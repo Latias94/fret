@@ -8,6 +8,13 @@ use fret_bootstrap::BootstrapBuilder;
 use fret_bootstrap::ui_app_driver::{UiAppDriver, ViewElements};
 use fret_core::{AppWindowId, Px, UiServices};
 use fret_diag::devtools::DevtoolsOps;
+use fret_diag::{
+    DevtoolsGatePerfThresholdCommandInputV1, DevtoolsGateScriptTargetCommandInputV1,
+    DevtoolsGateResourceFootprintThresholdCommandInputV1, devtools_gate_perf_threshold_command,
+    devtools_gate_profile_lines, devtools_gate_profiles_v1,
+    devtools_gate_resource_footprint_threshold_command, devtools_gate_script_target_command,
+    devtools_gate_script_target_profile_ids_v1,
+};
 use fret_diag::regression_summary::{
     DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionSummaryV1,
     regression_bundle_followup_command_lines, regression_bundle_followup_commands,
@@ -22,7 +29,8 @@ use fret_diag::{
     project_dashboard_summary,
 };
 use fret_diag_protocol::{
-    DevtoolsSessionDescriptorV1, UiActionScriptV1, UiActionScriptV2, UiScriptStageV1,
+    DevtoolsSessionDescriptorV1, UiActionScriptV1, UiActionScriptV2, UiInspectFocusV1,
+    UiInspectHoverV1, UiOverlaySummaryV1, UiRectV1, UiScriptStageV1,
 };
 use fret_diag_ws::server::{DevtoolsWsServer, DevtoolsWsServerConfig};
 use fret_runtime::Model;
@@ -35,8 +43,9 @@ use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::facade as shadcn;
 
-mod pack;
 mod followup;
+mod gate_run;
+mod pack;
 mod script_studio;
 mod semantics;
 mod summarize;
@@ -73,6 +82,11 @@ const CMD_COPY_FOLLOWUP_RESULT_JSON: &str = "fret.devtools.regression.followup.c
 const CMD_COPY_FOLLOWUP_RESULT_COMMAND: &str =
     "fret.devtools.regression.followup.copy_result_command";
 const CMD_OPEN_FOLLOWUP_RESULT_JSON: &str = "fret.devtools.regression.followup.open_result_json";
+const CMD_GATE_RUN_GENERATED: &str = "fret.devtools.gate.run_generated";
+const CMD_COPY_GATE_RESULT_PATH: &str = "fret.devtools.gate.copy_result_path";
+const CMD_COPY_GATE_RESULT_JSON: &str = "fret.devtools.gate.copy_result_json";
+const CMD_COPY_GATE_RESULT_COMMAND: &str = "fret.devtools.gate.copy_result_command";
+const CMD_OPEN_GATE_RESULT_JSON: &str = "fret.devtools.gate.open_result_json";
 
 const DEVTOOLS_FIRST_OPEN_DOC: &str = "docs/diagnostics-first-open.md";
 const DEVTOOLS_GUI_BRANCH_DOC: &str =
@@ -115,17 +129,6 @@ const DEVTOOLS_DEBUG_TRIAGE_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json";
 const DEVTOOLS_DEBUG_HOTSPOTS_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json";
-const DEVTOOLS_GATE_STALE_COMMAND: &str =
-    "cargo run -p fretboard-dev -- diag run <script.json> --check-stale-paint <test-id> --check-stale-scene <test-id> --json";
-const DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND: &str =
-    "cargo run -p fretboard-dev -- diag run <script.json> --check-pixels-changed <test-id> --json";
-const DEVTOOLS_GATE_PERF_THRESHOLDS_COMMAND: &str =
-    "cargo run -p fretboard-dev -- diag perf <script-or-suite> --repeat 7 --warmup-frames 5 --perf-threshold-agg p95 --max-top-total-us <us> --max-renderer-encode-scene-us <us> --json";
-const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_CAPTURE_COMMAND: &str =
-    "cargo run -p fretboard-dev -- diag repro <script-or-suite> --session-auto --json --launch -- <app-command>";
-const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND: &str =
-    "cargo run -p fretboard-dev -- diag compare <baseline-session> <candidate-session> --footprint --json";
-
 #[derive(Clone)]
 struct DevtoolsConfig {
     transport: DiagTransportKind,
@@ -145,6 +148,28 @@ struct State {
     selected_session_id: Model<Option<Arc<str>>>,
     selected_session_open: Model<bool>,
     inspect_consume_clicks: Model<bool>,
+    gate_profile_selected_id: Model<Option<Arc<str>>>,
+    gate_profile_open: Model<bool>,
+    gate_profile_script_json: Model<String>,
+    gate_profile_test_id: Model<String>,
+    gate_profile_perf_target: Model<String>,
+    gate_profile_perf_repeat: Model<String>,
+    gate_profile_perf_warmup_frames: Model<String>,
+    gate_profile_perf_threshold_agg: Model<String>,
+    gate_profile_perf_max_top_total_us: Model<String>,
+    gate_profile_perf_max_renderer_encode_scene_us: Model<String>,
+    gate_profile_resource_target: Model<String>,
+    gate_profile_resource_max_working_set_bytes: Model<String>,
+    gate_profile_resource_max_peak_working_set_bytes: Model<String>,
+    gate_profile_resource_max_cpu_avg_percent_total_cores: Model<String>,
+    gate_profile_resource_launch_command: Model<String>,
+    gate_run_in_flight: Model<bool>,
+    gate_run_last_command_line: Model<Option<Arc<str>>>,
+    gate_run_last_result_path: Model<Option<Arc<str>>>,
+    gate_run_last_result_json: Model<String>,
+    gate_run_result_history: Model<Vec<gate_run::GateRunResultHistoryEntry>>,
+    gate_run_selected_result_path: Model<Option<Arc<str>>>,
+    gate_run_last_error: Model<Option<Arc<str>>>,
 
     script_paths: script_studio::ScriptPaths,
     script_library: Model<Vec<script_studio::ScriptItem>>,
@@ -206,6 +231,7 @@ struct State {
     last_pick_json: Model<String>,
     last_inspect_hover_json: Model<String>,
     last_inspect_focus_json: Model<String>,
+    last_overlay_summary_json: Model<String>,
     last_script_result_json: Model<String>,
     last_bundle_json: Model<String>,
     last_screenshot_json: Model<String>,
@@ -254,6 +280,8 @@ struct State {
     summarize_rx: std::sync::mpsc::Receiver<summarize::SummarizeJobResult>,
     followup_tx: std::sync::mpsc::Sender<followup::FollowupJobResult>,
     followup_rx: std::sync::mpsc::Receiver<followup::FollowupJobResult>,
+    gate_run_tx: std::sync::mpsc::Sender<gate_run::GateRunJobResult>,
+    gate_run_rx: std::sync::mpsc::Receiver<gate_run::GateRunJobResult>,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -317,6 +345,37 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let selected_session_id = app.models_mut().insert(None::<Arc<str>>);
     let selected_session_open = app.models_mut().insert(false);
     let inspect_consume_clicks = app.models_mut().insert(false);
+    let gate_profile_selected_id = app
+        .models_mut()
+        .insert(Some(Arc::<str>::from("stale-paint-scene")));
+    let gate_profile_open = app.models_mut().insert(false);
+    let gate_profile_script_json = app.models_mut().insert(String::new());
+    let gate_profile_test_id = app.models_mut().insert(String::new());
+    let gate_profile_perf_target = app
+        .models_mut()
+        .insert("perf-docking-arbitration-steady".to_string());
+    let gate_profile_perf_repeat = app.models_mut().insert("7".to_string());
+    let gate_profile_perf_warmup_frames = app.models_mut().insert("5".to_string());
+    let gate_profile_perf_threshold_agg = app.models_mut().insert("p95".to_string());
+    let gate_profile_perf_max_top_total_us = app.models_mut().insert(String::new());
+    let gate_profile_perf_max_renderer_encode_scene_us = app.models_mut().insert(String::new());
+    let gate_profile_resource_target = app
+        .models_mut()
+        .insert("tools/diag-scripts/ui-gallery-intro-idle.json".to_string());
+    let gate_profile_resource_max_working_set_bytes = app.models_mut().insert(String::new());
+    let gate_profile_resource_max_peak_working_set_bytes = app.models_mut().insert(String::new());
+    let gate_profile_resource_max_cpu_avg_percent_total_cores =
+        app.models_mut().insert(String::new());
+    let gate_profile_resource_launch_command = app.models_mut().insert(String::new());
+    let gate_run_in_flight = app.models_mut().insert(false);
+    let gate_run_last_command_line = app.models_mut().insert(None::<Arc<str>>);
+    let gate_run_last_result_path = app.models_mut().insert(None::<Arc<str>>);
+    let gate_run_last_result_json = app.models_mut().insert(String::new());
+    let gate_run_result_history = app
+        .models_mut()
+        .insert(Vec::<gate_run::GateRunResultHistoryEntry>::new());
+    let gate_run_selected_result_path = app.models_mut().insert(None::<Arc<str>>);
+    let gate_run_last_error = app.models_mut().insert(None::<Arc<str>>);
 
     let repo_root = script_studio::repo_root_from_manifest_dir()
         .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
@@ -387,6 +446,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let last_pick_json = app.models_mut().insert(String::new());
     let last_inspect_hover_json = app.models_mut().insert(String::new());
     let last_inspect_focus_json = app.models_mut().insert(String::new());
+    let last_overlay_summary_json = app.models_mut().insert(String::new());
     let last_script_result_json = app.models_mut().insert(String::new());
     let last_bundle_json = app.models_mut().insert(String::new());
     let last_screenshot_json = app.models_mut().insert(String::new());
@@ -457,6 +517,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let (pack_tx, pack_rx) = pack::new_pack_channel();
     let (summarize_tx, summarize_rx) = summarize::new_summarize_channel();
     let (followup_tx, followup_rx) = followup::new_followup_channel();
+    let (gate_run_tx, gate_run_rx) = gate_run::new_gate_run_channel();
 
     let mut st = State {
         cfg,
@@ -467,6 +528,28 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         selected_session_id,
         selected_session_open,
         inspect_consume_clicks,
+        gate_profile_selected_id,
+        gate_profile_open,
+        gate_profile_script_json,
+        gate_profile_test_id,
+        gate_profile_perf_target,
+        gate_profile_perf_repeat,
+        gate_profile_perf_warmup_frames,
+        gate_profile_perf_threshold_agg,
+        gate_profile_perf_max_top_total_us,
+        gate_profile_perf_max_renderer_encode_scene_us,
+        gate_profile_resource_target,
+        gate_profile_resource_max_working_set_bytes,
+        gate_profile_resource_max_peak_working_set_bytes,
+        gate_profile_resource_max_cpu_avg_percent_total_cores,
+        gate_profile_resource_launch_command,
+        gate_run_in_flight,
+        gate_run_last_command_line,
+        gate_run_last_result_path,
+        gate_run_last_result_json,
+        gate_run_result_history,
+        gate_run_selected_result_path,
+        gate_run_last_error,
         script_paths,
         script_library,
         loaded_script_origin,
@@ -524,6 +607,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         last_pick_json,
         last_inspect_hover_json,
         last_inspect_focus_json,
+        last_overlay_summary_json,
         last_script_result_json,
         last_bundle_json,
         last_screenshot_json,
@@ -568,6 +652,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         summarize_rx,
         followup_tx,
         followup_rx,
+        gate_run_tx,
+        gate_run_rx,
     };
 
     refresh_script_library(app, &mut st);
@@ -579,6 +665,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     pack::poll_pack_jobs(cx.app, st);
     summarize::poll_summarize_jobs(cx.app, st);
     followup::poll_followup_jobs(cx.app, st);
+    gate_run::poll_gate_run_jobs(cx.app, st);
     ws::drain_ws_messages(cx.app, st);
     ws::sync_selected_session_to_client(cx.app, st);
     semantics::refresh_semantics_cache_if_needed(cx.app, st);
@@ -613,6 +700,43 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.selected_session_id, Invalidation::Paint);
     cx.observe_model(&st.selected_session_open, Invalidation::Paint);
     cx.observe_model(&st.inspect_consume_clicks, Invalidation::Paint);
+    cx.observe_model(&st.gate_profile_selected_id, Invalidation::Paint);
+    cx.observe_model(&st.gate_profile_open, Invalidation::Paint);
+    cx.observe_model(&st.gate_profile_script_json, Invalidation::Paint);
+    cx.observe_model(&st.gate_profile_test_id, Invalidation::Paint);
+    cx.observe_model(&st.gate_profile_perf_target, Invalidation::Paint);
+    cx.observe_model(&st.gate_profile_perf_repeat, Invalidation::Paint);
+    cx.observe_model(&st.gate_profile_perf_warmup_frames, Invalidation::Paint);
+    cx.observe_model(&st.gate_profile_perf_threshold_agg, Invalidation::Paint);
+    cx.observe_model(&st.gate_profile_perf_max_top_total_us, Invalidation::Paint);
+    cx.observe_model(
+        &st.gate_profile_perf_max_renderer_encode_scene_us,
+        Invalidation::Paint,
+    );
+    cx.observe_model(&st.gate_profile_resource_target, Invalidation::Paint);
+    cx.observe_model(
+        &st.gate_profile_resource_max_working_set_bytes,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_resource_max_peak_working_set_bytes,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_resource_max_cpu_avg_percent_total_cores,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_resource_launch_command,
+        Invalidation::Paint,
+    );
+    cx.observe_model(&st.gate_run_in_flight, Invalidation::Paint);
+    cx.observe_model(&st.gate_run_last_command_line, Invalidation::Paint);
+    cx.observe_model(&st.gate_run_last_result_path, Invalidation::Paint);
+    cx.observe_model(&st.gate_run_last_result_json, Invalidation::Paint);
+    cx.observe_model(&st.gate_run_result_history, Invalidation::Paint);
+    cx.observe_model(&st.gate_run_selected_result_path, Invalidation::Paint);
+    cx.observe_model(&st.gate_run_last_error, Invalidation::Paint);
     cx.observe_model(&st.script_library, Invalidation::Paint);
     cx.observe_model(&st.loaded_script_origin, Invalidation::Paint);
     cx.observe_model(&st.loaded_script_path, Invalidation::Paint);
@@ -675,6 +799,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.last_pick_json, Invalidation::Paint);
     cx.observe_model(&st.last_inspect_hover_json, Invalidation::Paint);
     cx.observe_model(&st.last_inspect_focus_json, Invalidation::Paint);
+    cx.observe_model(&st.last_overlay_summary_json, Invalidation::Paint);
     cx.observe_model(&st.last_script_result_json, Invalidation::Paint);
     cx.observe_model(&st.last_bundle_json, Invalidation::Paint);
     cx.observe_model(&st.last_screenshot_json, Invalidation::Paint);
@@ -883,6 +1008,8 @@ fn header_bar(
     for line in devtools_gate_command_lines(st.cfg.fs_out_dir.as_ref()) {
         gate_command_rows.push(cx.text(line));
     }
+    gate_command_rows.push(devtools_gate_profile_command_builder(cx, st));
+    gate_command_rows.extend(devtools_gate_profile_action_rows(cx));
     let gate_commands_panel = diag_section(
         cx,
         "Gate Commands",
@@ -2390,6 +2517,11 @@ fn right_panel(
         .models()
         .read(&st.last_inspect_focus_json, |v| v.clone())
         .unwrap_or_default();
+    let overlay_summary = cx
+        .app
+        .models()
+        .read(&st.last_overlay_summary_json, |v| v.clone())
+        .unwrap_or_default();
     let script = cx
         .app
         .models()
@@ -2408,16 +2540,12 @@ fn right_panel(
     let regression = regression_panel(cx, st);
     let semantics_node = sem_node_panel(cx, st);
 
-    let inspect = if inspect_hover.trim().is_empty() && inspect_focus.trim().is_empty() {
-        String::new()
-    } else {
-        format!("hover:\n{inspect_hover}\n\nfocus:\n{inspect_focus}")
-    };
+    let inspect = inspect_panel(cx, &inspect_hover, &inspect_focus, &overlay_summary);
 
     let tabs = shadcn::Tabs::new(st.details_tab.clone())
         .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
         .items([
-            shadcn::TabsItem::new("inspect", "Inspect", [text_blob(cx, inspect)]),
+            shadcn::TabsItem::new("inspect", "Inspect", [inspect]),
             shadcn::TabsItem::new("pick", "Pick", [text_blob(cx, pick)]),
             shadcn::TabsItem::new("script", "Script", [text_blob(cx, script)]),
             shadcn::TabsItem::new("bundle", "Bundle", [text_blob(cx, bundle)]),
@@ -2433,6 +2561,207 @@ fn right_panel(
         "Latest inspect, script, bundle, screenshot, and regression payloads.",
         vec![tabs],
     )
+}
+
+fn inspect_panel(
+    cx: &mut ElementContext<'_, App>,
+    hover_json: &str,
+    focus_json: &str,
+    overlay_json: &str,
+) -> AnyElement {
+    let hover_bounds = text_blob_sized(
+        cx,
+        inspect_hover_bounds_lines(hover_json).join("\n"),
+        Px(112.0),
+    )
+    .test_id("devtools.inspect.hover_bounds");
+    let overlay_hooks = text_blob_sized(
+        cx,
+        inspect_overlay_hook_lines(hover_json, focus_json, overlay_json).join("\n"),
+        Px(144.0),
+    )
+    .test_id("devtools.inspect.overlay_hooks");
+    let raw_payloads = text_blob_sized(
+        cx,
+        inspect_raw_payload_text(hover_json, focus_json, overlay_json),
+        Px(180.0),
+    )
+    .test_id("devtools.inspect.raw_payloads");
+
+    let hover_section = diag_section(
+        cx,
+        "Live Inspect Hover Bounds",
+        "Structured hovered-node bounds projected from inspect.hover.",
+        vec![hover_bounds],
+    );
+    let overlay_section = diag_section(
+        cx,
+        "Live Inspect Overlay Hooks",
+        "Viewport overlay hooks and overlay.summary root hints for live inspect overlays.",
+        vec![overlay_hooks],
+    );
+    let raw_section = diag_section(
+        cx,
+        "Raw Inspect Payloads",
+        "Raw inspect.hover, inspect.focus, and overlay.summary payloads remain available for protocol triage.",
+        vec![raw_payloads],
+    );
+
+    ui::v_stack(|_cx| [hover_section, overlay_section, raw_section])
+        .gap(fret_ui_kit::Space::N2)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx)
+}
+
+fn inspect_hover_bounds_lines(hover_json: &str) -> Vec<String> {
+    let Some(payload) = parse_inspect_json::<UiInspectHoverV1>(hover_json) else {
+        return vec![
+            "hover: <none>".to_string(),
+            "hover bounds: <none>".to_string(),
+        ];
+    };
+
+    let mut lines = vec![format!("hover window={}", payload.window)];
+    lines.push(inspect_rect_line("viewport", &payload.viewport_bounds));
+
+    let Some(node) = payload.hovered else {
+        lines.push("hovered node: <none>".to_string());
+        lines.push("hover bounds: <none>".to_string());
+        return lines;
+    };
+
+    lines.push(inspect_node_line("hovered node", &node));
+    lines.push(inspect_rect_line("hover bounds", &node.bounds));
+    lines.push(format!("selector_json: {}", node.selector_json));
+    lines
+}
+
+fn inspect_overlay_hook_lines(
+    hover_json: &str,
+    focus_json: &str,
+    overlay_json: &str,
+) -> Vec<String> {
+    let hover = parse_inspect_json::<UiInspectHoverV1>(hover_json);
+    let focus = parse_inspect_json::<UiInspectFocusV1>(focus_json);
+    let overlay = parse_inspect_json::<UiOverlaySummaryV1>(overlay_json);
+
+    let mut lines = Vec::new();
+    if let Some(hover) = hover.as_ref() {
+        lines.push(inspect_overlay_hook_line("hover overlay hook", &hover.overlay_hook));
+    } else {
+        lines.push("hover overlay hook: <none>".to_string());
+    }
+    if let Some(focus) = focus.as_ref() {
+        lines.push(inspect_overlay_hook_line("focus overlay hook", &focus.overlay_hook));
+        if let Some(summary) = focus.summary.as_deref() {
+            lines.push(format!("focus summary: {summary}"));
+        }
+        if let Some(path) = focus.path.as_deref() {
+            lines.push(format!("focus path: {path}"));
+        }
+    } else {
+        lines.push("focus overlay hook: <none>".to_string());
+    }
+
+    if let Some(overlay) = overlay {
+        lines.push(format!(
+            "overlay barrier root: {}",
+            inspect_opt_u64(overlay.barrier_root)
+        ));
+        lines.push(format!(
+            "overlay focus barrier root: {}",
+            inspect_opt_u64(overlay.focus_barrier_root)
+        ));
+        lines.push(format!(
+            "overlay blocking roots: {}",
+            overlay.blocking_roots.len()
+        ));
+        for root in overlay.blocking_roots.iter().take(4) {
+            lines.push(format!(
+                "blocking root={} z={} visible={} hit_testable={}",
+                root.root, root.z_index, root.visible, root.hit_testable
+            ));
+        }
+        if let Some(root) = overlay.topmost_interactive_root {
+            lines.push(format!(
+                "topmost interactive root={} z={} blocks_underlay_input={}",
+                root.root, root.z_index, root.blocks_underlay_input
+            ));
+        } else {
+            lines.push("topmost interactive root: <none>".to_string());
+        }
+    } else {
+        lines.push("overlay summary: <none>".to_string());
+    }
+
+    lines
+}
+
+fn inspect_raw_payload_text(hover_json: &str, focus_json: &str, overlay_json: &str) -> String {
+    if hover_json.trim().is_empty() && focus_json.trim().is_empty() && overlay_json.trim().is_empty()
+    {
+        return String::new();
+    }
+    format!("hover:\n{hover_json}\n\nfocus:\n{focus_json}\n\noverlay.summary:\n{overlay_json}")
+}
+
+fn parse_inspect_json<T: serde::de::DeserializeOwned>(text: &str) -> Option<T> {
+    if text.trim().is_empty() {
+        return None;
+    }
+    serde_json::from_str(text).ok()
+}
+
+fn inspect_node_line(label: &str, node: &fret_diag_protocol::UiInspectNodeSummaryV1) -> String {
+    let test_id = node.test_id.as_deref().unwrap_or("<none>");
+    let root = node
+        .root
+        .map(|root| root.to_string())
+        .unwrap_or_else(|| "<none>".to_string());
+    let root_z = node
+        .root_z_index
+        .map(|z| z.to_string())
+        .unwrap_or_else(|| "<none>".to_string());
+    format!(
+        "{label}: node={} role={} test_id={} root={} root_z_index={}",
+        node.node_id, node.role, test_id, root, root_z
+    )
+}
+
+fn inspect_rect_line(label: &str, rect: &UiRectV1) -> String {
+    format!(
+        "{label}: x={:.1} y={:.1} w={:.1} h={:.1}",
+        rect.x_px, rect.y_px, rect.w_px, rect.h_px
+    )
+}
+
+fn inspect_overlay_hook_line(
+    label: &str,
+    hook: &fret_diag_protocol::UiInspectOverlayHookV1,
+) -> String {
+    let target = hook
+        .target_node_id
+        .map(|node| node.to_string())
+        .unwrap_or_else(|| "<none>".to_string());
+    let bounds = hook
+        .target_bounds
+        .as_ref()
+        .map(|rect| inspect_rect_line("target bounds", rect))
+        .unwrap_or_else(|| "target bounds: <none>".to_string());
+    format!(
+        "{label}: kind={} space={} target_node={} {} {}",
+        hook.kind,
+        hook.coordinate_space,
+        target,
+        bounds,
+        inspect_rect_line("viewport", &hook.viewport_bounds)
+    )
+}
+
+fn inspect_opt_u64(value: Option<u64>) -> String {
+    value
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "<none>".to_string())
 }
 
 fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
@@ -3785,7 +4114,66 @@ fn followup_history_list(
     .into_element(cx)
 }
 
+fn gate_run_history_list(
+    cx: &mut ElementContext<'_, App>,
+    selected_result_path_model: &Model<Option<Arc<str>>>,
+    entries: &[gate_run::GateRunResultHistoryEntry],
+    active_result_path: Option<&str>,
+) -> AnyElement {
+    if entries.is_empty() {
+        return text_blob_sized(cx, "gate run history: <none>".to_string(), Px(84.0));
+    }
+
+    let mut rows: Vec<AnyElement> = Vec::new();
+    for entry in entries.iter().take(8) {
+        let is_selected = active_result_path.is_some_and(|path| path == entry.result_path);
+        let result_path = entry.result_path.clone();
+        let selected_result_path_model = selected_result_path_model.clone();
+        let label = format!(
+            "{} | {} | {}",
+            entry.status,
+            entry.id,
+            short_artifact_result_path(&entry.result_path)
+        );
+        let on_activate: fret_ui::action::OnActivate =
+            Arc::new(move |host, action_cx, _reason| {
+                let _ = host
+                    .models_mut()
+                    .update(&selected_result_path_model, |value| {
+                        *value = Some(Arc::<str>::from(result_path.clone()))
+                    });
+                host.request_redraw(action_cx.window);
+            });
+        rows.push(
+            shadcn::Button::new(label)
+                .variant(if is_selected {
+                    shadcn::ButtonVariant::Secondary
+                } else {
+                    shadcn::ButtonVariant::Ghost
+                })
+                .size(shadcn::ButtonSize::Sm)
+                .on_activate(on_activate)
+                .into_element(cx),
+        );
+    }
+
+    shadcn::ScrollArea::new([ui::v_stack(|_cx| rows)
+        .gap(fret_ui_kit::Space::N1)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx)])
+    .refine_layout(
+        fret_ui_kit::LayoutRefinement::default()
+            .w_full()
+            .min_h(Px(116.0)),
+    )
+    .into_element(cx)
+}
+
 fn short_followup_result_path(path: &str) -> String {
+    short_artifact_result_path(path)
+}
+
+fn short_artifact_result_path(path: &str) -> String {
     Path::new(path)
         .file_name()
         .and_then(|value| value.to_str())
@@ -4163,6 +4551,133 @@ fn selected_followup_result_json_from_state(app: &App, st: &State) -> Option<Str
     selected_followup_result_entry_from_state(app, st).map(|entry| entry.result_json)
 }
 
+fn gate_run_result_history_from_state(
+    app: &App,
+    st: &State,
+) -> Vec<gate_run::GateRunResultHistoryEntry> {
+    app.models()
+        .read(&st.gate_run_result_history, |v| v.clone())
+        .unwrap_or_default()
+}
+
+fn selected_gate_run_result_entry_from_state(
+    app: &App,
+    st: &State,
+) -> Option<gate_run::GateRunResultHistoryEntry> {
+    let gate_run_result_history = gate_run_result_history_from_state(app, st);
+    let gate_run_selected_result_path = app
+        .models()
+        .read(&st.gate_run_selected_result_path, |v| v.clone())
+        .ok()
+        .flatten();
+    gate_run::gate_run_result_history_selected_or_latest_entry(
+        &gate_run_result_history,
+        gate_run_selected_result_path.as_deref(),
+    )
+}
+
+fn selected_gate_run_result_path_from_state(app: &App, st: &State) -> Option<String> {
+    selected_gate_run_result_entry_from_state(app, st).map(|entry| entry.result_path)
+}
+
+fn selected_gate_run_result_command_from_state(app: &App, st: &State) -> Option<String> {
+    selected_gate_run_result_entry_from_state(app, st).map(|entry| entry.command_line)
+}
+
+fn selected_gate_run_result_json_from_state(app: &App, st: &State) -> Option<String> {
+    selected_gate_run_result_entry_from_state(app, st).map(|entry| entry.result_json)
+}
+
+fn generated_gate_command_from_state(
+    app: &App,
+    st: &State,
+) -> Option<fret_diag::DevtoolsGateCommandV1> {
+    let selected_profile_id = app
+        .models()
+        .read(&st.gate_profile_selected_id, |v| v.clone())
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| Arc::<str>::from("stale-paint-scene"));
+    if selected_profile_id.as_ref() == "perf-thresholds" {
+        let target = app
+            .models()
+            .read(&st.gate_profile_perf_target, |v| v.clone())
+            .unwrap_or_default();
+        let repeat = app
+            .models()
+            .read(&st.gate_profile_perf_repeat, |v| v.clone())
+            .unwrap_or_default();
+        let warmup_frames = app
+            .models()
+            .read(&st.gate_profile_perf_warmup_frames, |v| v.clone())
+            .unwrap_or_default();
+        let perf_threshold_agg = app
+            .models()
+            .read(&st.gate_profile_perf_threshold_agg, |v| v.clone())
+            .unwrap_or_default();
+        let max_top_total_us = app
+            .models()
+            .read(&st.gate_profile_perf_max_top_total_us, |v| v.clone())
+            .unwrap_or_default();
+        let max_renderer_encode_scene_us = app
+            .models()
+            .read(&st.gate_profile_perf_max_renderer_encode_scene_us, |v| v.clone())
+            .unwrap_or_default();
+        let input = DevtoolsGatePerfThresholdCommandInputV1::new(
+            &target,
+            &repeat,
+            &warmup_frames,
+            &perf_threshold_agg,
+            &max_top_total_us,
+            &max_renderer_encode_scene_us,
+        );
+        return Some(devtools_gate_perf_threshold_command(input));
+    }
+    if selected_profile_id.as_ref() == "resource-footprint-thresholds" {
+        let target = app
+            .models()
+            .read(&st.gate_profile_resource_target, |v| v.clone())
+            .unwrap_or_default();
+        let max_working_set_bytes = app
+            .models()
+            .read(&st.gate_profile_resource_max_working_set_bytes, |v| v.clone())
+            .unwrap_or_default();
+        let max_peak_working_set_bytes = app
+            .models()
+            .read(&st.gate_profile_resource_max_peak_working_set_bytes, |v| v.clone())
+            .unwrap_or_default();
+        let max_cpu_avg_percent_total_cores = app
+            .models()
+            .read(&st.gate_profile_resource_max_cpu_avg_percent_total_cores, |v| {
+                v.clone()
+            })
+            .unwrap_or_default();
+        let launch_command = app
+            .models()
+            .read(&st.gate_profile_resource_launch_command, |v| v.clone())
+            .unwrap_or_default();
+        let input = DevtoolsGateResourceFootprintThresholdCommandInputV1::new(
+            &target,
+            &max_working_set_bytes,
+            &max_peak_working_set_bytes,
+            &max_cpu_avg_percent_total_cores,
+            &launch_command,
+        );
+        return Some(devtools_gate_resource_footprint_threshold_command(input));
+    }
+
+    let script_json = app
+        .models()
+        .read(&st.gate_profile_script_json, |v| v.clone())
+        .unwrap_or_default();
+    let test_id = app
+        .models()
+        .read(&st.gate_profile_test_id, |v| v.clone())
+        .unwrap_or_default();
+    let input = DevtoolsGateScriptTargetCommandInputV1::new(&script_json, &test_id);
+    devtools_gate_script_target_command(selected_profile_id.as_ref(), input)
+}
+
 fn run_selected_regression_followup(app: &mut App, st: &mut State, command_id: &str) {
     let selected_bundle_dirs = app
         .models()
@@ -4387,6 +4902,84 @@ fn on_command(
                     app,
                     &st.log_lines,
                     "copy selected follow-up JSON refused (no selected-bundle result JSON yet)",
+                );
+                return;
+            };
+            let token = app.next_clipboard_token();
+            app.push_effect(Effect::ClipboardWriteText {
+                window,
+                token,
+                text: result_json,
+            });
+        }
+        CMD_GATE_RUN_GENERATED => {
+            let Some(command) = generated_gate_command_from_state(app, st) else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "gate run refused (unsupported generated gate profile)",
+                );
+                app.request_redraw(window);
+                return;
+            };
+            if let Err(err) = gate_run::start_gate_run(app, st, command) {
+                push_log(app, &st.log_lines, &format!("gate run refused: {err}"));
+            }
+            app.request_redraw(window);
+        }
+        CMD_COPY_GATE_RESULT_PATH => {
+            let Some(path) = selected_gate_run_result_path_from_state(app, st) else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "copy selected gate result refused (no gate run result artifact yet)",
+                );
+                return;
+            };
+            let token = app.next_clipboard_token();
+            app.push_effect(Effect::ClipboardWriteText {
+                window,
+                token,
+                text: path,
+            });
+        }
+        CMD_COPY_GATE_RESULT_COMMAND => {
+            let Some(command_line) = selected_gate_run_result_command_from_state(app, st) else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "copy selected gate command refused (no gate run result command yet)",
+                );
+                return;
+            };
+            let token = app.next_clipboard_token();
+            app.push_effect(Effect::ClipboardWriteText {
+                window,
+                token,
+                text: command_line,
+            });
+        }
+        CMD_OPEN_GATE_RESULT_JSON => {
+            let Some(path) = selected_gate_run_result_path_from_state(app, st) else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "open selected gate JSON refused (no gate run result artifact yet)",
+                );
+                return;
+            };
+            app.push_effect(Effect::OpenUrl {
+                url: file_url_from_path(&path),
+                target: None,
+                rel: None,
+            });
+        }
+        CMD_COPY_GATE_RESULT_JSON => {
+            let Some(result_json) = selected_gate_run_result_json_from_state(app, st) else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "copy selected gate JSON refused (no gate run result JSON yet)",
                 );
                 return;
             };
@@ -5884,26 +6477,416 @@ fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String> {
 }
 
 fn devtools_gate_command_lines(artifacts_root: &str) -> Vec<String> {
-    let artifacts_root = artifacts_root.trim();
-    let artifacts_root = if artifacts_root.is_empty() {
-        "<unset>"
-    } else {
-        artifacts_root
+    devtools_gate_profile_lines(artifacts_root)
+}
+
+fn devtools_gate_profile_command_builder(
+    cx: &mut ElementContext<'_, App>,
+    st: &State,
+) -> AnyElement {
+    let selected_profile_id = cx
+        .app
+        .models()
+        .read(&st.gate_profile_selected_id, |v| v.clone())
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| Arc::<str>::from("stale-paint-scene"));
+    let generated_command = generated_gate_command_from_state(cx.app, st);
+    let command_preview = generated_command
+        .as_ref()
+        .map(|command| command.command_line.clone())
+        .unwrap_or_else(|| "Select a script-target gate profile.".to_string());
+    let selected_profile_label = devtools_gate_profiles_v1()
+        .iter()
+        .find(|profile| profile.id == selected_profile_id.as_ref())
+        .map(|profile| format!("{} ({})", profile.label, profile.id))
+        .unwrap_or_else(|| selected_profile_id.to_string());
+
+    let profile_items = devtools_gate_profiles_v1()
+        .iter()
+        .filter(|profile| {
+            devtools_gate_script_target_profile_ids_v1().contains(&profile.id)
+                || profile.id == "perf-thresholds"
+                || profile.id == "resource-footprint-thresholds"
+        })
+        .map(|profile| shadcn::SelectItem::new(profile.id, format!("{} ({})", profile.label, profile.id)))
+        .collect::<Vec<_>>();
+    let profile_select =
+        shadcn::Select::new(st.gate_profile_selected_id.clone(), st.gate_profile_open.clone())
+            .value(shadcn::SelectValue::new().placeholder("Gate profile"))
+            .items(profile_items)
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(260.0)))
+            .into_element(cx);
+    let gate_inputs = match selected_profile_id.as_ref() {
+        "perf-thresholds" => perf_threshold_gate_inputs(cx, st),
+        "resource-footprint-thresholds" => resource_footprint_threshold_gate_inputs(cx, st),
+        _ => script_target_gate_inputs(cx, st),
     };
-    vec![
-        "gate route: first-class-gates".to_string(),
-        format!("artifacts root: {artifacts_root}"),
-        format!("stale paint/scene: {DEVTOOLS_GATE_STALE_COMMAND}"),
-        format!("pixels changed: {DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND}"),
-        format!("perf thresholds: {DEVTOOLS_GATE_PERF_THRESHOLDS_COMMAND}"),
-        format!(
-            "resource footprint capture: {DEVTOOLS_GATE_RESOURCE_FOOTPRINT_CAPTURE_COMMAND}"
-        ),
-        format!(
-            "resource footprint compare: {DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND}"
-        ),
-        "gate evidence files: check.pixels_changed.json, check.perf_thresholds.json, resource.footprint.json".to_string(),
-    ]
+    let command_state_line = generated_command
+        .as_ref()
+        .map(|command| {
+            if command.is_runnable() {
+                format!("diag args: {}", command.diag_args.join(" "))
+            } else if command.missing_inputs.is_empty() {
+                "diag args: <not runnable>".to_string()
+            } else {
+                format!("missing inputs: {}", command.missing_inputs.join(", "))
+            }
+        })
+        .unwrap_or_else(|| "diag args: <unsupported profile>".to_string());
+    let copy_enabled = generated_command.is_some();
+    let run_enabled = generated_command
+        .as_ref()
+        .is_some_and(|command| command.is_runnable());
+    let gate_run_in_flight = cx
+        .app
+        .models()
+        .read(&st.gate_run_in_flight, |v| *v)
+        .unwrap_or(false);
+    let gate_run_result_path = cx
+        .app
+        .models()
+        .read(&st.gate_run_last_result_path, |v| v.clone())
+        .ok()
+        .flatten()
+        .map(|v| v.to_string());
+    let gate_run_error = cx
+        .app
+        .models()
+        .read(&st.gate_run_last_error, |v| v.clone())
+        .ok()
+        .flatten()
+        .map(|v| v.to_string());
+    let gate_run_result_json = cx
+        .app
+        .models()
+        .read(&st.gate_run_last_result_json, |v| v.clone())
+        .unwrap_or_default();
+    let gate_run_result_history = cx
+        .app
+        .models()
+        .read(&st.gate_run_result_history, |v| v.clone())
+        .unwrap_or_default();
+    let gate_run_selected_result_path = cx
+        .app
+        .models()
+        .read(&st.gate_run_selected_result_path, |v| v.clone())
+        .ok()
+        .flatten();
+    let selected_gate_run_result_entry = gate_run::gate_run_result_history_selected_or_latest_entry(
+        &gate_run_result_history,
+        gate_run_selected_result_path.as_deref(),
+    );
+    let selected_gate_run_result_path = selected_gate_run_result_entry
+        .as_ref()
+        .map(|entry| entry.result_path.clone());
+    let selected_gate_run_result_json = selected_gate_run_result_entry
+        .as_ref()
+        .map(|entry| entry.result_json.clone())
+        .unwrap_or_else(|| gate_run_result_json.clone());
+    let gate_result_actions = ui::h_row(|cx| {
+        let mut out: Vec<AnyElement> = Vec::new();
+        if selected_gate_run_result_path.is_some() {
+            out.push(
+                shadcn::Button::new("Copy gate result")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CMD_COPY_GATE_RESULT_PATH)
+                    .into_element(cx),
+            );
+            out.push(
+                shadcn::Button::new("Open gate JSON")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CMD_OPEN_GATE_RESULT_JSON)
+                    .into_element(cx),
+            );
+        }
+        if selected_gate_run_result_entry.is_some() {
+            out.push(
+                shadcn::Button::new("Copy gate command")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CMD_COPY_GATE_RESULT_COMMAND)
+                    .into_element(cx),
+            );
+        }
+        if !selected_gate_run_result_json.trim().is_empty() {
+            out.push(
+                shadcn::Button::new("Copy gate JSON")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CMD_COPY_GATE_RESULT_JSON)
+                    .into_element(cx),
+            );
+        }
+        out
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx);
+    let gate_result_details = text_blob_sized(
+        cx,
+        gate_run::gate_run_result_history_entry_detail_lines(
+            selected_gate_run_result_entry.as_ref(),
+        )
+        .join("\n"),
+        Px(78.0),
+    );
+    let gate_result_summary = text_blob_sized(
+        cx,
+        gate_run::gate_run_result_summary_lines(&selected_gate_run_result_json).join("\n"),
+        Px(92.0),
+    );
+    let gate_result_history_summary = text_blob_sized(
+        cx,
+        gate_run::gate_run_result_history_summary_lines(&gate_run_result_history).join("\n"),
+        Px(84.0),
+    );
+    let gate_result_history = gate_run_history_list(
+        cx,
+        &st.gate_run_selected_result_path,
+        &gate_run_result_history,
+        selected_gate_run_result_path.as_deref(),
+    );
+    let gate_run_status_line = format!(
+        "gate_run_in_flight={} last_gate_result={} last_gate_error={}",
+        gate_run_in_flight,
+        gate_run_result_path.as_deref().unwrap_or("-"),
+        gate_run_error.as_deref().unwrap_or("-")
+    );
+    let command_line_for_copy = command_preview.clone();
+    let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+        let token = host.next_clipboard_token();
+        host.push_effect(Effect::ClipboardWriteText {
+            window: action_cx.window,
+            token,
+            text: command_line_for_copy.clone(),
+        });
+        host.request_redraw(action_cx.window);
+    });
+    let copy_button = shadcn::Button::new("Copy generated command")
+        .variant(shadcn::ButtonVariant::Secondary)
+        .size(shadcn::ButtonSize::Sm)
+        .disabled(!copy_enabled)
+        .on_activate(on_copy)
+        .into_element(cx);
+    let run_button = shadcn::Button::new("Run generated command")
+        .variant(shadcn::ButtonVariant::Secondary)
+        .size(shadcn::ButtonSize::Sm)
+        .disabled(!run_enabled || gate_run_in_flight)
+        .on_click(CMD_GATE_RUN_GENERATED)
+        .into_element(cx);
+    let controls = ui::h_row(|_cx| [profile_select, copy_button, run_button])
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx);
+    let preview = text_blob_sized(cx, command_preview, Px(58.0));
+    let result_preview = text_blob_sized(
+        cx,
+        if selected_gate_run_result_json.trim().is_empty() {
+            "<no generated gate result yet>".to_string()
+        } else {
+            selected_gate_run_result_json
+        },
+        Px(92.0),
+    );
+    ui::v_stack(|cx| {
+        [
+            cx.text(format!(
+                "Runnable generated gate: {selected_profile_label}"
+            )),
+            controls,
+            gate_inputs,
+            cx.text(command_state_line),
+            cx.text(gate_run_status_line),
+            preview,
+            diag_section(
+                cx,
+                "Generated Gate Result Details",
+                "Selected script-target gate result status, path, command, and error preview.",
+                vec![gate_result_actions, gate_result_details],
+            ),
+            diag_section(
+                cx,
+                "Generated Gate Result Summary",
+                "Status, command, duration, and error preview from the selected generated gate result.",
+                vec![gate_result_summary],
+            ),
+            diag_section(
+                cx,
+                "Generated Gate Result History",
+                "Select a GUI-launched generated gate result, newest first.",
+                vec![gate_result_history_summary, gate_result_history],
+            ),
+            result_preview,
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx)
+}
+
+fn script_target_gate_inputs(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
+    let script_input = shadcn::Input::new(st.gate_profile_script_json.clone())
+        .placeholder("tools/diag-scripts/<script>.json")
+        .a11y_label("Gate script JSON")
+        .test_id("devtools.gate.script_json")
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(320.0)))
+        .into_element(cx);
+    let test_id_input = shadcn::Input::new(st.gate_profile_test_id.clone())
+        .placeholder("test-id")
+        .a11y_label("Gate test id")
+        .test_id("devtools.gate.test_id")
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(180.0)))
+        .into_element(cx);
+    ui::h_row(|_cx| [script_input, test_id_input])
+        .gap(fret_ui_kit::Space::N2)
+        .items_center()
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx)
+}
+
+fn perf_threshold_gate_inputs(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
+    let target_input = shadcn::Input::new(st.gate_profile_perf_target.clone())
+        .placeholder("script-or-suite")
+        .a11y_label("Perf gate target")
+        .test_id("devtools.gate.perf_target")
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(300.0)))
+        .into_element(cx);
+    let repeat_input = shadcn::Input::new(st.gate_profile_perf_repeat.clone())
+        .placeholder("repeat")
+        .a11y_label("Perf gate repeat")
+        .test_id("devtools.gate.perf_repeat")
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(92.0)))
+        .into_element(cx);
+    let warmup_input = shadcn::Input::new(st.gate_profile_perf_warmup_frames.clone())
+        .placeholder("warmup")
+        .a11y_label("Perf gate warmup frames")
+        .test_id("devtools.gate.perf_warmup_frames")
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(104.0)))
+        .into_element(cx);
+    let agg_input = shadcn::Input::new(st.gate_profile_perf_threshold_agg.clone())
+        .placeholder("agg")
+        .a11y_label("Perf gate aggregate")
+        .test_id("devtools.gate.perf_threshold_agg")
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(84.0)))
+        .into_element(cx);
+    let max_total_input = shadcn::Input::new(st.gate_profile_perf_max_top_total_us.clone())
+        .placeholder("max total us")
+        .a11y_label("Perf gate max top total microseconds")
+        .test_id("devtools.gate.perf_max_top_total_us")
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(150.0)))
+        .into_element(cx);
+    let max_renderer_input =
+        shadcn::Input::new(st.gate_profile_perf_max_renderer_encode_scene_us.clone())
+            .placeholder("max encode us")
+            .a11y_label("Perf gate max renderer encode scene microseconds")
+            .test_id("devtools.gate.perf_max_renderer_encode_scene_us")
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(160.0)))
+            .into_element(cx);
+    let run_inputs = ui::h_row(|_cx| [target_input, repeat_input, warmup_input, agg_input])
+        .gap(fret_ui_kit::Space::N2)
+        .items_center()
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx);
+    let threshold_inputs = ui::h_row(|_cx| [max_total_input, max_renderer_input])
+        .gap(fret_ui_kit::Space::N2)
+        .items_center()
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx);
+    ui::v_stack(|_cx| [run_inputs, threshold_inputs])
+        .gap(fret_ui_kit::Space::N2)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx)
+}
+
+fn resource_footprint_threshold_gate_inputs(
+    cx: &mut ElementContext<'_, App>,
+    st: &State,
+) -> AnyElement {
+    let target_input = shadcn::Input::new(st.gate_profile_resource_target.clone())
+        .placeholder("script-or-suite")
+        .a11y_label("Resource footprint gate target")
+        .test_id("devtools.gate.resource_target")
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(320.0)))
+        .into_element(cx);
+    let launch_input = shadcn::Input::new(st.gate_profile_resource_launch_command.clone())
+        .placeholder("target/release/app.exe")
+        .a11y_label("Resource footprint gate launch command")
+        .test_id("devtools.gate.resource_launch_command")
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(320.0)))
+        .into_element(cx);
+    let max_working_input =
+        shadcn::Input::new(st.gate_profile_resource_max_working_set_bytes.clone())
+            .placeholder("max working bytes")
+            .a11y_label("Resource footprint max working set bytes")
+            .test_id("devtools.gate.resource_max_working_set_bytes")
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(180.0)))
+            .into_element(cx);
+    let max_peak_input =
+        shadcn::Input::new(st.gate_profile_resource_max_peak_working_set_bytes.clone())
+            .placeholder("max peak bytes")
+            .a11y_label("Resource footprint max peak working set bytes")
+            .test_id("devtools.gate.resource_max_peak_working_set_bytes")
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(180.0)))
+            .into_element(cx);
+    let max_cpu_input =
+        shadcn::Input::new(st.gate_profile_resource_max_cpu_avg_percent_total_cores.clone())
+            .placeholder("max cpu %")
+            .a11y_label("Resource footprint max CPU average percent total cores")
+            .test_id("devtools.gate.resource_max_cpu_avg_percent_total_cores")
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(150.0)))
+            .into_element(cx);
+    let target_inputs = ui::h_row(|_cx| [target_input, launch_input])
+        .gap(fret_ui_kit::Space::N2)
+        .items_center()
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx);
+    let threshold_inputs = ui::h_row(|_cx| [max_working_input, max_peak_input, max_cpu_input])
+        .gap(fret_ui_kit::Space::N2)
+        .items_center()
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx);
+    ui::v_stack(|_cx| [target_inputs, threshold_inputs])
+        .gap(fret_ui_kit::Space::N2)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx)
+}
+
+fn devtools_gate_profile_action_rows(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    devtools_gate_profiles_v1()
+        .iter()
+        .map(|profile| {
+            let command_line = profile.command_line.to_string();
+            let on_copy: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    let token = host.next_clipboard_token();
+                    host.push_effect(Effect::ClipboardWriteText {
+                        window: action_cx.window,
+                        token,
+                        text: command_line.clone(),
+                    });
+                    host.request_redraw(action_cx.window);
+                });
+            ui::h_row(|cx| {
+                [
+                    cx.text(format!("{} ({})", profile.label, profile.id)),
+                    shadcn::Button::new("Copy command")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_activate(on_copy)
+                        .into_element(cx),
+                ]
+            })
+            .gap(fret_ui_kit::Space::N2)
+            .items_center()
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx)
+        })
+        .collect()
 }
 
 fn resolve_repo_or_abs_path(repo_root: &Path, raw: &str) -> PathBuf {
@@ -6001,6 +6984,119 @@ mod tests {
     }
 
     #[test]
+    fn inspect_hover_bounds_lines_project_bounds_and_selector() {
+        let payload = serde_json::json!({
+            "schema_version": 1,
+            "window": 7,
+            "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 },
+            "scale_factor": 1.0,
+            "hovered": {
+                "node_id": 42,
+                "role": "button",
+                "test_id": "save",
+                "selector_json": "{\"kind\":\"test_id\",\"id\":\"save\"}",
+                "bounds": { "x_px": 12.0, "y_px": 24.0, "w_px": 96.0, "h_px": 32.0 },
+                "root": 1,
+                "root_z_index": 3
+            },
+            "overlay_hook": {
+                "kind": "hovered-node-bounds",
+                "coordinate_space": "window_logical_px",
+                "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 },
+                "target_bounds": { "x_px": 12.0, "y_px": 24.0, "w_px": 96.0, "h_px": 32.0 },
+                "target_node_id": 42
+            }
+        })
+        .to_string();
+
+        let lines = inspect_hover_bounds_lines(&payload).join("\n");
+        assert!(lines.contains("hover window=7"));
+        assert!(lines.contains("hovered node: node=42 role=button test_id=save"));
+        assert!(lines.contains("hover bounds: x=12.0 y=24.0 w=96.0 h=32.0"));
+        assert!(lines.contains("selector_json: {\"kind\":\"test_id\",\"id\":\"save\"}"));
+    }
+
+    #[test]
+    fn inspect_hover_bounds_lines_missing_bounds_returns_none() {
+        let payload = serde_json::json!({
+            "schema_version": 1,
+            "window": 7,
+            "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 },
+            "scale_factor": 1.0,
+            "hovered": {
+                "node_id": 42,
+                "role": "button",
+                "selector_json": "{\"kind\":\"node_id\",\"node\":42}"
+            },
+            "overlay_hook": {
+                "kind": "hovered-node-bounds",
+                "coordinate_space": "window_logical_px",
+                "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 }
+            }
+        })
+        .to_string();
+
+        let lines = inspect_hover_bounds_lines(&payload).join("\n");
+        assert_eq!(lines, "hover: <none>\nhover bounds: <none>");
+    }
+
+    #[test]
+    fn inspect_overlay_hook_lines_project_overlay_summary() {
+        let hover = serde_json::json!({
+            "schema_version": 1,
+            "window": 7,
+            "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 },
+            "scale_factor": 1.0,
+            "hovered": null,
+            "overlay_hook": {
+                "kind": "hovered-node-bounds",
+                "coordinate_space": "window_logical_px",
+                "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 }
+            }
+        })
+        .to_string();
+        let focus = serde_json::json!({
+            "schema_version": 1,
+            "window": 7,
+            "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 },
+            "scale_factor": 1.0,
+            "focused": null,
+            "summary": "focus: button node=42 test_id=save",
+            "path": "window > button(save)",
+            "overlay_hook": {
+                "kind": "focused-node-bounds",
+                "coordinate_space": "window_logical_px",
+                "viewport_bounds": { "x_px": 0.0, "y_px": 0.0, "w_px": 800.0, "h_px": 600.0 }
+            }
+        })
+        .to_string();
+        let overlay = serde_json::json!({
+            "schema_version": 1,
+            "window": 7,
+            "barrier_root": 9,
+            "focus_barrier_root": 10,
+            "blocking_roots": [
+                { "root": 9, "visible": true, "blocks_underlay_input": true, "hit_testable": true, "z_index": 12 }
+            ],
+            "topmost_interactive_root": {
+                "root": 9,
+                "visible": true,
+                "blocks_underlay_input": true,
+                "hit_testable": true,
+                "z_index": 12
+            }
+        })
+        .to_string();
+
+        let lines = inspect_overlay_hook_lines(&hover, &focus, &overlay).join("\n");
+        assert!(lines.contains("hover overlay hook: kind=hovered-node-bounds"));
+        assert!(lines.contains("focus summary: focus: button node=42 test_id=save"));
+        assert!(lines.contains("overlay barrier root: 9"));
+        assert!(lines.contains("overlay blocking roots: 1"));
+        assert!(lines.contains("topmost interactive root=9 z=12"));
+    }
+
+    #[test]
     fn devtools_first_open_lines_surface_canonical_paths() {
         let lines = devtools_first_open_lines("target/fret-diag");
         let text = lines.join("\n");
@@ -6081,13 +7177,14 @@ mod tests {
             "perf thresholds: cargo run -p fretboard-dev -- diag perf <script-or-suite> --repeat 7 --warmup-frames 5 --perf-threshold-agg p95 --max-top-total-us <us> --max-renderer-encode-scene-us <us> --json"
         ));
         assert!(text.contains(
-            "resource footprint capture: cargo run -p fretboard-dev -- diag repro <script-or-suite> --session-auto --json --launch -- <app-command>"
+            "resource footprint thresholds: cargo run -p fretboard-dev -- diag repro <script-or-suite> --max-working-set-bytes <bytes> --max-peak-working-set-bytes <bytes> --max-cpu-avg-percent-total-cores <percent> --json --launch -- <app-command>"
         ));
         assert!(text.contains(
             "resource footprint compare: cargo run -p fretboard-dev -- diag compare <baseline-session> <candidate-session> --footprint --json"
         ));
         assert!(text.contains("check.pixels_changed.json"));
         assert!(text.contains("check.perf_thresholds.json"));
+        assert!(text.contains("check.resource_footprint.json"));
         assert!(text.contains("resource.footprint.json"));
     }
 

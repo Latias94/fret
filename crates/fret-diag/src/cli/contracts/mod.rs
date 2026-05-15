@@ -2552,6 +2552,37 @@ mod tests {
     }
 
     #[test]
+    fn repro_contract_captures_resource_footprint_thresholds() {
+        let cli = try_parse_contract([
+            "fretboard",
+            "repro",
+            "tools/diag-scripts/ui-gallery-intro-idle.json",
+            "--max-working-set-bytes",
+            "1200000000",
+            "--max-peak-working-set-bytes",
+            "1600000000",
+            "--max-cpu-avg-percent-total-cores",
+            "250.5",
+            "--launch",
+            "--",
+            "target/release/fret-ui-gallery.exe",
+        ])
+        .expect("repro contract should parse resource footprint thresholds");
+
+        let DiagCommandContract::Repro(args) = cli.command else {
+            panic!("expected repro command");
+        };
+
+        assert_eq!(args.max_working_set_bytes, Some(1_200_000_000));
+        assert_eq!(args.max_peak_working_set_bytes, Some(1_600_000_000));
+        assert_eq!(args.max_cpu_avg_percent_total_cores, Some(250.5));
+        assert_eq!(
+            args.launch.normalized_launch_argv(),
+            Some(vec!["target/release/fret-ui-gallery.exe".to_string()])
+        );
+    }
+
+    #[test]
     fn suite_contract_rejects_conflicting_session_scope_flags() {
         let err = try_parse_contract([
             "fretboard",
@@ -2723,6 +2754,9 @@ mod tests {
         assert!(help.contains("run"));
         assert!(repeat_help.contains("--no-compare"));
         assert!(repro_help.contains("--ai-only"));
+        assert!(repro_help.contains("--max-working-set-bytes"));
+        assert!(repro_help.contains("--max-peak-working-set-bytes"));
+        assert!(repro_help.contains("--max-cpu-avg-percent-total-cores"));
         assert!(registry_help.contains("check"));
         assert!(registry_help.contains("write"));
         assert!(registry_help.contains("print"));
@@ -2790,6 +2824,7 @@ mod tests {
         assert!(repro_help.contains("--pack-out"));
         assert!(repro_help.contains("--ai-only"));
         assert!(repro_help.contains("--trace-chrome"));
+        assert!(repro_help.contains("--max-working-set-bytes"));
 
         assert!(perf_help.contains("Usage: fretboard-dev diag perf"));
         assert!(perf_help.contains("--prewarm-script"));

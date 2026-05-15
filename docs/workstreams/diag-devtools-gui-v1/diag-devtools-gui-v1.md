@@ -66,6 +66,33 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   pixels-changed, perf-threshold, and resource-footprint diagnostics entrypoints. This keeps the
   gate vocabulary visible in the product surface without moving gate policy into `fret-ui` or
   `fret-imui`.
+- That `Gate Commands` block now consumes the shared `fret-diag` DevTools gate profile projection
+  instead of hard-coding gate taxonomy in the GUI. The shared projection names each gate profile,
+  command template, evidence files, and scan-speed notes, including explicit
+  `check.resource_footprint.json` threshold evidence for resource-footprint gates.
+- The GUI now renders a `Copy command` action for each shared gate profile, so authors can copy the
+  exact stale/pixels/perf/resource-footprint command template from the structured profile row
+  instead of selecting text from the raw first-open block.
+- The GUI also has a script-target command builder for the stale paint/scene and pixels-changed
+  profiles. `fret-diag` owns the script/test-id parameterization API; the GUI only supplies the
+  selected profile, input models, preview, and `Copy generated command` action.
+- That shared script-target projection now carries structured `diag_args` and `missing_inputs`, so
+  the GUI can distinguish copyable templates from runnable gate commands without parsing shell
+  command strings.
+- The GUI can now launch a generated stale paint/scene or pixels-changed script-target gate command
+  through the shared diagnostics engine. Each run records in-flight/error state in the panel and
+  writes a lightweight `.fret/diag/gate-runs/*.json` result artifact with command/status/timing
+  metadata.
+- Generated gate results are retained as a bounded selectable history. The panel shows selected
+  result details, a structured summary, raw JSON, copy actions for path/command/JSON, and a
+  platform URL open action for the selected result artifact.
+- The same generated-gate builder now includes a perf-threshold profile. `fret-diag` owns the
+  structured `diag perf` command projection for target, repeat, warmup frames, aggregate, and the
+  first threshold fields; the GUI only renders the form and runs the shared `diag_args`.
+- Resource-footprint thresholds are also first-class in the generated-gate builder. The slice fixed
+  the `diag repro` CLI contract so `--max-working-set-bytes`,
+  `--max-peak-working-set-bytes`, and `--max-cpu-avg-percent-total-cores` are real parsed inputs,
+  then exposed a GUI form that passes a single launch argv item without shell parsing.
 - The selected regression summary inspector now consumes the shared `fret-diag`
   regression-bundle follow-up projection, generating concrete commands from the selected
   `bundle_dir` (`diag stats`, `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`,
@@ -97,6 +124,13 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   global last result, so copied evidence paths stay aligned with the current selected summary.
 - The same selected-bundle result JSON can be copied directly from the inspector, giving issue
   reports and AI-assisted triage the exact payload shown in the panel.
+- The live inspect path now has a real minimal WS payload loop instead of only a GUI raw-JSON
+  receiver. `fret-diag-protocol` owns `UiInspectHoverV1`, `UiInspectFocusV1`, overlay hook, and
+  `UiOverlaySummaryV1` types; `fret-bootstrap` publishes changed `inspect.hover`,
+  `inspect.focus`, and `overlay.summary` payloads with hovered/focused node bounds, viewport
+  bounds, barrier roots, blocking roots, and topmost interactive root hints; `fret-devtools`
+  projects them into `Live Inspect Hover Bounds`, `Live Inspect Overlay Hooks`, and raw payload
+  panels.
 - The MCP `fret_diag_regression_dashboard` tool now consumes the same shared regression drill-down
   and follow-up projection, so GUI and AI workflows see the same bundle dirs, capability
   provenance, perf evidence, and next-command hints.
@@ -421,6 +455,12 @@ For real-time UX, we push only the minimum stable summary required by the UI:
   - same shape as hover, plus focus-specific flags.
 - `overlay.summary`:
   - barrier root id, count of blocking roots, topmost interactive root hints.
+
+Implementation note (2026-05-15): the concrete v1 structs live in `crates/fret-diag-protocol`.
+`inspect.hover` and `inspect.focus` carry an `overlay_hook` in window-local logical pixels so the
+GUI can project a viewport overlay without asking the runtime to draw into the target app. The
+runtime sends these payloads only when their stable JSON changes, keeping hover traffic lossy and
+bounded under normal pointer movement.
 
 Full evidence remains bundle-based (`capture_bundle`).
 

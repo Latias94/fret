@@ -76,6 +76,129 @@ fn build_environment_sources_get_ack_v1(
     }
 }
 
+#[cfg(feature = "diagnostics-ws")]
+fn ui_rect_from_rect(rect: Rect) -> UiRectV1 {
+    UiRectV1 {
+        x_px: rect.origin.x.0,
+        y_px: rect.origin.y.0,
+        w_px: rect.size.width.0,
+        h_px: rect.size.height.0,
+    }
+}
+
+#[cfg(feature = "diagnostics-ws")]
+fn inspect_overlay_hook_v1(
+    kind: impl Into<String>,
+    viewport_bounds: Rect,
+    node: &Option<UiInspectNodeSummaryV1>,
+) -> UiInspectOverlayHookV1 {
+    UiInspectOverlayHookV1 {
+        kind: kind.into(),
+        coordinate_space: "window_logical_px".to_string(),
+        viewport_bounds: ui_rect_from_rect(viewport_bounds),
+        target_bounds: node.as_ref().map(|node| node.bounds),
+        target_node_id: node.as_ref().map(|node| node.node_id),
+    }
+}
+
+#[cfg(feature = "diagnostics-ws")]
+fn overlay_root_hint_v1(root: &fret_core::SemanticsRoot) -> UiOverlayRootHintV1 {
+    UiOverlayRootHintV1 {
+        root: root.root.data().as_ffi(),
+        visible: root.visible,
+        blocks_underlay_input: root.blocks_underlay_input,
+        hit_testable: root.hit_testable,
+        z_index: root.z_index,
+    }
+}
+
+#[cfg(feature = "diagnostics-ws")]
+fn root_hint_for_node_v1(
+    snapshot: &fret_core::SemanticsSnapshot,
+    node_id: u64,
+) -> Option<UiOverlayRootHintV1> {
+    let mut current = node_id;
+    loop {
+        if let Some(root) = snapshot
+            .roots
+            .iter()
+            .find(|root| root.root.data().as_ffi() == current)
+        {
+            return Some(overlay_root_hint_v1(root));
+        }
+        let node = snapshot
+            .nodes
+            .iter()
+            .find(|node| node.id.data().as_ffi() == current)?;
+        current = node.parent?.data().as_ffi();
+    }
+}
+
+#[cfg(feature = "diagnostics-ws")]
+fn inspect_node_summary_v1(
+    snapshot: &fret_core::SemanticsSnapshot,
+    node_id: u64,
+    selector_json: &str,
+) -> Option<UiInspectNodeSummaryV1> {
+    let node = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.id.data().as_ffi() == node_id)?;
+    let root = root_hint_for_node_v1(snapshot, node_id);
+    Some(UiInspectNodeSummaryV1 {
+        node_id,
+        role: super::semantics_role_label(node.role).to_string(),
+        test_id: node.test_id.clone(),
+        selector_json: selector_json.to_string(),
+        bounds: ui_rect_from_rect(node.bounds),
+        root: root.as_ref().map(|root| root.root),
+        root_z_index: root.as_ref().map(|root| root.z_index),
+    })
+}
+
+#[cfg(feature = "diagnostics-ws")]
+fn overlay_summary_v1(
+    window: AppWindowId,
+    snapshot: Option<&fret_core::SemanticsSnapshot>,
+) -> UiOverlaySummaryV1 {
+    let Some(snapshot) = snapshot else {
+        return UiOverlaySummaryV1 {
+            schema_version: 1,
+            window: window.data().as_ffi(),
+            captured_unix_ms: None,
+            barrier_root: None,
+            focus_barrier_root: None,
+            blocking_roots: Vec::new(),
+            topmost_interactive_root: None,
+        };
+    };
+
+    let mut roots: Vec<UiOverlayRootHintV1> =
+        snapshot.roots.iter().map(overlay_root_hint_v1).collect();
+    roots.sort_by_key(|root| root.z_index);
+
+    let blocking_roots = roots
+        .iter()
+        .filter(|root| root.visible && root.blocks_underlay_input)
+        .cloned()
+        .collect();
+    let topmost_interactive_root = roots
+        .iter()
+        .rev()
+        .find(|root| root.visible && root.hit_testable)
+        .cloned();
+
+    UiOverlaySummaryV1 {
+        schema_version: 1,
+        window: window.data().as_ffi(),
+        captured_unix_ms: None,
+        barrier_root: snapshot.barrier_root.map(|root| root.data().as_ffi()),
+        focus_barrier_root: snapshot.focus_barrier_root.map(|root| root.data().as_ffi()),
+        blocking_roots,
+        topmost_interactive_root,
+    }
+}
+
 impl UiDiagnosticsService {
     pub(super) fn drive_devtools_requests_for_window(
         &mut self,
@@ -86,7 +209,7 @@ impl UiDiagnosticsService {
     ) -> bool {
         #[cfg(feature = "diagnostics-ws")]
         {
-            return self.drive_devtools_ws_requests_for_window(app, window, scale_factor, ui);
+            self.drive_devtools_ws_requests_for_window(app, window, scale_factor, ui)
         }
         #[cfg(not(feature = "diagnostics-ws"))]
         {
@@ -157,16 +280,148 @@ impl UiDiagnosticsService {
     }
 
     #[cfg(feature = "diagnostics-ws")]
+    pub(super) fn ws_publish_live_inspect_payloads(
+        &mut self,
+        window: AppWindowId,
+        viewport_bounds: Rect,
+        scale_factor: f32,
+        snapshot: Option<&fret_core::SemanticsSnapshot>,
+        _pointer: Option<Point>,
+    ) {
+        if !self.ws_is_configured() {
+            return;
+        }
+
+        let hovered = snapshot.and_then(|snapshot| {
+            self.inspector
+                .last_hovered_node_id
+                .get(&window)
+                .copied()
+                .and_then(|node_id| {
+                    let selector_json = self.inspect_selector_json_for_node(window, node_id)?;
+                    inspect_node_summary_v1(snapshot, node_id, selector_json)
+                })
+        });
+        let hover_hook = inspect_overlay_hook_v1("hovered-node-bounds", viewport_bounds, &hovered);
+        let hover_payload = UiInspectHoverV1 {
+            schema_version: 1,
+            window: window.data().as_ffi(),
+            captured_unix_ms: None,
+            pointer: None,
+            viewport_bounds: ui_rect_from_rect(viewport_bounds),
+            scale_factor,
+            hovered,
+            overlay_hook: hover_hook,
+        };
+        self.ws_send_live_payload_if_changed("inspect.hover", window, hover_payload);
+
+        let focused_node_id = self.inspect_focus_node_id_for_payload(window);
+        let focused = snapshot.and_then(|snapshot| {
+            focused_node_id.and_then(|node_id| {
+                let selector_json = self.inspect_selector_json_for_node(window, node_id)?;
+                inspect_node_summary_v1(snapshot, node_id, selector_json)
+            })
+        });
+        let focus_hook = inspect_overlay_hook_v1("focused-node-bounds", viewport_bounds, &focused);
+        let focus_payload = UiInspectFocusV1 {
+            schema_version: 1,
+            window: window.data().as_ffi(),
+            captured_unix_ms: None,
+            viewport_bounds: ui_rect_from_rect(viewport_bounds),
+            scale_factor,
+            focused,
+            summary: self
+                .inspector
+                .focus_summary_line(window)
+                .map(str::to_string),
+            path: self.inspector.focus_path_line(window).map(str::to_string),
+            overlay_hook: focus_hook,
+        };
+        self.ws_send_live_payload_if_changed("inspect.focus", window, focus_payload);
+
+        let overlay_payload = overlay_summary_v1(window, snapshot);
+        self.ws_send_live_payload_if_changed("overlay.summary", window, overlay_payload);
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn inspect_focus_node_id_for_payload(&self, window: AppWindowId) -> Option<u64> {
+        self.inspector
+            .state
+            .focus_node_id
+            .get(&window)
+            .copied()
+            .or_else(|| self.inspector.last_picked_node_id.get(&window).copied())
+            .or_else(|| self.inspector.last_hovered_node_id.get(&window).copied())
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn inspect_selector_json_for_node(&self, window: AppWindowId, node_id: u64) -> Option<&str> {
+        if self
+            .inspector
+            .state
+            .focus_node_id
+            .get(&window)
+            .is_some_and(|id| *id == node_id)
+            && let Some(json) = self.inspector.state.focus_selector_json.get(&window)
+        {
+            return Some(json.as_str());
+        }
+        if self
+            .inspector
+            .last_picked_node_id
+            .get(&window)
+            .is_some_and(|id| *id == node_id)
+            && let Some(json) = self.inspector.last_picked_selector_json.get(&window)
+        {
+            return Some(json.as_str());
+        }
+        if self
+            .inspector
+            .last_hovered_node_id
+            .get(&window)
+            .is_some_and(|id| *id == node_id)
+            && let Some(json) = self.inspector.last_hovered_selector_json.get(&window)
+        {
+            return Some(json.as_str());
+        }
+        None
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn ws_send_live_payload_if_changed<T: serde::Serialize>(
+        &mut self,
+        ty: &'static str,
+        window: AppWindowId,
+        payload: T,
+    ) {
+        let Ok(json) = serde_json::to_string(&payload) else {
+            return;
+        };
+        let cache = match ty {
+            "inspect.hover" => &mut self.devtools_last_inspect_hover_json,
+            "inspect.focus" => &mut self.devtools_last_inspect_focus_json,
+            "overlay.summary" => &mut self.devtools_last_overlay_summary_json,
+            _ => return,
+        };
+        if cache.get(&window).is_some_and(|prev| prev == &json) {
+            return;
+        }
+        cache.insert(window, json);
+        let value = serde_json::to_value(payload).unwrap_or(serde_json::Value::Null);
+        self.ws_send(ty, value);
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
     pub(super) fn drive_devtools_ws_requests_for_window(
         &mut self,
         app: &App,
         window: AppWindowId,
         scale_factor: f32,
-        mut ui: Option<&mut UiTree<App>>,
+        ui: Option<&mut UiTree<App>>,
     ) -> bool {
         let mut request_redraw = false;
         request_redraw |= self.drive_devtools_ws_semantics_node_get(window, ui.as_deref());
-        request_redraw |= self.drive_devtools_ws_hit_test_explain(window, ui.as_deref_mut());
+        request_redraw |= self.drive_devtools_ws_hit_test_explain(window, ui);
         request_redraw |= self.drive_devtools_ws_screenshot_request(app, window, scale_factor);
         request_redraw
     }
@@ -782,6 +1037,97 @@ mod tests {
         }
     }
 
+    fn window_id(id: u64) -> AppWindowId {
+        AppWindowId::from(KeyData::from_ffi(id))
+    }
+
+    fn node_id(id: u64) -> NodeId {
+        NodeId::from(KeyData::from_ffi(id))
+    }
+
+    fn logical_rect(x: f32, y: f32, w: f32, h: f32) -> Rect {
+        Rect::new(Point::new(Px(x), Px(y)), fret_core::Size::new(Px(w), Px(h)))
+    }
+
+    fn semantics_node(
+        id: u64,
+        parent: Option<u64>,
+        role: SemanticsRole,
+        bounds: Rect,
+        test_id: Option<&str>,
+    ) -> fret_core::SemanticsNode {
+        fret_core::SemanticsNode {
+            id: node_id(id),
+            parent: parent.map(node_id),
+            role,
+            bounds,
+            flags: fret_core::SemanticsFlags::default(),
+            test_id: test_id.map(str::to_string),
+            active_descendant: None,
+            pos_in_set: None,
+            set_size: None,
+            label: None,
+            value: None,
+            extra: Default::default(),
+            text_selection: None,
+            text_composition: None,
+            actions: fret_core::SemanticsActions::default(),
+            labelled_by: Vec::new(),
+            described_by: Vec::new(),
+            controls: Vec::new(),
+            inline_spans: Vec::new(),
+        }
+    }
+
+    fn semantics_snapshot() -> fret_core::SemanticsSnapshot {
+        fret_core::SemanticsSnapshot {
+            window: window_id(7),
+            roots: vec![
+                fret_core::SemanticsRoot {
+                    root: node_id(1),
+                    visible: true,
+                    blocks_underlay_input: false,
+                    hit_testable: true,
+                    z_index: 0,
+                },
+                fret_core::SemanticsRoot {
+                    root: node_id(9),
+                    visible: true,
+                    blocks_underlay_input: true,
+                    hit_testable: true,
+                    z_index: 12,
+                },
+            ],
+            barrier_root: Some(node_id(9)),
+            focus_barrier_root: Some(node_id(9)),
+            focus: Some(node_id(42)),
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Panel,
+                    logical_rect(0.0, 0.0, 800.0, 600.0),
+                    None,
+                ),
+                semantics_node(
+                    42,
+                    Some(1),
+                    SemanticsRole::Button,
+                    logical_rect(12.0, 24.0, 96.0, 32.0),
+                    Some("save"),
+                ),
+                semantics_node(
+                    9,
+                    None,
+                    SemanticsRole::Dialog,
+                    logical_rect(100.0, 100.0, 300.0, 240.0),
+                    Some("modal"),
+                ),
+            ],
+        }
+    }
+
     #[test]
     fn environment_sources_get_ack_publishes_transport_session_monitor_topology() {
         let mut caps = fret_runtime::PlatformCapabilities::default();
@@ -831,5 +1177,46 @@ mod tests {
             Some("none")
         );
         assert_eq!(ack.runner_kind.as_deref(), Some("fret-bootstrap"));
+    }
+
+    #[test]
+    fn inspect_node_summary_v1_includes_bounds_and_root_hint() {
+        let snapshot = semantics_snapshot();
+        let summary = inspect_node_summary_v1(
+            &snapshot,
+            node_id(42).data().as_ffi(),
+            "{\"kind\":\"test_id\",\"id\":\"save\"}",
+        )
+        .expect("summary");
+
+        assert_eq!(summary.node_id, node_id(42).data().as_ffi());
+        assert_eq!(summary.role, "button");
+        assert_eq!(summary.test_id.as_deref(), Some("save"));
+        assert_eq!(summary.root, Some(node_id(1).data().as_ffi()));
+        assert_eq!(summary.root_z_index, Some(0));
+        assert_eq!(summary.bounds.x_px, 12.0);
+        assert_eq!(summary.bounds.y_px, 24.0);
+        assert_eq!(summary.bounds.w_px, 96.0);
+        assert_eq!(summary.bounds.h_px, 32.0);
+    }
+
+    #[test]
+    fn overlay_summary_v1_reports_barrier_and_blocking_roots() {
+        let snapshot = semantics_snapshot();
+        let summary = overlay_summary_v1(window_id(7), Some(&snapshot));
+
+        assert_eq!(summary.window, window_id(7).data().as_ffi());
+        assert_eq!(summary.barrier_root, Some(node_id(9).data().as_ffi()));
+        assert_eq!(summary.focus_barrier_root, Some(node_id(9).data().as_ffi()));
+        assert_eq!(summary.blocking_roots.len(), 1);
+        assert_eq!(summary.blocking_roots[0].root, node_id(9).data().as_ffi());
+        assert_eq!(summary.blocking_roots[0].z_index, 12);
+        assert_eq!(
+            summary
+                .topmost_interactive_root
+                .as_ref()
+                .map(|root| root.root),
+            Some(node_id(9).data().as_ffi())
+        );
     }
 }

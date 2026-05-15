@@ -99,6 +99,16 @@ pub(crate) fn drain_ws_messages(app: &mut App, st: &mut State) {
                         .update(&st.last_inspect_focus_json, |v| *v = text);
                 }
             }
+            "overlay.summary" => {
+                if !message_matches_selected_session(app, st, &msg) {
+                    continue;
+                }
+                if let Ok(text) = serde_json::to_string_pretty(&msg.payload) {
+                    let _ = app
+                        .models_mut()
+                        .update(&st.last_overlay_summary_json, |v| *v = text);
+                }
+            }
             "script.result" => {
                 if !message_matches_selected_session(app, st, &msg) {
                     continue;

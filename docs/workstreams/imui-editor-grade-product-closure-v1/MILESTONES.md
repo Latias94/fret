@@ -297,6 +297,29 @@ Current status:
   stale paint/scene, pixels-changed, perf-threshold, and resource-footprint diagnostics entrypoints.
   The owner remains `docs/workstreams/diag-devtools-gui-v1/`; this umbrella records the evidence
   only to keep the broader Dear ImGui-class product goal honest.
+- 2026-05-15 DevTools script-target gate command builder adds shared `fret-diag` command
+  parameterization for stale paint/scene and pixels-changed profiles plus a GUI selector,
+  `script.json`/`test-id` inputs, preview, and `Copy generated command` action. This starts the
+  profile-specific gate UI path without moving gate templates into `apps/fret-devtools` or
+  widening `fret-imui`.
+- 2026-05-15 DevTools script-target gate projection now returns structured `diag_args` and
+  `missing_inputs` alongside the command line, giving the next GUI launch/run slice a first-class
+  execution contract instead of forcing the GUI to parse shell command strings.
+- 2026-05-15 DevTools script-target gate launcher adds `Run generated command` for stale
+  paint/scene and pixels-changed profiles. The GUI executes the structured `diag_args` through
+  `fret-diag`, records in-flight/error status, and writes `.fret/diag/gate-runs/*.json` result
+  artifacts without moving gate policy into `apps/fret-devtools` or widening `fret-imui`.
+- 2026-05-15 generated gate result history makes stale paint/scene and pixels-changed gate runs
+  reviewable inside the GUI: selected result details, structured summary, raw JSON, path/command/JSON
+  copy actions, and platform URL open support all point at `.fret/diag/gate-runs/*.json` artifacts.
+- 2026-05-15 DevTools perf-threshold generated gate builder extends that same loop to
+  `perf-thresholds`: `fret-diag` owns the structured `diag perf` command projection, while the GUI
+  renders target/repeat/warmup/aggregate/threshold inputs and reuses the generated gate runner plus
+  `.fret/diag/gate-runs/*.json` result history.
+- 2026-05-15 DevTools resource-footprint generated gate builder closes the remaining first-class
+  gate UI item by first wiring the missing `diag repro` resource threshold CLI contract, then
+  exposing `resource-footprint-thresholds` as a shared generated command with GUI inputs for target,
+  working-set/peak/CPU thresholds, and a single launch argv item.
 - 2026-05-15 DevTools GUI selected-summary follow-up commands consume a shared `fret-diag`
   projection that converts the selected `bundle_dir` into concrete `diag stats`,
   `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`, visual-compare, and

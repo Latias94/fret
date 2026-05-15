@@ -21,6 +21,15 @@ FIRST_OPEN_DOC = "docs/diagnostics-first-open.md"
 DEVTOOLS_GUI_DOC = "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
 DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md"
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
+DEVTOOLS_GUI_WS_SOURCE = "apps/fret-devtools/src/ws.rs"
+DEVTOOLS_GUI_GATE_RUN_SOURCE = "apps/fret-devtools/src/gate_run.rs"
+DEVTOOLS_GATE_PROFILE_SOURCE = "crates/fret-diag/src/devtools_gate_profiles.rs"
+DEVTOOLS_PROTOCOL_SOURCE = "crates/fret-diag-protocol/src/lib.rs"
+BOOTSTRAP_DEVTOOLS_WS_SOURCE = (
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/ui_diagnostics_devtools_ws.rs"
+)
+DEVTOOLS_REPRO_CONTRACT_SOURCE = "crates/fret-diag/src/cli/contracts/commands/repro.rs"
+DEVTOOLS_CUTOVER_SOURCE = "crates/fret-diag/src/cli/cutover.rs"
 MAINTAINER_CHECKLIST_DOC = "docs/workstreams/diag-fearless-refactor-v2/MAINTAINER_CHECKLIST.md"
 REPO_PREFLIGHT_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns"
 REPO_PREFLIGHT_JSON_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns --json"
@@ -297,14 +306,50 @@ def _validate_devtools_gui_first_open_source(
     name = "fret-devtools gui first-open source"
     print(f"[diag-gate-imui-p2-devtools] {name}")
     path = cwd / DEVTOOLS_GUI_SOURCE
+    ws_path = cwd / DEVTOOLS_GUI_WS_SOURCE
+    gate_run_path = cwd / DEVTOOLS_GUI_GATE_RUN_SOURCE
+    gate_profile_path = cwd / DEVTOOLS_GATE_PROFILE_SOURCE
+    protocol_path = cwd / DEVTOOLS_PROTOCOL_SOURCE
+    bootstrap_ws_path = cwd / BOOTSTRAP_DEVTOOLS_WS_SOURCE
+    repro_contract_path = cwd / DEVTOOLS_REPRO_CONTRACT_SOURCE
+    cutover_path = cwd / DEVTOOLS_CUTOVER_SOURCE
     if progress is not None:
-        progress.record("step.start", name=name, path=str(path))
+        progress.record(
+            "step.start",
+            name=name,
+            path=str(path),
+            ws_path=str(ws_path),
+            gate_run_path=str(gate_run_path),
+            gate_profile_path=str(gate_profile_path),
+            protocol_path=str(protocol_path),
+            bootstrap_ws_path=str(bootstrap_ws_path),
+            repro_contract_path=str(repro_contract_path),
+            cutover_path=str(cutover_path),
+        )
     try:
         source = path.read_text(encoding="utf-8")
+        ws_source = ws_path.read_text(encoding="utf-8")
+        gate_run_source = gate_run_path.read_text(encoding="utf-8")
+        gate_profile_source = gate_profile_path.read_text(encoding="utf-8")
+        protocol_source = protocol_path.read_text(encoding="utf-8")
+        bootstrap_ws_source = bootstrap_ws_path.read_text(encoding="utf-8")
+        repro_contract_source = repro_contract_path.read_text(encoding="utf-8")
+        cutover_source = cutover_path.read_text(encoding="utf-8")
     except OSError as err:
         if progress is not None:
             progress.record("step.fail", name=name, error=str(err))
-        raise SystemExit(f"Step failed: {name} (failed to read {path}: {err})") from err
+        raise SystemExit(f"Step failed: {name} (failed to read source: {err})") from err
+    source = "\n".join(
+        [
+            source,
+            ws_source,
+            gate_run_source,
+            protocol_source,
+            bootstrap_ws_source,
+            repro_contract_source,
+            cutover_source,
+        ]
+    )
 
     for marker in (
         f'const DEVTOOLS_FIRST_OPEN_DOC: &str = "{FIRST_OPEN_DOC}"',
@@ -326,37 +371,122 @@ def _validate_devtools_gui_first_open_source(
         'const DEVTOOLS_METRICS_LAYOUT_PERF_COMMAND: &str =',
         'const DEVTOOLS_DEBUG_TRIAGE_COMMAND: &str =',
         'const DEVTOOLS_DEBUG_HOTSPOTS_COMMAND: &str =',
-        'const DEVTOOLS_GATE_STALE_COMMAND: &str =',
-        'const DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND: &str =',
-        'const DEVTOOLS_GATE_PERF_THRESHOLDS_COMMAND: &str =',
-        'const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_CAPTURE_COMMAND: &str =',
-        'const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND: &str =',
+        "DevtoolsGateScriptTargetCommandInputV1",
+        "DevtoolsGatePerfThresholdCommandInputV1",
+        "DevtoolsGateResourceFootprintThresholdCommandInputV1",
+        "UiInspectHoverV1",
+        "UiInspectFocusV1",
+        "UiInspectOverlayHookV1",
+        "UiInspectNodeSummaryV1",
+        "UiOverlayRootHintV1",
+        "UiOverlaySummaryV1",
+        "devtools_gate_profile_lines",
+        "devtools_gate_profiles_v1",
+        "devtools_gate_perf_threshold_command",
+        "devtools_gate_resource_footprint_threshold_command",
+        "devtools_gate_script_target_command",
+        "devtools_gate_script_target_profile_ids_v1",
+        "mod gate_run;",
+        'const CMD_GATE_RUN_GENERATED: &str = "fret.devtools.gate.run_generated"',
+        "gate_run::poll_gate_run_jobs(cx.app, st)",
         "First-open Evidence Path",
         "Canonical docs, repo preflight, artifact roots, product-chain evidence, and smoke gate stay visible in the GUI shell.",
         "Demo / Metrics / Debug Routes",
         "Always-available editor demos, metrics commands, and debug drill-down entrypoints stay visible in the GUI shell.",
         "Gate Commands",
         "First-class stale, pixels, perf-threshold, and resource-footprint gate entrypoints stay visible from the GUI shell.",
+        "Live Inspect Hover Bounds",
+        "Structured hovered-node bounds projected from inspect.hover.",
+        "Live Inspect Overlay Hooks",
+        "Viewport overlay hooks and overlay.summary root hints for live inspect overlays.",
+        "Raw Inspect Payloads",
+        "devtools.inspect.hover_bounds",
+        "devtools.inspect.overlay_hooks",
+        "devtools.inspect.raw_payloads",
+        "last_overlay_summary_json",
+        '"overlay.summary"',
+        "inspect_hover_bounds_lines(",
+        "inspect_overlay_hook_lines(",
+        "ws_publish_live_inspect_payloads(",
+        "ws_send_live_payload_if_changed(",
+        "inspect_node_summary_v1(",
+        "overlay_summary_v1(",
+        "hovered-node-bounds",
+        "focused-node-bounds",
         "devtools_first_open_lines(st.cfg.fs_out_dir.as_ref())",
         "devtools_demo_metrics_debug_lines(st.cfg.fs_out_dir.as_ref())",
         "devtools_gate_command_lines(st.cfg.fs_out_dir.as_ref())",
+        "gate_command_rows.push(devtools_gate_profile_command_builder(cx, st))",
+        "devtools_gate_profile_lines(artifacts_root)",
+        "generated_gate_command_from_state(cx.app, st)",
+        "generated_gate_command_from_state(app, st)",
+        "devtools_gate_perf_threshold_command(input)",
+        "devtools_gate_profile_action_rows(cx)",
+        "Copy generated command",
+        "Run generated command",
+        "Copy command",
+        "missing inputs:",
+        "diag args:",
+        "gate_run_in_flight",
+        "gate_run_last_result_path",
+        "gate_run_last_result_json",
+        "gate_run_result_history",
+        "gate_run_selected_result_path",
+        "gate_run_last_error",
+        "last_gate_result=",
+        "gate_run::start_gate_run(app, st, command)",
+        "gate_run_history_list(",
+        "gate_run::gate_run_result_summary_lines(",
+        "gate_run::gate_run_result_history_summary_lines(",
+        "gate_run::gate_run_result_history_selected_or_latest_entry(",
+        "gate_run::gate_run_result_history_entry_detail_lines(",
+        "fret_devtools_gate_run_result",
+        'join(".fret").join("diag").join("gate-runs")',
+        "new_gate_run_channel",
+        "Generated Gate Result Details",
+        "Generated Gate Result Summary",
+        "Generated Gate Result History",
+        "Copy gate result",
+        "Open gate JSON",
+        "Copy gate command",
+        "Copy gate JSON",
+        'const CMD_COPY_GATE_RESULT_PATH: &str = "fret.devtools.gate.copy_result_path"',
+        'const CMD_COPY_GATE_RESULT_JSON: &str = "fret.devtools.gate.copy_result_json"',
+        'const CMD_COPY_GATE_RESULT_COMMAND: &str = "fret.devtools.gate.copy_result_command"',
+        'const CMD_OPEN_GATE_RESULT_JSON: &str = "fret.devtools.gate.open_result_json"',
+        "devtools.gate.script_json",
+        "devtools.gate.test_id",
+        "devtools.gate.perf_target",
+        "devtools.gate.perf_repeat",
+        "devtools.gate.perf_warmup_frames",
+        "devtools.gate.perf_threshold_agg",
+        "devtools.gate.perf_max_top_total_us",
+        "devtools.gate.perf_max_renderer_encode_scene_us",
+        "devtools.gate.resource_target",
+        "devtools.gate.resource_launch_command",
+        "devtools.gate.resource_max_working_set_bytes",
+        "devtools.gate.resource_max_peak_working_set_bytes",
+        "devtools.gate.resource_max_cpu_avg_percent_total_cores",
+        "max_working_set_bytes: args.max_working_set_bytes",
+        "max_peak_working_set_bytes: args.max_peak_working_set_bytes",
+        "max_cpu_avg_percent_total_cores: args.max_cpu_avg_percent_total_cores",
+        "pub max_working_set_bytes: Option<u64>",
+        "pub max_peak_working_set_bytes: Option<u64>",
+        "pub max_cpu_avg_percent_total_cores: Option<f64>",
+        "fn generated_gate_command_from_state(",
+        "fn script_target_gate_inputs(",
+        "fn perf_threshold_gate_inputs(",
+        "fn resource_footprint_threshold_gate_inputs(",
         "fn devtools_first_open_lines(artifacts_root: &str) -> Vec<String>",
         "fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String>",
         "fn devtools_gate_command_lines(artifacts_root: &str) -> Vec<String>",
+        "fn devtools_gate_profile_command_builder(",
+        "fn devtools_gate_profile_action_rows(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>",
         "direct loop: diag run -> diag latest -> diag compare",
         "campaign loop: diag campaign run {DEVTOOLS_FIRST_OPEN_CAMPAIGN_ID} -> diag summarize -> diag dashboard",
         "route: {DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID}",
-        "gate route: first-class-gates",
         "metrics stats: {DEVTOOLS_METRICS_STATS_COMMAND}",
         "debug triage: {DEVTOOLS_DEBUG_TRIAGE_COMMAND}",
-        "stale paint/scene: {DEVTOOLS_GATE_STALE_COMMAND}",
-        "pixels changed: {DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND}",
-        "perf thresholds: {DEVTOOLS_GATE_PERF_THRESHOLDS_COMMAND}",
-        "resource footprint capture: {DEVTOOLS_GATE_RESOURCE_FOOTPRINT_CAPTURE_COMMAND}",
-        "resource footprint compare: {DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND}",
-        "check.pixels_changed.json",
-        "check.perf_thresholds.json",
-        "resource.footprint.json",
         "regression_selected_perf_evidence",
         "regression_summary_drilldown(&summary)",
         "regression_bundle_followup_command_lines(selected_bundle_dirs.iter().map(|v| v.as_ref()))",
@@ -380,8 +510,63 @@ def _validate_devtools_gui_first_open_source(
         "devtools_gate_command_lines_surface_first_class_gates",
     ):
         _assert_text_contains(name, source, marker)
+    for marker in (
+        "pub struct DevtoolsGateProfileV1",
+        "pub struct DevtoolsGateCommandV1",
+        "pub struct DevtoolsGateScriptTargetCommandInputV1",
+        "pub struct DevtoolsGatePerfThresholdCommandInputV1",
+        "pub struct DevtoolsGateResourceFootprintThresholdCommandInputV1",
+        "pub type DevtoolsGateScriptTargetCommandV1 = DevtoolsGateCommandV1",
+        'pub const DEVTOOLS_GATE_PERF_THRESHOLD_PROFILE_ID_V1: &str = "perf-thresholds"',
+        'pub const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_THRESHOLD_PROFILE_ID_V1: &str =',
+        "pub const DEVTOOLS_GATE_SCRIPT_TARGET_PROFILE_IDS_V1",
+        'pub const DEVTOOLS_GATE_STALE_COMMAND: &str =',
+        'pub const DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND: &str =',
+        'pub const DEVTOOLS_GATE_PERF_THRESHOLDS_COMMAND: &str =',
+        'pub const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_THRESHOLDS_COMMAND: &str =',
+        'pub const DEVTOOLS_GATE_RESOURCE_FOOTPRINT_COMPARE_COMMAND: &str =',
+        'id: "stale-paint-scene"',
+        'id: "pixels-changed"',
+        'id: "perf-thresholds"',
+        'id: "resource-footprint-thresholds"',
+        'id: "resource-footprint-compare"',
+        "gate route: first-class-gates",
+        "stale paint/scene",
+        "pixels changed",
+        "perf thresholds",
+        "resource footprint thresholds",
+        "resource footprint compare",
+        "check.pixels_changed.json",
+        "check.perf_thresholds.json",
+        "check.resource_footprint.json",
+        "resource.footprint.json",
+        "pub fn devtools_gate_profile_lines(artifacts_root: &str) -> Vec<String>",
+        "pub fn devtools_gate_profiles_v1() -> &'static [DevtoolsGateProfileV1]",
+        "pub fn devtools_gate_perf_threshold_command(",
+        "pub fn devtools_gate_perf_threshold_command_line(",
+        "pub fn devtools_gate_resource_footprint_threshold_command(",
+        "pub fn devtools_gate_resource_footprint_threshold_command_line(",
+        "pub fn devtools_gate_script_target_profile_ids_v1() -> &'static [&'static str]",
+        "pub fn devtools_gate_script_target_command(",
+        "pub fn devtools_gate_script_target_command_line(",
+        "pub fn is_runnable(&self) -> bool",
+        "devtools_gate_script_target_profiles_are_parameterized",
+        "devtools_gate_script_target_commands_include_runnable_diag_args",
+        "devtools_gate_perf_threshold_command_includes_runnable_diag_args",
+        "devtools_gate_resource_footprint_threshold_command_includes_runnable_diag_args",
+    ):
+        _assert_text_contains(name, gate_profile_source, marker)
     if progress is not None:
-        progress.record("step.pass", name=name, path=str(path))
+        progress.record(
+            "step.pass",
+            name=name,
+            path=str(path),
+            ws_path=str(ws_path),
+            gate_run_path=str(gate_run_path),
+            gate_profile_path=str(gate_profile_path),
+            protocol_path=str(protocol_path),
+            bootstrap_ws_path=str(bootstrap_ws_path),
+        )
 
 
 def _validate_first_open_docs(

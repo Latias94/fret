@@ -36,6 +36,15 @@ pub(crate) struct ReproCommandArgs {
     #[arg(long = "trace-chrome")]
     pub trace_chrome: bool,
 
+    #[arg(long = "max-working-set-bytes")]
+    pub max_working_set_bytes: Option<u64>,
+
+    #[arg(long = "max-peak-working-set-bytes")]
+    pub max_peak_working_set_bytes: Option<u64>,
+
+    #[arg(long = "max-cpu-avg-percent-total-cores")]
+    pub max_cpu_avg_percent_total_cores: Option<f64>,
+
     #[command(flatten)]
     pub launch: LaunchArgs,
 }

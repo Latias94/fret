@@ -3092,6 +3092,88 @@ pub struct UiInspectConfigV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiInspectOverlayHookV1 {
+    pub kind: String,
+    pub coordinate_space: String,
+    pub viewport_bounds: UiRectV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_bounds: Option<UiRectV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_node_id: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiInspectNodeSummaryV1 {
+    pub node_id: u64,
+    pub role: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub test_id: Option<String>,
+    pub selector_json: String,
+    pub bounds: UiRectV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_z_index: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiInspectHoverV1 {
+    pub schema_version: u32,
+    pub window: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub captured_unix_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pointer: Option<UiPointV1>,
+    pub viewport_bounds: UiRectV1,
+    pub scale_factor: f32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hovered: Option<UiInspectNodeSummaryV1>,
+    pub overlay_hook: UiInspectOverlayHookV1,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiInspectFocusV1 {
+    pub schema_version: u32,
+    pub window: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub captured_unix_ms: Option<u64>,
+    pub viewport_bounds: UiRectV1,
+    pub scale_factor: f32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focused: Option<UiInspectNodeSummaryV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+    pub overlay_hook: UiInspectOverlayHookV1,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiOverlayRootHintV1 {
+    pub root: u64,
+    pub visible: bool,
+    pub blocks_underlay_input: bool,
+    pub hit_testable: bool,
+    pub z_index: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiOverlaySummaryV1 {
+    pub schema_version: u32,
+    pub window: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub captured_unix_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub barrier_root: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focus_barrier_root: Option<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub blocking_roots: Vec<UiOverlayRootHintV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub topmost_interactive_root: Option<UiOverlayRootHintV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DevtoolsBundleDumpV1 {
     pub schema_version: u32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -4060,6 +4142,90 @@ mod tests {
         })
         .unwrap();
         assert_eq!(value, serde_json::json!({ "schema_version": 1 }));
+    }
+
+    #[test]
+    fn live_inspect_payloads_roundtrip_bounds_and_overlay_summary() {
+        let rect = UiRectV1 {
+            x_px: 12.0,
+            y_px: 24.0,
+            w_px: 96.0,
+            h_px: 32.0,
+        };
+        let viewport = UiRectV1 {
+            x_px: 0.0,
+            y_px: 0.0,
+            w_px: 800.0,
+            h_px: 600.0,
+        };
+        let node = UiInspectNodeSummaryV1 {
+            node_id: 42,
+            role: "button".to_string(),
+            test_id: Some("save".to_string()),
+            selector_json: "{\"kind\":\"test_id\",\"id\":\"save\"}".to_string(),
+            bounds: rect,
+            root: Some(1),
+            root_z_index: Some(3),
+        };
+        let hook = UiInspectOverlayHookV1 {
+            kind: "hovered-node-bounds".to_string(),
+            coordinate_space: "window_logical_px".to_string(),
+            viewport_bounds: viewport,
+            target_bounds: Some(rect),
+            target_node_id: Some(42),
+        };
+        let hover = UiInspectHoverV1 {
+            schema_version: 1,
+            window: 7,
+            captured_unix_ms: None,
+            pointer: None,
+            viewport_bounds: viewport,
+            scale_factor: 1.0,
+            hovered: Some(node),
+            overlay_hook: hook,
+        };
+
+        let hover_value = serde_json::to_value(&hover).unwrap();
+        let hover_roundtrip: UiInspectHoverV1 = serde_json::from_value(hover_value).unwrap();
+        assert_eq!(hover_roundtrip.window, 7);
+        assert_eq!(
+            hover_roundtrip.hovered.as_ref().map(|node| node.node_id),
+            Some(42)
+        );
+        assert_eq!(
+            hover_roundtrip
+                .overlay_hook
+                .target_bounds
+                .as_ref()
+                .map(|rect| rect.w_px),
+            Some(96.0)
+        );
+
+        let overlay = UiOverlaySummaryV1 {
+            schema_version: 1,
+            window: 7,
+            captured_unix_ms: None,
+            barrier_root: Some(9),
+            focus_barrier_root: Some(9),
+            blocking_roots: vec![UiOverlayRootHintV1 {
+                root: 9,
+                visible: true,
+                blocks_underlay_input: true,
+                hit_testable: true,
+                z_index: 12,
+            }],
+            topmost_interactive_root: Some(UiOverlayRootHintV1 {
+                root: 9,
+                visible: true,
+                blocks_underlay_input: true,
+                hit_testable: true,
+                z_index: 12,
+            }),
+        };
+        let overlay_value = serde_json::to_value(&overlay).unwrap();
+        let overlay_roundtrip: UiOverlaySummaryV1 = serde_json::from_value(overlay_value).unwrap();
+        assert_eq!(overlay_roundtrip.barrier_root, Some(9));
+        assert_eq!(overlay_roundtrip.blocking_roots.len(), 1);
     }
 
     #[test]
