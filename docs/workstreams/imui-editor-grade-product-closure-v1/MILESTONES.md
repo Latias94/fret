@@ -302,6 +302,13 @@ Current status:
   `script.json`/`test-id` inputs, preview, and `Copy generated command` action. This starts the
   profile-specific gate UI path without moving gate templates into `apps/fret-devtools` or
   widening `fret-imui`.
+- 2026-05-15 DevTools script-target gate projection now returns structured `diag_args` and
+  `missing_inputs` alongside the command line, giving the next GUI launch/run slice a first-class
+  execution contract instead of forcing the GUI to parse shell command strings.
+- 2026-05-15 DevTools script-target gate launcher adds `Run generated command` for stale
+  paint/scene and pixels-changed profiles. The GUI executes the structured `diag_args` through
+  `fret-diag`, records in-flight/error status, and writes `.fret/diag/gate-runs/*.json` result
+  artifacts without moving gate policy into `apps/fret-devtools` or widening `fret-imui`.
 - 2026-05-15 DevTools GUI selected-summary follow-up commands consume a shared `fret-diag`
   projection that converts the selected `bundle_dir` into concrete `diag stats`,
   `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`, visual-compare, and

@@ -171,6 +171,13 @@ reopen.
       pixels-changed gate profiles from `script.json` + `test-id`, and the DevTools GUI exposes a
       selected-profile command builder with preview and `Copy generated command` without moving
       gate templates into the GUI.
+      Maintenance: the same script-target gate projection now includes structured `diag_args` and
+      `missing_inputs`, giving the next GUI launch/run slice a safe execution contract instead of
+      parsing the copied shell command.
+      Maintenance: the DevTools GUI script-target gate builder can now launch the generated stale
+      paint/scene or pixels-changed command through the shared diagnostics engine and writes
+      `.fret/diag/gate-runs/*.json` result artifacts, keeping this as DevTools productization
+      rather than `fret-imui` runtime growth.
       Maintenance: selected regression summaries now generate concrete `bundle_dir` follow-up
       commands for stats, layout perf, memory, triage, hotspots, visual compare, and footprint
       compare from a shared `fret-diag` projection, reducing GUI-to-CLI friction without adding

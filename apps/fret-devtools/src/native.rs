@@ -10,7 +10,7 @@ use fret_core::{AppWindowId, Px, UiServices};
 use fret_diag::devtools::DevtoolsOps;
 use fret_diag::{
     DevtoolsGateScriptTargetCommandInputV1, devtools_gate_profile_lines,
-    devtools_gate_profiles_v1, devtools_gate_script_target_command_line,
+    devtools_gate_profiles_v1, devtools_gate_script_target_command,
     devtools_gate_script_target_profile_ids_v1,
 };
 use fret_diag::regression_summary::{
@@ -40,8 +40,9 @@ use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::facade as shadcn;
 
-mod pack;
 mod followup;
+mod gate_run;
+mod pack;
 mod script_studio;
 mod semantics;
 mod summarize;
@@ -78,6 +79,7 @@ const CMD_COPY_FOLLOWUP_RESULT_JSON: &str = "fret.devtools.regression.followup.c
 const CMD_COPY_FOLLOWUP_RESULT_COMMAND: &str =
     "fret.devtools.regression.followup.copy_result_command";
 const CMD_OPEN_FOLLOWUP_RESULT_JSON: &str = "fret.devtools.regression.followup.open_result_json";
+const CMD_GATE_RUN_GENERATED: &str = "fret.devtools.gate.run_generated";
 
 const DEVTOOLS_FIRST_OPEN_DOC: &str = "docs/diagnostics-first-open.md";
 const DEVTOOLS_GUI_BRANCH_DOC: &str =
@@ -143,6 +145,11 @@ struct State {
     gate_profile_open: Model<bool>,
     gate_profile_script_json: Model<String>,
     gate_profile_test_id: Model<String>,
+    gate_run_in_flight: Model<bool>,
+    gate_run_last_command_line: Model<Option<Arc<str>>>,
+    gate_run_last_result_path: Model<Option<Arc<str>>>,
+    gate_run_last_result_json: Model<String>,
+    gate_run_last_error: Model<Option<Arc<str>>>,
 
     script_paths: script_studio::ScriptPaths,
     script_library: Model<Vec<script_studio::ScriptItem>>,
@@ -252,6 +259,8 @@ struct State {
     summarize_rx: std::sync::mpsc::Receiver<summarize::SummarizeJobResult>,
     followup_tx: std::sync::mpsc::Sender<followup::FollowupJobResult>,
     followup_rx: std::sync::mpsc::Receiver<followup::FollowupJobResult>,
+    gate_run_tx: std::sync::mpsc::Sender<gate_run::GateRunJobResult>,
+    gate_run_rx: std::sync::mpsc::Receiver<gate_run::GateRunJobResult>,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -321,6 +330,11 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let gate_profile_open = app.models_mut().insert(false);
     let gate_profile_script_json = app.models_mut().insert(String::new());
     let gate_profile_test_id = app.models_mut().insert(String::new());
+    let gate_run_in_flight = app.models_mut().insert(false);
+    let gate_run_last_command_line = app.models_mut().insert(None::<Arc<str>>);
+    let gate_run_last_result_path = app.models_mut().insert(None::<Arc<str>>);
+    let gate_run_last_result_json = app.models_mut().insert(String::new());
+    let gate_run_last_error = app.models_mut().insert(None::<Arc<str>>);
 
     let repo_root = script_studio::repo_root_from_manifest_dir()
         .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
@@ -461,6 +475,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let (pack_tx, pack_rx) = pack::new_pack_channel();
     let (summarize_tx, summarize_rx) = summarize::new_summarize_channel();
     let (followup_tx, followup_rx) = followup::new_followup_channel();
+    let (gate_run_tx, gate_run_rx) = gate_run::new_gate_run_channel();
 
     let mut st = State {
         cfg,
@@ -475,6 +490,11 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         gate_profile_open,
         gate_profile_script_json,
         gate_profile_test_id,
+        gate_run_in_flight,
+        gate_run_last_command_line,
+        gate_run_last_result_path,
+        gate_run_last_result_json,
+        gate_run_last_error,
         script_paths,
         script_library,
         loaded_script_origin,
@@ -576,6 +596,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         summarize_rx,
         followup_tx,
         followup_rx,
+        gate_run_tx,
+        gate_run_rx,
     };
 
     refresh_script_library(app, &mut st);
@@ -587,6 +609,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     pack::poll_pack_jobs(cx.app, st);
     summarize::poll_summarize_jobs(cx.app, st);
     followup::poll_followup_jobs(cx.app, st);
+    gate_run::poll_gate_run_jobs(cx.app, st);
     ws::drain_ws_messages(cx.app, st);
     ws::sync_selected_session_to_client(cx.app, st);
     semantics::refresh_semantics_cache_if_needed(cx.app, st);
@@ -625,6 +648,11 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.gate_profile_open, Invalidation::Paint);
     cx.observe_model(&st.gate_profile_script_json, Invalidation::Paint);
     cx.observe_model(&st.gate_profile_test_id, Invalidation::Paint);
+    cx.observe_model(&st.gate_run_in_flight, Invalidation::Paint);
+    cx.observe_model(&st.gate_run_last_command_line, Invalidation::Paint);
+    cx.observe_model(&st.gate_run_last_result_path, Invalidation::Paint);
+    cx.observe_model(&st.gate_run_last_result_json, Invalidation::Paint);
+    cx.observe_model(&st.gate_run_last_error, Invalidation::Paint);
     cx.observe_model(&st.script_library, Invalidation::Paint);
     cx.observe_model(&st.loaded_script_origin, Invalidation::Paint);
     cx.observe_model(&st.loaded_script_path, Invalidation::Paint);
@@ -4411,6 +4439,38 @@ fn on_command(
                 text: result_json,
             });
         }
+        CMD_GATE_RUN_GENERATED => {
+            let selected_profile_id = app
+                .models()
+                .read(&st.gate_profile_selected_id, |v| v.clone())
+                .ok()
+                .flatten()
+                .unwrap_or_else(|| Arc::<str>::from("stale-paint-scene"));
+            let script_json = app
+                .models()
+                .read(&st.gate_profile_script_json, |v| v.clone())
+                .unwrap_or_default();
+            let test_id = app
+                .models()
+                .read(&st.gate_profile_test_id, |v| v.clone())
+                .unwrap_or_default();
+            let input = DevtoolsGateScriptTargetCommandInputV1::new(&script_json, &test_id);
+            let Some(command) =
+                devtools_gate_script_target_command(selected_profile_id.as_ref(), input)
+            else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    &format!("gate run refused (unsupported profile {selected_profile_id})"),
+                );
+                app.request_redraw(window);
+                return;
+            };
+            if let Err(err) = gate_run::start_gate_run(app, st, command) {
+                push_log(app, &st.log_lines, &format!("gate run refused: {err}"));
+            }
+            app.request_redraw(window);
+        }
         CMD_SCRIPT_FORK => {
             fork_loaded_script(app, window, st);
             app.request_redraw(window);
@@ -5928,10 +5988,10 @@ fn devtools_gate_profile_command_builder(
         .read(&st.gate_profile_test_id, |v| v.clone())
         .unwrap_or_default();
     let input = DevtoolsGateScriptTargetCommandInputV1::new(&script_json, &test_id);
-    let generated_command =
-        devtools_gate_script_target_command_line(selected_profile_id.as_ref(), input);
+    let generated_command = devtools_gate_script_target_command(selected_profile_id.as_ref(), input);
     let command_preview = generated_command
-        .clone()
+        .as_ref()
+        .map(|command| command.command_line.clone())
         .unwrap_or_else(|| "Select a script-target gate profile.".to_string());
     let selected_profile_label = devtools_gate_profiles_v1()
         .iter()
@@ -5962,7 +6022,52 @@ fn devtools_gate_profile_command_builder(
         .test_id("devtools.gate.test_id")
         .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(180.0)))
         .into_element(cx);
+    let command_state_line = generated_command
+        .as_ref()
+        .map(|command| {
+            if command.is_runnable() {
+                format!("diag args: {}", command.diag_args.join(" "))
+            } else if command.missing_inputs.is_empty() {
+                "diag args: <not runnable>".to_string()
+            } else {
+                format!("missing inputs: {}", command.missing_inputs.join(", "))
+            }
+        })
+        .unwrap_or_else(|| "diag args: <unsupported profile>".to_string());
     let copy_enabled = generated_command.is_some();
+    let run_enabled = generated_command
+        .as_ref()
+        .is_some_and(|command| command.is_runnable());
+    let gate_run_in_flight = cx
+        .app
+        .models()
+        .read(&st.gate_run_in_flight, |v| *v)
+        .unwrap_or(false);
+    let gate_run_result_path = cx
+        .app
+        .models()
+        .read(&st.gate_run_last_result_path, |v| v.clone())
+        .ok()
+        .flatten()
+        .map(|v| v.to_string());
+    let gate_run_error = cx
+        .app
+        .models()
+        .read(&st.gate_run_last_error, |v| v.clone())
+        .ok()
+        .flatten()
+        .map(|v| v.to_string());
+    let gate_run_result_json = cx
+        .app
+        .models()
+        .read(&st.gate_run_last_result_json, |v| v.clone())
+        .unwrap_or_default();
+    let gate_run_status_line = format!(
+        "gate_run_in_flight={} last_gate_result={} last_gate_error={}",
+        gate_run_in_flight,
+        gate_run_result_path.as_deref().unwrap_or("-"),
+        gate_run_error.as_deref().unwrap_or("-")
+    );
     let command_line_for_copy = command_preview.clone();
     let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
         let token = host.next_clipboard_token();
@@ -5979,19 +6084,45 @@ fn devtools_gate_profile_command_builder(
         .disabled(!copy_enabled)
         .on_activate(on_copy)
         .into_element(cx);
-    let controls = ui::h_row(|_cx| [profile_select, script_input, test_id_input, copy_button])
-        .gap(fret_ui_kit::Space::N2)
-        .items_center()
-        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    let run_button = shadcn::Button::new("Run generated command")
+        .variant(shadcn::ButtonVariant::Secondary)
+        .size(shadcn::ButtonSize::Sm)
+        .disabled(!run_enabled || gate_run_in_flight)
+        .on_click(CMD_GATE_RUN_GENERATED)
         .into_element(cx);
+    let controls = ui::h_row(|_cx| {
+        [
+            profile_select,
+            script_input,
+            test_id_input,
+            copy_button,
+            run_button,
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx);
     let preview = text_blob_sized(cx, command_preview, Px(58.0));
+    let result_preview = text_blob_sized(
+        cx,
+        if gate_run_result_json.trim().is_empty() {
+            "<no generated gate result yet>".to_string()
+        } else {
+            gate_run_result_json
+        },
+        Px(92.0),
+    );
     ui::v_stack(|cx| {
         [
             cx.text(format!(
                 "Runnable script-target gate: {selected_profile_label}"
             )),
             controls,
+            cx.text(command_state_line),
+            cx.text(gate_run_status_line),
             preview,
+            result_preview,
         ]
     })
     .gap(fret_ui_kit::Space::N2)

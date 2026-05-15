@@ -112,6 +112,12 @@ Conventions:
         pixels-changed profiles from `script.json` + `test-id`; the GUI exposes profile selection,
         inputs, command preview, and `Copy generated command` without making the GUI own command
         templates.
+  - [x] Script-target gate projection now includes structured `diag_args` plus `missing_inputs`,
+        giving the GUI a runnable contract for the next launch/run slice without parsing shell
+        command strings.
+  - [x] GUI script-target gate builder can launch the generated stale paint/scene or
+        pixels-changed gate command through the shared diagnostics engine and writes a lightweight
+        `.fret/diag/gate-runs/*.json` result artifact.
   - [x] Selected-summary follow-up commands generated from the selected `bundle_dir`, covering
         stats, layout perf, memory, triage, hotspots, visual compare, and footprint compare.
   - [x] Structured follow-up command projection separates bundle-local runnable commands from

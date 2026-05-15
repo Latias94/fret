@@ -33,6 +33,21 @@ impl<'a> DevtoolsGateScriptTargetCommandInputV1<'a> {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DevtoolsGateScriptTargetCommandV1 {
+    pub id: String,
+    pub label: String,
+    pub command_line: String,
+    pub diag_args: Vec<String>,
+    pub missing_inputs: Vec<&'static str>,
+}
+
+impl DevtoolsGateScriptTargetCommandV1 {
+    pub fn is_runnable(&self) -> bool {
+        self.missing_inputs.is_empty() && !self.diag_args.is_empty()
+    }
+}
+
 pub const DEVTOOLS_GATE_PROFILES_V1: &[DevtoolsGateProfileV1] = &[
     DevtoolsGateProfileV1 {
         id: "stale-paint-scene",
@@ -110,6 +125,13 @@ pub fn devtools_gate_script_target_command_line(
     profile_id: &str,
     input: DevtoolsGateScriptTargetCommandInputV1<'_>,
 ) -> Option<String> {
+    devtools_gate_script_target_command(profile_id, input).map(|command| command.command_line)
+}
+
+pub fn devtools_gate_script_target_command(
+    profile_id: &str,
+    input: DevtoolsGateScriptTargetCommandInputV1<'_>,
+) -> Option<DevtoolsGateScriptTargetCommandV1> {
     let profile_id = profile_id.trim();
     if !DEVTOOLS_GATE_SCRIPT_TARGET_PROFILE_IDS_V1.contains(&profile_id) {
         return None;
@@ -119,12 +141,23 @@ pub fn devtools_gate_script_target_command_line(
         .find(|profile| profile.id == profile_id)?;
     let script_json = shell_quote_arg_or_placeholder(input.script_json, "<script.json>");
     let test_id = shell_quote_arg_or_placeholder(input.test_id, "<test-id>");
-    Some(
-        profile
-            .command_line
-            .replace("<script.json>", &script_json)
-            .replace("<test-id>", &test_id),
-    )
+    let command_line = profile
+        .command_line
+        .replace("<script.json>", &script_json)
+        .replace("<test-id>", &test_id);
+    let missing_inputs = script_target_missing_inputs(input);
+    let diag_args = if missing_inputs.is_empty() {
+        script_target_diag_args(profile.id, input.script_json.trim(), input.test_id.trim())
+    } else {
+        Vec::new()
+    };
+    Some(DevtoolsGateScriptTargetCommandV1 {
+        id: profile.id.to_string(),
+        label: profile.label.to_string(),
+        command_line,
+        diag_args,
+        missing_inputs,
+    })
 }
 
 pub fn devtools_gate_profile_lines(artifacts_root: &str) -> Vec<String> {
@@ -162,6 +195,39 @@ fn shell_quote_arg_or_placeholder(value: &str, placeholder: &str) -> String {
     } else {
         shell_quote_arg(value)
     }
+}
+
+fn script_target_missing_inputs(
+    input: DevtoolsGateScriptTargetCommandInputV1<'_>,
+) -> Vec<&'static str> {
+    let mut missing = Vec::new();
+    if input.script_json.trim().is_empty() {
+        missing.push("script.json");
+    }
+    if input.test_id.trim().is_empty() {
+        missing.push("test-id");
+    }
+    missing
+}
+
+fn script_target_diag_args(profile_id: &str, script_json: &str, test_id: &str) -> Vec<String> {
+    let mut args = vec!["run".to_string(), script_json.to_string()];
+    match profile_id {
+        "stale-paint-scene" => {
+            args.extend([
+                "--check-stale-paint".to_string(),
+                test_id.to_string(),
+                "--check-stale-scene".to_string(),
+                test_id.to_string(),
+            ]);
+        }
+        "pixels-changed" => {
+            args.extend(["--check-pixels-changed".to_string(), test_id.to_string()]);
+        }
+        _ => return Vec::new(),
+    }
+    args.push("--json".to_string());
+    args
 }
 
 #[cfg(test)]
@@ -236,19 +302,68 @@ mod tests {
     }
 
     #[test]
+    fn devtools_gate_script_target_commands_include_runnable_diag_args() {
+        let input = DevtoolsGateScriptTargetCommandInputV1::new(
+            "tools/diag-scripts/smoke.json",
+            "button.ok",
+        );
+        let stale = devtools_gate_script_target_command("stale-paint-scene", input).unwrap();
+        assert!(stale.is_runnable());
+        assert!(stale.missing_inputs.is_empty());
+        assert_eq!(
+            stale.diag_args,
+            vec![
+                "run",
+                "tools/diag-scripts/smoke.json",
+                "--check-stale-paint",
+                "button.ok",
+                "--check-stale-scene",
+                "button.ok",
+                "--json"
+            ]
+        );
+
+        let pixels = devtools_gate_script_target_command("pixels-changed", input).unwrap();
+        assert!(pixels.is_runnable());
+        assert_eq!(
+            pixels.diag_args,
+            vec![
+                "run",
+                "tools/diag-scripts/smoke.json",
+                "--check-pixels-changed",
+                "button.ok",
+                "--json"
+            ]
+        );
+    }
+
+    #[test]
     fn devtools_gate_script_target_command_preserves_placeholders_until_filled() {
         let input = DevtoolsGateScriptTargetCommandInputV1::default();
-        let command = devtools_gate_script_target_command_line("stale-paint-scene", input).unwrap();
+        let command = devtools_gate_script_target_command("stale-paint-scene", input).unwrap();
 
-        assert!(command.contains("<script.json>"));
-        assert!(command.contains("<test-id>"));
+        assert!(!command.is_runnable());
+        assert_eq!(command.missing_inputs, vec!["script.json", "test-id"]);
+        assert!(command.diag_args.is_empty());
+        assert!(command.command_line.contains("<script.json>"));
+        assert!(command.command_line.contains("<test-id>"));
 
-        let quoted = devtools_gate_script_target_command_line(
+        let quoted = devtools_gate_script_target_command(
             "pixels-changed",
             DevtoolsGateScriptTargetCommandInputV1::new("target/my script.json", "button ok"),
         )
         .unwrap();
-        assert!(quoted.contains("'target/my script.json'"));
-        assert!(quoted.contains("'button ok'"));
+        assert!(quoted.command_line.contains("'target/my script.json'"));
+        assert!(quoted.command_line.contains("'button ok'"));
+        assert_eq!(
+            quoted.diag_args,
+            vec![
+                "run",
+                "target/my script.json",
+                "--check-pixels-changed",
+                "button ok",
+                "--json"
+            ]
+        );
     }
 }

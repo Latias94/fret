@@ -76,6 +76,13 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
 - The GUI also has a script-target command builder for the stale paint/scene and pixels-changed
   profiles. `fret-diag` owns the script/test-id parameterization API; the GUI only supplies the
   selected profile, input models, preview, and `Copy generated command` action.
+- That shared script-target projection now carries structured `diag_args` and `missing_inputs`, so
+  the GUI can distinguish copyable templates from runnable gate commands without parsing shell
+  command strings.
+- The GUI can now launch a generated stale paint/scene or pixels-changed script-target gate command
+  through the shared diagnostics engine. Each run records in-flight/error state in the panel and
+  writes a lightweight `.fret/diag/gate-runs/*.json` result artifact with command/status/timing
+  metadata.
 - The selected regression summary inspector now consumes the shared `fret-diag`
   regression-bundle follow-up projection, generating concrete commands from the selected
   `bundle_dir` (`diag stats`, `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`,

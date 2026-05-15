@@ -21,6 +21,7 @@ FIRST_OPEN_DOC = "docs/diagnostics-first-open.md"
 DEVTOOLS_GUI_DOC = "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
 DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md"
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
+DEVTOOLS_GUI_GATE_RUN_SOURCE = "apps/fret-devtools/src/gate_run.rs"
 DEVTOOLS_GATE_PROFILE_SOURCE = "crates/fret-diag/src/devtools_gate_profiles.rs"
 MAINTAINER_CHECKLIST_DOC = "docs/workstreams/diag-fearless-refactor-v2/MAINTAINER_CHECKLIST.md"
 REPO_PREFLIGHT_COMMAND = "cargo run -p fretboard-dev -- diag doctor campaigns"
@@ -298,21 +299,25 @@ def _validate_devtools_gui_first_open_source(
     name = "fret-devtools gui first-open source"
     print(f"[diag-gate-imui-p2-devtools] {name}")
     path = cwd / DEVTOOLS_GUI_SOURCE
+    gate_run_path = cwd / DEVTOOLS_GUI_GATE_RUN_SOURCE
     gate_profile_path = cwd / DEVTOOLS_GATE_PROFILE_SOURCE
     if progress is not None:
         progress.record(
             "step.start",
             name=name,
             path=str(path),
+            gate_run_path=str(gate_run_path),
             gate_profile_path=str(gate_profile_path),
         )
     try:
         source = path.read_text(encoding="utf-8")
+        gate_run_source = gate_run_path.read_text(encoding="utf-8")
         gate_profile_source = gate_profile_path.read_text(encoding="utf-8")
     except OSError as err:
         if progress is not None:
             progress.record("step.fail", name=name, error=str(err))
         raise SystemExit(f"Step failed: {name} (failed to read source: {err})") from err
+    source = source + "\n" + gate_run_source
 
     for marker in (
         f'const DEVTOOLS_FIRST_OPEN_DOC: &str = "{FIRST_OPEN_DOC}"',
@@ -337,8 +342,11 @@ def _validate_devtools_gui_first_open_source(
         "DevtoolsGateScriptTargetCommandInputV1",
         "devtools_gate_profile_lines",
         "devtools_gate_profiles_v1",
-        "devtools_gate_script_target_command_line",
+        "devtools_gate_script_target_command",
         "devtools_gate_script_target_profile_ids_v1",
+        "mod gate_run;",
+        'const CMD_GATE_RUN_GENERATED: &str = "fret.devtools.gate.run_generated"',
+        "gate_run::poll_gate_run_jobs(cx.app, st)",
         "First-open Evidence Path",
         "Canonical docs, repo preflight, artifact roots, product-chain evidence, and smoke gate stay visible in the GUI shell.",
         "Demo / Metrics / Debug Routes",
@@ -350,10 +358,22 @@ def _validate_devtools_gui_first_open_source(
         "devtools_gate_command_lines(st.cfg.fs_out_dir.as_ref())",
         "gate_command_rows.push(devtools_gate_profile_command_builder(cx, st))",
         "devtools_gate_profile_lines(artifacts_root)",
-        "devtools_gate_script_target_command_line(selected_profile_id.as_ref(), input)",
+        "devtools_gate_script_target_command(selected_profile_id.as_ref(), input)",
         "devtools_gate_profile_action_rows(cx)",
         "Copy generated command",
+        "Run generated command",
         "Copy command",
+        "missing inputs:",
+        "diag args:",
+        "gate_run_in_flight",
+        "gate_run_last_result_path",
+        "gate_run_last_result_json",
+        "gate_run_last_error",
+        "last_gate_result=",
+        "gate_run::start_gate_run(app, st, command)",
+        "fret_devtools_gate_run_result",
+        'join(".fret").join("diag").join("gate-runs")',
+        "new_gate_run_channel",
         "devtools.gate.script_json",
         "devtools.gate.test_id",
         "fn devtools_first_open_lines(artifacts_root: &str) -> Vec<String>",
@@ -392,6 +412,7 @@ def _validate_devtools_gui_first_open_source(
     for marker in (
         "pub struct DevtoolsGateProfileV1",
         "pub struct DevtoolsGateScriptTargetCommandInputV1",
+        "pub struct DevtoolsGateScriptTargetCommandV1",
         "pub const DEVTOOLS_GATE_SCRIPT_TARGET_PROFILE_IDS_V1",
         'pub const DEVTOOLS_GATE_STALE_COMMAND: &str =',
         'pub const DEVTOOLS_GATE_PIXELS_CHANGED_COMMAND: &str =',
@@ -416,8 +437,11 @@ def _validate_devtools_gui_first_open_source(
         "pub fn devtools_gate_profile_lines(artifacts_root: &str) -> Vec<String>",
         "pub fn devtools_gate_profiles_v1() -> &'static [DevtoolsGateProfileV1]",
         "pub fn devtools_gate_script_target_profile_ids_v1() -> &'static [&'static str]",
+        "pub fn devtools_gate_script_target_command(",
         "pub fn devtools_gate_script_target_command_line(",
+        "pub fn is_runnable(&self) -> bool",
         "devtools_gate_script_target_profiles_are_parameterized",
+        "devtools_gate_script_target_commands_include_runnable_diag_args",
     ):
         _assert_text_contains(name, gate_profile_source, marker)
     if progress is not None:
@@ -425,6 +449,7 @@ def _validate_devtools_gui_first_open_source(
             "step.pass",
             name=name,
             path=str(path),
+            gate_run_path=str(gate_run_path),
             gate_profile_path=str(gate_profile_path),
         )
 

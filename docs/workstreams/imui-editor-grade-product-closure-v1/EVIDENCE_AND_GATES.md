@@ -1107,7 +1107,7 @@ copyable, concrete command while keeping command construction in `fret-diag`.
 
 - `crates/fret-diag/src/devtools_gate_profiles.rs` now exposes script-target profile ids and
   `devtools_gate_script_target_command_line(...)` for stale paint/scene and pixels-changed
-  profiles.
+  profiles, with structured `diag_args` and `missing_inputs` for the next run/launch slice.
 - `apps/fret-devtools/src/native.rs` now renders a script-target gate profile selector,
   `script.json` and `test-id` inputs, command preview, and `Copy generated command` action inside
   the first-open `Gate Commands` panel.
@@ -1118,12 +1118,44 @@ copyable, concrete command while keeping command construction in `fret-diag`.
 Focused gates:
 
 ```text
-cargo nextest run -p fret-diag devtools_gate_profiles_include_first_class_gate_taxonomy devtools_gate_profile_lines_surface_artifacts_and_threshold_commands devtools_gate_script_target_profiles_are_parameterized devtools_gate_script_target_command_preserves_placeholders_until_filled regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required --no-fail-fast
+cargo nextest run -p fret-diag devtools_gate_profiles_include_first_class_gate_taxonomy devtools_gate_profile_lines_surface_artifacts_and_threshold_commands devtools_gate_script_target_profiles_are_parameterized devtools_gate_script_target_commands_include_runnable_diag_args devtools_gate_script_target_command_preserves_placeholders_until_filled regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required --no-fail-fast
 cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
 python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
 python tools/diag_gate_imui_product_chain.py --only discovery
 ```
 
-Result: passed. The `fret-diag` nextest gate reported `6 tests run: 6 passed`; the
+Result: passed. The `fret-diag` nextest gate reported `7 tests run: 7 passed`; the
 `fret-devtools` nextest gate reported `1 test run: 1 passed`; both source/discovery gates completed
 successfully.
+
+## DevTools script-target gate runner - 2026-05-15 follow-up
+
+Scope: turn the generated script-target gate command into a GUI-runnable action while keeping gate
+policy and command construction in `fret-diag`.
+
+- `apps/fret-devtools/src/gate_run.rs` now owns the GUI background job wrapper for script-target
+  gate runs. It executes the structured `diag_args` from
+  `DevtoolsGateScriptTargetCommandV1`, not the copied shell command string.
+- `apps/fret-devtools/src/native.rs` wires `Run generated command`, in-flight/error/result-path
+  state, and an inline result JSON preview into the `Gate Commands` builder.
+- Gate run results are written to `.fret/diag/gate-runs/*.json` with the stable
+  `fret_devtools_gate_run_result` kind, command line, diag args, status, error, and timing fields.
+- `tools/diag_gate_imui_p2_devtools_first_open.py` and
+  `tools/diag_gate_imui_product_chain.py` source-check both `native.rs` and `gate_run.rs` so the
+  product-chain discovery gates cover the runner module and the GUI surface together.
+
+Focused gates:
+
+```text
+cargo nextest run -p fret-devtools gate_run_result_record_has_stable_shape devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
+cargo nextest run -p fret-diag devtools_gate_profiles_include_first_class_gate_taxonomy devtools_gate_profile_lines_surface_artifacts_and_threshold_commands devtools_gate_script_target_profiles_are_parameterized devtools_gate_script_target_commands_include_runnable_diag_args devtools_gate_script_target_command_preserves_placeholders_until_filled regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required --no-fail-fast
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
+python tools/diag_gate_imui_product_chain.py --only discovery
+cargo clippy -p fret-diag -p fret-devtools --all-targets -- -D warnings
+```
+
+Result: passed. The `fret-devtools` nextest gate reported `2 tests run: 2 passed`; the `fret-diag`
+nextest gate reported `7 tests run: 7 passed`; both DevTools discovery/source gates completed
+successfully; `cargo clippy -p fret-diag -p fret-devtools --all-targets -- -D warnings`,
+`python tools/check_layering.py`, and `git diff --check` passed. `git diff --check` reported only
+the existing CRLF normalization warning for `tools/diag_gate_imui_p2_devtools_first_open.py`.
