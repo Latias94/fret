@@ -41,12 +41,11 @@ cargo build -p fret-ui-gallery --release --features gallery-ai,gallery-chart,gal
 Run this before a long target-machine validation pass:
 
 ```powershell
-python -m json.tool tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-typical.json
-python -m json.tool tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json
-python -m json.tool tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json
-python tools/check_diag_scripts_registry.py
-python tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict
+python tools/perf/diag_editor_paint_contract_preflight.py
 ```
+
+This checks the three editor probe JSON files, the diag script registry, and the strict baseline matrix audit without
+running the long perf validation passes.
 
 ## Validate Current Contracts First
 
