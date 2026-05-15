@@ -1627,6 +1627,36 @@ impl BundleStatsPaintWidgetHotspotSummary {
         })
     }
 
+    fn gap_per_row_ns(gap_us: i64, rows: u64) -> Option<i64> {
+        if rows == 0 {
+            return None;
+        }
+
+        let rows = i64::try_from(rows).unwrap_or(i64::MAX);
+        Some(gap_us.saturating_mul(1_000) / rows)
+    }
+
+    fn windowed_surface_callback_minus_row_paint_p95_per_row_ns(
+        &self,
+        code_editor: &BundleStatsCodeEditorPaintPerfSummary,
+    ) -> Option<i64> {
+        let gap = self.windowed_surface_callback_minus_row_paint_p95(code_editor)?;
+        Self::gap_per_row_ns(gap, code_editor.p95.surface_rows_with_rect)
+    }
+
+    fn windowed_surface_row_callback_gap_p95_per_row_ns(
+        code_editor: &BundleStatsCodeEditorPaintPerfSummary,
+    ) -> Option<i64> {
+        if code_editor.frames == 0 {
+            return None;
+        }
+
+        Self::gap_per_row_ns(
+            code_editor.p95.us_windowed_surface_row_callback_gap as i64,
+            code_editor.p95.surface_rows_with_rect,
+        )
+    }
+
     fn code_editor_windowed_surface_p95_json(
         code_editor: &BundleStatsCodeEditorPaintPerfSummary,
     ) -> Value {
@@ -1643,6 +1673,7 @@ impl BundleStatsPaintWidgetHotspotSummary {
             "row_paint": code_editor.p95.us_windowed_surface_row_paint,
             "non_row": code_editor.p95.us_windowed_surface_non_row,
             "row_callback_gap": code_editor.p95.us_windowed_surface_row_callback_gap,
+            "rows_with_rect": code_editor.p95.surface_rows_with_rect,
         })
     }
 
@@ -1658,6 +1689,8 @@ impl BundleStatsPaintWidgetHotspotSummary {
                 "windowed_surface_paint_callback_minus_us_total": self.windowed_surface_callback_minus_code_editor_p95_us_total(code_editor),
                 "windowed_surface_row_paint_minus_us_total": self.windowed_surface_row_paint_minus_code_editor_p95_us_total(code_editor),
                 "windowed_surface_paint_callback_minus_row_paint": self.windowed_surface_callback_minus_row_paint_p95(code_editor),
+                "windowed_surface_paint_callback_minus_row_paint_per_row_ns": self.windowed_surface_callback_minus_row_paint_p95_per_row_ns(code_editor),
+                "windowed_surface_row_callback_gap_per_row_ns": Self::windowed_surface_row_callback_gap_p95_per_row_ns(code_editor),
             },
             "code_editor_windowed_surface_p95": Self::code_editor_windowed_surface_p95_json(code_editor),
         })
@@ -2217,6 +2250,16 @@ impl BundleStatsReport {
         let surface_callback_gap_row = p
             .windowed_surface_callback_minus_row_paint_p95(&self.code_editor_paint_perf)
             .map_or_else(|| "n/a".to_string(), |v| v.to_string());
+        let surface_callback_gap_row_per_row = p
+            .windowed_surface_callback_minus_row_paint_p95_per_row_ns(
+                &self.code_editor_paint_perf,
+            )
+            .map_or_else(|| "n/a".to_string(), |v| v.to_string());
+        let surface_row_callback_gap_per_row =
+            BundleStatsPaintWidgetHotspotSummary::windowed_surface_row_callback_gap_p95_per_row_ns(
+                &self.code_editor_paint_perf,
+            )
+            .map_or_else(|| "n/a".to_string(), |v| v.to_string());
 
         println!(
             "paint_widget.hotspots sample_top_n={} frames={} canvas_frames={} non_canvas_frames={} canvas.top_exclusive_us(p50/p95/max)={}/{}/{} canvas.sampled_sum_exclusive_us(p50/p95/max)={}/{}/{} non_canvas.top_exclusive_us(p50/p95/max)={}/{}/{} non_canvas.sampled_sum_exclusive_us(p50/p95/max)={}/{}/{} canvas.gap_p95_us(code_editor_total/surface_callback)={}/{}",
@@ -2252,7 +2295,7 @@ impl BundleStatsReport {
         if self.code_editor_paint_perf.frames > 0 {
             let code_editor = &self.code_editor_paint_perf.p95;
             println!(
-                "paint_widget.hotspots code_editor.surface_p95_us(callback/row_paint/non_row/row_callback_gap/hook)={}/{}/{}/{}/{} surface.gap_p95_us(callback_minus_total/row_paint_minus_total/callback_minus_row_paint)={}/{}/{}",
+                "paint_widget.hotspots code_editor.surface_p95_us(callback/row_paint/non_row/row_callback_gap/hook)={}/{}/{}/{}/{} surface.gap_p95_us(callback_minus_total/row_paint_minus_total/callback_minus_row_paint)={}/{}/{} surface.gap_p95_per_row_ns(callback_minus_row_paint/row_callback_gap)={}/{}",
                 code_editor.us_windowed_surface_paint_callback,
                 code_editor.us_windowed_surface_row_paint,
                 code_editor.us_windowed_surface_non_row,
@@ -2261,6 +2304,8 @@ impl BundleStatsReport {
                 surface_gap_total,
                 surface_row_gap_total,
                 surface_callback_gap_row,
+                surface_callback_gap_row_per_row,
+                surface_row_callback_gap_per_row,
             );
         }
     }

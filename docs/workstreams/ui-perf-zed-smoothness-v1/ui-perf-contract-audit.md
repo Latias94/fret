@@ -500,3 +500,8 @@ Canvas-minus-`WindowedRowsSurface` callback p95 is only `2..4us`, while callback
 the next reversible owner slice belongs to code-editor row work, generic Canvas paint/cache, or renderer
 text/encode/upload. Keep non-Windows machine profiles explicit rather than inferring them from the Windows RTX 4090
 contract set.
+The 2026-05-16 05:14 +08:00 `diag stats` follow-up added per-row derived fields and shows the same typical
+overlay-disabled bundle at `65ns/row` for `windowed_surface_paint_callback_minus_row_paint_per_row_ns` and
+`79ns/row` for `windowed_surface_row_callback_gap_per_row_ns` on
+`target/fret-diag/editor-paint-overlay-disabled-20260516-typical-r3/1778878430806/bundle.schema2.json`. That keeps
+the remaining surface gap in aggregate loop overhead territory rather than a standalone row hot loop.

@@ -1479,6 +1479,7 @@ mod tests {
                                     "paint_perf": {
                                         "frame_seq": 1,
                                         "us_total": 100,
+                                        "surface_rows_with_rect": 10,
                                         "us_windowed_surface_paint_callback": 250,
                                         "us_windowed_surface_hook": 20,
                                         "us_windowed_surface_row_paint": 180,
@@ -1539,6 +1540,7 @@ mod tests {
                                     "paint_perf": {
                                         "frame_seq": 2,
                                         "us_total": 200,
+                                        "surface_rows_with_rect": 10,
                                         "us_windowed_surface_paint_callback": 400,
                                         "us_windowed_surface_hook": 30,
                                         "us_windowed_surface_row_paint": 330,
@@ -1619,6 +1621,7 @@ mod tests {
                                     "paint_perf": {
                                         "frame_seq": 3,
                                         "us_total": 300,
+                                        "surface_rows_with_rect": 10,
                                         "us_windowed_surface_paint_callback": 600,
                                         "us_windowed_surface_hook": 30,
                                         "us_windowed_surface_row_paint": 530,
@@ -1722,6 +1725,18 @@ mod tests {
             Some(70)
         );
         assert_eq!(
+            json.pointer("/paint_widget_hotspot_summary/gap_to_code_editor_p95/windowed_surface_paint_callback_minus_row_paint_per_row_ns")
+                .and_then(|v| v.as_i64()),
+            Some(7_000)
+        );
+        assert_eq!(
+            json.pointer(
+                "/paint_widget_hotspot_summary/gap_to_code_editor_p95/windowed_surface_row_callback_gap_per_row_ns"
+            )
+            .and_then(|v| v.as_i64()),
+            Some(23_000)
+        );
+        assert_eq!(
             json.pointer(
                 "/paint_widget_hotspot_summary/code_editor_windowed_surface_p95/row_paint"
             )
@@ -1739,6 +1754,13 @@ mod tests {
             )
             .and_then(|v| v.as_u64()),
             Some(230)
+        );
+        assert_eq!(
+            json.pointer(
+                "/paint_widget_hotspot_summary/code_editor_windowed_surface_p95/rows_with_rect"
+            )
+            .and_then(|v| v.as_u64()),
+            Some(10)
         );
         assert_eq!(
             json.pointer("/p50/paint_host_widget_observed_models_time_us")

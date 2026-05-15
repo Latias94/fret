@@ -14456,3 +14456,33 @@ Decision:
   but do not count it in the baseline contract surface.
 - Row replay/cache remains healthy with overlay removed, and renderer text/encode/upload remains bounded on this
   macOS M4 pass. Do not re-seed or loosen baselines from this local evidence.
+
+## 2026-05-16 05:14:52 +08:00 (per-row callback gap attribution)
+
+Question:
+- Is the remaining `WindowedRowsSurface` callback gap a standalone hot loop, or just aggregate per-row loop overhead?
+
+Change:
+- Added per-row derived fields to `fret-diag` paint-widget hotspot summaries:
+  `windowed_surface_paint_callback_minus_row_paint_per_row_ns` and
+  `windowed_surface_row_callback_gap_per_row_ns`.
+- Kept the change read-only for runtime behavior. No baseline or contract thresholds were loosened.
+
+Validation:
+```bash
+cargo fmt -p fret-diag --check
+cargo nextest run -p fret-diag bundle_stats_summarizes_canvas_paint_widget_hotspots --no-fail-fast
+cargo run -p fretboard-dev --release -- diag stats \
+  target/fret-diag/editor-paint-overlay-disabled-20260516-typical-r3/1778878430806/bundle.schema2.json \
+  --json | rg -n 'windowed_surface_paint_callback_minus_row_paint_per_row_ns|windowed_surface_row_callback_gap_per_row_ns|rows_with_rect'
+```
+
+Evidence:
+- The bundle above now reports `rows_with_rect=289`,
+  `windowed_surface_paint_callback_minus_row_paint_per_row_ns=65`, and
+  `windowed_surface_row_callback_gap_per_row_ns=79`.
+
+Decision:
+- The remaining surface gap is still real, but it is small enough per row to treat as aggregate loop
+  overhead rather than a standalone row hot function. Keep the next reversible owner slice focused on
+  the outer paint traversal / host-widget aggregate unless a fresh bundle changes that ratio.
