@@ -708,6 +708,11 @@ fn observe_scroll_overflow_extents<T: ScrollOverflowTree>(
                     (bounds.origin.x.0 + bounds.size.width.0 - content_bounds.origin.x.0).max(0.0);
                 let bottom =
                     (bounds.origin.y.0 + bounds.size.height.0 - content_bounds.origin.y.0).max(0.0);
+                let same_as_content_bounds = id == observe_root
+                    && (bounds.origin.x.0 - content_bounds.origin.x.0).abs() <= 0.5
+                    && (bounds.origin.y.0 - content_bounds.origin.y.0).abs() <= 0.5
+                    && (bounds.size.width.0 - content_bounds.size.width.0).abs() <= 0.5
+                    && (bounds.size.height.0 - content_bounds.size.height.0).abs() <= 0.5;
                 root_loose.width = Px(root_loose.width.0.max(right));
                 root_loose.height = Px(root_loose.height.0.max(bottom));
 
@@ -731,10 +736,18 @@ fn observe_scroll_overflow_extents<T: ScrollOverflowTree>(
                 for &child in children.iter().rev() {
                     stack.push(child);
                 }
+                let validation_extent = if same_as_content_bounds && !children.is_empty() {
+                    // The scroll layout passes direct barrier roots the synthetic content bounds.
+                    // Keep that rect as a loose upper bound, but do not let it inflate the
+                    // trusted frontier during deep validation; descendants are the authority.
+                    Size::default()
+                } else {
+                    Size::new(Px(right), Px(bottom))
+                };
                 observed_nodes.insert(
                     id,
                     ScrollOverflowObservedNode {
-                        extent: Size::new(Px(right), Px(bottom)),
+                        extent: validation_extent,
                         children,
                         pinned_to_content_extent_x: axis.scroll_x()
                             && extent_may_be_stale

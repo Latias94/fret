@@ -1002,3 +1002,44 @@ another parallel P3 gate entry.
 - `cargo nextest run -p fret-selector --features ui deps_builder_model_rev_includes_model_identity_before_revision --no-fail-fast`
 - This locks the real `ElementContext` + `ModelStore` path so same-revision model switches still
   invalidate selector memoization correctly.
+
+## Maintenance gate refresh - 2026-05-15 follow-up
+
+Scope: close the `fret-ui` layout/view-cache regressions left by the previous affected gate without
+changing the IMUI layer split. The fixes stay in `crates/fret-ui` mechanism code:
+
+- `crates/fret-ui/src/tree/commands.rs` refreshes window command action availability after
+  post-layout runtime snapshot refinement by clearing the cached availability signature before
+  publishing snapshots.
+- `crates/fret-ui/src/tree/dispatch/window.rs` treats the post-wheel scroll-handle invalidation pass
+  as the final baseline consumer, so non-retained virtual lists schedule their one-shot view-cache
+  rerender immediately after a wheel-driven visible-window escape.
+- `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` keeps scroll deep-scan validation
+  from trusting a synthetic content-bounds barrier root as the authoritative extent when descendants
+  provide the real frontier.
+- `crates/fret-ui/src/layout/engine/flow.rs` carries definite parent flex-axis information into
+  wrapper fill promotion, so viewport-root auto wrappers can promote to fill under a definite
+  cross-axis without globally stretching shrink-wrapped wrappers.
+
+Focused repro gates:
+
+```text
+cargo nextest run -p fret-ui layout_refines_focus_traversal_availability_after_structural_fallback scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_shrink_authoritative scroll_post_layout_mixed_child_invalidation_keeps_descendant_only_shrink_authoritative_at_edge viewport_root_auto_wrapper_promotes_fill_when_flow_child_requests_fill virtual_list_triggers_visible_range_rerender_on_wheel_scroll_when_cached --no-fail-fast
+```
+
+Result: passed, `5 tests run: 5 passed`.
+
+Affected/full maintenance gates:
+
+```text
+cargo fmt -p fret-ui
+cargo nextest run -p fret-ui -p fret-launch -p fret-bootstrap --no-fail-fast
+cargo clippy -p fret-devtools --all-targets -- -D warnings
+python tools/check_layering.py
+python tools/report_largest_files.py --top 30 --min-lines 800
+git diff --check
+```
+
+Result: passed. The affected nextest gate reported `1059 tests run: 1059 passed`. The largest-file
+report remains a drift watchlist only for this slice; no new large-file expansion was introduced
+outside the touched `fret-ui` mechanism files.
