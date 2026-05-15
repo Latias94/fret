@@ -95,6 +95,83 @@ class EditorPaintContractCloseoutTests(unittest.TestCase):
         self.assertEqual("run-a-attrib", closeout.verifier_date_tag(verifier, "attribution"))
         self.assertIsNone(closeout.verifier_date_tag(verifier, "missing"))
 
+    def test_non_dry_run_stops_before_repo_gates_when_verifier_fails(self) -> None:
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            report = root / "closeout-summary.json"
+            verifier = {
+                "ok": False,
+                "validation": {"date_tag": "run-a", "errors": ["missing stats"]},
+                "attribution": {"date_tag": "run-a-attrib", "errors": []},
+            }
+            with patch.object(
+                sys,
+                "argv",
+                [
+                    "diag_editor_paint_contract_closeout.py",
+                    str(root / "validation-dir"),
+                    "--attribution-dir",
+                    str(root / "attribution-dir"),
+                    "--out-report",
+                    str(report),
+                ],
+            ):
+                with patch.object(closeout.verify, "verify_artifact_dirs", return_value=verifier):
+                    with patch.object(closeout, "_run") as run_gate:
+                        with redirect_stderr(io.StringIO()):
+                            rc = closeout.main()
+
+            summary = json.loads(report.read_text(encoding="utf-8"))
+
+        self.assertEqual(1, rc)
+        self.assertFalse(summary["ok"])
+        self.assertEqual("run-a", summary["validation_date_tag"])
+        self.assertEqual("run-a-attrib", summary["attribution_date_tag"])
+        self.assertEqual([], summary["steps"])
+        run_gate.assert_not_called()
+
+    def test_non_dry_run_records_gate_results_after_verifier_passes(self) -> None:
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            report = root / "closeout-summary.json"
+            verifier = {
+                "ok": True,
+                "validation": {"date_tag": "run-a"},
+                "attribution": {"date_tag": "run-a-attrib"},
+            }
+            gate_result = {
+                "cmd": ["python", "--version"],
+                "rc": 0,
+                "elapsed_ms": 1,
+                "stdout": str(root / "stdout.log"),
+                "stderr": str(root / "stderr.log"),
+            }
+            with patch.object(
+                sys,
+                "argv",
+                [
+                    "diag_editor_paint_contract_closeout.py",
+                    str(root / "validation-dir"),
+                    "--attribution-dir",
+                    str(root / "attribution-dir"),
+                    "--out-report",
+                    str(report),
+                ],
+            ):
+                with patch.object(closeout.verify, "verify_artifact_dirs", return_value=verifier):
+                    with patch.object(closeout, "_run", return_value=gate_result) as run_gate:
+                        with redirect_stdout(io.StringIO()):
+                            rc = closeout.main()
+
+            summary = json.loads(report.read_text(encoding="utf-8"))
+
+        self.assertEqual(0, rc)
+        self.assertTrue(summary["ok"])
+        self.assertEqual("run-a", summary["validation_date_tag"])
+        self.assertEqual("run-a-attrib", summary["attribution_date_tag"])
+        self.assertEqual(4, len(summary["steps"]))
+        self.assertEqual(4, run_gate.call_count)
+
 
 if __name__ == "__main__":
     unittest.main()

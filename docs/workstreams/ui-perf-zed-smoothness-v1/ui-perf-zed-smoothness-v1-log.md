@@ -105,6 +105,30 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 07:03:15 +0800 (local head `47b0a322f9`)
+
+Change:
+- Added closeout CLI coverage for the non-dry-run control flow:
+  - if artifact verification fails, closeout records the validation/attribution date tags and stops before running repo
+    gates;
+  - if artifact verification passes, closeout runs all local repo gates and records their results in the summary.
+
+Command:
+```powershell
+python3 -m unittest discover -s tools/perf -p 'test_diag_editor_paint_contract_*.py'
+python3 -m unittest discover -s tools/perf -p 'test_*.py'
+git diff --check
+```
+
+Results:
+- Focused editor paint contract tests PASS (24 tests).
+- Full Python perf-tool tests PASS (34 tests).
+- Diff whitespace check PASS.
+
+Notes:
+- This strengthens local closeout proof, but still does not replace the missing Windows RTX4090 validation and
+  attribution artifacts.
+
 ## 2026-05-16 07:01:13 +0800 (local head `a84b72eab0`)
 
 Change:
