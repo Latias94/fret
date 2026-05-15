@@ -13805,3 +13805,48 @@ Decision:
 - The next landable owner lane should be narrow and reversible: split attribution between generic
   Canvas paint/widget overhead and renderer text/encode payload, then land one measured optimization
   with a checked gate before considering any baseline tightening.
+
+## 2026-05-16 01:20:00 +08:00 (renderer glyph pin bucket capacity)
+
+Question:
+- Can the renderer-side text prepare cost in the Editor Canvas replay probes be reduced without
+  changing editor row replay semantics or loosening payload contracts?
+
+Change:
+- Pre-size the renderer glyph pin-key buckets used by `TextSystem::collect_scene_pinned_keys(...)`
+  from the current scene's text-blob pin-key counts before merging the per-shape keys.
+- This is a renderer-local allocation/rehash reduction for text-heavy scenes. It does not change
+  glyph pinning semantics, atlas upload policy, row-scene replay, or payload thresholds.
+
+Validation:
+- `cargo fmt -p fret-render-wgpu --check`
+- `cargo nextest run -p fret-render-wgpu --lib glyph_pin_keys_deduplicate_by_bucket glyph_key_buckets_with_capacities_deduplicate_by_bucket --no-fail-fast`
+- `cargo check -p fret-render-wgpu`
+- `python3 tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict`
+- `git diff --check`
+
+Evidence:
+
+| probe | after output dir | after worst bundle | total p50/p95 | paint.widget p50/p95 | code_editor.paint_perf p50/p95 | renderer text p95/max | before renderer text p95/max |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| typical autoscroll | `target/fret-diag/editor-canvas-replay-glyph-pin-capacity-after-20260516-typical-r3` | `target/fret-diag/editor-canvas-replay-glyph-pin-capacity-after-20260516-typical-r3/1778863642502/bundle.schema2.json` | `750/847us` | `375/414us` | `104/123us` | `360/376us` | `392/422us` |
+| complex wheel | `target/fret-diag/editor-canvas-replay-glyph-pin-capacity-after-20260516-complex-wheel-r3` | `target/fret-diag/editor-canvas-replay-glyph-pin-capacity-after-20260516-complex-wheel-r3/1778863576944/bundle.schema2.json` | `872/1013us` | `519/633us` | `243/318us` | `381/412us` | `412/435us` |
+| resize jitter | `target/fret-diag/editor-canvas-replay-glyph-pin-capacity-after-20260516-resize-jitter-r3` | `target/fret-diag/editor-canvas-replay-glyph-pin-capacity-after-20260516-resize-jitter-r3/1778863681106/bundle.schema2.json` | `805/1177us` | `402/421us` | `112/119us` | `379/379us` | `419/419us` |
+
+Additional evidence:
+- Row replay/cache invariants remain healthy: typical and resize stay at `100%` row-scene replay
+  hit rate with `0` stores; complex wheel stays at `99%` hit rate.
+- Renderer text atlas upload/eviction stays at `0` on the sampled worst bundles, so the improvement
+  is in CPU-side pin-key collection/prepare work, not hidden atlas churn.
+- The resize jitter total p95 is not a clean total-frame win because the sampled worst frame moved
+  through layout/prepaint noise (`layout p95=360us`, `prepaint p95=211us`). Treat the renderer text
+  delta as the accepted optimization evidence, and keep total-frame baseline tightening out of this
+  slice.
+
+Decision:
+- Keep this renderer-local optimization: it is small, reversible, and improves renderer text prepare
+  on the three formal editor replay probes without changing payload thresholds.
+- Do not update or loosen checked-in perf baselines from this sample. The strict baseline audit still
+  passes, and no threshold re-seed is justified by repeat=3 macOS evidence alone.
+- The remaining P1.5 owner gap is generic Canvas/paint-widget overhead: `paint.widget` still exceeds
+  `code_editor.paint_perf` by roughly `290..315us` on the representative editor probes.

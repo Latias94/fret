@@ -467,12 +467,24 @@ Conventions:
       - Decision: row replay/cache and prepaint planning are not the next mainline bottlenecks.
         Keep the display-list rewrite gated on a future near-threshold/failing stressor where row
         replay/capture itself is measured as the limiter.
-    - [ ] Split the next owner lane between Canvas wrapper overhead and renderer text/encode payload.
+    - [x] Split the next owner lane between Canvas wrapper overhead and renderer text/encode payload.
       - Target: explain why `paint.widget` remains roughly `439..634us` p95 while
         `code_editor.paint_perf` is only `131..330us` p95, and why renderer text prepare remains
         roughly `419..435us` p95/max with atlas upload/eviction at `0`.
-      - Deliverable: one small reversible optimization or diagnostic split plus a focused gate;
-        do not tighten editor paint/payload baselines before this owner split is backed by evidence.
+      - Result: renderer text prepare was the first safe owner slice. `TextSystem::collect_scene_pinned_keys(...)`
+        now pre-sizes glyph pin buckets from per-shape pin-key counts before merging scene text blobs.
+      - Evidence: perf log entry `2026-05-16 01:20:00 +08:00` (`renderer glyph pin bucket capacity`).
+        Renderer text p95/max changed:
+        typical `392/422us -> 360/376us`, complex wheel `412/435us -> 381/412us`, and resize
+        jitter `419/419us -> 379/379us`.
+      - Contract decision: keep checked-in payload baselines unchanged; strict baseline audit still passes.
+    - [ ] Close the remaining Canvas wrapper / `paint.widget` attribution gap.
+      - Current evidence after the renderer slice: `paint.widget` p95 is still `414us` typical,
+        `633us` complex wheel, and `421us` resize jitter, while `code_editor.paint_perf` p95 is
+        `123us`, `318us`, and `119us` respectively.
+      - Target: split the gap between `WindowedRowsSurface` frame/row-loop overhead, per-row closure
+        dispatch/state access, Canvas host wrapper work, and any generic ElementHostWidget paint
+        bookkeeping before proposing a broader Canvas or display-list refactor.
     - [x] Add a stable “row op count” signal to diag snapshots (or reuse an existing one) so we can gate
       “we are rebuilding 500+ ops/frame” vs “we are replaying”.
       - Field: `code_editor.paint_perf.row_scene_ops_stored` in UI Gallery app snapshots and

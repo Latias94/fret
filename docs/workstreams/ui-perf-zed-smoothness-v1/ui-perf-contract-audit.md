@@ -359,6 +359,17 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
     p95/max with atlas upload/eviction still `0`.
   - Conclusion: the next owner split is Canvas wrapper overhead versus renderer text/encode payload. Do not use this
     evidence to justify a broad `WindowedRowsSurface` display-list rewrite.
+- Renderer text prepare reversible optimization:
+  - `TextSystem::collect_scene_pinned_keys(...)` now pre-sizes glyph pin buckets from the scene's per-shape pin-key
+    counts before merging text blobs. Code anchors:
+    `crates/fret-render-wgpu/src/text/atlas_flow.rs` and `crates/fret-render-wgpu/src/text/atlas.rs`.
+  - Validation: `cargo fmt -p fret-render-wgpu --check`; `cargo nextest run -p fret-render-wgpu --lib
+    glyph_pin_keys_deduplicate_by_bucket glyph_key_buckets_with_capacities_deduplicate_by_bucket --no-fail-fast`;
+    `cargo check -p fret-render-wgpu`; strict baseline audit passed.
+  - After evidence: typical renderer text p95/max `360/376us`, complex wheel `381/412us`, and resize jitter
+    `379/379us`, versus the formal pre-change `392/422us`, `412/435us`, and `419/419us`.
+  - Contract decision: no baseline was updated or loosened from the macOS repeat=3 evidence. Existing payload-aware
+    contracts remain the stabilization surface until a deliberate re-seed is justified.
 
 ## Open Gaps
 
@@ -370,9 +381,10 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
    shows healthy row-scene replay/cache. Keep the `WindowedRowsSurface` display-list rewrite gated on a future
    near-threshold or failing stressor where row op replay/capture is the measured limiter, not on these passing
    baselines alone.
-3. The next high-leverage implementation owner is still open: split generic Canvas `paint.widget` overhead from
-   renderer text/encode payload and land one reversible optimization or diagnostic gate before tightening editor
-   paint/payload baselines.
+3. The first renderer owner slice has landed as a reversible glyph pin-bucket capacity optimization. The remaining
+   high-leverage owner is generic Canvas `paint.widget` overhead: after the renderer slice, `paint.widget` p95 is still
+   `414us` typical, `633us` complex wheel, and `421us` resize jitter while `code_editor.paint_perf` p95 is
+   `123us`, `318us`, and `119us`.
 4. Keep Linux and any other non-Windows/macOS machine profiles explicit until a real Linux runner/profile and checked-in contract baseline exist. The current `ui-code-editor-resize-probes.linux-local.v1.json` export is smoke-only and does not close the gap.
 5. The current WSL code-editor resize smoke gate still times out on the current head after rebuild, with
    `Connection reset by peer` in `stderr.log` and `stage=running` at `step_index=5`; do not infer a
@@ -385,7 +397,7 @@ typical, and complex wheel contracts now have payload-aware baselines with expli
 `ui-gallery-view-cache-toggle-perf-steady`, `ui-gallery-virtual-list-torture-steady`, `ui-gallery-menubar-keyboard-nav-steady`,
 `ui-gallery-material3-tabs-switch-perf-steady`, and `ui-gallery-hover-layout-torture-steady` are now dedicated Windows
 v1 contracts. The hit-test torture pointer-move path now also has a formal repeat=7 dispatch/hit-test threshold gate
-for the optimized dispatch snapshot cache path. The 2026-05-16 Editor Canvas replay evidence says the immediate next
-work should split Canvas wrapper overhead from renderer text/encode payload; only start a `WindowedRowsSurface`
-display-list rewrite from a near-threshold or failing editor paint stressor, and keep non-Windows machine profiles
+for the optimized dispatch snapshot cache path. The 2026-05-16 Editor Canvas replay evidence has now closed one
+renderer-side owner slice without loosening baselines; the immediate next work should split the remaining Canvas
+wrapper / `paint.widget` gap before any `WindowedRowsSurface` display-list rewrite. Keep non-Windows machine profiles
 explicit rather than inferring them from the Windows RTX 4090 contract set.

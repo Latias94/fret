@@ -119,6 +119,14 @@ pub(super) struct GlyphKeyBuckets {
 }
 
 impl GlyphKeyBuckets {
+    pub(super) fn with_capacities(mask: usize, color: usize, subpixel: usize) -> Self {
+        Self {
+            mask: HashSet::with_capacity(mask),
+            color: HashSet::with_capacity(color),
+            subpixel: HashSet::with_capacity(subpixel),
+        }
+    }
+
     pub(super) fn insert(&mut self, key: GlyphKey) {
         if key.is_color() {
             self.color.insert(key);
@@ -172,6 +180,10 @@ impl GlyphPinKeys {
             .saturating_mul(std::mem::size_of::<GlyphKey>() as u128);
         bytes.min(u64::MAX as u128) as u64
     }
+
+    pub(super) fn bucket_lens(&self) -> (usize, usize, usize) {
+        (self.mask.len(), self.color.len(), self.subpixel.len())
+    }
 }
 
 fn glyph_image_content_metadata(
@@ -205,6 +217,24 @@ mod tests {
         let mut buckets = GlyphKeyBuckets::default();
         buckets.extend_pin_keys(&keys);
         buckets.extend_pin_keys(&keys);
+        let (mask, color, subpixel) = buckets.into_pin_bucket();
+
+        assert_eq!(mask.len(), 1);
+        assert_eq!(color.len(), 1);
+        assert_eq!(subpixel.len(), 1);
+    }
+
+    #[test]
+    fn glyph_key_buckets_with_capacities_deduplicate_by_bucket() {
+        let [color, subpixel, mask] = GlyphKey::lookup_keys(face(), 42, 16.0f32.to_bits(), 0, 0);
+
+        let mut buckets = GlyphKeyBuckets::with_capacities(8, 8, 8);
+        buckets.insert(mask);
+        buckets.insert(mask);
+        buckets.insert(color);
+        buckets.insert(color);
+        buckets.insert(subpixel);
+        buckets.insert(subpixel);
         let (mask, color, subpixel) = buckets.into_pin_bucket();
 
         assert_eq!(mask.len(), 1);
