@@ -61,4 +61,8 @@
       `fret_perf::measure_span` while preserving frame-hitch log fields:
       view, overlay, layout, paint, and diagnostics script drive.
       - Evidence: `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
+    - [x] Align native runner redraw phases with `fret_perf::measure_span` while preserving
+      redraw-hitch log fields:
+      prepare, render, record, present, and nested render scene.
+      - Evidence: `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`
     - `crates/fret-render-*` (prepare/record/submit/present boundaries)

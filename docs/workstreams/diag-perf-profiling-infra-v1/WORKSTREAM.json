@@ -78,6 +78,10 @@
       "command": "cargo check -p fret-bootstrap --features ui-app-driver,diagnostics"
     },
     {
+      "name": "fret-launch-runner-phase-check",
+      "command": "cargo check -p fret-launch"
+    },
+    {
       "name": "fret-diag-clippy",
       "command": "cargo clippy -p fret-diag --all-targets -- -D warnings"
     }
