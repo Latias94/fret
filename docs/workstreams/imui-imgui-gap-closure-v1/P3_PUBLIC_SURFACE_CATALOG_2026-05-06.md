@@ -1,7 +1,7 @@
 # P3 Public Surface Catalog - 2026-05-06
 
 Status: public surface audit; no API refactor opened yet
-Last updated: 2026-05-14
+Last updated: 2026-05-16
 
 ## Decision
 
@@ -49,6 +49,11 @@ The main rule for future growth is stricter than the current Rust visibility:
   floating/popup trait default implementation bodies now live under the private
   `src/imui/facade_writer/floating_popup.rs` owner. The public trait surface and central writer
   glue stay in the root file.
+- The `window(...)` / `window_with_options(...)` public comments now describe the current
+  in-window floating surface instead of treating z-order/focus arbitration as a future item.
+  `FloatingWindowOptions` remains the policy owner for focus-on-click, activate-on-click,
+  no-inputs, pointer pass-through, close, resize, and collapse behavior; OS-window tear-out and
+  multi-viewport parity remain docking/runner scope.
 - `ecosystem/fret-ui-editor/src/imui.rs` is a thin adapter layer. Every public function accepts a
   declarative editor control/composite and calls its `into_element(...)`; it must not become a
   parallel widget implementation.
@@ -145,6 +150,9 @@ cargo check -p fret --no-default-features --features imui
   that risk by moving focused inherent wrappers, including structural container wrappers, into
   `src/imui/facade_writer/` modules. The 2026-05-14 floating/popup owner split moved trait default
   implementation bodies behind a private owner without changing public method names.
+- 2026-05-16 posture refresh: `src/imui/facade_writer.rs` no longer labels floating-window
+  z-order/focus arbitration as future work. Current floating tests in `fret-imui` remain the
+  behavior evidence for in-window z-order, focus/input policy, close, resize, and collapse.
 - `python tools/audit_crate.py --crate fret-ui-editor` passed and identified editor controls plus
   `src/imui.rs` as the thin adapter surface.
 - `python tools/audit_crate.py --crate fret` passed and confirmed the wide facade shape.

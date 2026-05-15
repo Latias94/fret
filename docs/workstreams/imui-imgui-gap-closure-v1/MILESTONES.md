@@ -180,6 +180,11 @@ Exit criteria:
   2026-05-16 selectable highlight result: `imui-selectable-highlight-policy-v1` is the closed proof
   lane for forced selectable highlight visuals. Keyboard-active picker rows now use highlighted
   policy instead of selected semantics, while broader selectable flags remain candidate-only.
+  2026-05-16 floating posture refresh result: the public `window(...)` docs no longer describe
+  z-order/focus arbitration as future work. `fret-ui-kit::imui` owns the in-window floating policy
+  knobs through `WindowOptions` / `FloatingWindowOptions`, and `fret-imui` floating tests cover
+  bring-to-front hit-test order, focus-on-click vs activation, no-inputs / pointer-pass-through,
+  close, resize, and collapse. Multi-window / viewport parity remains outside this helper.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

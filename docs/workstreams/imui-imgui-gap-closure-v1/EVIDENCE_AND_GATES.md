@@ -146,6 +146,13 @@ Run evidence:
 - 2026-05-14: made `FloatingAreaResponse` / `FloatingWindowResponse` accessor-first too. Floating
   response identity, geometry, drag, resize, and collapse state now stay behind methods instead of
   public fields, and the floating tests use `resp.id()` instead of `resp.area.id`.
+- 2026-05-16: refreshed the public `window(...)` posture in
+  `ecosystem/fret-ui-kit/src/imui/facade_writer.rs`. The source docs now describe the current
+  in-window floating surface instead of deferring z-order/focus arbitration to a future work item.
+  Evidence anchors: `ecosystem/fret-imui/src/tests/floating/movement_z_order.rs` covers
+  bring-to-front hit-test order, `input_modes.rs` covers focus-on-click vs activation plus
+  no-inputs / pointer-pass-through behavior, and `window_options.rs` covers close, resize, and
+  collapse policy.
 - 2026-05-14: made `DisclosureResponse` / `ComboResponse` accessor-first for trigger/open/toggle
   state too. Public callers now read trigger details through `response()` and semantic helpers, the
   response types no longer expose external `Default` construction, and

@@ -556,6 +556,11 @@ def main() -> None:
         SourceCheck(
             Path("docs/workstreams/imui-imgui-gap-closure-v1/P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md"),
             required=[
+                "The in-window floating-window posture has also been",
+                "z-order hit-testing, focus-on-click vs activation,",
+                "In-window floating windows / overlay areas",
+                "Covered for in-window drag, z-order hit-testing, focus/input policy, close, resize, and collapse",
+                "`window(...)` is no longer a v1 posture with z-order/focus arbitration deferred",
                 "the inherent `ImUiFacade` wrappers",
                 "for button/actions, menu items, selection/combo, disclosure, text/value/boolean models, and",
                 "structural containers now live in `ecosystem/fret-ui-kit/src/imui/facade_writer/`.",
@@ -563,7 +568,9 @@ def main() -> None:
                 "`ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs`.",
                 "passed and found the current facade method anchors across the root file and split owner modules.",
             ],
-            forbidden=[],
+            forbidden=[
+                "Z-order and focus arbitration are tracked as a separate work item",
+            ],
         ),
         SourceCheck(
             Path("docs/workstreams/imui-imgui-gap-closure-v1/P3_PORTING_SUGAR_READINESS_2026-05-06.md"),
@@ -577,17 +584,38 @@ def main() -> None:
         SourceCheck(
             Path("docs/workstreams/imui-imgui-gap-closure-v1/P3_PUBLIC_SURFACE_CATALOG_2026-05-06.md"),
             required=[
+                "Last updated: 2026-05-16",
                 "`ecosystem/fret-ui-kit/src/imui/facade_writer.rs` is no longer the only facade owner file",
                 "inherent `ImUiFacade` wrappers now live under `src/imui/facade_writer/`",
+                "The `window(...)` / `window_with_options(...)` public comments now describe the current",
+                "`FloatingWindowOptions` remains the policy owner for focus-on-click, activate-on-click,",
                 "the 2026-05-13 owner splits reduced",
                 "including structural container wrappers",
                 "The 2026-05-14 floating/popup owner split moved trait default",
                 "implementation bodies behind a private owner without changing public method names.",
+                "2026-05-16 posture refresh: `src/imui/facade_writer.rs` no longer labels floating-window",
                 "Editor `ColorEdit` callback records are part of the public editor surface",
                 "`ColorEditPaletteSlotDrop`, `ColorEditEyedropperRequest`, and",
                 "`ColorEditDragDropPayload` expose event/request/payload reads through accessors",
             ],
-            forbidden=[],
+            forbidden=[
+                "Z-order and focus arbitration are tracked as a separate work item",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/facade_writer.rs"),
+            required=[
+                "/// Render an in-window floating window.",
+                "/// - `floating_layer(...)` owns bring-to-front ordering and hit-test order,",
+                "/// - `WindowOptions` / `FloatingWindowOptions` own close, resize, collapse, focus-on-click,",
+                "///   activate-on-click, and no-inputs / pointer-pass-through policy.",
+                "/// - OS-window tear-out and multi-viewport behavior are docking/runner concerns, not this",
+            ],
+            forbidden=[
+                "Render a minimal in-window floating window.",
+                "This is intentionally v1-small",
+                "Z-order and focus arbitration are tracked as a separate work item",
+            ],
         ),
         SourceCheck(
             Path("docs/workstreams/imui-kit-owner-split-v1/WORKSTREAM.json"),

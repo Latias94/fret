@@ -7,7 +7,9 @@ Status note (2026-05-16): this catalog remains the current component-surface gap
 image-item and child-region manual-resize candidates below have since landed in narrow proof lanes:
 `imui-image-item-proof-v1`, `imui-child-region-resize-y-v1`, and
 `imui-child-region-resize-x-v1`. Selectable forced-highlight visuals also landed in
-`imui-selectable-highlight-policy-v1`.
+`imui-selectable-highlight-policy-v1`. The in-window floating-window posture has also been
+refreshed: current source/tests already cover z-order hit-testing, focus-on-click vs activation,
+no-inputs / pointer-pass-through policy, close, resize, and collapse behavior.
 
 ## Decision
 
@@ -37,6 +39,7 @@ Keep the owner split:
 | Combo / selectable / multi-select | `combo`, `combo_model`, `selectable`, `multi_selectable`, `SelectableOptions::highlighted`, `ImUiMultiSelectState` | Covered for current examples; full app collection helper and broader selectable flag mirrors remain candidate-only |
 | Tree / disclosure | `collapsing_header`, `tree_node`, explicit `TreeNodeOptions::level` | Covered with Fret-native explicit identity/depth; do not copy implicit indent/ID stacks |
 | Child windows / scrolling | `child_region`, `scroll`, `virtual_list`, `ChildRegionResize{X,Y}Options` | Covered for keyed scrollable panes and manual axis resize; Dear ImGui child flags such as auto-resize, clipping-return, and nav flattening stay behavior-specific candidates |
+| In-window floating windows / overlay areas | `floating_layer`, `floating_area`, `window`, `window_with_options`, `FloatingWindowOptions` | Covered for in-window drag, z-order hit-testing, focus/input policy, close, resize, and collapse; OS-window tear-out / multi-viewport parity stays in docking/runner lanes |
 | Menus / menu bars / popups / modals | `menu_bar`, `begin_menu`, `begin_submenu`, menu items, `open_popup`, `begin_popup_menu`, context menu helpers, modal helpers | Covered at policy layer; dismissal/focus policy stays in ecosystem |
 | Tooltips | `tooltip_text`, `tooltip`, `TooltipOptions` | Covered enough for current response-driven usage |
 | Tabs | `tab_bar`, `ImUiTabBar`, `tab_item`, response reporting | Covered for current shell/editor proofs |
@@ -82,6 +85,9 @@ public helper widening:
   structural containers now live in `ecosystem/fret-ui-kit/src/imui/facade_writer/`. The
   floating/popup trait default implementation bodies now live in
   `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs`.
+- `window(...)` is no longer a v1 posture with z-order/focus arbitration deferred: current
+  `fret-imui` floating tests cover bring-to-front hit-test order, focus-on-click independent from
+  activation, no-inputs / pointer-pass-through behavior, close, resize, and collapse.
 - `ecosystem/fret-ui-editor/src/imui.rs` is only a thin adapter layer that forwards editor controls
   and composites through `into_element(...)`.
 - `repo-ref/imgui/imgui.h` still groups the upstream surface by Windows, Child Windows, Widgets,
