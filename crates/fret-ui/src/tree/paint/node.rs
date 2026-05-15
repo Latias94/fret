@@ -58,14 +58,19 @@ impl<H: UiHost> UiTree<H> {
         if self.window.is_some()
             && let Some(element) = self.nodes.get(node).and_then(|n| n.element)
         {
-            let (_, record_elapsed) = fret_perf::measure(self.debug_enabled, || {
-                let visual = if current_transform == Transform2D::IDENTITY {
-                    bounds
-                } else {
-                    rect_aabb_transformed(bounds, current_transform)
-                };
-                self.scratch_visual_bounds_records.push((element, visual));
-            });
+            let (_, record_elapsed) = fret_perf::measure_span(
+                self.debug_enabled,
+                tracing::enabled!(tracing::Level::TRACE),
+                || tracing::trace_span!("fret.ui.paint_node.record_visual_bounds", node = ?node),
+                || {
+                    let visual = if current_transform == Transform2D::IDENTITY {
+                        bounds
+                    } else {
+                        rect_aabb_transformed(bounds, current_transform)
+                    };
+                    self.scratch_visual_bounds_records.push((element, visual));
+                },
+            );
             if let Some(record_elapsed) = record_elapsed {
                 self.debug_stats.paint_record_visual_bounds_time = self
                     .debug_stats
@@ -78,24 +83,29 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        let (key, key_elapsed) = fret_perf::measure(self.debug_enabled, || {
-            let theme_revision = Theme::global(&*app).revision();
-            let children_render_transform = self.node_children_render_transform(node);
-            let child_transform = children_render_transform.unwrap_or(Transform2D::IDENTITY);
-            let inherited_text_style_fingerprint = self.window.and_then(|window| {
-                crate::declarative::frame::inherited_text_style_for_node(app, window, node)
-                    .as_ref()
-                    .map(crate::text_props::text_style_refinement_fingerprint)
-            });
-            PaintCacheKey::new(
-                bounds,
-                sf,
-                theme_revision,
-                paint_style,
-                inherited_text_style_fingerprint,
-                child_transform,
-            )
-        });
+        let (key, key_elapsed) = fret_perf::measure_span(
+            self.debug_enabled,
+            tracing::enabled!(tracing::Level::TRACE),
+            || tracing::trace_span!("fret.ui.paint_node.cache_key", node = ?node),
+            || {
+                let theme_revision = Theme::global(&*app).revision();
+                let children_render_transform = self.node_children_render_transform(node);
+                let child_transform = children_render_transform.unwrap_or(Transform2D::IDENTITY);
+                let inherited_text_style_fingerprint = self.window.and_then(|window| {
+                    crate::declarative::frame::inherited_text_style_for_node(app, window, node)
+                        .as_ref()
+                        .map(crate::text_props::text_style_refinement_fingerprint)
+                });
+                PaintCacheKey::new(
+                    bounds,
+                    sf,
+                    theme_revision,
+                    paint_style,
+                    inherited_text_style_fingerprint,
+                    child_transform,
+                )
+            },
+        );
         let cache_enabled = self.paint_cache_enabled()
             && self.node_render_transform(node).is_none()
             && (!self.view_cache_active()
@@ -122,61 +132,68 @@ impl<H: UiHost> UiTree<H> {
                 delta_visual: Point,
             }
 
-            let (replay_ctx, hit_check_elapsed) = fret_perf::measure(self.debug_enabled, || {
-                let prev = prev_cache?;
-                if prev.generation != self.paint_cache.source_generation {
-                    return None;
-                }
-                if prev.key != key {
-                    return None;
-                }
-                if !prev_bounds_origin.is_some_and(|origin| {
-                    (origin.x.0 - prev.origin.x.0).abs() <= 0.01
-                        && (origin.y.0 - prev.origin.y.0).abs() <= 0.01
-                }) {
-                    return None;
-                }
+            let (replay_ctx, hit_check_elapsed) = fret_perf::measure_span(
+                self.debug_enabled,
+                tracing::enabled!(tracing::Level::TRACE),
+                || tracing::trace_span!("fret.ui.paint_node.cache_hit_check", node = ?node),
+                || {
+                    let prev = prev_cache?;
+                    if prev.generation != self.paint_cache.source_generation {
+                        return None;
+                    }
+                    if prev.key != key {
+                        return None;
+                    }
+                    if !prev_bounds_origin.is_some_and(|origin| {
+                        (origin.x.0 - prev.origin.x.0).abs() <= 0.01
+                            && (origin.y.0 - prev.origin.y.0).abs() <= 0.01
+                    }) {
+                        return None;
+                    }
 
-                if !self.paint_cache.is_entry_replayable_in_previous_frame(prev) {
-                    return None;
-                }
+                    if !self.paint_cache.is_entry_replayable_in_previous_frame(prev) {
+                        return None;
+                    }
 
-                let delta = Point::new(
-                    bounds.origin.x - prev.origin.x,
-                    bounds.origin.y - prev.origin.y,
-                );
-                let delta_visual = if let Some(window) = self.window
-                    && let Some(element) = self.nodes.get(node).and_then(|n| n.element)
-                    && let Some(prev_visual) =
-                        crate::elements::with_window_state(app, window, |st| {
-                            st.last_visual_bounds(element)
-                                .or_else(|| st.last_bounds(element))
-                        }) {
-                    let current_visual = if current_transform == Transform2D::IDENTITY {
-                        bounds
-                    } else {
-                        rect_aabb_transformed(bounds, current_transform)
-                    };
-                    let size_dx = (current_visual.size.width.0 - prev_visual.size.width.0).abs();
-                    let size_dy = (current_visual.size.height.0 - prev_visual.size.height.0).abs();
-                    if size_dx <= 0.01 && size_dy <= 0.01 {
-                        Point::new(
-                            current_visual.origin.x - prev_visual.origin.x,
-                            current_visual.origin.y - prev_visual.origin.y,
-                        )
+                    let delta = Point::new(
+                        bounds.origin.x - prev.origin.x,
+                        bounds.origin.y - prev.origin.y,
+                    );
+                    let delta_visual = if let Some(window) = self.window
+                        && let Some(element) = self.nodes.get(node).and_then(|n| n.element)
+                        && let Some(prev_visual) =
+                            crate::elements::with_window_state(app, window, |st| {
+                                st.last_visual_bounds(element)
+                                    .or_else(|| st.last_bounds(element))
+                            }) {
+                        let current_visual = if current_transform == Transform2D::IDENTITY {
+                            bounds
+                        } else {
+                            rect_aabb_transformed(bounds, current_transform)
+                        };
+                        let size_dx =
+                            (current_visual.size.width.0 - prev_visual.size.width.0).abs();
+                        let size_dy =
+                            (current_visual.size.height.0 - prev_visual.size.height.0).abs();
+                        if size_dx <= 0.01 && size_dy <= 0.01 {
+                            Point::new(
+                                current_visual.origin.x - prev_visual.origin.x,
+                                current_visual.origin.y - prev_visual.origin.y,
+                            )
+                        } else {
+                            Point::new(Px(0.0), Px(0.0))
+                        }
                     } else {
                         Point::new(Px(0.0), Px(0.0))
-                    }
-                } else {
-                    Point::new(Px(0.0), Px(0.0))
-                };
+                    };
 
-                Some(PaintCacheReplayCtx {
-                    entry: prev,
-                    delta,
-                    delta_visual,
-                })
-            });
+                    Some(PaintCacheReplayCtx {
+                        entry: prev,
+                        delta,
+                        delta_visual,
+                    })
+                },
+            );
             if let Some(hit_check_elapsed) = hit_check_elapsed {
                 self.debug_stats.paint_cache_hit_check_time = self
                     .debug_stats
@@ -252,8 +269,16 @@ impl<H: UiHost> UiTree<H> {
                     // Without this, cached subtrees that move (e.g. due to parent layout changes)
                     // can render correctly while their descendant bounds remain stale, causing
                     // incorrect pointer routing and stale semantics geometry.
-                    let (translated_nodes, translate_elapsed) =
-                        fret_perf::measure(self.debug_enabled, || {
+                    let (translated_nodes, translate_elapsed) = fret_perf::measure_span(
+                        self.debug_enabled,
+                        tracing::enabled!(tracing::Level::TRACE),
+                        || {
+                            tracing::trace_span!(
+                                "fret.ui.paint_node.cache_bounds_translate",
+                                node = ?node,
+                            )
+                        },
+                        || {
                             let mut translated_nodes: u32 = 0;
                             let window = self.window;
                             let paint_pass = self.paint_pass;
@@ -272,7 +297,6 @@ impl<H: UiHost> UiTree<H> {
                                 stack.push(child);
                                 i += 1;
                             }
-
                             while let Some(id) = stack.pop() {
                                 let Some((element, node_bounds)) =
                                     self.nodes.get_mut(id).and_then(|n| {
@@ -314,7 +338,8 @@ impl<H: UiHost> UiTree<H> {
                             }
                             self.restore_scratch_node_stack(stack);
                             translated_nodes
-                        });
+                        },
+                    );
                     if let Some(translate_elapsed) = translate_elapsed {
                         self.debug_stats.paint_cache_bounds_translate_time = self
                             .debug_stats
@@ -428,8 +453,11 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut widget_type: &'static str = "<unknown>";
-        let ((start, text_blob_start), widget_elapsed) =
-            fret_perf::measure(self.debug_enabled, || {
+        let ((start, text_blob_start), widget_elapsed) = fret_perf::measure_span(
+            self.debug_enabled,
+            tracing::enabled!(tracing::Level::TRACE),
+            || tracing::trace_span!("fret.ui.paint_node.widget_paint", node = ?node),
+            || {
                 if self.debug_enabled {
                     self.debug_paint_stack.push(DebugPaintStackFrame {
                         child_inclusive_time: Duration::default(),
@@ -487,7 +515,8 @@ impl<H: UiHost> UiTree<H> {
                     }
                 });
                 (start, text_blob_start)
-            });
+            },
+        );
         let end = scene.ops_len();
 
         if let Some(inclusive_time) = widget_elapsed {
@@ -569,11 +598,16 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        let (_, obs_elapsed) = fret_perf::measure(self.debug_enabled, || {
-            self.observed_in_paint.record(node, observations.as_slice());
-            self.observed_globals_in_paint
-                .record(node, global_observations.as_slice());
-        });
+        let (_, obs_elapsed) = fret_perf::measure_span(
+            self.debug_enabled,
+            tracing::enabled!(tracing::Level::TRACE),
+            || tracing::trace_span!("fret.ui.paint_node.record_observations", node = ?node),
+            || {
+                self.observed_in_paint.record(node, observations.as_slice());
+                self.observed_globals_in_paint
+                    .record(node, global_observations.as_slice());
+            },
+        );
         if let Some(obs_elapsed) = obs_elapsed {
             self.debug_stats.paint_observation_record_time = self
                 .debug_stats

@@ -290,7 +290,42 @@ impl BundleStatsDiffDelta {
     }
 }
 
+const TYPICAL_TAIL_DIFF_HIGHLIGHT_KEYS: &[&str] = &[
+    "p95.total_time_us",
+    "max.total_time_us",
+    "p95.layout_time_us",
+    "max.layout_time_us",
+    "p95.layout_engine_solve_time_us",
+    "max.layout_engine_solve_time_us",
+    "p95.prepaint_time_us",
+    "max.prepaint_time_us",
+    "p95.paint_time_us",
+    "max.paint_time_us",
+    "p95.dispatch_time_us",
+    "p95.hit_test_time_us",
+    "pointer_move.max_dispatch_time_us",
+    "pointer_move.max_hit_test_time_us",
+];
+
+fn diff_delta_json(d: &BundleStatsDiffDelta) -> serde_json::Value {
+    serde_json::json!({
+        "key": d.key,
+        "a": d.a,
+        "b": d.b,
+        "delta_us": d.delta_us(),
+        "delta_pct": d.delta_pct(),
+        "abs_delta_us": d.abs_delta_us(),
+    })
+}
+
 impl BundleStatsDiffReport {
+    fn typical_tail_highlights(&self) -> Vec<&BundleStatsDiffDelta> {
+        TYPICAL_TAIL_DIFF_HIGHLIGHT_KEYS
+            .iter()
+            .filter_map(|key| self.deltas.iter().find(|delta| delta.key == *key))
+            .collect()
+    }
+
     pub(super) fn print_human(&self) {
         println!("bundle_a: {}", self.a_path.display());
         println!("bundle_b: {}", self.b_path.display());
@@ -302,6 +337,26 @@ impl BundleStatsDiffReport {
         if self.deltas.is_empty() {
             println!("diff: ok (no metrics)");
             return;
+        }
+
+        let highlights = self.typical_tail_highlights();
+        if !highlights.is_empty() {
+            println!("typical/tail highlights:");
+            for d in highlights {
+                let delta_us = d.delta_us();
+                let sign = if delta_us >= 0 { "+" } else { "-" };
+                let abs = delta_us.unsigned_abs();
+                let pct = d
+                    .delta_pct()
+                    .map(|v| format!("{v:.1}%"))
+                    .unwrap_or_else(|| "-".to_string());
+                println!(
+                    "  {key}: a={a} b={b} delta_us={sign}{abs} delta_pct={pct}",
+                    key = d.key,
+                    a = d.a,
+                    b = d.b
+                );
+            }
         }
 
         println!("top (by |delta_us|):");
@@ -323,19 +378,11 @@ impl BundleStatsDiffReport {
     }
 
     pub(super) fn to_json(&self) -> serde_json::Value {
-        let deltas = self
-            .deltas
-            .iter()
-            .map(|d| {
-                serde_json::json!({
-                    "key": d.key,
-                    "a": d.a,
-                    "b": d.b,
-                    "delta_us": d.delta_us(),
-                    "delta_pct": d.delta_pct(),
-                    "abs_delta_us": d.abs_delta_us(),
-                })
-            })
+        let deltas = self.deltas.iter().map(diff_delta_json).collect::<Vec<_>>();
+        let typical_tail_highlights = self
+            .typical_tail_highlights()
+            .into_iter()
+            .map(diff_delta_json)
             .collect::<Vec<_>>();
         serde_json::json!({
             "schema_version": crate::perf_schema::PERF_STATS_SCHEMA_VERSION,
@@ -346,6 +393,9 @@ impl BundleStatsDiffReport {
             "sort": self.sort.as_str(),
             "warmup_frames": self.warmup_frames,
             "top": self.top,
+            "highlights": {
+                "typical_tail": typical_tail_highlights,
+            },
             "deltas": deltas,
         })
     }
@@ -483,6 +533,91 @@ pub(super) fn bundle_stats_diff_from_paths(
             } else {
                 b.sum_layout_observation_record_time_us / (b.snapshots_considered as u64)
             },
+        },
+        BundleStatsDiffDelta {
+            key: "p95.total_time_us",
+            a: a.p95_total_time_us,
+            b: b.p95_total_time_us,
+        },
+        BundleStatsDiffDelta {
+            key: "p95.layout_time_us",
+            a: a.p95_layout_time_us,
+            b: b.p95_layout_time_us,
+        },
+        BundleStatsDiffDelta {
+            key: "p95.layout_request_build_roots_time_us",
+            a: a.p95_layout_request_build_roots_time_us,
+            b: b.p95_layout_request_build_roots_time_us,
+        },
+        BundleStatsDiffDelta {
+            key: "p95.layout_roots_time_us",
+            a: a.p95_layout_roots_time_us,
+            b: b.p95_layout_roots_time_us,
+        },
+        BundleStatsDiffDelta {
+            key: "p95.layout_engine_solve_time_us",
+            a: a.p95_layout_engine_solve_time_us,
+            b: b.p95_layout_engine_solve_time_us,
+        },
+        BundleStatsDiffDelta {
+            key: "p95.prepaint_time_us",
+            a: a.p95_prepaint_time_us,
+            b: b.p95_prepaint_time_us,
+        },
+        BundleStatsDiffDelta {
+            key: "p95.paint_time_us",
+            a: a.p95_paint_time_us,
+            b: b.p95_paint_time_us,
+        },
+        BundleStatsDiffDelta {
+            key: "p95.dispatch_time_us",
+            a: a.p95_dispatch_time_us,
+            b: b.p95_dispatch_time_us,
+        },
+        BundleStatsDiffDelta {
+            key: "p95.hit_test_time_us",
+            a: a.p95_hit_test_time_us,
+            b: b.p95_hit_test_time_us,
+        },
+        BundleStatsDiffDelta {
+            key: "p95.paint_widget_time_us",
+            a: a.p95_paint_widget_time_us,
+            b: b.p95_paint_widget_time_us,
+        },
+        BundleStatsDiffDelta {
+            key: "p95.paint_text_prepare_time_us",
+            a: a.p95_paint_text_prepare_time_us,
+            b: b.p95_paint_text_prepare_time_us,
+        },
+        BundleStatsDiffDelta {
+            key: "p95.renderer_encode_scene_us",
+            a: a.p95_renderer_encode_scene_us,
+            b: b.p95_renderer_encode_scene_us,
+        },
+        BundleStatsDiffDelta {
+            key: "p95.renderer_upload_us",
+            a: a.p95_renderer_upload_us,
+            b: b.p95_renderer_upload_us,
+        },
+        BundleStatsDiffDelta {
+            key: "p95.renderer_record_passes_us",
+            a: a.p95_renderer_record_passes_us,
+            b: b.p95_renderer_record_passes_us,
+        },
+        BundleStatsDiffDelta {
+            key: "p95.renderer_encoder_finish_us",
+            a: a.p95_renderer_encoder_finish_us,
+            b: b.p95_renderer_encoder_finish_us,
+        },
+        BundleStatsDiffDelta {
+            key: "p95.renderer_prepare_text_us",
+            a: a.p95_renderer_prepare_text_us,
+            b: b.p95_renderer_prepare_text_us,
+        },
+        BundleStatsDiffDelta {
+            key: "p95.renderer_prepare_svg_us",
+            a: a.p95_renderer_prepare_svg_us,
+            b: b.p95_renderer_prepare_svg_us,
         },
         BundleStatsDiffDelta {
             key: "max.total_time_us",
@@ -800,6 +935,45 @@ fn parse_redacted_len_bytes(value: &str) -> Option<u64> {
 mod tests {
     use super::*;
 
+    fn temp_stats_diff_dir(prefix: &str) -> PathBuf {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system time should be after unix epoch")
+            .as_nanos();
+        std::env::temp_dir().join(format!("fret-diag-{prefix}-{}-{now}", std::process::id()))
+    }
+
+    fn write_stats_diff_bundle(path: &Path, layout_values: &[u64]) {
+        let snapshots = layout_values
+            .iter()
+            .enumerate()
+            .map(|(idx, layout_time_us)| {
+                serde_json::json!({
+                    "frame_id": idx as u64,
+                    "debug": {
+                        "stats": {
+                            "layout_time_us": layout_time_us,
+                            "layout_engine_solve_time_us": *layout_time_us / 2,
+                            "prepaint_time_us": 0,
+                            "paint_time_us": 0
+                        }
+                    }
+                })
+            })
+            .collect::<Vec<_>>();
+        let bundle = serde_json::json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 1,
+                "snapshots": snapshots
+            }]
+        });
+        std::fs::create_dir_all(path.parent().expect("bundle path should have parent"))
+            .expect("create bundle dir");
+        std::fs::write(path, serde_json::to_vec(&bundle).expect("serialize bundle"))
+            .expect("write bundle");
+    }
+
     #[test]
     fn stats_diff_sorts_by_abs_delta_then_key() {
         let mut deltas = vec![
@@ -823,6 +997,63 @@ mod tests {
         assert_eq!(deltas[0].key, "z");
         assert_eq!(deltas[1].key, "a");
         assert_eq!(deltas[2].key, "b");
+    }
+
+    #[test]
+    fn stats_diff_includes_typical_and_tail_highlights() {
+        let dir = temp_stats_diff_dir("stats-diff");
+        let a_path = dir.join("a").join("bundle.schema2.json");
+        let b_path = dir.join("b").join("bundle.schema2.json");
+        let a_values = vec![100; 21];
+        let mut b_values = vec![110; 20];
+        b_values.push(400);
+        write_stats_diff_bundle(&a_path, &a_values);
+        write_stats_diff_bundle(&b_path, &b_values);
+
+        let report = bundle_stats_diff_from_paths(
+            &a_path,
+            &b_path,
+            20,
+            BundleStatsSort::Time,
+            BundleStatsOptions::default(),
+        )
+        .expect("diff report");
+        let json = report.to_json();
+        let deltas = json
+            .get("deltas")
+            .and_then(|v| v.as_array())
+            .expect("deltas");
+        let delta_for = |key: &str| {
+            deltas
+                .iter()
+                .find(|delta| delta.get("key").and_then(|v| v.as_str()) == Some(key))
+                .unwrap_or_else(|| panic!("missing diff delta: {key}"))
+        };
+
+        assert_eq!(
+            delta_for("p95.total_time_us")
+                .get("delta_us")
+                .and_then(|v| v.as_i64()),
+            Some(10)
+        );
+        assert_eq!(
+            delta_for("max.total_time_us")
+                .get("delta_us")
+                .and_then(|v| v.as_i64()),
+            Some(300)
+        );
+
+        let highlight_keys = json
+            .pointer("/highlights/typical_tail")
+            .and_then(|v| v.as_array())
+            .expect("typical/tail highlights")
+            .iter()
+            .filter_map(|delta| delta.get("key").and_then(|v| v.as_str()))
+            .collect::<std::collections::BTreeSet<_>>();
+        assert!(highlight_keys.contains("p95.total_time_us"));
+        assert!(highlight_keys.contains("max.total_time_us"));
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
@@ -879,6 +1110,18 @@ mod tests {
                 .and_then(|v| v.as_str()),
             Some("additive_only")
         );
+        let registered_keys = json
+            .get("registered_perf_keys")
+            .and_then(|v| v.as_array())
+            .expect("registered perf keys");
+        assert!(registered_keys.iter().any(|key| {
+            key.get("key").and_then(|v| v.as_str()) == Some("renderer_encode_scene_us")
+                && key.get("unit").and_then(|v| v.as_str()) == Some("us")
+        }));
+        assert!(registered_keys.iter().any(|key| {
+            key.get("key").and_then(|v| v.as_str()) == Some("pointer_move.max_dispatch_time_us")
+                && key.get("scope").and_then(|v| v.as_str()) == Some("pointer_move")
+        }));
         assert!(json.get("avg").is_some());
         assert!(json.get("budget_pct").is_some());
     }

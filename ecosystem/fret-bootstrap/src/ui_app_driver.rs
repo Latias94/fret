@@ -25,7 +25,7 @@ use std::collections::HashSet;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::{Mutex, OnceLock};
 
-use fret_core::time::Instant;
+use fret_core::time::{Duration, Instant};
 
 #[cfg(feature = "diagnostics")]
 use crate::ui_diagnostics::UiDiagnosticsService;
@@ -1911,6 +1911,54 @@ fn write_frame_hitch_log(line: &str) {
     state.write_line(&msg);
 }
 
+#[derive(Debug, Clone, Copy)]
+enum UiDriverPhase {
+    View,
+    Overlay,
+    Layout,
+    Paint,
+    #[cfg(feature = "diagnostics")]
+    DiagnosticsDriveScript,
+}
+
+#[cfg(feature = "tracing")]
+impl UiDriverPhase {
+    fn make_span(self) -> tracing::Span {
+        match self {
+            Self::View => tracing::info_span!("fret.ui.view"),
+            Self::Overlay => tracing::info_span!("fret.ui.overlay"),
+            Self::Layout => tracing::info_span!("fret.ui.layout"),
+            Self::Paint => tracing::info_span!("fret.ui.paint"),
+            #[cfg(feature = "diagnostics")]
+            Self::DiagnosticsDriveScript => {
+                tracing::info_span!("fret.ui.diagnostics.drive_script")
+            }
+        }
+    }
+}
+
+fn measure_ui_driver_phase<T>(
+    phase: UiDriverPhase,
+    time_enabled: bool,
+    f: impl FnOnce() -> T,
+) -> (T, Option<Duration>) {
+    #[cfg(feature = "tracing")]
+    {
+        fret_perf::measure_span(
+            time_enabled,
+            tracing::enabled!(tracing::Level::INFO),
+            || phase.make_span(),
+            f,
+        )
+    }
+
+    #[cfg(not(feature = "tracing"))]
+    {
+        let _ = phase;
+        fret_perf::measure(time_enabled, f)
+    }
+}
+
 fn ui_app_render<S>(
     driver: &mut UiAppDriver<S>,
     context: WinitRenderContext<'_, UiAppWindowState<S>>,
@@ -1989,169 +2037,173 @@ fn ui_app_render<S>(
         }
     }
 
-    let view_started = hitch_config.map(|_| Instant::now());
-    #[cfg(feature = "tracing")]
-    let view_span = tracing::info_span!("fret.ui.view");
-    #[cfg(feature = "tracing")]
-    let _view_guard = view_span.enter();
-    let root = fret_ui::frame_pipeline::render_base_root_with_changes(
-        &mut state.ui,
-        app,
-        services,
-        window,
-        bounds,
-        driver.root_name,
-        &changed_models,
-        &changed_globals,
-        |cx| {
-            let view_depth = VIEW_DEPTH.with(|d| {
-                let next = d.get().saturating_add(1);
-                d.set(next);
-                next
-            });
-            if view_depth >= 8 {
-                hotpatch_trace_log(&format!(
-                    "ui_app_render: entering view window={window:?} depth={view_depth}"
-                ));
-            }
-            hotpatch_trace_log(&format!(
-                "ui_app_render: view begin window={window:?} depth={view_depth}"
-            ));
-
-            // Install a Radix-style direction provider for the whole app subtree.
-            //
-            // Apps may override this by setting `LayoutDirection` as a global; otherwise we
-            // default to LTR (matching Radix `useDirection` default).
-            let dir = cx
-                .app
-                .global::<LayoutDirection>()
-                .copied()
-                .unwrap_or_default();
-
-            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
-            {
-                let view_ptr = driver.view as usize as u64;
-                let mapped = unsafe {
-                    subsecond::get_jump_table().and_then(|table| table.map.get(&view_ptr).cloned())
-                };
-                hotpatch_trace_log(&format!(
-                    "ui_app_render: view ptr=0x{view_ptr:x} mapped={mapped:?}"
-                ));
-                #[cfg(windows)]
-                {
-                    let view_module = hotpatch_module_path_for_address(view_ptr as usize)
-                        .map(|p| p.display().to_string());
-                    let mapped_module = mapped
-                        .and_then(|p| hotpatch_module_path_for_address(p as usize))
-                        .map(|p| p.display().to_string());
+    let (root, view_elapsed) = measure_ui_driver_phase(
+        UiDriverPhase::View,
+        hitch_config.is_some(),
+        || {
+            fret_ui::frame_pipeline::render_base_root_with_changes(
+                &mut state.ui,
+                app,
+                services,
+                window,
+                bounds,
+                driver.root_name,
+                &changed_models,
+                &changed_globals,
+                |cx| {
+                    let view_depth = VIEW_DEPTH.with(|d| {
+                        let next = d.get().saturating_add(1);
+                        d.set(next);
+                        next
+                    });
+                    if view_depth >= 8 {
+                        hotpatch_trace_log(&format!(
+                            "ui_app_render: entering view window={window:?} depth={view_depth}"
+                        ));
+                    }
                     hotpatch_trace_log(&format!(
-                        "ui_app_render: view module={view_module:?} mapped_module={mapped_module:?}"
-                    ));
-                }
-                let byte_diag =
-                    std::env::var_os("FRET_HOTPATCH_DIAG_BYTES").is_some_and(|v| !v.is_empty());
-                if byte_diag {
-                    let view_head = hotpatch_head_bytes(view_ptr as usize, 16);
-                    let mapped_head = mapped.and_then(|p| hotpatch_head_bytes(p as usize, 16));
-                    hotpatch_trace_log(&format!(
-                        "ui_app_render: view head16={view_head:?} mapped_head16={mapped_head:?}"
+                        "ui_app_render: view begin window={window:?} depth={view_depth}"
                     ));
 
-                    #[cfg(windows)]
-                    if let Some(mapped_addr) = mapped {
-                        if let Some(head) = hotpatch_head16(mapped_addr as usize) {
-                            if let Some(target) =
-                                hotpatch_call_target_from_head16(mapped_addr as usize, &head)
-                            {
-                                let target_module = hotpatch_module_path_for_address(target)
-                                    .map(|p| p.display().to_string());
-                                let target_head16 = hotpatch_head_bytes(target, 16);
-                                hotpatch_trace_log(&format!(
-                                    "ui_app_render: mapped prologue call_target=0x{target:x} target_module={target_module:?} target_head16={target_head16:?}"
-                                ));
+                    // Install a Radix-style direction provider for the whole app subtree.
+                    //
+                    // Apps may override this by setting `LayoutDirection` as a global; otherwise we
+                    // default to LTR (matching Radix `useDirection` default).
+                    let dir = cx
+                        .app
+                        .global::<LayoutDirection>()
+                        .copied()
+                        .unwrap_or_default();
 
-                                if let Some(target_head) = hotpatch_head16(target) {
-                                    if let Some(abs) =
-                                        hotpatch_abs_jmp_target_from_head16(&target_head)
-                                    {
-                                        let abs_module = hotpatch_module_path_for_address(abs)
-                                            .map(|p| p.display().to_string());
-                                        let abs_head16 = hotpatch_head_bytes(abs, 16);
+                    #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+                    {
+                        let view_ptr = driver.view as usize as u64;
+                        let mapped = unsafe {
+                            subsecond::get_jump_table()
+                                .and_then(|table| table.map.get(&view_ptr).cloned())
+                        };
+                        hotpatch_trace_log(&format!(
+                            "ui_app_render: view ptr=0x{view_ptr:x} mapped={mapped:?}"
+                        ));
+                        #[cfg(windows)]
+                        {
+                            let view_module = hotpatch_module_path_for_address(view_ptr as usize)
+                                .map(|p| p.display().to_string());
+                            let mapped_module = mapped
+                                .and_then(|p| hotpatch_module_path_for_address(p as usize))
+                                .map(|p| p.display().to_string());
+                            hotpatch_trace_log(&format!(
+                                "ui_app_render: view module={view_module:?} mapped_module={mapped_module:?}"
+                            ));
+                        }
+                        let byte_diag = std::env::var_os("FRET_HOTPATCH_DIAG_BYTES")
+                            .is_some_and(|v| !v.is_empty());
+                        if byte_diag {
+                            let view_head = hotpatch_head_bytes(view_ptr as usize, 16);
+                            let mapped_head =
+                                mapped.and_then(|p| hotpatch_head_bytes(p as usize, 16));
+                            hotpatch_trace_log(&format!(
+                                "ui_app_render: view head16={view_head:?} mapped_head16={mapped_head:?}"
+                            ));
+
+                            #[cfg(windows)]
+                            if let Some(mapped_addr) = mapped {
+                                if let Some(head) = hotpatch_head16(mapped_addr as usize) {
+                                    if let Some(target) = hotpatch_call_target_from_head16(
+                                        mapped_addr as usize,
+                                        &head,
+                                    ) {
+                                        let target_module =
+                                            hotpatch_module_path_for_address(target)
+                                                .map(|p| p.display().to_string());
+                                        let target_head16 = hotpatch_head_bytes(target, 16);
                                         hotpatch_trace_log(&format!(
-                                            "ui_app_render: call_target abs_jmp=0x{abs:x} abs_module={abs_module:?} abs_head16={abs_head16:?}"
+                                            "ui_app_render: mapped prologue call_target=0x{target:x} target_module={target_module:?} target_head16={target_head16:?}"
                                         ));
+
+                                        if let Some(target_head) = hotpatch_head16(target) {
+                                            if let Some(abs) =
+                                                hotpatch_abs_jmp_target_from_head16(&target_head)
+                                            {
+                                                let abs_module =
+                                                    hotpatch_module_path_for_address(abs)
+                                                        .map(|p| p.display().to_string());
+                                                let abs_head16 = hotpatch_head_bytes(abs, 16);
+                                                hotpatch_trace_log(&format!(
+                                                    "ui_app_render: call_target abs_jmp=0x{abs:x} abs_module={abs_module:?} abs_head16={abs_head16:?}"
+                                                ));
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
+
+                        let use_direct = hotpatch_view_call_use_direct();
+                        hotpatch_trace_log(&format!(
+                            "ui_app_render: view call strategy={}",
+                            if use_direct { "direct" } else { "hotfn" }
+                        ));
+
+                        let out = direction_prim::with_direction_provider(cx, dir, |cx| {
+                            let mut out = if use_direct {
+                                (driver.view)(cx, &mut state.state)
+                            } else {
+                                let mut hot = subsecond::HotFn::current(driver.view);
+                                hot.call((cx, &mut state.state))
+                            };
+
+                            #[cfg(feature = "ui-app-command-palette")]
+                            render_command_palette_overlay_if_needed(driver, cx, &mut out);
+
+                            drive_preferences_overlay(cx);
+                            out
+                        });
+                        hotpatch_trace_log(&format!(
+                            "ui_app_render: view end window={window:?} depth={view_depth}"
+                        ));
+                        VIEW_DEPTH.with(|d| d.set(d.get().saturating_sub(1)));
+                        out
                     }
-                }
 
-                let use_direct = hotpatch_view_call_use_direct();
-                hotpatch_trace_log(&format!(
-                    "ui_app_render: view call strategy={}",
-                    if use_direct { "direct" } else { "hotfn" }
-                ));
+                    #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+                    {
+                        let out = direction_prim::with_direction_provider(cx, dir, |cx| {
+                            let out = (driver.view)(cx, &mut state.state);
 
-                let out = direction_prim::with_direction_provider(cx, dir, |cx| {
-                    let mut out = if use_direct {
-                        (driver.view)(cx, &mut state.state)
-                    } else {
-                        let mut hot = subsecond::HotFn::current(driver.view);
-                        hot.call((cx, &mut state.state))
-                    };
+                            #[cfg(feature = "ui-app-command-palette")]
+                            let mut out = out;
 
-                    #[cfg(feature = "ui-app-command-palette")]
-                    render_command_palette_overlay_if_needed(driver, cx, &mut out);
+                            #[cfg(feature = "ui-app-command-palette")]
+                            render_command_palette_overlay_if_needed(driver, cx, &mut out);
 
-                    drive_preferences_overlay(cx);
-                    out
-                });
-                hotpatch_trace_log(&format!(
-                    "ui_app_render: view end window={window:?} depth={view_depth}"
-                ));
-                VIEW_DEPTH.with(|d| d.set(d.get().saturating_sub(1)));
-                out
-            }
-
-            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
-            {
-                let out = direction_prim::with_direction_provider(cx, dir, |cx| {
-                    let out = (driver.view)(cx, &mut state.state);
-
-                    #[cfg(feature = "ui-app-command-palette")]
-                    let mut out = out;
-
-                    #[cfg(feature = "ui-app-command-palette")]
-                    render_command_palette_overlay_if_needed(driver, cx, &mut out);
-
-                    drive_preferences_overlay(cx);
-                    out
-                });
-                hotpatch_trace_log(&format!(
-                    "ui_app_render: view end window={window:?} depth={view_depth}"
-                ));
-                VIEW_DEPTH.with(|d| d.set(d.get().saturating_sub(1)));
-                out
-            }
+                            drive_preferences_overlay(cx);
+                            out
+                        });
+                        hotpatch_trace_log(&format!(
+                            "ui_app_render: view end window={window:?} depth={view_depth}"
+                        ));
+                        VIEW_DEPTH.with(|d| d.set(d.get().saturating_sub(1)));
+                        out
+                    }
+                },
+            )
         },
     );
-    if let Some(started) = view_started {
-        hitch_view_ms = Some(started.elapsed().as_millis() as u64);
+    if let Some(elapsed) = view_elapsed {
+        hitch_view_ms = Some(elapsed.as_millis() as u64);
     }
     hotpatch_trace_log(&format!(
         "ui_app_render: after render_root window={window:?} root={root:?}"
     ));
     hotpatch_trace_log(&format!("ui_app_render: after set_root window={window:?}"));
 
-    let overlay_started = hitch_config.map(|_| Instant::now());
-    #[cfg(feature = "tracing")]
-    let overlay_span = tracing::info_span!("fret.ui.overlay");
-    #[cfg(feature = "tracing")]
-    let _overlay_guard = overlay_span.enter();
-    OverlayController::render(&mut state.ui, app, services, window, bounds);
-    if let Some(started) = overlay_started {
-        hitch_overlay_ms = Some(started.elapsed().as_millis() as u64);
+    let (_, overlay_elapsed) =
+        measure_ui_driver_phase(UiDriverPhase::Overlay, hitch_config.is_some(), || {
+            OverlayController::render(&mut state.ui, app, services, window, bounds);
+        });
+    if let Some(elapsed) = overlay_elapsed {
+        hitch_overlay_ms = Some(elapsed.as_millis() as u64);
     }
     hotpatch_trace_log(&format!(
         "ui_app_render: after overlay render window={window:?}"
@@ -2192,164 +2244,157 @@ fn ui_app_render<S>(
     state.ui.ingest_paint_cache_source(scene);
     scene.clear();
 
-    let layout_started = hitch_config.map(|_| Instant::now());
-    {
-        #[cfg(feature = "tracing")]
-        let layout_span = tracing::info_span!("fret.ui.layout");
-        #[cfg(feature = "tracing")]
-        let _layout_guard = layout_span.enter();
-        let mut frame = UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-    }
-    let layout_total_ms: Option<u64> = layout_started.map(|s| s.elapsed().as_millis() as u64);
+    let (_, layout_elapsed) =
+        measure_ui_driver_phase(UiDriverPhase::Layout, hitch_config.is_some(), || {
+            let mut frame =
+                UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+            frame.layout_all();
+        });
+    let layout_total_ms: Option<u64> = layout_elapsed.map(|elapsed| elapsed.as_millis() as u64);
     hotpatch_trace_log(&format!(
         "ui_app_render: after layout_all window={window:?}"
     ));
 
     let hitch_layout_ms = layout_total_ms;
 
-    let paint_started = hitch_config.map(|_| Instant::now());
-    {
-        #[cfg(feature = "tracing")]
-        let paint_span = tracing::info_span!("fret.ui.paint");
-        #[cfg(feature = "tracing")]
-        let _paint_guard = paint_span.enter();
-        let mut frame = UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.paint_all(scene);
-    }
-    if let Some(started) = paint_started {
-        hitch_paint_ms = Some(started.elapsed().as_millis() as u64);
+    let (_, paint_elapsed) =
+        measure_ui_driver_phase(UiDriverPhase::Paint, hitch_config.is_some(), || {
+            let mut frame =
+                UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+            frame.paint_all(scene);
+        });
+    if let Some(elapsed) = paint_elapsed {
+        hitch_paint_ms = Some(elapsed.as_millis() as u64);
     }
     hotpatch_trace_log(&format!("ui_app_render: after paint_all window={window:?}"));
 
     #[cfg(feature = "diagnostics")]
     {
-        // Drive scripted input after `paint_all()` so virtualization-heavy trees (e.g. VirtualList)
-        // have their realized item subtrees available for hit-testing.
-        //
-        // The injected events will typically affect the *next* frame; the diagnostics recorder
-        // below captures the current frame state.
-        let semantics_snapshot = state.ui.semantics_snapshot_arc();
-        #[cfg(feature = "tracing")]
-        let diag_span = tracing::info_span!("fret.ui.diagnostics.drive_script");
-        #[cfg(feature = "tracing")]
-        let _diag_guard = diag_span.enter();
-        let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            svc.drive_script_for_window(
-                app,
-                services,
-                window,
-                bounds,
-                scale_factor,
-                Some(&mut state.ui),
-                semantics_snapshot.as_deref(),
-            )
-        });
-        for effect in drive.effects {
-            app.push_effect(effect);
-        }
-        if drive.request_redraw {
-            app.request_redraw(window);
-            // Script-driven `wait_frames` needs a reliable way to advance frames even when the
-            // scene is otherwise idle. Requesting an animation frame ensures the runner
-            // schedules another render tick.
-            app.push_effect(Effect::RequestAnimationFrame(window));
-        }
-
-        let mut injected_any = false;
-        UiDiagnosticsService::with_script_injection_scope(|| {
-            for event in drive.events {
-                injected_any = true;
-                ui_app_handle_event(
-                    driver,
-                    WinitEventContext {
-                        app,
-                        services,
-                        window,
-                        state,
-                    },
-                    &event,
-                );
+        let _ = measure_ui_driver_phase(UiDriverPhase::DiagnosticsDriveScript, false, || {
+            // Drive scripted input after `paint_all()` so virtualization-heavy trees (e.g. VirtualList)
+            // have their realized item subtrees available for hit-testing.
+            //
+            // The injected events will typically affect the *next* frame; the diagnostics recorder
+            // below captures the current frame state.
+            let semantics_snapshot = state.ui.semantics_snapshot_arc();
+            let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+                svc.drive_script_for_window(
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    scale_factor,
+                    Some(&mut state.ui),
+                    semantics_snapshot.as_deref(),
+                )
+            });
+            for effect in drive.effects {
+                app.push_effect(effect);
             }
-        });
+            if drive.request_redraw {
+                app.request_redraw(window);
+                // Script-driven `wait_frames` needs a reliable way to advance frames even when the
+                // scene is otherwise idle. Requesting an animation frame ensures the runner
+                // schedules another render tick.
+                app.push_effect(Effect::RequestAnimationFrame(window));
+            }
 
-        // Scripted pointer steps often dispatch actions via `Effect::Command`. Flush those command
-        // effects eagerly so:
-        // - UI tree handlers run in the same render tick as the injected input, and
-        // - command dispatch diagnostics are available to scripted `wait_command_dispatch_trace`
-        //   without depending on runner-level effect timing.
-        if injected_any {
+            let mut injected_any = false;
             UiDiagnosticsService::with_script_injection_scope(|| {
-                const MAX_SCRIPT_COMMAND_FLUSH_ROUNDS: usize = 8;
-                let mut deferred_effects: Vec<Effect> = Vec::new();
-                for _ in 0..MAX_SCRIPT_COMMAND_FLUSH_ROUNDS {
-                    let effects = app.flush_effects();
-                    if effects.is_empty() {
-                        break;
-                    }
+                for event in drive.events {
+                    injected_any = true;
+                    ui_app_handle_event(
+                        driver,
+                        WinitEventContext {
+                            app,
+                            services,
+                            window,
+                            state,
+                        },
+                        &event,
+                    );
+                }
+            });
 
-                    let mut applied_any_command = false;
-                    for effect in effects {
-                        match effect {
-                            Effect::Command { window: w, command } => {
-                                if w.is_none() || w == Some(window) {
-                                    applied_any_command = true;
-                                    ui_app_handle_command(
-                                        driver,
-                                        WinitCommandContext {
-                                            app,
-                                            services,
-                                            window,
-                                            state,
-                                        },
-                                        command,
-                                    );
-                                } else {
-                                    deferred_effects.push(Effect::Command { window: w, command });
+            // Scripted pointer steps often dispatch actions via `Effect::Command`. Flush those command
+            // effects eagerly so:
+            // - UI tree handlers run in the same render tick as the injected input, and
+            // - command dispatch diagnostics are available to scripted `wait_command_dispatch_trace`
+            //   without depending on runner-level effect timing.
+            if injected_any {
+                UiDiagnosticsService::with_script_injection_scope(|| {
+                    const MAX_SCRIPT_COMMAND_FLUSH_ROUNDS: usize = 8;
+                    let mut deferred_effects: Vec<Effect> = Vec::new();
+                    for _ in 0..MAX_SCRIPT_COMMAND_FLUSH_ROUNDS {
+                        let effects = app.flush_effects();
+                        if effects.is_empty() {
+                            break;
+                        }
+
+                        let mut applied_any_command = false;
+                        for effect in effects {
+                            match effect {
+                                Effect::Command { window: w, command } => {
+                                    if w.is_none() || w == Some(window) {
+                                        applied_any_command = true;
+                                        ui_app_handle_command(
+                                            driver,
+                                            WinitCommandContext {
+                                                app,
+                                                services,
+                                                window,
+                                                state,
+                                            },
+                                            command,
+                                        );
+                                    } else {
+                                        deferred_effects
+                                            .push(Effect::Command { window: w, command });
+                                    }
                                 }
+                                other => deferred_effects.push(other),
                             }
-                            other => deferred_effects.push(other),
+                        }
+
+                        if !applied_any_command {
+                            break;
                         }
                     }
 
-                    if !applied_any_command {
-                        break;
+                    for effect in deferred_effects {
+                        app.push_effect(effect);
+                    }
+                });
+            }
+
+            app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+                let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+                svc.record_snapshot(
+                    app,
+                    window,
+                    bounds,
+                    scale_factor,
+                    &mut state.ui,
+                    element_runtime,
+                    scene,
+                );
+                if let Some(dir) = svc.maybe_dump_if_triggered() {
+                    #[cfg(feature = "tracing")]
+                    tracing::info!(window = ?window, out_dir = %dir.display(), "ui diagnostics dumped");
+                }
+                if svc.poll_exit_trigger() {
+                    app.push_effect(Effect::QuitApp);
+                } else if svc.is_enabled() {
+                    // Diagnostics are driven per-window after paint, but multi-window scripts may
+                    // need a non-active window to continue ticking (e.g. tear-off creates a new
+                    // window and focus shifts). Keep all known windows in the RAF set so scripted
+                    // playback and timeouts remain deterministic.
+                    for w in svc.known_windows().iter().copied() {
+                        app.request_redraw(w);
+                        app.push_effect(Effect::RequestAnimationFrame(w));
                     }
                 }
-
-                for effect in deferred_effects {
-                    app.push_effect(effect);
-                }
             });
-        }
-
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-            svc.record_snapshot(
-                app,
-                window,
-                bounds,
-                scale_factor,
-                &mut state.ui,
-                element_runtime,
-                scene,
-            );
-            if let Some(dir) = svc.maybe_dump_if_triggered() {
-                #[cfg(feature = "tracing")]
-                tracing::info!(window = ?window, out_dir = %dir.display(), "ui diagnostics dumped");
-            }
-            if svc.poll_exit_trigger() {
-                app.push_effect(Effect::QuitApp);
-            } else if svc.is_enabled() {
-                // Diagnostics are driven per-window after paint, but multi-window scripts may
-                // need a non-active window to continue ticking (e.g. tear-off creates a new
-                // window and focus shifts). Keep all known windows in the RAF set so scripted
-                // playback and timeouts remain deterministic.
-                for w in svc.known_windows().iter().copied() {
-                    app.request_redraw(w);
-                    app.push_effect(Effect::RequestAnimationFrame(w));
-                }
-            }
         });
     }
 

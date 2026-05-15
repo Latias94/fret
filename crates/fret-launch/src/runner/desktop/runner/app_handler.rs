@@ -4,7 +4,7 @@ use super::window::PendingWheelEvent;
 use super::*;
 use std::sync::{Arc, Mutex, OnceLock};
 
-use fret_core::time::Instant;
+use fret_core::time::{Duration, Instant};
 use fret_platform::external_drop::ExternalDropProvider as _;
 #[cfg(target_os = "macos")]
 use objc2_metal::MTLDevice as _;
@@ -204,6 +204,49 @@ fn write_redraw_hitch_log(line: &str) {
     let state = STATE.get_or_init(|| Mutex::new(HitchLogState::new()));
     let mut state = state.lock().unwrap_or_else(|e| e.into_inner());
     state.write_line(&msg);
+}
+
+#[derive(Debug, Clone, Copy)]
+enum RedrawPhase {
+    Prepare,
+    Render { bounds: Rect, scale_factor: f32 },
+    Record { scene_ops: usize },
+    Present,
+    RenderScene,
+}
+
+impl RedrawPhase {
+    fn make_span(self) -> tracing::Span {
+        match self {
+            Self::Prepare => tracing::info_span!("fret.runner.prepare"),
+            Self::Render {
+                bounds,
+                scale_factor,
+            } => tracing::info_span!(
+                "fret.runner.render",
+                bounds = ?bounds,
+                scale_factor = scale_factor,
+            ),
+            Self::Record { scene_ops } => {
+                tracing::info_span!("fret.runner.record", scene_ops = scene_ops,)
+            }
+            Self::Present => tracing::info_span!("fret.runner.present"),
+            Self::RenderScene => tracing::info_span!("fret.runner.render_scene"),
+        }
+    }
+}
+
+fn measure_redraw_phase<T>(
+    phase: RedrawPhase,
+    time_enabled: bool,
+    f: impl FnOnce() -> T,
+) -> (T, Option<Duration>) {
+    fret_perf::measure_span(
+        time_enabled,
+        tracing::enabled!(tracing::Level::INFO),
+        || phase.make_span(),
+        f,
+    )
 }
 
 fn collect_runner_monitor_topology_snapshot(
@@ -1773,63 +1816,67 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         .as_mut()
                         .is_some_and(|r| r.begin_capture_if_requested());
 
-                    let prepare_started = hitch_config.map(|_| Instant::now());
-                    let prepare_span = tracing::info_span!("fret.runner.prepare");
-                    let _prepare_guard = prepare_span.enter();
-                    // Apply any pending window-side state (IME/cursor) once per frame, similar to
-                    // Dear ImGui's backend `prepare_frame` pattern.
-                    state.platform.prepare_frame(state.window.as_ref());
+                    let ((scale_factor, bounds), prepare_elapsed) =
+                        measure_redraw_phase(RedrawPhase::Prepare, hitch_config.is_some(), || {
+                            // Apply any pending window-side state (IME/cursor) once per frame,
+                            // similar to Dear ImGui's backend `prepare_frame` pattern.
+                            state.platform.prepare_frame(state.window.as_ref());
 
-                    let scale_factor = state.window.scale_factor() as f32;
-                    let physical = state.window.surface_size();
-                    let logical: winit::dpi::LogicalSize<f32> =
-                        physical.to_logical(state.window.scale_factor());
-                    let logical_width = quantize_logical_px(logical.width);
-                    let logical_height = quantize_logical_px(logical.height);
+                            let scale_factor = state.window.scale_factor() as f32;
+                            let physical = state.window.surface_size();
+                            let logical: winit::dpi::LogicalSize<f32> =
+                                physical.to_logical(state.window.scale_factor());
+                            let logical_width = quantize_logical_px(logical.width);
+                            let logical_height = quantize_logical_px(logical.height);
 
-                    let bounds = Rect::new(
-                        Point::new(Px(0.0), Px(0.0)),
-                        Size::new(Px(logical_width), Px(logical_height)),
-                    );
+                            let bounds = Rect::new(
+                                Point::new(Px(0.0), Px(0.0)),
+                                Size::new(Px(logical_width), Px(logical_height)),
+                            );
 
-                    self.driver.gpu_frame_prepare(
-                        &mut self.app,
-                        app_window,
-                        &mut state.user,
-                        context,
-                        renderer,
-                        scale_factor,
-                    );
-                    if let Some(started) = prepare_started {
-                        hitch_prepare_ms = Some(started.elapsed().as_millis() as u64);
+                            self.driver.gpu_frame_prepare(
+                                &mut self.app,
+                                app_window,
+                                &mut state.user,
+                                context,
+                                renderer,
+                                scale_factor,
+                            );
+
+                            (scale_factor, bounds)
+                        });
+                    if let Some(elapsed) = prepare_elapsed {
+                        hitch_prepare_ms = Some(elapsed.as_millis() as u64);
                     }
 
-                    let render_started = hitch_config.map(|_| Instant::now());
-                    let render_span = tracing::info_span!(
-                        "fret.runner.render",
-                        bounds = ?bounds,
-                        scale_factor = scale_factor,
-                    );
-                    let _render_guard = render_span.enter();
                     let render_text_debug_enabled =
                         std::env::var_os("FRET_RENDER_TEXT_DEBUG").is_some_and(|v| !v.is_empty());
                     let render_text_diag_enabled = std::env::var_os("FRET_DIAG_DIR")
                         .is_some_and(|v| !v.is_empty())
                         || render_text_debug_enabled;
-                    if render_text_diag_enabled {
-                        renderer.begin_text_diagnostics_frame();
-                    }
-                    self.driver.render(WinitRenderContext {
-                        app: &mut self.app,
-                        services: renderer as &mut dyn fret_core::UiServices,
-                        window: app_window,
-                        state: &mut state.user,
-                        bounds,
-                        scale_factor,
-                        scene: &mut state.scene,
-                    });
-                    if let Some(started) = render_started {
-                        hitch_render_ms = Some(started.elapsed().as_millis() as u64);
+                    let (_, render_elapsed) = measure_redraw_phase(
+                        RedrawPhase::Render {
+                            bounds,
+                            scale_factor,
+                        },
+                        hitch_config.is_some(),
+                        || {
+                            if render_text_diag_enabled {
+                                renderer.begin_text_diagnostics_frame();
+                            }
+                            self.driver.render(WinitRenderContext {
+                                app: &mut self.app,
+                                services: renderer as &mut dyn fret_core::UiServices,
+                                window: app_window,
+                                state: &mut state.user,
+                                bounds,
+                                scale_factor,
+                                scene: &mut state.scene,
+                            });
+                        },
+                    );
+                    if let Some(elapsed) = render_elapsed {
+                        hitch_render_ms = Some(elapsed.as_millis() as u64);
                     }
 
                     // Consume the window-scoped text-input snapshot after render so the runner can
@@ -1902,29 +1949,31 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         state.last_semantics_snapshot = None;
                     }
 
-                    let record_started = hitch_config.map(|_| Instant::now());
-                    let record_span = tracing::info_span!(
-                        "fret.runner.record",
-                        scene_ops = state.scene.ops_len(),
-                    );
-                    let _record_guard = record_span.enter();
-                    let engine_frame = self.driver.record_engine_frame(
-                        &mut self.app,
-                        app_window,
-                        &mut state.user,
-                        context,
-                        renderer,
-                        scale_factor,
-                        self.tick_id,
-                        self.frame_id,
+                    let (engine_frame, record_elapsed) = measure_redraw_phase(
+                        RedrawPhase::Record {
+                            scene_ops: state.scene.ops_len(),
+                        },
+                        hitch_config.is_some(),
+                        || {
+                            self.driver.record_engine_frame(
+                                &mut self.app,
+                                app_window,
+                                &mut state.user,
+                                context,
+                                renderer,
+                                scale_factor,
+                                self.tick_id,
+                                self.frame_id,
+                            )
+                        },
                     );
                     let EngineFrameUpdate {
                         target_updates,
                         command_buffers: engine_command_buffers,
                         keepalive: engine_keepalive,
                     } = engine_frame;
-                    if let Some(started) = record_started {
-                        hitch_record_ms = Some(started.elapsed().as_millis() as u64);
+                    if let Some(elapsed) = record_elapsed {
+                        hitch_record_ms = Some(elapsed.as_millis() as u64);
                     }
 
                     #[cfg(feature = "webview-wry")]
@@ -1976,279 +2025,283 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         }
                     }
 
-                    let present_started = hitch_config.map(|_| Instant::now());
-                    let present_span = tracing::info_span!("fret.runner.present");
-                    let _present_guard = present_span.enter();
-                    let draw_result = (|| -> Result<(), fret_render::RenderError> {
-                        let (frame, view) = surface.get_current_frame_view().map_err(|source| {
-                            fret_render::RenderError::SurfaceAcquireFailed { source }
-                        })?;
+                    let (draw_result, present_elapsed) = measure_redraw_phase(
+                        RedrawPhase::Present,
+                        hitch_config.is_some(),
+                        || -> Result<(), fret_render::RenderError> {
+                            let (frame, view) =
+                                surface.get_current_frame_view().map_err(|source| {
+                                    fret_render::RenderError::SurfaceAcquireFailed { source }
+                                })?;
 
-                        let screenshot_dir = self.diag_bundle_screenshots.poll_request_dir();
+                            let screenshot_dir = self.diag_bundle_screenshots.poll_request_dir();
 
-                        let render_scene_span = tracing::info_span!("fret.runner.render_scene");
-                        let _render_scene_guard = render_scene_span.enter();
-                        let want_visual_transparent = self
-                            .app
-                            .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>()
-                            .and_then(|s| s.effective_snapshot(app_window))
-                            .is_some_and(|s| s.visual_transparent);
-                        let clear_color = if want_visual_transparent {
-                            fret_render::ClearColor(wgpu::Color::TRANSPARENT)
-                        } else {
-                            self.config.clear_color
-                        };
-                        let ui_cmd = renderer.render_scene(
-                            &context.device,
-                            &context.queue,
-                            fret_render::RenderSceneParams {
-                                format: surface.format(),
-                                target_view: &view,
-                                scene: &state.scene,
-                                clear: clear_color,
-                                scale_factor,
-                                viewport_size: surface.size(),
-                            },
-                        );
-                        crate::runner::font_catalog::publish_renderer_svg_text_bridge_diagnostics(
+                            let want_visual_transparent = self
+                                .app
+                                .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>()
+                                .and_then(|s| s.effective_snapshot(app_window))
+                                .is_some_and(|s| s.visual_transparent);
+                            let clear_color = if want_visual_transparent {
+                                fret_render::ClearColor(wgpu::Color::TRANSPARENT)
+                            } else {
+                                self.config.clear_color
+                            };
+                            let (ui_cmd, _) =
+                                measure_redraw_phase(RedrawPhase::RenderScene, false, || {
+                                    renderer.render_scene(
+                                        &context.device,
+                                        &context.queue,
+                                        fret_render::RenderSceneParams {
+                                            format: surface.format(),
+                                            target_view: &view,
+                                            scene: &state.scene,
+                                            clear: clear_color,
+                                            scale_factor,
+                                            viewport_size: surface.size(),
+                                        },
+                                    )
+                                });
+                            crate::runner::font_catalog::publish_renderer_svg_text_bridge_diagnostics(
                             &mut self.app,
                             renderer,
                         );
-                        if render_text_diag_enabled {
-                            let diagnostics = renderer.text_diagnostics_snapshot(self.frame_id);
-                            let trace = renderer.text_font_trace_snapshot(self.frame_id);
-                            let policy = renderer.text_fallback_policy_snapshot(self.frame_id);
+                            if render_text_diag_enabled {
+                                let diagnostics = renderer.text_diagnostics_snapshot(self.frame_id);
+                                let trace = renderer.text_font_trace_snapshot(self.frame_id);
+                                let policy = renderer.text_fallback_policy_snapshot(self.frame_id);
 
-                            if render_text_debug_enabled {
-                                self.app.set_global(diagnostics);
-                                self.app.set_global(trace);
-                                self.app.set_global(policy);
-                            } else {
-                                // Avoid turning per-frame diagnostics snapshots into global-change
-                                // propagation / invalidation work during perf-sensitive runs.
-                                self.app.with_global_mut_untracked(
-                                    fret_core::RendererTextPerfSnapshot::default,
-                                    |slot, _app| {
-                                        *slot = diagnostics;
-                                    },
-                                );
-                                self.app.with_global_mut_untracked(
-                                    fret_core::RendererTextFontTraceSnapshot::default,
-                                    |slot, _app| {
-                                        *slot = trace;
-                                    },
-                                );
-                                self.app.with_global_mut_untracked(
-                                    fret_core::RendererTextFallbackPolicySnapshot::default,
-                                    |slot, _app| {
-                                        *slot = policy;
-                                    },
-                                );
+                                if render_text_debug_enabled {
+                                    self.app.set_global(diagnostics);
+                                    self.app.set_global(trace);
+                                    self.app.set_global(policy);
+                                } else {
+                                    // Avoid turning per-frame diagnostics snapshots into global-change
+                                    // propagation / invalidation work during perf-sensitive runs.
+                                    self.app.with_global_mut_untracked(
+                                        fret_core::RendererTextPerfSnapshot::default,
+                                        |slot, _app| {
+                                            *slot = diagnostics;
+                                        },
+                                    );
+                                    self.app.with_global_mut_untracked(
+                                        fret_core::RendererTextFontTraceSnapshot::default,
+                                        |slot, _app| {
+                                            *slot = trace;
+                                        },
+                                    );
+                                    self.app.with_global_mut_untracked(
+                                        fret_core::RendererTextFallbackPolicySnapshot::default,
+                                        |slot, _app| {
+                                            *slot = policy;
+                                        },
+                                    );
+                                }
                             }
-                        }
 
-                        let diag_renderer_perf = std::env::var_os("FRET_DIAG_RENDERER_PERF")
-                            .is_some_and(|v| !v.is_empty());
-                        if diag_renderer_perf
-                            && let Some(perf) = renderer.take_last_frame_perf_snapshot()
-                        {
-                            let tick_id = self.tick_id.0;
-                            let frame_id = self.frame_id.0;
-                            self.app.with_global_mut_untracked(
-                                fret_render::RendererPerfFrameStore::default,
-                                |store, _app| {
-                                    store.record(app_window, tick_id, frame_id, perf);
-                                },
-                            );
-                        }
-
-                        let diag_wgpu_report = std::env::var_os("FRET_DIAG_WGPU_REPORT")
-                            .is_some_and(|v| !v.is_empty());
-                        if diag_wgpu_report {
-                            let every_n = std::env::var("FRET_DIAG_WGPU_REPORT_EVERY_N_FRAMES")
-                                .ok()
-                                .and_then(|v| v.trim().parse::<u64>().ok())
-                                .unwrap_or(60)
-                                .max(1);
-
-                            let tick_id = self.tick_id.0;
-                            let frame_id = self.frame_id.0;
-                            let should_sample = frame_id <= 2 || frame_id.is_multiple_of(every_n);
-
-                            if should_sample
-                                && let Some(report) = context.instance.generate_report()
-                            {
-                                let hub = report.hub_report();
-                                let counts = fret_render::WgpuHubReportCounts {
-                                    adapters: (hub.adapters.num_allocated
-                                        + hub.adapters.num_kept_from_user)
-                                        as u64,
-                                    devices: (hub.devices.num_allocated
-                                        + hub.devices.num_kept_from_user)
-                                        as u64,
-                                    queues: (hub.queues.num_allocated
-                                        + hub.queues.num_kept_from_user)
-                                        as u64,
-                                    command_encoders: (hub.command_encoders.num_allocated
-                                        + hub.command_encoders.num_kept_from_user)
-                                        as u64,
-                                    buffers: (hub.buffers.num_allocated
-                                        + hub.buffers.num_kept_from_user)
-                                        as u64,
-                                    textures: (hub.textures.num_allocated
-                                        + hub.textures.num_kept_from_user)
-                                        as u64,
-                                    texture_views: (hub.texture_views.num_allocated
-                                        + hub.texture_views.num_kept_from_user)
-                                        as u64,
-                                    samplers: (hub.samplers.num_allocated
-                                        + hub.samplers.num_kept_from_user)
-                                        as u64,
-                                    shader_modules: (hub.shader_modules.num_allocated
-                                        + hub.shader_modules.num_kept_from_user)
-                                        as u64,
-                                    render_pipelines: (hub.render_pipelines.num_allocated
-                                        + hub.render_pipelines.num_kept_from_user)
-                                        as u64,
-                                    compute_pipelines: (hub.compute_pipelines.num_allocated
-                                        + hub.compute_pipelines.num_kept_from_user)
-                                        as u64,
-                                };
-
-                                self.app.with_global_mut_untracked(
-                                    fret_render::WgpuHubReportFrameStore::default,
-                                    |store, _app| {
-                                        store.record(app_window, tick_id, frame_id, counts);
-                                    },
-                                );
-                            }
-                        }
-
-                        let diag_wgpu_allocator_report =
-                            std::env::var_os("FRET_DIAG_WGPU_ALLOCATOR_REPORT")
+                            let diag_renderer_perf = std::env::var_os("FRET_DIAG_RENDERER_PERF")
                                 .is_some_and(|v| !v.is_empty());
-                        if diag_wgpu_allocator_report {
-                            let every_n =
-                                std::env::var("FRET_DIAG_WGPU_ALLOCATOR_REPORT_EVERY_N_FRAMES")
+                            if diag_renderer_perf
+                                && let Some(perf) = renderer.take_last_frame_perf_snapshot()
+                            {
+                                let tick_id = self.tick_id.0;
+                                let frame_id = self.frame_id.0;
+                                self.app.with_global_mut_untracked(
+                                    fret_render::RendererPerfFrameStore::default,
+                                    |store, _app| {
+                                        store.record(app_window, tick_id, frame_id, perf);
+                                    },
+                                );
+                            }
+
+                            let diag_wgpu_report = std::env::var_os("FRET_DIAG_WGPU_REPORT")
+                                .is_some_and(|v| !v.is_empty());
+                            if diag_wgpu_report {
+                                let every_n = std::env::var("FRET_DIAG_WGPU_REPORT_EVERY_N_FRAMES")
                                     .ok()
                                     .and_then(|v| v.trim().parse::<u64>().ok())
-                                    .unwrap_or(300)
+                                    .unwrap_or(60)
                                     .max(1);
-                            let top_n = std::env::var("FRET_DIAG_WGPU_ALLOCATOR_REPORT_TOP_N")
-                                .ok()
-                                .and_then(|v| v.trim().parse::<usize>().ok())
-                                .unwrap_or(16)
-                                .max(1);
-                            let max_name_bytes =
-                                std::env::var("FRET_DIAG_WGPU_ALLOCATOR_REPORT_MAX_NAME_BYTES")
+
+                                let tick_id = self.tick_id.0;
+                                let frame_id = self.frame_id.0;
+                                let should_sample =
+                                    frame_id <= 2 || frame_id.is_multiple_of(every_n);
+
+                                if should_sample
+                                    && let Some(report) = context.instance.generate_report()
+                                {
+                                    let hub = report.hub_report();
+                                    let counts = fret_render::WgpuHubReportCounts {
+                                        adapters: (hub.adapters.num_allocated
+                                            + hub.adapters.num_kept_from_user)
+                                            as u64,
+                                        devices: (hub.devices.num_allocated
+                                            + hub.devices.num_kept_from_user)
+                                            as u64,
+                                        queues: (hub.queues.num_allocated
+                                            + hub.queues.num_kept_from_user)
+                                            as u64,
+                                        command_encoders: (hub.command_encoders.num_allocated
+                                            + hub.command_encoders.num_kept_from_user)
+                                            as u64,
+                                        buffers: (hub.buffers.num_allocated
+                                            + hub.buffers.num_kept_from_user)
+                                            as u64,
+                                        textures: (hub.textures.num_allocated
+                                            + hub.textures.num_kept_from_user)
+                                            as u64,
+                                        texture_views: (hub.texture_views.num_allocated
+                                            + hub.texture_views.num_kept_from_user)
+                                            as u64,
+                                        samplers: (hub.samplers.num_allocated
+                                            + hub.samplers.num_kept_from_user)
+                                            as u64,
+                                        shader_modules: (hub.shader_modules.num_allocated
+                                            + hub.shader_modules.num_kept_from_user)
+                                            as u64,
+                                        render_pipelines: (hub.render_pipelines.num_allocated
+                                            + hub.render_pipelines.num_kept_from_user)
+                                            as u64,
+                                        compute_pipelines: (hub.compute_pipelines.num_allocated
+                                            + hub.compute_pipelines.num_kept_from_user)
+                                            as u64,
+                                    };
+
+                                    self.app.with_global_mut_untracked(
+                                        fret_render::WgpuHubReportFrameStore::default,
+                                        |store, _app| {
+                                            store.record(app_window, tick_id, frame_id, counts);
+                                        },
+                                    );
+                                }
+                            }
+
+                            let diag_wgpu_allocator_report =
+                                std::env::var_os("FRET_DIAG_WGPU_ALLOCATOR_REPORT")
+                                    .is_some_and(|v| !v.is_empty());
+                            if diag_wgpu_allocator_report {
+                                let every_n =
+                                    std::env::var("FRET_DIAG_WGPU_ALLOCATOR_REPORT_EVERY_N_FRAMES")
+                                        .ok()
+                                        .and_then(|v| v.trim().parse::<u64>().ok())
+                                        .unwrap_or(300)
+                                        .max(1);
+                                let top_n = std::env::var("FRET_DIAG_WGPU_ALLOCATOR_REPORT_TOP_N")
                                     .ok()
                                     .and_then(|v| v.trim().parse::<usize>().ok())
-                                    .unwrap_or(160)
-                                    .max(16);
+                                    .unwrap_or(16)
+                                    .max(1);
+                                let max_name_bytes =
+                                    std::env::var("FRET_DIAG_WGPU_ALLOCATOR_REPORT_MAX_NAME_BYTES")
+                                        .ok()
+                                        .and_then(|v| v.trim().parse::<usize>().ok())
+                                        .unwrap_or(160)
+                                        .max(16);
 
-                            let tick_id = self.tick_id.0;
-                            let frame_id = self.frame_id.0;
-                            let should_sample = frame_id <= 2 || frame_id.is_multiple_of(every_n);
+                                let tick_id = self.tick_id.0;
+                                let frame_id = self.frame_id.0;
+                                let should_sample =
+                                    frame_id <= 2 || frame_id.is_multiple_of(every_n);
 
-                            if should_sample {
-                                let report = context.device.generate_allocator_report();
-                                #[cfg(target_os = "macos")]
-                                let metal_current_allocated_size_bytes = unsafe {
-                                    context
-                                        .device
-                                        .as_hal::<wgpu::hal::api::Metal>()
-                                        .map(|dev| dev.raw_device().currentAllocatedSize() as u64)
-                                };
-                                #[cfg(not(target_os = "macos"))]
+                                if should_sample {
+                                    let report = context.device.generate_allocator_report();
+                                    #[cfg(target_os = "macos")]
+                                    let metal_current_allocated_size_bytes = unsafe {
+                                        context.device.as_hal::<wgpu::hal::api::Metal>().map(
+                                            |dev| dev.raw_device().currentAllocatedSize() as u64,
+                                        )
+                                    };
+                                    #[cfg(not(target_os = "macos"))]
                                 let metal_current_allocated_size_bytes: Option<u64> = None;
 
-                                self.app.with_global_mut_untracked(
-                                    fret_render::WgpuAllocatorReportFrameStore::default,
-                                    |store, _app| {
-                                        store.record_sample(
-                                            app_window,
-                                            tick_id,
-                                            frame_id,
-                                            report,
-                                            metal_current_allocated_size_bytes,
-                                            top_n,
-                                            max_name_bytes,
-                                        );
-                                    },
-                                );
+                                    self.app.with_global_mut_untracked(
+                                        fret_render::WgpuAllocatorReportFrameStore::default,
+                                        |store, _app| {
+                                            store.record_sample(
+                                                app_window,
+                                                tick_id,
+                                                frame_id,
+                                                report,
+                                                metal_current_allocated_size_bytes,
+                                                top_n,
+                                                max_name_bytes,
+                                            );
+                                        },
+                                    );
+                                }
                             }
-                        }
 
-                        let mut cmd_buffers = engine_command_buffers;
-                        cmd_buffers.push(ui_cmd);
+                            let mut cmd_buffers = engine_command_buffers;
+                            cmd_buffers.push(ui_cmd);
 
-                        #[cfg(feature = "diag-screenshots")]
-                        let mut screenshot_inflight: Option<
-                            diag_screenshots::InFlightCapture,
-                        > = None;
-                        #[cfg(feature = "diag-screenshots")]
-                        if let Some(diag) = self.diag_screenshots.as_mut() {
-                            let window_ffi = app_window.data().as_ffi();
-                            if let Some((cmd, inflight)) = diag.begin_capture_for_window(
-                                &context.device,
-                                window_ffi,
-                                &frame.texture,
-                                surface.format(),
-                                surface.size(),
-                            ) {
-                                cmd_buffers.push(cmd);
-                                screenshot_inflight = Some(inflight);
-                            }
-                        }
-
-                        let mut pending_bundle_screenshot = None;
-                        if let Some(dir) = screenshot_dir
-                            && let Some((pending, copy_cmd)) =
-                                self.diag_bundle_screenshots.begin_readback(
+                            #[cfg(feature = "diag-screenshots")]
+                            let mut screenshot_inflight: Option<
+                                diag_screenshots::InFlightCapture,
+                            > = None;
+                            #[cfg(feature = "diag-screenshots")]
+                            if let Some(diag) = self.diag_screenshots.as_mut() {
+                                let window_ffi = app_window.data().as_ffi();
+                                if let Some((cmd, inflight)) = diag.begin_capture_for_window(
                                     &context.device,
+                                    window_ffi,
                                     &frame.texture,
                                     surface.format(),
                                     surface.size(),
-                                )
-                        {
-                            cmd_buffers.push(copy_cmd);
-                            pending_bundle_screenshot = Some((pending, dir));
-                        }
+                                ) {
+                                    cmd_buffers.push(cmd);
+                                    screenshot_inflight = Some(inflight);
+                                }
+                            }
 
-                        context.queue.submit(cmd_buffers);
-                        frame.present();
-                        super::scheduling_diagnostics::commit_presented_frame_for_window(
-                            &mut self.app,
-                            &mut self.frame_id,
-                            app_window,
-                        );
-                        drop(engine_keepalive);
+                            let mut pending_bundle_screenshot = None;
+                            if let Some(dir) = screenshot_dir
+                                && let Some((pending, copy_cmd)) =
+                                    self.diag_bundle_screenshots.begin_readback(
+                                        &context.device,
+                                        &frame.texture,
+                                        surface.format(),
+                                        surface.size(),
+                                    )
+                            {
+                                cmd_buffers.push(copy_cmd);
+                                pending_bundle_screenshot = Some((pending, dir));
+                            }
 
-                        #[cfg(feature = "diag-screenshots")]
-                        if let (Some(diag), Some(inflight)) =
-                            (self.diag_screenshots.as_mut(), screenshot_inflight)
-                            && let Err(err) = diag.finish_capture(&context.device, inflight)
-                        {
-                            tracing::warn!(
-                                error = %err,
-                                window = ?app_window,
-                                "diag screenshot: capture failed"
+                            context.queue.submit(cmd_buffers);
+                            frame.present();
+                            super::scheduling_diagnostics::commit_presented_frame_for_window(
+                                &mut self.app,
+                                &mut self.frame_id,
+                                app_window,
                             );
-                        }
+                            drop(engine_keepalive);
 
-                        if let Some((pending, dir)) = pending_bundle_screenshot {
-                            let _ = self.diag_bundle_screenshots.finish_and_write_bmp(
-                                &context.device,
-                                pending,
-                                &dir,
-                                surface.format(),
-                            );
-                        }
+                            #[cfg(feature = "diag-screenshots")]
+                            if let (Some(diag), Some(inflight)) =
+                                (self.diag_screenshots.as_mut(), screenshot_inflight)
+                                && let Err(err) = diag.finish_capture(&context.device, inflight)
+                            {
+                                tracing::warn!(
+                                    error = %err,
+                                    window = ?app_window,
+                                    "diag screenshot: capture failed"
+                                );
+                            }
 
-                        Ok(())
-                    })();
-                    if let Some(started) = present_started {
-                        hitch_present_ms = Some(started.elapsed().as_millis() as u64);
+                            if let Some((pending, dir)) = pending_bundle_screenshot {
+                                let _ = self.diag_bundle_screenshots.finish_and_write_bmp(
+                                    &context.device,
+                                    pending,
+                                    &dir,
+                                    surface.format(),
+                                );
+                            }
+
+                            Ok(())
+                        },
+                    );
+                    if let Some(elapsed) = present_elapsed {
+                        hitch_present_ms = Some(elapsed.as_millis() as u64);
                     }
 
                     if capturing && let Some(r) = self.renderdoc.as_mut() {

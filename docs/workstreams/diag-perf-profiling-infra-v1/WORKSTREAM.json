@@ -40,12 +40,65 @@
     {
       "name": "workstream-catalog",
       "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "perf-key-registry-tests",
+      "command": "cargo nextest run -p fret-diag trace_exported_perf_keys_are_unique registered_perf_keys_are_unique trace_exported_perf_key_units_match_names registered_perf_key_units_match_names registered_perf_key_contract_keeps_stats_and_gate_keys_additive registered_perf_key_inventory_doc_is_in_sync trace_exported_perf_key_registry_contains_core_timeline_keys chrome_trace_includes_trace_events stats_json_includes_avg_and_budget --no-fail-fast"
+    },
+    {
+      "name": "perf-key-registry-inventory-json",
+      "command": "cargo run -p fretboard-dev -- diag stats --perf-keys-json"
+    },
+    {
+      "name": "perf-threshold-evidence-tests",
+      "command": "cargo nextest run -p fret-diag single_threshold_failure_links_bundle_and_trace_artifact repeat_failure_context_links_existing_bundle_trace_artifact repeat_failure_context_uses_metric_specific_renderer_run repeat_failure_context_keeps_existing_non_renderer_evidence perf_thresholds_json_projects_renderer_thresholds --no-fail-fast"
+    },
+    {
+      "name": "stats-diff-typical-tail-tests",
+      "command": "cargo nextest run -p fret-diag stats_diff_sorts_by_abs_delta_then_key stats_diff_includes_typical_and_tail_highlights stats_diff_json_is_versioned_and_additive_only --no-fail-fast"
+    },
+    {
+      "name": "example-bundle-stats-json",
+      "command": "cargo run -p fretboard-dev -- diag stats docs/workstreams/diag-perf-profiling-infra-v1/examples/perf-profiling-mini --sort time --top 5 --json"
+    },
+    {
+      "name": "fret-ui-layout-tail-phase-tests",
+      "command": "cargo nextest run -p fret-ui detached_dirty_view_cache_root_is_pruned_before_layout_followups prepaint_interaction_cache_replays_for_clean_view_cache_root prepaint_output_store_is_keyed_by_cache_root_prepaint_key --no-fail-fast"
+    },
+    {
+      "name": "fret-ui-paint-entry-phase-tests",
+      "command": "cargo nextest run -p fret-ui view_cache_disables_paint_cache_for_non_boundary_nodes view_cache_allows_paint_cache_for_boundary_nodes paint_publishes_window_text_input_snapshot_for_focused_text_widget snapshot_resets_when_focus_is_not_text_input --no-fail-fast"
+    },
+    {
+      "name": "fret-ui-paint-node-phase-tests",
+      "command": "cargo nextest run -p fret-ui paint_cache_replays_ops_when_plain_node_translates_from_boundary_entry_store paint_cache_hit_test_only_invalidation_replays_when_cache_key_matches paint_cache_hit_test_only_replay_reject_counter_tracks_key_mismatch model_change_invalidates_bound_text_input --no-fail-fast"
+    },
+    {
+      "name": "fret-bootstrap-driver-phase-check",
+      "command": "cargo check -p fret-bootstrap --features ui-app-driver,diagnostics"
+    },
+    {
+      "name": "fret-launch-runner-phase-check",
+      "command": "cargo check -p fret-launch"
+    },
+    {
+      "name": "fret-launch-web-runner-phase-check",
+      "command": "cargo check -p fret-launch --target wasm32-unknown-unknown"
+    },
+    {
+      "name": "fret-diag-clippy",
+      "command": "cargo clippy -p fret-diag --all-targets -- -D warnings"
     }
   ],
   "evidence": [
     "docs/workstreams/diag-perf-profiling-infra-v1/diag-perf-profiling-infra-v1.md",
     "docs/workstreams/diag-perf-profiling-infra-v1/diag-perf-profiling-infra-v1-todo.md",
     "docs/workstreams/diag-perf-profiling-infra-v1/PHASE_TIMELINE_COVERAGE_AUDIT_2026-05-15.md",
+    "docs/workstreams/diag-perf-profiling-infra-v1/examples/perf-profiling-mini/bundle.schema2.json",
+    "docs/workstreams/diag-perf-profiling-infra-v1/perf-key-registry.frame-stats.json",
+    "crates/fret-diag/src/perf_keys.rs",
+    "crates/fret-diag/src/stats.rs",
+    "crates/fret-diag/src/stats/bundle_stats_report.inc.rs",
     "ecosystem/fret-bootstrap/src/ui_app_driver.rs",
     "ecosystem/fret-bootstrap/src/lib.rs",
     "crates/fret-ui/src/tree/layout/entrypoints.rs",
@@ -57,6 +110,7 @@
     "crates/fret-ui/src/tree/hit_test.rs",
     "crates/fret-render-wgpu/src/renderer",
     "crates/fret-diag/src/trace.rs",
+    "crates/fret-diag/src/diag_perf/thresholds.rs",
     "crates/fret-diag/src/diag_repro/launch.rs",
     "docs/tracy.md"
   ],
