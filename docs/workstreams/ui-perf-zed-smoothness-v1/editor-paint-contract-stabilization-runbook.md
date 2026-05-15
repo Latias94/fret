@@ -44,8 +44,8 @@ Run this before a long target-machine validation pass:
 python tools/perf/diag_editor_paint_contract_preflight.py
 ```
 
-This checks the three editor probe JSON files, the diag script registry, and the strict baseline matrix audit without
-running the long perf validation passes.
+This checks the three editor probe JSON files, their required overlay-disabled `meta.env_defaults`, the diag script
+registry, and the strict baseline matrix audit without running the long perf validation passes.
 
 ## Target-Machine Runner
 

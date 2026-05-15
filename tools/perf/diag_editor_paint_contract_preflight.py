@@ -23,6 +23,10 @@ EDITOR_PROBE_SCRIPTS = [
     "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
 ]
 
+REQUIRED_SCRIPT_ENV_DEFAULTS = {
+    "FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY": "0",
+}
+
 BASELINE_MATRIX = "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md"
 
 
@@ -51,6 +55,31 @@ def _run(cmd: list[str], cwd: Path) -> dict[str, object]:
         "elapsed_ms": int((time.time() - started) * 1000.0),
         "stdout": p.stdout,
         "stderr": p.stderr,
+    }
+
+
+def check_script_contract(path: Path) -> dict[str, object]:
+    started = time.time()
+    errors: list[str] = []
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        errors.append(f"cannot read script JSON: {exc}")
+        doc = None
+
+    meta = doc.get("meta") if isinstance(doc, dict) else None
+    env_defaults = meta.get("env_defaults") if isinstance(meta, dict) else None
+    for key, expected in REQUIRED_SCRIPT_ENV_DEFAULTS.items():
+        actual = env_defaults.get(key) if isinstance(env_defaults, dict) else None
+        if actual != expected:
+            errors.append(f"meta.env_defaults.{key} must be {expected!r}, got {actual!r}")
+
+    return {
+        "cmd": ["check-script-contract", str(path)],
+        "rc": 1 if errors else 0,
+        "elapsed_ms": int((time.time() - started) * 1000.0),
+        "stdout": "",
+        "stderr": "\n".join(errors),
     }
 
 
@@ -83,6 +112,7 @@ def main() -> int:
             )
             continue
         checks.append(_run([sys.executable, "-m", "json.tool", str(path)], workspace_root))
+        checks.append(check_script_contract(path))
 
     checks.append(_run([sys.executable, "tools/check_diag_scripts_registry.py"], workspace_root))
     checks.append(

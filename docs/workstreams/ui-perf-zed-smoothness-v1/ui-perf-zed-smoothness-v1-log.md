@@ -110,6 +110,7 @@ Notes:
 Question:
 - Does the closeout wording incorrectly imply that the entire baseline-validation directory must be free of
   `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`, even though the resize helper may collect code-editor paint fields internally?
+- Does preflight prove that all three editor paint scripts still carry the required overlay-disabled env defaults?
 
 Change:
 - Clarified that the verifier rejects paint-perf env only on baseline-validation direct `diag perf` commands.
@@ -118,6 +119,8 @@ Change:
 - Added the overlay-zero requirement to the attribution verifier:
   `code_editor_paint_perf.max.us_torture_overlay=0`, the `diag stats` form of
   `top_code_editor_torture_overlay_us=0`.
+- Added preflight script-contract checks for the required
+  `FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0` `meta.env_defaults`.
 
 Validation:
 - Documentation-only alignment with `tools/perf/diag_editor_paint_contract_verify_artifacts.py`.
