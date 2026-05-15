@@ -166,8 +166,8 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         &mut self,
         id: &str,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) {
-        self.child_region_with_options(id, ChildRegionOptions::default(), f);
+    ) -> ChildRegionResponse {
+        self.child_region_with_options(id, ChildRegionOptions::default(), f)
     }
 
     pub fn child_region_with_options(
@@ -175,10 +175,11 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         id: &str,
         options: ChildRegionOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) {
+    ) -> ChildRegionResponse {
         let build_focus = self.build_focus.clone();
-        let element = self
+        let (element, response) = self
             .with_cx_mut(|cx| child_region::child_region_element(cx, id, build_focus, options, f));
         self.add(element);
+        response
     }
 }

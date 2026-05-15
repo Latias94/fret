@@ -207,6 +207,8 @@ def main() -> None:
         OpaqueStructCheck(
             Path("ecosystem/fret-ui-kit/src/imui/response/widgets.rs"),
             [
+                "ChildRegionResponse",
+                "ChildRegionResizeYResponse",
                 "DisclosureResponse",
                 "ComboResponse",
                 "InputTextPickerResponse",
