@@ -90,6 +90,9 @@ Recent landing in this priority bucket:
   `diag doctor campaigns` / `diag doctor campaigns --json` preflight beside the DevTools GUI and
   MCP entrypoints, so first-open diagnostics discovery points maintainers at the checked-in
   campaign-manifest guard before they branch into GUI or automation consumers.
+- `regression_summary_drilldown` now projects first-open evidence paths and compact share
+  artifacts, and DevTools GUI plus MCP dashboard consumers expose that shared projection instead of
+  reparsing `regression.summary.json` evidence fields locally.
 
 Definition of done:
 

@@ -144,6 +144,11 @@ Progress update:
 - `diag_campaign` has now landed another share-manifest seam around combined-zip field mutation:
   - `apply_campaign_share_manifest_combined_zip` now routes through dedicated field-building and share-section apply helpers,
   - helper-level regression coverage now locks combined-zip field projection plus section-local mutation without going through the full finalize path.
+- `regression_summary_drilldown` has now landed a non-CLI consumer evidence projection:
+  - shared first-open/share evidence projection now flows through `regression_summary_drilldown`,
+    `apps/fret-devtools`, and `apps/fret-devtools-mcp`,
+  - DevTools GUI and MCP no longer need local parsing for `triage_artifact`, `script_result`,
+    `share_artifact`, or `packed_report` paths.
 - `commands::artifacts` has now landed another artifact-resolution/materialization seam around `cmd_meta`:
   - `resolve_meta_artifact_paths` now routes direct sidecar, bundle-dir, and bundle-path resolution through dedicated helpers,
   - helper-level regression coverage now locks valid-sidecar reuse, invalid-sidecar fallback, and `_root` sidecar preference without invoking the full command.

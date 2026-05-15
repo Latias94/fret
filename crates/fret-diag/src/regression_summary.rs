@@ -47,6 +47,8 @@ pub struct RegressionSummaryDrilldownV1 {
     pub capability_sources: Vec<String>,
     pub capabilities_check_paths: Vec<String>,
     pub perf_evidence_lines: Vec<String>,
+    pub first_open_evidence_lines: Vec<String>,
+    pub share_artifacts: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -108,6 +110,12 @@ pub fn regression_summary_drilldown(summary: &RegressionSummaryV1) -> Regression
                 .filter(|path| !path.trim().is_empty())
             {
                 push_unique_line(&mut drilldown.capabilities_check_paths, path.to_string());
+            }
+            for line in regression_item_first_open_evidence_lines(item) {
+                push_unique_line(&mut drilldown.first_open_evidence_lines, line);
+            }
+            for path in regression_item_share_artifacts(evidence) {
+                push_unique_line(&mut drilldown.share_artifacts, path);
             }
         }
     }
@@ -297,11 +305,7 @@ fn regression_item_perf_evidence_lines(item: &RegressionItemSummaryV1) -> Vec<St
     let Some(evidence) = item.evidence.as_ref() else {
         return Vec::new();
     };
-    let label = if item.name.trim().is_empty() {
-        item.item_id.as_str()
-    } else {
-        item.name.as_str()
-    };
+    let label = regression_item_display_label(item);
     let prefix = format!("{} [{}]", label, regression_status_label(item.status));
     let mut lines = Vec::new();
     if let Some(path) = evidence
@@ -344,6 +348,85 @@ fn regression_item_perf_evidence_lines(item: &RegressionItemSummaryV1) -> Vec<St
         }
     }
     lines
+}
+
+fn regression_item_first_open_evidence_lines(item: &RegressionItemSummaryV1) -> Vec<String> {
+    let Some(evidence) = item.evidence.as_ref() else {
+        return Vec::new();
+    };
+    let label = regression_item_display_label(item);
+    let prefix = format!("{} [{}]", label, regression_status_label(item.status));
+    let mut lines = Vec::new();
+    push_optional_evidence_line(
+        &mut lines,
+        &prefix,
+        "bundle_artifact",
+        &evidence.bundle_artifact,
+    );
+    push_optional_evidence_line(
+        &mut lines,
+        &prefix,
+        "triage_artifact",
+        &evidence.triage_json,
+    );
+    push_optional_evidence_line(
+        &mut lines,
+        &prefix,
+        "script_result",
+        &evidence.script_result_json,
+    );
+    push_optional_evidence_line(
+        &mut lines,
+        &prefix,
+        "screenshots_manifest",
+        &evidence.screenshots_manifest,
+    );
+    push_optional_evidence_line(
+        &mut lines,
+        &prefix,
+        "share_artifact",
+        &evidence.ai_packet_dir,
+    );
+    push_optional_evidence_line(&mut lines, &prefix, "packed_report", &evidence.pack_path);
+    lines
+}
+
+fn push_optional_evidence_line(
+    lines: &mut Vec<String>,
+    prefix: &str,
+    field: &str,
+    path: &Option<String>,
+) {
+    if let Some(path) = path.as_deref().filter(|path| !path.trim().is_empty()) {
+        lines.push(format!("{prefix} {field}: {path}"));
+    }
+}
+
+fn regression_item_share_artifacts(evidence: &RegressionEvidenceV1) -> Vec<String> {
+    let mut paths = Vec::new();
+    if let Some(path) = evidence
+        .ai_packet_dir
+        .as_deref()
+        .filter(|path| !path.trim().is_empty())
+    {
+        paths.push(path.to_string());
+    }
+    if let Some(path) = evidence
+        .pack_path
+        .as_deref()
+        .filter(|path| !path.trim().is_empty())
+    {
+        paths.push(path.to_string());
+    }
+    paths
+}
+
+fn regression_item_display_label(item: &RegressionItemSummaryV1) -> &str {
+    if item.name.trim().is_empty() {
+        item.item_id.as_str()
+    } else {
+        item.name.as_str()
+    }
 }
 
 impl RegressionTotalsV1 {
@@ -741,6 +824,12 @@ mod tests {
                     "lane": "perf",
                     "evidence": {
                         "bundle_dir": "target/fret-diag/perf-docking/run-a",
+                        "bundle_artifact": "target/fret-diag/perf-docking/run-a/bundle.schema2.json",
+                        "triage_artifact": "target/fret-diag/perf-docking/run-a/triage.json",
+                        "script_result": "target/fret-diag/perf-docking/run-a/script.result.json",
+                        "screenshots_manifest": "target/fret-diag/perf-docking/run-a/screenshots.manifest.json",
+                        "share_artifact": "target/fret-diag/perf-docking/share/perf-case.ai.zip",
+                        "packed_report": "target/fret-diag/perf-docking/share/perf-case.report.zip",
                         "perf_summary_json": "target/fret-diag/perf-docking/layout.perf.summary.v1.json",
                         "compare_json": "target/fret-diag/perf-docking/check.perf_thresholds.json",
                         "extra": {
@@ -806,6 +895,32 @@ mod tests {
         ));
         assert!(text.contains("docking steady drag [failed_deterministic] threshold_failures: 1"));
         assert!(text.contains("threshold_failures_json"));
+        let first_open_text = drilldown.first_open_evidence_lines.join("\n");
+        assert!(first_open_text.contains(
+            "docking steady drag [failed_deterministic] bundle_artifact: target/fret-diag/perf-docking/run-a/bundle.schema2.json"
+        ));
+        assert!(first_open_text.contains(
+            "docking steady drag [failed_deterministic] triage_artifact: target/fret-diag/perf-docking/run-a/triage.json"
+        ));
+        assert!(first_open_text.contains(
+            "docking steady drag [failed_deterministic] script_result: target/fret-diag/perf-docking/run-a/script.result.json"
+        ));
+        assert!(first_open_text.contains(
+            "docking steady drag [failed_deterministic] screenshots_manifest: target/fret-diag/perf-docking/run-a/screenshots.manifest.json"
+        ));
+        assert!(first_open_text.contains(
+            "docking steady drag [failed_deterministic] share_artifact: target/fret-diag/perf-docking/share/perf-case.ai.zip"
+        ));
+        assert!(first_open_text.contains(
+            "docking steady drag [failed_deterministic] packed_report: target/fret-diag/perf-docking/share/perf-case.report.zip"
+        ));
+        assert_eq!(
+            drilldown.share_artifacts,
+            vec![
+                "target/fret-diag/perf-docking/share/perf-case.ai.zip".to_string(),
+                "target/fret-diag/perf-docking/share/perf-case.report.zip".to_string(),
+            ]
+        );
     }
 
     #[test]
