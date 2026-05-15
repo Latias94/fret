@@ -163,6 +163,10 @@ Progress update:
   - `dashboard.txt` reuses the shared `diag_dashboard` human projection instead of creating another
     summary wording path,
   - `share/combined-failures.zip` includes `_root/dashboard.txt` when present.
+- Repo-owned campaign authoring preflight now runs in Linux CI:
+  - `.github/workflows/ci.yml` invokes `cargo run -p fretboard-dev -- diag doctor campaigns --json`,
+  - local one-off manifest work remains on `diag campaign validate <manifest>` rather than a richer
+    authoring UX.
 - `commands::artifacts` has now landed another artifact-resolution/materialization seam around `cmd_meta`:
   - `resolve_meta_artifact_paths` now routes direct sidecar, bundle-dir, and bundle-path resolution through dedicated helpers,
   - helper-level regression coverage now locks valid-sidecar reuse, invalid-sidecar fallback, and `_root` sidecar preference without invoking the full command.

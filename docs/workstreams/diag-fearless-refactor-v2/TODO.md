@@ -406,8 +406,8 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] land `diag campaign validate` for local authoring and ad hoc manifest checks,
   - [x] land `diag doctor campaigns` as the first repo-owned read-only preflight for checked-in
     manifests,
-  - [ ] decide whether CI should also run that preflight by default or keep it maintainer-invoked
-    first,
+  - [x] run `diag doctor campaigns --json` in Linux CI by default while keeping ad hoc
+    `diag campaign validate <manifest>` as the local one-off authoring path,
   - [ ] avoid inventing a richer manifest UX before the current JSON authoring flow proves
     insufficient.
 

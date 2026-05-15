@@ -101,6 +101,7 @@ Example:
 
 - checks the repo-owned manifest set under `tools/diag-campaigns/` as a read-only maintainer preflight,
 - reports invalid manifests, duplicate campaign ids, and remaining legacy top-level `suites` / `scripts` authoring shape,
+- runs in Linux CI via `cargo run -p fretboard-dev -- diag doctor campaigns --json`,
 - keeps `diag campaign validate` as the explicit ad hoc validation entrypoint for one-off manifest paths.
 
 `diag campaign share` behavior:

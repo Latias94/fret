@@ -53,6 +53,10 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
+      - name: Diagnostics campaign manifest preflight
+        if: runner.os == 'Linux'
+        run: cargo run -p fretboard-dev -- diag doctor campaigns --json
+
       - name: Clippy (core crates)
         run: >-
           cargo clippy -p fret -p fret-a11y-accesskit -p fret-app -p fret-core -p fret-fonts
