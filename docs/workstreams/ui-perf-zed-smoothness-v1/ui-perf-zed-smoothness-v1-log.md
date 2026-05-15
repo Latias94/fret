@@ -105,6 +105,32 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 06:22:30 (commit `35a399169f`)
+
+Change:
+- Added `diag_editor_paint_contract_verify_artifacts.py` and documented the post-sync verification step for the
+  Windows RTX4090 editor paint contract outputs.
+
+Command:
+```powershell
+python3 -m unittest discover -s tools/perf -p 'test_diag_editor_paint_contract_*.py'
+python3 tools/perf/diag_editor_paint_contract_preflight.py --out-summary target/fret-diag/editor-paint-contract-preflight-local-verify-artifacts/summary.json
+python3 tools/perf/diag_editor_paint_contract_validate.py --dry-run --date-tag workstream-gate
+python3 tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict
+python3 tools/check_workstream_catalog.py
+```
+
+Results:
+- Python tests PASS (13 tests).
+- Preflight PASS.
+- Validation dry-run PASS.
+- Strict baseline audit PASS.
+- Workstream catalog PASS.
+
+Notes:
+- The Windows RTX4090 validation artifacts are still missing locally; this entry only closes the post-sync
+  verification path.
+
 ## 2026-02-02 18:30:01 (commit `eb960a0570b361dd58f14f92683c4b345b2abbc3`)
 
 Change:
