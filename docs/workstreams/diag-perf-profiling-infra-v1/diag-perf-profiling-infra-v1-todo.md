@@ -19,7 +19,7 @@
   - [x] registered stats/gate subset keys stay additive and unit-consistent
   - [ ] full registry keys are additive only (no accidental rename)
   - [ ] full registry units are consistent
-- [ ] Add a generated field inventory doc (or update `diag-perf-attribution-v1-field-inventory.md` from the registry).
+- [x] Add a generated field inventory doc (or update `diag-perf-attribution-v1-field-inventory.md` from the registry).
 
 ## Tooling UX (shorten the attribution loop)
 

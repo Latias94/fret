@@ -1,0 +1,1157 @@
+{
+  "complete": false,
+  "coverage": "registered_subset",
+  "keys": [
+    {
+      "key": "total_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "frame",
+      "trace_event": "fret.frame",
+      "unit": "us"
+    },
+    {
+      "key": "layout_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout",
+      "unit": "us"
+    },
+    {
+      "key": "prepaint_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "prepaint",
+      "trace_event": "prepaint",
+      "unit": "us"
+    },
+    {
+      "key": "paint_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "paint",
+      "trace_event": "paint",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "dispatch",
+      "trace_event": "dispatch",
+      "unit": "us"
+    },
+    {
+      "key": "hit_test_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "hit_test",
+      "trace_event": "hit_test",
+      "unit": "us"
+    },
+    {
+      "key": "ui_thread_cpu_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "cpu",
+      "trace_event": "ui_thread_cpu_time",
+      "unit": "us"
+    },
+    {
+      "key": "ui_thread_cpu_total_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "us"
+    },
+    {
+      "key": "ui_thread_cpu_cycle_time_delta_cycles",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "cpu",
+      "trace_event": "ui_thread_cpu_cycle_delta",
+      "unit": "cycles"
+    },
+    {
+      "key": "ui_thread_cpu_cycle_time_total_cycles",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "trace_category": "cpu",
+      "trace_event": "ui_thread_cpu_cycle_total",
+      "unit": "cycles"
+    },
+    {
+      "key": "layout_collect_roots_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.collect_roots",
+      "unit": "us"
+    },
+    {
+      "key": "layout_invalidate_scroll_handle_bindings_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.invalidate_scroll_bindings",
+      "unit": "us"
+    },
+    {
+      "key": "layout_expand_view_cache_invalidations_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.expand_view_cache_invalidations",
+      "unit": "us"
+    },
+    {
+      "key": "layout_request_build_roots_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.request_build_roots",
+      "unit": "us"
+    },
+    {
+      "key": "layout_pending_barrier_relayouts_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_repair_view_cache_bounds_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_contained_view_cache_roots_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_collapse_layout_observations_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_observation_record_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.obs_record",
+      "unit": "us"
+    },
+    {
+      "key": "layout_observation_record_models_items",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "layout_observation_record_globals_items",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "layout_prepaint_after_layout_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_roots_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.roots",
+      "unit": "us"
+    },
+    {
+      "key": "layout_barrier_relayouts_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_view_cache_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.view_cache",
+      "unit": "us"
+    },
+    {
+      "key": "layout_semantics_refresh_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_focus_repair_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_deferred_cleanup_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_nodes_performed",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "layout_engine_solves",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "layout_engine_solve_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "layout",
+      "trace_event": "layout.engine_solve",
+      "unit": "us"
+    },
+    {
+      "key": "layout_engine_child_rect_queries",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "layout_engine_child_rect_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "layout_engine_widget_fallback_solves",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "paint_record_visual_bounds_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "paint",
+      "trace_event": "paint.record_visual_bounds",
+      "unit": "us"
+    },
+    {
+      "key": "paint_record_visual_bounds_calls",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "paint_cache_key_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "paint",
+      "trace_event": "paint.cache_key",
+      "unit": "us"
+    },
+    {
+      "key": "paint_cache_hit_check_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "paint",
+      "trace_event": "paint.cache_hit_check",
+      "unit": "us"
+    },
+    {
+      "key": "paint_widget_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "paint",
+      "trace_event": "paint.widget",
+      "unit": "us"
+    },
+    {
+      "key": "paint_observation_record_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "paint",
+      "trace_event": "paint.obs_record",
+      "unit": "us"
+    },
+    {
+      "key": "paint_host_widget_observed_models_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "paint_host_widget_observed_models_items",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "paint_host_widget_observed_globals_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "paint_host_widget_observed_globals_items",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "paint_host_widget_instance_lookup_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "paint_host_widget_instance_lookup_calls",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "paint_text_prepare_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "paint",
+      "trace_event": "paint.text_prepare",
+      "unit": "us"
+    },
+    {
+      "key": "paint_text_prepare_calls",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "paint_input_context_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "paint_scroll_handle_invalidation_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "paint_collect_roots_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "paint_publish_text_input_snapshot_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "paint_collapse_observations_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "paint_nodes_performed",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "paint_cache_misses",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "paint_cache_replay_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "paint",
+      "trace_event": "paint.cache_replay",
+      "unit": "us"
+    },
+    {
+      "key": "paint_cache_bounds_translate_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "trace_category": "paint",
+      "trace_event": "paint.cache_bounds_translate",
+      "unit": "us"
+    },
+    {
+      "key": "paint_cache_bounds_translated_nodes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "dispatch_inner_body_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_accounted_time_us",
+      "kind": "timing",
+      "scope": "derived_stats",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_unattributed_time_us",
+      "kind": "timing",
+      "scope": "derived_stats",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_inner_body_unattributed_time_us",
+      "kind": "timing",
+      "scope": "derived_stats",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_runtime_wrapper_time_us",
+      "kind": "timing",
+      "scope": "derived_stats",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_pointer_event_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_timer_event_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_timer_targeted_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_timer_broadcast_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_timer_broadcast_rebuild_visible_layers_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_timer_broadcast_loop_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_timer_slowest_event_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_other_event_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_hover_update_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_input_state_update_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_context_build_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_prelude_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_pointer_arbitration_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_pointer_target_routing_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_post_widget_control_flow_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_scroll_handle_invalidation_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_active_layers_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_input_context_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_event_chain_build_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_widget_capture_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_widget_bubble_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_cursor_query_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_pointer_move_layer_observers_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_synth_hover_observer_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_cursor_effect_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_post_dispatch_snapshot_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "dispatch_events",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "dispatch_pointer_events",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "dispatch_timer_events",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "dispatch_timer_targeted_events",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "dispatch_timer_broadcast_events",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "dispatch_timer_broadcast_layers_visited",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "dispatch_other_events",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "hit_test_cached_path_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "hit_test_bounds_tree_query_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "hit_test_candidate_self_only_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "hit_test_fallback_traversal_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "hit_test_queries",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "hit_test_bounds_tree_queries",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "hit_test_bounds_tree_disabled",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "hit_test_bounds_tree_misses",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "hit_test_bounds_tree_hits",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "hit_test_bounds_tree_candidate_rejected",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "window_runtime_snapshot_focus_repair_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "window_runtime_snapshot_input_context_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "window_runtime_snapshot_command_availability_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "window_runtime_snapshot_command_registry_collect_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "window_runtime_snapshot_command_availability_eval_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "window_runtime_snapshot_shortcut_overlay_time_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "window_runtime_snapshot_widget_command_count",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_encode_scene_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_ensure_pipelines_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_plan_compile_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_upload_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_record_passes_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_encoder_finish_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_prepare_svg_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_prepare_text_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_encode_scene_stack_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_encode_scene_clip_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_encode_scene_mask_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_encode_scene_effect_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_encode_scene_quad_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_encode_scene_image_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_encode_scene_text_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_encode_scene_path_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_encode_scene_viewport_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_encode_scene_flush_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_encode_scene_text_shadow_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_encode_scene_text_setup_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_encode_scene_text_glyphs_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_encode_scene_text_glyph_transform_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_encode_scene_text_glyph_emit_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_encode_scene_text_group_flush_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_uniform_bytes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "bytes"
+    },
+    {
+      "key": "renderer_instance_bytes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "bytes"
+    },
+    {
+      "key": "renderer_vertex_bytes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "bytes"
+    },
+    {
+      "key": "renderer_encode_scene_text_vertex_grow_events",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_encode_scene_text_transform_fast_path_glyphs",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_encode_scene_text_transform_generic_glyphs",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_encode_scene_stack_ops",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_encode_scene_clip_ops",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_encode_scene_mask_ops",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_encode_scene_effect_ops",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_encode_scene_quad_ops",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_encode_scene_image_ops",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_encode_scene_text_ops",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_encode_scene_path_ops",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_encode_scene_viewport_ops",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_encode_scene_flushes",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "pointer_move.max_dispatch_time_us",
+      "kind": "timing",
+      "scope": "pointer_move",
+      "suggested_aggregate": "max",
+      "unit": "us"
+    },
+    {
+      "key": "pointer_move.max_hit_test_time_us",
+      "kind": "timing",
+      "scope": "pointer_move",
+      "suggested_aggregate": "max",
+      "unit": "us"
+    },
+    {
+      "key": "pointer_move.snapshots_with_global_changes",
+      "kind": "counter",
+      "scope": "pointer_move",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    }
+  ],
+  "kind": "perf_key_registry",
+  "note": "Registered frame/stats/gate perf key subset. Full bundle/stats/gate coverage is still tracked by diag-perf-profiling-infra-v1.",
+  "schema_policy": {
+    "breaking_change": "requires_schema_version_bump_or_migration_plan",
+    "compatibility": "additive_only",
+    "field_renames": "require_compatibility_window"
+  },
+  "schema_version": 1,
+  "scope": "frame_stats"
+}

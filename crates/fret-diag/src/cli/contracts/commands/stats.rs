@@ -121,7 +121,7 @@ pub(crate) struct StatsChecksArgs {
 #[derive(Debug, Args)]
 #[command(group(
     ArgGroup::new("stats_target")
-        .args(["source", "diff", "stats_lite_checks_json"])
+        .args(["source", "diff", "stats_lite_checks_json", "perf_keys_json"])
         .required(true)
         .multiple(false)
 ))]
@@ -153,6 +153,9 @@ pub(crate) struct StatsCommandArgs {
 
     #[arg(long = "stats-lite-checks-json")]
     pub stats_lite_checks_json: bool,
+
+    #[arg(long = "perf-keys-json")]
+    pub perf_keys_json: bool,
 
     #[command(flatten)]
     pub checks: StatsChecksArgs,

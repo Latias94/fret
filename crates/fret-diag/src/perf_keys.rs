@@ -1,5 +1,8 @@
 use serde_json::{Map, Value};
 
+pub(crate) const PERF_KEY_REGISTRY_SCHEMA_VERSION: u32 = 1;
+pub(crate) const PERF_KEY_REGISTRY_KIND: &str = "perf_key_registry";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum PerfKeyUnit {
     Microseconds,
@@ -804,6 +807,19 @@ pub(crate) fn registered_frame_stats_keys_json() -> Value {
     perf_keys_json(REGISTERED_FRAME_STATS_KEYS)
 }
 
+pub(crate) fn registered_frame_stats_inventory_json() -> Value {
+    serde_json::json!({
+        "schema_version": PERF_KEY_REGISTRY_SCHEMA_VERSION,
+        "kind": PERF_KEY_REGISTRY_KIND,
+        "scope": "frame_stats",
+        "coverage": "registered_subset",
+        "complete": false,
+        "note": "Registered frame/stats/gate perf key subset. Full bundle/stats/gate coverage is still tracked by diag-perf-profiling-infra-v1.",
+        "schema_policy": crate::perf_schema::schema_policy_json(),
+        "keys": registered_frame_stats_keys_json(),
+    })
+}
+
 fn perf_keys_json(keys: &[PerfKey]) -> Value {
     Value::Array(
         keys.iter()
@@ -1050,5 +1066,15 @@ mod tests {
         ] {
             assert!(keys.contains(expected), "missing perf key: {expected}");
         }
+    }
+
+    #[test]
+    fn registered_perf_key_inventory_doc_is_in_sync() {
+        let expected = registered_frame_stats_inventory_json();
+        let doc: Value = serde_json::from_str(include_str!(
+            "../../../docs/workstreams/diag-perf-profiling-infra-v1/perf-key-registry.frame-stats.json"
+        ))
+        .expect("parse perf key registry inventory doc");
+        assert_eq!(doc, expected);
     }
 }
