@@ -105,6 +105,28 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 07:05:02 +0800 (local head `97a870253d`)
+
+Change:
+- Synchronized the contract audit completion table with the latest verifier/closeout hardening:
+  - target summaries must carry non-empty `date_tag` fields,
+  - stored commands must match the required Windows validation shape,
+  - baseline-validation summaries must not use paint-perf env,
+  - attribution summaries must include paint-perf coverage,
+  - and closeout non-dry-run behavior now has fail/pass path unit coverage.
+
+Command:
+```powershell
+git diff --check
+```
+
+Results:
+- Diff whitespace check PASS.
+
+Notes:
+- Audit status remains not complete because the target Windows RTX4090 validation and attribution artifacts are still
+  missing.
+
 ## 2026-05-16 07:03:15 +0800 (local head `47b0a322f9`)
 
 Change:
