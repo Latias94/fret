@@ -14352,3 +14352,47 @@ Decision:
 - Do not re-seed or loosen baselines from this macOS M4 run. The next owner is attribution closure for remaining
   generic paint-widget aggregate cost: Canvas callback/code-editor row work vs `ElementHostWidget` traversal and
   collapse/recording overhead.
+
+## 2026-05-16 03:59:52 +08:00 (paint-widget callback gap summary)
+
+Question:
+- The post-fast-path evidence shows Canvas p95 closely tracks `WindowedRowsSurface` callback p95, but
+  `code_editor.paint_perf.us_total` is much lower. Can `fretboard diag stats --json` explain that gap directly
+  without manual subtraction?
+
+Change:
+- Extended `paint_widget_hotspot_summary` with:
+  - `gap_to_code_editor_p95.windowed_surface_paint_callback_minus_us_total`
+  - `gap_to_code_editor_p95.windowed_surface_row_paint_minus_us_total`
+  - `gap_to_code_editor_p95.windowed_surface_paint_callback_minus_row_paint`
+  - `code_editor_windowed_surface_p95.{paint_callback,frame_lookup,hook,row_loop,row_rect,row_paint,non_row,row_callback_gap}`
+- The same summary is also printed by human-readable `diag stats` output as a compact
+  `paint_widget.hotspots code_editor.surface_p95_us(...)` line.
+
+Validation:
+```bash
+cargo fmt -p fret-diag --check
+git diff --check
+cargo check -p fret-diag
+cargo nextest run -p fret-diag bundle_stats_summarizes_canvas_paint_widget_hotspots --no-fail-fast
+cargo nextest run -p fret-diag bundle_stats_extracts_code_editor_paint_perf_from_app_snapshot --no-fail-fast
+cargo run -p fretboard-dev -- diag stats \
+  target/fret-diag/editor-paint-contract-post-observed-deps-fastpath-20260516-typical-r3-cargo/1778874544334/bundle.schema2.json \
+  --sort time --top 15 --json
+```
+
+Evidence from the post-fast-path formal worst bundles:
+| probe | Canvas minus callback p95 | callback minus code-editor total p95 | row-paint minus code-editor total p95 | callback minus row-paint p95 | surface p95 callback/row_paint/non_row/hook |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| typical autoscroll | `2us` | `147us` | `21us` | `126us` | `281/155/130/111us` |
+| complex wheel | `2us` | `162us` | `13us` | `149us` | `479/330/147/129us` |
+| resize jitter | `4us` | `139us` | `21us` | `118us` | `265/147/123/106us` |
+
+Decision:
+- The remaining Canvas hotspot gap is not a Canvas wrapper gap: Canvas exclusive p95 remains within `2..4us` of the
+  `WindowedRowsSurface` paint callback.
+- The main unclosed attribution is inside the windowed-surface callback boundary. `row_paint - code_editor.us_total`
+  is small (`13..21us` p95), while `callback - row_paint` is larger (`118..149us` p95).
+- The next optimization should not target renderer payload thresholds or broad row replay/cache. The next narrow owner
+  should inspect `WindowedRowsSurface` callback overhead, especially hook/non-row/row-loop accounting, before changing
+  behavior.

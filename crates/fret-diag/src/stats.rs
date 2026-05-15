@@ -1453,7 +1453,11 @@ mod tests {
                                     "paint_perf": {
                                         "frame_seq": 1,
                                         "us_total": 100,
-                                        "us_windowed_surface_paint_callback": 250
+                                        "us_windowed_surface_paint_callback": 250,
+                                        "us_windowed_surface_hook": 20,
+                                        "us_windowed_surface_row_paint": 180,
+                                        "us_windowed_surface_non_row": 60,
+                                        "us_windowed_surface_row_callback_gap": 80
                                     }
                                 }
                             }
@@ -1509,7 +1513,11 @@ mod tests {
                                     "paint_perf": {
                                         "frame_seq": 2,
                                         "us_total": 200,
-                                        "us_windowed_surface_paint_callback": 400
+                                        "us_windowed_surface_paint_callback": 400,
+                                        "us_windowed_surface_hook": 30,
+                                        "us_windowed_surface_row_paint": 330,
+                                        "us_windowed_surface_non_row": 60,
+                                        "us_windowed_surface_row_callback_gap": 130
                                     }
                                 }
                             }
@@ -1585,7 +1593,11 @@ mod tests {
                                     "paint_perf": {
                                         "frame_seq": 3,
                                         "us_total": 300,
-                                        "us_windowed_surface_paint_callback": 600
+                                        "us_windowed_surface_paint_callback": 600,
+                                        "us_windowed_surface_hook": 30,
+                                        "us_windowed_surface_row_paint": 530,
+                                        "us_windowed_surface_non_row": 90,
+                                        "us_windowed_surface_row_callback_gap": 230
                                     }
                                 }
                             }
@@ -1667,6 +1679,40 @@ mod tests {
             json.pointer("/paint_widget_hotspot_summary/gap_to_code_editor_p95/canvas_exclusive_minus_windowed_surface_paint_callback")
                 .and_then(|v| v.as_i64()),
             Some(100)
+        );
+        assert_eq!(
+            json.pointer("/paint_widget_hotspot_summary/gap_to_code_editor_p95/windowed_surface_paint_callback_minus_us_total")
+                .and_then(|v| v.as_i64()),
+            Some(300)
+        );
+        assert_eq!(
+            json.pointer("/paint_widget_hotspot_summary/gap_to_code_editor_p95/windowed_surface_row_paint_minus_us_total")
+                .and_then(|v| v.as_i64()),
+            Some(230)
+        );
+        assert_eq!(
+            json.pointer("/paint_widget_hotspot_summary/gap_to_code_editor_p95/windowed_surface_paint_callback_minus_row_paint")
+                .and_then(|v| v.as_i64()),
+            Some(70)
+        );
+        assert_eq!(
+            json.pointer(
+                "/paint_widget_hotspot_summary/code_editor_windowed_surface_p95/row_paint"
+            )
+            .and_then(|v| v.as_u64()),
+            Some(530)
+        );
+        assert_eq!(
+            json.pointer("/paint_widget_hotspot_summary/code_editor_windowed_surface_p95/non_row")
+                .and_then(|v| v.as_u64()),
+            Some(90)
+        );
+        assert_eq!(
+            json.pointer(
+                "/paint_widget_hotspot_summary/code_editor_windowed_surface_p95/row_callback_gap"
+            )
+            .and_then(|v| v.as_u64()),
+            Some(230)
         );
         assert_eq!(
             json.pointer("/p50/paint_host_widget_observed_models_time_us")

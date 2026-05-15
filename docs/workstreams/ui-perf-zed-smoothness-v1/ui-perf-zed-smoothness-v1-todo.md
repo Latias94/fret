@@ -633,6 +633,20 @@ Conventions:
           internals dominate, generic Canvas paint/cache if Canvas callback and wrapper diverge,
           or renderer text/encode/upload if renderer payload becomes the limiter. Do not start a
           broad row replay rewrite from the current passing row replay/cache evidence.
+        - Added attribution summary in perf log entry `2026-05-16 03:59:52 +08:00`:
+          `paint_widget_hotspot_summary.gap_to_code_editor_p95` now includes
+          `windowed_surface_paint_callback_minus_us_total`,
+          `windowed_surface_row_paint_minus_us_total`, and
+          `windowed_surface_paint_callback_minus_row_paint`, plus
+          `code_editor_windowed_surface_p95`.
+        - Current decision: Canvas wrapper is not the owner (`2..4us` Canvas-minus-callback p95).
+          `WindowedRowsSurface` callback internals remain the next owner candidate:
+          callback-minus-row-paint is `118..149us` p95, while row-paint-minus-code-editor-total
+          is only `13..21us` p95.
+      - [ ] Inspect `WindowedRowsSurface` callback overhead before changing behavior.
+        - Start from `ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs`.
+        - Preserve the existing code-editor row replay/cache evidence as a guardrail; do not
+          optimize by invalidating row replay semantics or weakening renderer payload thresholds.
     - [x] Add a stable “row op count” signal to diag snapshots (or reuse an existing one) so we can gate
       “we are rebuilding 500+ ops/frame” vs “we are replaying”.
       - Field: `code_editor.paint_perf.row_scene_ops_stored` in UI Gallery app snapshots and

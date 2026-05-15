@@ -1581,6 +1581,55 @@ impl BundleStatsPaintWidgetHotspotSummary {
         })
     }
 
+    fn windowed_surface_callback_minus_code_editor_p95_us_total(
+        &self,
+        code_editor: &BundleStatsCodeEditorPaintPerfSummary,
+    ) -> Option<i64> {
+        (self.canvas.frames > 0 && code_editor.frames > 0).then(|| {
+            code_editor.p95.us_windowed_surface_paint_callback as i64
+                - code_editor.p95.us_total as i64
+        })
+    }
+
+    fn windowed_surface_row_paint_minus_code_editor_p95_us_total(
+        &self,
+        code_editor: &BundleStatsCodeEditorPaintPerfSummary,
+    ) -> Option<i64> {
+        (self.canvas.frames > 0 && code_editor.frames > 0).then(|| {
+            code_editor.p95.us_windowed_surface_row_paint as i64
+                - code_editor.p95.us_total as i64
+        })
+    }
+
+    fn windowed_surface_callback_minus_row_paint_p95(
+        &self,
+        code_editor: &BundleStatsCodeEditorPaintPerfSummary,
+    ) -> Option<i64> {
+        (self.canvas.frames > 0 && code_editor.frames > 0).then(|| {
+            code_editor.p95.us_windowed_surface_paint_callback as i64
+                - code_editor.p95.us_windowed_surface_row_paint as i64
+        })
+    }
+
+    fn code_editor_windowed_surface_p95_json(
+        code_editor: &BundleStatsCodeEditorPaintPerfSummary,
+    ) -> Value {
+        if code_editor.frames == 0 {
+            return Value::Null;
+        }
+
+        serde_json::json!({
+            "paint_callback": code_editor.p95.us_windowed_surface_paint_callback,
+            "frame_lookup": code_editor.p95.us_windowed_surface_frame_lookup,
+            "hook": code_editor.p95.us_windowed_surface_hook,
+            "row_loop": code_editor.p95.us_windowed_surface_row_loop,
+            "row_rect": code_editor.p95.us_windowed_surface_row_rect,
+            "row_paint": code_editor.p95.us_windowed_surface_row_paint,
+            "non_row": code_editor.p95.us_windowed_surface_non_row,
+            "row_callback_gap": code_editor.p95.us_windowed_surface_row_callback_gap,
+        })
+    }
+
     fn to_json(&self, code_editor: &BundleStatsCodeEditorPaintPerfSummary) -> Value {
         serde_json::json!({
             "sampled_top_n_per_frame": self.sampled_top_n_per_frame as u64,
@@ -1590,7 +1639,11 @@ impl BundleStatsPaintWidgetHotspotSummary {
             "gap_to_code_editor_p95": {
                 "canvas_exclusive_minus_us_total": self.canvas_minus_code_editor_p95_us_total(code_editor),
                 "canvas_exclusive_minus_windowed_surface_paint_callback": self.canvas_minus_windowed_surface_callback_p95(code_editor),
+                "windowed_surface_paint_callback_minus_us_total": self.windowed_surface_callback_minus_code_editor_p95_us_total(code_editor),
+                "windowed_surface_row_paint_minus_us_total": self.windowed_surface_row_paint_minus_code_editor_p95_us_total(code_editor),
+                "windowed_surface_paint_callback_minus_row_paint": self.windowed_surface_callback_minus_row_paint_p95(code_editor),
             },
+            "code_editor_windowed_surface_p95": Self::code_editor_windowed_surface_p95_json(code_editor),
         })
     }
 }
@@ -2126,6 +2179,19 @@ impl BundleStatsReport {
         let canvas_gap_surface = p
             .canvas_minus_windowed_surface_callback_p95(&self.code_editor_paint_perf)
             .map_or_else(|| "n/a".to_string(), |v| v.to_string());
+        let surface_gap_total = p
+            .windowed_surface_callback_minus_code_editor_p95_us_total(
+                &self.code_editor_paint_perf,
+            )
+            .map_or_else(|| "n/a".to_string(), |v| v.to_string());
+        let surface_row_gap_total = p
+            .windowed_surface_row_paint_minus_code_editor_p95_us_total(
+                &self.code_editor_paint_perf,
+            )
+            .map_or_else(|| "n/a".to_string(), |v| v.to_string());
+        let surface_callback_gap_row = p
+            .windowed_surface_callback_minus_row_paint_p95(&self.code_editor_paint_perf)
+            .map_or_else(|| "n/a".to_string(), |v| v.to_string());
 
         println!(
             "paint_widget.hotspots sample_top_n={} frames={} canvas_frames={} non_canvas_frames={} canvas.top_exclusive_us(p50/p95/max)={}/{}/{} canvas.sampled_sum_exclusive_us(p50/p95/max)={}/{}/{} non_canvas.top_exclusive_us(p50/p95/max)={}/{}/{} non_canvas.sampled_sum_exclusive_us(p50/p95/max)={}/{}/{} canvas.gap_p95_us(code_editor_total/surface_callback)={}/{}",
@@ -2158,6 +2224,20 @@ impl BundleStatsReport {
             canvas_gap_total,
             canvas_gap_surface,
         );
+        if self.code_editor_paint_perf.frames > 0 {
+            let code_editor = &self.code_editor_paint_perf.p95;
+            println!(
+                "paint_widget.hotspots code_editor.surface_p95_us(callback/row_paint/non_row/row_callback_gap/hook)={}/{}/{}/{}/{} surface.gap_p95_us(callback_minus_total/row_paint_minus_total/callback_minus_row_paint)={}/{}/{}",
+                code_editor.us_windowed_surface_paint_callback,
+                code_editor.us_windowed_surface_row_paint,
+                code_editor.us_windowed_surface_non_row,
+                code_editor.us_windowed_surface_row_callback_gap,
+                code_editor.us_windowed_surface_hook,
+                surface_gap_total,
+                surface_row_gap_total,
+                surface_callback_gap_row,
+            );
+        }
     }
 
     fn print_code_editor_paint_perf_row(row: &BundleStatsSnapshotRow) {

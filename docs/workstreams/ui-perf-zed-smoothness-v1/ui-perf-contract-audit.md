@@ -486,7 +486,9 @@ host-widget subphase summaries now make that owner measurable, the first lookup-
 positive, and the observed-deps presence-set fast path identifies and short-circuits the dominant empty lookup case.
 The same-mouth editor paint evidence path has been restored and the full three-probe post-fast-path pass is complete:
 typical total/paint p95 `850/624us`, complex wheel `1115/838us`, and resize jitter `1563/631us`. Keep baselines
-unchanged from this macOS M4 evidence. The immediate next work is attribution closure for the remaining generic
-paint-widget aggregate cost before deciding whether the next reversible owner slice belongs to code-editor row work,
-generic Canvas paint/cache, or renderer text/encode/upload. Keep non-Windows machine profiles explicit rather than
-inferring them from the Windows RTX 4090 contract set.
+unchanged from this macOS M4 evidence. Follow-up attribution now shows the Canvas wrapper itself is not the owner:
+Canvas-minus-`WindowedRowsSurface` callback p95 is only `2..4us`, while callback-minus-row-paint p95 is
+`118..149us`. The immediate next work is to inspect `WindowedRowsSurface` callback overhead before deciding whether
+the next reversible owner slice belongs to code-editor row work, generic Canvas paint/cache, or renderer
+text/encode/upload. Keep non-Windows machine profiles explicit rather than inferring them from the Windows RTX 4090
+contract set.
