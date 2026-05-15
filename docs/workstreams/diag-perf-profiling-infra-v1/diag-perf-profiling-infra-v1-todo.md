@@ -25,7 +25,11 @@
 
 ## Phase timeline coverage
 
-- [ ] Audit the current "frame timeline" coverage (layout/paint/dispatch/hit-test).
+- [x] Audit the current "frame timeline" coverage (layout/paint/dispatch/hit-test).
+  - Evidence:
+    `docs/workstreams/diag-perf-profiling-infra-v1/PHASE_TIMELINE_COVERAGE_AUDIT_2026-05-15.md`
+  - Result: existing spans/timers cover the major runtime phases, but Chrome trace output remains
+    bundle-derived synthetic phases and does not include live `tracing` / Tracy spans.
 - [ ] Add missing always-on phase timers for known uninstrumented work (keep additive keys).
 - [ ] Ensure chrome trace emits stable event names for new sub-phases.
 - [ ] Adopt `crates/fret-perf` helpers for new/updated timers so stats + spans stay aligned.

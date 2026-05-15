@@ -1,6 +1,6 @@
 # Diagnostics perf profiling infra v1
 
-Status: Draft (proposal)
+Status: Active (infrastructure tracker)
 
 ## Goal
 
@@ -155,3 +155,11 @@ Tail-spike triage:
 - Stats aggregation and JSON: `crates/fret-diag/src/stats.rs`
 - Chrome trace exporter: `crates/fret-diag/src/trace.rs`
 - Layout phase timing sources: `crates/fret-ui/src/tree/layout.rs`
+
+## Current coverage audit
+
+- Latest phase timeline audit:
+  `docs/workstreams/diag-perf-profiling-infra-v1/PHASE_TIMELINE_COVERAGE_AUDIT_2026-05-15.md`
+- Result: frame, high-level UI phases, layout, prepaint, paint, dispatch, hit-test, and renderer trace names have
+  concrete source anchors. Chrome trace artifacts are currently bundle-derived synthetic phase timelines; real
+  `tracing` / Tracy span export remains a separate gap.
