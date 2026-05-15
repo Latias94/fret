@@ -101,7 +101,7 @@ Conventions:
 
 ### M6: Quality gates + “real-time inspect” polish
 
-- [ ] First-class UI for gates:
+- [x] First-class UI for gates:
   - [x] First-open `Gate Commands` block for existing stale paint/scene, pixels-changed,
         perf-threshold, and resource-footprint diagnostics command templates.
   - [x] Shared `fret-diag` gate profile projection owns gate ids, command templates, evidence
