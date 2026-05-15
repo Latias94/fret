@@ -14263,3 +14263,92 @@ Decision:
 - Empty dependency lookups are the dominant host-widget dependency replay shape in the typical editor paint probe.
 - The presence-set fast path is the right narrow reversible optimization for this owner slice.
 - The full three-probe editor paint set should be re-run before any baseline re-seed or claim that P1.5 is complete.
+
+## 2026-05-16 03:51:42 +08:00 (post observed-deps fast-path formal editor probes)
+
+Question:
+- Does the observed-deps presence-set fast path hold up across the full editor paint formal probe set, and is there
+  enough stable evidence to re-seed a contract baseline?
+
+Commands:
+```bash
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json \
+  --repeat 3 --warmup-frames 5 --reuse-launch \
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_A11Y_DISABLE=1 \
+  --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --sort time --top 15 --json \
+  --dir target/fret-diag/editor-paint-contract-post-observed-deps-fastpath-20260516-typical-r3-cargo \
+  --launch -- cargo run -p fret-ui-gallery --release \
+    --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json \
+  --repeat 3 --warmup-frames 5 --reuse-launch \
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_A11Y_DISABLE=1 \
+  --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --sort time --top 15 --json \
+  --dir target/fret-diag/editor-paint-contract-post-observed-deps-fastpath-20260516-complex-wheel-r3-cargo \
+  --launch -- cargo run -p fret-ui-gallery --release \
+    --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json \
+  --repeat 3 --warmup-frames 5 --reuse-launch \
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_A11Y_DISABLE=1 \
+  --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --sort time --top 15 --json \
+  --dir target/fret-diag/editor-paint-contract-post-observed-deps-fastpath-20260516-resize-jitter-r3-cargo \
+  --launch -- cargo run -p fret-ui-gallery --release \
+    --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+```
+
+Note:
+- A direct `--launch -- target/release/fret-ui-gallery` attempt failed the diagnostics preflight because the
+  prebuilt binary cannot prove the script's required Cargo features. The formal runs therefore used the same
+  feature-inspectable `cargo run ... --features ...` launch form as the previous formal evidence.
+
+Results (us, repeat=3 stats):
+| probe | worst bundle | total p50/p95/max | paint p50/p95/max | layout p95 | solve p95 | paint.widget p95 | Canvas p95 | code-editor p95 | row replay/store p95 | renderer text/encode/upload p95 | observed deps calls/empty p95 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| typical autoscroll | `target/fret-diag/editor-paint-contract-post-observed-deps-fastpath-20260516-typical-r3-cargo/1778874544334/bundle.schema2.json` | `773/850/850` | `548/624/624` | `35` | `0` | `428` | `283` | `134` | `289/0` | `362/165/84` | `252/244` |
+| complex wheel | `target/fret-diag/editor-paint-contract-post-observed-deps-fastpath-20260516-complex-wheel-r3-cargo/1778874575597/bundle.schema2.json` | `1023/1115/1115` | `752/838/838` | `188` | `0` | `627` | `481` | `317` | `288/3` | `362/146/65` | `253/245` |
+| resize jitter | `target/fret-diag/editor-paint-contract-post-observed-deps-fastpath-20260516-resize-jitter-r3-cargo/1778874599910/bundle.schema2.json` | `1548/1563/1563` | `623/631/631` | `769` | `372` | `613` | `269` | `126` | `289/0` | `389/159/90` | `252/244` |
+
+Host-widget attribution in the worst bundles:
+| probe | observed models/globals p95 | non-empty model/global calls p95 | instance lookup p95 | collapse observations p95 |
+| --- | ---: | ---: | ---: | ---: |
+| typical autoscroll | `24/24us` | `8/2` | `42us` | `56us` |
+| complex wheel | `25/24us` | `8/2` | `41us` | `53us` |
+| resize jitter | `24/23us` | `8/2` | `46us` | `51us` |
+
+Decision:
+- The post-fast-path formal run is green across all three editor probes, and the new observed-deps counters are
+  present in the formal worst bundles.
+- Row replay/cache remains healthy (`289/0`, `288/3`, `289/0` replay/store p95), so a broad row replay rewrite is
+  still not justified by this evidence.
+- Canvas p95 still tracks `WindowedRowsSurface` callback p95 closely (`2..4us` gap), so there is still no evidence of
+  a hidden generic Canvas wrapper tax.
+- Renderer text/encode/upload remains visible but stable enough for this machine-local pass; there is no atlas
+  upload/eviction pressure in the worst bundles.
+- Do not re-seed or loosen baselines from this macOS M4 run. The next owner is attribution closure for remaining
+  generic paint-widget aggregate cost: Canvas callback/code-editor row work vs `ElementHostWidget` traversal and
+  collapse/recording overhead.

@@ -613,6 +613,26 @@ Conventions:
         - Gates:
           `cargo nextest run -p fret-ui observed_deps_presence_tracks_rendered_and_touched_observations --no-fail-fast`;
           `cargo nextest run -p fret-ui -E 'test(~paint)' --no-fail-fast`.
+        - Post-fast-path formal evidence: perf log entry `2026-05-16 03:51:42 +08:00`.
+          Same-mouth `--reuse-launch --repeat 3 --warmup-frames 5` runs now pass for typical,
+          complex wheel, and resize jitter:
+          `target/fret-diag/editor-paint-contract-post-observed-deps-fastpath-20260516-typical-r3-cargo`,
+          `target/fret-diag/editor-paint-contract-post-observed-deps-fastpath-20260516-complex-wheel-r3-cargo`,
+          and
+          `target/fret-diag/editor-paint-contract-post-observed-deps-fastpath-20260516-resize-jitter-r3-cargo`.
+          Treat this as macOS M4 evidence only; keep baselines unchanged.
+      - [ ] Attribute the remaining post-fast-path generic paint-widget aggregate cost before the
+        next reversible optimization.
+        - Current evidence: typical p95 paint/widget/Canvas/code-editor is `624/428/283/134us`;
+          complex wheel is `838/627/481/317us`; resize jitter is `631/613/269/126us`.
+        - Current host-widget residuals: observed model/global replay p95 stays around
+          `24..25us` / `23..24us`, instance lookup p95 `41..46us`, collapse observations p95
+          `51..56us`, with observed-deps empty calls still dominating count shape
+          (`244..245` empty of `252..253` calls).
+        - Next owner decision should be evidence-first: code-editor row work if the callback
+          internals dominate, generic Canvas paint/cache if Canvas callback and wrapper diverge,
+          or renderer text/encode/upload if renderer payload becomes the limiter. Do not start a
+          broad row replay rewrite from the current passing row replay/cache evidence.
     - [x] Add a stable “row op count” signal to diag snapshots (or reuse an existing one) so we can gate
       “we are rebuilding 500+ ops/frame” vs “we are replaying”.
       - Field: `code_editor.paint_perf.row_scene_ops_stored` in UI Gallery app snapshots and
