@@ -1,0 +1,185 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-accordion-focusable-disabled-keyboard-suppression",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": [
+      "ui_gallery",
+      "shadcn",
+      "accordion",
+      "keyboard",
+      "focus",
+      "semantics",
+      "a11y",
+      "action_state"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "accordion",
+      "FRET_UI_GALLERY_START_SECTION": "ui-gallery-accordion-focusable-disabled"
+    },
+    "target_hints": [
+      "Proves the open non-collapsible Accordion trigger remains focusable while aria-disabled.",
+      "Gates the Radix-style action surface: focus stays enabled, invoke is suppressed, and Enter/Space do not collapse the open item."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-accordion" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-accordion-focusable-disabled-trigger"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-accordion-focusable-disabled-trigger"
+      },
+      "delta_y": -180.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-accordion-focusable-disabled-content"
+        }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-accordion-focusable-disabled-trigger"
+        },
+        "expanded": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "disabled_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-accordion-focusable-disabled-trigger"
+        },
+        "disabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-accordion-focusable-disabled-trigger"
+        },
+        "action": "focus",
+        "enabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-accordion-focusable-disabled-trigger"
+        },
+        "action": "invoke",
+        "enabled": false
+      }
+    },
+    {
+      "type": "focus",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-accordion-focusable-disabled-trigger"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-accordion-focusable-disabled-trigger"
+        }
+      },
+      "timeout_frames": 120
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-accordion-focusable-disabled-focused" },
+    { "type": "press_key", "key": "enter" },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-accordion-focusable-disabled-trigger"
+        },
+        "expanded": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-accordion-focusable-disabled-content"
+        }
+      }
+    },
+    { "type": "press_key", "key": "space" },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-accordion-focusable-disabled-trigger"
+        },
+        "expanded": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-accordion-focusable-disabled-content"
+        }
+      }
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-accordion-focusable-disabled-keyboard-suppression" }
+  ]
+}

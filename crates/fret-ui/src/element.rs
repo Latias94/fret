@@ -1660,6 +1660,11 @@ pub enum PressableKeyActivation {
     EnterAndSpace,
     /// Activate on Enter/NumpadEnter only (link-like).
     EnterOnly,
+    /// Do not activate from keyboard input while preserving focus routing.
+    ///
+    /// Component policies can use this for ARIA-style disabled-but-focusable outcomes where focus
+    /// remains available but Enter/Space must not dispatch activation.
+    None,
 }
 
 impl PressableKeyActivation {
@@ -1669,6 +1674,7 @@ impl PressableKeyActivation {
                 matches!(key, KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space)
             }
             Self::EnterOnly => matches!(key, KeyCode::Enter | KeyCode::NumpadEnter),
+            Self::None => false,
         }
     }
 }

@@ -15,6 +15,7 @@ pub(super) fn preview_accordion(
     let basic = snippets::basic::render(cx);
     let multiple = snippets::multiple::render(cx);
     let disabled = snippets::disabled::render(cx);
+    let focusable_disabled = snippets::focusable_disabled::render(cx);
     let borders = snippets::borders::render(cx);
     let card = snippets::card::render(cx);
     let rtl = snippets::rtl::render(cx);
@@ -51,6 +52,10 @@ pub(super) fn preview_accordion(
         .description("Disable individual items with `AccordionItem::disabled(true)`.")
         .test_id_prefix("ui-gallery-accordion-disabled")
         .code_rust_from_file_region(snippets::disabled::SOURCE, "example");
+    let focusable_disabled = DocSection::build(cx, "Focusable Disabled", focusable_disabled)
+        .description("Open non-collapsible triggers stay focusable while suppressing activation.")
+        .test_id_prefix("ui-gallery-accordion-focusable-disabled")
+        .code_rust_from_file_region(snippets::focusable_disabled::SOURCE, "example");
     let borders = DocSection::build(cx, "Borders", borders)
         .description("Wrap the accordion in an outer bordered container for the bordered recipe.")
         .test_id_prefix("ui-gallery-accordion-borders")
@@ -67,7 +72,7 @@ pub(super) fn preview_accordion(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Accordion docs path first: Demo, Usage, Basic, Multiple, Disabled, Borders, Card, RTL, and API Reference. The usage lane keeps the typed `AccordionRoot::children([...])` surface copyable on the curated facade, while the builder helpers cover the compact docs examples.",
+            "Preview mirrors the shadcn Accordion docs path first: Demo, Usage, Basic, Multiple, Disabled, Focusable Disabled, Borders, Card, RTL, and API Reference. The usage lane keeps the typed `AccordionRoot::children([...])` surface copyable on the curated facade, while the builder helpers cover the compact docs examples. The focusable-disabled lane keeps the open non-collapsible trigger behavior observable so keyboard and action suppression can be gated on a surface that remains focusable while aria-disabled.",
         ),
         vec![
             demo,
@@ -75,6 +80,7 @@ pub(super) fn preview_accordion(
             basic,
             multiple,
             disabled,
+            focusable_disabled,
             borders,
             card,
             rtl,

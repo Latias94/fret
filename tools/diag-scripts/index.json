@@ -2966,6 +2966,32 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-accordion-focusable-disabled-keyboard-suppression",
+      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-focusable-disabled-keyboard-suppression.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "a11y",
+        "accordion",
+        "action_state",
+        "focus",
+        "keyboard",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves the open non-collapsible Accordion trigger remains focusable while aria-disabled.",
+        "Gates the Radix-style action surface: focus stays enabled, invoke is suppressed, and Enter/Space do not collapse the open item."
+      ]
+    },
+    {
       "id": "ui-gallery-accordion-multiple-compact-layout",
       "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-multiple-compact-layout.json",
       "required_capabilities": [

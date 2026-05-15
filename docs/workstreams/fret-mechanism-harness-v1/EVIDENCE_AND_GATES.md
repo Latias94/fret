@@ -1330,6 +1330,69 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     passed; no retained Tree stale disabled/focus/invoke defect was reproduced. The next uncovered
     route is keyboard/action activation suppression on a focusable-disabled recipe/primitive
     surface rather than Tree disabled rows.
+- Accordion focusable-disabled keyboard/action suppression gate:
+  `tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-focusable-disabled-keyboard-suppression.json`
+  - proves the Radix-style open non-collapsible trigger outcome: `disabled_is=true`,
+    `expanded_is=true`, `semantics_action_is(focus)=true`,
+    `semantics_action_is(invoke)=false`, direct focus succeeds, and Enter/Space do not collapse the
+    item
+  - UI Gallery snippet:
+    `apps/fret-ui-gallery/src/ui/snippets/accordion/focusable_disabled.rs`
+  - recipe fix:
+    `ecosystem/fret-ui-shadcn/src/accordion.rs`
+  - focused recipe gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib accordion_trigger_open_non_collapsible_is_aria_disabled --no-fail-fast`
+  - focused recipe result:
+    passed; Nextest run id `8bcfd907-e08a-4c65-a183-4ed6c8c4ca5f`
+  - first failed runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-focusable-disabled-keyboard-suppression.json --dir target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v1 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - first failed evidence:
+    `target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v1/sessions/1778801842689-150456/1778801848335/script.result.json`
+  - failure slice:
+    `target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v1/sessions/1778801842689-150456/1778801848335/slice.ui-gallery-accordion-focusable-disabled-trigger.json`
+    (`actions.focus=true`, `flags.disabled=true`, `flags.expanded=true`, `bounds.w=0.0`)
+  - runtime command after fix:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-focusable-disabled-keyboard-suppression.json --dir target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v2 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - current passing evidence:
+    `target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v2/sessions/1778804970965-48396/1778804975621/script.result.json`
+  - current AI packet:
+    `target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v2/sessions/1778804970965-48396/1778804975621/ai.packet`
+  - current share pack:
+    `target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v2/sessions/1778804970965-48396/share/1778804975621.zip`
+  - result:
+    fixed and promoted. The runtime harness found a real shadcn Accordion recipe layout defect
+    before passing after the wrapper width fix.
+- Pressable focusable-disabled key-activation mechanism fixture:
+  `crates/fret-ui/src/declarative/tests/fixtures/pressable_key_activation_v1.json`
+  - covers Enter+Space, Enter-only, `PressableKeyActivation::None`, focusable-disabled semantics
+    with `disabled=true`/`focus=true`/`invoke=false`, and fully disabled Pressable semantics/action
+    outcomes
+  - thin harness:
+    `crates/fret-ui/src/declarative/tests/pressable_key_activation_harness.rs`
+  - mechanism change:
+    `crates/fret-ui/src/element.rs` (`PressableKeyActivation::None`)
+  - policy consumer:
+    `ecosystem/fret-ui-kit/src/primitives/accordion.rs`
+    (`apply_accordion_trigger_aria_disabled`)
+  - focused mechanism gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui --lib mechanism_harness_pressable_key_activation_matches_oracles --no-fail-fast`
+  - focused mechanism result:
+    passed; Nextest run id `3e2def17-044d-4583-9796-f625ee4367af`
+  - focused primitive gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit --lib apply_accordion_trigger_aria_disabled_suppresses_keyboard_activation_on_pressable --no-fail-fast`
+  - focused primitive result:
+    passed; Nextest run id `47d0e780-77bf-4b90-9d0e-9ec1bc481506`
+  - post-mechanism runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-focusable-disabled-keyboard-suppression.json --dir target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v3 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - current passing evidence:
+    `target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v3/sessions/1778806281798-4932/1778806286335/script.result.json`
+  - current AI packet:
+    `target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v3/sessions/1778806281798-4932/1778806286335/ai.packet`
+  - current share pack:
+    `target/fret-diag-accordion-focusable-disabled-keyboard-suppression-v3/sessions/1778806281798-4932/share/1778806286335.zip`
+  - result:
+    fixed and promoted. The focusable-disabled keyboard suppression axis is now available at the
+    core Pressable mechanism layer and consumed by Accordion.
 - Input Basic + File long-text visible-text gate:
   `tools/diag-scripts/ui-gallery/input/ui-gallery-input-basic-and-file-long-text.json`
   - asserts a plain Input and the file-composition Input both expose direct editable text-field

@@ -205,6 +205,7 @@ mod identity;
 mod interactions;
 mod layout;
 mod layout_queries;
+mod pressable_key_activation_harness;
 mod retained_virtual_list_reconcile_harness;
 mod roving_focus_interaction_harness;
 mod selection_indices;

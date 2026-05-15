@@ -777,3 +777,44 @@ Status: complete
 - No retained Tree stale disabled/focus/invoke mechanism or component policy defect was reproduced.
 - Remaining follow-up: find a focusable-disabled recipe/primitive surface, such as menu, listbox,
   or command-style items, for true Enter/Space activation suppression coverage.
+
+## M52: Accordion Focusable-Disabled Keyboard Suppression Runtime Gate
+
+Status: complete
+
+- Added a UI Gallery Accordion focusable-disabled snippet that starts an uncontrolled single
+  Accordion open and non-collapsible, matching the Radix outcome where the open trigger is
+  aria-disabled but remains focusable.
+- Added `ui-gallery-accordion-focusable-disabled-keyboard-suppression.json` and promoted it into
+  the shadcn runtime evidence and conformance suites.
+- The first runtime gate found a real shadcn Accordion recipe defect: the focusable disabled
+  trigger exported the right semantics but had zero-width bounds, causing focus repair to clear the
+  route before `focus_is` could pass.
+- Accordion item wrapper columns now fill width with `min_width=0`, so the recipe keeps
+  shrink-safe layout without collapsing trigger/content width under the UI Gallery docs shell.
+- Focused Accordion tests now prove focus remains enabled, invoke remains suppressed, bounds are
+  non-empty, and focus repair preserves the trigger.
+- The post-fix runtime gate passed and proved Enter/Space remain suppressed while the open
+  non-collapsible item stays expanded.
+- Remaining follow-up: add a synthetic focusable-disabled keyboard activation fixture and a second
+  recipe-family runtime gate so the invariant is not only covered through Accordion policy.
+
+## M53: Pressable Key Activation Fixture for Focusable-Disabled Suppression
+
+Status: complete
+
+- Added `PressableKeyActivation::None` so `crates/fret-ui` can model a focusable node that rejects
+  all keyboard activation keys without turning off focus routing.
+- Added `pressable_key_activation_v1.json` and a thin `fret-ui` harness covering Enter+Space,
+  Enter-only, no-keyboard-activation, focusable-disabled semantics, and fully disabled Pressable
+  semantics/action outcomes.
+- Updated `fret-ui-kit` Accordion's aria-disabled helper so the open non-collapsible trigger now
+  uses both semantics suppression (`disabled=true`, `invokable=false`) and the new keyboard
+  suppression mechanism.
+- The first fixture run clarified a harness boundary: direct `UiTree::set_focus` is an internal
+  force-set route, so disabled reachability should be judged through traversal, semantics actions,
+  and input activation rather than direct focus mutation alone.
+- Focused `fret-ui`, `fret-ui-kit`, and shadcn Accordion gates passed, and the UI Gallery Accordion
+  runtime gate passed again after the new mechanism was wired into the recipe path.
+- Remaining follow-up: add a second recipe-family runtime gate for disabled-but-focusable items in
+  menu/listbox/command-style surfaces.

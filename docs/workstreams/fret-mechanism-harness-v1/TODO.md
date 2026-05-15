@@ -322,9 +322,23 @@ date: 2026-05-12
     clicks do not move selection; re-enabled clicks select the row again. The single runtime gate
     and full retained Tree suite passed; no retained Tree stale disabled/invoke defect was
     reproduced.
-- [ ] Add keyboard/action activation suppression coverage on a focusable-disabled recipe/primitive
-  surface, such as menu, listbox, or command-style items. Retained Tree disabled rows correctly lose
-  focus/invoke action, so they are not a valid Enter/Space disabled activation target.
+- [x] Add keyboard/action activation suppression coverage on a focusable-disabled recipe/primitive
+  surface.
+  - Result: `ui-gallery-accordion-focusable-disabled-keyboard-suppression.json` now covers the
+    Radix-style Accordion route where the open non-collapsible trigger is disabled for assistive
+    technology, remains focusable, and suppresses invoke plus Enter/Space activation. The first
+    runtime run found a real shadcn Accordion layout defect: the trigger exported focusable
+    disabled semantics but had zero-width bounds, so focus repair cleared the route. Accordion item
+    wrapper columns now fill width with `min_width=0`, focused recipe tests lock non-empty bounds
+    plus focus repair, and the runtime gate passes.
+- [x] Add a synthetic mechanism-level focusable-disabled activation fixture.
+  - Result: `PressableKeyActivation::None` is now a core mechanism, with
+    `pressable_key_activation_v1.json` proving Enter+Space, Enter-only, no-keyboard-activation,
+    focusable-disabled semantics, and fully disabled Pressable outcomes. Accordion's aria-disabled
+    helper now consumes this mechanism instead of relying only on non-collapsible no-op policy.
+- [ ] Add a second recipe family runtime gate, such as menu/listbox/command-style
+  disabled-but-focusable items, to prove the focus/invoke/key separation is not only covered through
+  Accordion's non-collapsible policy.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.

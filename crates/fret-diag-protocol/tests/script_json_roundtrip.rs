@@ -227,6 +227,13 @@ fn script_v2_roundtrip_ui_gallery_accordion_usage_toggle() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_accordion_focusable_disabled_keyboard_suppression() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-focusable-disabled-keyboard-suppression.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_incoming_open_inject_smoke() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-incoming-open-inject-smoke.json"

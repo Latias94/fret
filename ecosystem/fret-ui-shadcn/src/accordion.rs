@@ -58,6 +58,13 @@ fn trigger_gap(theme: &ThemeSnapshot) -> Px {
         .unwrap_or_else(|| MetricRef::space(Space::N4).resolve(theme))
 }
 
+fn fill_width_layout() -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+    layout.size.min_width = Some(Length::Px(Px(0.0)));
+    layout
+}
+
 fn tailwind_transition_ease_in_out(t: f32) -> f32 {
     // Tailwind default `ease-in-out`: cubic-bezier(0.4, 0, 0.2, 1)
     fret_ui_kit::headless::easing::CubicBezier::new(0.4, 0.0, 0.2, 1.0).sample(t)
@@ -1172,7 +1179,7 @@ pub mod composable {
 
                                     vec![cx.column(
                                         ColumnProps {
-                                            layout: LayoutStyle::default(),
+                                            layout: fill_width_layout(),
                                             gap: Px(0.0).into(),
                                             padding: Edges::all(Px(0.0)).into(),
                                             justify: MainAlign::Start,
@@ -2132,7 +2139,7 @@ impl Accordion {
 
                                 vec![cx.column(
                                     ColumnProps {
-                                        layout: LayoutStyle::default(),
+                                        layout: fill_width_layout(),
                                         gap: Px(0.0).into(),
                                         padding: Edges::all(Px(0.0)).into(),
                                         justify: MainAlign::Start,
@@ -3911,6 +3918,24 @@ mod tests {
             !trigger_node.actions.invoke,
             "expected open non-collapsible trigger to suppress the click/invoke action"
         );
+        assert!(
+            trigger_node.actions.focus,
+            "expected open non-collapsible trigger to remain focusable while aria-disabled"
+        );
+        assert!(
+            trigger_node.bounds.size.width.0 > 0.0 && trigger_node.bounds.size.height.0 > 0.0,
+            "expected focusable aria-disabled trigger to keep non-empty bounds; got {:?}",
+            trigger_node.bounds
+        );
+        let trigger_node = trigger_node.id;
+
+        ui.set_focus(Some(trigger_node));
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        assert_eq!(
+            ui.focus(),
+            Some(trigger_node),
+            "expected focus repair to preserve the focusable aria-disabled trigger"
+        );
     }
 
     #[test]
@@ -4061,6 +4086,24 @@ mod tests {
         assert!(
             !trigger_node.actions.invoke,
             "expected open non-collapsible trigger to suppress the click/invoke action"
+        );
+        assert!(
+            trigger_node.actions.focus,
+            "expected open non-collapsible trigger to remain focusable while aria-disabled"
+        );
+        assert!(
+            trigger_node.bounds.size.width.0 > 0.0 && trigger_node.bounds.size.height.0 > 0.0,
+            "expected focusable aria-disabled trigger to keep non-empty bounds; got {:?}",
+            trigger_node.bounds
+        );
+        let trigger_node = trigger_node.id;
+
+        ui.set_focus(Some(trigger_node));
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        assert_eq!(
+            ui.focus(),
+            Some(trigger_node),
+            "expected focus repair to preserve the focusable aria-disabled trigger"
         );
     }
 
