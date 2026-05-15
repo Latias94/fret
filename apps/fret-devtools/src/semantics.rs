@@ -3,7 +3,9 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use fret_app::App;
-use fret_bootstrap::ui_diagnostics::{UiDiagnosticsBundleV1, UiSemanticsNodeV1, UiSemanticsRootV1};
+use fret_bootstrap::ui_diagnostics::{
+    UiDiagnosticsBundleV1, UiSemanticsNodeV1, UiSemanticsRootV1,
+};
 
 use crate::State;
 
@@ -177,63 +179,41 @@ pub(crate) fn compute_rows(
     });
 
     let mut out = Vec::new();
-    for root in index.roots.iter() {
-        push_rows_from_node(
-            &mut out,
-            index,
-            root.root,
-            0,
-            expanded,
-            visible.as_ref(),
-            has_search,
-        );
+    let mut stack = Vec::with_capacity(index.roots.len().max(1));
+    for root in index.roots.iter().rev() {
+        stack.push((root.root, 0usize));
     }
+
+    while let Some((id, depth)) = stack.pop() {
+        if let Some(visible) = visible.as_ref() {
+            if !visible.contains(&id) {
+                continue;
+            }
+        }
+
+        if index.node(id).is_none() {
+            continue;
+        };
+
+        let children = index.children(id);
+        let has_children = !children.is_empty();
+        let is_expanded = has_search || expanded.contains(&id);
+
+        out.push(SemanticsRow {
+            id,
+            depth,
+            has_children,
+            is_expanded: has_children && is_expanded,
+        });
+
+        if has_children && is_expanded {
+            for child in children.iter().rev() {
+                stack.push((*child, depth + 1));
+            }
+        }
+    }
+
     out
-}
-
-fn push_rows_from_node(
-    out: &mut Vec<SemanticsRow>,
-    index: &SemanticsIndex,
-    id: u64,
-    depth: usize,
-    expanded: &HashSet<u64>,
-    visible: Option<&HashSet<u64>>,
-    force_expand_visible: bool,
-) {
-    if let Some(visible) = visible {
-        if !visible.contains(&id) {
-            return;
-        }
-    }
-
-    if index.node(id).is_none() {
-        return;
-    };
-
-    let children = index.children(id);
-    let has_children = !children.is_empty();
-    let is_expanded = force_expand_visible || expanded.contains(&id);
-
-    out.push(SemanticsRow {
-        id,
-        depth,
-        has_children,
-        is_expanded: has_children && is_expanded,
-    });
-
-    if has_children && is_expanded {
-        for child in children {
-            push_rows_from_node(
-                out,
-                index,
-                *child,
-                depth + 1,
-                expanded,
-                visible,
-                force_expand_visible,
-            );
-        }
-    }
 }
 
 fn node_matches(node: &UiSemanticsNodeV1, search_lower: &str) -> bool {
@@ -276,4 +256,110 @@ fn hash_str(s: &str) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     s.hash(&mut hasher);
     hasher.finish()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_bootstrap::ui_diagnostics::{
+        RectV1, UiSemanticsActionsV1, UiSemanticsFlagsV1,
+    };
+
+    fn root() -> UiSemanticsRootV1 {
+        UiSemanticsRootV1 {
+            root: 1,
+            visible: true,
+            blocks_underlay_input: false,
+            hit_testable: true,
+            z_index: 0,
+        }
+    }
+
+    fn node(id: u64, parent: Option<u64>) -> UiSemanticsNodeV1 {
+        UiSemanticsNodeV1 {
+            id,
+            parent,
+            role: if id == 1 { "root" } else { "button" }.to_string(),
+            bounds: RectV1 {
+                x: 0.0,
+                y: id as f32,
+                w: 10.0,
+                h: 10.0,
+            },
+            flags: UiSemanticsFlagsV1::default(),
+            test_id: Some(format!("node-{id}")),
+            active_descendant: None,
+            pos_in_set: None,
+            set_size: None,
+            level: None,
+            label: Some(format!("Node {id}")),
+            value: None,
+            text_selection: None,
+            text_composition: None,
+            actions: UiSemanticsActionsV1::default(),
+            labelled_by: Vec::new(),
+            described_by: Vec::new(),
+            controls: Vec::new(),
+            inline_spans: Vec::new(),
+            scroll: Default::default(),
+        }
+    }
+
+    #[test]
+    fn compute_rows_handles_50k_flat_semantics_nodes() {
+        let node_count = 50_000u64;
+        let mut nodes = Vec::with_capacity(node_count as usize);
+        nodes.push(node(1, None));
+        for id in 2..=node_count {
+            nodes.push(node(id, Some(1)));
+        }
+        let index = SemanticsIndex::from_roots_and_nodes(7, vec![root()], nodes);
+        let expanded = HashSet::from([1]);
+
+        let rows = compute_rows(&index, &expanded, "");
+
+        assert_eq!(rows.len(), node_count as usize);
+        assert_eq!(rows.first().map(|r| r.id), Some(1));
+        assert_eq!(rows.last().map(|r| r.id), Some(node_count));
+        assert_eq!(rows[0].depth, 0);
+        assert_eq!(rows[1].depth, 1);
+    }
+
+    #[test]
+    fn compute_rows_handles_50k_deep_semantics_tree_without_recursion() {
+        let node_count = 50_000u64;
+        let mut nodes = Vec::with_capacity(node_count as usize);
+        nodes.push(node(1, None));
+        let mut expanded = HashSet::with_capacity(node_count as usize);
+        for id in 1..node_count {
+            expanded.insert(id);
+            nodes.push(node(id + 1, Some(id)));
+        }
+        let index = SemanticsIndex::from_roots_and_nodes(7, vec![root()], nodes);
+
+        let rows = compute_rows(&index, &expanded, "");
+
+        assert_eq!(rows.len(), node_count as usize);
+        assert_eq!(rows.first().map(|r| r.id), Some(1));
+        assert_eq!(rows.last().map(|r| r.id), Some(node_count));
+        assert_eq!(rows.last().map(|r| r.depth), Some(node_count as usize - 1));
+    }
+
+    #[test]
+    fn compute_rows_search_forces_visible_ancestor_path_on_large_tree() {
+        let node_count = 50_000u64;
+        let mut nodes = Vec::with_capacity(node_count as usize);
+        nodes.push(node(1, None));
+        for id in 1..node_count {
+            nodes.push(node(id + 1, Some(id)));
+        }
+        let index = SemanticsIndex::from_roots_and_nodes(7, vec![root()], nodes);
+
+        let rows = compute_rows(&index, &HashSet::new(), "node-50000");
+
+        assert_eq!(rows.len(), node_count as usize);
+        assert_eq!(rows.first().map(|r| r.id), Some(1));
+        assert_eq!(rows.last().map(|r| r.id), Some(node_count));
+        assert!(rows.iter().all(|r| r.is_expanded || r.id == node_count));
+    }
 }

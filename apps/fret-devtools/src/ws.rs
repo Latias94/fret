@@ -442,13 +442,15 @@ pub(crate) fn maybe_request_semantics_node_details(app: &mut App, st: &mut State
         .read(&st.semantics_live_force_nonce, |v| *v)
         .unwrap_or(0);
     let target = (window_ffi, selected_node_id);
-    let selection_changed = st.live_semantics_last_target != Some(target);
-    let force_refresh = force_nonce != st.live_semantics_last_force_nonce;
-    let due = match st.live_semantics_last_sent_unix_ms {
-        None => true,
-        Some(prev) => now.saturating_sub(prev) >= 1000,
-    };
-    if !selection_changed && !force_refresh && !due {
+    let decision = live_semantics_request_decision(
+        st.live_semantics_last_target,
+        st.live_semantics_last_sent_unix_ms,
+        st.live_semantics_last_force_nonce,
+        target,
+        force_nonce,
+        now,
+    );
+    if !decision.should_request {
         return;
     }
 
@@ -467,6 +469,36 @@ pub(crate) fn maybe_request_semantics_node_details(app: &mut App, st: &mut State
             root_z_index: None,
         },
     );
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct LiveSemanticsRequestDecision {
+    should_request: bool,
+    selection_changed: bool,
+    force_refresh: bool,
+    due: bool,
+}
+
+fn live_semantics_request_decision(
+    last_target: Option<(u64, u64)>,
+    last_sent_unix_ms: Option<u64>,
+    last_force_nonce: u64,
+    target: (u64, u64),
+    force_nonce: u64,
+    now_unix_ms: u64,
+) -> LiveSemanticsRequestDecision {
+    let selection_changed = last_target != Some(target);
+    let force_refresh = force_nonce != last_force_nonce;
+    let due = match last_sent_unix_ms {
+        None => true,
+        Some(prev) => now_unix_ms.saturating_sub(prev) >= 1000,
+    };
+    LiveSemanticsRequestDecision {
+        should_request: selection_changed || force_refresh || due,
+        selection_changed,
+        force_refresh,
+        due,
+    }
 }
 
 fn unix_ms_now() -> u64 {
@@ -628,4 +660,65 @@ fn option_u64_text(value: Option<u64>) -> String {
     value
         .map(|v| v.to_string())
         .unwrap_or_else(|| "unknown".to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn live_semantics_request_decision_throttles_unchanged_selection_to_one_hz() {
+        let target = (7, 42);
+        let decision =
+            live_semantics_request_decision(Some(target), Some(10_000), 3, target, 3, 10_999);
+
+        assert_eq!(
+            decision,
+            LiveSemanticsRequestDecision {
+                should_request: false,
+                selection_changed: false,
+                force_refresh: false,
+                due: false,
+            }
+        );
+
+        let decision =
+            live_semantics_request_decision(Some(target), Some(10_000), 3, target, 3, 11_000);
+        assert!(decision.should_request);
+        assert!(decision.due);
+        assert!(!decision.selection_changed);
+        assert!(!decision.force_refresh);
+    }
+
+    #[test]
+    fn live_semantics_request_decision_allows_selection_change_and_manual_refresh() {
+        let previous = (7, 42);
+        let next = (7, 43);
+
+        let selection = live_semantics_request_decision(
+            Some(previous),
+            Some(10_500),
+            3,
+            next,
+            3,
+            10_600,
+        );
+        assert!(selection.should_request);
+        assert!(selection.selection_changed);
+        assert!(!selection.force_refresh);
+        assert!(!selection.due);
+
+        let manual = live_semantics_request_decision(
+            Some(previous),
+            Some(10_500),
+            3,
+            previous,
+            4,
+            10_600,
+        );
+        assert!(manual.should_request);
+        assert!(!manual.selection_changed);
+        assert!(manual.force_refresh);
+        assert!(!manual.due);
+    }
 }

@@ -1337,3 +1337,34 @@ python tools/diag_gate_imui_product_chain.py --only discovery
 
 Result: passed. The `fret-devtools` focused nextest gate reported `1 test run: 1 passed`; both
 DevTools discovery/source gates completed successfully.
+
+## DevTools semantics tree scalability closure - 2026-05-15 follow-up
+
+Scope: close the M6 tree scalability item without widening `fret-imui` or adding a GUI-only live
+tree transport. The slice locks two DevTools invariants with code tests and source gates:
+
+- `apps/fret-devtools/src/native.rs` continues to render the Semantics tab through
+  `VirtualListOptions::fixed(Px(28.0), 8).keep_alive(16)` with `items_revision = rows_key`.
+- `apps/fret-devtools/src/semantics.rs` now computes visible rows with an explicit stack instead of
+  recursive DFS, preventing stack overflow on deeply nested 50k-node semantics trees.
+- `apps/fret-devtools/src/ws.rs` extracts `live_semantics_request_decision`, proving unchanged
+  selected-node live detail polling stays at 1Hz while selection changes and manual refreshes still
+  request immediately.
+- `tools/diag_gate_imui_p2_devtools_first_open.py` and
+  `tools/diag_gate_imui_product_chain.py` source-check the VirtualList, iterative row projection,
+  1Hz throttle, and focused test names.
+
+Focused gates:
+
+```text
+cargo nextest run -p fret-devtools compute_rows_handles_50k_flat_semantics_nodes compute_rows_handles_50k_deep_semantics_tree_without_recursion compute_rows_search_forces_visible_ancestor_path_on_large_tree live_semantics_request_decision_throttles_unchanged_selection_to_one_hz live_semantics_request_decision_allows_selection_change_and_manual_refresh --no-fail-fast
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
+python tools/diag_gate_imui_product_chain.py --only discovery
+```
+
+Result: passed. The focused `fret-devtools` nextest run reported `5 tests run: 5 passed`; both
+DevTools discovery/source gates passed after the source guards were corrected to read
+`apps/fret-devtools/src/semantics.rs` explicitly. The follow-up quality gates also passed:
+`cargo clippy -p fret-devtools --all-targets -- -D warnings`, `python tools/check_layering.py`, and
+`git diff --check` (with only the known CRLF normalization warning for
+`tools/diag_gate_imui_p2_devtools_first_open.py`).
