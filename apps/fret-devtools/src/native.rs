@@ -80,6 +80,10 @@ const CMD_COPY_FOLLOWUP_RESULT_COMMAND: &str =
     "fret.devtools.regression.followup.copy_result_command";
 const CMD_OPEN_FOLLOWUP_RESULT_JSON: &str = "fret.devtools.regression.followup.open_result_json";
 const CMD_GATE_RUN_GENERATED: &str = "fret.devtools.gate.run_generated";
+const CMD_COPY_GATE_RESULT_PATH: &str = "fret.devtools.gate.copy_result_path";
+const CMD_COPY_GATE_RESULT_JSON: &str = "fret.devtools.gate.copy_result_json";
+const CMD_COPY_GATE_RESULT_COMMAND: &str = "fret.devtools.gate.copy_result_command";
+const CMD_OPEN_GATE_RESULT_JSON: &str = "fret.devtools.gate.open_result_json";
 
 const DEVTOOLS_FIRST_OPEN_DOC: &str = "docs/diagnostics-first-open.md";
 const DEVTOOLS_GUI_BRANCH_DOC: &str =
@@ -149,6 +153,8 @@ struct State {
     gate_run_last_command_line: Model<Option<Arc<str>>>,
     gate_run_last_result_path: Model<Option<Arc<str>>>,
     gate_run_last_result_json: Model<String>,
+    gate_run_result_history: Model<Vec<gate_run::GateRunResultHistoryEntry>>,
+    gate_run_selected_result_path: Model<Option<Arc<str>>>,
     gate_run_last_error: Model<Option<Arc<str>>>,
 
     script_paths: script_studio::ScriptPaths,
@@ -334,6 +340,10 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let gate_run_last_command_line = app.models_mut().insert(None::<Arc<str>>);
     let gate_run_last_result_path = app.models_mut().insert(None::<Arc<str>>);
     let gate_run_last_result_json = app.models_mut().insert(String::new());
+    let gate_run_result_history = app
+        .models_mut()
+        .insert(Vec::<gate_run::GateRunResultHistoryEntry>::new());
+    let gate_run_selected_result_path = app.models_mut().insert(None::<Arc<str>>);
     let gate_run_last_error = app.models_mut().insert(None::<Arc<str>>);
 
     let repo_root = script_studio::repo_root_from_manifest_dir()
@@ -494,6 +504,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         gate_run_last_command_line,
         gate_run_last_result_path,
         gate_run_last_result_json,
+        gate_run_result_history,
+        gate_run_selected_result_path,
         gate_run_last_error,
         script_paths,
         script_library,
@@ -652,6 +664,8 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.gate_run_last_command_line, Invalidation::Paint);
     cx.observe_model(&st.gate_run_last_result_path, Invalidation::Paint);
     cx.observe_model(&st.gate_run_last_result_json, Invalidation::Paint);
+    cx.observe_model(&st.gate_run_result_history, Invalidation::Paint);
+    cx.observe_model(&st.gate_run_selected_result_path, Invalidation::Paint);
     cx.observe_model(&st.gate_run_last_error, Invalidation::Paint);
     cx.observe_model(&st.script_library, Invalidation::Paint);
     cx.observe_model(&st.loaded_script_origin, Invalidation::Paint);
@@ -3827,7 +3841,66 @@ fn followup_history_list(
     .into_element(cx)
 }
 
+fn gate_run_history_list(
+    cx: &mut ElementContext<'_, App>,
+    selected_result_path_model: &Model<Option<Arc<str>>>,
+    entries: &[gate_run::GateRunResultHistoryEntry],
+    active_result_path: Option<&str>,
+) -> AnyElement {
+    if entries.is_empty() {
+        return text_blob_sized(cx, "gate run history: <none>".to_string(), Px(84.0));
+    }
+
+    let mut rows: Vec<AnyElement> = Vec::new();
+    for entry in entries.iter().take(8) {
+        let is_selected = active_result_path.is_some_and(|path| path == entry.result_path);
+        let result_path = entry.result_path.clone();
+        let selected_result_path_model = selected_result_path_model.clone();
+        let label = format!(
+            "{} | {} | {}",
+            entry.status,
+            entry.id,
+            short_artifact_result_path(&entry.result_path)
+        );
+        let on_activate: fret_ui::action::OnActivate =
+            Arc::new(move |host, action_cx, _reason| {
+                let _ = host
+                    .models_mut()
+                    .update(&selected_result_path_model, |value| {
+                        *value = Some(Arc::<str>::from(result_path.clone()))
+                    });
+                host.request_redraw(action_cx.window);
+            });
+        rows.push(
+            shadcn::Button::new(label)
+                .variant(if is_selected {
+                    shadcn::ButtonVariant::Secondary
+                } else {
+                    shadcn::ButtonVariant::Ghost
+                })
+                .size(shadcn::ButtonSize::Sm)
+                .on_activate(on_activate)
+                .into_element(cx),
+        );
+    }
+
+    shadcn::ScrollArea::new([ui::v_stack(|_cx| rows)
+        .gap(fret_ui_kit::Space::N1)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx)])
+    .refine_layout(
+        fret_ui_kit::LayoutRefinement::default()
+            .w_full()
+            .min_h(Px(116.0)),
+    )
+    .into_element(cx)
+}
+
 fn short_followup_result_path(path: &str) -> String {
+    short_artifact_result_path(path)
+}
+
+fn short_artifact_result_path(path: &str) -> String {
     Path::new(path)
         .file_name()
         .and_then(|value| value.to_str())
@@ -4205,6 +4278,43 @@ fn selected_followup_result_json_from_state(app: &App, st: &State) -> Option<Str
     selected_followup_result_entry_from_state(app, st).map(|entry| entry.result_json)
 }
 
+fn gate_run_result_history_from_state(
+    app: &App,
+    st: &State,
+) -> Vec<gate_run::GateRunResultHistoryEntry> {
+    app.models()
+        .read(&st.gate_run_result_history, |v| v.clone())
+        .unwrap_or_default()
+}
+
+fn selected_gate_run_result_entry_from_state(
+    app: &App,
+    st: &State,
+) -> Option<gate_run::GateRunResultHistoryEntry> {
+    let gate_run_result_history = gate_run_result_history_from_state(app, st);
+    let gate_run_selected_result_path = app
+        .models()
+        .read(&st.gate_run_selected_result_path, |v| v.clone())
+        .ok()
+        .flatten();
+    gate_run::gate_run_result_history_selected_or_latest_entry(
+        &gate_run_result_history,
+        gate_run_selected_result_path.as_deref(),
+    )
+}
+
+fn selected_gate_run_result_path_from_state(app: &App, st: &State) -> Option<String> {
+    selected_gate_run_result_entry_from_state(app, st).map(|entry| entry.result_path)
+}
+
+fn selected_gate_run_result_command_from_state(app: &App, st: &State) -> Option<String> {
+    selected_gate_run_result_entry_from_state(app, st).map(|entry| entry.command_line)
+}
+
+fn selected_gate_run_result_json_from_state(app: &App, st: &State) -> Option<String> {
+    selected_gate_run_result_entry_from_state(app, st).map(|entry| entry.result_json)
+}
+
 fn run_selected_regression_followup(app: &mut App, st: &mut State, command_id: &str) {
     let selected_bundle_dirs = app
         .models()
@@ -4470,6 +4580,69 @@ fn on_command(
                 push_log(app, &st.log_lines, &format!("gate run refused: {err}"));
             }
             app.request_redraw(window);
+        }
+        CMD_COPY_GATE_RESULT_PATH => {
+            let Some(path) = selected_gate_run_result_path_from_state(app, st) else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "copy selected gate result refused (no gate run result artifact yet)",
+                );
+                return;
+            };
+            let token = app.next_clipboard_token();
+            app.push_effect(Effect::ClipboardWriteText {
+                window,
+                token,
+                text: path,
+            });
+        }
+        CMD_COPY_GATE_RESULT_COMMAND => {
+            let Some(command_line) = selected_gate_run_result_command_from_state(app, st) else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "copy selected gate command refused (no gate run result command yet)",
+                );
+                return;
+            };
+            let token = app.next_clipboard_token();
+            app.push_effect(Effect::ClipboardWriteText {
+                window,
+                token,
+                text: command_line,
+            });
+        }
+        CMD_OPEN_GATE_RESULT_JSON => {
+            let Some(path) = selected_gate_run_result_path_from_state(app, st) else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "open selected gate JSON refused (no gate run result artifact yet)",
+                );
+                return;
+            };
+            app.push_effect(Effect::OpenUrl {
+                url: file_url_from_path(&path),
+                target: None,
+                rel: None,
+            });
+        }
+        CMD_COPY_GATE_RESULT_JSON => {
+            let Some(result_json) = selected_gate_run_result_json_from_state(app, st) else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "copy selected gate JSON refused (no gate run result JSON yet)",
+                );
+                return;
+            };
+            let token = app.next_clipboard_token();
+            app.push_effect(Effect::ClipboardWriteText {
+                window,
+                token,
+                text: result_json,
+            });
         }
         CMD_SCRIPT_FORK => {
             fork_loaded_script(app, window, st);
@@ -6062,6 +6235,94 @@ fn devtools_gate_profile_command_builder(
         .models()
         .read(&st.gate_run_last_result_json, |v| v.clone())
         .unwrap_or_default();
+    let gate_run_result_history = cx
+        .app
+        .models()
+        .read(&st.gate_run_result_history, |v| v.clone())
+        .unwrap_or_default();
+    let gate_run_selected_result_path = cx
+        .app
+        .models()
+        .read(&st.gate_run_selected_result_path, |v| v.clone())
+        .ok()
+        .flatten();
+    let selected_gate_run_result_entry = gate_run::gate_run_result_history_selected_or_latest_entry(
+        &gate_run_result_history,
+        gate_run_selected_result_path.as_deref(),
+    );
+    let selected_gate_run_result_path = selected_gate_run_result_entry
+        .as_ref()
+        .map(|entry| entry.result_path.clone());
+    let selected_gate_run_result_json = selected_gate_run_result_entry
+        .as_ref()
+        .map(|entry| entry.result_json.clone())
+        .unwrap_or_else(|| gate_run_result_json.clone());
+    let gate_result_actions = ui::h_row(|cx| {
+        let mut out: Vec<AnyElement> = Vec::new();
+        if selected_gate_run_result_path.is_some() {
+            out.push(
+                shadcn::Button::new("Copy gate result")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CMD_COPY_GATE_RESULT_PATH)
+                    .into_element(cx),
+            );
+            out.push(
+                shadcn::Button::new("Open gate JSON")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CMD_OPEN_GATE_RESULT_JSON)
+                    .into_element(cx),
+            );
+        }
+        if selected_gate_run_result_entry.is_some() {
+            out.push(
+                shadcn::Button::new("Copy gate command")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CMD_COPY_GATE_RESULT_COMMAND)
+                    .into_element(cx),
+            );
+        }
+        if !selected_gate_run_result_json.trim().is_empty() {
+            out.push(
+                shadcn::Button::new("Copy gate JSON")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CMD_COPY_GATE_RESULT_JSON)
+                    .into_element(cx),
+            );
+        }
+        out
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx);
+    let gate_result_details = text_blob_sized(
+        cx,
+        gate_run::gate_run_result_history_entry_detail_lines(
+            selected_gate_run_result_entry.as_ref(),
+        )
+        .join("\n"),
+        Px(78.0),
+    );
+    let gate_result_summary = text_blob_sized(
+        cx,
+        gate_run::gate_run_result_summary_lines(&selected_gate_run_result_json).join("\n"),
+        Px(92.0),
+    );
+    let gate_result_history_summary = text_blob_sized(
+        cx,
+        gate_run::gate_run_result_history_summary_lines(&gate_run_result_history).join("\n"),
+        Px(84.0),
+    );
+    let gate_result_history = gate_run_history_list(
+        cx,
+        &st.gate_run_selected_result_path,
+        &gate_run_result_history,
+        selected_gate_run_result_path.as_deref(),
+    );
     let gate_run_status_line = format!(
         "gate_run_in_flight={} last_gate_result={} last_gate_error={}",
         gate_run_in_flight,
@@ -6106,10 +6367,10 @@ fn devtools_gate_profile_command_builder(
     let preview = text_blob_sized(cx, command_preview, Px(58.0));
     let result_preview = text_blob_sized(
         cx,
-        if gate_run_result_json.trim().is_empty() {
+        if selected_gate_run_result_json.trim().is_empty() {
             "<no generated gate result yet>".to_string()
         } else {
-            gate_run_result_json
+            selected_gate_run_result_json
         },
         Px(92.0),
     );
@@ -6122,6 +6383,24 @@ fn devtools_gate_profile_command_builder(
             cx.text(command_state_line),
             cx.text(gate_run_status_line),
             preview,
+            diag_section(
+                cx,
+                "Generated Gate Result Details",
+                "Selected script-target gate result status, path, command, and error preview.",
+                vec![gate_result_actions, gate_result_details],
+            ),
+            diag_section(
+                cx,
+                "Generated Gate Result Summary",
+                "Status, command, duration, and error preview from the selected generated gate result.",
+                vec![gate_result_summary],
+            ),
+            diag_section(
+                cx,
+                "Generated Gate Result History",
+                "Select a GUI-launched generated gate result, newest first.",
+                vec![gate_result_history_summary, gate_result_history],
+            ),
             result_preview,
         ]
     })

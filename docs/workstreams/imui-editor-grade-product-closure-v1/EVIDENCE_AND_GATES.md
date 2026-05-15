@@ -1159,3 +1159,34 @@ nextest gate reported `7 tests run: 7 passed`; both DevTools discovery/source ga
 successfully; `cargo clippy -p fret-diag -p fret-devtools --all-targets -- -D warnings`,
 `python tools/check_layering.py`, and `git diff --check` passed. `git diff --check` reported only
 the existing CRLF normalization warning for `tools/diag_gate_imui_p2_devtools_first_open.py`.
+
+## DevTools generated gate result history - 2026-05-15 follow-up
+
+Scope: finish the stale paint/scene and pixels-changed generated-gate loop by making result
+artifacts selectable and reusable from the GUI.
+
+- `apps/fret-devtools/src/gate_run.rs` now projects gate result artifacts into bounded in-memory
+  history entries plus summary/detail helper lines.
+- `apps/fret-devtools/src/native.rs` now renders generated gate result details, summary, history,
+  raw JSON, selected-result copy actions, and a platform URL open action.
+- The result history remains GUI state over `.fret/diag/gate-runs/*.json`; diagnostics gate policy
+  and command construction still live in `crates/fret-diag`.
+- `tools/diag_gate_imui_p2_devtools_first_open.py` and
+  `tools/diag_gate_imui_product_chain.py` source-check the history, copy/open actions, and summary
+  projection in addition to the background runner.
+
+Focused gates:
+
+```text
+cargo nextest run -p fret-devtools gate_run_result_record_has_stable_shape gate_run_result_summary_lines_project_status_and_duration gate_run_result_history_selects_explicit_path_or_latest devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
+cargo nextest run -p fret-diag devtools_gate_profiles_include_first_class_gate_taxonomy devtools_gate_profile_lines_surface_artifacts_and_threshold_commands devtools_gate_script_target_profiles_are_parameterized devtools_gate_script_target_commands_include_runnable_diag_args devtools_gate_script_target_command_preserves_placeholders_until_filled regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required --no-fail-fast
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
+python tools/diag_gate_imui_product_chain.py --only discovery
+cargo clippy -p fret-diag -p fret-devtools --all-targets -- -D warnings
+```
+
+Result: passed. The `fret-devtools` nextest gate reported `4 tests run: 4 passed`; the
+`fret-diag` nextest gate reported `7 tests run: 7 passed`; both source/discovery gates completed
+successfully; `cargo clippy -p fret-diag -p fret-devtools --all-targets -- -D warnings`,
+`python tools/check_layering.py`, and `git diff --check` passed. `git diff --check` reported only
+the existing CRLF normalization warning for `tools/diag_gate_imui_p2_devtools_first_open.py`.

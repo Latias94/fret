@@ -309,6 +309,9 @@ Current status:
   paint/scene and pixels-changed profiles. The GUI executes the structured `diag_args` through
   `fret-diag`, records in-flight/error status, and writes `.fret/diag/gate-runs/*.json` result
   artifacts without moving gate policy into `apps/fret-devtools` or widening `fret-imui`.
+- 2026-05-15 generated gate result history makes stale paint/scene and pixels-changed gate runs
+  reviewable inside the GUI: selected result details, structured summary, raw JSON, path/command/JSON
+  copy actions, and platform URL open support all point at `.fret/diag/gate-runs/*.json` artifacts.
 - 2026-05-15 DevTools GUI selected-summary follow-up commands consume a shared `fret-diag`
   projection that converts the selected `bundle_dir` into concrete `diag stats`,
   `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`, visual-compare, and

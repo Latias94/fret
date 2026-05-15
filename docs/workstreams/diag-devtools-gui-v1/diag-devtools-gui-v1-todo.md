@@ -118,6 +118,8 @@ Conventions:
   - [x] GUI script-target gate builder can launch the generated stale paint/scene or
         pixels-changed gate command through the shared diagnostics engine and writes a lightweight
         `.fret/diag/gate-runs/*.json` result artifact.
+  - [x] GUI generated gate results now keep a bounded selectable history with details, summary,
+        raw JSON preview, copy actions, and platform URL open support for the selected artifact.
   - [x] Selected-summary follow-up commands generated from the selected `bundle_dir`, covering
         stats, layout perf, memory, triage, hotspots, visual compare, and footprint compare.
   - [x] Structured follow-up command projection separates bundle-local runnable commands from
@@ -141,8 +143,8 @@ Conventions:
   - [x] Copying a follow-up result path uses the selected bundle's latest history entry instead of
         the global last result artifact.
   - [x] Copying the selected bundle's follow-up JSON is available from the same inspector.
-  - [ ] stale paint/scene launch/run + result artifact history,
-  - [ ] pixels changed launch/run + result artifact history,
+  - [x] stale paint/scene launch/run + result artifact history,
+  - [x] pixels changed launch/run + result artifact history,
   - [ ] perf thresholds,
   - [ ] resource footprint thresholds.
 - [ ] Live inspect payloads (keep minimal):
