@@ -274,6 +274,43 @@ class DiagScriptRegistryLintTests(unittest.TestCase):
             self.assertEqual(1, len(violations))
             self.assertIn("ui-gallery-page-combobox", violations[0])
 
+    def test_sidebar_long_page_click_requires_content_scroll_visibility(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/sidebar/bad.json"
+            self.write_script(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "wait_until",
+                        "predicate": {
+                            "kind": "exists",
+                            "target": {
+                                "kind": "test_id",
+                                "id": "ui-gallery-page-sidebar",
+                            },
+                        },
+                    },
+                    {
+                        "type": "click_stable",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-sidebar-demo-toggle",
+                        },
+                    },
+                ],
+            )
+
+            violations = REGISTRY.lint_strict_click_visibility(
+                root, self.registry_for(rel, ["ui-gallery-motion-pilot"])
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertIn("ui-gallery-sidebar-demo-toggle", violations[0])
+            self.assertIn("scroll_into_view", violations[0])
+
 
 if __name__ == "__main__":
     unittest.main()

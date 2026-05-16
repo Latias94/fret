@@ -30,10 +30,15 @@ REGISTRY_PATH = SCRIPTS_DIR / "index.json"
 SUITES_DIR = SCRIPTS_DIR / "suites"
 PRELUDE_DIR = SCRIPTS_DIR / "_prelude"
 SUITE_MANIFEST_FILENAMES = ["suite.json", "_suite.json"]
-STRICT_CLICK_VISIBILITY_SUITES = {"ui-gallery-combobox", "ui-gallery-select"}
+STRICT_CLICK_VISIBILITY_SUITES = {
+    "ui-gallery-combobox",
+    "ui-gallery-select",
+    "ui-gallery-motion-pilot",
+}
 STRICT_UI_GALLERY_CONTENT_TEST_ID_PREFIXES = (
     "ui-gallery-combobox-",
     "ui-gallery-select-",
+    "ui-gallery-sidebar-",
 )
 STRICT_PAGE_ENTRY_SUITES = {"ui-gallery-motion-pilot", "ui-gallery-select", "ui-gallery-combobox"}
 UI_GALLERY_PAGE_ENTRY_RULES = {
