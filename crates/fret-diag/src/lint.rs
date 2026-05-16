@@ -79,6 +79,34 @@ fn rect_is_non_empty(r: RectF64, eps: f64) -> bool {
     r.w > eps && r.h > eps
 }
 
+fn node_has_scrollable_ancestor(node: &Value, by_id: &HashMap<u64, &Value>) -> bool {
+    let mut parent = node.get("parent").and_then(|v| v.as_u64());
+    for _ in 0..256 {
+        let Some(parent_id) = parent else {
+            return false;
+        };
+        let Some(parent_node) = by_id.get(&parent_id).copied() else {
+            return false;
+        };
+        if node_is_scrollable(parent_node) {
+            return true;
+        }
+        parent = parent_node.get("parent").and_then(|v| v.as_u64());
+    }
+    false
+}
+
+fn node_is_scrollable(node: &Value) -> bool {
+    let Some(scroll) = node.get("scroll") else {
+        return false;
+    };
+    let x_min = scroll.get("x_min").and_then(|v| v.as_f64()).unwrap_or(0.0);
+    let x_max = scroll.get("x_max").and_then(|v| v.as_f64()).unwrap_or(0.0);
+    let y_min = scroll.get("y_min").and_then(|v| v.as_f64()).unwrap_or(0.0);
+    let y_max = scroll.get("y_max").and_then(|v| v.as_f64()).unwrap_or(0.0);
+    x_max > x_min + 0.5 || y_max > y_min + 0.5
+}
+
 fn role_requires_label(role: &str) -> bool {
     matches!(
         role,
@@ -346,9 +374,14 @@ fn lint_nodes_for_window(
             && let Some(active_bounds) = active_node.get("bounds").and_then(rect_from_bounds)
             && !rects_intersect(active_bounds, window_bounds, eps)
         {
+            let scrollable_ancestor = node_has_scrollable_ancestor(active_node, &by_id);
             push_finding(
                 findings,
-                LintLevel::Error,
+                if scrollable_ancestor {
+                    LintLevel::Warning
+                } else {
+                    LintLevel::Error
+                },
                 "layout.active_item_out_of_window",
                 window_id,
                 frame_id,
@@ -365,6 +398,7 @@ fn lint_nodes_for_window(
                 serde_json::json!({
                     "bounds": active_node.get("bounds").cloned().unwrap_or(Value::Null),
                     "window_bounds": window_bounds_value.clone(),
+                    "scrollable_ancestor": scrollable_ancestor,
                 }),
             );
         }
@@ -711,6 +745,101 @@ mod tests {
                     == Some("semantics.active_descendant_missing")
             }),
             "expected active_descendant missing finding"
+        );
+    }
+
+    #[test]
+    fn lint_downgrades_scrollable_active_descendant_out_of_window_to_warning() {
+        let bundle = serde_json::json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 10,
+                            "window_bounds": { "x": 0.0, "y": 0.0, "w": 100.0, "h": 100.0 },
+                            "debug": {
+                                "semantics": {
+                                    "window": 1,
+                                    "focus": 1,
+                                    "captured": null,
+                                    "nodes": [
+                                        {
+                                            "id": 1,
+                                            "parent": null,
+                                            "role": "viewport",
+                                            "bounds": { "x": 0.0, "y": 0.0, "w": 100.0, "h": 40.0 },
+                                            "flags": { "focused": true, "captured": false, "disabled": false, "selected": false, "expanded": false, "checked": null },
+                                            "test_id": "list-viewport",
+                                            "active_descendant": 2,
+                                            "scroll": { "y": 0.0, "y_min": 0.0, "y_max": 200.0 },
+                                            "label": "List",
+                                            "value": null,
+                                            "actions": { "focus": true, "invoke": false, "set_value": false, "set_text_selection": false },
+                                            "labelled_by": [],
+                                            "described_by": [],
+                                            "controls": []
+                                        },
+                                        {
+                                            "id": 2,
+                                            "parent": 1,
+                                            "role": "list_box_option",
+                                            "bounds": { "x": 0.0, "y": 180.0, "w": 100.0, "h": 20.0 },
+                                            "flags": { "focused": false, "captured": false, "disabled": false, "selected": false, "expanded": false, "checked": null },
+                                            "test_id": "item-10",
+                                            "active_descendant": null,
+                                            "pos_in_set": 10,
+                                            "set_size": 10,
+                                            "label": "Item 10",
+                                            "value": null,
+                                            "actions": { "focus": false, "invoke": true, "set_value": false, "set_text_selection": false },
+                                            "labelled_by": [],
+                                            "described_by": [],
+                                            "controls": []
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let report = lint_bundle_from_json(
+            &bundle,
+            Path::new("bundle.json"),
+            0,
+            LintOptions {
+                all_test_ids_bounds: false,
+                eps_px: 0.5,
+            },
+        )
+        .expect("lint should succeed");
+
+        assert_eq!(report.error_issues, 0);
+        let findings = report
+            .payload
+            .get("findings")
+            .and_then(|v| v.as_array())
+            .expect("expected findings");
+        let active = findings
+            .iter()
+            .find(|f| {
+                f.get("code").and_then(|v| v.as_str()) == Some("layout.active_item_out_of_window")
+            })
+            .expect("expected active item finding");
+        assert_eq!(
+            active.get("level").and_then(|v| v.as_str()),
+            Some("warning")
+        );
+        assert_eq!(
+            active
+                .get("evidence")
+                .and_then(|v| v.get("scrollable_ancestor"))
+                .and_then(|v| v.as_bool()),
+            Some(true)
         );
     }
 

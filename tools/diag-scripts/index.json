@@ -6324,6 +6324,33 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-combobox-placement-ownership-scroll-rtl",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-placement-ownership-scroll-rtl.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-combobox"
+      ],
+      "tags": [
+        "combobox",
+        "hit_test",
+        "overlay",
+        "rtl",
+        "scroll_container",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Combobox Placement Ownership fixture.",
+        "Opens an RTL Combobox whose trigger is inside a clipped ScrollArea while its popover extends below the ScrollArea viewport.",
+        "Clicks an option that is outside the ScrollArea viewport but inside the overlay root, proving overlay placement and hit-testing are not clipped by the trigger's scroll container."
+      ]
+    },
+    {
       "id": "ui-gallery-combobox-popup-trigger",
       "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger.json",
       "required_capabilities": [
@@ -6398,6 +6425,34 @@
         "Starts directly on the Combobox page with only the Responsive section mounted in a desktop viewport.",
         "Opens the responsive demo combobox trigger.",
         "Captures a layout sidecar, screenshot, and bundle to validate desktop overlay placement."
+      ]
+    },
+    {
+      "id": "ui-gallery-combobox-responsive-resize-open-placement",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-resize-open-placement.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-combobox",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "combobox",
+        "desktop",
+        "overlay",
+        "resize",
+        "responsive",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Combobox page with only the Responsive section mounted in a desktop viewport.",
+        "Opens the responsive demo popover-backed combobox and verifies first-open anchored placement.",
+        "Resizes the window while open and verifies the popover remains mounted, emits a fresh anchored placement trace, preserves relation wiring, and stabilizes within the resized viewport."
       ]
     },
     {
@@ -7758,6 +7813,33 @@
         "Navigates to the default Dialog component page.",
         "Verifies modal barrier and focus barrier roots are installed while the dialog is open.",
         "Verifies Escape clears both roots and restores focus to the public demo trigger."
+      ]
+    },
+    {
+      "id": "ui-gallery-dialog-nested-combobox-modal-boundary",
+      "path": "tools/diag-scripts/ui-gallery/dialog/ui-gallery-dialog-nested-combobox-modal-boundary.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "fret-mechanism-harness-overlay-focus"
+      ],
+      "tags": [
+        "combobox",
+        "dialog",
+        "focus",
+        "modal_boundary",
+        "overlay",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Dialog Nested Combobox fixture.",
+        "Opens a modal Dialog, then opens a nested Combobox listbox while the dialog modal/focus barrier roots are installed.",
+        "Uses ordinary selectors, relation predicates, and hit-tested selection to prove the nested listbox is owned by the active modal boundary rather than being clipped out by barrier-scoped lookup."
       ]
     },
     {
@@ -9966,7 +10048,7 @@
       "target_hints": [
         "Starts directly on the Select page with the minimal shadcn demo section mounted.",
         "Opens the default item-aligned Select popup and verifies placed-rect ownership through trigger and listbox test-id endpoints.",
-        "Resizes the window while open to gate popup bounds stability and window containment."
+        "Resizes the window while open and verifies the Base UI-aligned item-positioned Select policy closes the popup, clears trigger controls, and leaves the trigger stable in the viewport."
       ]
     },
     {
@@ -10114,6 +10196,32 @@
         "Navigates to the Select page.",
         "Opens the RTL Select trigger.",
         "Captures a screenshot to validate chevron/indicator inline-end mirroring and padding."
+      ]
+    },
+    {
+      "id": "ui-gallery-select-scrollable-placement-boundary",
+      "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-scrollable-placement-boundary.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-select"
+      ],
+      "tags": [
+        "overlay",
+        "placement",
+        "scrollable",
+        "select",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Select Scrollable docs section.",
+        "Opens the long-list Select in a constrained viewport and proves the item-aligned listbox has a placement trace, remains inside the window, and keeps relations across the overlay/root boundary.",
+        "Captures layout sidecar evidence so scroll-container clipping and listbox sizing ownership can be inspected without opening the full bundle."
       ]
     },
     {

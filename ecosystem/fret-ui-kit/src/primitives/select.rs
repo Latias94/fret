@@ -1348,23 +1348,37 @@ impl SelectContentKeyState {
                 true
             }
             KeyCode::Home => {
+                let before = self.active_row;
                 self.active_row = roving_focus::first_enabled(disabled_by_row);
+                if self.active_row != before {
+                    host.notify(action_cx);
+                }
                 host.request_redraw(window);
                 true
             }
             KeyCode::End => {
+                let before = self.active_row;
                 self.active_row = roving_focus::last_enabled(disabled_by_row);
+                if self.active_row != before {
+                    host.notify(action_cx);
+                }
                 host.request_redraw(window);
                 true
             }
             KeyCode::ArrowDown | KeyCode::ArrowUp => {
-                let Some(current) = current else {
-                    return true;
-                };
+                let before = self.active_row;
                 let forward = key == KeyCode::ArrowDown;
-                self.active_row =
+                self.active_row = if let Some(current) = self.active_row {
                     roving_focus::next_enabled(disabled_by_row, current, forward, loop_navigation)
-                        .or(Some(current));
+                        .or(Some(current))
+                } else if forward {
+                    roving_focus::first_enabled(disabled_by_row)
+                } else {
+                    roving_focus::last_enabled(disabled_by_row)
+                };
+                if self.active_row != before {
+                    host.notify(action_cx);
+                }
                 host.request_redraw(window);
                 true
             }
@@ -1410,6 +1424,7 @@ impl SelectContentKeyState {
                 );
                 if next != self.active_row {
                     self.active_row = next;
+                    host.notify(action_cx);
                     host.request_redraw(window);
                 }
                 true
@@ -1919,7 +1934,9 @@ mod tests {
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Scene, Transform2D};
     use fret_core::{TextBlobId, TextConstraints, TextInput, TextMetrics, TextService};
-    use fret_ui::action::{UiActionHostAdapter, UiFocusActionHost, UiPointerActionHost};
+    use fret_ui::action::{
+        UiActionHost, UiActionHostAdapter, UiFocusActionHost, UiPointerActionHost,
+    };
     use fret_ui::element::{ContainerProps, ElementKind, LayoutStyle, Length, PressableProps};
     use std::time::Duration;
 
@@ -1927,6 +1944,41 @@ mod tests {
 
     #[derive(Default)]
     struct FakeServices;
+
+    struct RecordingActionHost<'a> {
+        app: &'a mut App,
+        notified: Vec<GlobalElementId>,
+    }
+
+    impl UiActionHost for RecordingActionHost<'_> {
+        fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+            self.app.models_mut()
+        }
+
+        fn push_effect(&mut self, effect: Effect) {
+            self.app.push_effect(effect);
+        }
+
+        fn request_redraw(&mut self, window: AppWindowId) {
+            self.app.request_redraw(window);
+        }
+
+        fn next_timer_token(&mut self) -> TimerToken {
+            self.app.next_timer_token()
+        }
+
+        fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+            self.app.next_clipboard_token()
+        }
+
+        fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+            self.app.next_share_sheet_token()
+        }
+
+        fn notify(&mut self, cx: ActionCx) {
+            self.notified.push(cx.target);
+        }
+    }
 
     impl TextService for FakeServices {
         fn prepare(
@@ -2513,6 +2565,8 @@ mod tests {
         );
         let expected = select_root_name(id);
         assert_eq!(req.root_name.as_deref(), Some(expected.as_str()));
+        assert!(req.close_on_window_resize);
+        assert!(req.close_on_window_focus_lost);
     }
 
     #[test]
@@ -2843,8 +2897,136 @@ mod tests {
             false,
             true,
         ));
-        // Skips disabled row 1, so we land on row 2.
+        assert_eq!(state.active_row(), Some(0));
+
+        assert!(state.handle_key_down_when_open(
+            &mut host,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
+            &open,
+            &value,
+            &values_by_row,
+            &labels_by_row,
+            &disabled_by_row,
+            None,
+            KeyCode::ArrowDown,
+            false,
+            true,
+        ));
+        // The second ArrowDown skips disabled row 1, so we land on row 2.
         assert_eq!(state.active_row(), Some(2));
+    }
+
+    #[test]
+    fn content_arrow_up_from_no_active_starts_at_last_enabled() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let open = app.models_mut().insert(true);
+        let value = app.models_mut().insert(None::<Arc<str>>);
+
+        let values_by_row: Vec<Option<Arc<str>>> = vec![
+            Some(Arc::from("alpha")),
+            Some(Arc::from("beta")),
+            Some(Arc::from("gamma")),
+        ];
+        let labels_by_row: Vec<Arc<str>> =
+            vec![Arc::from("Alpha"), Arc::from("Beta"), Arc::from("Gamma")];
+        let disabled_by_row = vec![false, true, false];
+
+        let mut state = SelectContentKeyState::default();
+        let mut host = UiActionHostAdapter { app: &mut app };
+
+        assert!(state.handle_key_down_when_open(
+            &mut host,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
+            &open,
+            &value,
+            &values_by_row,
+            &labels_by_row,
+            &disabled_by_row,
+            None,
+            KeyCode::ArrowUp,
+            false,
+            true,
+        ));
+        assert_eq!(state.active_row(), Some(2));
+    }
+
+    #[test]
+    fn content_arrow_navigation_notifies_when_active_row_changes() {
+        let window = AppWindowId::default();
+        let target = GlobalElementId(42);
+        let mut app = App::new();
+        let open = app.models_mut().insert(true);
+        let value = app.models_mut().insert(None::<Arc<str>>);
+
+        let values_by_row: Vec<Option<Arc<str>>> = vec![
+            Some(Arc::from("alpha")),
+            Some(Arc::from("beta")),
+            Some(Arc::from("gamma")),
+        ];
+        let labels_by_row: Vec<Arc<str>> =
+            vec![Arc::from("Alpha"), Arc::from("Beta"), Arc::from("Gamma")];
+        let disabled_by_row = vec![false, true, false];
+
+        let mut state = SelectContentKeyState::default();
+        let mut host = RecordingActionHost {
+            app: &mut app,
+            notified: Vec::new(),
+        };
+
+        assert!(state.handle_key_down_when_open(
+            &mut host,
+            ActionCx { window, target },
+            &open,
+            &value,
+            &values_by_row,
+            &labels_by_row,
+            &disabled_by_row,
+            None,
+            KeyCode::ArrowDown,
+            false,
+            false,
+        ));
+        assert_eq!(state.active_row(), Some(0));
+        assert_eq!(host.notified.as_slice(), &[target]);
+
+        assert!(state.handle_key_down_when_open(
+            &mut host,
+            ActionCx { window, target },
+            &open,
+            &value,
+            &values_by_row,
+            &labels_by_row,
+            &disabled_by_row,
+            None,
+            KeyCode::ArrowDown,
+            false,
+            false,
+        ));
+        assert_eq!(state.active_row(), Some(2));
+        assert_eq!(host.notified.as_slice(), &[target, target]);
+
+        assert!(state.handle_key_down_when_open(
+            &mut host,
+            ActionCx { window, target },
+            &open,
+            &value,
+            &values_by_row,
+            &labels_by_row,
+            &disabled_by_row,
+            None,
+            KeyCode::ArrowDown,
+            false,
+            false,
+        ));
+        assert_eq!(state.active_row(), Some(2));
+        assert_eq!(host.notified.as_slice(), &[target, target]);
     }
 
     #[test]

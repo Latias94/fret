@@ -120,9 +120,6 @@ pub(crate) fn check_bundle_for_wheel_scroll_json(
         };
 
         let Some(target_before) = semantics_node_id_for_test_id(&semantics, before, test_id) else {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=missing_test_id_before"
-            ));
             continue;
         };
         let Some(target_after) = semantics_node_id_for_test_id(&semantics, after, test_id) else {
@@ -230,9 +227,6 @@ pub(crate) fn check_bundle_for_wheel_scroll_hit_changes_json(
         };
 
         let Some(target_before) = semantics_node_id_for_test_id(&semantics, before, test_id) else {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=missing_test_id_before"
-            ));
             continue;
         };
         let Some(target_after) = semantics_node_id_for_test_id(&semantics, after, test_id) else {
@@ -322,4 +316,50 @@ pub(crate) fn check_bundle_for_wheel_scroll_hit_changes_json(
         msg.push('\n');
     }
     Err(msg)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn wheel_scroll_hit_changes_json_ignores_wheel_before_target_exists() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "events": [{ "kind": "pointer.wheel", "frame_id": 1 }],
+                "snapshots": [
+                    {
+                        "frame_id": 0,
+                        "debug": {
+                            "hit_test": { "hit": 2 },
+                            "semantics": { "nodes": [
+                                { "id": 2, "parent": 1 }
+                            ]}
+                        }
+                    },
+                    {
+                        "frame_id": 1,
+                        "debug": {
+                            "hit_test": { "hit": 2 },
+                            "semantics": { "nodes": [
+                                { "id": 1, "test_id": "root" },
+                                { "id": 2, "parent": 1 }
+                            ]}
+                        }
+                    }
+                ]
+            }]
+        });
+
+        check_bundle_for_wheel_scroll_hit_changes_json(
+            &bundle,
+            Path::new("bundle.json"),
+            "root",
+            0,
+        )
+        .expect("wheel before target exists should be ignored");
+    }
 }

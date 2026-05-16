@@ -1,0 +1,162 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-select-scrollable-placement-boundary",
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.screenshot_png",
+      "diag.overlay_placement_trace"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "select",
+      "FRET_UI_GALLERY_START_SECTION": "ui-gallery-select-scrollable"
+    },
+    "tags": [
+      "ui_gallery",
+      "shadcn",
+      "select",
+      "scrollable",
+      "overlay",
+      "placement"
+    ],
+    "target_hints": [
+      "Starts directly on the Select Scrollable docs section.",
+      "Opens the long-list Select in a constrained viewport and proves the item-aligned listbox has a placement trace, remains inside the window, and keeps relations across the overlay/root boundary.",
+      "Captures layout sidecar evidence so scroll-container clipping and listbox sizing ownership can be inspected without opening the full bundle."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 720.0, "height_px": 480.0 },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-select" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-select-scrollable-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-select-scrollable" },
+      "delta_y": -160.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-select-scrollable" },
+        "padding_px": 2.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-select-scrollable" },
+      "stable_frames": 4,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-select-scrollable" },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-select-scrollable-listbox" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_overlay_placement_trace",
+      "query": {
+        "kind": "placed_rect",
+        "anchor_test_id": "ui-gallery-select-scrollable",
+        "content_test_id": "ui-gallery-select-scrollable-listbox"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-select-scrollable-listbox" },
+        "padding_px": 2.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-select-scrollable-listbox" },
+        "max_w_px": 720.0,
+        "max_h_px": 360.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-select-scrollable-listbox" },
+      "stable_frames": 4,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_relation_includes",
+        "source": { "kind": "test_id", "id": "ui-gallery-select-scrollable" },
+        "relation": "controls",
+        "target": { "kind": "test_id", "id": "ui-gallery-select-scrollable-listbox" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_relation_includes",
+        "source": { "kind": "test_id", "id": "ui-gallery-select-scrollable-listbox" },
+        "relation": "labelled_by",
+        "target": { "kind": "test_id", "id": "ui-gallery-select-scrollable" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-select-scrollable-placement-boundary.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-select-scrollable-placement-boundary"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-select-scrollable-placement-boundary"
+    }
+  ]
+}

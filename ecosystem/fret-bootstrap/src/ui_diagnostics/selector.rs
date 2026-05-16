@@ -542,7 +542,11 @@ impl<'a> SemanticsIndex<'a> {
             return false;
         }
         if let Some(barrier) = self.barrier_root {
-            return self.is_descendant_of_or_self(id, barrier);
+            // Modal barriers inert the background root stack, but overlay roots above the
+            // barrier stay selectable. Gate by input-layer order instead of tree ancestry so
+            // sibling popover roots above the barrier remain reachable.
+            let barrier_root_z = self.root_z_for(barrier);
+            return self.root_z_for(id) >= barrier_root_z;
         }
         true
     }
@@ -1323,6 +1327,175 @@ mod legacy_inline_validate {
             let picked =
                 select_semantics_node_scoped(&snapshot, window, None, &selector, None).unwrap();
             assert_eq!(picked.id, node_id(3));
+        }
+
+        #[test]
+        fn selector_modal_barrier_allows_overlay_roots_above_it() {
+            let window = window_id(1);
+
+            let snapshot = SemanticsSnapshot {
+                window,
+                roots: vec![
+                    SemanticsRoot {
+                        root: node_id(1),
+                        visible: true,
+                        blocks_underlay_input: false,
+                        hit_testable: true,
+                        z_index: 0,
+                    },
+                    SemanticsRoot {
+                        root: node_id(10),
+                        visible: true,
+                        blocks_underlay_input: true,
+                        hit_testable: true,
+                        z_index: 1,
+                    },
+                    SemanticsRoot {
+                        root: node_id(100),
+                        visible: true,
+                        blocks_underlay_input: false,
+                        hit_testable: true,
+                        z_index: 2,
+                    },
+                ],
+                barrier_root: Some(node_id(10)),
+                focus_barrier_root: Some(node_id(10)),
+                focus: None,
+                captured: None,
+                nodes: vec![
+                    semantics_node(
+                        1,
+                        None,
+                        SemanticsRole::Window,
+                        rect(0.0, 0.0, 200.0, 200.0),
+                        "app-root",
+                        None,
+                    ),
+                    semantics_node(
+                        2,
+                        Some(1),
+                        SemanticsRole::Button,
+                        rect(0.0, 0.0, 20.0, 20.0),
+                        "Underlay",
+                        Some("underlay-button"),
+                    ),
+                    semantics_node(
+                        10,
+                        None,
+                        SemanticsRole::Generic,
+                        rect(0.0, 0.0, 200.0, 200.0),
+                        "barrier",
+                        None,
+                    ),
+                    semantics_node(
+                        100,
+                        None,
+                        SemanticsRole::Generic,
+                        rect(0.0, 0.0, 200.0, 200.0),
+                        "overlay-root",
+                        None,
+                    ),
+                    semantics_node(
+                        101,
+                        Some(100),
+                        SemanticsRole::ListBox,
+                        rect(16.0, 40.0, 120.0, 80.0),
+                        "Choices",
+                        Some("overlay-listbox"),
+                    ),
+                ],
+            };
+
+            let overlay_selector = UiSelectorV1::TestId {
+                id: "overlay-listbox".to_string(),
+                root_z_index: None,
+            };
+            let picked =
+                select_semantics_node_scoped(&snapshot, window, None, &overlay_selector, None)
+                    .expect("expected overlay root above the barrier to stay selectable");
+            assert_eq!(picked.id, node_id(101));
+
+            let underlay_selector = UiSelectorV1::TestId {
+                id: "underlay-button".to_string(),
+                root_z_index: None,
+            };
+            assert!(
+                select_semantics_node_scoped(&snapshot, window, None, &underlay_selector, None)
+                    .is_none(),
+                "expected background roots below the barrier to stay inert",
+            );
+        }
+
+        #[test]
+        fn selector_trace_reports_test_id_filtered_by_modal_barrier() {
+            let window = window_id(1);
+
+            let snapshot = SemanticsSnapshot {
+                window,
+                roots: vec![
+                    SemanticsRoot {
+                        root: node_id(1),
+                        visible: true,
+                        blocks_underlay_input: false,
+                        hit_testable: true,
+                        z_index: 0,
+                    },
+                    SemanticsRoot {
+                        root: node_id(10),
+                        visible: true,
+                        blocks_underlay_input: true,
+                        hit_testable: true,
+                        z_index: 1,
+                    },
+                ],
+                barrier_root: Some(node_id(10)),
+                focus_barrier_root: Some(node_id(10)),
+                focus: None,
+                captured: None,
+                nodes: vec![
+                    semantics_node(
+                        1,
+                        None,
+                        SemanticsRole::Window,
+                        rect(0.0, 0.0, 200.0, 200.0),
+                        "app-root",
+                        None,
+                    ),
+                    semantics_node(
+                        2,
+                        Some(1),
+                        SemanticsRole::Group,
+                        rect(0.0, 0.0, 200.0, 200.0),
+                        "page",
+                        Some("ui-gallery-page-dialog"),
+                    ),
+                    semantics_node(
+                        10,
+                        None,
+                        SemanticsRole::Generic,
+                        rect(0.0, 0.0, 200.0, 200.0),
+                        "barrier",
+                        None,
+                    ),
+                ],
+            };
+
+            let selector = UiSelectorV1::TestId {
+                id: "ui-gallery-page-dialog".to_string(),
+                root_z_index: None,
+            };
+            let mut trace = Vec::new();
+            let picked = super::super::select_semantics_node_with_trace(
+                &snapshot, window, None, &selector, None, 5, false, &mut trace,
+            );
+
+            assert!(picked.is_none());
+            assert_eq!(trace.len(), 1);
+            let entry = &trace[0];
+            assert_eq!(entry.match_count, 0);
+            let note = entry.note.as_deref().unwrap_or_default();
+            assert!(note.contains("raw_match_count=1"));
+            assert!(note.contains("below_barrier_count=1"));
         }
 
         #[test]

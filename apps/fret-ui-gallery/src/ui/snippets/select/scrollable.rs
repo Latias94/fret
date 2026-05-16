@@ -9,9 +9,10 @@ use std::sync::Arc;
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     shadcn::Select::new_controllable(cx, None, None::<Arc<str>>, None, false)
         .refine_layout(LayoutRefinement::default().w_px(Px(280.0)))
+        .trigger_test_id("ui-gallery-select-scrollable-trigger")
         .trigger(shadcn::SelectTrigger::new())
         .value(shadcn::SelectValue::new().placeholder("Select a timezone"))
-        .content(shadcn::SelectContent::new())
+        .content(shadcn::SelectContent::new().test_id("ui-gallery-select-scrollable-listbox"))
         .entries([
             shadcn::SelectGroup::new([
                 shadcn::SelectLabel::new("North America").into(),

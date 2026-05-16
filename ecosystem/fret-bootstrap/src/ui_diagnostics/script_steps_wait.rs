@@ -1422,6 +1422,11 @@ fn overlay_rect_summary(rect: &UiRectV1) -> String {
 mod tests {
     use super::*;
     use crate::ui_diagnostics::script_engine::overlay_placement_trace_entry_matches_query_any_step;
+    use fret_core::{
+        Point, Px, Rect, SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsRoot,
+        SemanticsSnapshot, Size,
+    };
+    use slotmap::KeyData;
 
     fn key_modifiers() -> UiKeyModifiersV1 {
         UiKeyModifiersV1 {
@@ -1438,6 +1443,45 @@ mod tests {
             y_px: y,
             w_px: w,
             h_px: h,
+        }
+    }
+
+    fn node_id(id: u64) -> NodeId {
+        NodeId::from(KeyData::from_ffi(id))
+    }
+
+    fn semantics_rect(x: f32, y: f32, w: f32, h: f32) -> Rect {
+        Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(w), Px(h)))
+    }
+
+    fn semantics_node(
+        id: u64,
+        parent: Option<u64>,
+        role: SemanticsRole,
+        bounds: Rect,
+        label: &str,
+        test_id: Option<&str>,
+    ) -> SemanticsNode {
+        SemanticsNode {
+            id: node_id(id),
+            parent: parent.map(node_id),
+            role,
+            bounds,
+            flags: SemanticsFlags::default(),
+            test_id: test_id.map(|s| s.to_string()),
+            active_descendant: None,
+            pos_in_set: None,
+            set_size: None,
+            label: Some(label.to_string()),
+            value: None,
+            extra: Default::default(),
+            text_selection: None,
+            text_composition: None,
+            actions: SemanticsActions::default(),
+            labelled_by: Vec::new(),
+            described_by: Vec::new(),
+            controls: Vec::new(),
+            inline_spans: Vec::new(),
         }
     }
 
@@ -1558,6 +1602,77 @@ mod tests {
     }
 
     #[test]
+    fn wait_until_selector_trace_reports_modal_barrier_filtering() {
+        let window = AppWindowId::from(KeyData::from_ffi(1));
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![
+                SemanticsRoot {
+                    root: node_id(1),
+                    visible: true,
+                    blocks_underlay_input: false,
+                    hit_testable: true,
+                    z_index: 0,
+                },
+                SemanticsRoot {
+                    root: node_id(10),
+                    visible: true,
+                    blocks_underlay_input: true,
+                    hit_testable: true,
+                    z_index: 1,
+                },
+            ],
+            barrier_root: Some(node_id(10)),
+            focus_barrier_root: Some(node_id(10)),
+            focus: None,
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Window,
+                    semantics_rect(0.0, 0.0, 200.0, 200.0),
+                    "app-root",
+                    None,
+                ),
+                semantics_node(
+                    2,
+                    Some(1),
+                    SemanticsRole::Group,
+                    semantics_rect(0.0, 0.0, 200.0, 200.0),
+                    "page",
+                    Some("ui-gallery-page-dialog"),
+                ),
+                semantics_node(
+                    10,
+                    None,
+                    SemanticsRole::Generic,
+                    semantics_rect(0.0, 0.0, 200.0, 200.0),
+                    "barrier",
+                    None,
+                ),
+            ],
+        };
+
+        let predicate = UiPredicateV1::Exists {
+            target: UiSelectorV1::TestId {
+                id: "ui-gallery-page-dialog".to_string(),
+                root_z_index: None,
+            },
+        };
+
+        let mut trace = Vec::new();
+        record_wait_until_predicate_selector_trace(
+            &snapshot, window, None, None, 5, false, &predicate, &mut trace,
+        );
+
+        assert_eq!(trace.len(), 1);
+        let note = trace[0].note.as_deref().unwrap_or_default();
+        assert!(note.contains("raw_match_count=1"));
+        assert!(note.contains("below_barrier_count=1"));
+    }
+
+    #[test]
     fn overlay_trace_timeout_note_names_side_and_flip_mismatches() {
         let trace = vec![anchored_trace(
             "trigger",
@@ -1666,6 +1781,197 @@ mod tests {
             "handled_by_test_id expected Some(\"menu-button\") actual Some(\"window-shell\")"
         ));
         assert!(note.contains("used_default_root_fallback expected false actual true"));
+    }
+}
+
+fn record_wait_until_predicate_selector_trace(
+    snapshot: &fret_core::SemanticsSnapshot,
+    window: AppWindowId,
+    element_runtime: Option<&ElementRuntime>,
+    scope_root: Option<u64>,
+    step_index: u32,
+    redact_text: bool,
+    predicate: &UiPredicateV1,
+    trace: &mut Vec<UiSelectorResolutionTraceEntryV1>,
+) {
+    fn record_selector(
+        snapshot: &fret_core::SemanticsSnapshot,
+        window: AppWindowId,
+        element_runtime: Option<&ElementRuntime>,
+        scope_root: Option<u64>,
+        step_index: u32,
+        redact_text: bool,
+        selector: &UiSelectorV1,
+        trace: &mut Vec<UiSelectorResolutionTraceEntryV1>,
+    ) {
+        select_semantics_node_with_trace(
+            snapshot,
+            window,
+            element_runtime,
+            selector,
+            scope_root,
+            step_index,
+            redact_text,
+            trace,
+        );
+    }
+
+    match predicate {
+        UiPredicateV1::Exists { target }
+        | UiPredicateV1::NotExists { target }
+        | UiPredicateV1::RawSemanticsHiddenIs { target, .. }
+        | UiPredicateV1::FocusIs { target }
+        | UiPredicateV1::RoleIs { target, .. }
+        | UiPredicateV1::LabelContains { target, .. }
+        | UiPredicateV1::LabelLenIs { target, .. }
+        | UiPredicateV1::LabelLenGe { target, .. }
+        | UiPredicateV1::ValueContains { target, .. }
+        | UiPredicateV1::ValueEquals { target, .. }
+        | UiPredicateV1::ValueLenIs { target, .. }
+        | UiPredicateV1::ValueLenGe { target, .. }
+        | UiPredicateV1::PosInSetIs { target, .. }
+        | UiPredicateV1::SetSizeIs { target, .. }
+        | UiPredicateV1::LevelIs { target, .. }
+        | UiPredicateV1::CheckedIs { target, .. }
+        | UiPredicateV1::ExpandedIs { target, .. }
+        | UiPredicateV1::SemanticsLiveIs { target, .. }
+        | UiPredicateV1::SemanticsLiveAtomicIs { target, .. }
+        | UiPredicateV1::SelectedIs { target, .. }
+        | UiPredicateV1::DisabledIs { target, .. }
+        | UiPredicateV1::SemanticsActionIs { target, .. }
+        | UiPredicateV1::CapturedIs { target, .. }
+        | UiPredicateV1::SemanticsNumericApproxEq { target, .. }
+        | UiPredicateV1::SemanticsScrollIsFinite { target, .. }
+        | UiPredicateV1::SemanticsScrollApproxEq { target, .. }
+        | UiPredicateV1::SemanticsScrollNotApproxEq { target, .. }
+        | UiPredicateV1::TextCompositionIs { target, .. }
+        | UiPredicateV1::VisibleInWindow { target }
+        | UiPredicateV1::BoundsWithinWindow { target, .. }
+        | UiPredicateV1::TextInputImeCursorAreaWithinBounds { target, .. }
+        | UiPredicateV1::BoundsMinSize { target, .. }
+        | UiPredicateV1::BoundsMaxSize { target, .. } => {
+            record_selector(
+                snapshot,
+                window,
+                element_runtime,
+                scope_root,
+                step_index,
+                redact_text,
+                target,
+                trace,
+            );
+        }
+        UiPredicateV1::ExistsUnder { scope, target }
+        | UiPredicateV1::NotExistsUnder { scope, target }
+        | UiPredicateV1::FocusedDescendantIs { scope, target } => {
+            record_selector(
+                snapshot,
+                window,
+                element_runtime,
+                scope_root,
+                step_index,
+                redact_text,
+                scope,
+                trace,
+            );
+            record_selector(
+                snapshot,
+                window,
+                element_runtime,
+                scope_root,
+                step_index,
+                redact_text,
+                target,
+                trace,
+            );
+        }
+        UiPredicateV1::SemanticsRelationIncludes { source, target, .. } => {
+            record_selector(
+                snapshot,
+                window,
+                element_runtime,
+                scope_root,
+                step_index,
+                redact_text,
+                source,
+                trace,
+            );
+            record_selector(
+                snapshot,
+                window,
+                element_runtime,
+                scope_root,
+                step_index,
+                redact_text,
+                target,
+                trace,
+            );
+        }
+        UiPredicateV1::SemanticsRelationIsEmpty { source, .. }
+        | UiPredicateV1::ActiveItemIsNone { container: source } => {
+            record_selector(
+                snapshot,
+                window,
+                element_runtime,
+                scope_root,
+                step_index,
+                redact_text,
+                source,
+                trace,
+            );
+        }
+        UiPredicateV1::ActiveItemIs { container, item } => {
+            record_selector(
+                snapshot,
+                window,
+                element_runtime,
+                scope_root,
+                step_index,
+                redact_text,
+                container,
+                trace,
+            );
+            record_selector(
+                snapshot,
+                window,
+                element_runtime,
+                scope_root,
+                step_index,
+                redact_text,
+                item,
+                trace,
+            );
+        }
+        UiPredicateV1::BoundsApproxEqual { a, b, .. }
+        | UiPredicateV1::BoundsCenterApproxEqual { a, b, .. }
+        | UiPredicateV1::BoundsMetricDelta { a, b, .. }
+        | UiPredicateV1::BoundsMetricPairDelta { a, b, .. }
+        | UiPredicateV1::BoundsNonOverlapping { a, b, .. }
+        | UiPredicateV1::BoundsOverlapping { a, b, .. }
+        | UiPredicateV1::BoundsOverlappingX { a, b, .. }
+        | UiPredicateV1::BoundsOverlappingY { a, b, .. } => {
+            record_selector(
+                snapshot,
+                window,
+                element_runtime,
+                scope_root,
+                step_index,
+                redact_text,
+                a,
+                trace,
+            );
+            record_selector(
+                snapshot,
+                window,
+                element_runtime,
+                scope_root,
+                step_index,
+                redact_text,
+                b,
+                trace,
+            );
+        }
+        _ => {}
     }
 }
 
@@ -1938,6 +2244,21 @@ pub(super) fn handle_wait_until_step(
             }
         },
     };
+    if !ok
+        && predicate_window == window
+        && let Some(snapshot) = semantics_snapshot
+    {
+        record_wait_until_predicate_selector_trace(
+            snapshot,
+            predicate_window,
+            element_runtime,
+            active.scope_root_for_window(predicate_window),
+            step_index as u32,
+            svc.cfg.redact_text,
+            &predicate,
+            &mut active.selector_resolution_trace,
+        );
+    }
     if ok {
         active.wait_until = None;
         active.next_step = active.next_step.saturating_add(1);

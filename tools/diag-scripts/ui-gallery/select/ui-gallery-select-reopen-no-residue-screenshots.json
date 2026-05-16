@@ -131,12 +131,36 @@
       "timeout_frames": 600
     },
     {
-      "type": "click",
-      "button": "left",
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-select-trigger"
+        },
+        "padding_px": 2.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "save_pointer_point",
+      "name": "trigger-outside-press",
       "target": {
         "kind": "test_id",
         "id": "ui-gallery-select-trigger"
       }
+    },
+    {
+      "type": "click_stable",
+      "button": "left",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-select-trigger"
+      },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
     },
     {
       "type": "wait_until",
@@ -184,12 +208,9 @@
       "timeout_frames": 300
     },
     {
-      "type": "click",
+      "type": "click_saved_point",
       "button": "left",
-      "target": {
-        "kind": "test_id",
-        "id": "ui-gallery-select-trigger"
-      }
+      "name": "trigger-outside-press"
     },
     {
       "type": "wait_until",
@@ -216,12 +237,15 @@
       "timeout_frames": 300
     },
     {
-      "type": "click",
+      "type": "click_stable",
       "button": "left",
       "target": {
         "kind": "test_id",
         "id": "ui-gallery-select-trigger"
-      }
+      },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
     },
     {
       "type": "wait_until",

@@ -9,6 +9,7 @@
 pub mod custom_close_button;
 pub mod demo;
 pub mod detached_trigger;
+pub mod nested_combobox;
 pub mod no_close_button;
 pub mod parts;
 pub mod rtl;

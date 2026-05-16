@@ -18,9 +18,11 @@
     "tools/diag-scripts/ui-gallery-combobox-rtl-long-text-geometry.json",
     "tools/diag-scripts/ui-gallery-combobox-multiple-chips.json",
     "tools/diag-scripts/ui-gallery-combobox-open-select-focus-restore.json",
+    "tools/diag-scripts/ui-gallery-combobox-placement-ownership-scroll-rtl.json",
     "tools/diag-scripts/ui-gallery-combobox-popup-trigger-bottom-room.json",
     "tools/diag-scripts/ui-gallery-combobox-popup-trigger.json",
     "tools/diag-scripts/ui-gallery-combobox-responsive-open.json",
+    "tools/diag-scripts/ui-gallery-combobox-responsive-resize-open-placement.json",
     "tools/diag-scripts/ui-gallery-combobox-roving-skips-disabled.json",
     "tools/diag-scripts/ui-gallery-combobox-typeahead-commit-banana.json",
     "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-trigger-screenshot-zinc-dark.json"

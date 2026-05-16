@@ -13,6 +13,7 @@ pub(super) fn preview_dialog(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let sticky_footer = snippets::sticky_footer::render(cx);
     let scrollable_content = snippets::scrollable_content::render(cx);
     let rtl = snippets::rtl::render(cx);
+    let nested_combobox = snippets::nested_combobox::render(cx);
     let detached_trigger = snippets::detached_trigger::render(cx);
 
     let api_reference = doc_layout::notes_block([
@@ -85,6 +86,10 @@ pub(super) fn preview_dialog(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         .description("Dialog layout should work under an RTL direction provider.")
         .test_id_prefix("ui-gallery-dialog-rtl-docsec")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
+    let nested_combobox = DocSection::build(cx, "Nested Combobox", nested_combobox)
+        .description("Nested overlay ownership while a modal dialog barrier is active.")
+        .test_id_prefix("ui-gallery-dialog-nested-combobox-docsec")
+        .code_rust_from_file_region(snippets::nested_combobox::SOURCE, "example");
     let parts = DocSection::build(cx, "Parts", parts)
         .description(
             "Advanced part surface adapters for explicit Trigger/Portal/Overlay ownership.",
@@ -109,6 +114,7 @@ pub(super) fn preview_dialog(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
             sticky_footer,
             scrollable_content,
             rtl,
+            nested_combobox,
             api_reference,
             extras,
             parts,

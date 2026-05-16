@@ -179,12 +179,28 @@
       "timeout_frames": 240
     },
     {
-      "type": "click",
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-combobox-demo-input"
+        },
+        "padding_px": 0.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
       "target": {
         "kind": "test_id",
         "id": "ui-gallery-combobox-demo-input"
       },
-      "button": "left"
+      "button": "left",
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
     },
     {
       "type": "wait_until",

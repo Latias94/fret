@@ -1,0 +1,262 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-combobox-responsive-resize-open-placement",
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.screenshot_png",
+      "diag.overlay_placement_trace"
+    ],
+    "tags": [
+      "ui_gallery",
+      "shadcn",
+      "combobox",
+      "responsive",
+      "desktop",
+      "overlay",
+      "resize"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "combobox",
+      "FRET_UI_GALLERY_START_SECTION": "ui-gallery-combobox-responsive-docsec"
+    },
+    "target_hints": [
+      "Starts directly on the Combobox page with only the Responsive section mounted in a desktop viewport.",
+      "Opens the responsive demo popover-backed combobox and verifies first-open anchored placement.",
+      "Resizes the window while open and verifies the popover remains mounted, emits a fresh anchored placement trace, preserves relation wiring, and stabilizes within the resized viewport."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1440.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-combobox" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-trigger" },
+      "delta_y": -200.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-trigger" },
+        "padding_px": 2.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-trigger" },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-input" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-content" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-command" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-listbox" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_overlay_placement_trace",
+      "query": {
+        "kind": "anchored_panel",
+        "anchor_test_id": "ui-gallery-combobox-responsive-trigger",
+        "content_test_id": "ui-gallery-combobox-responsive-content",
+        "preferred_side": "bottom",
+        "chosen_side": "bottom",
+        "flipped": false,
+        "side_offset_px": 4.0,
+        "side_offset_eps_px": 0.25
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_relation_includes",
+        "source": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-input" },
+        "relation": "controls",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-listbox" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_relation_includes",
+        "source": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-listbox" },
+        "relation": "labelled_by",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-input" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "set_window_inner_size", "width_px": 960.0, "height_px": 620.0 },
+    { "type": "wait_frames", "n": 12 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-input" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-content" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-listbox" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_overlay_placement_trace",
+      "query": {
+        "kind": "anchored_panel",
+        "anchor_test_id": "ui-gallery-combobox-responsive-trigger",
+        "content_test_id": "ui-gallery-combobox-responsive-content",
+        "preferred_side": "bottom",
+        "side_offset_px": 4.0,
+        "side_offset_eps_px": 0.25
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-content" },
+        "padding_px": 2.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_metric_pair_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-content" },
+        "b": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-trigger" },
+        "a_metric": "bottom",
+        "b_metric": "top",
+        "comparison": "eq",
+        "value_px": -4.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-content" },
+        "b": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-trigger" },
+        "metric": "width",
+        "comparison": "eq",
+        "value_px": 50.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-input" },
+        "padding_px": 0.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-listbox" },
+        "padding_px": 0.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_relation_includes",
+        "source": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-input" },
+        "relation": "controls",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-listbox" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_relation_includes",
+        "source": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-listbox" },
+        "relation": "labelled_by",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-input" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-combobox-responsive-content" },
+      "stable_frames": 4,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    { "type": "capture_layout_sidecar", "label": "ui-gallery-combobox-responsive-resize-open-placement.layout" },
+    { "type": "capture_screenshot", "label": "ui-gallery-combobox-responsive-resize-open-placement" },
+    { "type": "capture_bundle", "label": "ui-gallery-combobox-responsive-resize-open-placement" }
+  ]
+}

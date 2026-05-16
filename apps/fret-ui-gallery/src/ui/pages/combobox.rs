@@ -21,6 +21,7 @@ pub(super) fn preview_combobox(
     let groups_with_separator = snippets::groups_with_separator::render(cx);
     let popup = snippets::trigger_button::render(cx);
     let responsive = snippets::responsive::render(cx);
+    let placement_ownership = snippets::placement_ownership::render(cx);
     let multiple = snippets::multiple_selection::render(cx);
     let custom_items = snippets::custom_items::render(cx);
     let long_text = snippets::long_text::render(cx);
@@ -116,6 +117,13 @@ pub(super) fn preview_combobox(
         .test_id_prefix("ui-gallery-combobox-responsive-docsec")
         .no_shell()
         .code_rust_from_file_region(snippets::responsive::SOURCE, "example");
+    let placement_ownership = DocSection::build(cx, "Placement Ownership", placement_ownership)
+        .description(
+            "Diagnostics fixture for overlay escape from a clipped scroll container under RTL direction.",
+        )
+        .test_id_prefix("ui-gallery-combobox-placement-ownership-docsec")
+        .no_shell()
+        .code_rust_from_file_region(snippets::placement_ownership::SOURCE, "example");
     let long_text = DocSection::build(cx, "Long Text", long_text)
         .description(
             "Constrained trigger and popup item text fixture for truncation and inline icon spacing.",
@@ -172,6 +180,7 @@ pub(super) fn preview_combobox(
             rtl,
             api_reference,
             responsive,
+            placement_ownership,
             long_text,
             rtl_long_text,
             conformance_demo,
