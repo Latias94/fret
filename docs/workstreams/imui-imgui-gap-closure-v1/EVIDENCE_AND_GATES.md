@@ -387,6 +387,12 @@ Run evidence:
   use `label_text(...)` and forbids those labels from returning to `|cx| cx.text(...)` in property
   label slots. Gates: `python tools/gate_imui_workstream_source.py` and
   `cargo check -p fret-demo --bin imui_editor_proof_demo`.
+- 2026-05-17: migrated the `workspace_shell_demo` editor rail to teach the shared text roles too.
+  Rail command buttons now use `text_button_label(...)`, property labels use `row_cx.label_text(...)`,
+  and compact property values route through `text_control_readout(...)` via a local proof helper.
+  Gates: `cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface
+  --no-fail-fast`, `cargo check -p fret-demo --bin workspace_shell_demo`, and
+  `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: removed clipping from `PropertyRow` value slots while keeping fixed label/reset/action
   chrome clipped. This is the layout-container side of the text-role contract: wrapping validation
   prose such as `NumericInput` inline errors may grow to multiple lines, so the parent value slot

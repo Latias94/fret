@@ -296,6 +296,9 @@ Readiness order for the next locally testable review slices:
    2026-05-17 proof teaching follow-up: `imui_editor_proof_demo` property-grid labels now use
    `row_cx.label_text(...)`, and the IMUI workstream source gate forbids representative proof
    labels from drifting back to bare `|cx| cx.text(...)` label slots.
+   2026-05-17 workspace shell proof text follow-up: `workspace_shell_demo` editor-rail buttons,
+   property labels, and compact property values now teach the shared button-label, property-label,
+   and control-readout text roles instead of bare `cx.text(...)`.
    2026-05-17 text role matrix follow-up: `P3_TEXT_ROLE_MATRIX_2026-05-17.md` now freezes the
    stable base role vocabulary for resize triage: control readout, button label, paragraph, code
    text, and table cell text. The matrix also classifies current derived roles, keeps wrapping text

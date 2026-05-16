@@ -24,6 +24,7 @@ use fret_ui_editor::composites::{
 };
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::file_tree::{FileTreeViewProps, file_tree_view_retained_v0};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{
     LayoutRefinement, MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space,
     TreeItem, TreeState,
@@ -143,10 +144,17 @@ where
                     padding: Edges::all(padding).into(),
                     ..Default::default()
                 },
-                move |cx| vec![cx.text(label.clone())],
+                move |cx| vec![decl_text::text_button_label(cx, label.clone())],
             )]
         },
     )
+}
+
+fn workspace_shell_readout_text<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    decl_text::text_control_readout(cx, text)
 }
 
 fn workspace_shell_editor_rail<'a, Cx>(
@@ -206,23 +214,43 @@ where
                                     vec![
                                         row_cx.row(
                                             cx,
-                                            |cx| cx.text("Active pane"),
-                                            |cx| cx.text(active_pane_label.clone()),
+                                            |cx| row_cx.label_text(cx, "Active pane"),
+                                            |cx| {
+                                                workspace_shell_readout_text(
+                                                    cx,
+                                                    active_pane_label.clone(),
+                                                )
+                                            },
                                         ),
                                         row_cx.row(
                                             cx,
-                                            |cx| cx.text("Active tab"),
-                                            |cx| cx.text(active_tab_label.clone()),
+                                            |cx| row_cx.label_text(cx, "Active tab"),
+                                            |cx| {
+                                                workspace_shell_readout_text(
+                                                    cx,
+                                                    active_tab_label.clone(),
+                                                )
+                                            },
                                         ),
                                         row_cx.row(
                                             cx,
-                                            |cx| cx.text("Tabs in pane"),
-                                            |cx| cx.text(format!("{active_tab_count}")),
+                                            |cx| row_cx.label_text(cx, "Tabs in pane"),
+                                            |cx| {
+                                                workspace_shell_readout_text(
+                                                    cx,
+                                                    format!("{active_tab_count}"),
+                                                )
+                                            },
                                         ),
                                         row_cx.row(
                                             cx,
-                                            |cx| cx.text("Dirty tabs"),
-                                            |cx| cx.text(format!("{active_dirty_count}")),
+                                            |cx| row_cx.label_text(cx, "Dirty tabs"),
+                                            |cx| {
+                                                workspace_shell_readout_text(
+                                                    cx,
+                                                    format!("{active_dirty_count}"),
+                                                )
+                                            },
                                         ),
                                     ]
                                 })]
@@ -242,30 +270,32 @@ where
                                     vec![
                                         row_cx.row(
                                             cx,
-                                            |cx| cx.text("Left slot"),
-                                            |cx| cx.text("File tree rail"),
+                                            |cx| row_cx.label_text(cx, "Left slot"),
+                                            |cx| workspace_shell_readout_text(cx, "File tree rail"),
                                         ),
                                         row_cx.row(
                                             cx,
-                                            |cx| cx.text("Right slot"),
-                                            |cx| cx.text("Editor rail"),
+                                            |cx| row_cx.label_text(cx, "Right slot"),
+                                            |cx| workspace_shell_readout_text(cx, "Editor rail"),
                                         ),
                                         row_cx.row(
                                             cx,
-                                            |cx| cx.text("Two-row tabs"),
+                                            |cx| row_cx.label_text(cx, "Two-row tabs"),
                                             |cx| {
-                                                cx.text(if two_row_pinned {
-                                                    "Pinned"
-                                                } else {
-                                                    "Auto"
-                                                })
+                                                workspace_shell_readout_text(
+                                                    cx,
+                                                    if two_row_pinned { "Pinned" } else { "Auto" },
+                                                )
                                             },
                                         ),
                                         row_cx.row(
                                             cx,
-                                            |cx| cx.text("Dirty close prompt"),
+                                            |cx| row_cx.label_text(cx, "Dirty close prompt"),
                                             |cx| {
-                                                cx.text(if prompt_open { "Open" } else { "Closed" })
+                                                workspace_shell_readout_text(
+                                                    cx,
+                                                    if prompt_open { "Open" } else { "Closed" },
+                                                )
                                             },
                                         ),
                                     ]
