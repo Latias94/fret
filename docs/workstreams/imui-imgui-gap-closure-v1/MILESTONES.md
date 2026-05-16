@@ -225,6 +225,9 @@ Exit criteria:
   ImGui's default `Text()` semantics by staying single-line and shrinkable with ellipsis under
   resize. `text_wrapped(...)` is the explicit wrapping escape hatch, and the editor/workspace proof
   prose that should wrap now opts into it.
+  2026-05-16 control chrome fill-text result: shared checkbox/radio/switch labels, combo preview
+  text, and slider captions now use single-line shrink/ellipsis layout through
+  `control_chrome::fill_text(...)`, removing another fixed-height control wrapping path.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

@@ -220,6 +220,10 @@ Readiness order for the next locally testable review slices:
    ImGui's default `Text()` posture by staying single-line, shrinkable, and ellipsis-truncated
    under narrow resize. `text_wrapped(...)` is the explicit opt-in path for explanatory copy that
    should wrap, and first-party proof prose now uses that API.
+   2026-05-16 control chrome fill-text follow-up: checkbox/radio/switch labels plus combo/slider
+   captions now inherit the same compact single-line shrink/ellipsis posture through
+   `control_chrome::fill_text(...)`, so fixed-height control chrome cannot grow rows by word
+   wrapping under resize.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

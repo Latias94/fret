@@ -232,6 +232,15 @@ Run evidence:
   prose, and routed first-party editor/workspace proof prose through it. Gates: `cargo nextest run
   -p fret-ui-kit --features imui --lib imui_text_item_is_single_line_and_shrinkable
   imui_text_wrapped_is_explicit_wrapping_text --no-fail-fast` and `cargo check -p fret-examples`.
+- 2026-05-16: tightened `control_chrome::fill_text(...)`, the shared path for boolean labels,
+  combo preview/captions, and slider captions, to fill, shrink, `min-width: 0`, and truncate instead
+  of word-wrapping inside compact control chrome. Gates: `cargo nextest run -p fret-ui-kit
+  --features imui --lib imui_fill_text_is_single_line_and_shrinkable
+  imui_control_text_uses_shared_button_label_role --no-fail-fast`, `cargo nextest run -p
+  fret-ui-kit --features imui --test imui_button_smoke --test imui_combo_smoke --no-fail-fast`, and
+  `cargo nextest run -p fret-ui-kit --features imui --lib
+  input_text_model_uses_compact_imui_chrome_without_focus_ring
+  textarea_model_uses_compact_imui_chrome_without_focus_ring --no-fail-fast`.
 - 2026-05-14: made `DisclosureResponse` / `ComboResponse` accessor-first for trigger/open/toggle
   state too. Public callers now read trigger details through `response()` and semantic helpers, the
   response types no longer expose external `Default` construction, and

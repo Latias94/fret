@@ -196,8 +196,12 @@ pub(super) fn fill_text<H: UiHost>(
     let mut props = TextProps::new(text);
     props.layout.size.width = Length::Fill;
     props.layout.size.height = Length::Auto;
-    props.wrap = TextWrap::Word;
-    props.overflow = TextOverflow::Clip;
+    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+    props.layout.flex.grow = 1.0;
+    props.layout.flex.shrink = 1.0;
+    props.layout.flex.basis = Length::Px(Px(0.0));
+    props.wrap = TextWrap::None;
+    props.overflow = TextOverflow::Ellipsis;
     props.color = Some(color);
     cx.text_props(props)
 }
@@ -296,5 +300,33 @@ mod tests {
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
         assert!(el.inherited_text_style.is_some());
         assert_eq!(el.inherited_foreground, Some(foreground));
+    }
+
+    #[test]
+    fn imui_fill_text_is_single_line_and_shrinkable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let foreground = fret_core::Color::from_srgb_hex_rgb(0x44_55_66);
+
+        let el = elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+            fill_text(
+                cx,
+                Arc::from("Long boolean/combo label that should not wrap in compact chrome"),
+                foreground,
+            )
+        });
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected fill_text(...) to build a Text element");
+        };
+
+        assert_eq!(props.color, Some(foreground));
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
     }
 }
