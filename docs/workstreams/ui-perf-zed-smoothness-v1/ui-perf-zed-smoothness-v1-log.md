@@ -105,6 +105,30 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 14:47:00 +0800 (local verifier decision-input projection)
+
+Question:
+- If the Windows RTX4090 closeout is deferred as a TODO, can synced target artifacts still carry enough raw numbers to
+  decide the next owner without re-reading each `diag stats --json` file manually?
+
+Change:
+- `diag_editor_paint_contract_verify_artifacts.py` now projects per-probe `decision_inputs` from the captured stats
+  JSON: paint-widget p95/max, renderer text/encode/upload p95, code-editor paint p95/max fields, and
+  `paint_widget_hotspot_summary`.
+- The runbook, audit, and TODO now state that Windows RTX4090 validation remains a deferred TODO while independent
+  local optimization slices may continue. Local macOS evidence and dry-run plans still cannot close P1.5 or re-seed
+  Windows baselines.
+
+Validation:
+- `python3 tools/perf/test_diag_editor_paint_contract_preflight.py` (3 tests), validate (10 tests),
+  verify_artifacts (10 tests), and closeout (7 tests) passed.
+- `python3 tools/check_workstream_catalog.py`, `python3 -m json.tool .../WORKSTREAM.json`, and `git diff --check`
+  passed.
+
+Decision:
+- Use verifier `decision_inputs` as the closeout handoff surface when the target-machine validation and attribution
+  directories arrive. Until then, the next local optimization scan should stay evidence-led and baseline-neutral.
+
 ## 2026-05-16 14:46:00 +0800 (target-machine closeout handoff audit)
 
 Question:

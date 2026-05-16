@@ -128,16 +128,88 @@ def _check_threshold_file(path: Path, errors: list[str], prefix: str) -> None:
         errors.append(f"{prefix}: threshold failures must be [] in {path}")
 
 
+def _metric_group(doc: dict[str, Any], group: str) -> dict[str, Any]:
+    values = doc.get(group)
+    return values if isinstance(values, dict) else {}
+
+
+def _nested_metric(doc: dict[str, Any], *keys: str) -> Any:
+    value: Any = doc
+    for key in keys:
+        if not isinstance(value, dict):
+            return None
+        value = value.get(key)
+    return value
+
+
+def _decision_inputs_for_doc(doc: object) -> dict[str, Any]:
+    if not isinstance(doc, dict):
+        return {}
+    p95 = _metric_group(doc, "p95")
+    max_values = _metric_group(doc, "max")
+    code_editor = doc.get("code_editor_paint_perf")
+    if not isinstance(code_editor, dict):
+        code_editor = {}
+    paint_hotspots = doc.get("paint_widget_hotspot_summary")
+    if not isinstance(paint_hotspots, dict):
+        paint_hotspots = {}
+
+    return {
+        "paint_widget_p95_us": p95.get("paint_widget_time_us"),
+        "paint_widget_max_us": max_values.get("paint_widget_time_us"),
+        "renderer_prepare_text_p95_us": p95.get("renderer_prepare_text_us"),
+        "renderer_prepare_text_max_us": max_values.get("renderer_prepare_text_us"),
+        "renderer_encode_scene_p95_us": p95.get("renderer_encode_scene_us"),
+        "renderer_upload_p95_us": p95.get("renderer_upload_us"),
+        "code_editor_paint_perf_frames": code_editor.get("frames"),
+        "code_editor_total_p95_us": _nested_metric(code_editor, "p95", "us_total"),
+        "code_editor_windowed_surface_callback_p95_us": _nested_metric(
+            code_editor,
+            "p95",
+            "us_windowed_surface_paint_callback",
+        ),
+        "code_editor_windowed_surface_row_paint_p95_us": _nested_metric(
+            code_editor,
+            "p95",
+            "us_windowed_surface_row_paint",
+        ),
+        "code_editor_torture_overlay_max_us": _nested_metric(
+            code_editor,
+            "max",
+            "us_torture_overlay",
+        ),
+        "paint_widget_hotspot_summary": {
+            "frames_with_hotspots": paint_hotspots.get("frames_with_hotspots"),
+            "canvas_exclusive_p95_us": _nested_metric(
+                paint_hotspots,
+                "canvas",
+                "exclusive_us",
+                "p95",
+            ),
+            "non_canvas_exclusive_p95_us": _nested_metric(
+                paint_hotspots,
+                "non_canvas",
+                "exclusive_us",
+                "p95",
+            ),
+            "gap_to_code_editor_p95": paint_hotspots.get("gap_to_code_editor_p95"),
+            "code_editor_windowed_surface_p95": paint_hotspots.get(
+                "code_editor_windowed_surface_p95"
+            ),
+        },
+    }
+
+
 def _stats_coverage_from_step(
     step: dict[str, Any],
     errors: list[str],
     prefix: str,
     fallback_stats_path: Path,
-) -> dict[str, bool]:
+) -> tuple[dict[str, bool], dict[str, Any]]:
     stats = step.get("stats")
     if not isinstance(stats, dict):
         errors.append(f"{prefix}: missing stats result")
-        return validate.stats_coverage_for_doc(None)
+        return validate.stats_coverage_for_doc(None), {}
     if stats.get("ok") is not True:
         errors.append(f"{prefix}: stats result is not ok")
     missing_coverage = stats.get("missing_coverage")
@@ -147,12 +219,13 @@ def _stats_coverage_from_step(
     stdout_path = _artifact_path(stats.get("stdout"), fallback_stats_path)
     if not stdout_path.is_file():
         errors.append(f"{prefix}: stats stdout JSON missing: {stdout_path}")
-        return validate.stats_coverage_for_doc(None)
+        return validate.stats_coverage_for_doc(None), {}
     try:
-        return validate.stats_coverage_for_doc(_read_json(stdout_path))
+        doc = _read_json(stdout_path)
+        return validate.stats_coverage_for_doc(doc), _decision_inputs_for_doc(doc)
     except Exception as exc:
         errors.append(f"{prefix}: cannot read stats stdout JSON {stdout_path}: {exc}")
-        return validate.stats_coverage_for_doc(None)
+        return validate.stats_coverage_for_doc(None), {}
 
 
 def verify_summary_dir(path: Path, *, expect_with_paint_perf: bool) -> dict[str, Any]:
@@ -270,7 +343,7 @@ def verify_summary_dir(path: Path, *, expect_with_paint_perf: bool) -> dict[str,
         )
         _check_threshold_file(check_path, errors, prefix)
 
-        coverage = _stats_coverage_from_step(
+        coverage, decision_inputs = _stats_coverage_from_step(
             step,
             errors,
             prefix,
@@ -288,6 +361,7 @@ def verify_summary_dir(path: Path, *, expect_with_paint_perf: bool) -> dict[str,
             "thresholds_ok": step.get("thresholds_ok"),
             "check_perf_thresholds_failures": artifacts.get("check_perf_thresholds_failures"),
             "stats_coverage": coverage,
+            "decision_inputs": decision_inputs,
         }
 
     return {

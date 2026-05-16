@@ -670,6 +670,9 @@ Conventions:
           `79/48/72ns` per row respectively. That keeps the remaining gap in aggregate loop overhead
           territory rather than a separate row hot loop.
       - [ ] Stabilize the target-machine editor paint contract before closing P1.5.
+        - Current execution policy: defer this as the Windows RTX4090 TODO while continuing independent local
+          optimization slices. Do not treat local macOS evidence or dry-run plans as substitutes for the required
+          target-machine validation and attribution directories.
         - Required artifact: Windows RTX4090 overlay-disabled validation for typical autoscroll, complex wheel, and
           code-editor resize jitter; use a deliberate re-seed path only if the validation evidence justifies it.
         - Latest local handoff audit: perf log entry `2026-05-16 14:46:00 +0800` confirms the current macOS M4
@@ -704,7 +707,9 @@ Conventions:
             stats (`top_code_editor_torture_overlay_us=0` / `code_editor_paint_perf.max.us_torture_overlay=0`).
         - Required evidence: ordinary validation must provide `check.perf_thresholds.json` with
           `failures=[]`, worst-bundle `diag stats` summaries for paint/widget, code-editor paint perf, and
-          renderer text/encode/upload. A deliberate re-seed path must additionally provide
+          renderer text/encode/upload. The artifact verifier projects these raw fields as per-probe
+          `decision_inputs` so closeout can choose Canvas/paint, renderer text, or no-code-change from the synced
+          artifacts. A deliberate re-seed path must additionally provide
           `selection-summary.json` plus no-threshold-loosening evidence unless a policy note intentionally
           justifies the reset.
         - Guardrail: do not update checked-in baselines from macOS M4 evidence and do not mark P1.5
