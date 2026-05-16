@@ -393,6 +393,13 @@ Run evidence:
   Gates: `cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface
   --no-fail-fast`, `cargo check -p fret-demo --bin workspace_shell_demo`, and
   `python tools/gate_imui_workstream_source.py`.
+- 2026-05-17: migrated the `workspace_shell_demo` dirty-close prompt title/details to the same
+  role vocabulary. The title now uses `workspace_shell_section_chrome_label(...)` backed by
+  `text_section_chrome_label(...)`, while reason/dirty-detail lines use
+  `workspace_shell_readout_text(...)` backed by `text_control_readout(...)`. Gates:
+  `cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface --no-fail-fast`,
+  `cargo check -p fret-demo --bin workspace_shell_demo`, and
+  `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: migrated selected `imui_editor_proof_demo` proof text to shared roles without
   widening framework API. Material/advanced/global `No matches` labels now use
   `proof_empty_state_text(...)`, authoring shared-state lines use `proof_compact_readout_element(...)`

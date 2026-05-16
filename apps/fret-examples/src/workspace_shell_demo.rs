@@ -157,6 +157,13 @@ fn workspace_shell_readout_text<H: fret_ui::UiHost>(
     decl_text::text_control_readout(cx, text)
 }
 
+fn workspace_shell_section_chrome_label<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    decl_text::text_section_chrome_label(cx, text)
+}
+
 fn workspace_shell_editor_rail<'a, Cx>(
     cx: &mut Cx,
     state: WorkspaceShellEditorRailState,
@@ -760,15 +767,22 @@ impl WorkspaceShellDemoDriver {
                                             },
                                             move |cx| {
                                                 vec![
-                                                    cx.text(Arc::<str>::from(
+                                                    workspace_shell_section_chrome_label(
+                                                        cx,
                                                         "Dirty close confirmation",
-                                                    )),
-                                                    cx.text(Arc::<str>::from(format!(
-                                                        "reason={reason} active={active_tab} close_count={close_count}"
-                                                    ))),
-                                                    cx.text(Arc::<str>::from(format!(
-                                                        "dirty=[{dirty_list}]"
-                                                    ))),
+                                                    ),
+                                                    workspace_shell_readout_text(
+                                                        cx,
+                                                        Arc::<str>::from(format!(
+                                                            "reason={reason} active={active_tab} close_count={close_count}"
+                                                        )),
+                                                    ),
+                                                    workspace_shell_readout_text(
+                                                        cx,
+                                                        Arc::<str>::from(format!(
+                                                            "dirty=[{dirty_list}]"
+                                                        )),
+                                                    ),
                                                     cx.flex(
                                                         FlexProps {
                                                             layout: {
