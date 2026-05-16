@@ -669,9 +669,13 @@ date: 2026-05-12
     scripts whose names declare `fixed-frame-delta` or `trigger-delays` now carry
     `FRET_DIAG_FIXED_FRAME_DELTA_MS=16`, and the registry lint rejects future promoted scripts that
     forget that clock contract. The focused HoverCard delay gate passes under the fixed frame clock.
-- [ ] Repair the HoverCard `sides-placement` leave-target authoring issue and rerun the
+- [x] Repair the HoverCard `sides-placement` leave-target authoring issue and rerun the
   `ui-gallery-hover-card` suite.
-  - Progress: after the fixed-frame-clock repair, the HoverCard suite advances past
+  - Result: after the fixed-frame-clock repair, the HoverCard suite advances past
     `trigger-delays`; `ui-gallery-hover-card-sides-placement.json` now fails at step 20 with
     `move_pointer_no_semantics_match` because it uses `ui-gallery-status-last-action` as a leave
     target and that node is not present on the HoverCard page snapshot.
+    The script now uses the stable `ui-gallery-nav-search` leave target and asserts the bottom
+    case as an intentional collision flip (`preferred_side=bottom`, `chosen_side=top`,
+    `flipped=true`) because the current page geometry leaves only ~43px below the trigger. The
+    full `ui-gallery-hover-card` suite passes 6/6.

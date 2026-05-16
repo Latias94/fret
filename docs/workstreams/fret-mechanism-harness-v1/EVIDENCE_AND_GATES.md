@@ -2856,6 +2856,28 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     first three HoverCard rows passed, including `trigger-delays`; the remaining failure is a
     separate `sides-placement` script authoring issue at
     `target/fret-diag-hover-card-fixed-delta-suite-v1/sessions/1778971816718-107892/suite.summary.json`.
+- HoverCard sides placement oracle:
+  - invariant:
+    overlay placement scripts must encode the actual geometry precondition they create. If the
+    trigger is near a collision boundary, the oracle should assert the collision flip rather than a
+    preferred-side placement that cannot fit.
+  - findings:
+    `ui-gallery-hover-card-sides-placement.json` first failed because it moved the pointer to
+    absent `ui-gallery-status-last-action`; after switching to a stable leave target, the bottom
+    side check revealed an incorrect oracle. The bottom trigger had only ~43px of preferred-side
+    space for a 120px panel, so the correct outcome is `chosen_side=top`, `flipped=true`.
+  - implementation anchor:
+    `tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-sides-placement.json`.
+  - focused runtime gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-sides-placement.json --dir target/fret-diag-hover-card-sides-placement-flip-oracle-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime result:
+    passed with run id `1778972701843`.
+  - full-suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-hover-card --dir target/fret-diag-hover-card-suite-after-sides-placement-oracle-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - full-suite result:
+    `target/fret-diag-hover-card-suite-after-sides-placement-oracle-v1/sessions/1778972760323-23244/suite.summary.json`
+    reports `status=passed`, 6/6 rows, `scripts_with_evidence=6`, and
+    `focus_mismatch_total=0`.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`
