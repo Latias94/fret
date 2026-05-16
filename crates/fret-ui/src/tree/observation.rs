@@ -48,6 +48,11 @@ pub(super) struct ObservationIndex {
 
 impl ObservationIndex {
     pub(super) fn record(&mut self, node: NodeId, observations: &[(ModelId, Invalidation)]) {
+        if observations.is_empty() {
+            self.remove_node(node);
+            return;
+        }
+
         let entry = self.by_node.entry(node).or_default();
 
         let mut prev_models = SmallCopyList::<ModelId, 8>::default();
@@ -107,6 +112,11 @@ pub(super) struct GlobalObservationIndex {
 
 impl GlobalObservationIndex {
     pub(super) fn record(&mut self, node: NodeId, observations: &[(TypeId, Invalidation)]) {
+        if observations.is_empty() {
+            self.remove_node(node);
+            return;
+        }
+
         let entry = self.by_node.entry(node).or_default();
 
         let mut prev_globals = SmallCopyList::<TypeId, 8>::default();

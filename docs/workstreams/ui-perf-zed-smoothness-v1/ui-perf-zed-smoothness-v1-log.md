@@ -14888,3 +14888,62 @@ Decision:
 - The remaining surface gap is still real, but it is small enough per row to treat as aggregate loop
   overhead rather than a standalone row hot function. Keep the next reversible owner slice focused on
   the outer paint traversal / host-widget aggregate unless a fresh bundle changes that ratio.
+
+## 2026-05-16 14:41:12 +08:00 (empty observation record fast path)
+
+Question:
+- Can the remaining paint observation collapse cost be reduced without changing view-cache
+  observation semantics?
+
+Change:
+- `ObservationIndex::record` and `GlobalObservationIndex::record` now remove the previous node entry
+  when the new observation list is empty, instead of leaving an empty `by_node` entry that
+  `collapse_*_observations_to_view_cache_roots_if_needed` has to scan later.
+- Added focused unit coverage for clearing stale model/global observation reverse indexes when a
+  node records an empty observation set.
+
+Validation:
+```bash
+cargo fmt -p fret-ui --check
+cargo check -p fret-ui
+cargo nextest run -p fret-ui empty_model_observation_record_removes_previous_node_entry empty_global_observation_record_removes_previous_node_entry --no-fail-fast
+cargo nextest run -p fret-ui -E 'test(~view_cache) | test(~observation) | test(~paint)' --no-fail-fast
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-typical.json \
+  --repeat 3 --warmup-frames 5 --reuse-launch \
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_A11Y_DISABLE=1 \
+  --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --sort time --top 15 --json \
+  --dir target/fret-diag/empty-observation-record-fastpath-typical-r3 \
+  --launch -- cargo run -p fret-ui-gallery --release \
+    --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+```
+
+Evidence:
+| bundle | total p95/max | paint p95/max | paint.widget p95 | paint collapse p95 | row replay/store p95 | renderer text/encode/upload p95 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `target/fret-diag/empty-observation-record-fastpath-typical-r3/1778913594775/bundle.schema2.json` | `673/735us` | `440/466us` | `277us` | `18us` | `289/0` | `361/140/78us` |
+| `target/fret-diag/empty-observation-record-fastpath-typical-r3/1778913599800/bundle.schema2.json` | `753/1715us` | `489/1076us` | `323us` | `18us` | `289/0` | `355/148/91us` |
+| `target/fret-diag/empty-observation-record-fastpath-typical-r3/1778913604577/bundle.schema2.json` | `718/816us` | `476/506us` | `310us` | `17us` | `289/0` | `354/145/87us` |
+
+Comparison anchor:
+- Pre-slice local focus-visible smoke bundle
+  `target/fret-diag/container-focus-visible-short-circuit-typical-r3/1778912115985/bundle.schema2.json`
+  reported p95 total/prepaint/paint/paint_widget `769/221/524/314us`,
+  `paint_collapse_observations_time_us=52us`, and row replay/store `289/0`.
+
+Decision:
+- Keep this small mechanism-layer optimization: it directly removes empty observation entries from
+  the view-cache collapse path and drops local typical `paint_collapse_observations_time_us` p95
+  from `52us` to `17..18us`.
+- Do not update checked-in baselines from this macOS M4 run. One repeat had a total-frame tail
+  outlier (`1715us`) with prepaint/paint outliers, so treat the total-frame numbers as local smoke
+  evidence only.
+- The next local optimization should still be evidence-first and should not target a broad row replay
+  or `WindowedRowsSurface` display-list rewrite unless a future bundle changes the owner boundary.

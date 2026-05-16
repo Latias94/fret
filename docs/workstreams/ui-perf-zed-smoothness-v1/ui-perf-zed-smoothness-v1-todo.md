@@ -673,6 +673,39 @@ Conventions:
           complex wheel, and resize jitter bundles, the p95 values are `65/62/62ns` per row and
           `79/48/72ns` per row respectively. That keeps the remaining gap in aggregate loop overhead
           territory rather than a separate row hot loop.
+      - [ ] Continue non-RTX4090 local optimization triage without treating it as contract closeout.
+        - Current policy: keep the Windows RTX4090 validation as the target-machine TODO below, but
+          allow independent local slices when they have their own evidence and do not update checked-in
+          baselines.
+        - Current local smoke after the focus-visible short-circuit:
+          `target/fret-diag/container-focus-visible-short-circuit-typical-r3/1778912115985/bundle.schema2.json`.
+          `fretboard-dev diag stats` reports p95 total/prepaint/paint/paint_widget
+          `769/221/524/314us`, Canvas exclusive p95 `176us`, renderer text/encode/upload p95
+          `344/142/84us`, host instance/models/globals p95 `41/25/24us`, paint collapse p95
+          `52us`, and row replay/store p95 `289/0`.
+        - Local slice: `ObservationIndex::record` and `GlobalObservationIndex::record` now remove
+          previous node entries when the new observation list is empty instead of retaining empty
+          `by_node` entries for later view-cache collapse scans. Same-script local typical evidence
+          in `target/fret-diag/empty-observation-record-fastpath-typical-r3` moves
+          `paint_collapse_observations_time_us` p95 from `52us` to `17..18us`, while row
+          replay/store remains `289/0`. Treat the run-1 total-frame outlier (`1715us`) as local
+          scheduler/noise evidence and do not update baselines.
+        - Near-term local owner order:
+          1. Re-run the three editor paint probes locally after any host-widget cleanup to confirm
+             the typical-only smoke generalizes to complex wheel and resize jitter.
+          2. Attribute the remaining outer paint traversal cost before changing behavior, especially
+             `paint_collapse_observations_time_us` and observation-index root collapse. Consider
+             scratch-map reuse or recording already-collapsed view-cache-root observations only if
+             bundles keep this above noise.
+          3. Audit policy/component focus-visible lookups in ecosystem crates and only short-circuit
+             the obvious `focused && focus_visible` cases with targeted tests; this is a small
+             traversal cleanup, not a core contract change.
+          4. Refresh or close the older `ui-perf-paint-pass-breakdown-v1` notes before using them as
+             a current execution source; the active editor-paint evidence now lives in this lane.
+        - Do not split a new workstream for the above. Split a narrow follow-on only when the next
+          slice becomes a hard contract or structural rewrite, such as true FrameArena/bump allocation,
+          `WindowFrame.children` arena/slab storage, explicit view-cache paint-skip semantics, or an
+          editor Canvas/row-fragment replay contract.
       - [ ] Stabilize the target-machine editor paint contract before closing P1.5.
         - Current execution policy: defer this as the Windows RTX4090 TODO while continuing independent local
           optimization slices. Do not treat local macOS evidence or dry-run plans as substitutes for the required
