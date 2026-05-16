@@ -71,6 +71,8 @@ Last updated: 2026-05-17
   - `ecosystem/fret-ui-editor/src/imui.rs`
   - `ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs`
   - `ecosystem/fret-ui-editor/src/primitives/input_group.rs`
+  - `ecosystem/fret-ui-editor/src/primitives/readout.rs`
+  - `ecosystem/fret-ui-editor/src/controls/field_status.rs`
   - `ecosystem/fret-ui-editor/src/controls/drag_value.rs`
   - `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs`
   - `ecosystem/fret/src/lib.rs`
@@ -243,6 +245,13 @@ Run evidence:
   while preserving editor-specific density and chrome policy outside `fret-imui`. Gates: `cargo
   nextest run -p fret-ui-editor editor_input_value_text_is_single_line_and_shrinkable --no-fail-fast`
   and `cargo nextest run -p fret-ui-editor drag_value axis_drag_value --no-fail-fast`.
+- 2026-05-17: moved `FieldStatusBadge` label text policy into
+  `editor_status_badge_text_props(...)` in the editor readout primitive layer. The control keeps its
+  compact centered badge label, single-line ellipsis, and palette behavior without owning local
+  `TextProps` policy. Gate: `cargo nextest run -p fret-ui-editor
+  editor_status_badge_text_uses_compact_single_line_readout_role
+  error_badge_palette_keeps_short_visible_label loading_badge_palette_uses_short_label
+  loading_badge_palette_stays_darker_than_editor_foreground --no-fail-fast`.
 - 2026-05-16: tightened `UiWriterImUiFacadeExt::text(...)` to match Dear ImGui's default
   `Text()` posture: single-line, shrinkable, `min-width: 0`, and ellipsis-truncated under resize.
   Added `UiWriterImUiFacadeExt::text_wrapped(...)` as the explicit wrapping path for explanatory

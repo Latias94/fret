@@ -6,9 +6,9 @@
 use std::sync::Arc;
 
 use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Color, Px, TextAlign, TextStyle};
+use fret_core::{Color, FontWeight, Px, TextAlign, TextStyle};
 use fret_ui::Theme;
-use fret_ui::element::{LayoutStyle, TextProps};
+use fret_ui::element::{LayoutStyle, Length, SizeStyle, TextProps};
 use fret_ui_kit::typography;
 
 use super::colors::editor_muted_foreground;
@@ -68,10 +68,42 @@ impl EditorCompactReadoutStyle {
     }
 }
 
+pub(crate) fn editor_status_badge_text_props(
+    text: Arc<str>,
+    color: Color,
+    badge_h: Px,
+) -> TextProps {
+    TextProps {
+        layout: LayoutStyle {
+            size: SizeStyle {
+                width: Length::Auto,
+                height: Length::Px(badge_h),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        text,
+        style: Some(typography::as_control_text(TextStyle {
+            size: Px(9.0),
+            weight: FontWeight::MEDIUM,
+            line_height: Some(badge_h),
+            ..Default::default()
+        })),
+        color: Some(color),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Ellipsis,
+        align: TextAlign::Center,
+        ink_overflow: Default::default(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::compact_readout_text_px;
-    use fret_core::Px;
+    use std::sync::Arc;
+
+    use super::{compact_readout_text_px, editor_status_badge_text_props};
+    use fret_core::{Color, FontWeight, Px, TextAlign, TextOverflow, TextWrap};
+    use fret_ui::element::Length;
 
     #[test]
     fn compact_readout_text_px_keeps_floor_for_small_base_sizes() {
@@ -83,5 +115,23 @@ mod tests {
     fn compact_readout_text_px_trims_one_step_from_primary_text() {
         assert_eq!(compact_readout_text_px(Px(12.0)), Px(11.0));
         assert_eq!(compact_readout_text_px(Px(14.0)), Px(13.0));
+    }
+
+    #[test]
+    fn editor_status_badge_text_uses_compact_single_line_readout_role() {
+        let color = Color::from_srgb_hex_rgb(0xAA_BB_CC);
+        let props = editor_status_badge_text_props(Arc::from("Loading"), color, Px(14.0));
+
+        assert_eq!(props.color, Some(color));
+        assert_eq!(props.layout.size.width, Length::Auto);
+        assert_eq!(props.layout.size.height, Length::Px(Px(14.0)));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(props.align, TextAlign::Center);
+
+        let style = props.style.expect("status badge text should set style");
+        assert_eq!(style.size, Px(9.0));
+        assert_eq!(style.weight, FontWeight::MEDIUM);
+        assert_eq!(style.line_height, Some(Px(14.0)));
     }
 }

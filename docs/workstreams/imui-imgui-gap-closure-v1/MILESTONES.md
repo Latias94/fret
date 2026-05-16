@@ -240,6 +240,9 @@ Exit criteria:
   `fret-ui-editor` because it depends on editor density/chrome policy, but it now has the same
   resize-safe fill, `min-width: 0`, shrink, single-line, and ellipsis behavior expected by IMUI
   editor panels.
+  2026-05-17 editor status badge text result: `FieldStatusBadge` no longer hand-rolls badge label
+  `TextProps`; it uses `editor_status_badge_text_props(...)` from the editor readout primitive
+  layer, preserving compact centered ellipsis text while keeping role policy reusable.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.
