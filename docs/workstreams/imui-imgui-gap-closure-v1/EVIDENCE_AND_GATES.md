@@ -49,7 +49,10 @@ Last updated: 2026-05-16
   - `ecosystem/fret-ui-kit/src/imui.rs`
   - `ecosystem/fret-ui-kit/src/declarative/text.rs`
   - `ecosystem/fret-ui-kit/src/imui/control_chrome.rs`
+  - `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs`
+  - `ecosystem/fret-ui-kit/src/imui/menu_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs`
+  - `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs`
   - `ecosystem/fret-ui-kit/src/imui/table_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs`
@@ -197,11 +200,20 @@ Run evidence:
   prose_variants_and_code_wrap_install_semantic_inherited_overrides --no-fail-fast`.
 - 2026-05-16: routed IMUI tab triggers and menubar triggers through the shared
   `text_button_label(...)` role. This keeps button-like trigger labels single-line and truncating
-  while leaving menu item/selectable row labels on their current row-text semantics until a separate
-  list/command-row text role is justified. Gate: `cargo nextest run -p fret-ui-kit --features imui
-  --lib imui::tab_family_controls::tests::tab_trigger_visual_uses_button_label_text_role
+  while leaving menu item/selectable row labels out of the button-label role. Gate: `cargo nextest
+  run -p fret-ui-kit --features imui --lib
+  imui::tab_family_controls::tests::tab_trigger_visual_uses_button_label_text_role
   imui::menu_family_controls::tests::menu_trigger_visual_uses_button_label_text_role
   --no-fail-fast`.
+- 2026-05-16: introduced `text_list_row_label(...)` as the shared dense list/command-row label
+  role and routed IMUI menu items, selectables, and disclosure/tree rows through it. The role uses
+  regular `text-sm` styling with fill-width, `min-width: 0`, single-line ellipsis semantics so row
+  labels truncate instead of wrapping or increasing row height under resize. Gate: `cargo nextest
+  run -p fret-ui-kit --features imui --lib
+  list_row_label_text_uses_fill_width_single_line_truncation
+  menu_item_label_text_uses_shared_list_row_text_role
+  selectable_row_label_uses_shared_list_row_text_role
+  tree_row_label_uses_shared_list_row_text_role --no-fail-fast`.
 - 2026-05-14: made `DisclosureResponse` / `ComboResponse` accessor-first for trigger/open/toggle
   state too. Public callers now read trigger details through `response()` and semantic helpers, the
   response types no longer expose external `Default` construction, and

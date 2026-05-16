@@ -5,7 +5,7 @@ use std::sync::Arc;
 use fret_core::{Color, Corners, Edges, KeyCode, Modifiers, Px, SemanticsRole};
 use fret_ui::UiHost;
 use fret_ui::action::{ActivateReason, UiActionHostExt as _};
-use fret_ui::element::{ContainerProps, Length, PressableA11y, PressableProps, TextProps};
+use fret_ui::element::{ContainerProps, Length, PressableA11y, PressableProps};
 use fret_ui::{ElementContext, Theme};
 
 use super::label_identity::parse_label_identity;
@@ -234,13 +234,10 @@ fn selectable_row_element<H: UiHost>(
     row.corner_radii = Corners::all(super::control_chrome::CONTROL_RADIUS);
 
     cx.container(row, move |cx| {
-        let mut text = TextProps::new(label.clone());
-        text.layout.size.width = Length::Fill;
-        text.layout.size.height = Length::Auto;
-        text.wrap = fret_core::TextWrap::None;
-        text.overflow = fret_core::TextOverflow::Ellipsis;
-        text.color = Some(palette.fg);
-        vec![cx.text_props(text)]
+        vec![
+            crate::declarative::text::text_list_row_label(cx, label.clone())
+                .inherit_foreground(palette.fg),
+        ]
     })
 }
 
@@ -289,11 +286,30 @@ fn resolve_selectable_palette(
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use fret_app::App;
-    use fret_core::Color;
+    use fret_core::{AppWindowId, Color, Point, Px, Rect, Size, TextOverflow, TextWrap};
+    use fret_ui::element::{AnyElement, ElementKind, Length, PressableState};
+    use fret_ui::elements;
     use fret_ui::{Theme, ThemeConfig};
 
     use super::resolve_selectable_palette;
+    use super::selectable_row_element;
+
+    fn test_bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(160.0)),
+        )
+    }
+
+    fn first_text(root: &AnyElement) -> Option<&AnyElement> {
+        match &root.kind {
+            ElementKind::Text(_) => Some(root),
+            _ => root.children.iter().find_map(first_text),
+        }
+    }
 
     #[test]
     fn selectable_palette_prefers_selected_background_hover_foreground_and_disabled_muted() {
@@ -366,5 +382,39 @@ mod tests {
             disabled_highlighted.fg,
             Color::from_srgb_hex_rgb(0x88_99_aa)
         );
+    }
+
+    #[test]
+    fn selectable_row_label_uses_shared_list_row_text_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+            selectable_row_element(
+                cx,
+                Arc::from("Long selectable row label"),
+                true,
+                false,
+                false,
+                PressableState::default(),
+            )
+        });
+        let expected_palette =
+            resolve_selectable_palette(Theme::global(&app), true, false, false, false);
+
+        let text = first_text(&el).expect("expected selectable row text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected selectable row label to be text");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(text.inherited_text_style.is_some());
+        assert_eq!(text.inherited_foreground, Some(expected_palette.fg));
     }
 }

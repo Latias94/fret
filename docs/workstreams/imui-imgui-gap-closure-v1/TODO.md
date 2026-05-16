@@ -203,8 +203,11 @@ Readiness order for the next locally testable review slices:
    leaving `text_prose(...)` available for shadcn/Tailwind naming while giving Fret apps a stable
    paragraph role name.
    2026-05-16 trigger label reuse follow-up: IMUI tab triggers and menubar triggers now reuse
-   `text_button_label(...)` because they are button-like trigger labels. Menu item/selectable row
-   labels intentionally stay separate until a list/command-row text role is justified.
+   `text_button_label(...)` because they are button-like trigger labels.
+   2026-05-16 list row text role follow-up: `text_list_row_label(...)` now owns dense
+   selectable/menu/tree row label text. IMUI menu items, selectables, and disclosure/tree rows use
+   the shared role, giving them fill-width, min-width-zero, single-line ellipsis semantics without
+   recasting them as button labels.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
