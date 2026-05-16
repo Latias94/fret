@@ -632,6 +632,13 @@ date: 2026-05-12
     suite exposed and fixed a diagnostics harness defect where current-state debug predicates could
     match stale ring snapshots, plus a multi-pointer script authoring issue where capture-state
     assertions needed `wait_until` convergence after pointer events.
+- [x] Add a promoted-script lint for pointer-event steps that immediately assert current pointer
+  state instead of waiting for debug-snapshot convergence.
+  - Result: the candidate audit found 6 adjacent pointer/current-state patterns in promoted
+    scripts. Three were already bounded `wait_until` checks; three remained immediate `assert`
+    steps in ScrollArea scrollbar-drag scripts. Those scripts now use bounded `wait_until`, the
+    registry lint rejects future promoted regressions, both focused ScrollArea runtime gates pass,
+    and the full `ui-gallery-scroll-area` suite passes.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.

@@ -475,6 +475,71 @@ class DiagScriptRegistryLintTests(unittest.TestCase):
 
             self.assertEqual([], violations)
 
+    def test_pointer_current_state_assert_immediately_after_pointer_step_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/scroll-area/bad-capture.json"
+            self.write_script(
+                root,
+                rel,
+                [
+                    {
+                        "type": "pointer_down",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-scroll-area-drag-baseline-y-scrollbar",
+                        },
+                    },
+                    {
+                        "type": "assert",
+                        "predicate": {
+                            "kind": "input_pointer_capture_active_is",
+                            "active": True,
+                        },
+                    },
+                ],
+            )
+
+            violations = REGISTRY.lint_pointer_current_state_convergence(
+                root, self.registry_for(rel, ["ui-gallery-scroll-area"])
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertIn("input_pointer_capture_active_is", violations[0])
+            self.assertIn("wait_until", violations[0])
+
+    def test_pointer_current_state_wait_until_after_pointer_step_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/scroll-area/good-capture.json"
+            self.write_script(
+                root,
+                rel,
+                [
+                    {
+                        "type": "pointer_down",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-scroll-area-drag-baseline-y-scrollbar",
+                        },
+                    },
+                    {
+                        "type": "wait_until",
+                        "predicate": {
+                            "kind": "input_pointer_capture_active_is",
+                            "active": True,
+                        },
+                        "timeout_frames": 120,
+                    },
+                ],
+            )
+
+            violations = REGISTRY.lint_pointer_current_state_convergence(
+                root, self.registry_for(rel, ["ui-gallery-scroll-area"])
+            )
+
+            self.assertEqual([], violations)
+
 
 if __name__ == "__main__":
     unittest.main()

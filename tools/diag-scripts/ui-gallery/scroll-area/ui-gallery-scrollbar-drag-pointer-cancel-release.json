@@ -118,14 +118,15 @@
       "button": "left"
     },
     {
-      "type": "assert",
+      "type": "wait_until",
       "predicate": {
         "kind": "input_pointer_capture_active_is",
         "active": true
-      }
+      },
+      "timeout_frames": 120
     },
     {
-      "type": "assert",
+      "type": "wait_until",
       "predicate": {
         "kind": "captured_is",
         "target": {
@@ -133,19 +134,21 @@
           "id": "ui-gallery-scroll-area-drag-baseline-y-scrollbar"
         },
         "captured": true
-      }
+      },
+      "timeout_frames": 120
     },
     { "type": "pointer_cancel" },
     { "type": "wait_frames", "n": 2 },
     {
-      "type": "assert",
+      "type": "wait_until",
       "predicate": {
         "kind": "input_pointer_capture_active_is",
         "active": false
-      }
+      },
+      "timeout_frames": 120
     },
     {
-      "type": "assert",
+      "type": "wait_until",
       "predicate": {
         "kind": "captured_is",
         "target": {
@@ -153,7 +156,8 @@
           "id": "ui-gallery-scroll-area-drag-baseline-y-scrollbar"
         },
         "captured": false
-      }
+      },
+      "timeout_frames": 120
     },
     { "type": "capture_bundle", "label": "scrollbar-drag-pointer-cancel-release" }
   ]

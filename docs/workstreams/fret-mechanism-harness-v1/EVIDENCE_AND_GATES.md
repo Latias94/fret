@@ -2687,22 +2687,30 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - invariant:
     promoted long-page content clicks must prove target visibility before pointer synthesis, and
     current-state debug predicates must read the latest debug snapshot rather than a historical ring
-    aggregate.
+    aggregate. Promoted pointer/capture scripts must also wait for bounded current-state
+    convergence after pointer events instead of asserting the next step against a possibly stale
+    debug snapshot.
   - findings:
     ScrollArea had five promoted long-page content clicks that still used plain `click`; enabling
     strict lint then exposed a diagnostics harness defect where `input_pointer_capture_active_is`
     could match stale debug-snapshot ring entries. The multi-pointer ScrollArea script also used
     immediate `assert` steps for cross-frame capture state and now waits for state convergence.
+    A follow-up promoted-registry audit found three remaining event-adjacent current-state
+    `assert` steps in the baseline and pointer-cancel ScrollArea scrollbar scripts; those scripts
+    now use bounded `wait_until` steps and the registry lint rejects future promoted regressions.
   - implementation anchors:
     `tools/check_diag_scripts_registry.py`,
     `tools/test_check_diag_scripts_registry.py`,
     `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_predicates.rs`,
+    `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json`,
+    `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-pointer-cancel-release.json`,
     and `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-multipointer-underlay-touch.json`.
   - lint gates:
     `python tools/test_check_diag_scripts_registry.py`,
     `python tools/check_diag_scripts_registry.py`
   - lint results:
-    passed; registry self-tests ran 13 tests.
+    passed; registry self-tests ran 15 tests. Structured promoted-registry audit reports
+    `immediate assert violations=0` and `adjacent wait_until convergence patterns=6`.
   - focused predicate gate:
     `cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics current_state_predicates_do_not_match_stale_ring_snapshots input_pointer_capture_active_predicate_reads_debug_snapshot --no-fail-fast`
   - focused predicate result:
@@ -2711,10 +2719,15 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-multipointer-underlay-touch.json --dir target/fret-diag-scrollbar-drag-multipointer-underlay-touch-after-wait-until-v1 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe`
   - focused runtime result:
     passed with run id `1778955752839`.
+  - follow-up focused runtime gates:
+    `target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json --dir target/fret-diag-scrollbar-drag-baseline-content-growth-wait-until-v1 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe`
+    `target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-pointer-cancel-release.json --dir target/fret-diag-scrollbar-drag-pointer-cancel-release-wait-until-v1 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe`
+  - follow-up focused runtime results:
+    passed with run ids `1778956466823` and `1778956486039`.
   - full-suite gate:
-    `target/debug/fretboard-dev.exe diag suite ui-gallery-scroll-area --dir target/fret-diag-scroll-area-suite-strict-click-v2 --session-auto --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe`
+    `target/debug/fretboard-dev.exe diag suite ui-gallery-scroll-area --dir target/fret-diag-scroll-area-suite-pointer-current-state-lint-v1 --session-auto --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe`
   - full-suite result:
-    `target/fret-diag-scroll-area-suite-strict-click-v2/sessions/1778955771522-90268/suite.summary.json`
+    `target/fret-diag-scroll-area-suite-pointer-current-state-lint-v1/sessions/1778956501773-46724/suite.summary.json`
     reports the suite passed.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,

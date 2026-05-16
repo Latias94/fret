@@ -43,6 +43,18 @@ STRICT_UI_GALLERY_CONTENT_TEST_ID_PREFIXES = (
     "ui-gallery-select-",
     "ui-gallery-sidebar-",
 )
+POINTER_EVENT_STEPS = {
+    "move_pointer",
+    "pointer_cancel",
+    "pointer_down",
+    "pointer_move",
+    "pointer_up",
+}
+CURRENT_STATE_CONVERGENCE_PREDICATES = {
+    "captured_is",
+    "dock_viewport_capture_active_is",
+    "input_pointer_capture_active_is",
+}
 STRICT_PAGE_ENTRY_SUITES = {
     "ui-gallery-motion-pilot",
     "ui-gallery-select",
@@ -593,6 +605,55 @@ def lint_strict_click_visibility(repo_root: Path, registry: dict[str, Any]) -> l
     return violations
 
 
+def lint_pointer_current_state_convergence(repo_root: Path, registry: dict[str, Any]) -> list[str]:
+    """
+    Check promoted scripts for pointer-event steps followed by immediate current-state asserts.
+
+    Current-state diagnostics predicates read the latest debug snapshot, so pointer/capture state
+    should be observed with a bounded wait rather than an assertion in the event-adjacent step.
+    """
+    scripts = registry.get("scripts")
+    if not isinstance(scripts, list):
+        return ["registry scripts must be a list"]
+
+    violations: list[str] = []
+
+    for entry in scripts:
+        if not isinstance(entry, dict):
+            continue
+
+        rel_path = entry.get("path")
+        if not isinstance(rel_path, str) or not rel_path.strip():
+            continue
+
+        script_path = repo_root / Path(rel_path)
+        obj = read_json(script_path)
+        steps = obj.get("steps") if isinstance(obj, dict) else None
+        if not isinstance(steps, list):
+            continue
+
+        for index, step in enumerate(steps[:-1]):
+            if not isinstance(step, dict) or step.get("type") not in POINTER_EVENT_STEPS:
+                continue
+
+            next_step = steps[index + 1]
+            if not isinstance(next_step, dict) or next_step.get("type") != "assert":
+                continue
+
+            predicate = next_step.get("predicate")
+            if (
+                isinstance(predicate, dict)
+                and predicate.get("kind") in CURRENT_STATE_CONVERGENCE_PREDICATES
+            ):
+                violations.append(
+                    f"{rel_path}: step {index + 1}: current-state predicate "
+                    f"`{predicate.get('kind')}` immediately follows pointer step "
+                    f"{index} `{step.get('type')}`; use wait_until with a bounded timeout"
+                )
+
+    return violations
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Validate the diag script registry (index.json).")
     ap.add_argument(
@@ -642,6 +703,16 @@ def main() -> None:
     if page_entry_violations:
         print("error: promoted diag scripts rely on implicit UI Gallery page entry:", file=sys.stderr)
         for violation in page_entry_violations:
+            print(f"- {violation}", file=sys.stderr)
+        raise SystemExit(2)
+
+    pointer_current_state_violations = lint_pointer_current_state_convergence(repo_root, expected)
+    if pointer_current_state_violations:
+        print(
+            "error: promoted diag scripts assert current pointer state without convergence:",
+            file=sys.stderr,
+        )
+        for violation in pointer_current_state_violations:
             print(f"- {violation}", file=sys.stderr)
         raise SystemExit(2)
 
