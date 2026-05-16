@@ -8,7 +8,9 @@ Notes:
 - Cross-references in `docs/architecture.md` should remain valid even as the code evolves.
 - Implementation audit tracking: `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 
-See `docs/adr/0027-framework-scope-and-responsibilities.md` for the framework vs editor-app scope boundary.
+See `docs/adr/0027-framework-scope-and-responsibilities.md` for the framework vs editor-app scope
+boundary, and `docs/adr/0328-product-language-and-ecosystem-positioning.md` for the shared product
+language and ecosystem positioning.
 
 Non-normative code references:
 
@@ -168,6 +170,7 @@ ADR or adding a new ADR) before scaling feature surface area.
 Use this as the “what should I read first?” map when implementing a subsystem.
 
 - **Declarative/composable authoring (GPUI-style)**: `docs/adr/0028-declarative-elements-and-element-state.md`, `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`, `docs/adr/0031-app-owned-models-and-leasing-updates.md`
+- **Product language and ecosystem positioning**: `docs/adr/0328-product-language-and-ecosystem-positioning.md`, `docs/adr/0027-framework-scope-and-responsibilities.md`, `docs/adr/0109-user-facing-crate-surfaces-and-golden-path.md`, `docs/adr/0154-ecosystem-crate-taxonomy-glue-and-ui-kit-split-v1.md`
 - **Typed actions + action dispatch (action-first authoring)**: `docs/adr/0307-action-registry-and-typed-action-dispatch-v1.md`, `docs/adr/0312-payload-actions-v2.md`, `docs/adr/0020-focus-and-command-routing.md`, `docs/adr/0021-keymap-file-format.md`, `docs/adr/0218-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
 - **View runtime + hooks (ecosystem authoring loop)**: `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`, `docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md`, `docs/adr/0213-cache-roots-and-cached-subtree-semantics-v1.md`, `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`, `docs/adr/0223-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
 - **Frame pipeline + runtime view boundaries**: `docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md`, `docs/adr/0213-cache-roots-and-cached-subtree-semantics-v1.md`, `docs/adr/0165-dirty-views-and-notify-gpui-aligned.md`, `docs/adr/0175-prepaint-windowed-virtual-surfaces.md`, `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`

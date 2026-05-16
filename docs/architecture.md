@@ -1,6 +1,6 @@
 # Fret Architecture (Draft)
 
-Fret is a Rust GUI framework aimed at building a game editor with a **Unity/Unreal/Godot-like** workflow: docking, tear-off windows, multiple viewports, and layered rendering. The long-term goal is **Windows/macOS/Linux first**, then **wasm (WebGPU)**, and eventually mobile.
+Fret is a GPU-first Rust application UI framework for desktop-first apps and editor-grade UI. It targets workflows such as docking, tear-off windows, embedded viewports, and layered rendering without owning editor or engine product domains. The platform strategy is **Windows/macOS/Linux first**, with a **wasm/WebGPU path**, and eventually mobile.
 
 This document intentionally focuses on decisions that minimize future rewrites.
 
@@ -8,14 +8,15 @@ If you are new to the repository, start with `docs/README.md`.
 
 ## Scope
 
-Fret is a **UI framework** for building engine editors, not “the editor itself”.
+Fret is a **UI framework** for editor-grade application surfaces, not an editor product or engine.
 
 - Framework scope (in Fret): windowing/event loop boundary, UI runtime, docking UX infrastructure,
   command/keymap system, display list + renderer, viewport embedding contracts.
-- Editor app / engine scope (out of Fret): asset pipeline, scene/ECS model, selection/gizmo/tool systems,
+- Editor Product Domain (out of Fret): asset pipeline, scene/ECS model, selection/gizmo/tool systems,
   undo/redo history policy, project/build/indexing.
 
-See `docs/adr/0027-framework-scope-and-responsibilities.md`.
+See `docs/adr/0027-framework-scope-and-responsibilities.md` and
+`docs/adr/0328-product-language-and-ecosystem-positioning.md`.
 
 ## Architecture Decision Records (ADRs)
 
@@ -41,9 +42,9 @@ For the full, module-oriented ADR index, see `docs/adr/README.md`.
 
 ## Goals
 
-- UI runtime core suitable for large editor applications.
+- UI runtime core suitable for large editor-grade applications.
 - Docking + tear-off windows (Imgui viewports-style UX).
-- Multiple engine viewports in one window (and across windows).
+- Multiple embedded viewports in one window (and across windows).
 - WGPU-based rendering pipeline, compatible with future WebGPU/wasm.
 - Clear separation between platform (window/events), UI core (tree/layout/input), and renderer (GPU).
 
@@ -51,7 +52,7 @@ For the full, module-oriented ADR index, see `docs/adr/README.md`.
 
 - Full accessibility stack.
 - Perfect text fidelity/IME on day one.
-- Mobile support.
+- Mobile as a first-class target.
 
 ## High-Level Layering
 
@@ -100,7 +101,7 @@ To keep the framework stable while allowing editor-grade components to scale, th
 - Core repo: `fret` (framework + backends + demos).
 - Components repo: `fret-components` (multiple `fret-components-*` crates that depend on `fret-ui` but not on platform/render).
 
-`fret-components` is expected to provide an “editor kit” (primitives + patterns), including:
+`fret-components` is expected to provide editor-grade UI primitives and patterns, including:
 
 - shadcn-inspired UI primitives/composites,
 - tree/inspector/table/command UI patterns,
@@ -128,7 +129,7 @@ Winit and wgpu evolve quickly, and API changes can make it easy to read the “w
 
 ### Why “retained semantics”
 
-Editors are long-lived, complex, and stateful. Even with declarative authoring (ADR 0028), the runtime must
+Editor-grade applications are long-lived, complex, and stateful. Even with declarative authoring (ADR 0028), the runtime must
 provide retained **semantics**:
 
 - stable widget identity (important for docking, drag state, selection),
@@ -216,17 +217,17 @@ References: `docs/adr/0002-display-list.md`, `docs/adr/0009-renderer-ordering-an
 
 References: `docs/adr/0003-platform-boundary.md`, `docs/adr/0017-multi-window-display-and-dpi.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`.
 
-## Resource Handles & Engine Viewports
+## Resource Handles & Embedded Viewports
 
 - UI code never touches `wgpu` types: it deals only in stable IDs/handles (`ImageId`, `FontId`, `RenderTargetId`, `TextBlobId`).
 - The renderer owns GPU resources and resolves handles.
-- Engine viewports are registered as render targets and painted via scene ops.
+- Hosted or engine viewports are registered as render targets and painted via scene ops.
 
 References: `docs/adr/0004-resource-handles.md`, `docs/adr/0007-viewport-surfaces.md`, `docs/adr/0010-wgpu-context-ownership.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`, `docs/adr/0025-viewport-input-forwarding.md`.
 
 ## Layout Engine
 
-- Layout stays editor-friendly: explicit layout for docking/splits, optional Flex/Grid via a layout engine.
+- Layout stays suitable for editor-grade UI: explicit layout for docking/splits, optional Flex/Grid via a layout engine.
 - `fret-core` must remain layout-engine-free; layout engines are implementation details in `fret-ui`/`fret-components-*`.
 
 Reference: `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`.
