@@ -206,6 +206,9 @@ Exit criteria:
   2026-05-16 paragraph text role result: `text_paragraph(...)` and
   `text_paragraph_break_words(...)` now close the first shared text-role vocabulary pass while
   keeping `text_prose(...)` as the shadcn/Tailwind-compatible name.
+  2026-05-16 trigger label reuse result: IMUI tab triggers and menubar triggers now reuse
+  `text_button_label(...)`; selectable/menu item row labels remain intentionally separate pending
+  evidence for a dedicated list/command-row role.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

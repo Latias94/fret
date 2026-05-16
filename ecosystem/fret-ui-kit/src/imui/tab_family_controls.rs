@@ -4,13 +4,13 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::{Edges, Px, TextOverflow, TextWrap};
+use fret_core::{Edges, Px};
 use fret_runtime::Model;
 use fret_ui::action::ActivateReason;
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps,
-    RowProps, SpacingLength, TextProps,
+    RowProps, SpacingLength,
 };
 use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 
@@ -473,10 +473,57 @@ fn tab_trigger_visual<H: UiHost>(
     });
 
     cx.container(panel, move |cx| {
-        let mut text = TextProps::new(label);
-        text.wrap = TextWrap::None;
-        text.overflow = TextOverflow::Clip;
-        text.color = Some(foreground);
-        vec![cx.text_props(text)]
+        vec![
+            crate::declarative::text::text_button_label(cx, label.clone())
+                .inherit_foreground(foreground),
+        ]
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size, TextOverflow, TextWrap};
+    use fret_ui::element::{ElementKind, PressableState};
+    use fret_ui::elements;
+
+    fn test_bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(160.0)),
+        )
+    }
+
+    #[test]
+    fn tab_trigger_visual_uses_button_label_text_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+            tab_trigger_visual(
+                cx,
+                Arc::from("Very long tab label"),
+                false,
+                true,
+                PressableState::default(),
+            )
+        });
+
+        let text = el
+            .children
+            .first()
+            .expect("expected tab trigger text child");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected tab trigger label to be text");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(text.inherited_text_style.is_some());
+        assert!(text.inherited_foreground.is_some());
+    }
 }

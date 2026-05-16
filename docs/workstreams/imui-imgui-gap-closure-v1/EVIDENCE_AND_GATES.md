@@ -49,8 +49,10 @@ Last updated: 2026-05-16
   - `ecosystem/fret-ui-kit/src/imui.rs`
   - `ecosystem/fret-ui-kit/src/declarative/text.rs`
   - `ecosystem/fret-ui-kit/src/imui/control_chrome.rs`
+  - `ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs`
   - `ecosystem/fret-ui-kit/src/imui/table_controls.rs`
+  - `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/selection_combo.rs`
@@ -193,6 +195,13 @@ Run evidence:
   text-role vocabulary pass without breaking shadcn/Tailwind-oriented naming. Gate: `cargo nextest
   run -p fret-ui-kit --features imui --lib
   prose_variants_and_code_wrap_install_semantic_inherited_overrides --no-fail-fast`.
+- 2026-05-16: routed IMUI tab triggers and menubar triggers through the shared
+  `text_button_label(...)` role. This keeps button-like trigger labels single-line and truncating
+  while leaving menu item/selectable row labels on their current row-text semantics until a separate
+  list/command-row text role is justified. Gate: `cargo nextest run -p fret-ui-kit --features imui
+  --lib imui::tab_family_controls::tests::tab_trigger_visual_uses_button_label_text_role
+  imui::menu_family_controls::tests::menu_trigger_visual_uses_button_label_text_role
+  --no-fail-fast`.
 - 2026-05-14: made `DisclosureResponse` / `ComboResponse` accessor-first for trigger/open/toggle
   state too. Public callers now read trigger details through `response()` and semantic helpers, the
   response types no longer expose external `Default` construction, and
