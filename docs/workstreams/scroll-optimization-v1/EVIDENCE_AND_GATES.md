@@ -208,6 +208,49 @@ Implemented root-solve / clean-geometry propagation slice (2026-05-17):
     side-effect gates or target a different root-solve owner; it should not fold RTX4090 closeout
     into this local slice.
 
+Remaining small-width-delta solve classification (2026-05-17):
+
+- Evidence:
+  - Bundle:
+    `target/fret-diag/local-next-root-solve-attrib-20260517-r3/1778956535346/bundle.schema2.json`
+  - Stats command:
+    `target/release/fretboard-dev diag stats target/fret-diag/local-next-root-solve-attrib-20260517-r3/1778956535346/bundle.schema2.json --sort time --top 15 --json`
+- `Semantics` solve:
+  - Root path: `apps/fret-ui-gallery/src/ui/content.rs:144` (`ui-gallery-page-preview`).
+  - Source shape: `apps/fret-ui-gallery/src/ui/doc_layout.rs:302` wraps preview pages in a
+    vertical flex, and the code-editor torture page includes gallery-dev control rows that can use
+    wrap flex.
+  - Bundle profile: `available_w_delta=-4`, `available_h_delta=0`, `subtree_nodes=136`,
+    `measure_time_us=0`, `flex_wrap_patch_wrap_nodes=1`, `solve_time_us=177`.
+  - Decision: do not add this to clean-geometry proof by name. Wrapped flex changes require a
+    line-break stability proof, or a durable contract that says when previous geometry is still
+    authoritative under width deltas.
+- Root `Stack` solve:
+  - Root path: `root[fret-ui-gallery]`; source assembly starts in
+    `apps/fret-ui-gallery/src/driver/render_flow.rs:244`.
+  - Source shape: app root mixes sidebar/content view-cache boundaries, `WorkspaceFrame`,
+    workspace command scope, overlays/toaster/settings/command palette/debug HUD/inspector
+    wrappers, plus the shell content wrapper in `apps/fret-ui-gallery/src/driver/shell.rs:134`.
+  - Bundle profile: `available_w_delta=-4`, `available_h_delta=0`, `subtree_nodes=102`,
+    `measure_time_us=0`, `solve_time_us=140`.
+  - Decision: do not keep growing the wrapper whitelist to cover this root. It needs an explicit
+    layout side-effect / geometry-propagation contract for app shell and cache-boundary nodes.
+- Editor `PointerRegion` solve:
+  - Root path: `ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs:783`.
+  - Source shape: `PointerRegion -> Canvas` under the windowed rows surface; `Canvas` layout is
+    currently a leaf clamp in `crates/fret-ui/src/declarative/host_widget/layout.rs:1570`, while
+    paint/prepaint hooks can depend on current bounds.
+  - Bundle profile: `available_w_delta=-4`, `available_h_delta=0`, `subtree_nodes=2`,
+    `measure_time_us=0`, `solve_time_us=3`.
+  - Decision: a dedicated `Canvas` leaf geometry proof is plausible, but the measured benefit is
+    too small for this slice. If attempted later, add tests for updated canvas bounds,
+    prepaint/paint hooks, and windowed-row hit-test bounds.
+- Overall decision:
+  - Stop expanding clean-geometry proof ad hoc. The next meaningful optimization should first
+    introduce a contract or classification surface for layout side effects and geometry-only
+    propagation, plus diagnostics that report the first unsupported kind/reason when a clean root
+    cannot skip its solve.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:

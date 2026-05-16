@@ -98,6 +98,30 @@ Status: Active
     layout data model or introduces a durable cross-crate layout-side-effect contract.
   - RTX4090 validation is intentionally deferred as follow-up evidence; it is not a completion gate
     for this local root-solve slice.
+- [x] Classify the remaining `Semantics` / `Stack` / `PointerRegion` small-width-delta solves
+  before widening the clean-geometry proof.
+  - `Semantics` (`177us`) maps to the code-editor preview panel and still contains a wrap-flex
+    descendant. Do not skip this by name; wrapped flex needs a line-break stability proof or a
+    more explicit layout side-effect contract before it can participate.
+  - Root `Stack` (`140us`) maps to the gallery root stack and mixes app chrome, workspace command
+    scopes, view-cache/sidebar/content boundaries, containers, overlays, and custom frame widgets.
+    This should not be solved by adding more wrapper names to the proof.
+  - Editor `PointerRegion` (`3us`) is effectively the windowed rows `PointerRegion -> Canvas`
+    root. A dedicated `Canvas` leaf proof is possible, but its measured benefit is too small to
+    justify widening the current root-solve slice.
+  - Decision: stop expanding clean-geometry proof ad hoc. The next meaningful optimization is an
+    explicit layout side-effect / geometry-propagation contract, plus debug rejection reasons for
+    why a clean root cannot skip its solve.
+- [ ] Draft the layout side-effect / geometry-propagation contract before attempting another root
+  solve skip expansion.
+  - Minimum contract questions: which element kinds are pure geometry, which are side-effectful
+    layout boundaries, which may be safe leaves only, and what data model records this without
+    relying on an ever-growing local whitelist.
+  - Required guardrails: wrapped flex line-break stability, view-cache retained semantics,
+    Canvas prepaint/paint bounds dependency, layout-query snapshots, focus/semantics/overlay
+    geometry, and virtual-list visible ranges.
+  - Add low-noise diagnostics that report the first unsupported kind/reason in
+    `can_skip_clean_geometry_engine_solve_for_resize(...)` before adding more fast-path coverage.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

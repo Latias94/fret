@@ -63,3 +63,13 @@ Status: Active
   or visible-window proof.
 - Record local perf evidence separately from RTX4090 closeout. RTX4090 remains follow-up evidence,
   not this slice's completion condition.
+
+## M7 — Layout side-effect / geometry propagation contract (follow-on)
+
+- Classify remaining `Semantics`, root `Stack`, and editor `PointerRegion` small-width-delta solves
+  before widening the fast path.
+- Prefer an explicit contract for pure geometry nodes, side-effectful layout boundaries, and
+  safe leaf-only nodes over another ad hoc whitelist expansion.
+- Add diagnostics that explain the first unsupported kind/reason when a clean root cannot skip its
+  engine solve.
+- Treat `Canvas` leaf participation as a small optional proof, not the next primary perf owner.
