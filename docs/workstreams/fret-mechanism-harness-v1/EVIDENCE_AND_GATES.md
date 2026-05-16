@@ -2450,6 +2450,8 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `ecosystem/fret-ui-shadcn/src/card.rs`,
     `ecosystem/fret-ui-shadcn/src/avatar.rs`, and
     `ecosystem/fret-ui-shadcn/src/item.rs`.
+  - source-hygiene gate:
+    `tools/check_shadcn_internal_slots.py` and `tools/test_check_shadcn_internal_slots.py`.
   - source audit:
     `rg -n "fret-ui-shadcn\\." ecosystem/fret-ui-shadcn/src -g "*.rs"` now reports only
     `component_slot` constants/usages in Alert, Avatar, Card, and Item.
@@ -2466,6 +2468,11 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `cargo test --profile dev-fast -p fret-ui-shadcn --lib item_media_with_description_self_starts_and_offsets_from_top -- --nocapture`.
   - focused gate results:
     all passed.
+  - source-hygiene gate commands:
+    `python tools/test_check_shadcn_internal_slots.py` and
+    `python tools/check_shadcn_internal_slots.py`
+  - source-hygiene gate results:
+    passed, 4 tests and a clean source scan.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

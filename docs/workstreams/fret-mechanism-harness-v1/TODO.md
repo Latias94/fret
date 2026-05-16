@@ -566,8 +566,14 @@ date: 2026-05-12
     `key_context` for internal classification, so they now use `component_slot` too. Focused tests
     prove the slots still drive layout/classification while staying out of diagnostics selectors
     and shortcut key contexts.
-- [ ] Continue `ui-gallery-motion-pilot` or add a lightweight source-hygiene gate for future
-  recipe-internal marker misuse.
+- [x] Add a lightweight source-hygiene gate for future recipe-internal marker misuse.
+  - Result: `tools/check_shadcn_internal_slots.py` enforces that `fret-ui-shadcn.*` internal marker
+    strings are declared as `*_SLOT` constants and are not passed to diagnostics `test_id`,
+    `attach_test_id`, or shortcut `key_context`. `tools/test_check_shadcn_internal_slots.py`
+    covers the allowed `component_slot` path plus bad constant naming, bad test-id use, and bad
+    key-context use.
+- [ ] Continue `ui-gallery-motion-pilot` to find the next runtime-visible harness or component
+  boundary issue.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.

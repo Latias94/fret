@@ -111,7 +111,9 @@ date: 2026-05-12
   Recipe-internal child classification now uses `AnyElement::component_slot` for the discovered
   shadcn structural markers: AlertAction, CardAction, CardFooter, AvatarBadge, ItemMedia, and
   ItemDescription. This removes diagnostics `test_id` pollution from Card/Avatar internals and
-  removes Item's misuse of shortcut `key_context` for recipe slot detection.
+  removes Item's misuse of shortcut `key_context` for recipe slot detection. The source-hygiene
+  gate `tools/check_shadcn_internal_slots.py` now prevents `fret-ui-shadcn.*` marker strings from
+  flowing back into `test_id`, `attach_test_id`, or `key_context`.
 
 A mechanism invariant is covered only when it has at least one of these:
 
