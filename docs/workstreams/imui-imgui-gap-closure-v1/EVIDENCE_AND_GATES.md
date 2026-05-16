@@ -231,6 +231,11 @@ Run evidence:
   ellipsis-truncated without adding a menu-specific shortcut role. Gate: `cargo nextest run -p
   fret-ui-kit --features imui --lib menu_item_shortcut_text_uses_shared_control_readout_role
   menu_item_label_text_uses_shared_list_row_text_role --no-fail-fast`.
+- 2026-05-16: hardened `tools/gate_imui_workstream_source.py` with an explicit allowlist for the
+  remaining direct `TextProps::new(...)` constructors under `fret-ui-kit::imui`: bullet prose,
+  control chrome, disclosure indicator, facade `text`/`text_wrapped`, floating title, and separator
+  label. New direct constructors now fail the source gate unless they are routed through the shared
+  text roles or intentionally added to the allowlist. Gate: `python tools/gate_imui_workstream_source.py`.
 - 2026-05-16: tightened `UiWriterImUiFacadeExt::text(...)` to match Dear ImGui's default
   `Text()` posture: single-line, shrinkable, `min-width: 0`, and ellipsis-truncated under resize.
   Added `UiWriterImUiFacadeExt::text_wrapped(...)` as the explicit wrapping path for explanatory

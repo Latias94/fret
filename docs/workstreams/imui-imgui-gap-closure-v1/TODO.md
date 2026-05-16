@@ -219,6 +219,10 @@ Readiness order for the next locally testable review slices:
    2026-05-16 menu shortcut readout reuse follow-up: menu item shortcut labels now reuse
    `text_control_readout(...)` as muted compact auxiliary readouts instead of carrying local
    nowrap/clip `TextProps` policy.
+   2026-05-16 text role source-gate follow-up: `tools/gate_imui_workstream_source.py` now keeps an
+   explicit allowlist for remaining direct `TextProps::new(...)` constructors under
+   `fret-ui-kit::imui`, so new compact IMUI text policy cannot bypass the shared role vocabulary
+   without updating the gate.
    2026-05-16 IMUI text item resize follow-up: `UiWriterImUiFacadeExt::text(...)` now follows Dear
    ImGui's default `Text()` posture by staying single-line, shrinkable, and ellipsis-truncated
    under narrow resize. `text_wrapped(...)` is the explicit opt-in path for explanatory copy that

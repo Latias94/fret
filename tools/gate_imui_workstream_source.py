@@ -45,6 +45,27 @@ OPAQUE_STRUCT_SUFFIXES = (
     "Summary",
 )
 
+IMUI_DIRECT_TEXT_PROPS_ALLOWED = {
+    Path("ecosystem/fret-ui-kit/src/imui/bullet_text_controls.rs"): {
+        "let mut label_props = TextProps::new(text);": 1,
+    },
+    Path("ecosystem/fret-ui-kit/src/imui/control_chrome.rs"): {
+        "let mut props = TextProps::new(text);": 1,
+    },
+    Path("ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs"): {
+        "let mut props = TextProps::new(indicator.clone());": 1,
+    },
+    Path("ecosystem/fret-ui-kit/src/imui/facade_writer.rs"): {
+        "let mut props = fret_ui::element::TextProps::new(text);": 2,
+    },
+    Path("ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs"): {
+        "let mut props = fret_ui::element::TextProps::new(title.clone());": 1,
+    },
+    Path("ecosystem/fret-ui-kit/src/imui/separator_text_controls.rs"): {
+        "let mut label_props = TextProps::new(label);": 1,
+    },
+}
+
 
 def read_source(path: Path) -> str:
     try:
@@ -168,6 +189,48 @@ def check_fret_imui_runtime_dependencies(failures: list[str]) -> None:
     for marker in forbidden:
         if marker in deps:
             failures.append(f"{path.as_posix()} [dependencies]: forbidden {marker}")
+
+
+def check_imui_direct_text_props_allowlist(failures: list[str]) -> None:
+    actual: dict[Path, dict[str, int]] = {}
+    root = WORKSPACE_ROOT / "ecosystem/fret-ui-kit/src/imui"
+    for source_path in sorted(root.rglob("*.rs")):
+        path = source_path.relative_to(WORKSPACE_ROOT)
+        source = read_source(path)
+        for line in source.splitlines():
+            stripped = line.strip()
+            if "TextProps::new(" not in stripped:
+                continue
+            actual.setdefault(path, {})
+            actual[path][stripped] = actual[path].get(stripped, 0) + 1
+
+    for path, constructors in sorted(actual.items()):
+        allowed = IMUI_DIRECT_TEXT_PROPS_ALLOWED.get(path)
+        if allowed is None:
+            for constructor, count in sorted(constructors.items()):
+                failures.append(
+                    f"{path.as_posix()}: direct TextProps constructor is not in the text-role allowlist ({count}x {constructor})"
+                )
+            continue
+        for constructor, count in sorted(constructors.items()):
+            expected = allowed.get(constructor)
+            if expected is None:
+                failures.append(
+                    f"{path.as_posix()}: direct TextProps constructor is not allowed: {constructor}"
+                )
+            elif count != expected:
+                failures.append(
+                    f"{path.as_posix()}: direct TextProps constructor count changed for {constructor}: expected {expected}, found {count}"
+                )
+
+    for path, constructors in sorted(IMUI_DIRECT_TEXT_PROPS_ALLOWED.items()):
+        actual_for_path = actual.get(path, {})
+        for constructor, expected in sorted(constructors.items()):
+            count = actual_for_path.get(constructor, 0)
+            if count != expected:
+                failures.append(
+                    f"{path.as_posix()}: missing allowed direct TextProps constructor {constructor}: expected {expected}, found {count}"
+                )
 
 
 def main() -> None:
@@ -463,6 +526,8 @@ def main() -> None:
                 "2026-05-16 menu shortcut readout reuse follow-up",
                 "menu item shortcut labels now reuse",
                 "`text_control_readout(...)` as muted compact auxiliary readouts",
+                "2026-05-16 text role source-gate follow-up",
+                "explicit allowlist for remaining direct `TextProps::new(...)` constructors",
                 "2026-05-16 IMUI text item resize follow-up",
                 "`UiWriterImUiFacadeExt::text(...)` now follows Dear",
                 "`text_wrapped(...)` is the explicit opt-in path",
@@ -620,6 +685,8 @@ def main() -> None:
                 "tree_row_label_uses_shared_list_row_text_role",
                 "routed IMUI menu shortcut labels through the existing `text_control_readout(...)`",
                 "menu_item_shortcut_text_uses_shared_control_readout_role",
+                "hardened `tools/gate_imui_workstream_source.py` with an explicit allowlist",
+                "remaining direct `TextProps::new(...)` constructors under `fret-ui-kit::imui`",
                 "tightened `UiWriterImUiFacadeExt::text(...)` to match Dear ImGui",
                 "`UiWriterImUiFacadeExt::text_wrapped(...)`",
                 "imui_text_item_is_single_line_and_shrinkable",
@@ -8100,6 +8167,7 @@ def main() -> None:
     for check in opaque_struct_checks:
         check_opaque_structs(check, failures)
     check_fret_imui_runtime_dependencies(failures)
+    check_imui_direct_text_props_allowlist(failures)
     for failure in collect_docking_multiwindow_failures():
         failures.append(f"docking multiwindow source: {failure}")
 
