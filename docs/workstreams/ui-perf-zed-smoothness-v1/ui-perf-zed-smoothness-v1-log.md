@@ -105,6 +105,54 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 14:46:00 +0800 (target-machine closeout handoff audit)
+
+Question:
+- Can the Editor Paint contract closeout be completed from the current macOS M4 workspace, or is a Windows RTX4090
+  target-machine pass still required?
+
+Change:
+- No code change. Re-ran the closeout audit against actual local artifacts and generated clean Windows handoff plans
+  that use `python` plus release `.exe` binary paths instead of macOS-local Python paths.
+
+Commands:
+```bash
+python3 tools/perf/diag_editor_paint_contract_preflight.py
+python3 tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260516-closeout-plan --dry-run
+python3 tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260516-closeout-plan-attrib --with-paint-perf --dry-run
+python3 tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260516-host-guard-check
+python3 tools/perf/diag_editor_paint_contract_verify_artifacts.py \
+  target/fret-diag/editor-paint-contract-validate-20260516-closeout-plan \
+  --attribution-dir target/fret-diag/editor-paint-contract-validate-20260516-closeout-plan-attrib \
+  --out-report target/fret-diag/editor-paint-contract-validate-20260516-closeout-plan/artifact-verification.dry-run-negative.summary.json
+python3 tools/perf/audit_perf_baselines.py --matrix docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md --strict
+python3 -m json.tool docs/workstreams/ui-perf-zed-smoothness-v1/WORKSTREAM.json >/dev/null
+python3 tools/check_workstream_catalog.py
+git diff --check
+```
+
+Results:
+- Preflight: PASS, 8 checks.
+- Non-dry-run validation on this macOS host: rejected by design with
+  `windows-rtx4090 validation must run on the target Windows host`.
+- Artifact verifier against dry-run directories: FAIL by design; both validation and attribution directories are
+  missing real `summary.json` files.
+- Local closeout gates that do not require target artifacts are green: strict baseline matrix audit,
+  `WORKSTREAM.json` parsing, workstream catalog, and `git diff --check`.
+
+Handoff artifacts:
+- `target/fret-diag/editor-paint-contract-windows-handoff-validation-plan/validation-plan.json`
+- `target/fret-diag/editor-paint-contract-windows-handoff-attribution-plan/validation-plan.json`
+- `target/fret-diag/editor-paint-contract-windows-handoff-closeout-plan.json`
+- Negative verifier proof:
+  `target/fret-diag/editor-paint-contract-validate-20260516-closeout-plan/artifact-verification.dry-run-negative.summary.json`
+
+Decision:
+- P1.5 remains blocked on the Windows RTX4090 target-machine validation and attribution passes. Do not mark closeout
+  complete or update checked-in baselines until those target artifacts either pass verifier/closeout or shift the owner
+  attribution. Local work may continue on independent, evidence-backed optimization slices, but those slices are not
+  substitutes for the target-machine closeout artifact.
+
 ## 2026-05-16 07:27:00 +0800 (local head `efe4979a60`)
 
 Question:
