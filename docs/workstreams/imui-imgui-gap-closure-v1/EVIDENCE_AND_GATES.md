@@ -254,6 +254,11 @@ Run evidence:
   ellipsis-truncated without adding a menu-specific shortcut role. Gate: `cargo nextest run -p
   fret-ui-kit --features imui --lib menu_item_shortcut_text_uses_shared_control_readout_role
   menu_item_label_text_uses_shared_list_row_text_role --no-fail-fast`.
+- 2026-05-17: routed IMUI menu checkbox/radio indicators and submenu chevrons through the shared
+  `text_chrome_glyph(...)` role instead of bare `cx.text(...)`. Menu glyph chrome now follows the
+  same single-line clip contract as disclosure indicators, and the source gate rejects the old
+  indicator text paths. Gate: `cargo nextest run -p fret-ui-kit --features imui --lib
+  menu_item_indicator_text_uses_shared_chrome_glyph_role --no-fail-fast`.
 - 2026-05-17: introduced `text_section_chrome_label(...)` as the shared compact section/chrome
   label role and routed IMUI `separator_text` labels through it. Separator labels no longer carry
   local `TextProps` policy or default word wrapping; they stay single-line, shrinkable, and

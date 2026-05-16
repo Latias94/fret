@@ -142,6 +142,13 @@ fn menu_item_shortcut_text<H: UiHost>(
     crate::declarative::text::text_control_readout(cx, shortcut)
 }
 
+fn menu_item_indicator_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    indicator: Arc<str>,
+) -> AnyElement {
+    crate::declarative::text::text_chrome_glyph(cx, indicator)
+}
+
 fn menu_item_impl_with_pressable_hook<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized, F>(
     ui: &mut W,
     label: Arc<str>,
@@ -243,7 +250,7 @@ where
                 vec![cx.row(row, move |cx| {
                     let mut out: Vec<AnyElement> = Vec::new();
                     if let Some(indicator) = indicator.clone() {
-                        out.push(cx.text(indicator));
+                        out.push(menu_item_indicator_text(cx, indicator));
                     }
                     out.push(menu_item_label_text(cx, label_for_visuals.clone()));
 
@@ -258,7 +265,7 @@ where
                         out.push(shortcut);
                     } else if submenu {
                         out.push(cx.spacer(SpacerProps::default()));
-                        out.push(cx.text(Arc::from("\u{203A}")));
+                        out.push(menu_item_indicator_text(cx, Arc::from("\u{203A}")));
                     }
                     out
                 })]
@@ -522,5 +529,27 @@ mod tests {
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
         assert!(el.inherited_text_style.is_some());
         assert!(el.inherited_foreground.is_some());
+    }
+
+    #[test]
+    fn menu_item_indicator_text_uses_shared_chrome_glyph_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+            menu_item_indicator_text(cx, Arc::from("\u{203A}"))
+        });
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected menu item indicator to be text");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert!(el.inherited_text_style.is_some());
     }
 }

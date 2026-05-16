@@ -222,6 +222,9 @@ Readiness order for the next locally testable review slices:
    2026-05-16 menu shortcut readout reuse follow-up: menu item shortcut labels now reuse
    `text_control_readout(...)` as muted compact auxiliary readouts instead of carrying local
    nowrap/clip `TextProps` policy.
+   2026-05-17 menu indicator glyph follow-up: menu checkbox/radio indicators and submenu chevrons
+   now reuse `text_chrome_glyph(...)`, so glyph-only menu chrome no longer falls back to bare
+   `cx.text(...)` default wrapping semantics.
    2026-05-17 section chrome label text follow-up: `text_section_chrome_label(...)` now owns
    compact separator/section chrome labels in `fret-ui-kit::declarative::text`, and IMUI
    `separator_text` labels route through it instead of local default-wrapping `TextProps`.

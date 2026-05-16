@@ -997,10 +997,14 @@ def main() -> None:
             required=[
                 "crate::declarative::text::text_list_row_label(cx, label)",
                 "crate::declarative::text::text_control_readout(cx, shortcut)",
+                "crate::declarative::text::text_chrome_glyph(cx, indicator)",
                 "menu_item_label_text_uses_shared_list_row_text_role",
                 "menu_item_shortcut_text_uses_shared_control_readout_role",
+                "menu_item_indicator_text_uses_shared_chrome_glyph_role",
             ],
             forbidden=[
+                "out.push(cx.text(indicator));",
+                "out.push(cx.text(Arc::from(\"\\u{203A}\")));",
                 "label_props.wrap = fret_core::TextWrap::None;",
                 "label_props.overflow = fret_core::TextOverflow::Ellipsis;",
                 "let mut shortcut_props = TextProps::new(shortcut);",

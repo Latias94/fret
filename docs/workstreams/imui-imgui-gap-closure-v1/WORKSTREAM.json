@@ -171,7 +171,7 @@
     },
     {
       "name": "imui menu shortcut text role reuse",
-      "command": "cargo nextest run -p fret-ui-kit --features imui --lib menu_item_shortcut_text_uses_shared_control_readout_role menu_item_label_text_uses_shared_list_row_text_role --no-fail-fast"
+      "command": "cargo nextest run -p fret-ui-kit --features imui --lib menu_item_shortcut_text_uses_shared_control_readout_role menu_item_label_text_uses_shared_list_row_text_role menu_item_indicator_text_uses_shared_chrome_glyph_role --no-fail-fast"
     },
     {
       "name": "imui section chrome label text semantics",
