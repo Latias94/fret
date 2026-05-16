@@ -199,15 +199,16 @@ Exit criteria:
   in `TableRowOptions::background` and `TableCellOptions::background`, with scene-paint proof that
   cell overrides paint after row overrides. `ImUiTableRow::cell_text(...)` now uses the shared
   `text_table_cell(...)` role helper, so default table text no longer inherits paragraph wrapping
-  semantics. Freeze panes, runtime hideable-column policy, and old columns API remain
+  semantics. Freeze panes, persistence, header-menu policy, and old columns API remain
   advanced-table candidates.
   2026-05-16 table header text result: sortable and plain table header labels also use
   `text_table_cell(...)`, preserving the same compact single-line ellipsis semantics as body cells.
   2026-05-16 static table column visibility result: `TableColumn::hidden()` and
   `TableColumn::with_visible(bool)` now cover author-declared hidden columns without copying Dear
   ImGui's mutable table runtime. Hidden columns still consume submitted row cells in declared order
-  but skip header/body rendering and header responses; runtime hideable columns, persistence, and
-  header-menu policy stay candidate-only.
+  but skip header/body rendering and header responses; runtime hideable-column policy is covered
+  by the follow-up state helper below, while persistence and header-menu policy stay
+  candidate-only.
   2026-05-17 runtime table column visibility result: `ImUiTableColumnVisibilityState` now covers
   runtime stable-id visibility overrides as a policy-layer helper in `fret-ui-kit::imui`. It
   produces an adjusted `TableColumn` list and reuses the existing hidden-column render contract;
