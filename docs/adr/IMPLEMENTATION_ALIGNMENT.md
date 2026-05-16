@@ -23,13 +23,13 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 
 ## Summary
 
-- Last updated: 2026-05-14
+- Last updated: 2026-05-16
 - ADR count (numbered): 325
 
-- Aligned: 117
+- Aligned: 118
 - Aligned (with known gaps): 111
 - N/A (superseded): 2
-- Not audited: 52
+- Not audited: 51
 - Not implemented: 6
 - Partially aligned: 37
 
@@ -65,7 +65,7 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 | [`0254-delinea-dataset-transform-cache-keys-and-invalidation-v1.md`](0254-delinea-dataset-transform-cache-keys-and-invalidation-v1.md) | Proposed | Not audited |  |
 | [`0253-delinea-minimal-dataset-transform-node-set-v1.md`](0253-delinea-minimal-dataset-transform-node-set-v1.md) | Proposed | Not audited |  |
 | [`0252-delinea-transform-lineage-and-raw-index-identity-v1.md`](0252-delinea-transform-lineage-and-raw-index-identity-v1.md) | Proposed | Not audited |  |
-| [`0251-text-intrinsic-sizing-min-max-content-v1.md`](0251-text-intrinsic-sizing-min-max-content-v1.md) | Accepted | Not audited |  |
+| [`0251-text-intrinsic-sizing-min-max-content-v1.md`](0251-text-intrinsic-sizing-min-max-content-v1.md) | Accepted | Aligned | Text intrinsic sizing keeps definite-width measurement and paint preparation aligned for wrapped text, and the flow engine now lets `TextWrap::Word`/`Balance` receive real min-content probes instead of treating min-content as max-content during flex shrink. Evidence: `crates/fret-ui/src/layout/engine/flow.rs`, `crates/fret-ui/src/declarative/host_widget/measure.rs`, `crates/fret-ui/src/declarative/tests/layout/text.rs`, `crates/fret-ui/src/declarative/tests/text_cache.rs`, and resize regression coverage in `crates/fret-ui/src/tree/tests/interactive_resize_flow_rebuild.rs`. |
 | [`0250-delinea-link-events-for-domain-window.md`](0250-delinea-link-events-for-domain-window.md) | Proposed | Not audited |  |
 | [`0249-delinea-link-events-for-axis-pointer-and-cursor.md`](0249-delinea-link-events-for-axis-pointer-and-cursor.md) | Proposed | Not audited |  |
 | [`0248-delinea-multi-grid-viewport-layout-contract.md`](0248-delinea-multi-grid-viewport-layout-contract.md) | Proposed | Not audited |  |

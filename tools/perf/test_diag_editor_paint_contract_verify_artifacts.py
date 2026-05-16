@@ -43,7 +43,7 @@ def _step(
     plan = validate.build_plan(
         python_bin="python",
         fretboard_bin=validate._default_fretboard_bin(),
-        launch_bin=validate._default_launch_bin(),
+        launch_cmd=validate._default_launch_cmd(),
         out_dir=str(root),
         resize_attempts=3,
         resize_repeat=repeat if name == "resize-jitter" else 7,
@@ -119,6 +119,8 @@ def _write_summary(
             "target_profile": validate.TARGET_PROFILE,
             "date_tag": "test-date",
             "with_paint_perf": with_paint_perf,
+            "launch_bin": None,
+            "launch_cmd": validate._default_launch_cmd(),
             "stats_enabled": True,
             "steps": steps,
         },

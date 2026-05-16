@@ -14772,3 +14772,52 @@ Decision:
 - The remaining surface gap is still real, but it is small enough per row to treat as aggregate loop
   overhead rather than a standalone row hot function. Keep the next reversible owner slice focused on
   the outer paint traversal / host-widget aggregate unless a fresh bundle changes that ratio.
+
+## 2026-05-16 16:30:00 +08:00 (soft-wrap resize layout/paint correctness)
+
+Question:
+- Why can code-editor soft-wrap controls visually overlap after resizing even when semantics/layout bounds appear
+  plausible?
+
+Finding:
+- Two mechanism-layer issues combined:
+  - Flow construction treated `TextWrap::Word` / `TextWrap::Balance` min-content as max-content, so flex rows could
+    keep a single-line height reservation while paint prepared the same text at the new narrow multiline width.
+  - Paint-cache keys did not include subtree geometry, so a stable parent bounds key could replay stale child text
+    geometry after child local rects changed.
+
+Change:
+- `crates/fret-ui/src/layout/engine/flow.rs` now lets word/balance text receive real `MinContent` probes, matching
+  ADR 0251.
+- `PaintCacheKey` now carries a subtree geometry fingerprint derived from node size, measured size, child local rects,
+  and child geometry fingerprints. Layout recomputes this fingerprint after final layout and clean-engine geometry
+  propagation.
+- The UI Gallery soft-wrap editing diagnostic script now captures a final `layout.taffy.v1.json` sidecar.
+- The target-machine perf helpers now default to the inspectable cargo gallery launch command, preserving the legacy
+  `--launch-bin` override for deliberate direct-binary runs.
+
+Validation:
+```bash
+cargo test -p fret-ui tree::tests::paint_cache::paint_cache_key_tracks_child_geometry_changes_when_parent_size_is_stable -- --nocapture
+cargo test -p fret-ui tree::tests::paint_cache:: -- --nocapture
+cargo test -p fret-ui tree::tests::interactive_resize_flow_rebuild::interactive_resize_cached_flow_remeasures_word_wrapped_text_height -- --nocapture
+cargo test -p fret-ui tree::tests::interactive_resize_flow_rebuild::interactive_resize_cached_flow_remeasures_kit_row_wrapped_text_height -- --nocapture
+cargo test -p fret-ui declarative::tests::text_cache:: -- --nocapture
+cargo test -p fret-ui declarative::tests::layout::text:: -- --nocapture
+```
+
+Diag evidence:
+- UI Gallery run: `target/fret-diag/code-editor-soft-wrap-resize-fix-2026-05-16b/sessions/1778917336764-71196`.
+- Final bundle:
+  `target/fret-diag/code-editor-soft-wrap-resize-fix-2026-05-16b/sessions/1778917336764-71196/1778917961806-ui-gallery-code-editor-torture-soft-wrap-editing-after/bundle.schema2.json`.
+- Final layout sidecar:
+  `target/fret-diag/code-editor-soft-wrap-resize-fix-2026-05-16b/sessions/1778917336764-71196/1778917961657-ui-gallery-code-editor-torture-soft-wrap-editing-after/layout.taffy.v1.json`.
+- Final screenshot:
+  `target/fret-diag/code-editor-soft-wrap-resize-fix-2026-05-16b/sessions/1778917336764-71196/screenshots/1778917961806-ui-gallery-code-editor-torture-soft-wrap-editing-after/window-4294967297-tick-132-frame-132.png`.
+
+Decision:
+- Keep this inside the active `ui-perf-zed-smoothness-v1` lane instead of opening a new workstream. The owner is
+  `fret-ui` text measurement plus retained paint-cache correctness, and the closed code-editor resize replay lane
+  should stay closed.
+- Do not update perf baselines from this correctness fix. If later evidence shows fingerprint recomputation cost in a
+  hot resize path, optimize the fingerprint storage/scratch path without relaxing stale-replay safety.

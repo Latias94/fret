@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 from pathlib import Path
 from typing import Any
 
@@ -77,6 +78,34 @@ def _cmd_env_values(cmd: object) -> set[str]:
     return envs
 
 
+def _launch_tokens(cmd: object) -> list[str]:
+    if not isinstance(cmd, list):
+        return []
+    for i, item in enumerate(cmd):
+        if item == "--launch" and i + 1 < len(cmd) and cmd[i + 1] == "--":
+            return [str(token) for token in cmd[i + 2 :] if isinstance(token, str)]
+    return []
+
+
+def _cmd_has_default_launch(cmd: object) -> bool:
+    launch_tokens = _launch_tokens(cmd)
+    return launch_tokens == validate._default_launch_cmd() or launch_tokens == [validate._default_launch_bin()]
+
+
+def _cmd_has_default_launch_cmd_flag(cmd: object) -> bool:
+    if not isinstance(cmd, list):
+        return False
+    for i, item in enumerate(cmd):
+        if item == "--launch-cmd":
+            if i + 1 >= len(cmd) or not isinstance(cmd[i + 1], str):
+                return False
+            try:
+                return shlex.split(cmd[i + 1]) == validate._default_launch_cmd()
+            except ValueError:
+                return False
+    return False
+
+
 def _check_direct_diag_perf_cmd(
     *,
     cmd: object,
@@ -94,8 +123,11 @@ def _check_direct_diag_perf_cmd(
         errors.append(f"{prefix}: direct diag perf command must emit --json")
     if not _cmd_contains(cmd, "--launch"):
         errors.append(f"{prefix}: direct diag perf command must launch the target binary")
-    if not _cmd_contains(cmd, validate._default_launch_bin()):
-        errors.append(f"{prefix}: direct diag perf command must launch {validate._default_launch_bin()}")
+    if not _cmd_has_default_launch(cmd):
+        errors.append(
+            f"{prefix}: direct diag perf command must launch the default inspectable cargo command "
+            f"or {validate._default_launch_bin()}"
+        )
 
     envs = _cmd_env_values(cmd)
     required_envs = set(validate.COMMON_ENVS)
@@ -237,8 +269,13 @@ def verify_summary_dir(path: Path, *, expect_with_paint_perf: bool) -> dict[str,
                 errors.append(f"{prefix}: resize baseline missing from command")
             if not _cmd_has_flag_value(cmd, "--fretboard-bin", validate._default_fretboard_bin()):
                 errors.append(f"{prefix}: resize command must use release fretboard-dev.exe")
-            if not _cmd_has_flag_value(cmd, "--launch-bin", validate._default_launch_bin()):
-                errors.append(f"{prefix}: resize command must use release fret-ui-gallery.exe")
+            has_default_launch_cmd = _cmd_has_default_launch_cmd_flag(cmd)
+            has_legacy_launch_bin = _cmd_has_flag_value(cmd, "--launch-bin", validate._default_launch_bin())
+            if not (has_default_launch_cmd or has_legacy_launch_bin):
+                errors.append(
+                    f"{prefix}: resize command must use the default inspectable cargo launch command "
+                    f"or {validate._default_launch_bin()}"
+                )
         elif name == "typical-autoscroll":
             if not _cmd_contains(cmd, validate.TYPICAL_BASELINE):
                 errors.append(f"{prefix}: typical baseline missing from command")

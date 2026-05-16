@@ -5,6 +5,7 @@ use fret_core::TextBlobId;
 pub(super) struct PaintCacheKey {
     width_bits: u32,
     height_bits: u32,
+    geometry_fingerprint: u64,
     scale_factor_bits: u32,
     theme_revision: u64,
     fg_present: bool,
@@ -25,6 +26,7 @@ pub(super) struct PaintCacheKey {
 impl PaintCacheKey {
     pub(super) fn new(
         bounds: Rect,
+        geometry_fingerprint: u64,
         scale_factor: f32,
         theme_revision: u64,
         paint_style: crate::tree::paint_style::PaintStyleState,
@@ -47,6 +49,7 @@ impl PaintCacheKey {
         Self {
             width_bits: bounds.size.width.0.to_bits(),
             height_bits: bounds.size.height.0.to_bits(),
+            geometry_fingerprint,
             scale_factor_bits: scale_factor.to_bits(),
             theme_revision,
             fg_present,
@@ -63,6 +66,70 @@ impl PaintCacheKey {
             child_tx_bits: child_transform.tx.to_bits(),
             child_ty_bits: child_transform.ty.to_bits(),
         }
+    }
+}
+
+fn mix_geometry_hash(hash: &mut u64, value: u64) {
+    *hash ^= value
+        .wrapping_add(0x9e37_79b9_7f4a_7c15)
+        .wrapping_add(*hash << 6)
+        .wrapping_add(*hash >> 2);
+}
+
+fn px_hash_bits(value: Px) -> u64 {
+    value.0.to_bits() as u64
+}
+
+impl<H: UiHost> UiTree<H> {
+    pub(in crate::tree) fn recompute_paint_geometry_fingerprint(&mut self, node: NodeId) -> u64 {
+        let Some(entry) = self.nodes.get(node) else {
+            return 0;
+        };
+        let bounds = entry.bounds;
+        let measured_size = entry.measured_size;
+        let mut children = SmallNodeList::<16>::default();
+        children.set(entry.children.as_slice());
+
+        let mut hash = 0xcbf2_9ce4_8422_2325u64;
+        mix_geometry_hash(&mut hash, px_hash_bits(bounds.size.width));
+        mix_geometry_hash(&mut hash, px_hash_bits(bounds.size.height));
+        mix_geometry_hash(&mut hash, px_hash_bits(measured_size.width));
+        mix_geometry_hash(&mut hash, px_hash_bits(measured_size.height));
+        mix_geometry_hash(&mut hash, children.as_slice().len() as u64);
+
+        for &child in children.as_slice() {
+            let Some(child_entry) = self.nodes.get(child) else {
+                continue;
+            };
+            let local_x = child_entry.bounds.origin.x - bounds.origin.x;
+            let local_y = child_entry.bounds.origin.y - bounds.origin.y;
+            mix_geometry_hash(&mut hash, px_hash_bits(local_x));
+            mix_geometry_hash(&mut hash, px_hash_bits(local_y));
+            mix_geometry_hash(&mut hash, px_hash_bits(child_entry.bounds.size.width));
+            mix_geometry_hash(&mut hash, px_hash_bits(child_entry.bounds.size.height));
+            mix_geometry_hash(&mut hash, child_entry.paint_geometry_fingerprint);
+        }
+
+        let hash = if hash == 0 { 1 } else { hash };
+        if let Some(entry) = self.nodes.get_mut(node) {
+            entry.paint_geometry_fingerprint = hash;
+        }
+        hash
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_recompute_paint_geometry_fingerprint_subtree(
+        &mut self,
+        node: NodeId,
+    ) -> u64 {
+        let mut children = SmallNodeList::<16>::default();
+        if let Some(entry) = self.nodes.get(node) {
+            children.set(entry.children.as_slice());
+        }
+        for &child in children.as_slice() {
+            self.test_recompute_paint_geometry_fingerprint_subtree(child);
+        }
+        self.recompute_paint_geometry_fingerprint(node)
     }
 }
 

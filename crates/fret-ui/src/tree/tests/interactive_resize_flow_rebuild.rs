@@ -142,6 +142,459 @@ fn assert_authoritative_compact_flow(
     );
 }
 
+#[derive(Default)]
+struct WrapAwareTextService {
+    measured: Vec<TextConstraints>,
+    prepared: Vec<TextConstraints>,
+    prepared_texts: Vec<String>,
+    prepared_metrics: Vec<TextMetrics>,
+}
+
+fn descendant_text_nodes_for(
+    app: &mut crate::test_host::TestHost,
+    window: AppWindowId,
+    ui: &UiTree<crate::test_host::TestHost>,
+    root: NodeId,
+    text: &str,
+) -> Vec<NodeId> {
+    let mut out = Vec::new();
+    let mut stack = vec![root];
+    while let Some(node) = stack.pop() {
+        if let Some(record) = crate::declarative::frame::element_record_for_node(app, window, node)
+            && matches!(
+                record.instance,
+                crate::declarative::frame::ElementInstance::Text(props) if props.text.as_ref() == text
+            )
+        {
+            out.push(node);
+        }
+        for child in ui.children(node).into_iter().rev() {
+            stack.push(child);
+        }
+    }
+    out
+}
+
+impl WrapAwareTextService {
+    fn metrics_for(input: &fret_core::TextInput, constraints: TextConstraints) -> TextMetrics {
+        let char_w = 6.0;
+        let line_h = 14.0;
+        let text_w = input.text().chars().count() as f32 * char_w;
+        let max_w = constraints.max_width.map(|w| w.0.max(char_w));
+        let lines = match (constraints.wrap, max_w) {
+            (fret_core::TextWrap::Word, Some(max_w)) if max_w + 0.01 < text_w => {
+                (text_w / max_w).ceil().max(1.0)
+            }
+            _ => 1.0,
+        };
+        let width = max_w.unwrap_or(text_w).min(text_w);
+        TextMetrics {
+            size: Size::new(Px(width), Px(line_h * lines)),
+            baseline: Px(8.0),
+        }
+    }
+}
+
+impl TextService for WrapAwareTextService {
+    fn prepare(
+        &mut self,
+        input: &fret_core::TextInput,
+        constraints: TextConstraints,
+    ) -> (fret_core::TextBlobId, TextMetrics) {
+        let metrics = Self::metrics_for(input, constraints);
+        self.prepared.push(constraints);
+        self.prepared_texts.push(input.text().to_owned());
+        self.prepared_metrics.push(metrics);
+        (fret_core::TextBlobId::default(), metrics)
+    }
+
+    fn release(&mut self, _blob: fret_core::TextBlobId) {}
+
+    fn measure(
+        &mut self,
+        input: &fret_core::TextInput,
+        constraints: TextConstraints,
+    ) -> TextMetrics {
+        self.measured.push(constraints);
+        Self::metrics_for(input, constraints)
+    }
+}
+
+impl fret_core::PathService for WrapAwareTextService {
+    fn prepare(
+        &mut self,
+        _commands: &[fret_core::PathCommand],
+        _style: fret_core::PathStyle,
+        _constraints: fret_core::PathConstraints,
+    ) -> (fret_core::PathId, fret_core::PathMetrics) {
+        (
+            fret_core::PathId::default(),
+            fret_core::PathMetrics::default(),
+        )
+    }
+
+    fn release(&mut self, _path: fret_core::PathId) {}
+}
+
+impl fret_core::SvgService for WrapAwareTextService {
+    fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+        fret_core::SvgId::default()
+    }
+
+    fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        true
+    }
+}
+
+impl fret_core::MaterialService for WrapAwareTextService {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        false
+    }
+}
+
+fn render_gallery_like_wrapping_header(
+    ui: &mut UiTree<crate::test_host::TestHost>,
+    app: &mut crate::test_host::TestHost,
+    services: &mut WrapAwareTextService,
+    window: AppWindowId,
+    bounds: Rect,
+) -> NodeId {
+    declarative::render_root(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "interactive-resize-text-wrap-height",
+        |cx| {
+            let mut page = crate::element::FlexProps::default();
+            page.layout.size.width = crate::element::Length::Fill;
+            page.layout.size.height = crate::element::Length::Fill;
+            page.direction = fret_core::Axis::Vertical;
+            page.align = crate::element::CrossAlign::Stretch;
+            page.gap = crate::element::SpacingLength::Px(Px(4.0));
+
+            let mut row = crate::element::FlexProps::default();
+            row.layout.size.width = crate::element::Length::Fill;
+            row.direction = fret_core::Axis::Horizontal;
+            row.align = crate::element::CrossAlign::Center;
+            row.gap = crate::element::SpacingLength::Px(Px(4.0));
+
+            let mut switch_box = crate::element::ContainerProps::default();
+            switch_box.layout.size.width = crate::element::Length::Px(Px(36.0));
+            switch_box.layout.size.height = crate::element::Length::Px(Px(20.0));
+            switch_box.layout.flex.shrink = 0.0;
+
+            vec![cx.flex(page, |cx| {
+                vec![
+                    cx.flex(row, |cx| {
+                        vec![
+                            cx.container(switch_box, |_| Vec::new()),
+                            cx.text("Syntax: Rust (tree-sitter)"),
+                        ]
+                    }),
+                    cx.flex(row, |cx| {
+                        vec![
+                            cx.container(switch_box, |_| Vec::new()),
+                            cx.text("Word boundaries: Identifier"),
+                        ]
+                    }),
+                ]
+            })]
+        },
+    )
+}
+
+fn render_gallery_kit_wrapping_header(
+    ui: &mut UiTree<crate::test_host::TestHost>,
+    app: &mut crate::test_host::TestHost,
+    services: &mut WrapAwareTextService,
+    window: AppWindowId,
+    bounds: Rect,
+) -> NodeId {
+    declarative::render_root(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "interactive-resize-kit-text-wrap-height",
+        |cx| {
+            let mut page = crate::element::FlexProps::default();
+            page.layout.size.width = crate::element::Length::Fill;
+            page.layout.size.height = crate::element::Length::Fill;
+            page.direction = fret_core::Axis::Vertical;
+            page.align = crate::element::CrossAlign::Stretch;
+            page.gap = crate::element::SpacingLength::Px(Px(4.0));
+
+            let mut row = crate::element::FlexProps::default();
+            row.direction = fret_core::Axis::Horizontal;
+            row.align = crate::element::CrossAlign::Center;
+            row.gap = crate::element::SpacingLength::Px(Px(4.0));
+
+            let row_wrapper = crate::element::ContainerProps::default();
+
+            let mut switch_box = crate::element::ContainerProps::default();
+            switch_box.layout.size.width = crate::element::Length::Px(Px(36.0));
+            switch_box.layout.size.height = crate::element::Length::Px(Px(20.0));
+            switch_box.layout.flex.shrink = 0.0;
+
+            vec![cx.flex(page, |cx| {
+                vec![
+                    cx.container(row_wrapper, |cx| {
+                        vec![cx.flex(row, |cx| {
+                            vec![
+                                cx.container(switch_box, |_| Vec::new()),
+                                cx.text("Syntax: Rust (tree-sitter)"),
+                            ]
+                        })]
+                    }),
+                    cx.container(row_wrapper, |cx| {
+                        vec![cx.flex(row, |cx| {
+                            vec![
+                                cx.container(switch_box, |_| Vec::new()),
+                                cx.text("Word boundaries: Identifier"),
+                            ]
+                        })]
+                    }),
+                ]
+            })]
+        },
+    )
+}
+
+#[test]
+fn interactive_resize_cached_flow_remeasures_word_wrapped_text_height() {
+    let mut app = crate::test_host::TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let roomy_bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(160.0)),
+    );
+    let compact_bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(160.0)),
+    );
+    let mut services = WrapAwareTextService::default();
+
+    let root =
+        render_gallery_like_wrapping_header(&mut ui, &mut app, &mut services, window, roomy_bounds);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, roomy_bounds, 1.0);
+    clear_all_invalidations(&mut ui);
+
+    app.advance_frame();
+    let compact_root = render_gallery_like_wrapping_header(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        compact_bounds,
+    );
+    assert_eq!(compact_root, root, "expected stable root identity");
+    ui.set_root(root);
+    clear_all_invalidations(&mut ui);
+    ui.layout_all(&mut app, &mut services, compact_bounds, 1.0);
+
+    let page = ui.children(root)[0];
+    let first_row = ui.children(page)[0];
+    let second_row = ui.children(page)[1];
+    let first_text = ui.children(first_row)[1];
+    let second_text = ui.children(second_row)[1];
+    let first_text_bounds = ui.debug_node_bounds(first_text).expect("first text bounds");
+    let second_text_bounds = ui
+        .debug_node_bounds(second_text)
+        .expect("second text bounds");
+    let second_row_bounds = ui.debug_node_bounds(second_row).expect("second row bounds");
+    let engine = ui.take_layout_engine();
+    let first_text_engine_rect = engine.child_layout_rect_if_solved(first_row, first_text);
+    let second_text_engine_rect = engine.child_layout_rect_if_solved(second_row, second_text);
+    let first_row_engine_rect = engine.child_layout_rect_if_solved(page, first_row);
+    let second_row_engine_rect = engine.child_layout_rect_if_solved(page, second_row);
+    ui.put_layout_engine(engine);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, compact_bounds, &mut scene, 1.0);
+    let prepared_height_for = |needle: &str| {
+        services
+            .prepared_texts
+            .iter()
+            .zip(services.prepared_metrics.iter())
+            .rev()
+            .find_map(|(text, metrics)| (text == needle).then_some(metrics.size.height))
+            .expect("prepared wrapped text metrics")
+    };
+    let first_painted_h = prepared_height_for("Syntax: Rust (tree-sitter)");
+    let second_painted_h = prepared_height_for("Word boundaries: Identifier");
+
+    assert!(
+        first_painted_h.0 > 10.5 && second_painted_h.0 > 10.5,
+        "expected compact paint to wrap the text into multiple lines; prepared={:?}",
+        services.prepared
+    );
+    assert!(
+        first_text_bounds.size.height.0 + 0.01 >= first_painted_h.0,
+        "layout height must reserve the first painted wrapped text height; text_bounds={first_text_bounds:?} measured_size={:?} painted_h={first_painted_h:?} first_text_engine_rect={first_text_engine_rect:?} first_row_engine_rect={first_row_engine_rect:?} second_row_engine_rect={second_row_engine_rect:?} measured={:?} prepared={:?}",
+        ui.debug_node_measured_size(first_text),
+        services.measured,
+        services.prepared
+    );
+    assert!(
+        second_text_bounds.size.height.0 + 0.01 >= second_painted_h.0,
+        "layout height must reserve the second painted wrapped text height; text_bounds={second_text_bounds:?} measured_size={:?} painted_h={second_painted_h:?} second_text_engine_rect={second_text_engine_rect:?} first_row_engine_rect={first_row_engine_rect:?} second_row_engine_rect={second_row_engine_rect:?} measured={:?} prepared={:?}",
+        ui.debug_node_measured_size(second_text),
+        services.measured,
+        services.prepared
+    );
+    assert!(
+        second_row_bounds.origin.y.0 + 0.01 >= first_text_bounds.origin.y.0 + first_painted_h.0,
+        "following row must not overlap painted wrapped text; first_text={first_text_bounds:?} second_row={second_row_bounds:?} painted_h={:?}",
+        first_painted_h
+    );
+
+    let resize_record = ui
+        .debug_layout_request_build_roots()
+        .iter()
+        .find(|record| record.root == root)
+        .expect("resize request-build record");
+    assert_eq!(
+        resize_record.mode, "cached_flow_reuse",
+        "test should exercise the interactive-resize cached-flow path"
+    );
+}
+
+#[test]
+fn interactive_resize_cached_flow_remeasures_kit_row_wrapped_text_height() {
+    let mut app = crate::test_host::TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let roomy_bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(160.0)),
+    );
+    let compact_bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(160.0)),
+    );
+    let mut services = WrapAwareTextService::default();
+
+    let root =
+        render_gallery_kit_wrapping_header(&mut ui, &mut app, &mut services, window, roomy_bounds);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, roomy_bounds, 1.0);
+    clear_all_invalidations(&mut ui);
+
+    app.advance_frame();
+    let compact_root = render_gallery_kit_wrapping_header(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        compact_bounds,
+    );
+    assert_eq!(compact_root, root, "expected stable root identity");
+    ui.set_root(root);
+    clear_all_invalidations(&mut ui);
+    ui.layout_all(&mut app, &mut services, compact_bounds, 1.0);
+
+    let first_text =
+        descendant_text_nodes_for(&mut app, window, &ui, root, "Syntax: Rust (tree-sitter)")
+            .into_iter()
+            .next()
+            .expect("first text node");
+    let second_text =
+        descendant_text_nodes_for(&mut app, window, &ui, root, "Word boundaries: Identifier")
+            .into_iter()
+            .next()
+            .expect("second text node");
+    let first_row = ui
+        .nodes
+        .get(first_text)
+        .and_then(|n| n.parent)
+        .expect("first row");
+    let second_row = ui
+        .nodes
+        .get(second_text)
+        .and_then(|n| n.parent)
+        .expect("second row");
+    let first_row_container = ui
+        .nodes
+        .get(first_row)
+        .and_then(|n| n.parent)
+        .expect("first row container");
+    let second_row_container = ui
+        .nodes
+        .get(second_row)
+        .and_then(|n| n.parent)
+        .expect("second row container");
+    let first_text_bounds = ui.debug_node_bounds(first_text).expect("first text bounds");
+    let second_text_bounds = ui
+        .debug_node_bounds(second_text)
+        .expect("second text bounds");
+    let first_row_container_bounds = ui
+        .debug_node_bounds(first_row_container)
+        .expect("first row container bounds");
+    let second_row_container_bounds = ui
+        .debug_node_bounds(second_row_container)
+        .expect("second row container bounds");
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, compact_bounds, &mut scene, 1.0);
+    let prepared_height_for = |needle: &str| {
+        services
+            .prepared_texts
+            .iter()
+            .zip(services.prepared_metrics.iter())
+            .rev()
+            .find_map(|(text, metrics)| (text == needle).then_some(metrics.size.height))
+            .expect("prepared wrapped text metrics")
+    };
+    let first_painted_h = prepared_height_for("Syntax: Rust (tree-sitter)");
+    let second_painted_h = prepared_height_for("Word boundaries: Identifier");
+
+    assert!(
+        first_text_bounds.size.height.0 + 0.01 >= first_painted_h.0,
+        "kit row wrapper must reserve first painted wrapped text height; text_bounds={first_text_bounds:?} row_container={first_row_container_bounds:?} painted_h={first_painted_h:?} measured={:?} prepared={:?}",
+        services.measured,
+        services.prepared
+    );
+    assert!(
+        second_text_bounds.size.height.0 + 0.01 >= second_painted_h.0,
+        "kit row wrapper must reserve second painted wrapped text height; text_bounds={second_text_bounds:?} row_container={second_row_container_bounds:?} painted_h={second_painted_h:?} measured={:?} prepared={:?}",
+        services.measured,
+        services.prepared
+    );
+    assert!(
+        second_row_container_bounds.origin.y.0 + 0.01
+            >= first_text_bounds.origin.y.0 + first_painted_h.0,
+        "kit row wrapper must not let the following row overlap painted wrapped text; first_text={first_text_bounds:?} first_row_container={first_row_container_bounds:?} second_row_container={second_row_container_bounds:?} painted_h={first_painted_h:?}"
+    );
+
+    let resize_record = ui
+        .debug_layout_request_build_roots()
+        .iter()
+        .find(|record| record.root == root)
+        .expect("resize request-build record");
+    assert_eq!(
+        resize_record.mode, "cached_flow_reuse",
+        "test should exercise the interactive-resize cached-flow path"
+    );
+}
+
 struct DynamicViewportRoot {
     child: NodeId,
     viewport: std::sync::Arc<std::sync::Mutex<Rect>>,

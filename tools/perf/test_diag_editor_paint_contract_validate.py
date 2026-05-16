@@ -15,7 +15,7 @@ class EditorPaintContractValidateTests(unittest.TestCase):
         plan = validate.build_plan(
             python_bin="python",
             fretboard_bin="target/release/fretboard-dev.exe",
-            launch_bin="target/release/fret-ui-gallery.exe",
+            launch_cmd=validate._default_launch_cmd(),
             out_dir="target/fret-diag/editor-paint-contract-validate-test",
             resize_attempts=3,
             resize_repeat=7,
@@ -37,7 +37,8 @@ class EditorPaintContractValidateTests(unittest.TestCase):
         self.assertIn(validate.TYPICAL_BASELINE, joined)
         self.assertIn(validate.COMPLEX_WHEEL_BASELINE, joined)
         self.assertIn("FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0", joined)
-        self.assertIn("target/release/fret-ui-gallery.exe", joined)
+        self.assertIn("--launch-cmd cargo run -p fret-ui-gallery --release --features gallery-full", joined)
+        self.assertIn("--launch -- cargo run -p fret-ui-gallery --release --features gallery-full", joined)
         self.assertNotIn("FRET_CODE_EDITOR_DIAG_PAINT_PERF=1", " ".join(plan[2]["cmd"]))
         self.assertNotIn("FRET_CODE_EDITOR_DIAG_PAINT_PERF=1", " ".join(plan[3]["cmd"]))
 
@@ -45,7 +46,7 @@ class EditorPaintContractValidateTests(unittest.TestCase):
         plan = validate.build_plan(
             python_bin="python",
             fretboard_bin="target/release/fretboard-dev.exe",
-            launch_bin="target/release/fret-ui-gallery.exe",
+            launch_cmd=validate._default_launch_cmd(),
             out_dir="target/fret-diag/editor-paint-contract-validate-test",
             resize_attempts=3,
             resize_repeat=7,
@@ -60,6 +61,24 @@ class EditorPaintContractValidateTests(unittest.TestCase):
         self.assertNotIn("FRET_CODE_EDITOR_DIAG_PAINT_PERF=1", " ".join(plan[0]["cmd"]))
         self.assertIn("FRET_CODE_EDITOR_DIAG_PAINT_PERF=1", " ".join(plan[1]["cmd"]))
         self.assertIn("FRET_CODE_EDITOR_DIAG_PAINT_PERF=1", " ".join(plan[2]["cmd"]))
+
+    def test_launch_cmd_from_args_defaults_to_inspectable_gallery_full(self) -> None:
+        launch_cmd, launch_bin_path = validate._launch_cmd_from_args(
+            Path("F:/repo"),
+            type("Args", (), {"launch_cmd": "", "launch_bin": ""})(),
+        )
+
+        self.assertEqual(validate._default_launch_cmd(), launch_cmd)
+        self.assertIsNone(launch_bin_path)
+
+    def test_launch_cmd_from_args_preserves_legacy_launch_bin(self) -> None:
+        launch_cmd, launch_bin_path = validate._launch_cmd_from_args(
+            Path("F:/repo"),
+            type("Args", (), {"launch_cmd": "", "launch_bin": "target/release/fret-ui-gallery.exe"})(),
+        )
+
+        self.assertEqual(["F:/repo/target/release/fret-ui-gallery.exe"], [token.replace("\\", "/") for token in launch_cmd])
+        self.assertEqual("F:/repo/target/release/fret-ui-gallery.exe", str(launch_bin_path).replace("\\", "/"))
 
     def test_artifact_summary_prefers_threshold_bundle(self) -> None:
         with TemporaryDirectory() as td:
@@ -185,6 +204,8 @@ class EditorPaintContractValidateTests(unittest.TestCase):
 
         self.assertEqual(0, rc)
         self.assertEqual("unit-date", summary["date_tag"])
+        self.assertEqual(validate._default_launch_cmd(), summary["launch_cmd"])
+        self.assertIsNone(summary["launch_bin"])
 
     def test_non_dry_run_rejects_non_empty_out_dir_by_default(self) -> None:
         with TemporaryDirectory() as td:

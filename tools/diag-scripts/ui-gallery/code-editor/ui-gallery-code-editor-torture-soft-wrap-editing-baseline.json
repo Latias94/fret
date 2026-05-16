@@ -142,6 +142,10 @@
       "label": "ui-gallery-code-editor-torture-soft-wrap-editing-after"
     },
     {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-code-editor-torture-soft-wrap-editing-after"
+    },
+    {
       "type": "capture_screenshot",
       "label": "ui-gallery-code-editor-torture-soft-wrap-editing-after"
     }

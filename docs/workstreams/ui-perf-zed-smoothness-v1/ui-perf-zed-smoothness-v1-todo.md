@@ -421,6 +421,27 @@ Conventions:
     - Evidence: perf log entry `2026-02-09 21:14:30` (`ui-resize-probes` attempts=5 PASS).
     - Known gap: most UI gallery nodes are sized via the layout engine’s measure callback; follow up by aligning
       `TextService::measure`/`prepare` cache behavior so paint can reuse measurement work without re-shaping.
+  - [x] Fix wrapped-text correctness under live resize when cached flow and paint replay both stay eligible.
+    - User-visible failure: UI Gallery code-editor soft-wrap controls could visually overlap after a narrow resize
+      because text repainted with a multiline wrap while layout had reserved the old single-line height, and a stable
+      parent paint-cache key could replay stale child geometry.
+    - Mechanism-layer fix: `crates/fret-ui/src/layout/engine/flow.rs` no longer treats `TextWrap::Word` /
+      `TextWrap::Balance` min-content as max-content during flow construction, matching ADR 0251; paint-cache keys now
+      include a subtree geometry fingerprint that tracks child local rects and child fingerprints even when the parent
+      bounds stay stable.
+    - Gates:
+      `cargo test -p fret-ui tree::tests::interactive_resize_flow_rebuild::interactive_resize_cached_flow_remeasures_word_wrapped_text_height -- --nocapture`;
+      `cargo test -p fret-ui tree::tests::interactive_resize_flow_rebuild::interactive_resize_cached_flow_remeasures_kit_row_wrapped_text_height -- --nocapture`;
+      `cargo test -p fret-ui tree::tests::paint_cache:: -- --nocapture`.
+    - Diag evidence: `tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json`
+      now captures a layout sidecar after the final bundle; local evidence lives under
+      `target/fret-diag/code-editor-soft-wrap-resize-fix-2026-05-16b/sessions/1778917336764-71196`, with final bundle
+      `1778917961806-ui-gallery-code-editor-torture-soft-wrap-editing-after/bundle.schema2.json`, layout sidecar
+      `1778917961657-ui-gallery-code-editor-torture-soft-wrap-editing-after/layout.taffy.v1.json`, and screenshot
+      `screenshots/1778917961806-ui-gallery-code-editor-torture-soft-wrap-editing-after/window-4294967297-tick-132-frame-132.png`.
+    - Decision: this does not need a new workstream. Keep it inside this active resize/text/perf lane because the hard
+      contract owner is `fret-ui` text measurement plus retained paint-cache correctness, not the closed
+      code-editor-specific resize replay lane.
 - [ ] **P1.5 Editor canvas paint replay**: reduce editor-class `Canvas` paint cost (scene-op rebuild), aiming for
   “paint-only” frames under small-step resize/scroll.
   - Primary probes:
@@ -688,9 +709,10 @@ Conventions:
           without the repo-level closeout gates.
         - Post-sync verifier hard requirements:
           - both validation summaries must carry a non-empty `date_tag`;
-          - stored commands must match the Windows validation shape: release `fretboard-dev.exe` /
-            `fret-ui-gallery.exe`, standard prewarm/prelude hooks, `--reuse-launch` on direct `diag perf`, and the
-            overlay-disabled env set;
+          - stored commands must match the Windows validation shape: release `fretboard-dev.exe`, the default
+            inspectable cargo gallery launch (`cargo run -p fret-ui-gallery --release --features gallery-full`) or a
+            deliberate legacy `fret-ui-gallery.exe`, standard prewarm/prelude hooks, `--reuse-launch` on direct
+            `diag perf`, and the overlay-disabled env set;
           - baseline-validation direct `diag perf` commands must not include `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`;
           - the attribution directory must include paint-perf coverage, `code_editor_paint_perf`, and overlay-zero
             stats (`top_code_editor_torture_overlay_us=0` / `code_editor_paint_perf.max.us_torture_overlay=0`).

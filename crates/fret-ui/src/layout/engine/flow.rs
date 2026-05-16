@@ -777,11 +777,10 @@ fn build_flow_subtree_impl<H: UiHost>(
             let width_auto = matches!(props.layout.size.width, crate::element::Length::Auto);
             let height_auto = matches!(props.layout.size.height, crate::element::Length::Auto);
             let mut measured = width_auto || height_auto;
-            let mut min_content_width_as_max = measured
-                && matches!(
-                    wrap,
-                    fret_core::TextWrap::Word | fret_core::TextWrap::Balance
-                );
+            // ADR 0251: `TextWrap::Word`/`Balance` min-content is the longest unbreakable segment,
+            // not max-content. Let text measurement receive a real MinContent probe so flex rows
+            // can shrink word-wrapped text and reserve the resulting multiline height.
+            let mut min_content_width_as_max = false;
 
             if measured
                 && wrap == fret_core::TextWrap::None
@@ -843,11 +842,10 @@ fn build_flow_subtree_impl<H: UiHost>(
             let width_auto = matches!(props.layout.size.width, crate::element::Length::Auto);
             let height_auto = matches!(props.layout.size.height, crate::element::Length::Auto);
             let mut measured = width_auto || height_auto;
-            let mut min_content_width_as_max = measured
-                && matches!(
-                    wrap,
-                    fret_core::TextWrap::Word | fret_core::TextWrap::Balance
-                );
+            // ADR 0251: `TextWrap::Word`/`Balance` min-content is the longest unbreakable segment,
+            // not max-content. Let text measurement receive a real MinContent probe so flex rows
+            // can shrink word-wrapped text and reserve the resulting multiline height.
+            let mut min_content_width_as_max = false;
 
             if measured
                 && wrap == fret_core::TextWrap::None
@@ -909,11 +907,10 @@ fn build_flow_subtree_impl<H: UiHost>(
             let width_auto = matches!(props.layout.size.width, crate::element::Length::Auto);
             let height_auto = matches!(props.layout.size.height, crate::element::Length::Auto);
             let mut measured = width_auto || height_auto;
-            let mut min_content_width_as_max = measured
-                && matches!(
-                    wrap,
-                    fret_core::TextWrap::Word | fret_core::TextWrap::Balance
-                );
+            // ADR 0251: `TextWrap::Word`/`Balance` min-content is the longest unbreakable segment,
+            // not max-content. Let text measurement receive a real MinContent probe so flex rows
+            // can shrink word-wrapped text and reserve the resulting multiline height.
+            let mut min_content_width_as_max = false;
 
             if measured
                 && wrap == fret_core::TextWrap::None

@@ -33,8 +33,12 @@ dated `--dir target/fret-diag/editor-paint-contract-attribution-<date>-...`; use
 
 ```powershell
 cargo build -p fretboard-dev --release
-cargo build -p fret-ui-gallery --release --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
 ```
+
+The validation helpers default to launching the gallery through an inspectable cargo command:
+`cargo run -p fret-ui-gallery --release --features gallery-full`. This lets `diag` prove script
+`required_launch_features` before the app process starts. Only build `fret-ui-gallery.exe` separately when using the
+legacy `--launch-bin target/release/fret-ui-gallery.exe` override.
 
 ## Preflight
 
@@ -57,6 +61,9 @@ python tools/perf/diag_editor_paint_contract_validate.py `
 ```
 
 Run the release builds above first; the runner fails fast if the expected Windows binaries are missing.
+By default it requires only the release `fretboard-dev.exe` binary and launches the gallery through
+`cargo run -p fret-ui-gallery --release --features gallery-full`; pass `--launch-bin target/release/fret-ui-gallery.exe`
+only for a deliberate legacy direct-binary pass.
 Use `--dry-run` on non-target hosts to inspect the exact command plan without producing misleading local evidence.
 For non-dry-run validation, use a fresh `--date-tag` / `--out-dir`; the runner rejects an existing non-empty output
 directory by default so closeout evidence cannot accidentally mix stale dry-run or failed-run artifacts. Use
@@ -84,8 +91,9 @@ This verifier checks that both summaries carry a non-empty `date_tag`, that the 
 expected repeat/warmup shape, that every probe has `check.perf_thresholds.json` with `failures=[]`, that `diag stats
 --json` output exists for every worst bundle, and that the attribution pass includes `code_editor_paint_perf` coverage.
 It also rejects target summaries whose stored commands drift from the contract shape: resize must use the Windows
-code-editor resize suite plus release `fretboard-dev.exe` / `fret-ui-gallery.exe`, while the direct `diag perf` probes
-must use `--reuse-launch`, the standard font prewarm and reset-diagnostics prelude, `--json`, the release gallery
+code-editor resize suite plus release `fretboard-dev.exe` and either the default inspectable cargo gallery launch or the
+legacy release `fret-ui-gallery.exe`, while the direct `diag perf` probes must use `--reuse-launch`, the standard font
+prewarm and reset-diagnostics prelude, `--json`, the default inspectable cargo gallery launch or legacy release gallery
 binary, and the required overlay-disabled env set. The baseline-validation direct `diag perf` commands must not set
 `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`; that flag belongs to the attribution directory for direct probes. The resize
 helper may still collect its code-editor paint-perf fields internally.
@@ -101,8 +109,7 @@ python tools/perf/diag_resize_probes_gate.py `
   --attempts 3 `
   --repeat 7 `
   --warmup-frames 5 `
-  --fretboard-bin target/release/fretboard-dev.exe `
-  --launch-bin target/release/fret-ui-gallery.exe
+  --fretboard-bin target/release/fretboard-dev.exe
 ```
 
 Typical autoscroll:
@@ -127,7 +134,7 @@ target/release/fretboard-dev.exe diag perf `
   --env FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0 `
   --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
   --env FRET_DIAG_SEMANTICS=0 `
-  --launch -- target/release/fret-ui-gallery.exe
+  --launch -- cargo run -p fret-ui-gallery --release --features gallery-full
 ```
 
 Complex wheel:
@@ -152,7 +159,7 @@ target/release/fretboard-dev.exe diag perf `
   --env FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0 `
   --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 `
   --env FRET_DIAG_SEMANTICS=0 `
-  --launch -- target/release/fret-ui-gallery.exe
+  --launch -- cargo run -p fret-ui-gallery --release --features gallery-full
 ```
 
 ## Attribution Evidence

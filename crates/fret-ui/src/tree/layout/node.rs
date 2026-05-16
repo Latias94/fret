@@ -399,6 +399,7 @@ impl<H: UiHost> UiTree<H> {
                 // layout state so clean cache roots do not remain queued across stable frames.
                 self.clear_boundary_dirty_tracking_if_clean(node);
             }
+            self.recompute_paint_geometry_fingerprint(node);
         }
 
         size
@@ -511,6 +512,7 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
+        self.recompute_paint_geometry_fingerprint(node);
         Some(size)
     }
 

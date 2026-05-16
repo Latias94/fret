@@ -92,10 +92,46 @@ def _default_launch_bin() -> str:
     return "target/release/fret-ui-gallery.exe"
 
 
+def _default_launch_cmd() -> list[str]:
+    return [
+        "cargo",
+        "run",
+        "-p",
+        "fret-ui-gallery",
+        "--release",
+        "--features",
+        "gallery-full",
+    ]
+
+
+def _launch_cmd_from_args(workspace_root: Path, args: argparse.Namespace) -> tuple[list[str], Path | None]:
+    launch_cmd_arg = getattr(args, "launch_cmd", None)
+    if isinstance(launch_cmd_arg, list):
+        launch_cmd = [str(token) for token in launch_cmd_arg if str(token)]
+        if not launch_cmd:
+            raise ValueError("--launch-cmd requires at least one token")
+        return launch_cmd, None
+    if isinstance(launch_cmd_arg, str) and launch_cmd_arg.strip():
+        try:
+            launch_cmd = shlex.split(launch_cmd_arg)
+        except ValueError as exc:
+            raise ValueError(f"invalid --launch-cmd: {exc}") from exc
+        if not launch_cmd:
+            raise ValueError("--launch-cmd requires at least one token")
+        return launch_cmd, None
+
+    launch_bin_raw = str(getattr(args, "launch_bin", "")).strip()
+    if launch_bin_raw:
+        launch_bin_path = _resolve_workspace_path(workspace_root, launch_bin_raw)
+        return [str(launch_bin_path)], launch_bin_path
+
+    return _default_launch_cmd(), None
+
+
 def _diag_perf_command(
     *,
     fretboard_bin: str,
-    launch_bin: str,
+    launch_cmd: list[str],
     script: str,
     out_dir: str,
     repeat: int,
@@ -132,7 +168,7 @@ def _diag_perf_command(
         envs.append("FRET_CODE_EDITOR_DIAG_PAINT_PERF=1")
     for env in envs:
         cmd += ["--env", env]
-    cmd += ["--launch", "--", launch_bin]
+    cmd += ["--launch", "--", *launch_cmd]
     return cmd
 
 
@@ -140,7 +176,7 @@ def build_plan(
     *,
     python_bin: str,
     fretboard_bin: str,
-    launch_bin: str,
+    launch_cmd: list[str],
     out_dir: str,
     resize_attempts: int,
     resize_repeat: int,
@@ -188,8 +224,8 @@ def build_plan(
                 str(resize_repeat),
                 "--warmup-frames",
                 str(warmup_frames),
-                "--launch-bin",
-                launch_bin,
+                "--launch-cmd",
+                shlex.join(launch_cmd),
             ],
         }
     )
@@ -200,7 +236,7 @@ def build_plan(
             "wants_stats": True,
             "cmd": _diag_perf_command(
                 fretboard_bin=fretboard_bin,
-                launch_bin=launch_bin,
+                launch_cmd=launch_cmd,
                 script=TYPICAL_SCRIPT,
                 out_dir=f"{out_dir}/typical-autoscroll",
                 repeat=typical_repeat,
@@ -217,7 +253,7 @@ def build_plan(
             "wants_stats": True,
             "cmd": _diag_perf_command(
                 fretboard_bin=fretboard_bin,
-                launch_bin=launch_bin,
+                launch_cmd=launch_cmd,
                 script=COMPLEX_WHEEL_SCRIPT,
                 out_dir=f"{out_dir}/complex-wheel",
                 repeat=complex_repeat,
@@ -252,9 +288,12 @@ def _validate_inputs(workspace_root: Path, args: argparse.Namespace) -> list[str
         if not _resolve_workspace_path(workspace_root, rel).is_file():
             missing.append(rel)
     if not bool(args.dry_run):
-        for rel in [str(args.fretboard_bin), str(args.launch_bin)]:
+        for rel in [str(args.fretboard_bin)]:
             if not _resolve_workspace_path(workspace_root, rel).is_file():
                 missing.append(rel)
+        launch_bin_raw = str(getattr(args, "launch_bin", "")).strip()
+        if launch_bin_raw and not _resolve_workspace_path(workspace_root, launch_bin_raw).is_file():
+            missing.append(launch_bin_raw)
     return missing
 
 
@@ -370,7 +409,23 @@ def main() -> int:
     ap.add_argument("--out-dir", default="")
     ap.add_argument("--python-bin", default=sys.executable)
     ap.add_argument("--fretboard-bin", default=_default_fretboard_bin())
-    ap.add_argument("--launch-bin", default=_default_launch_bin())
+    ap.add_argument(
+        "--launch-bin",
+        default="",
+        help=(
+            "Legacy direct binary launch. Prefer the default cargo launch, or pass --launch-cmd as "
+            "the final option, so fret-diag can prove required_launch_features."
+        ),
+    )
+    ap.add_argument(
+        "--launch-cmd",
+        default="",
+        help=(
+            "Shell-like launch command forwarded after `diag perf --launch --`. Quote the whole "
+            "value when passing spaces. Defaults to `cargo run -p fret-ui-gallery --release "
+            "--features gallery-full`."
+        ),
+    )
     ap.add_argument("--resize-attempts", type=int, default=3)
     ap.add_argument("--resize-repeat", type=int, default=7)
     ap.add_argument("--typical-repeat", type=int, default=15)
@@ -423,6 +478,11 @@ def main() -> int:
     workspace_root = _workspace_root()
     out_dir = str(args.out_dir).strip() or _default_out_dir(str(args.date_tag))
     out_dir_path = _resolve_workspace_path(workspace_root, out_dir)
+    try:
+        launch_cmd, launch_bin_path = _launch_cmd_from_args(workspace_root, args)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     if (
         str(args.target_profile) == TARGET_PROFILE
@@ -460,7 +520,7 @@ def main() -> int:
     plan = build_plan(
         python_bin=str(args.python_bin),
         fretboard_bin=str(args.fretboard_bin),
-        launch_bin=str(args.launch_bin),
+        launch_cmd=launch_cmd,
         out_dir=out_dir,
         resize_attempts=int(args.resize_attempts),
         resize_repeat=int(args.resize_repeat),
@@ -482,6 +542,8 @@ def main() -> int:
             "target_profile": str(args.target_profile),
             "date_tag": str(args.date_tag),
             "out_dir": out_dir,
+            "launch_bin": str(launch_bin_path) if launch_bin_path is not None else None,
+            "launch_cmd": launch_cmd,
             "with_paint_perf": bool(args.with_paint_perf),
             "stats_enabled": not bool(args.skip_stats),
             "steps": plan,
@@ -589,6 +651,8 @@ def main() -> int:
         "target_profile": str(args.target_profile),
         "date_tag": str(args.date_tag),
         "out_dir": str(out_dir_path),
+        "launch_bin": str(launch_bin_path) if launch_bin_path is not None else None,
+        "launch_cmd": launch_cmd,
         "with_paint_perf": bool(args.with_paint_perf),
         "stats_enabled": not bool(args.skip_stats),
         "steps": step_results,
