@@ -25,9 +25,10 @@ pub use runtime::{
 
 pub(crate) use access::action_route_fallback_roots;
 pub(crate) use access::{
-    clear_timer_target, is_pressed_pressable, record_timer_target, record_timer_target_node,
-    record_transient_event, set_pressed_pressable, set_pressed_pressable_with_node, timer_target,
-    update_hovered_hover_region, update_hovered_hover_region_with_node, update_hovered_pressable,
+    clear_timer_target, is_pressed_pressable, observed_deps_presence_copy_into,
+    record_timer_target, record_timer_target_node, record_transient_event, set_pressed_pressable,
+    set_pressed_pressable_with_node, timer_target, update_hovered_hover_region,
+    update_hovered_hover_region_with_node, update_hovered_pressable,
     update_hovered_pressable_raw_below_barrier_with_node, update_hovered_pressable_raw_with_node,
     update_hovered_pressable_with_node, with_observed_deps_for_element, with_window_state,
 };

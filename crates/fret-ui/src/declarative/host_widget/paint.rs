@@ -97,7 +97,9 @@ impl ElementHostWidget {
 
         let debug_enabled = cx.tree.debug_enabled();
         let total_started = debug_enabled.then(Instant::now);
-        let (models_len, models_loop, globals_len, globals_loop) =
+        let observed_deps_presence = cx.tree.paint_observed_deps_presence_contains(self.element);
+        let should_query_observed_deps = observed_deps_presence.unwrap_or(true);
+        let (models_len, models_loop, globals_len, globals_loop) = if should_query_observed_deps {
             crate::elements::with_observed_deps_for_element(
                 cx.app,
                 window,
@@ -117,7 +119,15 @@ impl ElementHostWidget {
 
                     (models.len(), models_loop, globals.len(), globals_loop)
                 },
-            );
+            )
+        } else {
+            (
+                0,
+                debug_enabled.then(Default::default),
+                0,
+                debug_enabled.then(Default::default),
+            )
+        };
 
         if debug_enabled {
             let total_elapsed = total_started.map(|started| started.elapsed());

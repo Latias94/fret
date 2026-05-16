@@ -500,7 +500,10 @@ the missing Windows RTX4090 validation artifacts.
    `target/fret-diag/editor-paint-contract-post-observed-deps-fastpath-20260516-typical-r3-cargo`,
    `target/fret-diag/editor-paint-contract-post-observed-deps-fastpath-20260516-complex-wheel-r3-cargo`, and
    `target/fret-diag/editor-paint-contract-post-observed-deps-fastpath-20260516-resize-jitter-r3-cargo`. That pass is
-   still evidence-only; a baseline decision requires a deliberate re-seed rather than using local machine evidence to
+   still evidence-only. A later local pass-level presence snapshot moves the typical autoscroll observed model/global
+   replay p95 from `24/23us` to `4/4us`
+   (`target/fret-diag/paint-observed-deps-presence-snapshot-typical-r3/1778921262429/stats.json`), but this remains
+   macOS M4 evidence. A baseline decision requires a deliberate re-seed rather than using local machine evidence to
    loosen or silently update thresholds.
 4. Keep Linux and any other non-Windows/macOS machine profiles explicit until a real Linux runner/profile and checked-in contract baseline exist. The current `ui-code-editor-resize-probes.linux-local.v1.json` export is smoke-only and does not close the gap.
 5. The current WSL code-editor resize smoke gate still times out on the current head after rebuild, with
@@ -527,8 +530,9 @@ renderer-side owner slice without loosening baselines, the `WindowedRowsSurface`
 verified on formal bundles, and `paint_widget_hotspot_summary` narrows the remaining editor paint owner to generic
 paint-widget aggregate overhead rather than Canvas wrapper, renderer payload, or code-editor row replay. Root-level
 host-widget subphase summaries now make that owner measurable, the first lookup-slimming slice is directionally
-positive, and the observed-deps presence-set fast path identifies and short-circuits the dominant empty lookup case.
-The same-mouth editor paint evidence path has been restored and the full three-probe post-fast-path pass is complete:
+positive, the observed-deps presence-set fast path identifies the dominant empty lookup case, and the paint-pass
+presence snapshot now keeps those empty siblings out of the runtime lookup path. The same-mouth editor paint evidence
+path has been restored and the full three-probe post-fast-path pass is complete:
 typical total/paint p95 `850/624us`, complex wheel `1115/838us`, and resize jitter `1563/631us`. Keep baselines
 unchanged from this macOS M4 evidence. Follow-up attribution now shows the Canvas wrapper itself is not the owner:
 Canvas-minus-`WindowedRowsSurface` callback p95 is only `2..4us`, while callback-minus-row-paint p95 is

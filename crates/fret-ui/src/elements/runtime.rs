@@ -1535,6 +1535,17 @@ impl WindowElementState {
         self.observed_deps_next.insert(element);
     }
 
+    pub(crate) fn observed_deps_presence_copy_into(&self, out: &mut HashSet<GlobalElementId>) {
+        out.clear();
+        let required = self
+            .observed_deps_rendered
+            .len()
+            .saturating_add(self.observed_deps_next.len());
+        out.reserve(required);
+        out.extend(self.observed_deps_rendered.iter().copied());
+        out.extend(self.observed_deps_next.iter().copied());
+    }
+
     pub(crate) fn touch_observed_layout_queries_for_element_if_recorded(
         &mut self,
         element: GlobalElementId,
@@ -3127,6 +3138,24 @@ mod tests {
         state.prepare_for_frame(FrameId(3), 0);
         assert!(state.observed_deps_rendered.contains(&element));
         assert!(state.observed_globals_rendered.contains_key(&element));
+    }
+
+    #[test]
+    fn observed_deps_presence_snapshot_includes_rendered_and_next_elements() {
+        let mut state = WindowElementState::default();
+        let rendered = GlobalElementId(123);
+        let next = GlobalElementId(456);
+
+        state.prepare_for_frame(FrameId(1), 0);
+        state.record_observed_deps_presence(rendered);
+        state.prepare_for_frame(FrameId(2), 0);
+        state.record_observed_deps_presence(next);
+
+        let mut snapshot = HashSet::new();
+        state.observed_deps_presence_copy_into(&mut snapshot);
+        assert!(snapshot.contains(&rendered));
+        assert!(snapshot.contains(&next));
+        assert_eq!(snapshot.len(), 2);
     }
 
     #[test]

@@ -302,6 +302,8 @@ pub struct UiTree<H: UiHost> {
     scratch_pending_invalidations: HashMap<NodeId, u8>,
     scratch_node_stack: Vec<NodeId>,
     scratch_element_nodes: Vec<(GlobalElementId, NodeId)>,
+    scratch_paint_observed_deps_presence: HashSet<GlobalElementId>,
+    scratch_paint_observed_deps_presence_active: bool,
     scratch_bounds_records: Vec<(GlobalElementId, Rect)>,
     scratch_visual_bounds_records: Vec<(GlobalElementId, Rect)>,
     measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics,

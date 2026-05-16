@@ -1,6 +1,14 @@
 use super::*;
 
 impl<H: UiHost> UiTree<H> {
+    pub(crate) fn paint_observed_deps_presence_contains(
+        &self,
+        element: GlobalElementId,
+    ) -> Option<bool> {
+        self.scratch_paint_observed_deps_presence_active
+            .then(|| self.scratch_paint_observed_deps_presence.contains(&element))
+    }
+
     pub(crate) fn request_redraw_coalesced(&mut self, app: &mut H) {
         let Some(window) = self.window else {
             return;

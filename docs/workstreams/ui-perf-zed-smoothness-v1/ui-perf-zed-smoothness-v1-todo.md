@@ -690,17 +690,26 @@ Conventions:
           `paint_collapse_observations_time_us` p95 from `52us` to `17..18us`, while row
           replay/store remains `289/0`. Treat the run-1 total-frame outlier (`1715us`) as local
           scheduler/noise evidence and do not update baselines.
+        - Local slice: paint now prepares an observed-deps presence snapshot once per `UiTree`
+          paint pass, and `ElementHostWidget::paint_impl` skips the runtime empty-deps lookup
+          path when that active snapshot says the element has no declarative model/global
+          observations. Same-script local typical evidence in
+          `target/fret-diag/paint-observed-deps-presence-snapshot-typical-r3/1778921262429/stats.json`
+          moves `paint_host_widget_observed_models_time_us` / `paint_host_widget_observed_globals_time_us`
+          p95 from `24/23us` to `4/4us`. This is a baseline-neutral host-widget traversal cleanup,
+          not Windows RTX4090 closeout evidence.
         - Formal owner decision from the three-probe editor contract remains unchanged: the
           dominant residual is still `paint.widget` / Canvas aggregate work, with renderer text
-          prepare visible but not yet the primary limiter. The next implementation slice should be
-          Canvas/paint replay or traversal compaction, not glyph/text-index residency.
+          prepare visible but not yet the primary limiter. The next implementation slice should
+          inspect remaining host-widget instance lookup plus paint cache / visual-bounds
+          bookkeeping before any glyph/text-index residency or broad display-list rewrite.
         - Near-term local owner order:
           1. Re-run the three editor paint probes locally after any host-widget cleanup to confirm
              the typical-only smoke generalizes to complex wheel and resize jitter.
           2. Attribute the remaining outer paint traversal cost before changing behavior, especially
-             `paint_collapse_observations_time_us` and observation-index root collapse. Consider
-             scratch-map reuse or recording already-collapsed view-cache-root observations only if
-             bundles keep this above noise.
+             `paint_host_widget_instance_lookup_time_us`, paint-cache key / replay bookkeeping, and
+             visual-bounds flush. Consider scratch-map reuse or recording already-collapsed
+             view-cache-root observations only if bundles keep this above noise.
           3. Audit policy/component focus-visible lookups in ecosystem crates and only short-circuit
              the obvious `focused && focus_visible` cases with targeted tests; this is a small
              traversal cleanup, not a core contract change.

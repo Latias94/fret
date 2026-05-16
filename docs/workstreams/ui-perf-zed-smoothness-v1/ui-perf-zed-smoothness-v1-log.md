@@ -14947,3 +14947,62 @@ Decision:
   evidence only.
 - The next local optimization should still be evidence-first and should not target a broad row replay
   or `WindowedRowsSurface` display-list rewrite unless a future bundle changes the owner boundary.
+
+## 2026-05-16 16:55:00 +0800 (paint observed-deps presence snapshot)
+
+Question:
+- Can `ElementHostWidget::paint_impl` avoid entering `ElementRuntime` for the dominant empty
+  declarative observed-deps replay case, while preserving paint-time observation recording?
+
+Change:
+- `UiTree::paint_all` and the direct `UiTree::paint` entrypoint now prepare a paint-pass
+  snapshot of elements with declarative observed model/global dependencies.
+- `ElementHostWidget::paint_impl` consults that snapshot before calling
+  `with_observed_deps_for_element`; when the active snapshot says the element has no recorded
+  declarative dependencies, the host records the same empty debug counters without entering the
+  runtime map lookup path.
+- Manual `PaintCx` / no-active-snapshot paths still fall back to the old runtime query. This
+  preserves tests and special callers that construct paint contexts outside the normal tree paint
+  entrypoints.
+
+Validation:
+```bash
+cargo fmt -p fret-ui --check
+cargo check -p fret-ui
+cargo nextest run -p fret-ui observed_deps_presence_snapshot_includes_rendered_and_next_elements observed_deps_presence_tracks_rendered_and_touched_observations canvas_paint_observation_replays_without_runtime_empty_deps_lookup_for_empty_siblings --no-fail-fast
+cargo nextest run -p fret-ui -E 'test(~paint) | test(~view_cache) | test(~observation) | test(~canvas)' --no-fail-fast
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-typical.json \
+  --repeat 3 --warmup-frames 5 --reuse-launch \
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_A11Y_DISABLE=1 \
+  --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --sort time --top 15 --json \
+  --dir target/fret-diag/paint-observed-deps-presence-snapshot-typical-r3 \
+  --launch -- cargo run -p fret-ui-gallery --release \
+    --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+```
+
+Evidence:
+| comparison | bundle/stats | total p95 | paint p95 | paint.widget p95 | observed models p95 | observed globals p95 | instance lookup p95 | renderer text/encode/upload p95 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| before | `target/fret-diag/text-pin-bucket-delta-generation-typical-r3/1778918296580/stats.json` | `637us` | `422us` | `269us` | `24us` | `23us` | `39us` | `328/133/68us` |
+| after | `target/fret-diag/paint-observed-deps-presence-snapshot-typical-r3/1778921262429/stats.json` | `673us` | `423us` | `263us` | `4us` | `4us` | `42us` | `324/150/85us` |
+
+Decision:
+- Keep this as a narrow mechanism-layer paint traversal optimization. It turns the already-known
+  empty observed-deps count shape into a pass-level presence check and drops local observed
+  model/global replay p95 from roughly `24/23us` to `4/4us`.
+- Do not update checked-in baselines from this macOS M4 smoke. Total-frame p95 moved with
+  prepaint/renderer noise, while the targeted host-widget subphase clearly improved.
+- The Windows RTX4090 editor paint closeout remains a target-machine TODO. This local slice is not
+  closeout evidence and must not drive a baseline re-seed.
+- Next local owner order: first inspect remaining `paint_host_widget_instance_lookup_time_us` and
+  paint-cache/visual-bounds bookkeeping; then revisit renderer text/encode only if fresh
+  attribution shows it dominates. Do not start a broad row replay, Canvas op-cache, or
+  `WindowedRowsSurface` display-list rewrite from this evidence alone.
