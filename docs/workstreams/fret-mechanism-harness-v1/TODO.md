@@ -574,6 +574,11 @@ date: 2026-05-12
     key-context use.
 - [ ] Continue `ui-gallery-motion-pilot` to find the next runtime-visible harness or component
   boundary issue.
+  - Progress: the next Sonner gate found a real overlay policy defect. A local named Sonner
+    Toaster and the shell's unnamed Toaster both rendered the same named toast, creating duplicate
+    `toast-entry-1`/`toast-entry-2` semantics `test_id`s. `fret-ui-kit` now scopes unnamed toast
+    layers to unnamed toasts and named layers to matching `toaster_id`s; the focused Sonner runtime
+    gate passes and `diag test-ids` reports zero duplicates.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.

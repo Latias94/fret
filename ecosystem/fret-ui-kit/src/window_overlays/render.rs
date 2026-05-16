@@ -2245,8 +2245,13 @@ pub fn render<H: UiHost + 'static>(
                     .unwrap_or_default();
 
                 let mut toasts = toasts;
-                if let Some(toaster_id) = toaster_id.as_ref() {
-                    toasts.retain(|t| t.toaster_id.as_ref() == Some(toaster_id));
+                match toaster_id.as_ref() {
+                    Some(toaster_id) => {
+                        toasts.retain(|t| t.toaster_id.as_ref() == Some(toaster_id));
+                    }
+                    None => {
+                        toasts.retain(|t| t.toaster_id.is_none());
+                    }
                 }
 
                 if toasts.is_empty() {

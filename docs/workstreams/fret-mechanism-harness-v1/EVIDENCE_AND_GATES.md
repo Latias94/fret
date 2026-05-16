@@ -2473,6 +2473,34 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `python tools/check_shadcn_internal_slots.py`
   - source-hygiene gate results:
     passed, 4 tests and a clean source scan.
+- Sonner named-toaster scoping:
+  - invariant:
+    an unnamed Toaster renders only unnamed toasts, while a named Toaster renders only toasts with
+    the matching `toaster_id`; a single toast store entry must not appear in multiple live toast
+    overlay stacks.
+  - finding:
+    `ui-gallery-motion-pilot` found duplicate `toast-entry-1` and `toast-entry-2` semantics
+    `test_id`s after the Sonner interrupt gate because the shell Toaster rendered page-local
+    named toasts in addition to the page-local named Toaster.
+  - implementation anchors:
+    `ecosystem/fret-ui-kit/src/window_overlays/render.rs` and
+    `ecosystem/fret-ui-kit/src/window_overlays/tests/toast.rs`.
+  - focused unit gate:
+    `cargo test --profile dev-fast -p fret-ui-kit --lib toast_layers_scope_named_toasts_to_matching_toaster_id -- --nocapture`
+  - focused unit result:
+    passed.
+  - focused runtime gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-interrupt-fixed-frame-delta.json --dir .fret/diag/runs/ui-gallery-sonner-interrupt-after-scope-fix --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime result:
+    passed, run id `1778939842586`, share pack
+    `.fret/diag/runs/ui-gallery-sonner-interrupt-after-scope-fix/share/1778939842586.zip`.
+  - duplicate audit:
+    `target/dev-fast/fretboard-dev.exe diag test-ids .fret/diag/runs/ui-gallery-sonner-interrupt-after-scope-fix --json --max-test-ids 20`
+  - duplicate audit result:
+    `duplicate_test_ids_total=0`; `toast-entry-1` and `toast-entry-2` each have `count=1`.
+  - lint evidence:
+    `.fret/diag/runs/ui-gallery-sonner-interrupt-after-scope-fix/1778939851780-ui-gallery-sonner-interrupt-fixed-frame-delta/check.lint.json`
+    reports `error_issues=0`.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`
