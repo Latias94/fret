@@ -18,6 +18,7 @@ pub(crate) struct TextAtlasRuntimeState {
     color_atlas: GlyphAtlas,
     subpixel_atlas: GlyphAtlas,
     atlas_bind_group_layout: wgpu::BindGroupLayout,
+    reset_generation: u64,
 }
 
 impl TextAtlasRuntimeState {
@@ -66,6 +67,7 @@ impl TextAtlasRuntimeState {
             color_atlas,
             subpixel_atlas,
             atlas_bind_group_layout,
+            reset_generation: 0,
         }
     }
 
@@ -73,6 +75,7 @@ impl TextAtlasRuntimeState {
         self.mask_atlas.reset();
         self.color_atlas.reset();
         self.subpixel_atlas.reset();
+        self.reset_generation = self.reset_generation.saturating_add(1);
     }
 
     pub(super) fn begin_frame_diagnostics(&mut self) {
@@ -142,6 +145,10 @@ impl TextAtlasRuntimeState {
             ^ self.subpixel_atlas.revision().rotate_left(2)
     }
 
+    pub(super) fn reset_generation(&self) -> u64 {
+        self.reset_generation
+    }
+
     #[cfg(not(target_arch = "wasm32"))]
     pub(super) fn mask_dimensions(&self) -> (u32, u32) {
         self.dimensions(AtlasSelector::Mask)
@@ -166,6 +173,10 @@ impl TextAtlasRuntimeState {
         self.atlas_mut(selector)
     }
 
+    pub(super) fn contains_key(&self, key: GlyphKey) -> bool {
+        self.atlas_for_key(key).contains_key(key)
+    }
+
     pub(super) fn prepared_bounds_for_key(
         &mut self,
         key: GlyphKey,
@@ -181,11 +192,6 @@ impl TextAtlasRuntimeState {
 
     pub(super) fn touch_if_present(&mut self, key: GlyphKey, epoch: u64) -> bool {
         self.atlas_mut_for_key(key).touch_if_present(key, epoch)
-    }
-
-    #[cfg(test)]
-    pub(super) fn contains_key(&self, key: GlyphKey) -> bool {
-        self.atlas_for_key(key).contains_key(key)
     }
 
     pub(super) fn uv_for_key(&self, key: GlyphKey) -> Option<(u16, [f32; 4])> {

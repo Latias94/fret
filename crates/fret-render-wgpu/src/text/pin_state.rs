@@ -4,6 +4,7 @@ pub(crate) struct TextPinState {
     mask: Vec<Vec<GlyphKey>>,
     color: Vec<Vec<GlyphKey>>,
     subpixel: Vec<Vec<GlyphKey>>,
+    atlas_reset_generation: u64,
 }
 
 impl TextPinState {
@@ -12,6 +13,7 @@ impl TextPinState {
             mask: vec![Vec::new(); ring_len],
             color: vec![Vec::new(); ring_len],
             subpixel: vec![Vec::new(); ring_len],
+            atlas_reset_generation: 0,
         }
     }
 
@@ -21,6 +23,14 @@ impl TextPinState {
         self.subpixel.iter_mut().for_each(|bucket| bucket.clear());
     }
 
+    pub(crate) fn clear_for_atlas_reset_generation(&mut self, generation: u64) {
+        if self.atlas_reset_generation == generation {
+            return;
+        }
+        self.clear();
+        self.atlas_reset_generation = generation;
+    }
+
     pub(crate) fn ring_len(&self) -> usize {
         self.mask
             .len()
@@ -28,26 +38,26 @@ impl TextPinState {
             .min(self.subpixel.len())
     }
 
-    pub(crate) fn take_bucket(
-        &mut self,
-        bucket: usize,
-    ) -> (Vec<GlyphKey>, Vec<GlyphKey>, Vec<GlyphKey>) {
-        (
-            std::mem::take(&mut self.mask[bucket]),
-            std::mem::take(&mut self.color[bucket]),
-            std::mem::take(&mut self.subpixel[bucket]),
-        )
+    pub(crate) fn bucket(&self, bucket: usize) -> Option<(&[GlyphKey], &[GlyphKey], &[GlyphKey])> {
+        if bucket >= self.ring_len() {
+            return None;
+        }
+        Some((
+            &self.mask[bucket],
+            &self.color[bucket],
+            &self.subpixel[bucket],
+        ))
     }
 
-    pub(crate) fn append_bucket(
+    pub(crate) fn replace_bucket(
         &mut self,
         bucket: usize,
-        mut mask: Vec<GlyphKey>,
-        mut color: Vec<GlyphKey>,
-        mut subpixel: Vec<GlyphKey>,
+        mask: Vec<GlyphKey>,
+        color: Vec<GlyphKey>,
+        subpixel: Vec<GlyphKey>,
     ) {
-        self.mask[bucket].append(&mut mask);
-        self.color[bucket].append(&mut color);
-        self.subpixel[bucket].append(&mut subpixel);
+        self.mask[bucket] = mask;
+        self.color[bucket] = color;
+        self.subpixel[bucket] = subpixel;
     }
 }

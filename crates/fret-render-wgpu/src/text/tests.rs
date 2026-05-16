@@ -111,6 +111,25 @@ fn rasterized_pending_upload_bytes(
     pending_upload_bytes_for_key(text, key)
 }
 
+fn scene_with_text(text_blob: fret_core::TextBlobId) -> fret_core::Scene {
+    let mut scene = fret_core::Scene::default();
+    scene.push(fret_core::SceneOp::Text {
+        order: fret_core::DrawOrder(0),
+        origin: fret_core::Point::new(Px(0.0), Px(0.0)),
+        text: text_blob,
+        paint: fret_core::Paint::Solid(fret_core::Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0,
+        })
+        .into(),
+        outline: None,
+        shadow: None,
+    });
+    scene
+}
+
 fn reset_bundled_only_font_runtime(text: &mut super::TextSystem) {
     text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
@@ -297,6 +316,41 @@ fn text_blob_key_includes_font_fallback_policy() {
     let k0 = TextBlobKey::new("hello", &base, constraints, 1);
     let k1 = TextBlobKey::new("hello", &base, constraints, 2);
     assert_ne!(k0, k1);
+}
+
+#[test]
+fn prepare_for_scene_retries_retained_keys_missing_from_reset_atlas() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut text = super::TextSystem::new(&ctx.device);
+    let style = TextStyle {
+        size: Px(16.0),
+        ..Default::default()
+    };
+    let (blob_id, _) = text.prepare(
+        "Retained atlas pin retry",
+        &style,
+        TextConstraints::default(),
+    );
+    let key = first_glyph_key_for_blob(&text, blob_id);
+    let scene = scene_with_text(blob_id);
+
+    text.prepare_for_scene(&scene, 0);
+    assert!(
+        text.atlas_runtime.contains_key(key),
+        "initial prepare should cache the visible text glyph"
+    );
+
+    text.atlas_runtime.reset();
+    assert!(
+        !text.atlas_runtime.contains_key(key),
+        "test setup should remove the cached glyph while leaving the pin bucket populated"
+    );
+
+    text.prepare_for_scene(&scene, 3);
+    assert!(
+        text.atlas_runtime.contains_key(key),
+        "same-slot prepare should retry retained keys that are no longer present in the atlas"
+    );
 }
 
 #[test]

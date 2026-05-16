@@ -150,6 +150,47 @@ impl GlyphKeyBuckets {
             self.subpixel.into_iter().collect(),
         )
     }
+
+    pub(super) fn retain_delta_from_existing(
+        self,
+        existing_mask: &[GlyphKey],
+        existing_color: &[GlyphKey],
+        existing_subpixel: &[GlyphKey],
+    ) -> GlyphPinBucketDelta {
+        let (retain_mask, add_mask, remove_mask) = bucket_delta(self.mask, existing_mask);
+        let (retain_color, add_color, remove_color) = bucket_delta(self.color, existing_color);
+        let (retain_subpixel, add_subpixel, remove_subpixel) =
+            bucket_delta(self.subpixel, existing_subpixel);
+
+        GlyphPinBucketDelta {
+            retained: (retain_mask, retain_color, retain_subpixel),
+            added: (add_mask, add_color, add_subpixel),
+            removed: (remove_mask, remove_color, remove_subpixel),
+        }
+    }
+}
+
+pub(super) struct GlyphPinBucketDelta {
+    pub(super) retained: (Vec<GlyphKey>, Vec<GlyphKey>, Vec<GlyphKey>),
+    pub(super) added: (Vec<GlyphKey>, Vec<GlyphKey>, Vec<GlyphKey>),
+    pub(super) removed: (Vec<GlyphKey>, Vec<GlyphKey>, Vec<GlyphKey>),
+}
+
+fn bucket_delta(
+    mut new_keys: HashSet<GlyphKey>,
+    existing: &[GlyphKey],
+) -> (Vec<GlyphKey>, Vec<GlyphKey>, Vec<GlyphKey>) {
+    let mut retained = Vec::new();
+    let mut removed = Vec::new();
+    for &key in existing {
+        if new_keys.remove(&key) {
+            retained.push(key);
+        } else {
+            removed.push(key);
+        }
+    }
+    let added = new_keys.into_iter().collect();
+    (retained, added, removed)
 }
 
 #[derive(Debug, Clone, Default)]
@@ -240,6 +281,43 @@ mod tests {
         assert_eq!(mask.len(), 1);
         assert_eq!(color.len(), 1);
         assert_eq!(subpixel.len(), 1);
+    }
+
+    #[test]
+    fn glyph_key_buckets_split_delta_from_existing_bucket() {
+        let [color_retain, subpixel_retain, mask_retain] =
+            GlyphKey::lookup_keys(face(), 1, 16.0f32.to_bits(), 0, 0);
+        let [color_add, subpixel_add, mask_add] =
+            GlyphKey::lookup_keys(face(), 2, 16.0f32.to_bits(), 0, 0);
+        let [color_remove, subpixel_remove, mask_remove] =
+            GlyphKey::lookup_keys(face(), 3, 16.0f32.to_bits(), 0, 0);
+
+        let mut buckets = GlyphKeyBuckets::default();
+        buckets.insert(mask_retain);
+        buckets.insert(mask_add);
+        buckets.insert(color_retain);
+        buckets.insert(color_add);
+        buckets.insert(subpixel_retain);
+        buckets.insert(subpixel_add);
+
+        let delta = buckets.retain_delta_from_existing(
+            &[mask_retain, mask_remove],
+            &[color_retain, color_remove],
+            &[subpixel_retain, subpixel_remove],
+        );
+
+        assert_eq!(delta.retained.0, vec![mask_retain]);
+        assert_eq!(delta.retained.1, vec![color_retain]);
+        assert_eq!(delta.retained.2, vec![subpixel_retain]);
+        assert_eq!(delta.removed.0, vec![mask_remove]);
+        assert_eq!(delta.removed.1, vec![color_remove]);
+        assert_eq!(delta.removed.2, vec![subpixel_remove]);
+        assert_eq!(delta.added.0.len(), 1);
+        assert_eq!(delta.added.1.len(), 1);
+        assert_eq!(delta.added.2.len(), 1);
+        assert!(delta.added.0.contains(&mask_add));
+        assert!(delta.added.1.contains(&color_add));
+        assert!(delta.added.2.contains(&subpixel_add));
     }
 }
 
@@ -743,7 +821,6 @@ impl GlyphAtlas {
         })
     }
 
-    #[cfg(test)]
     pub(super) fn contains_key(&self, key: GlyphKey) -> bool {
         self.glyphs.contains_key(&key)
     }

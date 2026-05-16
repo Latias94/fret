@@ -33,12 +33,35 @@ impl TextSystem {
         }
         let bucket = (frame_index as usize) % ring_len;
         let epoch = frame_index;
+        self.pin_state
+            .clear_for_atlas_reset_generation(self.atlas_runtime.reset_generation());
 
-        self.release_pin_bucket(bucket);
         let pinned_keys = self.collect_scene_pinned_keys(scene);
-        let (new_mask, new_color, new_subpixel) = pinned_keys.into_pin_bucket();
-        self.prewarm_pin_bucket(&new_mask, &new_color, &new_subpixel, epoch);
-        self.activate_pin_bucket(bucket, new_mask, new_color, new_subpixel);
+        let Some((old_mask, old_color, old_subpixel)) = self.pin_state.bucket(bucket) else {
+            return;
+        };
+        let delta = pinned_keys.retain_delta_from_existing(old_mask, old_color, old_subpixel);
+        let (retain_mask, retain_color, retain_subpixel) = delta.retained;
+        let (mut add_mask, mut add_color, mut add_subpixel) = delta.added;
+        let (remove_mask, remove_color, remove_subpixel) = delta.removed;
+
+        self.atlas_runtime
+            .dec_pin_bucket(&remove_mask, &remove_color, &remove_subpixel);
+        self.prewarm_pin_bucket(&add_mask, &add_color, &add_subpixel, epoch);
+
+        add_mask.retain(|key| self.atlas_runtime.contains_key(*key));
+        add_color.retain(|key| self.atlas_runtime.contains_key(*key));
+        add_subpixel.retain(|key| self.atlas_runtime.contains_key(*key));
+
+        self.atlas_runtime
+            .inc_pin_bucket(&add_mask, &add_color, &add_subpixel);
+
+        self.pin_state.replace_bucket(
+            bucket,
+            append_pin_bucket(retain_mask, add_mask),
+            append_pin_bucket(retain_color, add_color),
+            append_pin_bucket(retain_subpixel, add_subpixel),
+        );
     }
 
     pub(super) fn ensure_glyph_in_atlas(&mut self, key: GlyphKey, epoch: u64) {
@@ -107,12 +130,6 @@ impl TextSystem {
         );
     }
 
-    fn release_pin_bucket(&mut self, bucket: usize) {
-        let (old_mask, old_color, old_subpixel) = self.pin_state.take_bucket(bucket);
-        self.atlas_runtime
-            .dec_pin_bucket(&old_mask, &old_color, &old_subpixel);
-    }
-
     fn collect_scene_pinned_keys(&self, scene: &Scene) -> GlyphKeyBuckets {
         let mut mask_capacity = 0usize;
         let mut color_capacity = 0usize;
@@ -156,17 +173,11 @@ impl TextSystem {
             self.ensure_glyph_in_atlas(key, epoch);
         }
     }
+}
 
-    fn activate_pin_bucket(
-        &mut self,
-        bucket: usize,
-        mask: Vec<GlyphKey>,
-        color: Vec<GlyphKey>,
-        subpixel: Vec<GlyphKey>,
-    ) {
-        self.atlas_runtime.inc_pin_bucket(&mask, &color, &subpixel);
-        self.pin_state.append_bucket(bucket, mask, color, subpixel);
-    }
+fn append_pin_bucket(mut retained: Vec<GlyphKey>, mut added: Vec<GlyphKey>) -> Vec<GlyphKey> {
+    retained.append(&mut added);
+    retained
 }
 
 fn parley_glyph_font_size(key: GlyphKey) -> f32 {
