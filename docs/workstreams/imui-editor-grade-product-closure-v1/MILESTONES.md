@@ -445,6 +445,24 @@ Current status:
   `--max-renderer-record-passes-us`, `--max-renderer-encoder-finish-us`,
   `--max-renderer-prepare-text-us`, `--max-renderer-prepare-svg-us`,
   `--max-renderer-instance-bytes`, and `--max-renderer-encode-scene-text-ops`).
+- 2026-05-16 trace attribution refresh:
+  the same launched `perf-docking` product-chain slice now passes `--trace-real-spans`, injects the
+  `FRET_DIAG_REAL_SPANS` runtime opt-in through `diag perf`, and requires one readable
+  `trace.chrome.json` beside each perf-case bundle. The gate validates `kind=perf_trace_chrome`,
+  `trace_source=bundle_synthetic_phases_with_extension_spans`, `real_spans_included=true`,
+  a positive `real_span_event_count`, and the `fret.perf.spans.v1` extension key. This makes the
+  bounded product-chain perf entrypoint trace-attributable without claiming full smoothness
+  maturity across all editor workloads. Runtime capture moved into
+  `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` as `UiRealPerfSpanCaptureV1`; the shared
+  `ui_app_driver` and custom `docking_arbitration_demo` render path both use it, preserving
+  non-zero sub-microsecond driver phases as 1us spans and proving the real-span extension path
+  instead of silently falling back to synthetic-only traces. The trace exporter also keeps
+  `fret.perf.spans.v1` when synthetic timing counters are zero, matching steady/idle product-chain
+  bundles where real driver spans are the attribution source. The latest canonical release gate
+  passed at
+  `target/imui-product-chain-perf-docking-trace-gate-2026-05-16-release-after-fix/1778898757233`,
+  with two passing perf cases, zero threshold failures, and real-span trace event counts of 40 and
+  45 for the promoted suite scripts.
 - P3 remains the active global parity lane when real backend/runner acceptance is available, while
   the latest non-multi-window local follow-on is now closed in
   `docs/workstreams/imui-collection-second-proof-surface-v1/` after command-package closeout.

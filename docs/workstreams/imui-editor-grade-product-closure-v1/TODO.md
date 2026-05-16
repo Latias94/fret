@@ -270,7 +270,18 @@ reopen.
       A second 2026-05-15 follow-up exposes renderer threshold CLI flags and gates
       `--max-renderer-encode-scene-us` / `--max-renderer-instance-bytes` / related renderer
       thresholds in the same `perf-docking` product-chain slice, so renderer metrics are no longer
-      read-only evidence.
+      read-only evidence. The 2026-05-16 follow-up also runs that slice with
+      `--trace-real-spans` and requires each perf-case bundle to carry a readable
+      `trace.chrome.json` with `real_spans_included=true` and the `fret.perf.spans.v1` extension,
+      so the product-chain perf entrypoint produces attribution evidence instead of only summary
+      counters. The runtime capture repair now lives in
+      `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` as `UiRealPerfSpanCaptureV1`; both the
+      shared `ui_app_driver` and the custom `docking_arbitration_demo` render path flush through it,
+      preserving non-zero sub-microsecond phases as 1us spans and preventing steady/idle perf
+      bundles from losing the real-span extension solely due to microsecond rounding or custom
+      driver bypass. The trace exporter now also consumes those real spans when synthetic timing
+      counters are zero, and the canonical release `perf-docking` gate passes with zero threshold
+      failures plus real-span trace artifacts.
 
 ## Closeout / follow-on management
 
