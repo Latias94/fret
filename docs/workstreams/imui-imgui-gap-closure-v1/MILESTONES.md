@@ -197,6 +197,9 @@ Exit criteria:
   `fret-ui-kit::declarative::text` beside `text_table_cell(...)`. The UI Gallery code-editor
   readouts still use the doc-layout app helper, but that helper delegates to the shared role, so
   toolbar/status readouts get muted compact single-line truncation without app-local text policy.
+  2026-05-16 button label text role result: `text_button_label(...)` now gives IMUI button/pill
+  labels a shared compact single-line truncation role instead of the previous word-wrapping
+  `control_text(...)` behavior.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

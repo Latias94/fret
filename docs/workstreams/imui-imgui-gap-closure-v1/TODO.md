@@ -192,6 +192,9 @@ Readiness order for the next locally testable review slices:
    `text_table_cell(...)` in `fret-ui-kit::declarative::text`, and the UI Gallery code-editor
    toolbar readouts route through that shared role instead of carrying app-local text layout policy.
    Continue converging text into a small stable role set before adding more per-surface helpers.
+   2026-05-16 button label text role follow-up: `text_button_label(...)` now owns compact
+   single-line button-label text in `fret-ui-kit::declarative::text`, and IMUI control chrome uses
+   it for button/pill labels instead of word-wrapping control text.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

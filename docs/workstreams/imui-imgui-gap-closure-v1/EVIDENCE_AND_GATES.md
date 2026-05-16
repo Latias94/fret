@@ -48,6 +48,7 @@ Last updated: 2026-05-16
   - `ecosystem/fret-imui/src/tests/popup_hover/mod.rs`
   - `ecosystem/fret-ui-kit/src/imui.rs`
   - `ecosystem/fret-ui-kit/src/declarative/text.rs`
+  - `ecosystem/fret-ui-kit/src/imui/control_chrome.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs`
   - `ecosystem/fret-ui-kit/src/imui/table_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs`
@@ -177,6 +178,11 @@ Run evidence:
   text no longer carries app-local wrap/overflow policy. Gate: `cargo nextest run -p fret-ui-kit
   --features imui --lib control_readout_text_uses_muted_compact_single_line_truncation
   --no-fail-fast`.
+- 2026-05-16: introduced `text_button_label(...)` as the shared compact button-label text role and
+  routed IMUI `control_text(...)` through it. IMUI buttons and pill-style control labels now keep
+  single-line truncation instead of inheriting word-wrap text semantics. Gate: `cargo nextest run -p
+  fret-ui-kit --features imui --lib button_label_text_uses_medium_single_line_truncation
+  imui::control_chrome::tests::imui_control_text_uses_shared_button_label_role --no-fail-fast`.
 - 2026-05-14: made `DisclosureResponse` / `ComboResponse` accessor-first for trigger/open/toggle
   state too. Public callers now read trigger details through `response()` and semantic helpers, the
   response types no longer expose external `Default` construction, and

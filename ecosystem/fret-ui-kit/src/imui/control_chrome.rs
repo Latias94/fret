@@ -185,12 +185,7 @@ pub(super) fn control_text<H: UiHost>(
     text: Arc<str>,
     color: Color,
 ) -> AnyElement {
-    let mut props = TextProps::new(text);
-    props.layout.size.height = Length::Auto;
-    props.wrap = TextWrap::Word;
-    props.overflow = TextOverflow::Clip;
-    props.color = Some(color);
-    cx.text_props(props)
+    crate::declarative::text::text_button_label(cx, text).inherit_foreground(color)
 }
 
 pub(super) fn fill_text<H: UiHost>(
@@ -261,4 +256,45 @@ pub(super) fn pill<H: UiHost>(
     chrome.corner_radii = Corners::all(CONTROL_RADIUS);
 
     cx.container(chrome, move |cx| vec![control_text(cx, text, fg)])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect};
+    use fret_ui::element::ElementKind;
+    use fret_ui::elements;
+
+    fn test_bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(160.0)),
+        )
+    }
+
+    #[test]
+    fn imui_control_text_uses_shared_button_label_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let foreground = fret_core::Color::from_srgb_hex_rgb(0x11_22_33);
+
+        let el = elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+            control_text(cx, Arc::from("Apply selected changes"), foreground)
+        });
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected control_text(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(el.inherited_text_style.is_some());
+        assert_eq!(el.inherited_foreground, Some(foreground));
+    }
 }
