@@ -280,7 +280,8 @@ reopen.
       preserving non-zero sub-microsecond phases as 1us spans and preventing steady/idle perf
       bundles from losing the real-span extension solely due to microsecond rounding or custom
       driver bypass. The trace exporter now also consumes those real spans when synthetic timing
-      counters are zero.
+      counters are zero, and the canonical release `perf-docking` gate passes with zero threshold
+      failures plus real-span trace artifacts.
 
 ## Closeout / follow-on management
 

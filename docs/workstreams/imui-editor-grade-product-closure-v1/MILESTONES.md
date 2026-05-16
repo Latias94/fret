@@ -458,7 +458,11 @@ Current status:
   non-zero sub-microsecond driver phases as 1us spans and proving the real-span extension path
   instead of silently falling back to synthetic-only traces. The trace exporter also keeps
   `fret.perf.spans.v1` when synthetic timing counters are zero, matching steady/idle product-chain
-  bundles where real driver spans are the attribution source.
+  bundles where real driver spans are the attribution source. The latest canonical release gate
+  passed at
+  `target/imui-product-chain-perf-docking-trace-gate-2026-05-16-release-after-fix/1778898757233`,
+  with two passing perf cases, zero threshold failures, and real-span trace event counts of 40 and
+  45 for the promoted suite scripts.
 - P3 remains the active global parity lane when real backend/runner acceptance is available, while
   the latest non-multi-window local follow-on is now closed in
   `docs/workstreams/imui-collection-second-proof-surface-v1/` after command-package closeout.

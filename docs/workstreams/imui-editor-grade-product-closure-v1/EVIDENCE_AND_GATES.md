@@ -844,6 +844,23 @@ Debug trace probe evidence (2026-05-16):
   `trace_source=bundle_synthetic_phases_with_extension_spans`,
   `real_spans_included=true`, and first real events from `docking_arbitration_demo`.
 
+Canonical release gate evidence (2026-05-16):
+
+- Command:
+  `python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release --out-dir target/imui-product-chain-perf-docking-trace-gate-2026-05-16-release-after-fix`
+- Output:
+  `target/imui-product-chain-perf-docking-trace-gate-2026-05-16-release-after-fix/1778898757233/perf-docking/regression.summary.json`
+  reports `items_total=2`, `passed=2`, and `failed_tooling=0`.
+- Threshold artifact:
+  `target/imui-product-chain-perf-docking-trace-gate-2026-05-16-release-after-fix/1778898757233/perf-docking/check.perf_thresholds.json`
+  reports `failures=[]`.
+- Trace artifacts:
+  `target/imui-product-chain-perf-docking-trace-gate-2026-05-16-release-after-fix/1778898757233/perf-docking/1778898759498/trace.chrome.json`
+  (`real_span_event_count=40`) and
+  `target/imui-product-chain-perf-docking-trace-gate-2026-05-16-release-after-fix/1778898757233/perf-docking/1778898765184/trace.chrome.json`
+  (`real_span_event_count=45`) both report
+  `trace_source=bundle_synthetic_phases_with_extension_spans` and `real_spans_included=true`.
+
 DevTools GUI perf-threshold preset closure (2026-05-16):
 
 - `crates/fret-diag/src/devtools_gate_profiles.rs` now owns the product-chain docking perf preset
