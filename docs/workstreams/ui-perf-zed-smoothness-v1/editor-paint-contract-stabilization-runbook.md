@@ -49,7 +49,18 @@ registry, and the strict baseline matrix audit without running the long perf val
 
 ## Target-Machine Runner
 
-Prefer the checked-in runner for the full Windows RTX4090 validation pass:
+Prefer the checked-in handoff runner for the full Windows RTX4090 closeout sequence:
+
+```powershell
+python tools/perf/diag_editor_paint_contract_windows_handoff.py `
+  --date-tag <date>
+```
+
+This single command runs the fast preflight, the baseline-validation pass, the `--with-paint-perf` attribution pass,
+artifact verification, and the local closeout gates. It does not bypass the target-machine requirement; use `--dry-run`
+on non-target hosts to inspect the command plan without producing misleading local artifacts.
+
+Use the lower-level validation runner directly only when you need to debug one validation directory at a time:
 
 ```powershell
 python tools/perf/diag_editor_paint_contract_validate.py `

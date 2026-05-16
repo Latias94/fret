@@ -105,6 +105,37 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 19:09:25 +0800 (Windows handoff runner)
+
+Question:
+- Can the still-deferred Windows RTX4090 closeout be reduced to one target-machine command without weakening the
+  verifier or closeout requirements?
+
+Change:
+- Added `tools/perf/diag_editor_paint_contract_windows_handoff.py`, a wrapper that runs preflight, baseline
+  validation, `--with-paint-perf` attribution validation, artifact verification, and closeout gates in order.
+- Updated the runbook and workstream metadata so the handoff runner is now the preferred target-machine entry point.
+
+Validation:
+```bash
+python3 -m unittest discover -s tools/perf -p 'test_diag_editor_paint_contract_*.py'
+python3 tools/perf/diag_editor_paint_contract_windows_handoff.py --dry-run --date-tag workstream-gate
+python3 tools/perf/diag_editor_paint_contract_windows_handoff.py --date-tag host-guard-check
+python3 -m json.tool docs/workstreams/ui-perf-zed-smoothness-v1/WORKSTREAM.json >/dev/null
+python3 tools/check_workstream_catalog.py
+git diff --check
+```
+
+Results:
+- The editor-paint contract tool suite passed: 34 tests.
+- Dry-run wrote
+  `target/fret-diag/editor-paint-contract-windows-handoff-workstream-gate/handoff-plan.json`.
+- Non-dry-run on this macOS host was rejected with the expected target-Windows-host guard.
+
+Decision:
+- This does not close the contract by itself; it removes the remaining target-host command-stitching risk. The formal
+  closeout still requires real Windows RTX4090 baseline and attribution directories verified by the closeout tools.
+
 ## 2026-05-16 18:52:58 +0800 (scene pin-key incremental cache)
 
 Question:

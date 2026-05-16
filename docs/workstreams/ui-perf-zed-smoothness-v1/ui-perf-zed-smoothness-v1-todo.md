@@ -34,6 +34,14 @@ The target-machine Windows RTX4090 editor-paint closeout remains the formal cont
 current local execution blocker. Continue baseline-neutral local work only when it has its own evidence and does
 not update checked-in baselines.
 
+- [x] Keep a one-command target-machine handoff runner for the deferred Windows RTX4090 closeout.
+  - Runner: `tools/perf/diag_editor_paint_contract_windows_handoff.py`
+  - Sequence: preflight, baseline validation, `--with-paint-perf` attribution validation, artifact verifier, and
+    closeout gates.
+  - Dry-run evidence:
+    `target/fret-diag/editor-paint-contract-windows-handoff-workstream-gate/handoff-plan.json`
+  - Host guard evidence: non-dry-run on this macOS host exits with
+    `the editor paint contract handoff must run on the target Windows host`.
 - [x] Re-run the three local editor paint probes after any host-widget, renderer-text, or paint-cache cleanup before
   widening the implementation lane.
   - Probes:

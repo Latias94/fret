@@ -93,6 +93,10 @@
       "command": "python tools/perf/diag_editor_paint_contract_validate.py --dry-run --date-tag workstream-gate"
     },
     {
+      "name": "editor-paint-contract-windows-handoff-plan",
+      "command": "python tools/perf/diag_editor_paint_contract_windows_handoff.py --dry-run --date-tag workstream-gate"
+    },
+    {
       "name": "editor-paint-contract-artifacts-verify",
       "command": "python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-<date> --attribution-dir target/fret-diag/editor-paint-contract-validate-<date>-attrib"
     },
@@ -144,6 +148,8 @@
     "tools/perf/test_diag_editor_paint_contract_preflight.py",
     "tools/perf/diag_editor_paint_contract_validate.py",
     "tools/perf/test_diag_editor_paint_contract_validate.py",
+    "tools/perf/diag_editor_paint_contract_windows_handoff.py",
+    "tools/perf/test_diag_editor_paint_contract_windows_handoff.py",
     "tools/perf/diag_editor_paint_contract_verify_artifacts.py",
     "tools/perf/test_diag_editor_paint_contract_verify_artifacts.py",
     "tools/perf/diag_editor_paint_contract_closeout.py",
