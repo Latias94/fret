@@ -578,7 +578,8 @@ date: 2026-05-12
     Toaster and the shell's unnamed Toaster both rendered the same named toast, creating duplicate
     `toast-entry-1`/`toast-entry-2` semantics `test_id`s. `fret-ui-kit` now scopes unnamed toast
     layers to unnamed toasts and named layers to matching `toaster_id`s; the focused Sonner runtime
-    gate passes and `diag test-ids` reports zero duplicates.
+    gate passes and `diag test-ids` reports zero duplicates. The full `ui-gallery-motion-pilot`
+    suite now passes 14/14 after the fix, with only non-blocking lint warnings remaining.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.

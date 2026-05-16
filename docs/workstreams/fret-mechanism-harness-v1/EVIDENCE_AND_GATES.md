@@ -2501,6 +2501,11 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - lint evidence:
     `.fret/diag/runs/ui-gallery-sonner-interrupt-after-scope-fix/1778939851780-ui-gallery-sonner-interrupt-fixed-frame-delta/check.lint.json`
     reports `error_issues=0`.
+  - full-suite follow-up:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-motion-pilot --dir .fret/diag/runs/ui-gallery-motion-pilot-after-toast-scope-fix --timeout-ms 900000 --session-auto --launch target/dev-fast/fret-ui-gallery.exe`
+  - full-suite result:
+    passed, 14/14 rows; summary
+    `.fret/diag/runs/ui-gallery-motion-pilot-after-toast-scope-fix/sessions/1778940056096-94540/suite.summary.json`.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`
