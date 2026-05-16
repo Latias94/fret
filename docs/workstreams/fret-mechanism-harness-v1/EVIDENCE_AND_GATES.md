@@ -2902,6 +2902,35 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag-menubar-placement-suite-v1/sessions/1778973313432-109176/suite.summary.json`
     reports `status=passed`, 3/3 rows, `scripts_with_evidence=3`,
     `focus_mismatch_total=0`, and zero lint errors/warnings for all rows.
+- DropdownMenu focused suite:
+  - invariant:
+    DropdownMenu runtime evidence should prove submenu placement, keyboard typeahead commit, and
+    disabled-but-focusable suppression without depending on optional status-bar UI.
+  - findings:
+    the first Basic typeahead run found harness issues rather than a recipe defect. The script let
+    the trigger sit at the window bottom edge before `click_stable`, and then used the optional
+    `ui-gallery-status-last-action` semantics node as the result oracle even though the app
+    snapshot already recorded `/shell/last_action = "menu.dropdown.orange"`.
+  - implementation anchors:
+    `tools/diag-scripts/suites/ui-gallery-dropdown-menu/suite.json`,
+    `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-submenu-open-smoke.json`,
+    `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-basic-typeahead-billing.json`,
+    and
+    `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression.json`.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - focused typeahead gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-basic-typeahead-billing.json --dir target/fret-diag-dropdown-typeahead-app-snapshot-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused typeahead result:
+    passed with run id `1778974969846`.
+  - full-suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-dropdown-menu --dir target/fret-diag-dropdown-menu-suite-v2 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - full-suite result:
+    `target/fret-diag-dropdown-menu-suite-v2/sessions/1778975019728-11100/suite.summary.json`
+    reports `status=passed`, 3/3 rows, `scripts_with_evidence=3`,
+    `focus_mismatch_total=0`, and zero lint errors/warnings for all rows.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

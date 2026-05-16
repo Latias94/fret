@@ -7944,6 +7944,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
+        "ui-gallery-dropdown-menu",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -8022,7 +8023,8 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
-        "fret-mechanism-harness-overlay-focus"
+        "fret-mechanism-harness-overlay-focus",
+        "ui-gallery-dropdown-menu"
       ],
       "tags": [
         "a11y",
@@ -8082,6 +8084,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
+        "ui-gallery-dropdown-menu",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [

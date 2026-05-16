@@ -683,3 +683,9 @@ date: 2026-05-12
   - Result: `ui-gallery-menubar-placement` now gates the existing LTR submenu, RTL wide submenu,
     and RTL tight-left collision scripts as a small durable placement suite. The suite passed 3/3
     with zero lint errors/warnings; no new Menubar or overlay mechanism defect was reproduced.
+- [x] Promote DropdownMenu runtime evidence into a focused suite.
+  - Result: `ui-gallery-dropdown-menu` now gates submenu placement, basic keyboard typeahead
+    commit, and disabled-but-focusable keyboard suppression as a small durable suite. The first
+    focused runs found harness defects rather than recipe defects: the typeahead script allowed a
+    trigger to remain at the window edge before `click_stable`, and it used an optional status-bar
+    semantics node as its result oracle. The suite now passes 3/3 with zero lint errors/warnings.
