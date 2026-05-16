@@ -472,6 +472,13 @@ artifacts, not just intent.
 | Confirm artifacts with the verifier and closeout tools. | `diag_editor_paint_contract_verify_artifacts.py` and `diag_editor_paint_contract_closeout.py` pass on the copied validation and attribution directories. | The verifier is green only for tool behavior; against current dry-run plan directories it correctly fails with missing validation and attribution summaries. The local preflight passes 8 checks but does not cover target-machine perf results. | Missing. |
 | Decide whether the next refactor lane is Canvas/paint replay, glyph/text-index/atlas residency, or no code change. | Decision based on verified target-machine baseline and attribution artifacts. | macOS M4 evidence points away from Canvas wrapper and row replay and toward generic host-widget paint aggregate, but target-machine attribution is still absent. | Not decidable from the required evidence. |
 
+Tooling regression check (2026-05-16): the closeout helper tests are green locally:
+`python3 tools/perf/test_diag_editor_paint_contract_preflight.py` (3 tests),
+`python3 tools/perf/test_diag_editor_paint_contract_validate.py` (10 tests),
+`python3 tools/perf/test_diag_editor_paint_contract_verify_artifacts.py` (9 tests), and
+`python3 tools/perf/test_diag_editor_paint_contract_closeout.py` (7 tests). This proves the local helper behavior, not
+the missing Windows RTX4090 validation artifacts.
+
 ## Open Gaps
 
 1. The broad `ui-gallery-steady` suite remains evidence-only until it is redefined as a suite-of-contracts or its
