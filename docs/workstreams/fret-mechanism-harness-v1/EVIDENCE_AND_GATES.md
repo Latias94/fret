@@ -2602,6 +2602,32 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - full-suite result:
     passed, 14/14 rows, `scripts_with_evidence=14`, `focus_mismatch_total=0`,
     `lint_error_total=0`, `lint_warning_total=0`.
+- Motion-pilot zero-warning suite policy:
+  - invariant:
+    a clean motion-pilot suite must mean the runtime scripts pass and each script's diagnostics
+    lint has `error_issues=0` and `warning_issues=0`.
+  - implementation anchors:
+    `crates/fret-diag/src/diag_suite.rs`,
+    `tools/diag-scripts/suites/ui-gallery-motion-pilot/suite.json`, and
+    `tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-toggle-fixed-frame-delta.json`.
+  - focused policy gates:
+    `cargo test --profile dev-fast -p fret-diag --lib suite_lint_policy -- --nocapture`,
+    `cargo test --profile dev-fast -p fret-diag --lib lint_warning_budget -- --nocapture`,
+    `cargo test --profile dev-fast -p fret-diag --lib maybe_run_suite_script_lint -- --nocapture`,
+    and
+    `cargo test --profile dev-fast -p fret-diag --lib finalize_suite_script_success_tail_records_row_when_lint_and_post_run_skip -- --nocapture`.
+  - focused Sidebar runtime gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-toggle-fixed-frame-delta.json --dir .fret/diag/runs/ui-gallery-sidebar-toggle-fixed-frame-delta-stable-entry-v1 --timeout-ms 300000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - focused Sidebar runtime/lint result:
+    passed with run id `1778949248838`; focused lint reports `error_issues=0`,
+    `warning_issues=0`.
+  - full-suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-motion-pilot --dir .fret/diag/runs/ui-gallery-motion-pilot-lint-policy-v2 --timeout-ms 1200000 --session-auto --launch target/dev-fast/fret-ui-gallery.exe`
+  - full-suite result:
+    `.fret/diag/runs/ui-gallery-motion-pilot-lint-policy-v2/sessions/1778949363628-19720/suite.summary.json`
+    reports `status=passed`, 14/14 rows, `scripts_with_evidence=14`,
+    `focus_mismatch_total=0`, `lint_error_total=0`, `lint_warning_total=0`, and
+    `failed_policy=0`.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`
