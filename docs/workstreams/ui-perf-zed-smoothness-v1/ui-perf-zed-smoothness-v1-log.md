@@ -15006,3 +15006,62 @@ Decision:
   paint-cache/visual-bounds bookkeeping; then revisit renderer text/encode only if fresh
   attribution shows it dominates. Do not start a broad row replay, Canvas op-cache, or
   `WindowedRowsSurface` display-list rewrite from this evidence alone.
+
+## 2026-05-16 17:53:00 +0800 (renderer text prepare pin-key attribution)
+
+Question:
+- With the Windows RTX4090 closeout deferred, what is the next local, baseline-neutral editor-paint owner?
+
+Change:
+- Added renderer text prepare subphase attribution for scene pin-key collection, bucket delta,
+  prewarm, pin-bucket updates, and upload flush.
+- Threaded the new timings and glyph/blob counters through renderer snapshots, UI diagnostics
+  frame stats, and `fretboard-dev diag stats` JSON/text output.
+- No runtime behavior, baseline, threshold, or checked-in perf contract changed.
+
+Validation:
+```bash
+cargo fmt -p fret-render-wgpu -p fret-bootstrap -p fret-diag --check
+cargo check -p fret-render-wgpu -p fret-bootstrap -p fret-diag
+cargo nextest run -p fret-diag bundle_stats_reports_renderer_prepare_text_subphases --no-fail-fast
+cargo nextest run -p fret-render-wgpu prepare_for_scene_retries_retained_keys_missing_from_reset_atlas --no-fail-fast
+cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics patch_latest_renderer_perf_sample_updates_latest_snapshot_stats --no-fail-fast
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-typical.json \
+  --repeat 1 --warmup-frames 5 --reuse-launch \
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_A11Y_DISABLE=1 \
+  --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0 \
+  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --sort renderer_prepare_text --top 15 --json \
+  --dir target/fret-diag/renderer-text-prepare-subphase-typical-smoke \
+  --launch -- cargo run -p fret-ui-gallery --release \
+    --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+```
+
+Evidence:
+- Three-probe local pass before attribution:
+  - typical autoscroll:
+    `target/fret-diag/local-next-editor-paint-20260516-typical-r3/1778923500049/bundle.schema2.json`
+  - complex wheel:
+    `target/fret-diag/local-next-editor-paint-20260516-complex-wheel-r3/1778923537543/bundle.schema2.json`
+  - resize jitter:
+    `target/fret-diag/local-next-editor-paint-20260516-resize-jitter-r3/1778923574043/bundle.schema2.json`
+- Attribution smoke:
+  `target/fret-diag/renderer-text-prepare-subphase-typical-smoke/1778924874759/bundle.schema2.json`
+- Smoke result: `renderer_prepare_text_us` p95 `339us`; `collect_pin_keys` p95 `326us`;
+  `bucket_delta` p95 `13us`; prewarm, pin update, and flush upload p95 all `0us`.
+- Top sampled text-prepare frame: `text_blobs=341`, `pinned_glyph_keys=322`, `prewarm_glyph_keys=0`,
+  `retained_glyph_keys=322`, `added_glyph_keys=0`, and `removed_glyph_keys=14`.
+
+Decision:
+- The next local optimization should target stable-frame scene text pin-key aggregation, not atlas upload,
+  prewarm, paint-cache bookkeeping, `WindowFrame.instances`, or a broad Canvas display-list rewrite.
+- The first safe prototype should preserve atlas pin lifetime semantics and use a scene/text-blob fingerprint or
+  retained bucket reuse to avoid rebuilding the same per-scene pin set every frame.
+- Keep this evidence baseline-neutral. It does not close the Windows RTX4090 editor paint contract.

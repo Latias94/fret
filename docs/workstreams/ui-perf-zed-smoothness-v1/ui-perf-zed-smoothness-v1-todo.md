@@ -43,6 +43,15 @@ not update checked-in baselines.
   - Required local evidence: repeat=3, warmup=5, standard prewarm/prelude hooks, overlay disabled, `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`,
     and `fretboard-dev diag stats --sort time --top 15 --json` for the worst bundle.
   - Do not treat this as Windows closeout or baseline promotion evidence.
+  - Latest local pass (2026-05-16, macOS M4; baseline-neutral):
+    - typical autoscroll:
+      `target/fret-diag/local-next-editor-paint-20260516-typical-r3/1778923500049/bundle.schema2.json`
+    - complex wheel:
+      `target/fret-diag/local-next-editor-paint-20260516-complex-wheel-r3/1778923537543/bundle.schema2.json`
+    - resize jitter:
+      `target/fret-diag/local-next-editor-paint-20260516-resize-jitter-r3/1778923574043/bundle.schema2.json`
+    - Decision: do not start a broad `ElementHostWidget`, `WindowFrame.instances`, row replay, or Canvas display-list
+      rewrite from this pass. The shared remaining local paint-side owner is renderer text prepare.
 - [ ] Attribute the remaining local paint/renderer split before another code change.
   - Latest typical-only local smoke:
     `target/fret-diag/paint-observed-deps-presence-snapshot-typical-r3/1778921262429/stats.json`.
@@ -54,12 +63,27 @@ not update checked-in baselines.
   - Decision: do not start a broad `ElementHostWidget` or Canvas display-list rewrite from this evidence alone.
     The next implementation owner should be chosen only after the three-probe local pass confirms whether the
     residual is renderer text prepare, paint-cache/visual-bounds bookkeeping, or generic paint traversal noise.
-- [ ] If renderer text prepare stays dominant across the three probes, add a narrow attribution slice before optimizing.
+- [x] If renderer text prepare stays dominant across the three probes, add a narrow attribution slice before optimizing.
   - Split `TextSystem::prepare_for_scene(...)` into scene pin-key collection, bucket delta, prewarm, and upload flush
     timing.
+  - Implementation surface: renderer frame perf snapshots, UI diagnostics frame stats, and `fretboard-dev diag stats`
+    now expose renderer text prepare subphase timings and glyph/blob counts.
+  - Smoke evidence:
+    `target/fret-diag/renderer-text-prepare-subphase-typical-smoke/1778924874759/bundle.schema2.json`.
+  - Result: local typical p95 shows `renderer_prepare_text_us=339us`, with
+    `renderer_prepare_text_collect_pin_keys_us=326us`; bucket delta is only `13us`, prewarm/pin update/flush upload
+    are `0us`, and the top sampled frame reports `text_blobs=341`, `pinned_glyph_keys=322`, `retained_glyph_keys=322`,
+    `added_glyph_keys=0`, and `removed_glyph_keys=14`.
   - Candidate follow-up only after attribution: reuse or fingerprint the per-scene text pin set across stable
     row-replay frames, preserving atlas pin lifetime semantics.
   - Do not change renderer payload thresholds from local macOS evidence.
+- [ ] Optimize renderer text prepare only if the pin-key collection finding reproduces after the attribution slice lands.
+  - Candidate owner: `TextSystem::collect_scene_pinned_keys(...)` currently rebuilds a `GlyphKeyBuckets` aggregate from
+    `Scene::text_blob_ids()` each frame even when row replay makes the text blob set mostly stable.
+  - Preferred first prototype: a small scene text pin-set cache or fingerprinted bucket reuse that short-circuits stable
+    frames while preserving atlas pin bucket ring semantics, reset-generation cleanup, and add/remove deltas.
+  - Repro/gate before landing: rerun the three local editor probes above plus a focused `fret-render-wgpu` atlas reset
+    regression test. Keep any checked-in baseline change blocked on the Windows RTX4090 contract pass.
 - [ ] If paint-cache / visual-bounds bookkeeping is the local residual, optimize only the measured subphase.
   - Candidate low-risk paths: avoid redundant visual-bounds writes, reuse small paint-cache key inputs, or reduce
     per-node text-style fingerprint lookups when the node kind cannot carry inherited text style.

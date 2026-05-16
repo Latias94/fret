@@ -143,6 +143,13 @@ impl GlyphKeyBuckets {
         self.subpixel.extend(keys.subpixel.iter().copied());
     }
 
+    pub(super) fn total_len(&self) -> usize {
+        self.mask
+            .len()
+            .saturating_add(self.color.len())
+            .saturating_add(self.subpixel.len())
+    }
+
     pub(super) fn into_pin_bucket(self) -> (Vec<GlyphKey>, Vec<GlyphKey>, Vec<GlyphKey>) {
         (
             self.mask.into_iter().collect(),

@@ -232,6 +232,13 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
     `target/fret-diag/perf-complex-editor-shape-pin-keys-baseline-check-v1/1778516630518/bundle.json` passed the
     checked-in v1 contract with worst top total `2206us`, `top_renderer_prepare_text_us` p50/p95/max `424/426/426us`,
     and payload `254/192368`.
+  - Follow-up local attribution after the Windows RTX4090 closeout was deferred: renderer text prepare now reports
+    subphase timings and glyph/blob counts through renderer snapshots, UI diagnostics frame stats, and `diag stats`.
+    The local macOS M4 smoke
+    `target/fret-diag/renderer-text-prepare-subphase-typical-smoke/1778924874759/bundle.schema2.json` shows
+    `renderer_prepare_text_us` p95 `339us`, with `collect_pin_keys` p95 `326us`, `bucket_delta` p95 `13us`, and
+    prewarm/pin-update/flush-upload at `0us`. This points the next baseline-neutral optimization at stable-frame
+    scene text pin-key aggregation rather than atlas upload or broad paint traversal rewrites.
 - IMUI hello smoke correctness recheck:
   - `FRET_DIAG=1 FRET_DIAG_DIR=target/fret-diag/imui-hello-demo-screenshot-recheck FRET_DIAG_GPU_SCREENSHOTS=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-editor/imui/local-debug/imui-hello-demo-screenshot.json --dir target/fret-diag/imui-hello-demo-screenshot-recheck --session-auto --timeout-ms 180000 --launch -- cargo run -p fret-demo --bin imui_hello_demo`
   - Screenshot evidence:

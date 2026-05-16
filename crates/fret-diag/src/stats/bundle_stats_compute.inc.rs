@@ -810,6 +810,50 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_prepare_text_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_prepare_text_collect_pin_keys_us = stats
+                .and_then(|m| m.get("renderer_prepare_text_collect_pin_keys_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_text_bucket_delta_us = stats
+                .and_then(|m| m.get("renderer_prepare_text_bucket_delta_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_text_prewarm_us = stats
+                .and_then(|m| m.get("renderer_prepare_text_prewarm_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_text_pin_bucket_update_us = stats
+                .and_then(|m| m.get("renderer_prepare_text_pin_bucket_update_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_text_flush_uploads_us = stats
+                .and_then(|m| m.get("renderer_prepare_text_flush_uploads_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_text_scene_text_blobs = stats
+                .and_then(|m| m.get("renderer_prepare_text_scene_text_blobs"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_text_pinned_glyph_keys = stats
+                .and_then(|m| m.get("renderer_prepare_text_pinned_glyph_keys"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_text_prewarm_glyph_keys = stats
+                .and_then(|m| m.get("renderer_prepare_text_prewarm_glyph_keys"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_text_retained_glyph_keys = stats
+                .and_then(|m| m.get("renderer_prepare_text_retained_glyph_keys"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_text_added_glyph_keys = stats
+                .and_then(|m| m.get("renderer_prepare_text_added_glyph_keys"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_text_removed_glyph_keys = stats
+                .and_then(|m| m.get("renderer_prepare_text_removed_glyph_keys"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let renderer_prepare_svg_us = stats
                 .and_then(|m| m.get("renderer_prepare_svg_us"))
                 .and_then(|v| v.as_u64())
@@ -1991,6 +2035,21 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.max_renderer_prepare_text_us = out
                 .max_renderer_prepare_text_us
                 .max(renderer_prepare_text_us);
+            out.max_renderer_prepare_text_collect_pin_keys_us = out
+                .max_renderer_prepare_text_collect_pin_keys_us
+                .max(renderer_prepare_text_collect_pin_keys_us);
+            out.max_renderer_prepare_text_bucket_delta_us = out
+                .max_renderer_prepare_text_bucket_delta_us
+                .max(renderer_prepare_text_bucket_delta_us);
+            out.max_renderer_prepare_text_prewarm_us = out
+                .max_renderer_prepare_text_prewarm_us
+                .max(renderer_prepare_text_prewarm_us);
+            out.max_renderer_prepare_text_pin_bucket_update_us = out
+                .max_renderer_prepare_text_pin_bucket_update_us
+                .max(renderer_prepare_text_pin_bucket_update_us);
+            out.max_renderer_prepare_text_flush_uploads_us = out
+                .max_renderer_prepare_text_flush_uploads_us
+                .max(renderer_prepare_text_flush_uploads_us);
 
             rows.push(BundleStatsSnapshotRow {
                 window: window_id,
@@ -2133,6 +2192,17 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_record_passes_us,
                 renderer_encoder_finish_us,
                 renderer_prepare_text_us,
+                renderer_prepare_text_collect_pin_keys_us,
+                renderer_prepare_text_bucket_delta_us,
+                renderer_prepare_text_prewarm_us,
+                renderer_prepare_text_pin_bucket_update_us,
+                renderer_prepare_text_flush_uploads_us,
+                renderer_prepare_text_scene_text_blobs,
+                renderer_prepare_text_pinned_glyph_keys,
+                renderer_prepare_text_prewarm_glyph_keys,
+                renderer_prepare_text_retained_glyph_keys,
+                renderer_prepare_text_added_glyph_keys,
+                renderer_prepare_text_removed_glyph_keys,
                 renderer_prepare_svg_us,
                 renderer_uniform_bytes,
                 renderer_instance_bytes,
@@ -2651,6 +2721,29 @@ pub(super) fn bundle_stats_from_json_with_options(
         out.p50_renderer_prepare_text_us,
         out.p95_renderer_prepare_text_us,
     ) = p50_p95(rows.iter().map(|r| r.renderer_prepare_text_us));
+    (
+        out.p50_renderer_prepare_text_collect_pin_keys_us,
+        out.p95_renderer_prepare_text_collect_pin_keys_us,
+    ) = p50_p95(rows.iter().map(|r| r.renderer_prepare_text_collect_pin_keys_us));
+    (
+        out.p50_renderer_prepare_text_bucket_delta_us,
+        out.p95_renderer_prepare_text_bucket_delta_us,
+    ) = p50_p95(rows.iter().map(|r| r.renderer_prepare_text_bucket_delta_us));
+    (
+        out.p50_renderer_prepare_text_prewarm_us,
+        out.p95_renderer_prepare_text_prewarm_us,
+    ) = p50_p95(rows.iter().map(|r| r.renderer_prepare_text_prewarm_us));
+    (
+        out.p50_renderer_prepare_text_pin_bucket_update_us,
+        out.p95_renderer_prepare_text_pin_bucket_update_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.renderer_prepare_text_pin_bucket_update_us),
+    );
+    (
+        out.p50_renderer_prepare_text_flush_uploads_us,
+        out.p95_renderer_prepare_text_flush_uploads_us,
+    ) = p50_p95(rows.iter().map(|r| r.renderer_prepare_text_flush_uploads_us));
     out.code_editor_paint_perf.p50 = code_editor_paint_perf_percentile(
         rows.iter().filter_map(|r| r.code_editor_paint_perf.as_ref()),
         0.50,

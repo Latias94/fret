@@ -104,6 +104,11 @@ pub(super) struct BundleStatsReport {
     pub(super) max_renderer_encoder_finish_us: u64,
     pub(super) max_renderer_prepare_svg_us: u64,
     pub(super) max_renderer_prepare_text_us: u64,
+    pub(super) max_renderer_prepare_text_collect_pin_keys_us: u64,
+    pub(super) max_renderer_prepare_text_bucket_delta_us: u64,
+    pub(super) max_renderer_prepare_text_prewarm_us: u64,
+    pub(super) max_renderer_prepare_text_pin_bucket_update_us: u64,
+    pub(super) max_renderer_prepare_text_flush_uploads_us: u64,
     pub(super) max_invalidation_walk_calls: u32,
     pub(super) max_invalidation_walk_nodes: u32,
     max_model_change_invalidation_roots: u32,
@@ -197,6 +202,16 @@ pub(super) struct BundleStatsReport {
     pub(super) p95_renderer_prepare_svg_us: u64,
     pub(super) p50_renderer_prepare_text_us: u64,
     pub(super) p95_renderer_prepare_text_us: u64,
+    pub(super) p50_renderer_prepare_text_collect_pin_keys_us: u64,
+    pub(super) p95_renderer_prepare_text_collect_pin_keys_us: u64,
+    pub(super) p50_renderer_prepare_text_bucket_delta_us: u64,
+    pub(super) p95_renderer_prepare_text_bucket_delta_us: u64,
+    pub(super) p50_renderer_prepare_text_prewarm_us: u64,
+    pub(super) p95_renderer_prepare_text_prewarm_us: u64,
+    pub(super) p50_renderer_prepare_text_pin_bucket_update_us: u64,
+    pub(super) p95_renderer_prepare_text_pin_bucket_update_us: u64,
+    pub(super) p50_renderer_prepare_text_flush_uploads_us: u64,
+    pub(super) p95_renderer_prepare_text_flush_uploads_us: u64,
     paint_widget_hotspot_summary: BundleStatsPaintWidgetHotspotSummary,
     code_editor_paint_perf: BundleStatsCodeEditorPaintPerfSummary,
     worst_hover_layout: Option<BundleStatsWorstHoverLayout>,
@@ -347,6 +362,17 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_record_passes_us: u64,
     pub(super) renderer_encoder_finish_us: u64,
     pub(super) renderer_prepare_text_us: u64,
+    pub(super) renderer_prepare_text_collect_pin_keys_us: u64,
+    pub(super) renderer_prepare_text_bucket_delta_us: u64,
+    pub(super) renderer_prepare_text_prewarm_us: u64,
+    pub(super) renderer_prepare_text_pin_bucket_update_us: u64,
+    pub(super) renderer_prepare_text_flush_uploads_us: u64,
+    pub(super) renderer_prepare_text_scene_text_blobs: u64,
+    pub(super) renderer_prepare_text_pinned_glyph_keys: u64,
+    pub(super) renderer_prepare_text_prewarm_glyph_keys: u64,
+    pub(super) renderer_prepare_text_retained_glyph_keys: u64,
+    pub(super) renderer_prepare_text_added_glyph_keys: u64,
+    pub(super) renderer_prepare_text_removed_glyph_keys: u64,
     pub(super) renderer_prepare_svg_us: u64,
     pub(super) renderer_encode_scene_stack_us: u64,
     pub(super) renderer_encode_scene_clip_us: u64,
@@ -2534,6 +2560,31 @@ impl BundleStatsReport {
                 self.p95_renderer_prepare_svg_us,
                 self.max_renderer_prepare_svg_us,
             );
+            if self.p95_renderer_prepare_text_collect_pin_keys_us > 0
+                || self.max_renderer_prepare_text_collect_pin_keys_us > 0
+                || self.p95_renderer_prepare_text_bucket_delta_us > 0
+                || self.max_renderer_prepare_text_bucket_delta_us > 0
+                || self.p95_renderer_prepare_text_prewarm_us > 0
+                || self.max_renderer_prepare_text_prewarm_us > 0
+                || self.p95_renderer_prepare_text_pin_bucket_update_us > 0
+                || self.max_renderer_prepare_text_pin_bucket_update_us > 0
+                || self.p95_renderer_prepare_text_flush_uploads_us > 0
+                || self.max_renderer_prepare_text_flush_uploads_us > 0
+            {
+                println!(
+                    "renderer text_prepare p95/max (us): collect_pin_keys={}/{} bucket_delta={}/{} prewarm={}/{} pin_update={}/{} flush={}/{}",
+                    self.p95_renderer_prepare_text_collect_pin_keys_us,
+                    self.max_renderer_prepare_text_collect_pin_keys_us,
+                    self.p95_renderer_prepare_text_bucket_delta_us,
+                    self.max_renderer_prepare_text_bucket_delta_us,
+                    self.p95_renderer_prepare_text_prewarm_us,
+                    self.max_renderer_prepare_text_prewarm_us,
+                    self.p95_renderer_prepare_text_pin_bucket_update_us,
+                    self.max_renderer_prepare_text_pin_bucket_update_us,
+                    self.p95_renderer_prepare_text_flush_uploads_us,
+                    self.max_renderer_prepare_text_flush_uploads_us,
+                );
+            }
         }
         self.print_code_editor_paint_perf_summary();
         self.print_paint_widget_hotspot_summary();
@@ -2660,6 +2711,32 @@ impl BundleStatsReport {
                     row.renderer_prepare_svg_us,
                     row.renderer_prepare_text_us,
                 ));
+                if row.renderer_prepare_text_collect_pin_keys_us > 0
+                    || row.renderer_prepare_text_bucket_delta_us > 0
+                    || row.renderer_prepare_text_prewarm_us > 0
+                    || row.renderer_prepare_text_pin_bucket_update_us > 0
+                    || row.renderer_prepare_text_flush_uploads_us > 0
+                    || row.renderer_prepare_text_scene_text_blobs > 0
+                    || row.renderer_prepare_text_pinned_glyph_keys > 0
+                {
+                    line.push_str(&format!(
+                        " renderer.text_prepare.us(collect/bucket_delta/prewarm/pin_update/flush)={}/{}/{}/{}/{}",
+                        row.renderer_prepare_text_collect_pin_keys_us,
+                        row.renderer_prepare_text_bucket_delta_us,
+                        row.renderer_prepare_text_prewarm_us,
+                        row.renderer_prepare_text_pin_bucket_update_us,
+                        row.renderer_prepare_text_flush_uploads_us,
+                    ));
+                    line.push_str(&format!(
+                        " renderer.text_prepare.counts(blobs/pinned/prewarm/retained/added/removed)={}/{}/{}/{}/{}/{}",
+                        row.renderer_prepare_text_scene_text_blobs,
+                        row.renderer_prepare_text_pinned_glyph_keys,
+                        row.renderer_prepare_text_prewarm_glyph_keys,
+                        row.renderer_prepare_text_retained_glyph_keys,
+                        row.renderer_prepare_text_added_glyph_keys,
+                        row.renderer_prepare_text_removed_glyph_keys,
+                    ));
+                }
                 if row.renderer_uniform_bytes > 0
                     || row.renderer_instance_bytes > 0
                     || row.renderer_vertex_bytes > 0
@@ -2931,6 +3008,31 @@ impl BundleStatsReport {
                 self.p50_renderer_prepare_text_us,
                 self.p95_renderer_prepare_text_us,
             );
+            if self.p50_renderer_prepare_text_collect_pin_keys_us > 0
+                || self.p95_renderer_prepare_text_collect_pin_keys_us > 0
+                || self.p50_renderer_prepare_text_bucket_delta_us > 0
+                || self.p95_renderer_prepare_text_bucket_delta_us > 0
+                || self.p50_renderer_prepare_text_prewarm_us > 0
+                || self.p95_renderer_prepare_text_prewarm_us > 0
+                || self.p50_renderer_prepare_text_pin_bucket_update_us > 0
+                || self.p95_renderer_prepare_text_pin_bucket_update_us > 0
+                || self.p50_renderer_prepare_text_flush_uploads_us > 0
+                || self.p95_renderer_prepare_text_flush_uploads_us > 0
+            {
+                println!(
+                    "renderer text_prepare p50/p95 (us): collect_pin_keys={}/{} bucket_delta={}/{} prewarm={}/{} pin_update={}/{} flush={}/{}",
+                    self.p50_renderer_prepare_text_collect_pin_keys_us,
+                    self.p95_renderer_prepare_text_collect_pin_keys_us,
+                    self.p50_renderer_prepare_text_bucket_delta_us,
+                    self.p95_renderer_prepare_text_bucket_delta_us,
+                    self.p50_renderer_prepare_text_prewarm_us,
+                    self.p95_renderer_prepare_text_prewarm_us,
+                    self.p50_renderer_prepare_text_pin_bucket_update_us,
+                    self.p95_renderer_prepare_text_pin_bucket_update_us,
+                    self.p50_renderer_prepare_text_flush_uploads_us,
+                    self.p95_renderer_prepare_text_flush_uploads_us,
+                );
+            }
         }
         println!(
             "layout breakdown p50/p95 (us): roots={}/{} request_build_roots={}/{} view_cache={}/{} collapse_obs={}/{} prepaint_after_layout={}/{}",
@@ -2998,6 +3100,21 @@ impl BundleStatsReport {
                 self.max_renderer_prepare_svg_us,
                 self.max_renderer_prepare_text_us,
             );
+            if self.max_renderer_prepare_text_collect_pin_keys_us > 0
+                || self.max_renderer_prepare_text_bucket_delta_us > 0
+                || self.max_renderer_prepare_text_prewarm_us > 0
+                || self.max_renderer_prepare_text_pin_bucket_update_us > 0
+                || self.max_renderer_prepare_text_flush_uploads_us > 0
+            {
+                println!(
+                    "renderer text_prepare max (us): collect_pin_keys={} bucket_delta={} prewarm={} pin_update={} flush={}",
+                    self.max_renderer_prepare_text_collect_pin_keys_us,
+                    self.max_renderer_prepare_text_bucket_delta_us,
+                    self.max_renderer_prepare_text_prewarm_us,
+                    self.max_renderer_prepare_text_pin_bucket_update_us,
+                    self.max_renderer_prepare_text_flush_uploads_us,
+                );
+            }
         }
         self.print_code_editor_paint_perf_summary();
         self.print_paint_widget_hotspot_summary();
@@ -3167,6 +3284,32 @@ impl BundleStatsReport {
                     row.renderer_prepare_svg_us,
                     row.renderer_prepare_text_us,
                 ));
+                if row.renderer_prepare_text_collect_pin_keys_us > 0
+                    || row.renderer_prepare_text_bucket_delta_us > 0
+                    || row.renderer_prepare_text_prewarm_us > 0
+                    || row.renderer_prepare_text_pin_bucket_update_us > 0
+                    || row.renderer_prepare_text_flush_uploads_us > 0
+                    || row.renderer_prepare_text_scene_text_blobs > 0
+                    || row.renderer_prepare_text_pinned_glyph_keys > 0
+                {
+                    line.push_str(&format!(
+                        " renderer.text_prepare.us(collect/bucket_delta/prewarm/pin_update/flush)={}/{}/{}/{}/{}",
+                        row.renderer_prepare_text_collect_pin_keys_us,
+                        row.renderer_prepare_text_bucket_delta_us,
+                        row.renderer_prepare_text_prewarm_us,
+                        row.renderer_prepare_text_pin_bucket_update_us,
+                        row.renderer_prepare_text_flush_uploads_us,
+                    ));
+                    line.push_str(&format!(
+                        " renderer.text_prepare.counts(blobs/pinned/prewarm/retained/added/removed)={}/{}/{}/{}/{}/{}",
+                        row.renderer_prepare_text_scene_text_blobs,
+                        row.renderer_prepare_text_pinned_glyph_keys,
+                        row.renderer_prepare_text_prewarm_glyph_keys,
+                        row.renderer_prepare_text_retained_glyph_keys,
+                        row.renderer_prepare_text_added_glyph_keys,
+                        row.renderer_prepare_text_removed_glyph_keys,
+                    ));
+                }
                 line.push_str(&format!(
                     " renderer.encode.us(stack/clip/mask/effect/quad/image/text/path/viewport/flush)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
                     row.renderer_encode_scene_stack_us,
@@ -4496,6 +4639,26 @@ impl BundleStatsReport {
             Value::from(self.max_renderer_prepare_text_us),
         );
         max.insert(
+            "renderer_prepare_text_collect_pin_keys_us".to_string(),
+            Value::from(self.max_renderer_prepare_text_collect_pin_keys_us),
+        );
+        max.insert(
+            "renderer_prepare_text_bucket_delta_us".to_string(),
+            Value::from(self.max_renderer_prepare_text_bucket_delta_us),
+        );
+        max.insert(
+            "renderer_prepare_text_prewarm_us".to_string(),
+            Value::from(self.max_renderer_prepare_text_prewarm_us),
+        );
+        max.insert(
+            "renderer_prepare_text_pin_bucket_update_us".to_string(),
+            Value::from(self.max_renderer_prepare_text_pin_bucket_update_us),
+        );
+        max.insert(
+            "renderer_prepare_text_flush_uploads_us".to_string(),
+            Value::from(self.max_renderer_prepare_text_flush_uploads_us),
+        );
+        max.insert(
             "invalidation_walk_calls".to_string(),
             Value::from(self.max_invalidation_walk_calls),
         );
@@ -4843,6 +5006,26 @@ impl BundleStatsReport {
             "renderer_prepare_text_us".to_string(),
             Value::from(self.p50_renderer_prepare_text_us),
         );
+        p50.insert(
+            "renderer_prepare_text_collect_pin_keys_us".to_string(),
+            Value::from(self.p50_renderer_prepare_text_collect_pin_keys_us),
+        );
+        p50.insert(
+            "renderer_prepare_text_bucket_delta_us".to_string(),
+            Value::from(self.p50_renderer_prepare_text_bucket_delta_us),
+        );
+        p50.insert(
+            "renderer_prepare_text_prewarm_us".to_string(),
+            Value::from(self.p50_renderer_prepare_text_prewarm_us),
+        );
+        p50.insert(
+            "renderer_prepare_text_pin_bucket_update_us".to_string(),
+            Value::from(self.p50_renderer_prepare_text_pin_bucket_update_us),
+        );
+        p50.insert(
+            "renderer_prepare_text_flush_uploads_us".to_string(),
+            Value::from(self.p50_renderer_prepare_text_flush_uploads_us),
+        );
         root.insert("p50".to_string(), Value::Object(p50));
 
         let mut p95 = Map::new();
@@ -5022,6 +5205,26 @@ impl BundleStatsReport {
             "renderer_prepare_text_us".to_string(),
             Value::from(self.p95_renderer_prepare_text_us),
         );
+        p95.insert(
+            "renderer_prepare_text_collect_pin_keys_us".to_string(),
+            Value::from(self.p95_renderer_prepare_text_collect_pin_keys_us),
+        );
+        p95.insert(
+            "renderer_prepare_text_bucket_delta_us".to_string(),
+            Value::from(self.p95_renderer_prepare_text_bucket_delta_us),
+        );
+        p95.insert(
+            "renderer_prepare_text_prewarm_us".to_string(),
+            Value::from(self.p95_renderer_prepare_text_prewarm_us),
+        );
+        p95.insert(
+            "renderer_prepare_text_pin_bucket_update_us".to_string(),
+            Value::from(self.p95_renderer_prepare_text_pin_bucket_update_us),
+        );
+        p95.insert(
+            "renderer_prepare_text_flush_uploads_us".to_string(),
+            Value::from(self.p95_renderer_prepare_text_flush_uploads_us),
+        );
         root.insert("p95".to_string(), Value::Object(p95));
 
         root.insert(
@@ -5137,6 +5340,50 @@ impl BundleStatsReport {
                 obj.insert(
                     "renderer_prepare_text_us".to_string(),
                     Value::from(row.renderer_prepare_text_us),
+                );
+                obj.insert(
+                    "renderer_prepare_text_collect_pin_keys_us".to_string(),
+                    Value::from(row.renderer_prepare_text_collect_pin_keys_us),
+                );
+                obj.insert(
+                    "renderer_prepare_text_bucket_delta_us".to_string(),
+                    Value::from(row.renderer_prepare_text_bucket_delta_us),
+                );
+                obj.insert(
+                    "renderer_prepare_text_prewarm_us".to_string(),
+                    Value::from(row.renderer_prepare_text_prewarm_us),
+                );
+                obj.insert(
+                    "renderer_prepare_text_pin_bucket_update_us".to_string(),
+                    Value::from(row.renderer_prepare_text_pin_bucket_update_us),
+                );
+                obj.insert(
+                    "renderer_prepare_text_flush_uploads_us".to_string(),
+                    Value::from(row.renderer_prepare_text_flush_uploads_us),
+                );
+                obj.insert(
+                    "renderer_prepare_text_scene_text_blobs".to_string(),
+                    Value::from(row.renderer_prepare_text_scene_text_blobs),
+                );
+                obj.insert(
+                    "renderer_prepare_text_pinned_glyph_keys".to_string(),
+                    Value::from(row.renderer_prepare_text_pinned_glyph_keys),
+                );
+                obj.insert(
+                    "renderer_prepare_text_prewarm_glyph_keys".to_string(),
+                    Value::from(row.renderer_prepare_text_prewarm_glyph_keys),
+                );
+                obj.insert(
+                    "renderer_prepare_text_retained_glyph_keys".to_string(),
+                    Value::from(row.renderer_prepare_text_retained_glyph_keys),
+                );
+                obj.insert(
+                    "renderer_prepare_text_added_glyph_keys".to_string(),
+                    Value::from(row.renderer_prepare_text_added_glyph_keys),
+                );
+                obj.insert(
+                    "renderer_prepare_text_removed_glyph_keys".to_string(),
+                    Value::from(row.renderer_prepare_text_removed_glyph_keys),
                 );
                 obj.insert(
                     "renderer_uniform_bytes".to_string(),

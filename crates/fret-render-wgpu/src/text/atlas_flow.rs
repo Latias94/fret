@@ -1,9 +1,10 @@
-use super::TextSystem;
 use super::atlas::{GlyphKey, GlyphKeyBuckets};
 use super::prepare::{
     build_glyph_scaler_from_face_bytes, glyph_render_at_bins, render_glyph_image,
 };
+use super::{TextPrepareScenePerf, TextSystem};
 use fret_core::scene::Scene;
+use std::time::Instant;
 
 impl TextSystem {
     pub fn atlas_bind_group_layout(&self) -> &wgpu::BindGroupLayout {
@@ -26,33 +27,72 @@ impl TextSystem {
         self.atlas_runtime.flush_uploads(queue);
     }
 
+    #[cfg(test)]
     pub fn prepare_for_scene(&mut self, scene: &Scene, frame_index: u64) {
+        let _ = self.prepare_for_scene_with_perf(scene, frame_index, false);
+    }
+
+    pub(crate) fn prepare_for_scene_with_perf(
+        &mut self,
+        scene: &Scene,
+        frame_index: u64,
+        perf_enabled: bool,
+    ) -> TextPrepareScenePerf {
+        let mut perf = TextPrepareScenePerf::default();
         let ring_len = self.pin_state.ring_len();
         if ring_len == 0 {
-            return;
+            return perf;
         }
         let bucket = (frame_index as usize) % ring_len;
         let epoch = frame_index;
         self.pin_state
             .clear_for_atlas_reset_generation(self.atlas_runtime.reset_generation());
 
-        let pinned_keys = self.collect_scene_pinned_keys(scene);
+        let collect_start = perf_enabled.then(Instant::now);
+        let (pinned_keys, scene_text_blobs) = self.collect_scene_pinned_keys(scene);
+        perf.scene_text_blobs = usize_to_u64(scene_text_blobs);
+        perf.pinned_glyph_keys = usize_to_u64(pinned_keys.total_len());
+        if let Some(start) = collect_start {
+            perf.collect_pin_keys += start.elapsed();
+        }
+
         let Some((old_mask, old_color, old_subpixel)) = self.pin_state.bucket(bucket) else {
-            return;
+            return perf;
         };
+
+        let delta_start = perf_enabled.then(Instant::now);
         let delta = pinned_keys.retain_delta_from_existing(old_mask, old_color, old_subpixel);
+        if let Some(start) = delta_start {
+            perf.bucket_delta += start.elapsed();
+        }
         let (retain_mask, retain_color, retain_subpixel) = delta.retained;
         let (mut add_mask, mut add_color, mut add_subpixel) = delta.added;
         let (remove_mask, remove_color, remove_subpixel) = delta.removed;
+        perf.retained_glyph_keys =
+            glyph_bucket_len_u64(&retain_mask, &retain_color, &retain_subpixel);
+        perf.prewarm_glyph_keys = glyph_bucket_len_u64(&add_mask, &add_color, &add_subpixel);
+        perf.removed_glyph_keys =
+            glyph_bucket_len_u64(&remove_mask, &remove_color, &remove_subpixel);
 
+        let pin_update_start = perf_enabled.then(Instant::now);
         self.atlas_runtime
             .dec_pin_bucket(&remove_mask, &remove_color, &remove_subpixel);
+        if let Some(start) = pin_update_start {
+            perf.pin_bucket_update += start.elapsed();
+        }
+
+        let prewarm_start = perf_enabled.then(Instant::now);
         self.prewarm_pin_bucket(&add_mask, &add_color, &add_subpixel, epoch);
+        if let Some(start) = prewarm_start {
+            perf.prewarm += start.elapsed();
+        }
 
         add_mask.retain(|key| self.atlas_runtime.contains_key(*key));
         add_color.retain(|key| self.atlas_runtime.contains_key(*key));
         add_subpixel.retain(|key| self.atlas_runtime.contains_key(*key));
+        perf.added_glyph_keys = glyph_bucket_len_u64(&add_mask, &add_color, &add_subpixel);
 
+        let pin_update_start = perf_enabled.then(Instant::now);
         self.atlas_runtime
             .inc_pin_bucket(&add_mask, &add_color, &add_subpixel);
 
@@ -62,6 +102,10 @@ impl TextSystem {
             append_pin_bucket(retain_color, add_color),
             append_pin_bucket(retain_subpixel, add_subpixel),
         );
+        if let Some(start) = pin_update_start {
+            perf.pin_bucket_update += start.elapsed();
+        }
+        perf
     }
 
     pub(super) fn ensure_glyph_in_atlas(&mut self, key: GlyphKey, epoch: u64) {
@@ -130,15 +174,17 @@ impl TextSystem {
         );
     }
 
-    fn collect_scene_pinned_keys(&self, scene: &Scene) -> GlyphKeyBuckets {
+    fn collect_scene_pinned_keys(&self, scene: &Scene) -> (GlyphKeyBuckets, usize) {
         let mut mask_capacity = 0usize;
         let mut color_capacity = 0usize;
         let mut subpixel_capacity = 0usize;
+        let mut scene_text_blobs = 0usize;
 
         for &text in scene.text_blob_ids() {
             let Some(blob) = self.blob_state.blobs.get(text) else {
                 continue;
             };
+            scene_text_blobs = scene_text_blobs.saturating_add(1);
             let (mask, color, subpixel) = blob.shape().pin_keys().bucket_lens();
             mask_capacity = mask_capacity.saturating_add(mask);
             color_capacity = color_capacity.saturating_add(color);
@@ -153,7 +199,7 @@ impl TextSystem {
             };
             pinned_keys.extend_pin_keys(blob.shape().pin_keys());
         }
-        pinned_keys
+        (pinned_keys, scene_text_blobs)
     }
 
     fn prewarm_pin_bucket(
@@ -178,6 +224,18 @@ impl TextSystem {
 fn append_pin_bucket(mut retained: Vec<GlyphKey>, mut added: Vec<GlyphKey>) -> Vec<GlyphKey> {
     retained.append(&mut added);
     retained
+}
+
+fn glyph_bucket_len_u64(mask: &[GlyphKey], color: &[GlyphKey], subpixel: &[GlyphKey]) -> u64 {
+    usize_to_u64(
+        mask.len()
+            .saturating_add(color.len())
+            .saturating_add(subpixel.len()),
+    )
+}
+
+fn usize_to_u64(value: usize) -> u64 {
+    value.try_into().unwrap_or(u64::MAX)
 }
 
 fn parley_glyph_font_size(key: GlyphKey) -> f32 {

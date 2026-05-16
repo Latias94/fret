@@ -3328,6 +3328,90 @@ fn bundle_stats_reports_dispatch_unattributed_time() {
 }
 
 #[test]
+fn bundle_stats_reports_renderer_prepare_text_subphases() {
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [
+            {
+                "window": 1,
+                "snapshots": [
+                    {
+                        "tick_id": 1,
+                        "frame_id": 1,
+                        "changed_models": [],
+                        "changed_globals": [],
+                        "debug": { "stats": {
+                            "total_time_us": 100,
+                            "renderer_prepare_text_us": 20,
+                            "renderer_prepare_text_collect_pin_keys_us": 3,
+                            "renderer_prepare_text_bucket_delta_us": 4,
+                            "renderer_prepare_text_prewarm_us": 5,
+                            "renderer_prepare_text_pin_bucket_update_us": 6,
+                            "renderer_prepare_text_flush_uploads_us": 2,
+                            "renderer_prepare_text_scene_text_blobs": 8,
+                            "renderer_prepare_text_pinned_glyph_keys": 40,
+                            "renderer_prepare_text_prewarm_glyph_keys": 2,
+                            "renderer_prepare_text_retained_glyph_keys": 38,
+                            "renderer_prepare_text_added_glyph_keys": 2,
+                            "renderer_prepare_text_removed_glyph_keys": 1
+                        } }
+                    },
+                    {
+                        "tick_id": 2,
+                        "frame_id": 2,
+                        "changed_models": [],
+                        "changed_globals": [],
+                        "debug": { "stats": {
+                            "total_time_us": 120,
+                            "renderer_prepare_text_us": 30,
+                            "renderer_prepare_text_collect_pin_keys_us": 7,
+                            "renderer_prepare_text_bucket_delta_us": 8,
+                            "renderer_prepare_text_prewarm_us": 9,
+                            "renderer_prepare_text_pin_bucket_update_us": 10,
+                            "renderer_prepare_text_flush_uploads_us": 6,
+                            "renderer_prepare_text_scene_text_blobs": 9,
+                            "renderer_prepare_text_pinned_glyph_keys": 44,
+                            "renderer_prepare_text_prewarm_glyph_keys": 4,
+                            "renderer_prepare_text_retained_glyph_keys": 40,
+                            "renderer_prepare_text_added_glyph_keys": 4,
+                            "renderer_prepare_text_removed_glyph_keys": 3
+                        } }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let report = bundle_stats_from_json_with_options(
+        &bundle,
+        2,
+        BundleStatsSort::RendererPrepareText,
+        BundleStatsOptions::default(),
+    )
+    .unwrap();
+
+    assert_eq!(report.max_renderer_prepare_text_collect_pin_keys_us, 7);
+    assert_eq!(report.max_renderer_prepare_text_bucket_delta_us, 8);
+    assert_eq!(report.max_renderer_prepare_text_prewarm_us, 9);
+    assert_eq!(report.max_renderer_prepare_text_pin_bucket_update_us, 10);
+    assert_eq!(report.max_renderer_prepare_text_flush_uploads_us, 6);
+    assert_eq!(report.p95_renderer_prepare_text_collect_pin_keys_us, 7);
+    assert_eq!(report.top[0].renderer_prepare_text_pinned_glyph_keys, 44);
+
+    let json = report.to_json();
+    assert_eq!(
+        json.pointer("/p95/renderer_prepare_text_prewarm_us")
+            .and_then(|v| v.as_u64()),
+        Some(9)
+    );
+    assert_eq!(
+        json.pointer("/top/0/renderer_prepare_text_removed_glyph_keys")
+            .and_then(|v| v.as_u64()),
+        Some(3)
+    );
+}
+
+#[test]
 fn bundle_stats_extracts_top_invalidation_walks_with_semantics() {
     let bundle = json!({
         "schema_version": 1,

@@ -59,6 +59,7 @@ use self::types::{GlyphInstance, TextBlob, TextShape};
 pub(crate) use self::types::{
     TextAtlasPerfSnapshot, TextFontFaceUsage, TextRenderGlyph, TextRenderGlyphKind,
 };
+use std::time::Duration;
 
 pub struct TextSystem {
     parley_shaper: ParleyShaper,
@@ -77,6 +78,21 @@ pub struct TextSystem {
     frame_perf: TextFramePerfState,
 
     atlas_epoch: TextAtlasEpochState,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub(crate) struct TextPrepareScenePerf {
+    pub(crate) collect_pin_keys: Duration,
+    pub(crate) bucket_delta: Duration,
+    pub(crate) prewarm: Duration,
+    pub(crate) pin_bucket_update: Duration,
+    pub(crate) flush_uploads: Duration,
+    pub(crate) scene_text_blobs: u64,
+    pub(crate) pinned_glyph_keys: u64,
+    pub(crate) prewarm_glyph_keys: u64,
+    pub(crate) retained_glyph_keys: u64,
+    pub(crate) added_glyph_keys: u64,
+    pub(crate) removed_glyph_keys: u64,
 }
 #[cfg(test)]
 mod tests;
