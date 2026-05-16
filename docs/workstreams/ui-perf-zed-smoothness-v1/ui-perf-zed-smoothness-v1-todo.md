@@ -690,6 +690,10 @@ Conventions:
           `paint_collapse_observations_time_us` p95 from `52us` to `17..18us`, while row
           replay/store remains `289/0`. Treat the run-1 total-frame outlier (`1715us`) as local
           scheduler/noise evidence and do not update baselines.
+        - Formal owner decision from the three-probe editor contract remains unchanged: the
+          dominant residual is still `paint.widget` / Canvas aggregate work, with renderer text
+          prepare visible but not yet the primary limiter. The next implementation slice should be
+          Canvas/paint replay or traversal compaction, not glyph/text-index residency.
         - Near-term local owner order:
           1. Re-run the three editor paint probes locally after any host-widget cleanup to confirm
              the typical-only smoke generalizes to complex wheel and resize jitter.
