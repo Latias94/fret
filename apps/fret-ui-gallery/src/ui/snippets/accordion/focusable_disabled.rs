@@ -17,7 +17,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     "The open trigger is aria-disabled for assistive tech, but it should still keep its focus route while suppressing activation."
                 )
             ])
-            .test_id("ui-gallery-accordion-focusable-disabled-content"),
+            .test_id("ui-gallery-accordion-focusable-disabled-panel"),
         )]
     })
     .collapsible(false)

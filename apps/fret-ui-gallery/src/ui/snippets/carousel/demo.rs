@@ -275,6 +275,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 shadcn::Button::new("")
                     .variant(shadcn::ButtonVariant::Ghost)
                     .size(shadcn::ButtonSize::IconSm)
+                    .a11y_label("Toggle inner carousel action")
                     .refine_layout(
                         LayoutRefinement::default()
                             .absolute()

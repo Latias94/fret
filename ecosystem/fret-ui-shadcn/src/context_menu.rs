@@ -2130,8 +2130,9 @@ impl ContextMenuContentRenderEnv {
         cx.keyed(value.clone(), move |cx| {
             cx.pressable_with_id_props(move |cx, st, item_id| {
                 let geometry_hint = has_submenu.then(|| {
-                    let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                    let outer = overlay::outer_bounds_with_window_margin_for_element_root(
                         cx,
+                        item_id,
                         fret_ui::Invalidation::Layout,
                         window_margin,
                     );
@@ -3780,7 +3781,7 @@ impl ContextMenu {
                     let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
                     let disabled_arc: Arc<[bool]> = Arc::from(disabled_flags.into_boxed_slice());
 
-                    let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                    let outer = overlay::outer_bounds_with_window_margin_for_root(
                         cx,
                         fret_ui::Invalidation::Layout,
                         window_margin,
@@ -4185,8 +4186,9 @@ impl ContextMenu {
                                                                 move |cx, st, item_id| {
                                                                     let geometry_hint =
                                                                         has_submenu.then(|| {
-                                                                            let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                                                                            let outer = overlay::outer_bounds_with_window_margin_for_element_root(
                                                                                 cx,
+                                                                                item_id,
                                                                                 fret_ui::Invalidation::Layout,
                                                                                 window_margin,
                                                                             );

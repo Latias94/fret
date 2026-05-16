@@ -29,6 +29,65 @@ pub fn outer_bounds_with_window_margin(window_bounds: Rect, window_margin: Px) -
     inset_rect(window_bounds, Edges::all(window_margin))
 }
 
+/// Returns the current render root bounds for placement.
+///
+/// The environment viewport is still observed so view-cache roots that place overlays are refreshed
+/// on window metric changes, but the geometry itself must come from the render root. This keeps
+/// anchored overlays correct inside embedded or secondary viewport roots whose origin/size can
+/// differ from the OS window.
+#[track_caller]
+pub fn root_bounds_for_placement<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    invalidation: Invalidation,
+) -> Rect {
+    let _ = cx.environment_viewport_bounds(invalidation);
+    cx.bounds
+}
+
+/// Returns the anchor/source element root bounds for placement.
+///
+/// Element-anchored overlays may render in a portal/window overlay root while their source element
+/// lives inside an embedded viewport root. Collision boundaries must follow the source element root
+/// rather than the portal root, otherwise panel-local viewports place against the OS window.
+#[track_caller]
+pub fn root_bounds_for_element_placement<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    element: GlobalElementId,
+    invalidation: Invalidation,
+) -> Rect {
+    let _ = cx.environment_viewport_bounds(invalidation);
+    cx.root_bounds_for_element(element).unwrap_or(cx.bounds)
+}
+
+/// Returns the current render root bounds inset by a uniform window margin.
+#[track_caller]
+pub fn outer_bounds_with_window_margin_for_root<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    invalidation: Invalidation,
+    window_margin: Px,
+) -> Rect {
+    let outer =
+        outer_bounds_with_window_margin(root_bounds_for_placement(cx, invalidation), window_margin);
+    let scale_factor = cx.environment_scale_factor(invalidation);
+    pixel_snap::snap_rect_edges_round(outer, scale_factor)
+}
+
+/// Returns the anchor/source element root bounds inset by a uniform window margin.
+#[track_caller]
+pub fn outer_bounds_with_window_margin_for_element_root<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    element: GlobalElementId,
+    invalidation: Invalidation,
+    window_margin: Px,
+) -> Rect {
+    let outer = outer_bounds_with_window_margin(
+        root_bounds_for_element_placement(cx, element, invalidation),
+        window_margin,
+    );
+    let scale_factor = cx.environment_scale_factor(invalidation);
+    pixel_snap::snap_rect_edges_round(outer, scale_factor)
+}
+
 /// Returns an "outer viewport" rect inset by a uniform window margin, observing the committed
 /// environment snapshot (ADR 0232).
 #[track_caller]
@@ -72,8 +131,12 @@ pub fn anchored_panel_bounds_for_element<H: UiHost>(
     fallback_size: Size,
 ) -> Option<Rect> {
     let anchor = anchor_bounds_for_element(cx, trigger)?;
-    let outer =
-        outer_bounds_with_window_margin_for_environment(cx, Invalidation::Layout, window_margin);
+    let outer = outer_bounds_with_window_margin_for_element_root(
+        cx,
+        trigger,
+        Invalidation::Layout,
+        window_margin,
+    );
     let size = estimated_element_size(cx, content, fallback_size);
     Some(anchored_panel_bounds_sized(
         outer,
@@ -108,7 +171,7 @@ pub fn popper_layout_sized(
 
 /// Computes an anchored popper layout for an element, using last-frame layout/visual bounds.
 ///
-/// - `outer` is derived from `cx.bounds` inset by `window_margin`.
+/// - `outer` is derived from the current render root bounds inset by `window_margin`.
 /// - `desired` is derived from last-frame content size (falls back to `fallback_size`).
 #[allow(clippy::too_many_arguments)]
 pub fn popper_layout_for_element<H: UiHost>(
@@ -124,8 +187,12 @@ pub fn popper_layout_for_element<H: UiHost>(
 ) -> Option<AnchoredPanelLayout> {
     let anchor_id = anchor;
     let anchor = anchor_bounds_for_element(cx, anchor_id)?;
-    let outer =
-        outer_bounds_with_window_margin_for_environment(cx, Invalidation::Layout, window_margin);
+    let outer = outer_bounds_with_window_margin_for_element_root(
+        cx,
+        anchor_id,
+        Invalidation::Layout,
+        window_margin,
+    );
     let size = estimated_element_size(cx, content, fallback_size);
     let (layout, trace) = crate::primitives::popper::popper_layout_sized_with_trace(
         outer,
@@ -205,5 +272,49 @@ mod tests {
 
         let arrow = layout.arrow.expect("arrow layout");
         assert_eq!(arrow.side, Side::Top);
+    }
+
+    #[test]
+    fn outer_bounds_with_window_margin_preserves_non_zero_root_origin() {
+        let root = Rect::new(
+            Point::new(Px(240.0), Px(64.0)),
+            Size::new(Px(220.0), Px(190.0)),
+        );
+
+        let outer = outer_bounds_with_window_margin(root, Px(10.0));
+
+        assert_eq!(
+            outer,
+            Rect::new(
+                Point::new(Px(250.0), Px(74.0)),
+                Size::new(Px(200.0), Px(170.0)),
+            )
+        );
+    }
+
+    #[test]
+    fn outer_bounds_with_window_margin_for_root_uses_current_context_bounds() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = fret_app::App::new();
+        let root = Rect::new(
+            Point::new(Px(240.0), Px(64.0)),
+            Size::new(Px(220.0), Px(190.0)),
+        );
+
+        let outer = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            root,
+            "overlay-root-bounds-test",
+            |cx| outer_bounds_with_window_margin_for_root(cx, Invalidation::Layout, Px(10.0)),
+        );
+
+        assert_eq!(
+            outer,
+            Rect::new(
+                Point::new(Px(250.0), Px(74.0)),
+                Size::new(Px(200.0), Px(170.0)),
+            )
+        );
     }
 }

@@ -843,6 +843,8 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::SetWindowInnerSize { window, .. }
                 | UiActionStepV2::SetWindowStyle { window, .. }
                 | UiActionStepV2::SetWindowOuterPosition { window, .. }
+                | UiActionStepV2::SetWindowInsets { window, .. }
+                | UiActionStepV2::SetWindowPreferences { window, .. }
                 | UiActionStepV2::SetCursorInWindow { window, .. }
                 | UiActionStepV2::SetCursorInWindowLogical { window, .. }
                 | UiActionStepV2::SetMouseButtons { window, .. }

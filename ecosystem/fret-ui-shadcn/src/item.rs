@@ -20,37 +20,20 @@ use fret_ui_kit::{
 
 use crate::overlay_motion;
 
-const ITEM_MEDIA_MARKER_PREFIX: &str = "fret-ui-shadcn.item-media";
-const ITEM_DESCRIPTION_MARKER_PREFIX: &str = "fret-ui-shadcn.item-description";
+const ITEM_MEDIA_SLOT: &str = "fret-ui-shadcn.item-media";
+const ITEM_DESCRIPTION_SLOT: &str = "fret-ui-shadcn.item-description";
 
 fn tailwind_transition_ease_in_out(t: f32) -> f32 {
     // Tailwind default `ease-in-out`: cubic-bezier(0.4, 0, 0.2, 1)
     fret_ui_kit::headless::easing::CubicBezier::new(0.4, 0.0, 0.2, 1.0).sample(t)
 }
 
-fn matches_marker(marker: &str, prefix: &str) -> bool {
-    marker == prefix
-        || (marker.starts_with(prefix)
-            && marker
-                .as_bytes()
-                .get(prefix.len())
-                .is_some_and(|b| *b == b':'))
-}
-
-fn attach_item_marker(el: AnyElement, prefix: &str) -> AnyElement {
-    let marker: Arc<str> = Arc::from(format!("{prefix}:{}", el.id.0));
-    el.key_context(marker)
-}
-
-fn element_has_item_marker(element: &AnyElement, prefix: &str) -> bool {
-    element
-        .key_context
-        .as_deref()
-        .is_some_and(|marker| matches_marker(marker, prefix))
+fn element_has_item_marker(element: &AnyElement, slot: &str) -> bool {
+    element.component_slot.as_deref() == Some(slot)
 }
 
 fn subtree_has_item_description_marker(element: &AnyElement) -> bool {
-    element_has_item_marker(element, ITEM_DESCRIPTION_MARKER_PREFIX)
+    element_has_item_marker(element, ITEM_DESCRIPTION_SLOT)
         || element
             .children
             .iter()
@@ -456,7 +439,7 @@ impl ItemMedia {
                 move |_cx| children,
             )]
         });
-        attach_item_marker(element, ITEM_MEDIA_MARKER_PREFIX)
+        element.component_slot(ITEM_MEDIA_SLOT)
     }
 }
 
@@ -869,7 +852,7 @@ impl ItemDescription {
             }
         };
 
-        attach_item_marker(element, ITEM_DESCRIPTION_MARKER_PREFIX)
+        element.component_slot(ITEM_DESCRIPTION_SLOT)
     }
 }
 
@@ -1068,7 +1051,7 @@ impl Item {
             children
                 .into_iter()
                 .map(|child| {
-                    if element_has_item_marker(&child, ITEM_MEDIA_MARKER_PREFIX) {
+                    if element_has_item_marker(&child, ITEM_MEDIA_SLOT) {
                         patch_item_media_for_description(child, media_description_offset)
                     } else {
                         child
@@ -1317,6 +1300,20 @@ mod tests {
         }
     }
 
+    fn assert_internal_slot_not_public_marker(el: &AnyElement, slot: &str, label: &str) {
+        assert_eq!(el.component_slot.as_deref(), Some(slot));
+        assert!(
+            el.key_context.is_none(),
+            "{label} structural slot must not occupy shortcut key_context",
+        );
+        assert!(
+            el.semantics_decoration
+                .as_ref()
+                .is_none_or(|d| d.test_id.is_none()),
+            "{label} structural slot must not be exported as a diagnostics test_id",
+        );
+    }
+
     #[derive(Default)]
     struct FakeServices;
 
@@ -1547,6 +1544,28 @@ mod tests {
         };
         assert_eq!(pressable.a11y.role, Some(SemanticsRole::Link));
         assert_eq!(pressable.key_activation, PressableKeyActivation::EnterOnly);
+    }
+
+    #[test]
+    fn item_structural_slots_do_not_use_key_context_or_diagnostics_test_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = bounds();
+
+        let (media, description) =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+                (
+                    ItemMedia::new([ui::text("m").into_element(cx)]).into_element(cx),
+                    ItemDescription::new("Description").into_element(cx),
+                )
+            });
+
+        assert_internal_slot_not_public_marker(&media, ITEM_MEDIA_SLOT, "ItemMedia");
+        assert_internal_slot_not_public_marker(
+            &description,
+            ITEM_DESCRIPTION_SLOT,
+            "ItemDescription",
+        );
     }
 
     #[test]

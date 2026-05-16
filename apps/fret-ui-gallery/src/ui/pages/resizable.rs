@@ -10,6 +10,7 @@ pub(super) fn preview_resizable(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> 
     let handle = snippets::handle::render(cx);
     let rtl = snippets::rtl::render(cx);
     let adaptive_panel = snippets::adaptive_panel::render(cx);
+    let multi_viewport_combobox = snippets::multi_viewport_combobox::render(cx);
     let notes = snippets::notes::render(cx);
     let about = doc_layout::notes_block([
         "Reference stack: shadcn Resizable docs on the Base UI and Radix lanes.",
@@ -42,6 +43,18 @@ pub(super) fn preview_resizable(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> 
         .max_w(Px(1120.0))
         .test_id_prefix("ui-gallery-resizable-adaptive-panel-proof")
         .code_rust_from_file_region(snippets::adaptive_panel::SOURCE, "example");
+    let multi_viewport_combobox = DocSection::build(
+        cx,
+        "Multi-Viewport Combobox",
+        multi_viewport_combobox,
+    )
+    .description(
+        "Diagnostics fixture for anchored Combobox placement inside a Resizable panel viewport root.",
+    )
+    .max_w(Px(1120.0))
+    .test_id_prefix("ui-gallery-resizable-multi-viewport-combobox-docsec")
+    .no_shell()
+    .code_rust_from_file_region(snippets::multi_viewport_combobox::SOURCE, "example");
     let notes = DocSection::build(cx, "Notes", notes)
         .no_shell()
         .description("Remaining parity notes and diagnostics anchors.")
@@ -72,7 +85,7 @@ pub(super) fn preview_resizable(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn/Base UI Resizable docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `About`, `Usage`, `Vertical`, `Handle`, `RTL`, and `API Reference`. `Adaptive Panel Proof` is the explicit Fret follow-up that promotes one fixed-window container-query teaching surface before `Notes` closes on parity conclusions and diagnostics anchors.",
+            "Preview mirrors the shadcn/Base UI Resizable docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `About`, `Usage`, `Vertical`, `Handle`, `RTL`, and `API Reference`. `Adaptive Panel Proof` and `Multi-Viewport Combobox` are explicit Fret follow-ups that promote fixed-window container-query and viewport-root overlay ownership surfaces before `Notes` closes on parity conclusions and diagnostics anchors.",
         ),
         vec![
             demo,
@@ -83,6 +96,7 @@ pub(super) fn preview_resizable(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> 
             rtl,
             api_reference,
             adaptive_panel,
+            multi_viewport_combobox,
             notes,
         ],
     );

@@ -84,6 +84,52 @@ fn script_v2_roundtrip_todo_baseline() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_popover_click_through_outside_press_focus_underlay() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-click-through-outside-press-focus-underlay.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_dropdown_nonmodal_outside_press_focus_underlay() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/overlay/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_motion_preset_runtime_token_mutation() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-preset-runtime-token-mutation.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_platform_preferences_runtime_environment_mutation() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_set_window_preferences_defaults() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "set_window_preferences",
+      "window": { "kind": "first_seen" },
+      "color_scheme": { "kind": "clear" },
+      "prefers_reduced_motion": { "kind": "set", "value": true },
+      "text_scale_factor": { "kind": "set", "value": 1.25 }
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v1_roundtrip_active_item_is_predicate() {
     assert_script_v1_roundtrip(
         r#"{
@@ -354,6 +400,27 @@ fn script_v2_roundtrip_ui_gallery_sonner_live_region_mutation() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_switch_read_only_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-switch-read-only-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_switch_read_only_dynamic_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-switch-read-only-dynamic-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_switch_command_gated_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-switch-command-gated-action-state.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_card_description_no_early_wrap() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-card-description-no-early-wrap.json"
@@ -539,6 +606,13 @@ fn script_v2_roundtrip_ui_gallery_combobox_responsive_resize_open_placement() {
 fn script_v2_roundtrip_ui_gallery_combobox_placement_ownership_scroll_rtl() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-placement-ownership-scroll-rtl.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_resizable_multi_viewport_combobox_placement() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-multi-viewport-combobox-placement.json"
     ));
 }
 

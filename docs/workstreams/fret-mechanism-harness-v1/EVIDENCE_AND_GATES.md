@@ -48,6 +48,20 @@ cargo nextest run -p fret-ui anchored_anchor_element_uses_scroll_transformed_vis
 cargo nextest run -p fret-ui anchored
 ```
 
+## Anchored Cross-Root Coordinate Gates
+
+```powershell
+python -m json.tool crates/fret-ui/src/declarative/tests/fixtures/anchored_cross_root_coordinate_v1.json
+cargo test -p fret-ui --lib mechanism_harness_anchored_cross_root_coordinate_matches_oracles -- --nocapture
+cargo nextest run -p fret-ui-kit outer_bounds_with_window_margin --no-fail-fast
+$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib popover_first_open_placement_size_prefers_explicit_hint -- --nocapture
+$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib hover_card_anchor_override_uses_anchor_bounds_for_placement -- --nocapture
+$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib tooltip_anchor_override_uses_anchor_bounds_for_placement -- --nocapture
+$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib dropdown_menu_portal_escapes_overflow_clip_ancestor -- --nocapture
+$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib context_menu_submenu_keyboard_open_transfers_focus_and_arrow_left_restores_focus -- --nocapture
+$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib menubar_submenu_opens_on_arrow_right_and_closes_on_arrow_left_restoring_focus -- --nocapture
+```
+
 ## View-Cache and Root-Boundary Gates
 
 ```powershell
@@ -1949,6 +1963,634 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag-dialog-nested-combobox-modal-boundary-v4/sessions/1778885765520-86120/1778885771913-ui-gallery-dialog-nested-combobox-modal-boundary/bundle.schema2.json`
   - packed evidence:
     `target/fret-diag-dialog-nested-combobox-modal-boundary-v4/sessions/1778885765520-86120/share/1778885770482.zip`
+- Cross-root anchored coordinate/root-boundary policy gate:
+  `crates/fret-ui/src/declarative/tests/fixtures/anchored_cross_root_coordinate_v1.json`
+  - invariant:
+    core `AnchoredProps` must resolve anchors across render roots and clamp/flip against the
+    current overlay/root boundary, while shadcn anchored overlay recipes should derive collision
+    boundaries from the owner render root rather than the OS window/environment viewport.
+  - implementation anchors:
+    `crates/fret-ui/src/declarative/tests/anchored_cross_root_coordinate_harness.rs`,
+    `ecosystem/fret-ui-kit/src/overlay.rs`,
+    `ecosystem/fret-ui-shadcn/src/popover.rs`,
+    `ecosystem/fret-ui-shadcn/src/select.rs`,
+    `ecosystem/fret-ui-shadcn/src/tooltip.rs`,
+    `ecosystem/fret-ui-shadcn/src/hover_card.rs`,
+    `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`,
+    `ecosystem/fret-ui-shadcn/src/context_menu.rs`, and
+    `ecosystem/fret-ui-shadcn/src/menubar.rs`.
+  - JSON fixture result:
+    `python -m json.tool crates/fret-ui/src/declarative/tests/fixtures/anchored_cross_root_coordinate_v1.json`
+    passed.
+  - synthetic gate:
+    `cargo test -p fret-ui --lib mechanism_harness_anchored_cross_root_coordinate_matches_oracles -- --nocapture`
+  - synthetic result:
+    passed, 1 test.
+  - UI kit focused gate:
+    `cargo nextest run -p fret-ui-kit outer_bounds_with_window_margin --no-fail-fast`
+  - UI kit focused result:
+    passed, 2 tests; Nextest run id `18deeb53-0fd8-4b25-8df3-af61212780e9`.
+  - shadcn compile/placement smoke:
+    `$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib popover_first_open_placement_size_prefers_explicit_hint -- --nocapture`
+  - shadcn compile/placement smoke result:
+    passed, 1 test.
+  - representative shadcn focused gates:
+    `hover_card_anchor_override_uses_anchor_bounds_for_placement`,
+    `tooltip_anchor_override_uses_anchor_bounds_for_placement`,
+    `dropdown_menu_portal_escapes_overflow_clip_ancestor`,
+    `context_menu_submenu_keyboard_open_transfers_focus_and_arrow_left_restores_focus`, and
+    `menubar_submenu_opens_on_arrow_right_and_closes_on_arrow_left_restoring_focus`.
+  - representative shadcn focused result:
+    all passed.
+- Runtime multi-viewport Combobox root-boundary gate:
+  `tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-multi-viewport-combobox-placement.json`
+  - invariant:
+    a Combobox trigger inside a Resizable panel viewport root must derive overlay collision
+    boundaries from the source element's nearest layout viewport root, not from the owner root or
+    OS window. The fixture places the trigger near the bottom of the panel while the OS window still
+    has room below; correct behavior flips the popover to the top.
+  - implementation anchors:
+    `crates/fret-ui/src/elements/runtime.rs`,
+    `crates/fret-ui/src/elements/cx.rs`,
+    `crates/fret-ui/src/elements/queries.rs`,
+    `crates/fret-ui/src/tree/layout/entrypoints.rs`,
+    `crates/fret-ui/src/declarative/tests/layout/viewport_roots.rs`,
+    `ecosystem/fret-ui-kit/src/overlay.rs`,
+    `apps/fret-ui-gallery/src/ui/snippets/resizable/multi_viewport_combobox.rs`,
+    `apps/fret-ui-gallery/src/ui/pages/resizable.rs`,
+    `tools/diag-scripts/suites/fret-mechanism-harness-overlay-focus/suite.json`, and
+    `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+  - before runtime evidence:
+    `.fret/diag/runs/ui-gallery-resizable-multi-viewport-combobox-placement-before/script.result.json`
+  - before result:
+    failed at step 14 with `wait_overlay_placement_trace_timeout`; trace showed
+    `chosen_side=bottom` and `outer_collision=900x1000@0,0`.
+  - before packed evidence:
+    `.fret/diag/runs/ui-gallery-resizable-multi-viewport-combobox-placement-before/share/1778902294871.zip`
+  - focused mechanism gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui element_root_bounds_cache_rebuilds_on_view_cache_hit_after_viewport_move element_root_bounds_cache_rebuilds_when_element_moves_between_viewport_roots element_root_bounds_cache_uses_nearest_nested_viewport_root element_root_bounds_cache_uses_nearest_viewport_when_owner_root_differs viewport_root_bounds_for_descendant_elements_track_the_panel_bounds --no-fail-fast`
+  - focused mechanism result:
+    passed, 5 tests; Nextest run id `045558b5-2637-4b15-a41f-55d7399d5ad2`.
+  - UI kit focused gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit outer_bounds_with_window_margin_for_root_uses_current_context_bounds popper_layout_for_element_returns_arrow_layout_when_configured --no-fail-fast`
+  - UI kit focused result:
+    passed, 2 tests; Nextest run id `819d431c-1316-431e-95b8-58dc6e962904`.
+  - protocol roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_resizable_multi_viewport_combobox_placement --no-fail-fast`
+  - protocol roundtrip result:
+    passed, 1 test; Nextest run id `6f146a5c-1f46-4982-b37d-4722a3909e4d`.
+  - registry gate:
+    `python tools/check_diag_scripts_registry.py`
+  - registry result:
+    passed.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-multi-viewport-combobox-placement.json --dir .fret/diag/runs/ui-gallery-resizable-multi-viewport-combobox-placement-final2 --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1778905890519`.
+  - runtime evidence:
+    `.fret/diag/runs/ui-gallery-resizable-multi-viewport-combobox-placement-final2/script.result.json`
+  - packed evidence:
+    `.fret/diag/runs/ui-gallery-resizable-multi-viewport-combobox-placement-final2/share/1778905890519.zip`
+  - structured trace proof:
+    `chosen_side=top`, `preferred_fits_without_main_clamp=false`, and
+    `outer_collision=336x378@514.67,468.67`.
+- Non-modal overlay underlay activation-status gates:
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-click-through-outside-press-focus-underlay.json`
+  and
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay.json`
+  - invariant:
+    outside press on a default-compatible non-modal overlay must dismiss/close the overlay, move
+    focus to the underlay probe, and deliver the click to the underlay activation handler. Focus and
+    dismiss status are not strong enough proxy signals for click-through correctness.
+  - implementation anchors:
+    `apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/widgets.rs`,
+    `apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/flags.rs`,
+    `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-click-through-outside-press-focus-underlay.json`,
+    `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay.json`,
+    and `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+  - finding:
+    found a harness weakness, not a new mechanism defect. The previous runtime gates only proved
+    focus/dismiss outcomes and could miss an outside-press policy regression where the underlay
+    gained focus but the activation handler did not run.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - Popover runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-click-through-outside-press-focus-underlay.json --dir .fret/diag/runs/ui-gallery-popover-click-through-outside-press-focus-underlay-activation --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - Popover runtime result:
+    passed; run id `1778906489806`.
+  - Popover packed evidence:
+    `.fret/diag/runs/ui-gallery-popover-click-through-outside-press-focus-underlay-activation/share/1778906489806.zip`
+  - DropdownMenu runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/overlay/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay.json --dir .fret/diag/runs/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay-activation --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - DropdownMenu runtime result:
+    passed; run id `1778906522304`.
+  - DropdownMenu packed evidence:
+    `.fret/diag/runs/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay-activation/share/1778906522304.zip`
+  - protocol roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_popover_click_through_outside_press_focus_underlay script_v2_roundtrip_ui_gallery_dropdown_nonmodal_outside_press_focus_underlay --no-fail-fast`
+  - protocol roundtrip result:
+    passed, 2 tests; Nextest run id `c563620f-80b3-4933-9da6-48d657c68a38`.
+  - registry gate:
+    `python tools/check_diag_scripts_registry.py`
+  - registry result:
+    passed.
+- Switch read-only action-state runtime gate:
+  `tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-read-only-action-state.json`
+  - invariant:
+    a read-only Switch must remain observable and focusable, publish `read_only=true`, keep
+    `disabled=false`, suppress `invoke`, and reject pointer, associated-label, Space, and Enter
+    activation attempts without changing checked state.
+  - implementation anchors:
+    `crates/fret-diag-protocol/src/lib.rs`,
+    `crates/fret-diag-protocol/src/builder.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs`,
+    `ecosystem/fret-ui-shadcn/src/switch.rs`,
+    `apps/fret-ui-gallery/src/ui/snippets/switch/read_only.rs`,
+    `apps/fret-ui-gallery/src/ui/pages/switch.rs`,
+    `tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-read-only-action-state.json`,
+    and `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+  - finding:
+    found a real shadcn recipe semantics defect. `Switch::read_only(true)` already blocked pointer
+    mutation, but its semantics snapshot still exposed `actions.invoke=true`.
+  - before focused command:
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib switch_read_only_exposes_semantics_and_blocks_activation -- --nocapture`
+  - before focused result:
+    failed with `read-only switches must not expose invoke semantics`.
+  - focused recipe command after fix:
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib switch_read_only_exposes_semantics_and_blocks_activation -- --nocapture`
+  - focused recipe result:
+    passed, 1 test.
+  - protocol gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_read_only_is_serializes_and_deserializes predicate_disabled_is_serializes_and_deserializes predicate_semantics_action_is_serializes_and_deserializes script_v2_roundtrip_ui_gallery_switch_read_only_action_state --no-fail-fast`
+  - protocol result:
+    passed, 4 tests; Nextest run id `c521d101-11fc-4c8e-b094-47bea4a5b822`.
+  - bootstrap predicate gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics read_only_is_matches_semantics_read_only_flag disabled_is_matches_semantics_disabled_flag semantics_action_is_matches_all_exported_action_flags --no-fail-fast`
+  - bootstrap predicate result:
+    passed, 3 tests; Nextest run id `6b8a60cd-00a7-44ab-93bc-9e8a5cce6fce`.
+  - registry gate:
+    `python tools/check_diag_scripts_registry.py`
+  - registry result:
+    passed.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-read-only-action-state.json --dir .fret/diag/runs/ui-gallery-switch-read-only-action-state-f112 --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1778909364811`.
+  - runtime evidence:
+    `.fret/diag/runs/ui-gallery-switch-read-only-action-state-f112/script.result.json`
+  - packed evidence:
+    `.fret/diag/runs/ui-gallery-switch-read-only-action-state-f112/share/1778909364811.zip`
+- Switch dynamic read-only action-state runtime gate:
+  `tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-read-only-dynamic-action-state.json`
+  - invariant:
+    read-only policy changes must refresh a non-list Switch's `read_only` and `invoke` semantics
+    across frames, while preserving focusability and checked-state behavior.
+  - implementation anchors:
+    `apps/fret-ui-gallery/src/ui/snippets/switch/read_only.rs`,
+    `ecosystem/fret-ui-shadcn/src/switch.rs`,
+    `tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-read-only-dynamic-action-state.json`,
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`, and
+    `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+  - finding:
+    no new runtime defect reproduced after F112. The first focused test draft exposed a test
+    modeling issue: changing a model without rerendering the declarative root cannot prove
+    component props changed. The corrected focused gate and runtime gate both pass.
+  - focused recipe command:
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib switch_read_only_semantics_update_when_policy_model_changes -- --nocapture`
+  - focused recipe result:
+    passed, 1 test.
+  - protocol roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_switch_read_only_dynamic_action_state script_v2_roundtrip_ui_gallery_switch_read_only_action_state --no-fail-fast`
+  - protocol roundtrip result:
+    passed, 2 tests; Nextest run id `be780bca-1c2b-4a26-9322-cdefd3de970a`.
+  - registry gate:
+    `python tools/check_diag_scripts_registry.py`
+  - registry result:
+    passed.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-read-only-dynamic-action-state.json --dir .fret/diag/runs/ui-gallery-switch-read-only-dynamic-action-state-f113 --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1778910608918`.
+  - runtime evidence:
+    `.fret/diag/runs/ui-gallery-switch-read-only-dynamic-action-state-f113/script.result.json`
+  - packed evidence:
+    `.fret/diag/runs/ui-gallery-switch-read-only-dynamic-action-state-f113/share/1778910608918.zip`
+- Switch command-gated action-state runtime gate:
+  `tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-command-gated-action-state.json`
+  - invariant:
+    external `WindowCommandEnabledService` command availability must update a non-list Switch's
+    `disabled` and `invoke` semantics across frames, suppress checked-state mutation while disabled,
+    and restore mutation after re-enabling without stale derived action-availability feedback.
+  - implementation anchors:
+    `ecosystem/fret-ui-kit/src/command.rs`,
+    `ecosystem/fret-ui-shadcn/src/switch.rs`,
+    `apps/fret-ui-gallery/src/driver/runtime_driver.rs`,
+    `apps/fret-ui-gallery/src/ui/snippets/switch/command_gate.rs`,
+    `tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-command-gated-action-state.json`,
+    and `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+  - finding:
+    found a diagnostics harness gap. The Gallery driver handled the command after `UiTree`
+    recorded a bubbling `handled=false` decision, but did not emit a driver-handled trace, so the
+    strict runtime script could not prove command handling.
+  - before runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-command-gated-action-state.json --dir .fret/diag/runs/ui-gallery-switch-command-gated-action-state-f114-final --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - before runtime result:
+    failed at `wait_command_dispatch_trace_timeout`; best candidate was
+    `ui_gallery.switch.command_gate.toggle_enabled` with `handled=false`.
+  - protocol roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_switch_command_gated_action_state --no-fail-fast`
+  - protocol roundtrip result:
+    passed, 1 test; Nextest run id `ff37bc5e-7d16-492e-bf2e-cb1b0381993a`.
+  - build gate:
+    `cargo build --profile dev-fast -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-command-gated-action-state.json --dir .fret/diag/runs/ui-gallery-switch-command-gated-action-state-f114-final2 --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1778914891818`.
+  - runtime evidence:
+    `.fret/diag/runs/ui-gallery-switch-command-gated-action-state-f114-final2/script.result.json`
+  - packed evidence:
+    `.fret/diag/runs/ui-gallery-switch-command-gated-action-state-f114-final2/share/1778914891818.zip`
+- Shell theme/motion runtime token mutation gate:
+  `tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-preset-runtime-token-mutation.json`
+  - invariant:
+    Gallery shell Theme/Motion preset selections must update both the observable shell models and
+    effective global Theme runtime tokens. Numeric motion-token assertions should use stable
+    integer-scaled snapshot fields instead of strict equality on raw `f32` JSON values.
+  - implementation anchors:
+    `apps/fret-ui-gallery/src/driver/diag_snapshot.rs`,
+    `apps/fret-ui-gallery/src/driver/runtime_driver.rs`,
+    `apps/fret-ui-gallery/src/driver/window_bootstrap.rs`,
+    `tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-preset-runtime-token-mutation.json`,
+    `tools/diag-scripts/suites/ui-gallery-motion-pilot/suite.json`, and
+    `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+  - finding:
+    found a diagnostics oracle gap. The first script draft could see the model/token transition, but
+    strict JSON equality on raw `f32` easing/bounce values produced a false failure. The app
+    snapshot now publishes rounded readable values plus milli-scaled integer fields for durable
+    token gates.
+  - protocol roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_motion_preset_runtime_token_mutation --no-fail-fast`
+  - protocol roundtrip result:
+    passed, 1 test; Nextest run id `8fc82fd2-4c72-49cb-883d-b6993fbaa4fd`.
+  - registry gate:
+    `python tools/check_diag_scripts_registry.py`
+  - registry result:
+    passed.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-preset-runtime-token-mutation.json --dir .fret/diag/runs/ui-gallery-motion-preset-runtime-token-mutation-f115c --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1778919283142`.
+  - runtime evidence:
+    `.fret/diag/runs/ui-gallery-motion-preset-runtime-token-mutation-f115c/script.result.json`
+  - packed evidence:
+    `.fret/diag/runs/ui-gallery-motion-preset-runtime-token-mutation-f115c/share/1778919283142.zip`
+- Platform preference runtime environment mutation gate:
+  `tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json`
+  - invariant:
+    Diagnostics-injected platform preferences must travel through the same runner-owned
+    `WindowMetricsService` path as platform environment events, and both app snapshot readers and
+    `ElementContext` environment queries must observe the resulting color scheme, reduced-motion,
+    and text-scale values.
+  - implementation anchors:
+    `crates/fret-diag-protocol/src/lib.rs`,
+    `crates/fret-runtime/src/effect.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs`,
+    `crates/fret-launch/src/runner/desktop/runner/effects.rs`,
+    `crates/fret-launch/src/runner/web/effects.rs`,
+    `apps/fret-ui-gallery/src/driver/diag_snapshot.rs`,
+    `apps/fret-ui-gallery/src/ui/snippets/motion_presets/environment_probe.rs`,
+    `tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json`, and
+    `tools/diag-scripts/suites/ui-gallery-motion-pilot/suite.json`.
+  - finding:
+    found a harness script reliability defect. The first runtime run timed out while waiting for
+    `ui-gallery-motion-presets-environment-probe` because the script never navigated from the
+    default page into Motion Presets. The script now performs the same explicit nav-search and page
+    click flow used by the existing Motion Presets scripts.
+  - protocol roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_platform_preferences_runtime_environment_mutation script_v2_roundtrip_set_window_preferences_defaults --no-fail-fast`
+  - protocol roundtrip result:
+    passed, 2 tests; Nextest run id `f5713881-de6d-4eb3-9f4c-4d7d77e76697`.
+  - registry gate:
+    `python tools/check_diag_scripts_registry.py`
+  - registry result:
+    passed.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed before the final script navigation hardening.
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json --dir .fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation-rerun --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - first runtime failure:
+    `.fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation/script.result.json`
+    reported `timeout.tooling.script_result`; the step sidecar
+    `.fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation/1778922372693-script-step-0002-wait_until-timeout/test_ids.index.json`
+    contained `ui-gallery-nav-motion-presets` but not the page or probe ids.
+  - runtime result after script navigation hardening:
+    passed; run id `1778922706072`.
+  - runtime evidence:
+    `.fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation-rerun/script.result.json`
+  - packed evidence:
+    `.fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation-rerun/share/1778922706072.zip`
+- Diagnostics authoring page-entry lint gate:
+  `tools/check_diag_scripts_registry.py`
+  - scope:
+    promoted `ui-gallery-motion-pilot` scripts, Motion Presets page-local selectors with
+    `ui-gallery-motion-presets-*` test ids.
+  - invariant:
+    a script may not wait for, click, scroll, move to, or capture a page-local Motion Presets
+    selector until it has first proved the owning page root `ui-gallery-page-motion-presets`.
+    The always-visible shell motion preset trigger is allowlisted because it exists outside the
+    Motion Presets page body.
+  - finding:
+    found and fixed an existing script authoring debt:
+    `ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json` navigated to
+    Motion Presets but waited for a page-local trigger without first asserting the page root.
+  - implementation anchors:
+    `tools/check_diag_scripts_registry.py`,
+    `tools/test_check_diag_scripts_registry.py`,
+    `tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json`,
+    `tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json`, and
+    `tools/diag-scripts/suites/ui-gallery-motion-pilot/suite.json`.
+  - lint self-test gate:
+    `python tools/test_check_diag_scripts_registry.py`
+  - lint self-test result:
+    passed, 3 tests.
+  - registry gate:
+    `python tools/check_diag_scripts_registry.py`
+  - registry result:
+    passed.
+  - follow-up audit result:
+    promoted Select scripts had 0 page-entry violations; promoted Combobox scripts initially had
+    36 under a page-root-only rule, but they had explicit
+    `FRET_UI_GALLERY_START_PAGE=combobox` defaults, so start-page defaults now count as valid entry
+    evidence and Combobox is strict too. Promoted DataTable scripts still had 166 page-entry
+    violations and remain a follow-on cleanup lane rather than a strict-lint candidate.
+- AlertAction component-slot marker gate:
+  - invariant:
+    recipe-internal slot classification must not use globally exported diagnostics `test_id`s.
+    Internal slots should be discoverable by composition code without entering semantics, layout,
+    hit testing, or accessibility surfaces.
+  - implementation anchors:
+    `crates/fret-ui/src/element.rs` and `ecosystem/fret-ui-shadcn/src/alert.rs`.
+  - focused gate:
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib alert_action`
+  - focused result:
+    passed, 6 tests.
+  - runtime gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta.json --dir .fret/diag/runs/ui-gallery-alert-tabs-component-slot-fix --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1778926130298`.
+  - packed evidence:
+    `.fret/diag/runs/ui-gallery-alert-tabs-component-slot-fix/share/1778926130298.zip`
+- Drawer snap-point visible-click and dismiss-contract gates:
+  - invariant:
+    long-page Drawer scripts must prove a trigger is visible/hittable before `click_stable`, and
+    snap-point drag gates must encode the component's actual Vaul-style policy: releasing near a
+    snap point settles, while dragging far enough down can dismiss and should restore focus.
+  - implementation anchors:
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/labels.rs`, and
+    `tools/diag-scripts/ui-gallery/drawer/`.
+  - diagnostics unit gate:
+    `cargo test --profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics --lib click_stable_timeout`
+  - diagnostics unit result:
+    passed, 3 tests.
+  - reason-code gate:
+    `cargo test --profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics --lib labels_reason_code_tests`
+  - reason-code result:
+    passed, 1 test.
+  - runtime gates:
+    `ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta.json`,
+    `ui-gallery-drawer-snap-points-drag-settle.json`, and
+    `ui-gallery-drawer-snap-points-spring-midflight-retarget-fixed-frame-delta.json`.
+  - runtime results:
+    passed with run ids `1778928529130`, `1778928579053`, and `1778928911018`.
+  - packed evidence:
+    `.fret/diag/runs/ui-gallery-drawer-snap-points-visible-click-fix/share/1778928529130.zip`,
+    `.fret/diag/runs/ui-gallery-drawer-snap-points-drag-settle-visible-click-fix/share/1778928579053.zip`,
+    and
+    `.fret/diag/runs/ui-gallery-drawer-snap-points-spring-dismiss-contract-fix-2/share/1778928911018.zip`.
+- Sidebar tooling-timeout evidence and long-page visibility gate:
+  - invariant:
+    when a script is stuck in a long-running intent step such as `click_stable`, external
+    script-result timeout handling must leave a bounded bundle with selector, hit-test, and
+    click-stable traces; long-page Sidebar content targets must be scrolled into view or
+    bounds-checked before `click_stable`.
+  - status:
+    fixed. The confirmed issue was a diagnostics/tooling plus script-authoring gap, not a Sidebar
+    component defect.
+  - original repro:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-toggle-fixed-frame-delta.json --dir .fret/diag/runs/ui-gallery-sidebar-toggle-triage --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - original repro result:
+    failed with `timeout.tooling.script_result`; run `1778930062035` remained at step 8
+    `click_stable` and did not produce a forced bundle.
+  - timeout-bundle fix anchors:
+    `crates/fret-diag/src/tooling_failures.rs` and `crates/fret-diag/src/tests.rs`.
+  - timeout-bundle regression gate:
+    `cargo test --profile dev-fast -p fret-diag --lib run_script_over_transport_timeout_captures_last_bundle_when_run_started -- --nocapture`
+  - timeout-bundle regression result:
+    passed.
+  - forced-bundle triage evidence:
+    `.fret/diag/runs/ui-gallery-sidebar-toggle-triage3/script.result.json` reports
+    `timeout.tooling.script_result` at step 8 and records `last_bundle_dir=1778934305640-diag-run`.
+  - root-cause evidence:
+    `.fret/diag/runs/ui-gallery-sidebar-toggle-triage3/sidebar-step8.slice.json` shows
+    `ui-gallery-sidebar-demo-toggle` at `x=549.3333`, `y=1401.3333`, `w=28`, `h=28` in a
+    `1080x720` window.
+  - script/lint fix anchors:
+    `tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-toggle-fixed-frame-delta.json`,
+    `tools/check_diag_scripts_registry.py`, and `tools/test_check_diag_scripts_registry.py`.
+  - registry lint gates:
+    `python tools/test_check_diag_scripts_registry.py` and
+    `python tools/check_diag_scripts_registry.py`
+  - registry lint results:
+    passed; the unit gate covers the Sidebar long-page negative case.
+  - focused runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-toggle-fixed-frame-delta.json --dir .fret/diag/runs/ui-gallery-sidebar-toggle-triage4 --timeout-ms 45000 --poll-ms 20 --launch target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime result:
+    passed, run id `1778936393221`.
+  - current evidence:
+    `.fret/diag/runs/ui-gallery-sidebar-toggle-triage/script.result.json` and
+    `.fret/diag/runs/ui-gallery-sidebar-toggle-triage/1778930062035/script.result.json`,
+    `.fret/diag/runs/ui-gallery-sidebar-toggle-triage3/script.result.json`,
+    `.fret/diag/runs/ui-gallery-sidebar-toggle-triage3/sidebar-step8.slice.json`, and
+    `.fret/diag/runs/ui-gallery-sidebar-toggle-triage4/script.result.json`.
+- Shadcn structural slot hygiene:
+  - invariant:
+    recipe-internal child classification must use `AnyElement::component_slot`, not diagnostics
+    `test_id` and not shortcut `key_context`.
+  - finding:
+    CardAction/CardFooter/AvatarBadge used generated diagnostics `test_id` markers; ItemMedia and
+    ItemDescription used `key_context` for internal recipe classification.
+  - implementation anchors:
+    `ecosystem/fret-ui-shadcn/src/card.rs`,
+    `ecosystem/fret-ui-shadcn/src/avatar.rs`, and
+    `ecosystem/fret-ui-shadcn/src/item.rs`.
+  - source-hygiene gate:
+    `tools/check_shadcn_internal_slots.py` and `tools/test_check_shadcn_internal_slots.py`.
+  - source audit:
+    `rg -n "fret-ui-shadcn\\." ecosystem/fret-ui-shadcn/src -g "*.rs"` now reports only
+    `component_slot` constants/usages in Alert, Avatar, Card, and Item.
+  - negative source audit:
+    `rg -n "key_context\\([^\\)]*fret-ui-shadcn|attach_test_id\\([^\\n]*fret-ui-shadcn|test_id\\([^\\n]*fret-ui-shadcn" ecosystem/fret-ui-shadcn/src -g "*.rs"`
+    returns no matches.
+  - focused gates:
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib card_action_marker -- --nocapture`,
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib card_header_with_action_uses_explicit_grid_slot_placement -- --nocapture`,
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib card_sections_can_inherit_or_override_size -- --nocapture`,
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib avatar_badge_can_inherit_or_override_size -- --nocapture`,
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib item_structural_slots_do_not_use_key_context_or_diagnostics_test_id -- --nocapture`,
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib item_sized_provides_size_defaults_to_parts -- --nocapture`, and
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib item_media_with_description_self_starts_and_offsets_from_top -- --nocapture`.
+  - focused gate results:
+    all passed.
+  - source-hygiene gate commands:
+    `python tools/test_check_shadcn_internal_slots.py` and
+    `python tools/check_shadcn_internal_slots.py`
+  - source-hygiene gate results:
+    passed, 4 tests and a clean source scan.
+- Sonner named-toaster scoping:
+  - invariant:
+    an unnamed Toaster renders only unnamed toasts, while a named Toaster renders only toasts with
+    the matching `toaster_id`; a single toast store entry must not appear in multiple live toast
+    overlay stacks.
+  - finding:
+    `ui-gallery-motion-pilot` found duplicate `toast-entry-1` and `toast-entry-2` semantics
+    `test_id`s after the Sonner interrupt gate because the shell Toaster rendered page-local
+    named toasts in addition to the page-local named Toaster.
+  - implementation anchors:
+    `ecosystem/fret-ui-kit/src/window_overlays/render.rs` and
+    `ecosystem/fret-ui-kit/src/window_overlays/tests/toast.rs`.
+  - focused unit gate:
+    `cargo test --profile dev-fast -p fret-ui-kit --lib toast_layers_scope_named_toasts_to_matching_toaster_id -- --nocapture`
+  - focused unit result:
+    passed.
+  - focused runtime gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-interrupt-fixed-frame-delta.json --dir .fret/diag/runs/ui-gallery-sonner-interrupt-after-scope-fix --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime result:
+    passed, run id `1778939842586`, share pack
+    `.fret/diag/runs/ui-gallery-sonner-interrupt-after-scope-fix/share/1778939842586.zip`.
+  - duplicate audit:
+    `target/dev-fast/fretboard-dev.exe diag test-ids .fret/diag/runs/ui-gallery-sonner-interrupt-after-scope-fix --json --max-test-ids 20`
+  - duplicate audit result:
+    `duplicate_test_ids_total=0`; `toast-entry-1` and `toast-entry-2` each have `count=1`.
+  - lint evidence:
+    `.fret/diag/runs/ui-gallery-sonner-interrupt-after-scope-fix/1778939851780-ui-gallery-sonner-interrupt-fixed-frame-delta/check.lint.json`
+    reports `error_issues=0`.
+  - full-suite follow-up:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-motion-pilot --dir .fret/diag/runs/ui-gallery-motion-pilot-after-toast-scope-fix --timeout-ms 900000 --session-auto --launch target/dev-fast/fret-ui-gallery.exe`
+  - full-suite result:
+    passed, 14/14 rows; summary
+    `.fret/diag/runs/ui-gallery-motion-pilot-after-toast-scope-fix/sessions/1778940056096-94540/suite.summary.json`.
+- Sonner toast action/cancel accessible names:
+  - invariant:
+    toast action and cancel controls are interactive buttons, so the visual `ToastAction.label`
+    must also be exported as the button accessible name.
+  - finding:
+    after the named-toaster scoping fix, `ui-gallery-sonner-interrupt-fixed-frame-delta.json`
+    still produced one `semantics.missing_label` warning. The flagged button was the visible
+    `Undo` toast action: the child text node existed, but the button itself had no label/value.
+  - implementation anchors:
+    `ecosystem/fret-ui-kit/src/window_overlays/render.rs` and
+    `ecosystem/fret-ui-kit/src/window_overlays/tests/toast.rs`.
+  - focused unit gate:
+    `cargo test --profile dev-fast -p fret-ui-kit --lib toast_action_and_cancel_labels_are_exposed_in_semantics_snapshot -- --nocapture`
+  - focused unit result:
+    passed.
+  - focused runtime gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-interrupt-fixed-frame-delta.json --dir .fret/diag/runs/ui-gallery-sonner-interrupt-after-action-label-fix --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime result:
+    passed, run id `1778941669635`, share pack
+    `.fret/diag/runs/ui-gallery-sonner-interrupt-after-action-label-fix/share/1778941669635.zip`.
+  - focused lint:
+    `target/dev-fast/fretboard-dev.exe diag lint .fret/diag/runs/ui-gallery-sonner-interrupt-after-action-label-fix/1778941679023-ui-gallery-sonner-interrupt-fixed-frame-delta/bundle.schema2.json --json --out .fret/diag/runs/ui-gallery-sonner-interrupt-after-action-label-fix/1778941679023-ui-gallery-sonner-interrupt-fixed-frame-delta/check.lint.json`
+  - focused lint result:
+    `error_issues=0`, `warning_issues=0`.
+  - full-suite follow-up:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-motion-pilot --dir .fret/diag/runs/ui-gallery-motion-pilot-after-toast-action-label-fix --timeout-ms 900000 --session-auto --launch target/dev-fast/fret-ui-gallery.exe`
+  - full-suite result:
+    passed, 14/14 rows; summary
+    `.fret/diag/runs/ui-gallery-motion-pilot-after-toast-action-label-fix/sessions/1778941744107-108312/suite.summary.json`.
+- Carousel demo inner-button accessible name:
+  - invariant:
+    UI Gallery fixture/demo controls that are exposed as interactive semantics nodes must have a
+    stable accessible name, even when their visual label is intentionally empty.
+  - finding:
+    three Carousel motion-pilot scripts reported `semantics.missing_label` for
+    `ui-gallery-carousel-demo-inner-button`; the demo used `Button::new("")` without
+    `.a11y_label(...)`.
+  - implementation anchor:
+    `apps/fret-ui-gallery/src/ui/snippets/carousel/demo.rs`.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - focused runtime gates:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery-carousel-expandable-fixed-frame-delta.json --dir .fret/diag/runs/ui-gallery-carousel-expandable-after-inner-label-fix --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery-carousel-focus-watch-tab-scrolls-gate.json --dir .fret/diag/runs/ui-gallery-carousel-focus-watch-after-inner-label-fix --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery-carousel-loop-continuity-touch-gate.json --dir .fret/diag/runs/ui-gallery-carousel-loop-continuity-after-inner-label-fix --timeout-ms 300000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime results:
+    passed with run ids `1778942849445`, `1778943027333`, and `1778943151863`.
+  - focused lint evidence:
+    `.fret/diag/runs/ui-gallery-carousel-expandable-after-inner-label-fix/1778942966450-ui-gallery-carousel-expandable-fixed-frame-delta/check.lint.json`,
+    `.fret/diag/runs/ui-gallery-carousel-focus-watch-after-inner-label-fix/1778943117290-ui-gallery-carousel-focus-watch-tab-scrolls/check.lint.json`, and
+    `.fret/diag/runs/ui-gallery-carousel-loop-continuity-after-inner-label-fix/1778943271162-ui-gallery-carousel-loop-continuity-end/check.lint.json`.
+  - focused lint results:
+    all report `error_issues=0`, `warning_issues=0`.
+- Tabs shared-indicator non-empty diagnostics bounds:
+  - invariant:
+    decorative visual surfaces that carry generated diagnostics `test_id`s must have non-empty
+    bounds even when pointer hit-testing is disabled.
+  - finding:
+    the Motion Presets `ui-gallery-motion-presets-fluid-tabs-shared-indicator` node had zero
+    semantics bounds because the Tabs shared indicator used a default auto-sized
+    `hit_test_gate(false)` around an absolute canvas. Fret's self-drawn layout path needs explicit
+    Fill sizing here; CSS-style inset fill is not enough.
+  - implementation anchor:
+    `ecosystem/fret-ui-shadcn/src/tabs.rs`.
+  - focused unit gate:
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib tabs_shared_indicator_test_id_has_non_empty_bounds -- --nocapture`
+  - focused unit result:
+    passed.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - focused runtime gates:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json --dir .fret/diag/runs/ui-gallery-platform-preferences-after-tabs-indicator-fill --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json --dir .fret/diag/runs/ui-gallery-fluid-tabs-after-tabs-indicator-fill --timeout-ms 300000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime results:
+    passed with run ids `1778944327922` and `1778944371703`; focused lint reports
+    `error_issues=0`, `warning_issues=0` for both bundles.
+  - full-suite follow-up:
+    `.fret/diag/runs/ui-gallery-motion-pilot-after-carousel-tabs-cleanup/sessions/1778944420308-93620/suite.summary.json`
+  - full-suite result:
+    passed, 14/14 rows, `scripts_with_evidence=14`, `focus_mismatch_total=0`,
+    `lint_error_total=0`, `lint_warning_total=0`.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

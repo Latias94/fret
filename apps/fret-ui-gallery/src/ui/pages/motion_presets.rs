@@ -16,6 +16,7 @@ pub(super) fn preview_motion_presets(
             motion_preset_open.clone(),
         );
         let token_snapshot = snippets::token_snapshot::render(cx);
+        let environment_probe = snippets::environment_probe::render(cx);
         let overlay_demo = snippets::overlay_demo::render(cx);
         let fluid_tabs_demo = snippets::fluid_tabs_demo::render(cx);
         let stagger_demo = snippets::stagger_demo::render(cx);
@@ -26,6 +27,9 @@ pub(super) fn preview_motion_presets(
         let token_snapshot = DocSection::build(cx, "Token snapshot", token_snapshot)
             .no_shell()
             .code_rust_from_file_region(snippets::token_snapshot::SOURCE, "example");
+        let environment_probe = DocSection::build(cx, "Environment probe", environment_probe)
+            .no_shell()
+            .code_rust_from_file_region(snippets::environment_probe::SOURCE, "example");
         let overlay_demo = DocSection::build(cx, "Overlay demo", overlay_demo)
             .no_shell()
             .code_rust_from_file_region(snippets::overlay_demo::SOURCE, "example");
@@ -48,6 +52,7 @@ pub(super) fn preview_motion_presets(
             vec![
                 preset_selector,
                 token_snapshot,
+                environment_probe,
                 overlay_demo,
                 fluid_tabs_demo,
                 stagger_demo,

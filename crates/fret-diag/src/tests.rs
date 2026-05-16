@@ -782,6 +782,148 @@ fn run_script_over_transport_timeout_writes_failed_tool_script_result() {
 }
 
 #[test]
+fn run_script_over_transport_timeout_captures_last_bundle_when_run_started() {
+    let root = std::env::temp_dir().join(format!(
+        "fret-diag-script-timeout-bundle-{}-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis(),
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).expect("create temp root");
+
+    let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
+        schema_version: 1,
+        capabilities: vec!["script_v2".to_string()],
+        runner_kind: None,
+        runner_version: None,
+        hints: None,
+    };
+    crate::util::write_json_value(
+        &root.join("capabilities.json"),
+        &serde_json::to_value(caps).expect("capabilities json"),
+    )
+    .expect("write capabilities.json");
+
+    let cfg = crate::transport::FsDiagTransportConfig::from_out_dir(&root);
+
+    let runtime_cfg = cfg.clone();
+    std::thread::spawn(move || {
+        fn read_stamp(path: &Path) -> Option<u64> {
+            let s = std::fs::read_to_string(path).ok()?;
+            s.lines().last()?.trim().parse::<u64>().ok()
+        }
+
+        let deadline = Instant::now() + Duration::from_secs(3);
+        while Instant::now() < deadline {
+            if read_stamp(&runtime_cfg.script_trigger_path).is_some() {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+
+        let running = fret_diag_protocol::UiScriptResultV1 {
+            schema_version: 1,
+            run_id: 11,
+            updated_unix_ms: crate::util::now_unix_ms(),
+            window: None,
+            stage: fret_diag_protocol::UiScriptStageV1::Running,
+            step_index: Some(8),
+            reason_code: None,
+            reason: None,
+            evidence: None,
+            last_bundle_dir: None,
+            last_bundle_artifact: None,
+        };
+        let _ = crate::util::write_json_value(
+            &runtime_cfg.script_result_path,
+            &serde_json::to_value(running).unwrap_or_else(|_| serde_json::json!({})),
+        );
+        let _ = crate::util::touch(&runtime_cfg.script_result_trigger_path);
+
+        let deadline = Instant::now() + Duration::from_secs(3);
+        while Instant::now() < deadline {
+            if read_stamp(&runtime_cfg.trigger_path).is_some() {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+
+        let export_dir = runtime_cfg.out_dir.join("888-timeout");
+        let _ = std::fs::create_dir_all(&export_dir);
+        let _ = crate::util::write_json_value(
+            &export_dir.join("bundle.json"),
+            &serde_json::json!({
+                "schema_version": 1,
+                "windows": [],
+            }),
+        );
+        let _ = std::fs::write(runtime_cfg.out_dir.join("latest.txt"), b"888-timeout");
+    });
+
+    let connected = connect_filesystem_tooling(&cfg, &root.join("ready.touch"), false, 5_000, 5)
+        .expect("connect fs tooling");
+
+    let tool_script_result_path = root.join("tool.script.result.json");
+    let capabilities_check_path = root.join("check.capabilities.json");
+    let script_json = serde_json::json!({
+        "schema_version": 2,
+        "steps": [],
+    });
+
+    let err = run_script_over_transport(
+        &root,
+        &connected,
+        script_json,
+        false,
+        false,
+        Some("timeout"),
+        None,
+        300,
+        5,
+        &tool_script_result_path,
+        &capabilities_check_path,
+    )
+    .unwrap_err();
+    assert!(err.contains("timeout waiting for script result"));
+
+    let bytes = std::fs::read(&tool_script_result_path).expect("read tool script.result.json");
+    let parsed: fret_diag_protocol::UiScriptResultV1 =
+        serde_json::from_slice(&bytes).expect("parse tool script.result.json");
+    assert!(matches!(
+        parsed.stage,
+        fret_diag_protocol::UiScriptStageV1::Failed
+    ));
+    assert_eq!(parsed.run_id, 11);
+    assert_eq!(parsed.step_index, Some(8));
+    assert_eq!(
+        parsed.reason_code.as_deref(),
+        Some("timeout.tooling.script_result")
+    );
+    assert_eq!(parsed.last_bundle_dir.as_deref(), Some("888-timeout"));
+    assert!(parsed.last_bundle_artifact.is_some());
+    assert!(
+        parsed
+            .evidence
+            .as_ref()
+            .and_then(|e| e.event_log.last())
+            .and_then(|e| e.bundle_dir.as_deref())
+            == Some("888-timeout")
+    );
+
+    assert!(
+        root.join("11").join("script.result.json").is_file(),
+        "expected run_id script.result alias"
+    );
+    assert!(
+        root.join("11").join("bundle.json").is_file(),
+        "expected run_id bundle alias"
+    );
+}
+
+#[test]
 fn write_tooling_failure_script_result_overwrites_existing_reason_code() {
     let root = std::env::temp_dir().join(format!(
         "fret-diag-tooling-failure-overwrite-{}-{}",

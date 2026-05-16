@@ -236,12 +236,7 @@ pub trait ElementCommandGatingExt {
 impl<H: UiHost> ElementCommandGatingExt for ElementContext<'_, H> {
     fn command_is_enabled(&self, command: &CommandId) -> bool {
         let fallback_input_ctx = default_fallback_input_context(&*self.app);
-        fret_runtime::command_is_enabled_for_window_with_input_ctx_fallback(
-            &*self.app,
-            self.window,
-            command,
-            fallback_input_ctx,
-        )
+        render_command_is_enabled_for_window(&*self.app, self.window, command, fallback_input_ctx)
     }
 
     fn command_is_enabled_with_fallback_input_context(
@@ -249,12 +244,7 @@ impl<H: UiHost> ElementCommandGatingExt for ElementContext<'_, H> {
         command: &CommandId,
         fallback_input_ctx: InputContext,
     ) -> bool {
-        fret_runtime::command_is_enabled_for_window_with_input_ctx_fallback(
-            &*self.app,
-            self.window,
-            command,
-            fallback_input_ctx,
-        )
+        render_command_is_enabled_for_window(&*self.app, self.window, command, fallback_input_ctx)
     }
 
     fn dispatch_command_if_enabled(&mut self, command: CommandId) -> bool {
@@ -267,7 +257,7 @@ impl<H: UiHost> ElementCommandGatingExt for ElementContext<'_, H> {
         command: CommandId,
         fallback_input_ctx: InputContext,
     ) -> bool {
-        if !fret_runtime::command_is_enabled_for_window_with_input_ctx_fallback(
+        if !render_command_is_enabled_for_window(
             &*self.app,
             self.window,
             &command,
@@ -288,6 +278,34 @@ impl<H: UiHost> ElementCommandGatingExt for ElementContext<'_, H> {
 
     fn dispatch_action_if_enabled(&mut self, action: ActionId) -> bool {
         self.dispatch_command_if_enabled(action)
+    }
+}
+
+fn render_command_is_enabled_for_window<H: UiHost>(
+    app: &H,
+    window: fret_core::AppWindowId,
+    command: &CommandId,
+    fallback_input_ctx: InputContext,
+) -> bool {
+    let mut gating = fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
+        app,
+        window,
+        fallback_input_ctx,
+    );
+
+    if app
+        .commands()
+        .get(command.clone())
+        .is_some_and(|meta| meta.scope == CommandScope::Widget)
+        && gating.is_action_available(command).is_some()
+    {
+        gating = gating.with_action_availability(None);
+    }
+
+    if let Some(meta) = app.commands().get(command.clone()) {
+        gating.is_enabled_for_command(command, meta)
+    } else {
+        gating.is_enabled_for_meta(command, CommandScope::App, None)
     }
 }
 
@@ -535,6 +553,87 @@ mod tests {
         assert!(
             item.disabled,
             "expected the command entry to be disabled via WindowCommandGatingService snapshot"
+        );
+    }
+
+    #[test]
+    fn render_time_command_gating_ignores_widget_action_availability_feedback() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let cmd = CommandId::from("test.widget-action");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Widget Action").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandActionAvailabilityService::default());
+        app.with_global_mut(
+            WindowCommandActionAvailabilityService::default,
+            |svc, _app| {
+                let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
+                snapshot.insert(cmd.clone(), false);
+                svc.set_snapshot(window, snapshot);
+            },
+        );
+
+        let enabled =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "render-cmd", |cx| {
+                cx.command_is_enabled(&cmd)
+            });
+        assert!(
+            enabled,
+            "render-time component gating must not consume the previous frame's derived widget action availability"
+        );
+
+        app.set_global(fret_runtime::WindowCommandGatingService::default());
+        app.with_global_mut(
+            fret_runtime::WindowCommandGatingService::default,
+            |svc, app| {
+                let input_ctx = default_fallback_input_context(app);
+                let enabled_overrides: HashMap<CommandId, bool> = HashMap::new();
+                let mut availability: HashMap<CommandId, bool> = HashMap::new();
+                availability.insert(cmd.clone(), false);
+                svc.set_snapshot(
+                    window,
+                    WindowCommandGatingSnapshot::new(input_ctx, enabled_overrides)
+                        .with_action_availability(Some(Arc::new(availability))),
+                );
+            },
+        );
+
+        let enabled =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "render-cmd", |cx| {
+                cx.command_is_enabled(&cmd)
+            });
+        assert!(
+            enabled,
+            "render-time component gating must ignore action availability even when it arrives through an explicit gating snapshot"
+        );
+
+        app.with_global_mut(
+            fret_runtime::WindowCommandGatingService::default,
+            |svc, app| {
+                let input_ctx = default_fallback_input_context(app);
+                let mut enabled_overrides: HashMap<CommandId, bool> = HashMap::new();
+                enabled_overrides.insert(cmd.clone(), false);
+                let mut availability: HashMap<CommandId, bool> = HashMap::new();
+                availability.insert(cmd.clone(), true);
+                svc.set_snapshot(
+                    window,
+                    WindowCommandGatingSnapshot::new(input_ctx, enabled_overrides)
+                        .with_action_availability(Some(Arc::new(availability))),
+                );
+            },
+        );
+
+        let enabled =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "render-cmd", |cx| {
+                cx.command_is_enabled(&cmd)
+            });
+        assert!(
+            !enabled,
+            "render-time component gating should still honor explicit enabled overrides"
         );
     }
 

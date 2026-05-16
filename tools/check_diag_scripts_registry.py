@@ -30,11 +30,40 @@ REGISTRY_PATH = SCRIPTS_DIR / "index.json"
 SUITES_DIR = SCRIPTS_DIR / "suites"
 PRELUDE_DIR = SCRIPTS_DIR / "_prelude"
 SUITE_MANIFEST_FILENAMES = ["suite.json", "_suite.json"]
-STRICT_CLICK_VISIBILITY_SUITES = {"ui-gallery-combobox", "ui-gallery-select"}
+STRICT_CLICK_VISIBILITY_SUITES = {
+    "ui-gallery-combobox",
+    "ui-gallery-select",
+    "ui-gallery-motion-pilot",
+}
 STRICT_UI_GALLERY_CONTENT_TEST_ID_PREFIXES = (
     "ui-gallery-combobox-",
     "ui-gallery-select-",
+    "ui-gallery-sidebar-",
 )
+STRICT_PAGE_ENTRY_SUITES = {"ui-gallery-motion-pilot", "ui-gallery-select", "ui-gallery-combobox"}
+UI_GALLERY_PAGE_ENTRY_RULES = {
+    "motion_presets": {
+        "page_id": "ui-gallery-page-motion-presets",
+        "content_prefixes": ("ui-gallery-motion-presets-",),
+        "start_page_values": ("motion_presets",),
+        "global_ids": (
+            "ui-gallery-motion-preset-trigger",
+            "ui-gallery-motion-preset-trigger.chrome",
+        ),
+    },
+    "combobox": {
+        "page_id": "ui-gallery-page-combobox",
+        "content_prefixes": ("ui-gallery-combobox-",),
+        "start_page_values": ("combobox",),
+        "global_ids": (),
+    },
+    "select": {
+        "page_id": "ui-gallery-page-select",
+        "content_prefixes": ("ui-gallery-select-",),
+        "start_page_values": ("select",),
+        "global_ids": (),
+    },
+}
 
 
 def find_repo_root(start: Path) -> Path:
@@ -328,6 +357,116 @@ def is_strict_ui_gallery_content_target(test_id: str) -> bool:
     return test_id.startswith(STRICT_UI_GALLERY_CONTENT_TEST_ID_PREFIXES)
 
 
+def collect_test_ids(value: Any) -> list[str]:
+    out: list[str] = []
+    if isinstance(value, dict):
+        test_id = test_id_from_target_ref(value)
+        if test_id is not None:
+            out.append(test_id)
+        for child in value.values():
+            out.extend(collect_test_ids(child))
+    elif isinstance(value, list):
+        for child in value:
+            out.extend(collect_test_ids(child))
+    return out
+
+
+def is_page_scoped_test_id(test_id: str, rule: dict[str, Any]) -> bool:
+    global_ids = rule.get("global_ids")
+    if isinstance(global_ids, tuple) and test_id in global_ids:
+        return False
+    prefixes = rule.get("content_prefixes")
+    return isinstance(prefixes, tuple) and any(test_id.startswith(prefix) for prefix in prefixes)
+
+
+def start_pages_from_meta(obj: Any) -> set[str]:
+    meta = obj.get("meta") if isinstance(obj, dict) else None
+    if not isinstance(meta, dict):
+        return set()
+    env_defaults = meta.get("env_defaults")
+    if not isinstance(env_defaults, dict):
+        return set()
+    start_page = env_defaults.get("FRET_UI_GALLERY_START_PAGE")
+    if not isinstance(start_page, str) or not start_page.strip():
+        return set()
+    return {start_page.strip()}
+
+
+def lint_strict_page_entry(repo_root: Path, registry: dict[str, Any]) -> list[str]:
+    """
+    Check promoted scripts whose page-local selectors should not rely on the Gallery default page.
+
+    The first strict page is Motion Presets because a real diagnostics run already found this
+    failure mode: waiting for a page-local probe without first entering the owning page.
+    """
+    scripts = registry.get("scripts")
+    if not isinstance(scripts, list):
+        return ["registry scripts must be a list"]
+
+    violations: list[str] = []
+
+    for entry in scripts:
+        if not isinstance(entry, dict):
+            continue
+        memberships = entry.get("suite_memberships")
+        if not isinstance(memberships, list):
+            continue
+        if not STRICT_PAGE_ENTRY_SUITES.intersection(
+            item for item in memberships if isinstance(item, str)
+        ):
+            continue
+
+        rel_path = entry.get("path")
+        if not isinstance(rel_path, str) or not rel_path.strip():
+            continue
+
+        script_path = repo_root / Path(rel_path)
+        obj = read_json(script_path)
+        steps = obj.get("steps") if isinstance(obj, dict) else None
+        if not isinstance(steps, list):
+            continue
+
+        entered_pages: set[str] = set()
+        start_pages = start_pages_from_meta(obj)
+        for page_name, rule in UI_GALLERY_PAGE_ENTRY_RULES.items():
+            start_page_values = rule.get("start_page_values")
+            if isinstance(start_page_values, tuple) and start_pages.intersection(start_page_values):
+                entered_pages.add(page_name)
+
+        for index, step in enumerate(steps):
+            if not isinstance(step, dict):
+                continue
+
+            step_type = step.get("type")
+            ids = collect_test_ids(step)
+            for page_name, rule in UI_GALLERY_PAGE_ENTRY_RULES.items():
+                page_id = rule.get("page_id")
+                if isinstance(page_id, str) and page_id in ids:
+                    entered_pages.add(page_name)
+
+                if step_type in {
+                    "wait_until",
+                    "assert",
+                    "click",
+                    "click_stable",
+                    "move_pointer",
+                    "scroll_into_view",
+                    "capture_layout_sidecar",
+                }:
+                    for test_id in ids:
+                        if (
+                            is_page_scoped_test_id(test_id, rule)
+                            and page_name not in entered_pages
+                        ):
+                            violations.append(
+                                f"{rel_path}: step {index}: page-local selector `{test_id}` "
+                                f"requires a prior wait/assert for `{page_id}`"
+                            )
+                            break
+
+    return violations
+
+
 def lint_strict_click_visibility(repo_root: Path, registry: dict[str, Any]) -> list[str]:
     """
     Check promoted UI Gallery content clicks that are known to run in long pages.
@@ -454,6 +593,13 @@ def main() -> None:
     if click_visibility_violations:
         print("error: promoted diag scripts have unsafe long-page click authoring:", file=sys.stderr)
         for violation in click_visibility_violations:
+            print(f"- {violation}", file=sys.stderr)
+        raise SystemExit(2)
+
+    page_entry_violations = lint_strict_page_entry(repo_root, expected)
+    if page_entry_violations:
+        print("error: promoted diag scripts rely on implicit UI Gallery page entry:", file=sys.stderr)
+        for violation in page_entry_violations:
             print(f"- {violation}", file=sys.stderr)
         raise SystemExit(2)
 

@@ -1,10 +1,12 @@
 pub mod airplane_mode;
 pub mod bluetooth;
 pub mod choice_card;
+pub mod command_gate;
 pub mod description;
 pub mod disabled;
 pub mod invalid;
 pub mod label;
+pub mod read_only;
 pub mod rtl;
 pub mod sizes;
 pub mod usage;

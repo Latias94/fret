@@ -145,6 +145,20 @@ struct DiagWindowInsetsOverride {
     occlusion_insets: Option<Option<fret_core::Edges>>,
 }
 
+#[derive(Debug, Default, Clone)]
+struct DiagWindowPreferenceOverride {
+    /// `None` means "no override".
+    ///
+    /// `Some(None)` means "known-but-none" (cleared).
+    ///
+    /// `Some(Some(v))` means "override to v".
+    color_scheme: Option<Option<fret_core::ColorScheme>>,
+    /// See `color_scheme`.
+    prefers_reduced_motion: Option<Option<bool>>,
+    /// See `color_scheme`.
+    text_scale_factor: Option<Option<f32>>,
+}
+
 mod app_handler;
 mod asset_reload;
 #[cfg(feature = "dev-state")]
@@ -301,6 +315,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     #[cfg(target_os = "ios")]
     ios_keyboard: Option<ios_keyboard::IosKeyboardTracker>,
     diag_window_insets_overrides: HashMap<fret_core::AppWindowId, DiagWindowInsetsOverride>,
+    diag_window_preference_overrides: HashMap<fret_core::AppWindowId, DiagWindowPreferenceOverride>,
     diag_cursor_screen_pos_override: Option<diag_cursor_override::DiagCursorScreenPosOverride>,
     diag_last_cursor_override_tick: Option<TickId>,
     diag_mouse_buttons_override: Option<diag_mouse_buttons_override::DiagMouseButtonsOverride>,

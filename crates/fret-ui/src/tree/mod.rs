@@ -281,6 +281,7 @@ pub struct UiTree<H: UiHost> {
     scratch_node_stack: Vec<NodeId>,
     scratch_element_nodes: Vec<(GlobalElementId, NodeId)>,
     scratch_bounds_records: Vec<(GlobalElementId, Rect)>,
+    scratch_element_root_bounds_records: Vec<(GlobalElementId, Rect)>,
     scratch_visual_bounds_records: Vec<(GlobalElementId, Rect)>,
     measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics,
     layout_engine: crate::layout_engine::TaffyLayoutEngine,

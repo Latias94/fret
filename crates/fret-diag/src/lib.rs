@@ -154,8 +154,9 @@ use stats::{
     run_script_and_wait, wait_for_failure_dump_bundle,
 };
 use tooling_failures::{
-    mark_existing_script_result_tooling_failure, push_tooling_event_log_entry,
-    write_tooling_failure_script_result, write_tooling_failure_script_result_if_missing,
+    build_tooling_failure_script_result, mark_existing_script_result_tooling_failure,
+    push_tooling_event_log_entry, write_tooling_failure_script_result,
+    write_tooling_failure_script_result_if_missing,
 };
 use util::{advance_target_run_id, now_unix_ms, read_json_value, touch, write_json_value};
 
@@ -2188,6 +2189,60 @@ fn try_resolve_existing_filesystem_bundle_artifact(
     wait_for_bundle_artifact_from_script_result(out_dir, &summary, timeout_ms, poll_ms)
 }
 
+fn try_capture_timeout_bundle_over_transport(
+    out_dir: &Path,
+    connected: &ConnectedToolingTransport,
+    label: &str,
+    dump_max_snapshots: Option<u32>,
+    timeout_ms: u64,
+    poll_ms: u64,
+) -> Result<PathBuf, String> {
+    let bundle_timeout_ms = timeout_ms.clamp(250, 5_000);
+    dump_bundle_over_transport(
+        out_dir,
+        connected,
+        Some(label),
+        dump_max_snapshots,
+        bundle_timeout_ms,
+        poll_ms,
+    )
+}
+
+fn attach_tooling_failure_bundle_to_result(
+    out_dir: &Path,
+    result: &mut UiScriptResultV1,
+    bundle_path: &Path,
+) {
+    if result.run_id != 0 {
+        RunArtifactStore::new(out_dir, result.run_id).write_bundle_artifact(bundle_path);
+    }
+    result.last_bundle_dir = bundle_path
+        .parent()
+        .and_then(|path| path.file_name())
+        .and_then(|name| name.to_str())
+        .map(|name| name.to_string());
+    result.last_bundle_artifact = Some(artifact_stats_from_bundle_json_path(bundle_path));
+    if let Some(evidence) = result.evidence.as_mut()
+        && let Some(entry) = evidence.event_log.last_mut()
+    {
+        entry.bundle_dir = result.last_bundle_dir.clone();
+    }
+}
+
+fn write_tooling_failure_result_with_artifacts(
+    out_dir: &Path,
+    script_result_path: &Path,
+    result: &UiScriptResultV1,
+) {
+    let _ = write_json_value(
+        script_result_path,
+        &serde_json::to_value(result).unwrap_or_else(|_| serde_json::json!({})),
+    );
+    if result.run_id != 0 {
+        RunArtifactStore::new(out_dir, result.run_id).write_script_result(result);
+    }
+}
+
 fn devtools_select_session_id(
     list: &DevtoolsSessionListV1,
     want: Option<&str>,
@@ -2501,6 +2556,7 @@ fn run_script_over_transport(
     let mut target_run_id: Option<u64> = None;
     let mut last_seen_stage: Option<&'static str> = None;
     let mut last_seen_step_index: Option<u32> = None;
+    let mut last_seen_result: Option<UiScriptResultV1> = None;
 
     let seam = connected.devtools.client().seam_v1();
     let mut script_retoucher = seam.new_script_run_retoucher(timeout_ms, poll_ms);
@@ -2545,6 +2601,7 @@ fn run_script_over_transport(
                 UiScriptStageV1::Failed => "failed",
             });
             last_seen_step_index = parsed.step_index;
+            last_seen_result = Some(parsed.clone());
 
             // Transport-agnostic streaming hook: persist incremental script progress so external
             // tooling can observe long runs without waiting for completion.
@@ -2583,12 +2640,27 @@ fn run_script_over_transport(
                 last_seen_step_index,
                 ws_hint.unwrap_or(""),
             );
-            write_tooling_failure_script_result_if_missing(
-                script_result_path,
+            let mut failure_result = build_tooling_failure_script_result(
+                last_seen_result.as_ref(),
                 "timeout.tooling.script_result",
                 "timeout waiting for script result",
                 "tooling_timeout",
                 Some(note),
+            );
+            if let Ok(bundle_path) = try_capture_timeout_bundle_over_transport(
+                out_dir,
+                connected,
+                bundle_label.unwrap_or("tooling-timeout"),
+                dump_max_snapshots,
+                timeout_ms,
+                poll_ms,
+            ) {
+                attach_tooling_failure_bundle_to_result(out_dir, &mut failure_result, &bundle_path);
+            }
+            write_tooling_failure_result_with_artifacts(
+                out_dir,
+                script_result_path,
+                &failure_result,
             );
             return Err(
                 "timeout waiting for script result (DevTools WS: keep the app actively rendering; web tabs may be throttled in the background)"

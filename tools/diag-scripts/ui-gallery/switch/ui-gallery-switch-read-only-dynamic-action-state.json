@@ -1,0 +1,184 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: Switch dynamic read-only action-state",
+    "tags": [
+      "ui-gallery",
+      "shadcn",
+      "switch",
+      "semantics",
+      "read-only",
+      "action-state",
+      "mutation"
+    ],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Verifies that toggling a Switch from read-only to editable and back refreshes read_only/invoke semantics without remounting the docs surface."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "switch" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-switch" },
+      "delta_y": -240.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-switch" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-switch" }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-switch-read-only" },
+      "delta_y": -180.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-switch-read-only-control" },
+        "checked": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "read_only_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-switch-read-only-control" },
+        "read_only": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-switch-read-only-control" },
+        "action": "invoke",
+        "enabled": false
+      }
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-switch-read-only-policy-toggle" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "read_only_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-switch-read-only-control" },
+        "read_only": false
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-switch-read-only-control" },
+        "action": "invoke",
+        "enabled": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-switch-read-only-control" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-switch-read-only-control" },
+        "checked": false
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-switch-read-only-policy-toggle" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "read_only_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-switch-read-only-control" },
+        "read_only": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-switch-read-only-control" },
+        "action": "invoke",
+        "enabled": false
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-switch-read-only-control" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 900
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-switch-read-only-control" },
+        "checked": false
+      }
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-switch-read-only-dynamic-action-state" },
+    { "type": "capture_screenshot", "label": "ui-gallery-switch-read-only-dynamic-action-state" }
+  ]
+}

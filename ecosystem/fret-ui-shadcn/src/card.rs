@@ -15,34 +15,13 @@ use fret_ui_kit::{
 
 use crate::layout as shadcn_layout;
 use crate::surface_slot::{ShadcnSurfaceSlot, with_surface_slot_provider};
-use crate::test_id::attach_test_id;
 use fret_ui_kit::typography::scope_description_text;
 
-const CARD_ACTION_MARKER_PREFIX: &str = "fret-ui-shadcn.card-action";
-const CARD_FOOTER_MARKER_PREFIX: &str = "fret-ui-shadcn.card-footer";
-
-fn matches_marker(test_id: &str, prefix: &str) -> bool {
-    test_id == prefix
-        || (test_id.starts_with(prefix)
-            && test_id
-                .as_bytes()
-                .get(prefix.len())
-                .is_some_and(|b| *b == b':'))
-}
+const CARD_ACTION_SLOT: &str = "fret-ui-shadcn.card-action";
+const CARD_FOOTER_SLOT: &str = "fret-ui-shadcn.card-footer";
 
 fn is_card_action_marker(element: &AnyElement) -> bool {
-    element
-        .semantics_decoration
-        .as_ref()
-        .and_then(|d| d.test_id.as_deref())
-        .is_some_and(|id| matches_marker(id, CARD_ACTION_MARKER_PREFIX))
-        || match &element.kind {
-            ElementKind::Semantics(props) => props
-                .test_id
-                .as_deref()
-                .is_some_and(|id| matches_marker(id, CARD_ACTION_MARKER_PREFIX)),
-            _ => false,
-        }
+    element.component_slot.as_deref() == Some(CARD_ACTION_SLOT)
 }
 
 fn card_header_row_tracks() -> Vec<GridTrackSizing> {
@@ -761,8 +740,7 @@ where
         }
     });
 
-    let marker: Arc<str> = Arc::from(format!("{}:{}", CARD_ACTION_MARKER_PREFIX, el.id.0));
-    attach_test_id(el, marker)
+    el.component_slot(CARD_ACTION_SLOT)
 }
 
 pub struct CardActionBuild<H, B> {
@@ -834,36 +812,26 @@ mod tests {
     use fret_core::{AppWindowId, AttributedText, Axis, Point, Rect, Size, TextSpan};
     use fret_ui::element::{
         ContainerProps, CrossAlign, FlexProps, GridProps, Length, MainAlign, Overflow,
-        SemanticsProps,
     };
     use fret_ui::elements::GlobalElementId;
     use fret_ui_kit::ui::UiElementSinkExt as _;
     use fret_ui_kit::{MetricRef, UiExt as _};
 
     #[test]
-    fn card_action_marker_matches_semantics_decoration_test_id() {
+    fn card_action_marker_uses_component_slot_not_diagnostics_test_id() {
         let el = AnyElement::new(
             GlobalElementId(1),
             ElementKind::Container(ContainerProps::default()),
             Vec::new(),
         )
-        .test_id(format!("{CARD_ACTION_MARKER_PREFIX}:1"));
+        .component_slot(CARD_ACTION_SLOT);
 
         assert!(is_card_action_marker(&el));
-    }
-
-    #[test]
-    fn card_action_marker_matches_legacy_semantics_test_id() {
-        let el = AnyElement::new(
-            GlobalElementId(1),
-            ElementKind::Semantics(SemanticsProps {
-                test_id: Some(Arc::<str>::from(format!("{CARD_ACTION_MARKER_PREFIX}:1"))),
-                ..Default::default()
-            }),
-            Vec::new(),
+        assert!(
+            el.semantics_decoration
+                .as_ref()
+                .is_none_or(|d| d.test_id.is_none())
         );
-
-        assert!(is_card_action_marker(&el));
     }
 
     #[test]
@@ -1501,6 +1469,17 @@ mod tests {
             };
             assert_eq!(default_footer_padding.left, px_default.into());
             assert_eq!(default_footer_padding.right, px_default.into());
+            assert_eq!(
+                default_footer_el.component_slot.as_deref(),
+                Some(CARD_FOOTER_SLOT)
+            );
+            assert!(
+                default_footer_el
+                    .semantics_decoration
+                    .as_ref()
+                    .is_none_or(|d| d.test_id.is_none()),
+                "CardFooter structural slot must not be exported as a diagnostics test_id",
+            );
 
             let explicit_footer_el = CardFooter::new(Vec::<AnyElement>::new())
                 .size(CardSize::Sm)
@@ -2438,8 +2417,7 @@ impl CardFooter {
             inner
         };
 
-        let marker: Arc<str> = Arc::from(format!("{}:{}", CARD_FOOTER_MARKER_PREFIX, el.id.0));
-        attach_test_id(el, marker)
+        el.component_slot(CARD_FOOTER_SLOT)
     }
 }
 

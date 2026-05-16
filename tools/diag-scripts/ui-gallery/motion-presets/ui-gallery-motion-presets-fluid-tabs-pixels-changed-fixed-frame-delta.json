@@ -34,6 +34,14 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-motion-presets" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
         "target": {
           "kind": "test_id",
           "id": "ui-gallery-motion-presets-fluid-tabs-trigger-accounts"

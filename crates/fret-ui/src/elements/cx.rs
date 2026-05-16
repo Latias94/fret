@@ -452,6 +452,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// This is safe to call during element rendering for the same reason as
     /// `last_bounds_for_element`.
     pub fn root_bounds_for_element(&self, element: GlobalElementId) -> Option<Rect> {
+        if let Some(bounds) = self.window_state.element_root_bounds(element) {
+            return Some(bounds);
+        }
         let root = self.window_state.node_entry(element).map(|e| e.root)?;
         self.window_state.root_bounds(root)
     }

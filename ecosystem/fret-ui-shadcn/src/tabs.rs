@@ -619,6 +619,8 @@ fn tabs_shared_indicator<H: UiHost>(
         props.layout.inset.right = Some(Px(0.0)).into();
         props.layout.inset.bottom = Some(Px(0.0)).into();
         props.layout.inset.left = Some(Px(0.0)).into();
+        props.layout.size.width = Length::Fill;
+        props.layout.size.height = Length::Fill;
         if kind == TabsSharedIndicatorKind::Line {
             // shadcn v4 draws the line "outside" the trigger via negative offsets:
             // - horizontal: `bottom-[-5px]`
@@ -743,7 +745,22 @@ fn tabs_shared_indicator<H: UiHost>(
             indicator = indicator.test_id(test_id.clone());
         }
 
-        cx.hit_test_gate(false, move |_cx| [indicator])
+        let mut gate_layout = LayoutStyle::default();
+        gate_layout.position = fret_ui::element::PositionStyle::Absolute;
+        gate_layout.inset.top = Some(Px(0.0)).into();
+        gate_layout.inset.right = Some(Px(0.0)).into();
+        gate_layout.inset.bottom = Some(Px(0.0)).into();
+        gate_layout.inset.left = Some(Px(0.0)).into();
+        gate_layout.size.width = Length::Fill;
+        gate_layout.size.height = Length::Fill;
+
+        cx.hit_test_gate_props(
+            fret_ui::element::HitTestGateProps {
+                layout: gate_layout,
+                hit_test: false,
+            },
+            move |_cx| [indicator],
+        )
     })
 }
 
@@ -3331,6 +3348,69 @@ mod tests {
 
         assert!(find_pressable_with_test_id(&el, "tabs-demo-trigger-alpha").is_some());
         assert!(find_pressable_with_test_id(&el, "tabs-demo-trigger-beta").is_some());
+    }
+
+    #[test]
+    fn tabs_shared_indicator_test_id_has_non_empty_bounds() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let model = app.models_mut().insert(Some(Arc::<str>::from("alpha")));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(180.0)),
+        );
+        let mut services = FakeServices;
+
+        let mut render = || {
+            let root = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "tabs-shared-indicator-bounds",
+                |cx| {
+                    vec![
+                        Tabs::new(model.clone())
+                            .test_id("tabs-demo")
+                            .shared_indicator_motion(true)
+                            .items([
+                                TabsItem::new("alpha", "Alpha", Vec::<AnyElement>::new()),
+                                TabsItem::new("beta", "Beta", Vec::<AnyElement>::new()),
+                            ])
+                            .into_element(cx),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        };
+
+        render();
+        render();
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let indicator = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("tabs-demo-shared-indicator"))
+            .expect("shared indicator node");
+
+        assert!(
+            indicator.bounds.size.width.0 > 0.0 && indicator.bounds.size.height.0 > 0.0,
+            "shared indicator should have non-empty diagnostics bounds, got {:?}",
+            indicator.bounds
+        );
     }
 
     #[test]

@@ -7,8 +7,8 @@ use crate::{
     IncomingOpenToken, ShareSheetToken, TimerToken,
 };
 use fret_core::{
-    AlphaMode, AppWindowId, CursorIcon, Edges, Event, ExternalDropReadLimits, FileDialogOptions,
-    ImageColorInfo, ImageId, Rect, RectPx, WindowAnchor,
+    AlphaMode, AppWindowId, ColorScheme, CursorIcon, Edges, Event, ExternalDropReadLimits,
+    FileDialogOptions, ImageColorInfo, ImageId, Rect, RectPx, WindowAnchor,
 };
 
 use crate::{CommandId, MenuBar};
@@ -292,6 +292,21 @@ pub enum Effect {
         window: AppWindowId,
         safe_area_insets: Option<Option<Edges>>,
         occlusion_insets: Option<Option<Edges>>,
+    },
+    /// Override environment preferences in `WindowMetricsService`.
+    ///
+    /// This is primarily used by diagnostics/scripted repros to simulate platform preference
+    /// changes (for example system dark mode or reduced motion) in deterministic runs.
+    ///
+    /// Semantics:
+    /// - `None` means "no change".
+    /// - `Some(None)` clears the value but still marks it as "known".
+    /// - `Some(Some(v))` sets the value to `v`.
+    WindowMetricsSetPreferences {
+        window: AppWindowId,
+        color_scheme: Option<Option<ColorScheme>>,
+        prefers_reduced_motion: Option<Option<bool>>,
+        text_scale_factor: Option<Option<f32>>,
     },
     CursorSetIcon {
         window: AppWindowId,

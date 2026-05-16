@@ -36,7 +36,7 @@ pub(super) fn compose_body(
     ui::v_flex(move |cx| {
         let gap = cx.with_theme(|theme| fret_ui_kit::MetricRef::space(Space::N2).resolve(theme));
         let underlay_row = {
-            let children = ui::children![cx; widgets::underlay(cx)];
+            let children = ui::children![cx; widgets::underlay(cx, &models)];
             row_end(cx, gap, children)
         };
         let menu_row = {

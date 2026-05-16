@@ -1,0 +1,203 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui.anchored-cross-root-coordinate.v1",
+  "owner_layer": "crates/fret-ui",
+  "domains": ["overlay", "layout"],
+  "cases": [
+    {
+      "id": "secondary-viewport-anchor-to-full-window-overlay",
+      "scenario": {
+        "window_bounds": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 360.0, "height": 240.0 }
+        },
+        "anchor_root_bounds": {
+          "origin": { "x": 140.0, "y": 32.0 },
+          "size": { "width": 140.0, "height": 120.0 }
+        },
+        "overlay_root_bounds": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 360.0, "height": 240.0 }
+        },
+        "anchor": {
+          "origin": { "x": 15.0, "y": 18.0 },
+          "size": { "width": 40.0, "height": 20.0 }
+        },
+        "fallback_anchor": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 1.0, "height": 1.0 }
+        },
+        "content": { "width": 90.0, "height": 36.0 },
+        "side": "bottom",
+        "align": "start",
+        "side_offset_px": 6.0
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "anchor" },
+            "expected": {
+              "origin": { "x": 155.0, "y": 50.0 },
+              "size": { "width": 40.0, "height": 20.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "panel" },
+            "expected": {
+              "origin": { "x": 155.0, "y": 76.0 },
+              "size": { "width": 90.0, "height": 36.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored.used_anchor_element",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored.panel_matches_fallback",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "viewport-local-overlay-root-prefers-top-in-non-zero-root",
+      "scenario": {
+        "window_bounds": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 500.0, "height": 320.0 }
+        },
+        "anchor_root_bounds": {
+          "origin": { "x": 260.0, "y": 80.0 },
+          "size": { "width": 180.0, "height": 160.0 }
+        },
+        "overlay_root_bounds": {
+          "origin": { "x": 240.0, "y": 64.0 },
+          "size": { "width": 220.0, "height": 190.0 }
+        },
+        "anchor": {
+          "origin": { "x": 24.0, "y": 110.0 },
+          "size": { "width": 32.0, "height": 18.0 }
+        },
+        "fallback_anchor": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 1.0, "height": 1.0 }
+        },
+        "content": { "width": 90.0, "height": 48.0 },
+        "side": "bottom",
+        "align": "start",
+        "side_offset_px": 8.0
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "anchor" },
+            "expected": {
+              "origin": { "x": 284.0, "y": 190.0 },
+              "size": { "width": 32.0, "height": 18.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "panel" },
+            "expected": {
+              "origin": { "x": 284.0, "y": 134.0 },
+              "size": { "width": 90.0, "height": 48.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored.side.top",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored.used_anchor_element",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "cross-axis-clamps-to-overlay-root-not-window-origin",
+      "scenario": {
+        "window_bounds": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 500.0, "height": 280.0 }
+        },
+        "anchor_root_bounds": {
+          "origin": { "x": 320.0, "y": 40.0 },
+          "size": { "width": 140.0, "height": 100.0 }
+        },
+        "overlay_root_bounds": {
+          "origin": { "x": 300.0, "y": 30.0 },
+          "size": { "width": 160.0, "height": 160.0 }
+        },
+        "anchor": {
+          "origin": { "x": 130.0, "y": 30.0 },
+          "size": { "width": 20.0, "height": 20.0 }
+        },
+        "fallback_anchor": {
+          "origin": { "x": 0.0, "y": 0.0 },
+          "size": { "width": 1.0, "height": 1.0 }
+        },
+        "content": { "width": 100.0, "height": 40.0 },
+        "side": "bottom",
+        "align": "start",
+        "side_offset_px": 4.0
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "anchor" },
+            "expected": {
+              "origin": { "x": 450.0, "y": 70.0 },
+              "size": { "width": 20.0, "height": 20.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "panel" },
+            "expected": {
+              "origin": { "x": 360.0, "y": 94.0 },
+              "size": { "width": 100.0, "height": 40.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored.side.bottom",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "anchored.shift_delta_x_px",
+            "comparison": "eq",
+            "value": -90.0,
+            "eps": 0.01
+          }
+        ]
+      }
+    }
+  ]
+}

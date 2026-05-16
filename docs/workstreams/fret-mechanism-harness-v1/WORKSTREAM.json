@@ -42,6 +42,10 @@
     {
       "role": "audit",
       "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-15.md"
+    },
+    {
+      "role": "audit",
+      "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-16.md"
     }
   ],
   "repro": {
@@ -148,6 +152,15 @@
       "target/debug/fretboard-dev.exe diag suite ui-gallery-combobox --dir target/fret-diag-combobox-suite-placement-ownership-v1 --session-auto --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe",
       "cargo nextest run -p fret-bootstrap --features \"ui-app-driver diagnostics\" --lib wait_until_selector_trace_reports_modal_barrier_filtering",
       "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/dialog/ui-gallery-dialog-nested-combobox-modal-boundary.json --dir target/fret-diag-dialog-nested-combobox-modal-boundary-v4 --session-auto --pack --pack-schema2-only --json --exit-after-run --launch cargo run -p fret-ui-gallery",
+      "python -m json.tool crates/fret-ui/src/declarative/tests/fixtures/anchored_cross_root_coordinate_v1.json",
+      "cargo test -p fret-ui --lib mechanism_harness_anchored_cross_root_coordinate_matches_oracles -- --nocapture",
+      "cargo nextest run -p fret-ui-kit outer_bounds_with_window_margin --no-fail-fast",
+      "$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib popover_first_open_placement_size_prefers_explicit_hint -- --nocapture",
+      "$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib hover_card_anchor_override_uses_anchor_bounds_for_placement -- --nocapture",
+      "$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib tooltip_anchor_override_uses_anchor_bounds_for_placement -- --nocapture",
+      "$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib dropdown_menu_portal_escapes_overflow_clip_ancestor -- --nocapture",
+      "$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib context_menu_submenu_keyboard_open_transfers_focus_and_arrow_left_restores_focus -- --nocapture",
+      "$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib menubar_submenu_opens_on_arrow_right_and_closes_on_arrow_left_restoring_focus -- --nocapture",
       "python tools/check_diag_scripts_registry.py"
     ]
   },
@@ -255,6 +268,42 @@
     {
       "name": "ui-gallery-dialog-nested-combobox-modal-boundary-diag",
       "command": "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/dialog/ui-gallery-dialog-nested-combobox-modal-boundary.json --dir target/fret-diag-dialog-nested-combobox-modal-boundary-v4 --session-auto --pack --pack-schema2-only --json --exit-after-run --launch cargo run -p fret-ui-gallery"
+    },
+    {
+      "name": "anchored-cross-root-coordinate-fixture-json",
+      "command": "python -m json.tool crates/fret-ui/src/declarative/tests/fixtures/anchored_cross_root_coordinate_v1.json"
+    },
+    {
+      "name": "anchored-cross-root-coordinate-fixture",
+      "command": "cargo test -p fret-ui --lib mechanism_harness_anchored_cross_root_coordinate_matches_oracles -- --nocapture"
+    },
+    {
+      "name": "ui-kit-overlay-root-boundary-focused-gates",
+      "command": "cargo nextest run -p fret-ui-kit outer_bounds_with_window_margin --no-fail-fast"
+    },
+    {
+      "name": "shadcn-root-boundary-popover-focused-gate",
+      "command": "$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib popover_first_open_placement_size_prefers_explicit_hint -- --nocapture"
+    },
+    {
+      "name": "shadcn-root-boundary-hover-card-focused-gate",
+      "command": "$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib hover_card_anchor_override_uses_anchor_bounds_for_placement -- --nocapture"
+    },
+    {
+      "name": "shadcn-root-boundary-tooltip-focused-gate",
+      "command": "$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib tooltip_anchor_override_uses_anchor_bounds_for_placement -- --nocapture"
+    },
+    {
+      "name": "shadcn-root-boundary-dropdown-menu-focused-gate",
+      "command": "$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib dropdown_menu_portal_escapes_overflow_clip_ancestor -- --nocapture"
+    },
+    {
+      "name": "shadcn-root-boundary-context-menu-focused-gate",
+      "command": "$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib context_menu_submenu_keyboard_open_transfers_focus_and_arrow_left_restores_focus -- --nocapture"
+    },
+    {
+      "name": "shadcn-root-boundary-menubar-focused-gate",
+      "command": "$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib menubar_submenu_opens_on_arrow_right_and_closes_on_arrow_left_restoring_focus -- --nocapture"
     },
     {
       "name": "shadcn-select-content-listbox-test-id-focused-gate",
@@ -717,12 +766,28 @@
       "command": "cargo test --profile dev-fast -p fret-bootstrap --features diagnostics,ui-app-driver --lib step_start_retains_semantics_scroll_idle_stable_trace_for_passed_evidence -- --nocapture"
     },
     {
+      "name": "ui-gallery-switch-command-gated-action-state-diag",
+      "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-command-gated-action-state.json --dir .fret/diag/runs/ui-gallery-switch-command-gated-action-state-f114-final2 --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
+      "name": "ui-gallery-motion-preset-runtime-token-mutation-diag",
+      "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-preset-runtime-token-mutation.json --dir .fret/diag/runs/ui-gallery-motion-preset-runtime-token-mutation-f115c --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
+      "name": "ui-gallery-platform-preferences-runtime-environment-mutation-diag",
+      "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json --dir .fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation-rerun --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
       "name": "workstream-catalog",
       "command": "python tools/check_workstream_catalog.py"
     },
     {
       "name": "diag-script-registry",
       "command": "python tools/check_diag_scripts_registry.py"
+    },
+    {
+      "name": "diag-script-registry-lint-tests",
+      "command": "python tools/test_check_diag_scripts_registry.py"
     }
   ],
   "evidence": [
@@ -744,6 +809,8 @@
     "crates/fret-ui/src/tree/tests/focus_barrier_routing_harness.rs",
     "crates/fret-ui/src/declarative/tests/fixtures/semantics_relations_v1.json",
     "crates/fret-ui/src/declarative/tests/semantics_relations_harness.rs",
+    "crates/fret-ui/src/declarative/tests/fixtures/anchored_cross_root_coordinate_v1.json",
+    "crates/fret-ui/src/declarative/tests/anchored_cross_root_coordinate_harness.rs",
     "crates/fret-ui/src/declarative/tests/fixtures/pressable_key_activation_v1.json",
     "crates/fret-ui/src/declarative/tests/pressable_key_activation_harness.rs",
     "crates/fret-ui/src/declarative/tests/fixtures/combobox_active_descendant_interaction_v1.json",
@@ -813,6 +880,7 @@
     "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-12.md",
     "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-14.md",
     "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-15.md",
+    "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-16.md",
     "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-small-scroll-no-window-shifts.json",
     "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll.json",
     "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
@@ -886,6 +954,29 @@
     "target/fret-diag-dialog-nested-combobox-modal-boundary-v4/sessions/1778885765520-86120/script.result.json",
     "target/fret-diag-dialog-nested-combobox-modal-boundary-v4/sessions/1778885765520-86120/1778885771913-ui-gallery-dialog-nested-combobox-modal-boundary/bundle.schema2.json",
     "target/fret-diag-dialog-nested-combobox-modal-boundary-v4/sessions/1778885765520-86120/share/1778885770482.zip",
+    ".fret/diag/runs/ui-gallery-switch-command-gated-action-state-f114-final2/script.result.json",
+    ".fret/diag/runs/ui-gallery-switch-command-gated-action-state-f114-final2/share/1778914891818.zip",
+    ".fret/diag/runs/ui-gallery-motion-preset-runtime-token-mutation-f115c/script.result.json",
+    ".fret/diag/runs/ui-gallery-motion-preset-runtime-token-mutation-f115c/share/1778919283142.zip",
+    "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-preset-runtime-token-mutation.json",
+    "tools/diag-scripts/suites/ui-gallery-motion-pilot/suite.json",
+    ".fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation-rerun/script.result.json",
+    ".fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation-rerun/share/1778922706072.zip",
+    "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json",
+    "tools/check_diag_scripts_registry.py",
+    "tools/test_check_diag_scripts_registry.py",
+    "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json",
+    "apps/fret-ui-gallery/src/driver/diag_snapshot.rs",
+    "apps/fret-ui-gallery/src/ui/pages/motion_presets.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/motion_presets/environment_probe.rs",
+    "ecosystem/fret-ui-kit/src/overlay.rs",
+    "ecosystem/fret-ui-shadcn/src/popover.rs",
+    "ecosystem/fret-ui-shadcn/src/select.rs",
+    "ecosystem/fret-ui-shadcn/src/tooltip.rs",
+    "ecosystem/fret-ui-shadcn/src/hover_card.rs",
+    "ecosystem/fret-ui-shadcn/src/dropdown_menu.rs",
+    "ecosystem/fret-ui-shadcn/src/context_menu.rs",
+    "ecosystem/fret-ui-shadcn/src/menubar.rs",
     "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-selected-state-mutation.json",
     "tools/diag-scripts/ui-gallery-tabs-selected-state-mutation.json",
     "tools/diag-scripts/ui-gallery/command/ui-gallery-command-scrollable-collection-metadata-mutation.json",
@@ -916,7 +1007,9 @@
     "docs/ui-diagnostics-and-scripted-tests.md",
     "tools/diag-scripts/index.json",
     "ecosystem/fret-bootstrap/src/ui_diagnostics/selector.rs",
-    "apps/fret-ui-gallery/src/ui/snippets/select/diag_surface.rs"
+    "apps/fret-ui-gallery/src/ui/snippets/select/diag_surface.rs",
+    "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-command-gated-action-state.json",
+    "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-preset-runtime-token-mutation.json"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",

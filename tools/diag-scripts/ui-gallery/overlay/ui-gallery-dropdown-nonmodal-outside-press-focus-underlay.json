@@ -146,6 +146,17 @@
     {
       "type": "wait_until",
       "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-overlay-underlay-activated"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
         "kind": "not_exists",
         "target": {
           "kind": "test_id",
