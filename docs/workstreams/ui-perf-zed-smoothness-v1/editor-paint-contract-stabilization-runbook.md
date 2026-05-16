@@ -51,6 +51,10 @@ python tools/perf/diag_editor_paint_contract_preflight.py
 This checks the three editor probe JSON files, their required overlay-disabled `meta.env_defaults`, the diag script
 registry, and the strict baseline matrix audit without running the long perf validation passes.
 
+Before a non-dry-run validation, the runner also checks for already-running Fret/Gallery/Cargo/Rustc processes that
+would contaminate the target-machine perf profile. Close those runs first. `--allow-concurrent-fret-processes` exists
+only for debugging a failed runner path; do not use it for closeout evidence.
+
 ## Target-Machine Runner
 
 Prefer the checked-in runner for the full Windows RTX4090 validation pass:

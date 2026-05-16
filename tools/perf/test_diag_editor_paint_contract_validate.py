@@ -182,6 +182,87 @@ class EditorPaintContractValidateTests(unittest.TestCase):
         self.assertTrue(coverage["code_editor_paint_perf"])
         self.assertFalse(coverage["code_editor_torture_overlay_zero"])
 
+    def test_concurrent_process_filter_flags_fret_perf_processes(self) -> None:
+        rows = [
+            {
+                "ProcessId": 10,
+                "ParentProcessId": 1,
+                "Name": "python.exe",
+                "CommandLine": "python tools/perf/diag_editor_paint_contract_validate.py --date-tag other",
+            },
+            {
+                "ProcessId": 11,
+                "ParentProcessId": 1,
+                "Name": "fretboard-dev.exe",
+                "CommandLine": "target/release/fretboard-dev.exe diag perf ui-code-editor-resize-probes",
+            },
+            {
+                "ProcessId": 12,
+                "ParentProcessId": 11,
+                "Name": "cargo.exe",
+                "CommandLine": "cargo run -p fret-ui-gallery --release --features gallery-full",
+            },
+            {
+                "ProcessId": 13,
+                "ParentProcessId": 12,
+                "Name": "rustc.exe",
+                "CommandLine": "rustc --crate-name fret_ui_gallery apps/fret-ui-gallery/src/lib.rs",
+            },
+            {
+                "ProcessId": 14,
+                "ParentProcessId": 1,
+                "Name": "notepad.exe",
+                "CommandLine": "notepad.exe",
+            },
+            {
+                "ProcessId": 99,
+                "ParentProcessId": 1,
+                "Name": "python.exe",
+                "CommandLine": "python tools/perf/diag_editor_paint_contract_validate.py --date-tag current",
+            },
+        ]
+
+        flagged = validate.find_concurrent_validation_processes(rows, current_pid=99)
+
+        self.assertEqual([10, 11, 12, 13], [row["ProcessId"] for row in flagged])
+
+    def test_non_dry_run_rejects_concurrent_fret_processes(self) -> None:
+        with TemporaryDirectory() as td:
+            out_dir = Path(td) / "validation"
+            stderr = io.StringIO()
+            concurrent = {
+                "ok": False,
+                "skipped": False,
+                "reason": None,
+                "error": None,
+                "processes": [
+                    {
+                        "ProcessId": 77,
+                        "ParentProcessId": 1,
+                        "Name": "fret-ui-gallery.exe",
+                        "CommandLine": "target/dev-fast/fret-ui-gallery.exe",
+                    }
+                ],
+            }
+            with patch.object(
+                sys,
+                "argv",
+                [
+                    "diag_editor_paint_contract_validate.py",
+                    "--allow-non-windows",
+                    "--out-dir",
+                    str(out_dir),
+                ],
+            ):
+                with patch.object(validate, "_validate_inputs", return_value=[]):
+                    with patch.object(validate, "concurrent_validation_processes", return_value=concurrent):
+                        with redirect_stderr(stderr):
+                            rc = validate.main()
+
+        self.assertEqual(2, rc)
+        self.assertIn("concurrent Fret/Gallery processes", stderr.getvalue())
+        self.assertIn("fret-ui-gallery.exe", stderr.getvalue())
+
     def test_dry_run_summary_records_date_tag(self) -> None:
         with TemporaryDirectory() as td:
             out_dir = Path(td) / "validation"

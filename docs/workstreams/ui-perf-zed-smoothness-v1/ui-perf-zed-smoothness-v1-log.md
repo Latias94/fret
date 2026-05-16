@@ -105,6 +105,36 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 19:09:11 +0800 (local head `5905cf6be7`)
+
+Question:
+- Can the Windows RTX4090 editor paint contract runner fail fast before producing closeout-looking artifacts when
+  another Fret/Gallery diagnostic run is already active on the same machine?
+
+Change:
+- Added a non-dry-run guard to `tools/perf/diag_editor_paint_contract_validate.py` that detects existing
+  `fretboard-dev.exe`, `fret-ui-gallery.exe`, `cargo run -p fret-ui-gallery`, `rustc` gallery builds, and sibling
+  validation runners before starting the formal contract plan.
+- The guard is strict by default; `--allow-concurrent-fret-processes` is available only for debugging and is explicitly
+  not closeout evidence.
+- Updated the editor paint stabilization runbook so target validation requires a clean machine before the baseline and
+  attribution artifact directories can be trusted.
+
+Local evidence:
+- A target validation attempt was intentionally stopped before use as evidence after an unrelated
+  `fret-worktrees/improve-shadcn` `ui-gallery-motion-pilot` diag process and `fret-ui-gallery.exe` were observed.
+- Preflight still passed before this guard work:
+  `python tools/perf/diag_editor_paint_contract_preflight.py` ->
+  `target/fret-diag/editor-paint-contract-preflight/summary.json`.
+
+Gates:
+- `python -m unittest test_diag_editor_paint_contract_validate.py` from `tools/perf` passed 14 tests.
+- `python tools/perf/diag_editor_paint_contract_validate.py --dry-run --date-tag codex-guard-plan-2` preserved the
+  expected command plan.
+- `python tools/perf/diag_editor_paint_contract_validate.py --date-tag codex-guard-reject-check-2 --out-dir
+  target/fret-diag/editor-paint-contract-guard-reject-check-2` failed fast before launching validation and reported the
+  unrelated `fret-worktrees/improve-shadcn` `fretboard-dev.exe` / `fret-ui-gallery.exe` processes as contaminants.
+
 ## 2026-05-16 07:27:00 +0800 (local head `efe4979a60`)
 
 Question:

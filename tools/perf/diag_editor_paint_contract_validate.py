@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shlex
 import subprocess
 import sys
@@ -274,6 +275,130 @@ def _run_step(cmd: list[str], cwd: Path, stdout_path: Path, stderr_path: Path) -
         return int(p.returncode)
 
 
+def _process_int(row: dict[str, Any], key: str) -> int | None:
+    value = row.get(key)
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _process_command(row: dict[str, Any]) -> str:
+    value = row.get("CommandLine")
+    return str(value) if value is not None else ""
+
+
+def _process_name(row: dict[str, Any]) -> str:
+    value = row.get("Name")
+    return str(value).lower() if value is not None else ""
+
+
+def process_contaminates_editor_paint_validation(row: dict[str, Any], *, current_pid: int) -> bool:
+    pid = _process_int(row, "ProcessId")
+    if pid is None or pid == current_pid:
+        return False
+
+    name = _process_name(row)
+    cmd = _process_command(row).lower()
+
+    if name in {"fretboard-dev.exe", "fret-ui-gallery.exe"}:
+        return True
+    if name in {"cargo.exe", "cargo"} and "fret-ui-gallery" in cmd:
+        return True
+    if name in {"rustc.exe", "rustc"} and ("fret_ui_gallery" in cmd or "fret-ui-gallery" in cmd):
+        return True
+    if name in {"python.exe", "python", "python3.exe", "python3"} and "diag_editor_paint_contract_validate.py" in cmd:
+        return True
+    return False
+
+
+def find_concurrent_validation_processes(
+    rows: list[dict[str, Any]],
+    *,
+    current_pid: int,
+) -> list[dict[str, Any]]:
+    return [
+        row
+        for row in rows
+        if process_contaminates_editor_paint_validation(row, current_pid=current_pid)
+    ]
+
+
+def _process_snapshot_windows() -> tuple[list[dict[str, Any]], str | None]:
+    script = (
+        "$ErrorActionPreference = 'Stop'; "
+        "Get-CimInstance Win32_Process | "
+        "Select-Object ProcessId,ParentProcessId,Name,CommandLine | "
+        "ConvertTo-Json -Compress"
+    )
+    errors: list[str] = []
+    for exe in ["powershell", "pwsh"]:
+        try:
+            p = subprocess.run(
+                [exe, "-NoProfile", "-Command", script],
+                text=True,
+                capture_output=True,
+                timeout=10,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            errors.append(f"{exe}: {exc}")
+            continue
+        if p.returncode != 0:
+            errors.append(f"{exe}: {p.stderr.strip()}")
+            continue
+        stdout = p.stdout.strip()
+        if not stdout:
+            return [], None
+        try:
+            doc = json.loads(stdout)
+        except json.JSONDecodeError as exc:
+            return [], f"{exe}: cannot parse process snapshot JSON: {exc}"
+        if isinstance(doc, dict):
+            return [doc], None
+        if isinstance(doc, list):
+            return [row for row in doc if isinstance(row, dict)], None
+        return [], f"{exe}: process snapshot JSON must be an object or array"
+    return [], "; ".join(errors) if errors else "no process snapshot command available"
+
+
+def concurrent_validation_processes(*, current_pid: int) -> dict[str, Any]:
+    if not sys.platform.startswith("win"):
+        return {
+            "ok": True,
+            "skipped": True,
+            "reason": "non-windows host",
+            "processes": [],
+            "error": None,
+        }
+    rows, error = _process_snapshot_windows()
+    if error is not None:
+        return {
+            "ok": False,
+            "skipped": False,
+            "reason": "process snapshot failed",
+            "processes": [],
+            "error": error,
+        }
+    processes = find_concurrent_validation_processes(rows, current_pid=current_pid)
+    return {
+        "ok": not processes,
+        "skipped": False,
+        "reason": None,
+        "processes": processes,
+        "error": None,
+    }
+
+
+def _format_process_for_error(row: dict[str, Any]) -> str:
+    pid = _process_int(row, "ProcessId")
+    ppid = _process_int(row, "ParentProcessId")
+    name = row.get("Name")
+    cmd = _process_command(row).replace("\r", " ").replace("\n", " ")
+    if len(cmd) > 260:
+        cmd = cmd[:257] + "..."
+    return f"pid={pid} ppid={ppid} name={name} cmd={cmd}"
+
+
 def _validate_inputs(workspace_root: Path, args: argparse.Namespace) -> list[str]:
     missing: list[str] = []
     for rel in [
@@ -465,6 +590,16 @@ def main() -> int:
             "evidence from stale dry-run or failed-run artifacts."
         ),
     )
+    ap.add_argument(
+        "--allow-concurrent-fret-processes",
+        action="store_true",
+        default=False,
+        help=(
+            "Allow the formal validation run to proceed even when other Fret/Gallery/Cargo "
+            "processes are already running. Use only for debugging; closeout evidence should "
+            "come from a clean machine."
+        ),
+    )
     ap.add_argument("--keep-going", action="store_true", default=False)
     args = ap.parse_args()
 
@@ -516,6 +651,30 @@ def main() -> int:
             file=sys.stderr,
         )
         return 2
+
+    if not bool(args.dry_run) and not bool(args.allow_concurrent_fret_processes):
+        concurrent = concurrent_validation_processes(current_pid=os.getpid())
+        if concurrent.get("error"):
+            print(
+                "error: cannot verify that the target machine is clean for editor paint validation:",
+                file=sys.stderr,
+            )
+            print(f"  {concurrent['error']}", file=sys.stderr)
+            print("  pass --allow-concurrent-fret-processes only for non-closeout debugging", file=sys.stderr)
+            return 2
+        processes = concurrent.get("processes")
+        if isinstance(processes, list) and processes:
+            print(
+                "error: concurrent Fret/Gallery processes would contaminate editor paint validation:",
+                file=sys.stderr,
+            )
+            for row in processes[:12]:
+                if isinstance(row, dict):
+                    print(f"  - {_format_process_for_error(row)}", file=sys.stderr)
+            if len(processes) > 12:
+                print(f"  - ... {len(processes) - 12} more", file=sys.stderr)
+            print("  stop the other run, or pass --allow-concurrent-fret-processes for debugging only", file=sys.stderr)
+            return 2
 
     plan = build_plan(
         python_bin=str(args.python_bin),
