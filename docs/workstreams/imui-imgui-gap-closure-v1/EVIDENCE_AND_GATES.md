@@ -393,6 +393,15 @@ Run evidence:
   Gates: `cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface
   --no-fail-fast`, `cargo check -p fret-demo --bin workspace_shell_demo`, and
   `python tools/gate_imui_workstream_source.py`.
+- 2026-05-17: migrated the `editor_notes_demo` inspector metadata surface to the same resize-safe
+  text roles. Property-grid labels now use `row_cx.label_text(...)`, inspector subtitle and compact
+  committed/outcome/draft/summary status values route through a local
+  `editor_notes_readout_text(...)` helper backed by `text_control_readout(...)`, and the
+  `editor_notes_editor_rail_surface` test plus the IMUI workstream source gate reject those fixed
+  property-row labels/readouts drifting back to bare `cx.text(...)`. Gates:
+  `cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --no-fail-fast`,
+  `cargo check -p fret-demo --bin editor_notes_demo`, and
+  `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: migrated the `workspace_shell_demo` dirty-close prompt title/details to the same
   role vocabulary. The title now uses `workspace_shell_section_chrome_label(...)` backed by
   `text_section_chrome_label(...)`, while reason/dirty-detail lines use
@@ -1012,3 +1021,12 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 2026-05-17 property-grid wrapping value layout gate:
 
 - `cargo nextest run -p fret-ui-editor property_grid_keeps_rows_separated_when_value_text_wraps_under_narrow_layout row_value_slot_grows_to_wrapping_value_text_under_narrow_layout row_value_slot_keeps_overflow_visible_for_wrapping_value_children --no-fail-fast` passed.
+
+2026-05-17 editor-notes proof text-role slice:
+
+- `cargo fmt -p fret-examples` passed.
+- `cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --test editor_notes_device_shell_surface --no-fail-fast` passed.
+- `cargo check -p fret-demo --bin editor_notes_demo` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.

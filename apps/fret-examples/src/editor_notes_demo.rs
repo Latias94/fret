@@ -4,7 +4,7 @@ use fret::app::prelude::*;
 use fret::{Defaults, FretApp, shadcn};
 use fret_app::{CommandId, Model};
 use fret_core::Px;
-use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle, TextProps};
+use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle};
 use fret_ui_editor::composites::{
     InspectorPanel, InspectorPanelOptions, PropertyGrid, PropertyGroup, PropertyGroupOptions,
     PropertyRow,
@@ -14,6 +14,7 @@ use fret_ui_editor::controls::{
     TextFieldOptions, TextFieldOutcome,
 };
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{ColorRef, IntoUiElementInExt as _, Space};
 use fret_workspace::WorkspaceFrame;
 
@@ -264,6 +265,13 @@ fn editor_asset_summary_command_status(asset: &EditorAssetState) -> String {
 
 fn editor_notes_draft_action_status(asset: &EditorAssetState, action: &str) -> String {
     format!("{action}: {} · TextField draft controller", asset.title)
+}
+
+fn editor_notes_readout_text<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_control_readout(cx, text)
 }
 
 fn selection_button<'a, Cx>(
@@ -580,18 +588,7 @@ where
         .into_element_in(
             cx,
             move |cx, _panel_cx| {
-                let muted = cx.theme_snapshot().color_token("muted-foreground");
-                let subtitle_text = cx.text_props(TextProps {
-                    layout: Default::default(),
-                    text: subtitle.clone(),
-                    style: None,
-                    color: Some(muted),
-                    align: fret_core::TextAlign::Start,
-                    wrap: fret_core::TextWrap::Word,
-                    overflow: fret_core::TextOverflow::Clip,
-                    ink_overflow: Default::default(),
-                });
-                vec![subtitle_text]
+                vec![editor_notes_readout_text(cx, subtitle.clone())]
             },
             move |cx, _panel_cx| {
                 vec![
@@ -610,7 +607,7 @@ where
                                     rows.push(row_cx.row_with(
                                         cx,
                                         PropertyRow::new(),
-                                        |cx| cx.text("Name"),
+                                        |cx| row_cx.label_text(cx, "Name"),
                                         |cx| {
                                             TextField::new(asset.name_model.clone())
                                             .options(TextFieldOptions {
@@ -629,7 +626,7 @@ where
                                     rows.push(row_cx.row_with(
                                         cx,
                                         PropertyRow::new(),
-                                        |cx| cx.text("Notes"),
+                                        |cx| row_cx.label_text(cx, "Notes"),
                                         |cx| {
                                             TextField::new(asset.notes_model.clone())
                                             .on_outcome(Some(Arc::new({
@@ -668,9 +665,9 @@ where
                                     rows.push(row_cx.row_with(
                                         cx,
                                         PropertyRow::new(),
-                                        |cx| cx.text("Committed"),
+                                        |cx| row_cx.label_text(cx, "Committed"),
                                         |cx| {
-                                            cx.text(committed_label.clone())
+                                            editor_notes_readout_text(cx, committed_label.clone())
                                                 .test_id(TEST_ID_NOTES_COMMITTED)
                                         },
                                         |_cx| None,
@@ -679,9 +676,9 @@ where
                                     rows.push(row_cx.row_with(
                                         cx,
                                         PropertyRow::new(),
-                                        |cx| cx.text("Last action"),
+                                        |cx| row_cx.label_text(cx, "Last action"),
                                         |cx| {
-                                            cx.text(outcome_label.clone())
+                                            editor_notes_readout_text(cx, outcome_label.clone())
                                                 .test_id(TEST_ID_NOTES_OUTCOME)
                                         },
                                         |_cx| None,
@@ -690,9 +687,9 @@ where
                                     rows.push(row_cx.row_with(
                                         cx,
                                         PropertyRow::new(),
-                                        |cx| cx.text("Draft status"),
+                                        |cx| row_cx.label_text(cx, "Draft status"),
                                         |cx| {
-                                            cx.text(draft_status_label.clone())
+                                            editor_notes_readout_text(cx, draft_status_label.clone())
                                                 .test_id(TEST_ID_NOTES_DRAFT_STATUS)
                                         },
                                         |_cx| None,
@@ -701,7 +698,7 @@ where
                                     rows.push(row_cx.row_with(
                                         cx,
                                         PropertyRow::new(),
-                                        |cx| cx.text("Draft actions"),
+                                        |cx| row_cx.label_text(cx, "Draft actions"),
                                         |cx| {
                                             ui::h_flex(|cx| {
                                                 ui::children![
@@ -801,7 +798,7 @@ where
                                     rows.push(row_cx.row_with(
                                         cx,
                                         PropertyRow::new(),
-                                        |cx| cx.text("Summary command"),
+                                        |cx| row_cx.label_text(cx, "Summary command"),
                                         |cx| {
                                             shadcn::Button::new("Copy asset summary")
                                                 .variant(shadcn::ButtonVariant::Secondary)
@@ -831,9 +828,9 @@ where
                                     rows.push(row_cx.row_with(
                                         cx,
                                         PropertyRow::new(),
-                                        |cx| cx.text("Summary status"),
+                                        |cx| row_cx.label_text(cx, "Summary status"),
                                         |cx| {
-                                            cx.text(summary_status.clone())
+                                            editor_notes_readout_text(cx, summary_status.clone())
                                                 .test_id(TEST_ID_SUMMARY_STATUS)
                                         },
                                         |_cx| None,

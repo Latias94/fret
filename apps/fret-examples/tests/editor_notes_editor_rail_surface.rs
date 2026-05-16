@@ -10,6 +10,8 @@ fn editor_notes_demo_composes_shell_mounted_rails_through_workspace_frame_slots(
         "WorkspaceFrame::new(center)",
         ".left(left_rail)",
         ".right(right_rail)",
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "fn editor_notes_readout_text<",
         "const TEST_ID_COLLECTION: &str = \"editor-notes-demo.collection\";",
         "const TEST_ID_COLLECTION_SUMMARY: &str = \"editor-notes-demo.collection.summary\";",
         "const TEST_ID_COLLECTION_LIST: &str = \"editor-notes-demo.collection.list\";",
@@ -36,9 +38,15 @@ fn editor_notes_demo_composes_shell_mounted_rails_through_workspace_frame_slots(
         "shadcn::Button::new(\"Copy asset summary\")",
         ".test_id(TEST_ID_SUMMARY_COMMAND)",
         ".test_id(TEST_ID_SUMMARY_STATUS)",
-        "cx.text(\"Draft status\")",
+        "row_cx.label_text(cx, \"Draft status\")",
+        "editor_notes_readout_text(cx, draft_status_label.clone())",
         ".test_id(TEST_ID_NOTES_DRAFT_STATUS)",
-        "cx.text(\"Draft actions\")",
+        "row_cx.label_text(cx, \"Draft actions\")",
+        "row_cx.label_text(cx, \"Summary command\")",
+        "row_cx.label_text(cx, \"Summary status\")",
+        "editor_notes_readout_text(cx, committed_label.clone())",
+        "editor_notes_readout_text(cx, outcome_label.clone())",
+        "editor_notes_readout_text(cx, summary_status.clone())",
         "shadcn::Button::new(\"Commit draft\")",
         "shadcn::Button::new(\"Discard draft\")",
         ".test_id(TEST_ID_DRAFT_COMMIT_COMMAND)",
@@ -58,6 +66,20 @@ fn editor_notes_demo_composes_shell_mounted_rails_through_workspace_frame_slots(
         !source.contains("Theme::global(&*cx.app).snapshot()"),
         "editor notes demo should use the app-facing theme snapshot helper instead of reading theme through cx.app",
     );
+
+    for needle in [
+        "cx.text(\"Draft status\")",
+        "cx.text(\"Draft actions\")",
+        "cx.text(committed_label.clone())",
+        "cx.text(outcome_label.clone())",
+        "cx.text(draft_status_label.clone())",
+        "cx.text(summary_status.clone())",
+    ] {
+        assert!(
+            !source.contains(needle),
+            "editor notes demo should keep inspector row text on semantic roles; unexpected `{needle}`"
+        );
+    }
 }
 
 #[test]

@@ -299,6 +299,9 @@ Readiness order for the next locally testable review slices:
    2026-05-17 workspace shell proof text follow-up: `workspace_shell_demo` editor-rail buttons,
    property labels, and compact property values now teach the shared button-label, property-label,
    and control-readout text roles instead of bare `cx.text(...)`.
+   2026-05-17 editor notes proof text follow-up: `editor_notes_demo` inspector metadata labels,
+   subtitle, and compact status values now teach the same property-label and control-readout roles
+   instead of relying on bare `cx.text(...)` inside fixed property rows.
    2026-05-17 workspace shell prompt text follow-up: the dirty-close prompt title/details now
    reuse the shared section-chrome and control-readout text roles instead of bare dialog text.
    2026-05-17 editor proof readout follow-up: `imui_editor_proof_demo` now routes selected
