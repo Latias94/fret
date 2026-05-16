@@ -1,7 +1,51 @@
 # Scroll Optimization Workstream (v1) — TODO
 
-Date: 2026-05-08
+Date: 2026-05-16
 Status: Active
+
+## Candidate perf slice — Resize-jitter ScrollArea layout root attribution
+
+- [x] Reproduce the local resize-jitter post-row-fragment attribution with scroll/layout profiling enabled.
+  - Seed evidence:
+    `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-resize-jitter-r3/worst.stats.json`
+  - Current worst-frame shape: `total=1464us`, `layout=796us`, `layout_roots=538us`,
+    `layout_engine_solve=395us`, `paint=450us`.
+  - Top layout hotspot: gallery content `ScrollArea` / `Scroll` with `263us` exclusive and `388us`
+    inclusive layout time.
+  - Profiled rerun:
+    `target/fret-diag/local-next-scroll-layout-resize-jitter-20260516-r1/worst.stats.json`
+  - Triage:
+    `target/fret-diag/local-next-scroll-layout-resize-jitter-20260516-r1/triage.json`
+  - Profiled worst-frame shape: `total=1362us`, `layout=805us`, `layout_roots=574us`,
+    `layout_engine_solve=373us`, `paint=397us`.
+- [x] Explain why the gallery content view-cache root is `reuse_reason=needs_rerender` during the resize-jitter
+  probe even though the editor row-fragment path is stable.
+- [x] Classify the `ScrollArea` cost more narrowly.
+  - Current profile rules out child measure as the dominant owner (`measure_children_us=0` on the
+    worst content viewport profile).
+  - Current profile rules out dirty-descendant escalation in that worst frame
+    (`direct_children_layout_invalidated=false`, `descendant_subtree_layout_dirty=false`).
+  - Fresh local evidence first reported `layout_dirty_source=notify` /
+    `layout_dirty_detail=animation_frame_request`; after converting code-editor torture autoscroll
+    to paint-only RAF, the dirty source is the legitimate `scroll_handle_window_update`.
+  - Remaining candidate: windowed-paint scroll-handle updates force the parent content view-cache
+    root to rerender even when retained row fragments already cover the current visible row window.
+- [x] Only after classification, choose the implementation owner:
+  - `crates/fret-ui` for scroll mechanism or layout-root scheduling,
+  - `ecosystem/fret-ui-shadcn` for recipe/chrome policy,
+  - or `ui-perf-zed-smoothness-v1` for a broader resize solve batching contract.
+  - Decision: keep the next implementation owner in `crates/fret-ui` / `ecosystem/fret-ui-kit`
+    windowed-paint scroll reuse semantics, not in shadcn `ScrollArea` recipe policy.
+- [x] Add one focused gate before changing behavior, preferably a single resize-jitter diag script plus
+  `diag stats --sort time --top 15 --json` evidence.
+- [ ] Investigate a retained-windowed-paint scroll update path that can avoid marking the parent
+  content view-cache root `needs_rerender` when the current retained row-fragment cache already
+  covers the visible row window.
+  - Guardrail: do not weaken `Scroll.windowed_paint=true` globally. The existing rule is still
+    correct for non-retained windowed paint and virtualized surfaces that need declarative window
+    updates.
+  - Required proof: a focused Rust regression for the retained/windowed case plus the same
+    resize-jitter diag sample showing row replay/store invariants stay stable.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

@@ -78,6 +78,11 @@ pub(super) struct BundleStatsReport {
     max_layout_observation_record_globals_items: u32,
     pub(super) max_prepaint_time_us: u64,
     pub(super) max_paint_time_us: u64,
+    max_paint_record_visual_bounds_time_us: u64,
+    max_paint_record_visual_bounds_calls: u32,
+    max_paint_cache_key_time_us: u64,
+    max_paint_cache_hit_check_time_us: u64,
+    max_paint_observation_record_time_us: u64,
     max_paint_host_widget_observed_models_time_us: u64,
     max_paint_host_widget_observed_models_items: u32,
     max_paint_host_widget_observed_globals_time_us: u64,
@@ -104,6 +109,11 @@ pub(super) struct BundleStatsReport {
     pub(super) max_renderer_encoder_finish_us: u64,
     pub(super) max_renderer_prepare_svg_us: u64,
     pub(super) max_renderer_prepare_text_us: u64,
+    pub(super) max_renderer_prepare_text_collect_pin_keys_us: u64,
+    pub(super) max_renderer_prepare_text_bucket_delta_us: u64,
+    pub(super) max_renderer_prepare_text_prewarm_us: u64,
+    pub(super) max_renderer_prepare_text_pin_bucket_update_us: u64,
+    pub(super) max_renderer_prepare_text_flush_uploads_us: u64,
     pub(super) max_invalidation_walk_calls: u32,
     pub(super) max_invalidation_walk_nodes: u32,
     max_model_change_invalidation_roots: u32,
@@ -133,6 +143,16 @@ pub(super) struct BundleStatsReport {
     pub(super) p95_prepaint_time_us: u64,
     pub(super) p50_paint_time_us: u64,
     pub(super) p95_paint_time_us: u64,
+    p50_paint_record_visual_bounds_time_us: u64,
+    p95_paint_record_visual_bounds_time_us: u64,
+    p50_paint_record_visual_bounds_calls: u64,
+    p95_paint_record_visual_bounds_calls: u64,
+    p50_paint_cache_key_time_us: u64,
+    p95_paint_cache_key_time_us: u64,
+    p50_paint_cache_hit_check_time_us: u64,
+    p95_paint_cache_hit_check_time_us: u64,
+    p50_paint_observation_record_time_us: u64,
+    p95_paint_observation_record_time_us: u64,
     pub(super) p50_paint_input_context_time_us: u64,
     pub(super) p95_paint_input_context_time_us: u64,
     pub(super) p50_paint_scroll_handle_invalidation_time_us: u64,
@@ -197,6 +217,16 @@ pub(super) struct BundleStatsReport {
     pub(super) p95_renderer_prepare_svg_us: u64,
     pub(super) p50_renderer_prepare_text_us: u64,
     pub(super) p95_renderer_prepare_text_us: u64,
+    pub(super) p50_renderer_prepare_text_collect_pin_keys_us: u64,
+    pub(super) p95_renderer_prepare_text_collect_pin_keys_us: u64,
+    pub(super) p50_renderer_prepare_text_bucket_delta_us: u64,
+    pub(super) p95_renderer_prepare_text_bucket_delta_us: u64,
+    pub(super) p50_renderer_prepare_text_prewarm_us: u64,
+    pub(super) p95_renderer_prepare_text_prewarm_us: u64,
+    pub(super) p50_renderer_prepare_text_pin_bucket_update_us: u64,
+    pub(super) p95_renderer_prepare_text_pin_bucket_update_us: u64,
+    pub(super) p50_renderer_prepare_text_flush_uploads_us: u64,
+    pub(super) p95_renderer_prepare_text_flush_uploads_us: u64,
     paint_widget_hotspot_summary: BundleStatsPaintWidgetHotspotSummary,
     code_editor_paint_perf: BundleStatsCodeEditorPaintPerfSummary,
     worst_hover_layout: Option<BundleStatsWorstHoverLayout>,
@@ -347,6 +377,17 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_record_passes_us: u64,
     pub(super) renderer_encoder_finish_us: u64,
     pub(super) renderer_prepare_text_us: u64,
+    pub(super) renderer_prepare_text_collect_pin_keys_us: u64,
+    pub(super) renderer_prepare_text_bucket_delta_us: u64,
+    pub(super) renderer_prepare_text_prewarm_us: u64,
+    pub(super) renderer_prepare_text_pin_bucket_update_us: u64,
+    pub(super) renderer_prepare_text_flush_uploads_us: u64,
+    pub(super) renderer_prepare_text_scene_text_blobs: u64,
+    pub(super) renderer_prepare_text_pinned_glyph_keys: u64,
+    pub(super) renderer_prepare_text_prewarm_glyph_keys: u64,
+    pub(super) renderer_prepare_text_retained_glyph_keys: u64,
+    pub(super) renderer_prepare_text_added_glyph_keys: u64,
+    pub(super) renderer_prepare_text_removed_glyph_keys: u64,
     pub(super) renderer_prepare_svg_us: u64,
     pub(super) renderer_encode_scene_stack_us: u64,
     pub(super) renderer_encode_scene_clip_us: u64,
@@ -542,6 +583,7 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) widget_measure_hotspots: Vec<BundleStatsWidgetMeasureHotspot>,
     pub(super) paint_widget_hotspots: Vec<BundleStatsPaintWidgetHotspot>,
     pub(super) paint_text_prepare_hotspots: Vec<BundleStatsPaintTextPrepareHotspot>,
+    pub(super) command_availability_hotspots: Vec<BundleStatsCommandAvailabilityHotspot>,
     pub(super) model_change_hotspots: Vec<BundleStatsModelChangeHotspot>,
     pub(super) model_change_unobserved: Vec<BundleStatsModelChangeUnobserved>,
     pub(super) global_change_hotspots: Vec<BundleStatsGlobalChangeHotspot>,
@@ -597,6 +639,8 @@ pub(super) struct BundleStatsCodeEditorPaintPerf {
     pub(super) us_row_scene_replay_touch: u64,
     pub(super) us_row_scene_replay_ops: u64,
     pub(super) us_row_scene_prepaint_plan: u64,
+    pub(super) us_row_scene_prepaint_probe: u64,
+    pub(super) us_row_scene_prepaint_key_compare: u64,
     pub(super) us_row_scene_capture_ops: u64,
     pub(super) us_row_scene_store: u64,
     pub(super) us_row_scene_prepaint_edge_store: u64,
@@ -680,6 +724,8 @@ struct BundleStatsCodeEditorPaintPerfTotals {
     us_row_scene_replay_touch: u64,
     us_row_scene_replay_ops: u64,
     us_row_scene_prepaint_plan: u64,
+    us_row_scene_prepaint_probe: u64,
+    us_row_scene_prepaint_key_compare: u64,
     us_row_scene_capture_ops: u64,
     us_row_scene_store: u64,
     us_row_scene_prepaint_edge_store: u64,
@@ -814,6 +860,12 @@ impl BundleStatsCodeEditorPaintPerfTotals {
         self.us_row_scene_prepaint_plan = self
             .us_row_scene_prepaint_plan
             .saturating_add(p.us_row_scene_prepaint_plan);
+        self.us_row_scene_prepaint_probe = self
+            .us_row_scene_prepaint_probe
+            .saturating_add(p.us_row_scene_prepaint_probe);
+        self.us_row_scene_prepaint_key_compare = self
+            .us_row_scene_prepaint_key_compare
+            .saturating_add(p.us_row_scene_prepaint_key_compare);
         self.us_row_scene_capture_ops = self
             .us_row_scene_capture_ops
             .saturating_add(p.us_row_scene_capture_ops);
@@ -981,6 +1033,12 @@ impl BundleStatsCodeEditorPaintPerfTotals {
         self.us_row_scene_prepaint_plan = self
             .us_row_scene_prepaint_plan
             .max(p.us_row_scene_prepaint_plan);
+        self.us_row_scene_prepaint_probe = self
+            .us_row_scene_prepaint_probe
+            .max(p.us_row_scene_prepaint_probe);
+        self.us_row_scene_prepaint_key_compare = self
+            .us_row_scene_prepaint_key_compare
+            .max(p.us_row_scene_prepaint_key_compare);
         self.us_row_scene_capture_ops = self
             .us_row_scene_capture_ops
             .max(p.us_row_scene_capture_ops);
@@ -1077,6 +1135,8 @@ impl BundleStatsCodeEditorPaintPerfTotals {
             "us_row_scene_replay_touch": self.us_row_scene_replay_touch,
             "us_row_scene_replay_ops": self.us_row_scene_replay_ops,
             "us_row_scene_prepaint_plan": self.us_row_scene_prepaint_plan,
+            "us_row_scene_prepaint_probe": self.us_row_scene_prepaint_probe,
+            "us_row_scene_prepaint_key_compare": self.us_row_scene_prepaint_key_compare,
             "us_row_scene_capture_ops": self.us_row_scene_capture_ops,
             "us_row_scene_store": self.us_row_scene_store,
             "us_row_scene_prepaint_edge_store": self.us_row_scene_prepaint_edge_store,
@@ -1179,6 +1239,8 @@ impl BundleStatsCodeEditorPaintPerf {
             "us_row_scene_replay_touch": self.us_row_scene_replay_touch,
             "us_row_scene_replay_ops": self.us_row_scene_replay_ops,
             "us_row_scene_prepaint_plan": self.us_row_scene_prepaint_plan,
+            "us_row_scene_prepaint_probe": self.us_row_scene_prepaint_probe,
+            "us_row_scene_prepaint_key_compare": self.us_row_scene_prepaint_key_compare,
             "us_row_scene_capture_ops": self.us_row_scene_capture_ops,
             "us_row_scene_store": self.us_row_scene_store,
             "us_row_scene_prepaint_edge_store": self.us_row_scene_prepaint_edge_store,
@@ -1345,6 +1407,41 @@ pub(super) struct BundleStatsWidgetMeasureHotspot {
     pub(super) inclusive_time_us: u64,
     pub(super) role: Option<String>,
     pub(super) test_id: Option<String>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(super) struct BundleStatsCommandAvailabilityHotspot {
+    pub(super) command: String,
+    pub(super) route: String,
+    pub(super) start_node: u64,
+    pub(super) resolved_node: Option<u64>,
+    pub(super) outcome: String,
+    pub(super) elapsed_us: u64,
+    pub(super) start_element: Option<u64>,
+    pub(super) start_element_kind: Option<String>,
+    pub(super) start_element_path: Option<String>,
+    pub(super) resolved_element: Option<u64>,
+    pub(super) resolved_element_kind: Option<String>,
+    pub(super) resolved_element_path: Option<String>,
+}
+
+impl BundleStatsCommandAvailabilityHotspot {
+    fn to_json(&self) -> Value {
+        serde_json::json!({
+            "command": self.command,
+            "route": self.route,
+            "start_node": self.start_node,
+            "resolved_node": self.resolved_node,
+            "outcome": self.outcome,
+            "elapsed_us": self.elapsed_us,
+            "start_element": self.start_element,
+            "start_element_kind": self.start_element_kind,
+            "start_element_path": self.start_element_path,
+            "resolved_element": self.resolved_element,
+            "resolved_element_kind": self.resolved_element_kind,
+            "resolved_element_path": self.resolved_element_path,
+        })
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -2142,9 +2239,11 @@ impl BundleStatsReport {
             p.sum.us_row_scene_full_path,
         );
         println!(
-            "code_editor.paint_perf sum.us(total/prepaint_plan/replay_touch/replay_ops/capture_ops/store/prepaint_edge_store/fast_probe/full_probe/geom_cache/geom_resolve/overlay/frame_overlay)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+            "code_editor.paint_perf sum.us(total/prepaint_plan/prepaint_probe/prepaint_key_compare/replay_touch/replay_ops/capture_ops/store/prepaint_edge_store/fast_probe/full_probe/geom_cache/geom_resolve/overlay/frame_overlay)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
             p.sum.us_total,
             p.sum.us_row_scene_prepaint_plan,
+            p.sum.us_row_scene_prepaint_probe,
+            p.sum.us_row_scene_prepaint_key_compare,
             p.sum.us_row_scene_replay_touch,
             p.sum.us_row_scene_replay_ops,
             p.sum.us_row_scene_capture_ops,
@@ -2191,11 +2290,15 @@ impl BundleStatsReport {
             p.sum.rows_scene_full_miss_key_mismatch,
         );
         println!(
-            "code_editor.paint_perf p50/p95.us(total/prepaint_plan/content/row_text/geom_key/scene_key/rich_cmp/fast_key_cmp/text/fast_path/surface_total/surface_non_row/surface_row_callback_gap/torture_autoscroll/torture_overlay)={}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}",
+            "code_editor.paint_perf p50/p95.us(total/prepaint_plan/prepaint_probe/prepaint_key_compare/content/row_text/geom_key/scene_key/rich_cmp/fast_key_cmp/text/fast_path/surface_total/surface_non_row/surface_row_callback_gap/torture_autoscroll/torture_overlay)={}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}",
             p.p50.us_total,
             p.p95.us_total,
             p.p50.us_row_scene_prepaint_plan,
             p.p95.us_row_scene_prepaint_plan,
+            p.p50.us_row_scene_prepaint_probe,
+            p.p95.us_row_scene_prepaint_probe,
+            p.p50.us_row_scene_prepaint_key_compare,
+            p.p95.us_row_scene_prepaint_key_compare,
             p.p50.us_row_content_resolve,
             p.p95.us_row_content_resolve,
             p.p50.us_row_text,
@@ -2338,9 +2441,11 @@ impl BundleStatsReport {
             p.quads_caret,
         );
         println!(
-            "    code_editor.paint_perf.us(total/prepaint_plan/content/row_text/text/rich/geom_key/scene_key/rich_cmp/fast_key_cmp/full_key_cmp/replay_touch/replay_ops/capture_ops/store/prepaint_edge_store/fast_probe/full_probe/fast_path/full_path/syntax_spans/geom_cache/geom_resolve/overlay/frame_overlay/torture_autoscroll/torture_overlay)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+            "    code_editor.paint_perf.us(total/prepaint_plan/prepaint_probe/prepaint_key_compare/content/row_text/text/rich/geom_key/scene_key/rich_cmp/fast_key_cmp/full_key_cmp/replay_touch/replay_ops/capture_ops/store/prepaint_edge_store/fast_probe/full_probe/fast_path/full_path/syntax_spans/geom_cache/geom_resolve/overlay/frame_overlay/torture_autoscroll/torture_overlay)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
             p.us_total,
             p.us_row_scene_prepaint_plan,
+            p.us_row_scene_prepaint_probe,
+            p.us_row_scene_prepaint_key_compare,
             p.us_row_content_resolve,
             p.us_row_text,
             p.us_text_draw,
@@ -2498,6 +2603,31 @@ impl BundleStatsReport {
                 self.p95_renderer_prepare_svg_us,
                 self.max_renderer_prepare_svg_us,
             );
+            if self.p95_renderer_prepare_text_collect_pin_keys_us > 0
+                || self.max_renderer_prepare_text_collect_pin_keys_us > 0
+                || self.p95_renderer_prepare_text_bucket_delta_us > 0
+                || self.max_renderer_prepare_text_bucket_delta_us > 0
+                || self.p95_renderer_prepare_text_prewarm_us > 0
+                || self.max_renderer_prepare_text_prewarm_us > 0
+                || self.p95_renderer_prepare_text_pin_bucket_update_us > 0
+                || self.max_renderer_prepare_text_pin_bucket_update_us > 0
+                || self.p95_renderer_prepare_text_flush_uploads_us > 0
+                || self.max_renderer_prepare_text_flush_uploads_us > 0
+            {
+                println!(
+                    "renderer text_prepare p95/max (us): collect_pin_keys={}/{} bucket_delta={}/{} prewarm={}/{} pin_update={}/{} flush={}/{}",
+                    self.p95_renderer_prepare_text_collect_pin_keys_us,
+                    self.max_renderer_prepare_text_collect_pin_keys_us,
+                    self.p95_renderer_prepare_text_bucket_delta_us,
+                    self.max_renderer_prepare_text_bucket_delta_us,
+                    self.p95_renderer_prepare_text_prewarm_us,
+                    self.max_renderer_prepare_text_prewarm_us,
+                    self.p95_renderer_prepare_text_pin_bucket_update_us,
+                    self.max_renderer_prepare_text_pin_bucket_update_us,
+                    self.p95_renderer_prepare_text_flush_uploads_us,
+                    self.max_renderer_prepare_text_flush_uploads_us,
+                );
+            }
         }
         self.print_code_editor_paint_perf_summary();
         self.print_paint_widget_hotspot_summary();
@@ -2624,6 +2754,32 @@ impl BundleStatsReport {
                     row.renderer_prepare_svg_us,
                     row.renderer_prepare_text_us,
                 ));
+                if row.renderer_prepare_text_collect_pin_keys_us > 0
+                    || row.renderer_prepare_text_bucket_delta_us > 0
+                    || row.renderer_prepare_text_prewarm_us > 0
+                    || row.renderer_prepare_text_pin_bucket_update_us > 0
+                    || row.renderer_prepare_text_flush_uploads_us > 0
+                    || row.renderer_prepare_text_scene_text_blobs > 0
+                    || row.renderer_prepare_text_pinned_glyph_keys > 0
+                {
+                    line.push_str(&format!(
+                        " renderer.text_prepare.us(collect/bucket_delta/prewarm/pin_update/flush)={}/{}/{}/{}/{}",
+                        row.renderer_prepare_text_collect_pin_keys_us,
+                        row.renderer_prepare_text_bucket_delta_us,
+                        row.renderer_prepare_text_prewarm_us,
+                        row.renderer_prepare_text_pin_bucket_update_us,
+                        row.renderer_prepare_text_flush_uploads_us,
+                    ));
+                    line.push_str(&format!(
+                        " renderer.text_prepare.counts(blobs/pinned/prewarm/retained/added/removed)={}/{}/{}/{}/{}/{}",
+                        row.renderer_prepare_text_scene_text_blobs,
+                        row.renderer_prepare_text_pinned_glyph_keys,
+                        row.renderer_prepare_text_prewarm_glyph_keys,
+                        row.renderer_prepare_text_retained_glyph_keys,
+                        row.renderer_prepare_text_added_glyph_keys,
+                        row.renderer_prepare_text_removed_glyph_keys,
+                    ));
+                }
                 if row.renderer_uniform_bytes > 0
                     || row.renderer_instance_bytes > 0
                     || row.renderer_vertex_bytes > 0
@@ -2722,6 +2878,47 @@ impl BundleStatsReport {
                     row.window_runtime_snapshot_widget_command_count,
                     row.window_runtime_snapshot_command_registry_collect_time_us,
                     row.window_runtime_snapshot_command_availability_eval_time_us
+                );
+            }
+            if !row.command_availability_hotspots.is_empty() {
+                let items: Vec<String> = row
+                    .command_availability_hotspots
+                    .iter()
+                    .map(|h| {
+                        let start = h
+                            .start_element_path
+                            .as_deref()
+                            .or(h.start_element_kind.as_deref())
+                            .unwrap_or("unknown");
+                        let resolved = h
+                            .resolved_element_path
+                            .as_deref()
+                            .or(h.resolved_element_kind.as_deref())
+                            .unwrap_or("none");
+                        format!(
+                            "{}@{}={}us outcome={} start_node={} resolved_node={} start_el={} resolved_el={} start={} resolved={}",
+                            h.command,
+                            h.route,
+                            h.elapsed_us,
+                            h.outcome,
+                            h.start_node,
+                            h.resolved_node
+                                .map(|node| node.to_string())
+                                .unwrap_or_else(|| "none".to_string()),
+                            h.start_element
+                                .map(|element| element.to_string())
+                                .unwrap_or_else(|| "none".to_string()),
+                            h.resolved_element
+                                .map(|element| element.to_string())
+                                .unwrap_or_else(|| "none".to_string()),
+                            compact_string_middle(start, 40, 40),
+                            compact_string_middle(resolved, 40, 40)
+                        )
+                    })
+                    .collect();
+                println!(
+                    "    window_runtime_snapshot.command_availability.hotspots: {}",
+                    items.join(" | ")
                 );
             }
         }
@@ -2854,6 +3051,31 @@ impl BundleStatsReport {
                 self.p50_renderer_prepare_text_us,
                 self.p95_renderer_prepare_text_us,
             );
+            if self.p50_renderer_prepare_text_collect_pin_keys_us > 0
+                || self.p95_renderer_prepare_text_collect_pin_keys_us > 0
+                || self.p50_renderer_prepare_text_bucket_delta_us > 0
+                || self.p95_renderer_prepare_text_bucket_delta_us > 0
+                || self.p50_renderer_prepare_text_prewarm_us > 0
+                || self.p95_renderer_prepare_text_prewarm_us > 0
+                || self.p50_renderer_prepare_text_pin_bucket_update_us > 0
+                || self.p95_renderer_prepare_text_pin_bucket_update_us > 0
+                || self.p50_renderer_prepare_text_flush_uploads_us > 0
+                || self.p95_renderer_prepare_text_flush_uploads_us > 0
+            {
+                println!(
+                    "renderer text_prepare p50/p95 (us): collect_pin_keys={}/{} bucket_delta={}/{} prewarm={}/{} pin_update={}/{} flush={}/{}",
+                    self.p50_renderer_prepare_text_collect_pin_keys_us,
+                    self.p95_renderer_prepare_text_collect_pin_keys_us,
+                    self.p50_renderer_prepare_text_bucket_delta_us,
+                    self.p95_renderer_prepare_text_bucket_delta_us,
+                    self.p50_renderer_prepare_text_prewarm_us,
+                    self.p95_renderer_prepare_text_prewarm_us,
+                    self.p50_renderer_prepare_text_pin_bucket_update_us,
+                    self.p95_renderer_prepare_text_pin_bucket_update_us,
+                    self.p50_renderer_prepare_text_flush_uploads_us,
+                    self.p95_renderer_prepare_text_flush_uploads_us,
+                );
+            }
         }
         println!(
             "layout breakdown p50/p95 (us): roots={}/{} request_build_roots={}/{} view_cache={}/{} collapse_obs={}/{} prepaint_after_layout={}/{}",
@@ -2921,6 +3143,21 @@ impl BundleStatsReport {
                 self.max_renderer_prepare_svg_us,
                 self.max_renderer_prepare_text_us,
             );
+            if self.max_renderer_prepare_text_collect_pin_keys_us > 0
+                || self.max_renderer_prepare_text_bucket_delta_us > 0
+                || self.max_renderer_prepare_text_prewarm_us > 0
+                || self.max_renderer_prepare_text_pin_bucket_update_us > 0
+                || self.max_renderer_prepare_text_flush_uploads_us > 0
+            {
+                println!(
+                    "renderer text_prepare max (us): collect_pin_keys={} bucket_delta={} prewarm={} pin_update={} flush={}",
+                    self.max_renderer_prepare_text_collect_pin_keys_us,
+                    self.max_renderer_prepare_text_bucket_delta_us,
+                    self.max_renderer_prepare_text_prewarm_us,
+                    self.max_renderer_prepare_text_pin_bucket_update_us,
+                    self.max_renderer_prepare_text_flush_uploads_us,
+                );
+            }
         }
         self.print_code_editor_paint_perf_summary();
         self.print_paint_widget_hotspot_summary();
@@ -3090,6 +3327,32 @@ impl BundleStatsReport {
                     row.renderer_prepare_svg_us,
                     row.renderer_prepare_text_us,
                 ));
+                if row.renderer_prepare_text_collect_pin_keys_us > 0
+                    || row.renderer_prepare_text_bucket_delta_us > 0
+                    || row.renderer_prepare_text_prewarm_us > 0
+                    || row.renderer_prepare_text_pin_bucket_update_us > 0
+                    || row.renderer_prepare_text_flush_uploads_us > 0
+                    || row.renderer_prepare_text_scene_text_blobs > 0
+                    || row.renderer_prepare_text_pinned_glyph_keys > 0
+                {
+                    line.push_str(&format!(
+                        " renderer.text_prepare.us(collect/bucket_delta/prewarm/pin_update/flush)={}/{}/{}/{}/{}",
+                        row.renderer_prepare_text_collect_pin_keys_us,
+                        row.renderer_prepare_text_bucket_delta_us,
+                        row.renderer_prepare_text_prewarm_us,
+                        row.renderer_prepare_text_pin_bucket_update_us,
+                        row.renderer_prepare_text_flush_uploads_us,
+                    ));
+                    line.push_str(&format!(
+                        " renderer.text_prepare.counts(blobs/pinned/prewarm/retained/added/removed)={}/{}/{}/{}/{}/{}",
+                        row.renderer_prepare_text_scene_text_blobs,
+                        row.renderer_prepare_text_pinned_glyph_keys,
+                        row.renderer_prepare_text_prewarm_glyph_keys,
+                        row.renderer_prepare_text_retained_glyph_keys,
+                        row.renderer_prepare_text_added_glyph_keys,
+                        row.renderer_prepare_text_removed_glyph_keys,
+                    ));
+                }
                 line.push_str(&format!(
                     " renderer.encode.us(stack/clip/mask/effect/quad/image/text/path/viewport/flush)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
                     row.renderer_encode_scene_stack_us,
@@ -4315,6 +4578,26 @@ impl BundleStatsReport {
             Value::from(self.max_paint_time_us),
         );
         max.insert(
+            "paint_record_visual_bounds_time_us".to_string(),
+            Value::from(self.max_paint_record_visual_bounds_time_us),
+        );
+        max.insert(
+            "paint_record_visual_bounds_calls".to_string(),
+            Value::from(self.max_paint_record_visual_bounds_calls),
+        );
+        max.insert(
+            "paint_cache_key_time_us".to_string(),
+            Value::from(self.max_paint_cache_key_time_us),
+        );
+        max.insert(
+            "paint_cache_hit_check_time_us".to_string(),
+            Value::from(self.max_paint_cache_hit_check_time_us),
+        );
+        max.insert(
+            "paint_observation_record_time_us".to_string(),
+            Value::from(self.max_paint_observation_record_time_us),
+        );
+        max.insert(
             "paint_host_widget_observed_models_time_us".to_string(),
             Value::from(self.max_paint_host_widget_observed_models_time_us),
         );
@@ -4417,6 +4700,26 @@ impl BundleStatsReport {
         max.insert(
             "renderer_prepare_text_us".to_string(),
             Value::from(self.max_renderer_prepare_text_us),
+        );
+        max.insert(
+            "renderer_prepare_text_collect_pin_keys_us".to_string(),
+            Value::from(self.max_renderer_prepare_text_collect_pin_keys_us),
+        );
+        max.insert(
+            "renderer_prepare_text_bucket_delta_us".to_string(),
+            Value::from(self.max_renderer_prepare_text_bucket_delta_us),
+        );
+        max.insert(
+            "renderer_prepare_text_prewarm_us".to_string(),
+            Value::from(self.max_renderer_prepare_text_prewarm_us),
+        );
+        max.insert(
+            "renderer_prepare_text_pin_bucket_update_us".to_string(),
+            Value::from(self.max_renderer_prepare_text_pin_bucket_update_us),
+        );
+        max.insert(
+            "renderer_prepare_text_flush_uploads_us".to_string(),
+            Value::from(self.max_renderer_prepare_text_flush_uploads_us),
         );
         max.insert(
             "invalidation_walk_calls".to_string(),
@@ -4639,6 +4942,26 @@ impl BundleStatsReport {
             Value::from(self.p50_paint_time_us),
         );
         p50.insert(
+            "paint_record_visual_bounds_time_us".to_string(),
+            Value::from(self.p50_paint_record_visual_bounds_time_us),
+        );
+        p50.insert(
+            "paint_record_visual_bounds_calls".to_string(),
+            Value::from(self.p50_paint_record_visual_bounds_calls),
+        );
+        p50.insert(
+            "paint_cache_key_time_us".to_string(),
+            Value::from(self.p50_paint_cache_key_time_us),
+        );
+        p50.insert(
+            "paint_cache_hit_check_time_us".to_string(),
+            Value::from(self.p50_paint_cache_hit_check_time_us),
+        );
+        p50.insert(
+            "paint_observation_record_time_us".to_string(),
+            Value::from(self.p50_paint_observation_record_time_us),
+        );
+        p50.insert(
             "paint_input_context_time_us".to_string(),
             Value::from(self.p50_paint_input_context_time_us),
         );
@@ -4766,6 +5089,26 @@ impl BundleStatsReport {
             "renderer_prepare_text_us".to_string(),
             Value::from(self.p50_renderer_prepare_text_us),
         );
+        p50.insert(
+            "renderer_prepare_text_collect_pin_keys_us".to_string(),
+            Value::from(self.p50_renderer_prepare_text_collect_pin_keys_us),
+        );
+        p50.insert(
+            "renderer_prepare_text_bucket_delta_us".to_string(),
+            Value::from(self.p50_renderer_prepare_text_bucket_delta_us),
+        );
+        p50.insert(
+            "renderer_prepare_text_prewarm_us".to_string(),
+            Value::from(self.p50_renderer_prepare_text_prewarm_us),
+        );
+        p50.insert(
+            "renderer_prepare_text_pin_bucket_update_us".to_string(),
+            Value::from(self.p50_renderer_prepare_text_pin_bucket_update_us),
+        );
+        p50.insert(
+            "renderer_prepare_text_flush_uploads_us".to_string(),
+            Value::from(self.p50_renderer_prepare_text_flush_uploads_us),
+        );
         root.insert("p50".to_string(), Value::Object(p50));
 
         let mut p95 = Map::new();
@@ -4816,6 +5159,26 @@ impl BundleStatsReport {
         p95.insert(
             "paint_time_us".to_string(),
             Value::from(self.p95_paint_time_us),
+        );
+        p95.insert(
+            "paint_record_visual_bounds_time_us".to_string(),
+            Value::from(self.p95_paint_record_visual_bounds_time_us),
+        );
+        p95.insert(
+            "paint_record_visual_bounds_calls".to_string(),
+            Value::from(self.p95_paint_record_visual_bounds_calls),
+        );
+        p95.insert(
+            "paint_cache_key_time_us".to_string(),
+            Value::from(self.p95_paint_cache_key_time_us),
+        );
+        p95.insert(
+            "paint_cache_hit_check_time_us".to_string(),
+            Value::from(self.p95_paint_cache_hit_check_time_us),
+        );
+        p95.insert(
+            "paint_observation_record_time_us".to_string(),
+            Value::from(self.p95_paint_observation_record_time_us),
         );
         p95.insert(
             "paint_input_context_time_us".to_string(),
@@ -4945,6 +5308,26 @@ impl BundleStatsReport {
             "renderer_prepare_text_us".to_string(),
             Value::from(self.p95_renderer_prepare_text_us),
         );
+        p95.insert(
+            "renderer_prepare_text_collect_pin_keys_us".to_string(),
+            Value::from(self.p95_renderer_prepare_text_collect_pin_keys_us),
+        );
+        p95.insert(
+            "renderer_prepare_text_bucket_delta_us".to_string(),
+            Value::from(self.p95_renderer_prepare_text_bucket_delta_us),
+        );
+        p95.insert(
+            "renderer_prepare_text_prewarm_us".to_string(),
+            Value::from(self.p95_renderer_prepare_text_prewarm_us),
+        );
+        p95.insert(
+            "renderer_prepare_text_pin_bucket_update_us".to_string(),
+            Value::from(self.p95_renderer_prepare_text_pin_bucket_update_us),
+        );
+        p95.insert(
+            "renderer_prepare_text_flush_uploads_us".to_string(),
+            Value::from(self.p95_renderer_prepare_text_flush_uploads_us),
+        );
         root.insert("p95".to_string(), Value::Object(p95));
 
         root.insert(
@@ -5060,6 +5443,50 @@ impl BundleStatsReport {
                 obj.insert(
                     "renderer_prepare_text_us".to_string(),
                     Value::from(row.renderer_prepare_text_us),
+                );
+                obj.insert(
+                    "renderer_prepare_text_collect_pin_keys_us".to_string(),
+                    Value::from(row.renderer_prepare_text_collect_pin_keys_us),
+                );
+                obj.insert(
+                    "renderer_prepare_text_bucket_delta_us".to_string(),
+                    Value::from(row.renderer_prepare_text_bucket_delta_us),
+                );
+                obj.insert(
+                    "renderer_prepare_text_prewarm_us".to_string(),
+                    Value::from(row.renderer_prepare_text_prewarm_us),
+                );
+                obj.insert(
+                    "renderer_prepare_text_pin_bucket_update_us".to_string(),
+                    Value::from(row.renderer_prepare_text_pin_bucket_update_us),
+                );
+                obj.insert(
+                    "renderer_prepare_text_flush_uploads_us".to_string(),
+                    Value::from(row.renderer_prepare_text_flush_uploads_us),
+                );
+                obj.insert(
+                    "renderer_prepare_text_scene_text_blobs".to_string(),
+                    Value::from(row.renderer_prepare_text_scene_text_blobs),
+                );
+                obj.insert(
+                    "renderer_prepare_text_pinned_glyph_keys".to_string(),
+                    Value::from(row.renderer_prepare_text_pinned_glyph_keys),
+                );
+                obj.insert(
+                    "renderer_prepare_text_prewarm_glyph_keys".to_string(),
+                    Value::from(row.renderer_prepare_text_prewarm_glyph_keys),
+                );
+                obj.insert(
+                    "renderer_prepare_text_retained_glyph_keys".to_string(),
+                    Value::from(row.renderer_prepare_text_retained_glyph_keys),
+                );
+                obj.insert(
+                    "renderer_prepare_text_added_glyph_keys".to_string(),
+                    Value::from(row.renderer_prepare_text_added_glyph_keys),
+                );
+                obj.insert(
+                    "renderer_prepare_text_removed_glyph_keys".to_string(),
+                    Value::from(row.renderer_prepare_text_removed_glyph_keys),
                 );
                 obj.insert(
                     "renderer_uniform_bytes".to_string(),
@@ -6831,6 +7258,16 @@ impl BundleStatsReport {
                 obj.insert(
                     "paint_text_prepare_hotspots".to_string(),
                     Value::Array(paint_text_prepare_hotspots),
+                );
+
+                let command_availability_hotspots = row
+                    .command_availability_hotspots
+                    .iter()
+                    .map(BundleStatsCommandAvailabilityHotspot::to_json)
+                    .collect::<Vec<_>>();
+                obj.insert(
+                    "command_availability_hotspots".to_string(),
+                    Value::Array(command_availability_hotspots),
                 );
 
                 let model_change_hotspots = row

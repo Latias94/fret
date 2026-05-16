@@ -15,10 +15,17 @@ impl Renderer {
             trace_enabled,
             || tracing::trace_span!("fret.renderer.text.prepare", frame_index),
             || {
-                self.text_system.prepare_for_scene(scene, frame_index);
+                let mut text_prepare_perf =
+                    self.text_system
+                        .prepare_for_scene_with_perf(scene, frame_index, perf_enabled);
+                let flush_start = perf_enabled.then(std::time::Instant::now);
                 self.text_system.flush_uploads(queue);
+                if let Some(start) = flush_start {
+                    text_prepare_perf.flush_uploads += start.elapsed();
+                }
                 let text_atlas_revision = self.text_system.atlas_revision();
                 if perf_enabled {
+                    frame_perf.record_text_prepare_scene_perf(text_prepare_perf);
                     let atlas_perf = self.text_system.take_atlas_perf_snapshot();
                     frame_perf.text_atlas_revision = text_atlas_revision;
                     frame_perf.text_atlas_uploads = atlas_perf.uploads;

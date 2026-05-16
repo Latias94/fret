@@ -211,12 +211,12 @@ pub(super) use windowed_rows::{
 };
 
 use bundle_stats_snapshot::{
-    SemanticsIndex, format_text_prepare_reasons, snapshot_global_change_hotspots,
-    snapshot_global_change_unobserved, snapshot_layout_engine_solves, snapshot_layout_hotspots,
-    snapshot_layout_request_build_roots, snapshot_lookup_semantics, snapshot_model_change_hotspots,
-    snapshot_model_change_unobserved, snapshot_paint_text_prepare_hotspots,
-    snapshot_paint_widget_hotspots, snapshot_scroll_layout_profiles,
-    snapshot_widget_measure_hotspots,
+    SemanticsIndex, format_text_prepare_reasons, snapshot_command_availability_hotspots,
+    snapshot_global_change_hotspots, snapshot_global_change_unobserved,
+    snapshot_layout_engine_solves, snapshot_layout_hotspots, snapshot_layout_request_build_roots,
+    snapshot_lookup_semantics, snapshot_model_change_hotspots, snapshot_model_change_unobserved,
+    snapshot_paint_text_prepare_hotspots, snapshot_paint_widget_hotspots,
+    snapshot_scroll_layout_profiles, snapshot_widget_measure_hotspots,
 };
 
 fn bundle_artifact_alias_pair(bundle_path: &Path) -> (String, String) {
@@ -1237,6 +1237,8 @@ mod tests {
                                     "us_row_scene_replay_touch": 5,
                                     "us_row_scene_replay_ops": 25,
                                     "us_row_scene_prepaint_plan": 7,
+                                    "us_row_scene_prepaint_probe": 4,
+                                    "ns_row_scene_prepaint_key_compare": 6100,
                                     "us_row_scene_capture_ops": 70,
                                     "us_row_scene_store": 20,
                                     "us_row_scene_prepaint_edge_store": 4,
@@ -1305,6 +1307,8 @@ mod tests {
         assert_eq!(perf.quads_caret, 1);
         assert_eq!(perf.us_row_scene_replay_ops, 25);
         assert_eq!(perf.us_row_scene_prepaint_plan, 7);
+        assert_eq!(perf.us_row_scene_prepaint_probe, 4);
+        assert_eq!(perf.us_row_scene_prepaint_key_compare, 6);
         assert_eq!(perf.us_row_scene_prepaint_edge_store, 4);
         assert_eq!(perf.us_row_scene_capture_ops, 70);
         assert_eq!(perf.us_row_scene_store, 20);
@@ -1357,6 +1361,16 @@ mod tests {
             Some(7)
         );
         assert_eq!(
+            json.pointer("/code_editor_paint_perf/sum/us_row_scene_prepaint_probe")
+                .and_then(|v| v.as_u64()),
+            Some(4)
+        );
+        assert_eq!(
+            json.pointer("/code_editor_paint_perf/sum/us_row_scene_prepaint_key_compare")
+                .and_then(|v| v.as_u64()),
+            Some(6)
+        );
+        assert_eq!(
             json.pointer("/code_editor_paint_perf/sum/us_row_content_resolve")
                 .and_then(|v| v.as_u64()),
             Some(45)
@@ -1402,6 +1416,16 @@ mod tests {
             Some(5)
         );
         assert_eq!(
+            json.pointer("/top/0/code_editor_paint_perf/us_row_scene_prepaint_probe")
+                .and_then(|v| v.as_u64()),
+            Some(4)
+        );
+        assert_eq!(
+            json.pointer("/top/0/code_editor_paint_perf/us_row_scene_prepaint_key_compare")
+                .and_then(|v| v.as_u64()),
+            Some(6)
+        );
+        assert_eq!(
             json.pointer("/top/0/code_editor_paint_perf/row_scene_ops_stored")
                 .and_then(|v| v.as_u64()),
             Some(19)
@@ -1438,7 +1462,12 @@ mod tests {
                                 "layout_time_us": 50,
                                 "prepaint_time_us": 10,
                                 "paint_time_us": 900,
+                                "paint_record_visual_bounds_time_us": 5,
+                                "paint_record_visual_bounds_calls": 2,
+                                "paint_cache_key_time_us": 15,
+                                "paint_cache_hit_check_time_us": 1,
                                 "paint_widget_time_us": 400,
+                                "paint_observation_record_time_us": 7,
                                 "paint_host_widget_observed_models_time_us": 10,
                                 "paint_host_widget_observed_models_items": 1,
                                 "paint_host_widget_observed_globals_time_us": 11,
@@ -1499,7 +1528,12 @@ mod tests {
                                 "layout_time_us": 50,
                                 "prepaint_time_us": 10,
                                 "paint_time_us": 1900,
+                                "paint_record_visual_bounds_time_us": 6,
+                                "paint_record_visual_bounds_calls": 3,
+                                "paint_cache_key_time_us": 25,
+                                "paint_cache_hit_check_time_us": 2,
                                 "paint_widget_time_us": 700,
+                                "paint_observation_record_time_us": 8,
                                 "paint_host_widget_observed_models_time_us": 20,
                                 "paint_host_widget_observed_models_items": 2,
                                 "paint_host_widget_observed_globals_time_us": 21,
@@ -1560,7 +1594,12 @@ mod tests {
                                 "layout_time_us": 50,
                                 "prepaint_time_us": 10,
                                 "paint_time_us": 2900,
+                                "paint_record_visual_bounds_time_us": 7,
+                                "paint_record_visual_bounds_calls": 4,
+                                "paint_cache_key_time_us": 35,
+                                "paint_cache_hit_check_time_us": 3,
                                 "paint_widget_time_us": 2600,
+                                "paint_observation_record_time_us": 9,
                                 "paint_host_widget_observed_models_time_us": 30,
                                 "paint_host_widget_observed_models_items": 3,
                                 "paint_host_widget_observed_globals_time_us": 31,
@@ -1778,6 +1817,36 @@ mod tests {
             Some(6)
         );
         assert_eq!(
+            json.pointer("/p50/paint_cache_key_time_us")
+                .and_then(|v| v.as_u64()),
+            Some(25)
+        );
+        assert_eq!(
+            json.pointer("/p95/paint_cache_key_time_us")
+                .and_then(|v| v.as_u64()),
+            Some(35)
+        );
+        assert_eq!(
+            json.pointer("/p95/paint_record_visual_bounds_time_us")
+                .and_then(|v| v.as_u64()),
+            Some(7)
+        );
+        assert_eq!(
+            json.pointer("/p95/paint_record_visual_bounds_calls")
+                .and_then(|v| v.as_u64()),
+            Some(4)
+        );
+        assert_eq!(
+            json.pointer("/p95/paint_cache_hit_check_time_us")
+                .and_then(|v| v.as_u64()),
+            Some(3)
+        );
+        assert_eq!(
+            json.pointer("/p95/paint_observation_record_time_us")
+                .and_then(|v| v.as_u64()),
+            Some(9)
+        );
+        assert_eq!(
             json.pointer("/p50/paint_host_widget_observed_deps_calls")
                 .and_then(|v| v.as_u64()),
             Some(5)
@@ -1796,6 +1865,148 @@ mod tests {
             json.pointer("/max/paint_host_widget_instance_lookup_time_us")
                 .and_then(|v| v.as_u64()),
             Some(32)
+        );
+        assert_eq!(
+            json.pointer("/max/paint_cache_key_time_us")
+                .and_then(|v| v.as_u64()),
+            Some(35)
+        );
+        assert_eq!(
+            json.pointer("/max/paint_record_visual_bounds_calls")
+                .and_then(|v| v.as_u64()),
+            Some(4)
+        );
+    }
+
+    #[test]
+    fn bundle_stats_projects_command_availability_hotspots() {
+        let bundle = serde_json::json!({
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    {
+                        "frame_id": 9,
+                        "tick_id": 10,
+                        "timestamp_unix_ms": 11,
+                        "debug": {
+                            "stats": {
+                                "total_time_us": 5000,
+                                "dispatch_time_us": 20,
+                                "window_runtime_snapshot_command_availability_time_us": 30,
+                                "window_runtime_snapshot_widget_command_count": 1,
+                                "window_runtime_snapshot_command_registry_collect_time_us": 10,
+                                "window_runtime_snapshot_command_availability_eval_time_us": 20
+                            }
+                        }
+                    },
+                    {
+                        "frame_id": 10,
+                        "tick_id": 11,
+                        "timestamp_unix_ms": 12,
+                        "debug": {
+                            "stats": {
+                                "total_time_us": 100,
+                                "dispatch_time_us": 20,
+                                "window_runtime_snapshot_command_availability_time_us": 900,
+                                "window_runtime_snapshot_widget_command_count": 2,
+                                "window_runtime_snapshot_command_registry_collect_time_us": 10,
+                                "window_runtime_snapshot_command_availability_eval_time_us": 890
+                            },
+                            "command_availability_hotspots": [
+                                {
+                                    "command": "editor.save",
+                                    "route": "focused_or_default",
+                                    "start_node": 7,
+                                    "resolved_node": 9,
+                                    "outcome": "available",
+                                    "elapsed_us": 700,
+                                    "start_element": 17,
+                                    "start_element_kind": "Button",
+                                    "start_element_path": "app/root/save-button",
+                                    "resolved_element": 19,
+                                    "resolved_element_kind": "Editor",
+                                    "resolved_element_path": "app/root/editor"
+                                },
+                                {
+                                    "command": "editor.format",
+                                    "route": "action_route_fallback_roots",
+                                    "start_node": 3,
+                                    "outcome": "not_handled",
+                                    "elapsed_us": 200,
+                                    "start_element_kind": "WindowRoot"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }]
+        });
+
+        let report = bundle_stats_from_json_with_options(
+            &bundle,
+            2,
+            BundleStatsSort::Time,
+            BundleStatsOptions { warmup_frames: 0 },
+        )
+        .expect("bundle stats");
+
+        let command_row = report
+            .top
+            .iter()
+            .find(|row| row.window_runtime_snapshot_command_availability_time_us == 900)
+            .expect("command availability row");
+        assert_eq!(command_row.command_availability_hotspots.len(), 2);
+        assert_eq!(
+            command_row.command_availability_hotspots[0].command,
+            "editor.save"
+        );
+        assert_eq!(command_row.command_availability_hotspots[0].elapsed_us, 700);
+        assert_eq!(command_row.command_availability_hotspots[0].start_node, 7);
+        assert_eq!(
+            command_row.command_availability_hotspots[0].resolved_node,
+            Some(9)
+        );
+        assert_eq!(
+            command_row.command_availability_hotspots[0]
+                .start_element_path
+                .as_deref(),
+            Some("app/root/save-button")
+        );
+
+        let sorted_report = bundle_stats_from_json_with_options(
+            &bundle,
+            1,
+            BundleStatsSort::CommandAvailability,
+            BundleStatsOptions { warmup_frames: 0 },
+        )
+        .expect("bundle stats sorted by command availability");
+        let top = sorted_report.top.first().expect("top row");
+        assert_eq!(
+            top.window_runtime_snapshot_command_availability_time_us,
+            900
+        );
+        assert_eq!(top.command_availability_hotspots[0].command, "editor.save");
+
+        let json = sorted_report.to_json();
+        assert_eq!(
+            json.pointer("/top/0/command_availability_hotspots/0/command")
+                .and_then(|v| v.as_str()),
+            Some("editor.save")
+        );
+        assert_eq!(
+            json.pointer("/top/0/command_availability_hotspots/0/route")
+                .and_then(|v| v.as_str()),
+            Some("focused_or_default")
+        );
+        assert_eq!(
+            json.pointer("/top/0/command_availability_hotspots/0/start_node")
+                .and_then(|v| v.as_u64()),
+            Some(7)
+        );
+        assert_eq!(
+            json.pointer("/top/0/command_availability_hotspots/0/resolved_element")
+                .and_then(|v| v.as_u64()),
+            Some(19)
         );
     }
 }

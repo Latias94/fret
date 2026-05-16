@@ -242,6 +242,7 @@ mod layer_root_replacement;
 mod layout_dirty_invalidation_harness;
 mod measure_in;
 mod models;
+mod observation;
 mod outside_press;
 mod paint_cache;
 mod platform_text_input;

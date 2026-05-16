@@ -142,6 +142,116 @@ fn view_cache_skips_child_render_when_clean_and_preserves_element_state() {
 }
 
 #[test]
+fn windowed_scroll_paint_update_keeps_view_cache_render_reusable() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+    let mut scene = Scene::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+    let renders = Arc::new(AtomicUsize::new(0));
+    let paints = Arc::new(AtomicUsize::new(0));
+
+    let render_frame = |ui: &mut UiTree<TestHost>,
+                        app: &mut TestHost,
+                        services: &mut FakeTextService,
+                        renders: Arc<AtomicUsize>,
+                        paints: Arc<AtomicUsize>| {
+        let scroll_handle = scroll_handle.clone();
+        render_root_for_frame(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "windowed-scroll-paint-update-view-cache",
+            move |cx| {
+                vec![
+                    cx.view_cache(crate::element::ViewCacheProps::default(), move |cx| {
+                        renders.fetch_add(1, Ordering::SeqCst);
+                        let mut scroll = crate::element::ScrollProps::default();
+                        scroll.scroll_handle = Some(scroll_handle.clone());
+                        scroll.windowed_paint = true;
+
+                        vec![cx.scroll(scroll, move |cx| {
+                            let paints = paints.clone();
+                            let mut canvas = crate::element::CanvasProps::default();
+                            canvas.layout.size.height = crate::element::Length::Px(Px(400.0));
+                            vec![cx.canvas(canvas, move |_p| {
+                                paints.fetch_add(1, Ordering::SeqCst);
+                            })]
+                        })]
+                    }),
+                ]
+            },
+        )
+    };
+
+    let root = render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        renders.clone(),
+        paints.clone(),
+    );
+    layout_frame(&mut ui, &mut app, &mut services, bounds);
+    paint_frame(&mut ui, &mut app, &mut services, bounds, &mut scene);
+    assert_eq!(ui.children(root).len(), 1);
+    assert_eq!(renders.load(Ordering::SeqCst), 1);
+    assert_eq!(paints.load(Ordering::SeqCst), 1);
+    app.advance_frame();
+
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), Px(120.0)));
+
+    let root = render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        renders.clone(),
+        paints.clone(),
+    );
+    layout_frame(&mut ui, &mut app, &mut services, bounds);
+    let cache_node = ui.children(root)[0];
+    assert!(
+        !ui.view_cache_node_needs_rerender(cache_node),
+        "windowed-paint scroll updates should not force the cache-root render closure to rerun"
+    );
+    assert!(ui.should_reuse_view_cache_node(cache_node));
+    paint_frame(&mut ui, &mut app, &mut services, bounds, &mut scene);
+    assert_eq!(
+        renders.load(Ordering::SeqCst),
+        1,
+        "scrolling a stable windowed-paint surface should keep the view-cache render subtree reusable"
+    );
+    assert_eq!(
+        paints.load(Ordering::SeqCst),
+        2,
+        "scrolling a windowed-paint surface must still repaint the canvas"
+    );
+    app.advance_frame();
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        renders.clone(),
+        paints.clone(),
+    );
+    assert_eq!(
+        renders.load(Ordering::SeqCst),
+        1,
+        "the scroll update must not leave a next-frame view-cache rerender pending"
+    );
+}
+
+#[test]
 fn view_cache_reuse_preserves_scope_only_authoring_identity_liveness() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

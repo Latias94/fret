@@ -1,7 +1,99 @@
 # Scroll Optimization Workstream (v1) — Evidence And Gates
 
-Date: 2026-05-08
+Date: 2026-05-16
 Status: Active
+
+## Candidate perf slice — Resize-jitter ScrollArea layout root attribution
+
+Seed evidence after the code-editor retained row-fragment prototype:
+
+- Baseline local resize-jitter stats:
+  `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-resize-jitter-r3/worst.stats.json`
+- Profiled local resize-jitter stats:
+  `target/fret-diag/local-next-scroll-layout-resize-jitter-20260516-r1/worst.stats.json`
+- Profiled triage:
+  `target/fret-diag/local-next-scroll-layout-resize-jitter-20260516-r1/triage.json`
+
+Profiled command shape:
+
+```bash
+target/release/fretboard-dev diag perf \
+  tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json \
+  --repeat 1 \
+  --warmup-frames 5 \
+  --reuse-launch \
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_A11Y_DISABLE=1 \
+  --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0 \
+  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
+  --env FRET_SCROLL_LAYOUT_PROFILE=1 \
+  --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 \
+  --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 \
+  --env FRET_LAYOUT_NODE_PROFILE=1 \
+  --env FRET_LAYOUT_NODE_PROFILE_TOP=20 \
+  --env FRET_LAYOUT_NODE_PROFILE_MIN_US=100 \
+  --env FRET_DIAG_MAX_SNAPSHOTS=180 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --sort time \
+  --top 15 \
+  --json \
+  --dir target/fret-diag/local-next-scroll-layout-resize-jitter-20260516-r1 \
+  --launch -- cargo run -p fret-ui-gallery --release \
+    --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+```
+
+Result:
+
+- Worst frame: `total=1362us`, `layout=805us`, `layout_roots=574us`,
+  `layout_request_build_roots=157us`, `layout_engine_solve=373us`, `prepaint=160us`,
+  `paint=397us`.
+- View-cache: one content root, `reuse_reason=needs_rerender`, `layout_dependency=contained_when_bounds_known`,
+  `layout_outcome=contained_clean`.
+- Top layout hotspot: gallery content `ScrollArea` / `Scroll`, `267us` exclusive and `413us`
+  inclusive.
+- Scroll profile for `ui-gallery-content-viewport`: `total=405us`, `solve_barrier=244us`,
+  `layout_children_first_pass=156us`, `measure_children=0us`.
+- Dirty state on that profile: `interactive_resize=true`, `direct_children_layout_invalidated=false`,
+  `descendant_subtree_layout_dirty=false`, `post_layout_extents_mode=true`.
+
+Decision:
+
+- Do not spend the next slice on renderer text, glyph atlas, or row-fragment replay from this evidence.
+- Do not start a broad scroll layout skip: `Scroll` still writes authoritative viewport/content
+  state during layout.
+- The next narrow question is whether changing-bounds `solve_barrier` and the small child layout pass
+  under a `needs_rerender` content view-cache root can use a cheaper resize apply path without
+  weakening scroll extent correctness.
+
+Follow-up local no-4090 attribution (2026-05-16):
+
+- Baseline same-command resize-jitter sample:
+  `target/fret-diag/local-next-no4090-resize-jitter-20260516-r3/worst.stats.json`
+- Paint-only RAF experiment sample:
+  `target/fret-diag/local-next-no4090-resize-jitter-paint-only-raf-20260516-r3/worst.stats.json`
+- Focused gates:
+  - `cargo nextest run -p fret-ui canvas_paint_only_animation_frame_keeps_view_cache_root_reusable --no-fail-fast`
+  - `cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast`
+  - `cargo fmt --check`
+- Result:
+  - `CodeEditor` torture autoscroll now requests paint-only RAF from its paint hook.
+  - The resize-jitter worst-bundle p95 moved total/layout/solve/prepaint/paint from
+    `1494/903/408/221/632us` to `1479/865/386/183/613us`.
+  - The row replay guardrails stayed stable: `rows_scene_replayed=289`, `rows_scene_stored=0`,
+    and row-scene replay hit rate `100%`.
+  - The view-cache root still reports `reuse_reason=needs_rerender`, but the dirty source moved
+    from `notify/animation_frame_request` to `other/scroll_handle_window_update`.
+- Decision:
+  - Keep the paint-only RAF cleanup as a baseline-neutral correction.
+  - Do not classify this as a shadcn `ScrollArea` recipe issue.
+  - The remaining owner is the windowed-paint scroll update contract: avoid parent cache-root
+    rerender only when a retained/windowed surface can prove the current visible row window is
+    already covered by retained row fragments.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

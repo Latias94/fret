@@ -2817,8 +2817,9 @@ pub struct ScrollProps {
     /// When true, the scroll subtree's paint output depends on the scroll offset in a
     /// windowed/virtualized way (e.g. a single `Canvas` that only paints the visible range).
     ///
-    /// In this mode, scroll-handle updates must be allowed to invalidate view-cache reuse so the
-    /// subtree can re-render and re-run paint handlers for the new visible window.
+    /// In this mode, offset-only scroll-handle updates invalidate paint-cache replay so the
+    /// subtree can re-run paint handlers for the new visible window while keeping the declarative
+    /// view-cache render subtree reusable.
     ///
     /// This is a mechanism-only switch; policy lives in ecosystem layers.
     pub windowed_paint: bool,

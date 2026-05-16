@@ -194,6 +194,9 @@ pub(crate) fn push_perf_json_row(
         "top_code_editor_rows_scene_stored": top_code_editor.rows_scene_stored,
         "top_code_editor_row_scene_ops_stored": top_code_editor.row_scene_ops_stored,
         "top_code_editor_row_scene_replay_hit_rate_pct": top_code_editor.row_scene_replay_hit_rate_pct,
+        "top_code_editor_row_scene_prepaint_plan_us": top_code_editor.row_scene_prepaint_plan_us,
+        "top_code_editor_row_scene_prepaint_probe_us": top_code_editor.row_scene_prepaint_probe_us,
+        "top_code_editor_row_scene_prepaint_key_compare_us": top_code_editor.row_scene_prepaint_key_compare_us,
         "top_code_editor_windowed_surface_paint_callback_us": top_code_editor.windowed_surface_paint_callback_us,
         "top_code_editor_windowed_surface_non_row_us": top_code_editor.windowed_surface_non_row_us,
         "top_code_editor_windowed_surface_row_callback_gap_us": top_code_editor.windowed_surface_row_callback_gap_us,
@@ -297,6 +300,9 @@ mod tests {
                 rows_scene_replayed: 15,
                 rows_scene_stored: 5,
                 row_scene_ops_stored: 64,
+                us_row_scene_prepaint_plan: 33,
+                us_row_scene_prepaint_probe: 21,
+                us_row_scene_prepaint_key_compare: 13,
                 us_windowed_surface_paint_callback: 200,
                 us_windowed_surface_non_row: 40,
                 us_windowed_surface_row_callback_gap: 9,
@@ -320,6 +326,12 @@ mod tests {
         assert_eq!(rows[0]["top_code_editor_rows_scene_stored"], 5);
         assert_eq!(rows[0]["top_code_editor_row_scene_ops_stored"], 64);
         assert_eq!(rows[0]["top_code_editor_row_scene_replay_hit_rate_pct"], 75);
+        assert_eq!(rows[0]["top_code_editor_row_scene_prepaint_plan_us"], 33);
+        assert_eq!(rows[0]["top_code_editor_row_scene_prepaint_probe_us"], 21);
+        assert_eq!(
+            rows[0]["top_code_editor_row_scene_prepaint_key_compare_us"],
+            13
+        );
         assert_eq!(
             rows[0]["top_code_editor_windowed_surface_paint_callback_us"],
             200

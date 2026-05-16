@@ -183,6 +183,7 @@ impl<H: UiHost> UiTree<H> {
         self.debug_model_change_unobserved.clear();
         self.debug_global_change_hotspots.clear();
         self.debug_global_change_unobserved.clear();
+        self.debug_command_availability_hotspots.clear();
         self.debug_hover_edge_this_frame = false;
         self.debug_hover_declarative_invalidations.clear();
         self.debug_dirty_views.clear();

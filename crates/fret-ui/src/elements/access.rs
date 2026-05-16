@@ -1,4 +1,5 @@
 use std::any::{Any, TypeId};
+use std::collections::HashSet;
 
 use fret_core::{AppWindowId, NodeId};
 
@@ -66,6 +67,21 @@ pub(crate) fn with_observed_deps_for_element<H: UiHost, R>(
 
         f(models, globals)
     })
+}
+
+pub(crate) fn observed_deps_presence_copy_into<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    out: &mut HashSet<GlobalElementId>,
+) {
+    let frame_id = app.frame_id();
+    app.with_global_mut_untracked(ElementRuntime::new, |runtime, _app| {
+        runtime.prepare_window_for_frame(window, frame_id);
+        runtime
+            .for_window(window)
+            .map(|state| state.observed_deps_presence_copy_into(out))
+            .unwrap_or_else(|| out.clear());
+    });
 }
 
 pub fn with_element_state<H: UiHost, S: Any, R>(

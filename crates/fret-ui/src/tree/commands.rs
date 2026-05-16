@@ -536,13 +536,15 @@ impl<H: UiHost> UiTree<H> {
 
         let default_root = barrier_root.unwrap_or(base_root);
         let start = self.focus.unwrap_or(default_root);
-        let mut availability = self.command_availability_from_node(app, &input_ctx, start, command);
+        let (mut availability, _) =
+            self.command_availability_from_node(app, &input_ctx, start, command);
         // When focus lives in a non-default layer (e.g. a non-modal overlay), we still want
         // widget-scoped command availability to fall back to the default root so global shortcuts
         // and menus remain usable.
         if availability == CommandAvailability::NotHandled && start != default_root {
-            availability =
-                self.command_availability_from_node(app, &input_ctx, default_root, command);
+            availability = self
+                .command_availability_from_node(app, &input_ctx, default_root, command)
+                .0;
         }
 
         if availability == CommandAvailability::NotHandled
@@ -603,6 +605,116 @@ impl<H: UiHost> UiTree<H> {
             },
             needs_layout_refine && !focusables.is_empty(),
         )
+    }
+
+    fn timed_focus_traversal_command_availability_for_snapshot(
+        &mut self,
+        app: &mut H,
+        frame_id: fret_runtime::FrameId,
+        dispatch_snapshot: &UiDispatchSnapshot,
+        scope_root: Option<NodeId>,
+        command: &CommandId,
+        window: AppWindowId,
+    ) -> (CommandAvailability, bool) {
+        let start_node = scope_root.or(dispatch_snapshot.barrier_root).or_else(|| {
+            self.base_layer
+                .and_then(|id| self.layers.get(id).map(|l| l.root))
+        });
+        let start_time = if self.debug_enabled {
+            Some(Instant::now())
+        } else {
+            None
+        };
+        let (availability, needs_layout_refine) = self
+            .focus_traversal_command_availability_for_snapshot(
+                app,
+                frame_id,
+                dispatch_snapshot,
+                scope_root,
+            );
+        if let (Some(start_time), Some(start_node)) = (start_time, start_node) {
+            self.debug_record_command_availability_hotspot(
+                app,
+                window,
+                command,
+                "focus_traversal_snapshot",
+                start_node,
+                None,
+                availability,
+                start_time.elapsed(),
+            );
+        }
+        (availability, needs_layout_refine)
+    }
+
+    fn focus_traversal_availability_cache_key_for_snapshot(
+        &self,
+        frame_id: fret_runtime::FrameId,
+        dispatch_snapshot: &UiDispatchSnapshot,
+        scope_root: Option<NodeId>,
+    ) -> WindowFocusTraversalAvailabilityCacheKey {
+        let resolved_scope_root = scope_root.or(dispatch_snapshot.barrier_root).or_else(|| {
+            self.base_layer
+                .and_then(|id| self.layers.get(id).map(|l| l.root))
+        });
+        let layout_ready = match resolved_scope_root {
+            Some(scope_root) => {
+                self.last_layout_frame_id == Some(frame_id)
+                    && !self.node_subtree_layout_dirty(scope_root)
+            }
+            None => true,
+        };
+
+        WindowFocusTraversalAvailabilityCacheKey {
+            frame_id,
+            dispatch_snapshot_generation: self.dispatch_snapshot_generation,
+            window: dispatch_snapshot.window,
+            active_layer_roots: dispatch_snapshot.active_layer_roots.clone(),
+            barrier_root: dispatch_snapshot.barrier_root,
+            scope_root,
+            resolved_scope_root,
+            command_availability_revision: self.command_availability_revision,
+            layout_ready,
+            inspection_active: self.inspection_active,
+        }
+    }
+
+    fn cached_timed_focus_traversal_command_availability_for_snapshot(
+        &mut self,
+        app: &mut H,
+        frame_id: fret_runtime::FrameId,
+        dispatch_snapshot: &UiDispatchSnapshot,
+        scope_root: Option<NodeId>,
+        command: &CommandId,
+        window: AppWindowId,
+    ) -> (CommandAvailability, bool) {
+        let key = self.focus_traversal_availability_cache_key_for_snapshot(
+            frame_id,
+            dispatch_snapshot,
+            scope_root,
+        );
+        if let Some(entry) = &self.focus_traversal_availability_cache
+            && entry.key == key
+        {
+            return (entry.availability, entry.needs_layout_refine);
+        }
+
+        let (availability, needs_layout_refine) = self
+            .timed_focus_traversal_command_availability_for_snapshot(
+                app,
+                frame_id,
+                dispatch_snapshot,
+                scope_root,
+                command,
+                window,
+            );
+        self.focus_traversal_availability_cache =
+            Some(WindowFocusTraversalAvailabilityCacheEntry {
+                key,
+                availability,
+                needs_layout_refine,
+            });
+        (availability, needs_layout_refine)
     }
 
     fn focus_traversal_candidates_for_snapshot(
@@ -736,7 +848,7 @@ impl<H: UiHost> UiTree<H> {
         input_ctx: &InputContext,
         start: NodeId,
         command: &CommandId,
-    ) -> CommandAvailability {
+    ) -> (CommandAvailability, Option<NodeId>) {
         let mut node_id = start;
         loop {
             let (availability, parent) = self.with_widget_mut(node_id, |widget, tree| {
@@ -756,7 +868,7 @@ impl<H: UiHost> UiTree<H> {
 
             match availability {
                 CommandAvailability::Available | CommandAvailability::Blocked => {
-                    return availability;
+                    return (availability, Some(node_id));
                 }
                 CommandAvailability::NotHandled => {}
             }
@@ -767,7 +879,38 @@ impl<H: UiHost> UiTree<H> {
             };
         }
 
-        CommandAvailability::NotHandled
+        (CommandAvailability::NotHandled, None)
+    }
+
+    fn timed_command_availability_from_node(
+        &mut self,
+        app: &mut H,
+        input_ctx: &InputContext,
+        start: NodeId,
+        command: &CommandId,
+        route: &'static str,
+        window: AppWindowId,
+    ) -> (CommandAvailability, Option<NodeId>) {
+        let start_time = if self.debug_enabled {
+            Some(Instant::now())
+        } else {
+            None
+        };
+        let (availability, resolved_node) =
+            self.command_availability_from_node(app, input_ctx, start, command);
+        if let Some(start_time) = start_time {
+            self.debug_record_command_availability_hotspot(
+                app,
+                window,
+                command,
+                route,
+                start,
+                resolved_node,
+                availability,
+                start_time.elapsed(),
+            );
+        }
+        (availability, resolved_node)
     }
 
     fn command_availability_in_subtree(
@@ -789,15 +932,49 @@ impl<H: UiHost> UiTree<H> {
         }
 
         for node in nodes {
-            let availability = self.command_availability_from_node(app, input_ctx, node, command);
+            let (availability, resolved_node) =
+                self.command_availability_from_node(app, input_ctx, node, command);
             match availability {
-                CommandAvailability::Available => return (availability, Some(node)),
+                CommandAvailability::Available => {
+                    return (availability, resolved_node.or(Some(node)));
+                }
                 CommandAvailability::Blocked => return (availability, None),
                 CommandAvailability::NotHandled => {}
             }
         }
 
         (CommandAvailability::NotHandled, None)
+    }
+
+    fn timed_command_availability_in_subtree(
+        &mut self,
+        app: &mut H,
+        input_ctx: &InputContext,
+        root: NodeId,
+        command: &CommandId,
+        route: &'static str,
+        window: AppWindowId,
+    ) -> (CommandAvailability, Option<NodeId>) {
+        let start_time = if self.debug_enabled {
+            Some(Instant::now())
+        } else {
+            None
+        };
+        let (availability, resolved_node) =
+            self.command_availability_in_subtree(app, input_ctx, root, command);
+        if let Some(start_time) = start_time {
+            self.debug_record_command_availability_hotspot(
+                app,
+                window,
+                command,
+                route,
+                root,
+                resolved_node,
+                availability,
+                start_time.elapsed(),
+            );
+        }
+        (availability, resolved_node)
     }
 
     fn command_availability_in_action_route_fallback_roots(
@@ -811,21 +988,89 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let roots = crate::elements::action_route_fallback_roots(app, window);
+        let (availability, resolved_node, _) = self
+            .command_availability_in_action_route_fallback_root_elements(
+                app, input_ctx, command, window, roots,
+            );
+        (availability, resolved_node)
+    }
+
+    fn command_availability_in_action_route_fallback_root_elements(
+        &mut self,
+        app: &mut H,
+        input_ctx: &InputContext,
+        command: &CommandId,
+        window: AppWindowId,
+        roots: impl IntoIterator<Item = GlobalElementId>,
+    ) -> (CommandAvailability, Option<NodeId>, Option<NodeId>) {
+        let mut first_resolved_root = None;
         for element in roots {
             let Some(node) =
                 self.resolve_live_attached_node_for_element(app, Some(window), element)
             else {
                 continue;
             };
-            let availability = self.command_availability_from_node(app, input_ctx, node, command);
+            first_resolved_root.get_or_insert(node);
+            let (availability, resolved_node) =
+                self.command_availability_from_node(app, input_ctx, node, command);
             match availability {
-                CommandAvailability::Available => return (availability, Some(node)),
-                CommandAvailability::Blocked => return (availability, None),
+                CommandAvailability::Available => {
+                    return (
+                        availability,
+                        resolved_node.or(Some(node)),
+                        first_resolved_root,
+                    );
+                }
+                CommandAvailability::Blocked => return (availability, None, first_resolved_root),
                 CommandAvailability::NotHandled => {}
             }
         }
 
-        (CommandAvailability::NotHandled, None)
+        (CommandAvailability::NotHandled, None, first_resolved_root)
+    }
+
+    fn timed_command_availability_in_action_route_fallback_roots(
+        &mut self,
+        app: &mut H,
+        input_ctx: &InputContext,
+        command: &CommandId,
+        route: &'static str,
+        window: AppWindowId,
+    ) -> (CommandAvailability, Option<NodeId>) {
+        let start_time = if self.debug_enabled {
+            Some(Instant::now())
+        } else {
+            None
+        };
+        let (availability, resolved_node, start_node) = if let Some(active_window) = self.window {
+            let roots = crate::elements::action_route_fallback_roots(app, active_window);
+            self.command_availability_in_action_route_fallback_root_elements(
+                app,
+                input_ctx,
+                command,
+                active_window,
+                roots,
+            )
+        } else {
+            (CommandAvailability::NotHandled, None, None)
+        };
+        let start_node = start_node.or_else(|| {
+            self.base_layer
+                .and_then(|id| self.layers.get(id).map(|l| l.root))
+        });
+        if let (Some(start_time), Some(start_node)) = (start_time, start_node) {
+            self.debug_record_command_availability_hotspot(
+                app,
+                window,
+                command,
+                route,
+                start_node,
+                resolved_node,
+                availability,
+                start_time.elapsed(),
+            );
+        }
+        (availability, resolved_node)
     }
 
     /// Publish a per-window action availability snapshot for widget-scoped commands.
@@ -910,7 +1155,6 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
         self.publish_window_key_context_stack_snapshot(app, next_key_contexts);
-        let mut focus_traversal_snapshot: Option<(CommandAvailability, bool)> = None;
         let trace_runtime_snapshot = tracing::enabled!(tracing::Level::TRACE);
         let time_enabled = self.debug_enabled;
 
@@ -966,28 +1210,42 @@ impl<H: UiHost> UiTree<H> {
                         continue;
                     }
 
-                    let mut availability =
-                        self.command_availability_from_node(app, input_ctx, start, &id);
+                    let (mut availability, _) = self.timed_command_availability_from_node(
+                        app,
+                        input_ctx,
+                        start,
+                        &id,
+                        "focused_or_default",
+                        window,
+                    );
                     if availability == CommandAvailability::NotHandled
                         && focus.is_some()
                         && !focus_in_default_root
                         && start != default_root
                     {
-                        availability =
-                            self.command_availability_from_node(app, input_ctx, default_root, &id);
+                        availability = self
+                            .timed_command_availability_from_node(
+                                app,
+                                input_ctx,
+                                default_root,
+                                &id,
+                                "default_root_fallback",
+                                window,
+                            )
+                            .0;
                     }
                     if availability == CommandAvailability::NotHandled
                         && matches!(id.as_str(), "focus.next" | "focus.previous")
                     {
-                        let (focus_traversal_availability, needs_layout_refine) =
-                            *focus_traversal_snapshot.get_or_insert_with(|| {
-                                self.focus_traversal_command_availability_for_snapshot(
-                                    app,
-                                    frame_id,
-                                    &dispatch_snapshot,
-                                    barrier_root,
-                                )
-                            });
+                        let (focus_traversal_availability, needs_layout_refine) = self
+                            .cached_timed_focus_traversal_command_availability_for_snapshot(
+                                app,
+                                frame_id,
+                                &dispatch_snapshot,
+                                barrier_root,
+                                &id,
+                                window,
+                            );
                         availability = focus_traversal_availability;
                         if needs_layout_refine {
                             self.pending_post_layout_window_runtime_snapshot_refine = true;
@@ -995,8 +1253,12 @@ impl<H: UiHost> UiTree<H> {
                     }
                     if availability == CommandAvailability::NotHandled && barrier_root.is_none() {
                         availability = self
-                            .command_availability_in_action_route_fallback_roots(
-                                app, input_ctx, &id,
+                            .timed_command_availability_in_action_route_fallback_roots(
+                                app,
+                                input_ctx,
+                                &id,
+                                "action_route_fallback_roots",
+                                window,
                             )
                             .0;
                     }
@@ -1012,7 +1274,14 @@ impl<H: UiHost> UiTree<H> {
                         && barrier_root.is_none()
                     {
                         availability = self
-                            .command_availability_in_subtree(app, input_ctx, base_root, &id)
+                            .timed_command_availability_in_subtree(
+                                app,
+                                input_ctx,
+                                base_root,
+                                &id,
+                                "subtree_no_focus_fallback",
+                                window,
+                            )
                             .0;
                     }
 

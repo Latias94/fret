@@ -1,9 +1,14 @@
-use super::atlas::GlyphKey;
+use super::atlas::{GlyphKey, GlyphKeyBuckets, GlyphPinKeys};
+use super::blob_state::TextBlobState;
+use fret_core::{Scene, TextBlobId};
+use std::collections::HashMap;
 
 pub(crate) struct TextPinState {
     mask: Vec<Vec<GlyphKey>>,
     color: Vec<Vec<GlyphKey>>,
     subpixel: Vec<Vec<GlyphKey>>,
+    atlas_reset_generation: u64,
+    scene_cache: ScenePinKeyCache,
 }
 
 impl TextPinState {
@@ -12,6 +17,8 @@ impl TextPinState {
             mask: vec![Vec::new(); ring_len],
             color: vec![Vec::new(); ring_len],
             subpixel: vec![Vec::new(); ring_len],
+            atlas_reset_generation: 0,
+            scene_cache: ScenePinKeyCache::default(),
         }
     }
 
@@ -19,6 +26,15 @@ impl TextPinState {
         self.mask.iter_mut().for_each(|bucket| bucket.clear());
         self.color.iter_mut().for_each(|bucket| bucket.clear());
         self.subpixel.iter_mut().for_each(|bucket| bucket.clear());
+        self.scene_cache.clear();
+    }
+
+    pub(crate) fn clear_for_atlas_reset_generation(&mut self, generation: u64) {
+        if self.atlas_reset_generation == generation {
+            return;
+        }
+        self.clear();
+        self.atlas_reset_generation = generation;
     }
 
     pub(crate) fn ring_len(&self) -> usize {
@@ -28,26 +44,153 @@ impl TextPinState {
             .min(self.subpixel.len())
     }
 
-    pub(crate) fn take_bucket(
+    pub(crate) fn bucket(&self, bucket: usize) -> Option<(&[GlyphKey], &[GlyphKey], &[GlyphKey])> {
+        if bucket >= self.ring_len() {
+            return None;
+        }
+        Some((
+            &self.mask[bucket],
+            &self.color[bucket],
+            &self.subpixel[bucket],
+        ))
+    }
+
+    pub(crate) fn replace_bucket(
         &mut self,
         bucket: usize,
-    ) -> (Vec<GlyphKey>, Vec<GlyphKey>, Vec<GlyphKey>) {
-        (
-            std::mem::take(&mut self.mask[bucket]),
-            std::mem::take(&mut self.color[bucket]),
-            std::mem::take(&mut self.subpixel[bucket]),
+        mask: Vec<GlyphKey>,
+        color: Vec<GlyphKey>,
+        subpixel: Vec<GlyphKey>,
+    ) {
+        self.mask[bucket] = mask;
+        self.color[bucket] = color;
+        self.subpixel[bucket] = subpixel;
+    }
+
+    pub(crate) fn collect_scene_pinned_keys(
+        &mut self,
+        scene: &Scene,
+        blob_state: &TextBlobState,
+    ) -> (GlyphKeyBuckets, usize) {
+        self.scene_cache.collect(scene, blob_state)
+    }
+}
+
+#[derive(Default)]
+struct ScenePinKeyCache {
+    blob_entries: HashMap<TextBlobId, ScenePinBlobEntry>,
+    current_counts: HashMap<TextBlobId, u32>,
+    current_blobs: Vec<TextBlobId>,
+    stale_blobs: Vec<TextBlobId>,
+    mask_ref_counts: HashMap<GlyphKey, u32>,
+    color_ref_counts: HashMap<GlyphKey, u32>,
+    subpixel_ref_counts: HashMap<GlyphKey, u32>,
+}
+
+impl ScenePinKeyCache {
+    fn clear(&mut self) {
+        self.blob_entries.clear();
+        self.current_counts.clear();
+        self.current_blobs.clear();
+        self.stale_blobs.clear();
+        self.mask_ref_counts.clear();
+        self.color_ref_counts.clear();
+        self.subpixel_ref_counts.clear();
+    }
+
+    fn collect(&mut self, scene: &Scene, blob_state: &TextBlobState) -> (GlyphKeyBuckets, usize) {
+        self.current_counts.clear();
+        let mut scene_text_blobs = 0usize;
+        for &text in scene.text_blob_ids() {
+            if !blob_state.blobs.contains_key(text) {
+                continue;
+            }
+            scene_text_blobs = scene_text_blobs.saturating_add(1);
+            let count = self.current_counts.entry(text).or_insert(0);
+            *count = count.saturating_add(1);
+        }
+
+        self.reconcile(blob_state);
+        (self.to_buckets(), scene_text_blobs)
+    }
+
+    fn reconcile(&mut self, blob_state: &TextBlobState) {
+        self.stale_blobs.clear();
+        for &text in self.blob_entries.keys() {
+            if !self.current_counts.contains_key(&text) {
+                self.stale_blobs.push(text);
+            }
+        }
+
+        let mut stale_blobs = std::mem::take(&mut self.stale_blobs);
+        for text in stale_blobs.drain(..) {
+            if let Some(entry) = self.blob_entries.remove(&text) {
+                self.dec_pin_keys(&entry.pin_keys);
+            }
+        }
+        self.stale_blobs = stale_blobs;
+
+        self.current_blobs.clear();
+        self.current_blobs
+            .extend(self.current_counts.keys().copied());
+        let mut current_blobs = std::mem::take(&mut self.current_blobs);
+        for text in current_blobs.drain(..) {
+            if self.blob_entries.contains_key(&text) {
+                continue;
+            }
+
+            let Some(blob) = blob_state.blobs.get(text) else {
+                continue;
+            };
+            let pin_keys = blob.shape().pin_keys().clone();
+            self.inc_pin_keys(&pin_keys);
+            self.blob_entries
+                .insert(text, ScenePinBlobEntry { pin_keys });
+        }
+        self.current_blobs = current_blobs;
+    }
+
+    fn to_buckets(&self) -> GlyphKeyBuckets {
+        GlyphKeyBuckets::from_unique_key_iters(
+            self.mask_ref_counts.keys().copied(),
+            self.color_ref_counts.keys().copied(),
+            self.subpixel_ref_counts.keys().copied(),
         )
     }
 
-    pub(crate) fn append_bucket(
-        &mut self,
-        bucket: usize,
-        mut mask: Vec<GlyphKey>,
-        mut color: Vec<GlyphKey>,
-        mut subpixel: Vec<GlyphKey>,
-    ) {
-        self.mask[bucket].append(&mut mask);
-        self.color[bucket].append(&mut color);
-        self.subpixel[bucket].append(&mut subpixel);
+    fn inc_pin_keys(&mut self, keys: &GlyphPinKeys) {
+        inc_ref_counts(&mut self.mask_ref_counts, keys.mask_keys());
+        inc_ref_counts(&mut self.color_ref_counts, keys.color_keys());
+        inc_ref_counts(&mut self.subpixel_ref_counts, keys.subpixel_keys());
+    }
+
+    fn dec_pin_keys(&mut self, keys: &GlyphPinKeys) {
+        dec_ref_counts(&mut self.mask_ref_counts, keys.mask_keys());
+        dec_ref_counts(&mut self.color_ref_counts, keys.color_keys());
+        dec_ref_counts(&mut self.subpixel_ref_counts, keys.subpixel_keys());
+    }
+}
+
+struct ScenePinBlobEntry {
+    pin_keys: GlyphPinKeys,
+}
+
+fn inc_ref_counts(counts: &mut HashMap<GlyphKey, u32>, keys: &[GlyphKey]) {
+    for &key in keys {
+        let count = counts.entry(key).or_insert(0);
+        *count = count.saturating_add(1);
+    }
+}
+
+fn dec_ref_counts(counts: &mut HashMap<GlyphKey, u32>, keys: &[GlyphKey]) {
+    for &key in keys {
+        let Some(count) = counts.get_mut(&key) else {
+            continue;
+        };
+        if *count <= 1 {
+            counts.remove(&key);
+        } else {
+            *count -= 1;
+        }
     }
 }

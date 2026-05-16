@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import unittest
 from pathlib import Path
@@ -18,6 +20,7 @@ def _step(
     *,
     with_paint_perf: bool,
     repeat: int,
+    launch_cmd: list[str] | None = None,
     torture_overlay_us: int = 0,
     stale_summary_paths: bool = False,
 ) -> dict[str, object]:
@@ -31,19 +34,49 @@ def _step(
             "renderer_prepare_text_us": 11,
             "renderer_encode_scene_us": 12,
             "renderer_upload_us": 13,
-        }
+        },
+        "max": {
+            "paint_widget_time_us": 30,
+            "renderer_prepare_text_us": 31,
+        },
+        "paint_widget_hotspot_summary": {
+            "frames_with_hotspots": 2,
+            "canvas": {"exclusive_us": {"p95": 20}},
+            "non_canvas": {"exclusive_us": {"p95": 3}},
+            "gap_to_code_editor_p95": {
+                "canvas_exclusive_minus_us_total": 6,
+                "canvas_exclusive_minus_windowed_surface_paint_callback": 2,
+                "windowed_surface_paint_callback_minus_row_paint": 5,
+                "windowed_surface_paint_callback_minus_row_paint_per_row_ns": 60,
+                "windowed_surface_row_callback_gap_per_row_ns": 70,
+            },
+            "code_editor_windowed_surface_p95": {
+                "paint_callback": 18,
+                "row_paint": 13,
+                "rows_with_rect": 80,
+            },
+        },
     }
     if with_paint_perf:
         stats_doc["code_editor_paint_perf"] = {
             "max": {"us_torture_overlay": torture_overlay_us},
-            "p95": {"us_total": 14},
+            "p95": {
+                "us_total": 14,
+                "us_windowed_surface_paint_callback": 18,
+                "us_windowed_surface_row_paint": 13,
+            },
+            "frames": 4,
         }
     _write_json(stats_path, stats_doc)
 
+    fretboard_bin = validate._default_fretboard_bin()
+    if launch_cmd is not None:
+        fretboard_bin = fretboard_bin.removesuffix(".exe")
+
     plan = validate.build_plan(
         python_bin="python",
-        fretboard_bin=validate._default_fretboard_bin(),
-        launch_cmd=validate._default_launch_cmd(),
+        fretboard_bin=fretboard_bin,
+        launch_cmd=launch_cmd if launch_cmd is not None else validate._default_launch_cmd(),
         out_dir=str(root),
         resize_attempts=3,
         resize_repeat=repeat if name == "resize-jitter" else 7,
@@ -81,6 +114,7 @@ def _write_summary(
     root: Path,
     *,
     with_paint_perf: bool,
+    launch_cmd: list[str] | None = None,
     resize_repeat: int = 7,
     torture_overlay_us: int = 0,
     stale_summary_paths: bool = False,
@@ -91,6 +125,7 @@ def _write_summary(
             "resize-jitter",
             with_paint_perf=with_paint_perf,
             repeat=resize_repeat,
+            launch_cmd=launch_cmd,
             torture_overlay_us=torture_overlay_us,
             stale_summary_paths=stale_summary_paths,
         ),
@@ -99,6 +134,7 @@ def _write_summary(
             "typical-autoscroll",
             with_paint_perf=with_paint_perf,
             repeat=15,
+            launch_cmd=launch_cmd,
             torture_overlay_us=torture_overlay_us,
             stale_summary_paths=stale_summary_paths,
         ),
@@ -107,6 +143,7 @@ def _write_summary(
             "complex-wheel",
             with_paint_perf=with_paint_perf,
             repeat=7,
+            launch_cmd=launch_cmd,
             torture_overlay_us=torture_overlay_us,
             stale_summary_paths=stale_summary_paths,
         ),
@@ -120,7 +157,7 @@ def _write_summary(
             "date_tag": "test-date",
             "with_paint_perf": with_paint_perf,
             "launch_bin": None,
-            "launch_cmd": validate._default_launch_cmd(),
+            "launch_cmd": launch_cmd if launch_cmd is not None else validate._default_launch_cmd(),
             "stats_enabled": True,
             "steps": steps,
         },
@@ -184,6 +221,42 @@ class EditorPaintContractVerifyArtifactsTests(unittest.TestCase):
 
         self.assertTrue(report["ok"], report)
 
+    def test_pair_verification_projects_decision_inputs(self) -> None:
+        with TemporaryDirectory() as td:
+            validation = Path(td) / "validation"
+            attribution = Path(td) / "attribution"
+            _write_summary(validation, with_paint_perf=False)
+            _write_summary(attribution, with_paint_perf=True)
+
+            report = verify.verify_artifact_dirs(validation, attribution)
+
+        self.assertTrue(report["ok"], report)
+        decision_inputs = report["attribution"]["steps"]["typical-autoscroll"]["decision_inputs"]
+        self.assertEqual(10, decision_inputs["paint_widget_p95_us"])
+        self.assertEqual(30, decision_inputs["paint_widget_max_us"])
+        self.assertEqual(11, decision_inputs["renderer_prepare_text_p95_us"])
+        self.assertEqual(31, decision_inputs["renderer_prepare_text_max_us"])
+        self.assertEqual(14, decision_inputs["code_editor_total_p95_us"])
+        self.assertEqual(18, decision_inputs["code_editor_windowed_surface_callback_p95_us"])
+        self.assertEqual(13, decision_inputs["code_editor_windowed_surface_row_paint_p95_us"])
+        self.assertEqual(0, decision_inputs["code_editor_torture_overlay_max_us"])
+        hotspot_summary = decision_inputs["paint_widget_hotspot_summary"]
+        self.assertEqual(2, hotspot_summary["frames_with_hotspots"])
+        self.assertEqual(20, hotspot_summary["canvas_exclusive_p95_us"])
+        self.assertEqual(3, hotspot_summary["non_canvas_exclusive_p95_us"])
+        self.assertEqual(
+            2,
+            hotspot_summary["gap_to_code_editor_p95"][
+                "canvas_exclusive_minus_windowed_surface_paint_callback"
+            ],
+        )
+        self.assertEqual(
+            70,
+            hotspot_summary["gap_to_code_editor_p95"][
+                "windowed_surface_row_callback_gap_per_row_ns"
+            ],
+        )
+
     def test_synced_artifacts_can_remap_stale_target_machine_paths(self) -> None:
         with TemporaryDirectory() as td:
             root = Path(td)
@@ -192,6 +265,33 @@ class EditorPaintContractVerifyArtifactsTests(unittest.TestCase):
             report = verify.verify_summary_dir(root, expect_with_paint_perf=True)
 
         self.assertTrue(report["ok"], report["errors"])
+
+    def test_non_windows_cargo_launch_requires_explicit_allow_flag(self) -> None:
+        launch_cmd = [
+            "cargo",
+            "run",
+            "-p",
+            "fret-ui-gallery",
+            "--release",
+            "--features",
+            "gallery-dev",
+            "--",
+            "target/release/fret-ui-gallery",
+        ]
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            _write_summary(root, with_paint_perf=True, launch_cmd=launch_cmd)
+
+            strict_report = verify.verify_summary_dir(root, expect_with_paint_perf=True)
+            local_report = verify.verify_summary_dir(
+                root,
+                expect_with_paint_perf=True,
+                allow_non_windows=True,
+            )
+
+        self.assertFalse(strict_report["ok"])
+        self.assertTrue(any("fret-ui-gallery.exe" in error for error in strict_report["errors"]))
+        self.assertTrue(local_report["ok"], local_report["errors"])
 
     def test_repeat_one_smoke_is_rejected(self) -> None:
         with TemporaryDirectory() as td:

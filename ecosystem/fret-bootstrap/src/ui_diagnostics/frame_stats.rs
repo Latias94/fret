@@ -410,6 +410,28 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_prepare_text_us: u64,
     #[serde(default)]
+    pub renderer_prepare_text_collect_pin_keys_us: u64,
+    #[serde(default)]
+    pub renderer_prepare_text_bucket_delta_us: u64,
+    #[serde(default)]
+    pub renderer_prepare_text_prewarm_us: u64,
+    #[serde(default)]
+    pub renderer_prepare_text_pin_bucket_update_us: u64,
+    #[serde(default)]
+    pub renderer_prepare_text_flush_uploads_us: u64,
+    #[serde(default)]
+    pub renderer_prepare_text_scene_text_blobs: u64,
+    #[serde(default)]
+    pub renderer_prepare_text_pinned_glyph_keys: u64,
+    #[serde(default)]
+    pub renderer_prepare_text_prewarm_glyph_keys: u64,
+    #[serde(default)]
+    pub renderer_prepare_text_retained_glyph_keys: u64,
+    #[serde(default)]
+    pub renderer_prepare_text_added_glyph_keys: u64,
+    #[serde(default)]
+    pub renderer_prepare_text_removed_glyph_keys: u64,
+    #[serde(default)]
     pub renderer_encode_scene_stack_us: u64,
     #[serde(default)]
     pub renderer_encode_scene_clip_us: u64,
@@ -1079,6 +1101,17 @@ impl UiFrameStatsV1 {
             renderer_encoder_finish_us: 0,
             renderer_prepare_svg_us: 0,
             renderer_prepare_text_us: 0,
+            renderer_prepare_text_collect_pin_keys_us: 0,
+            renderer_prepare_text_bucket_delta_us: 0,
+            renderer_prepare_text_prewarm_us: 0,
+            renderer_prepare_text_pin_bucket_update_us: 0,
+            renderer_prepare_text_flush_uploads_us: 0,
+            renderer_prepare_text_scene_text_blobs: 0,
+            renderer_prepare_text_pinned_glyph_keys: 0,
+            renderer_prepare_text_prewarm_glyph_keys: 0,
+            renderer_prepare_text_retained_glyph_keys: 0,
+            renderer_prepare_text_added_glyph_keys: 0,
+            renderer_prepare_text_removed_glyph_keys: 0,
             renderer_encode_scene_stack_us: 0,
             renderer_encode_scene_clip_us: 0,
             renderer_encode_scene_mask_us: 0,
@@ -1312,6 +1345,21 @@ impl UiFrameStatsV1 {
         self.renderer_encoder_finish_us = sample.perf.encoder_finish_us;
         self.renderer_prepare_svg_us = sample.perf.prepare_svg_us;
         self.renderer_prepare_text_us = sample.perf.prepare_text_us;
+        self.renderer_prepare_text_collect_pin_keys_us =
+            sample.perf.prepare_text_collect_pin_keys_us;
+        self.renderer_prepare_text_bucket_delta_us = sample.perf.prepare_text_bucket_delta_us;
+        self.renderer_prepare_text_prewarm_us = sample.perf.prepare_text_prewarm_us;
+        self.renderer_prepare_text_pin_bucket_update_us =
+            sample.perf.prepare_text_pin_bucket_update_us;
+        self.renderer_prepare_text_flush_uploads_us = sample.perf.prepare_text_flush_uploads_us;
+        self.renderer_prepare_text_scene_text_blobs = sample.perf.prepare_text_scene_text_blobs;
+        self.renderer_prepare_text_pinned_glyph_keys = sample.perf.prepare_text_pinned_glyph_keys;
+        self.renderer_prepare_text_prewarm_glyph_keys = sample.perf.prepare_text_prewarm_glyph_keys;
+        self.renderer_prepare_text_retained_glyph_keys =
+            sample.perf.prepare_text_retained_glyph_keys;
+        self.renderer_prepare_text_added_glyph_keys = sample.perf.prepare_text_added_glyph_keys;
+        self.renderer_prepare_text_removed_glyph_keys =
+            sample.perf.prepare_text_removed_glyph_keys;
         self.renderer_encode_scene_stack_us = sample.perf.encode_scene_stack_us;
         self.renderer_encode_scene_clip_us = sample.perf.encode_scene_clip_us;
         self.renderer_encode_scene_mask_us = sample.perf.encode_scene_mask_us;

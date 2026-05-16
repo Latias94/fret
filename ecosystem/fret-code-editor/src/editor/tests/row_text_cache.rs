@@ -146,6 +146,95 @@ fn begin_paint_frame_sets_cache_floor_from_actual_visible_rows() {
     assert_eq!(perf_frame.cache_frame_min_entries, 299);
 }
 
+fn test_retained_row_scene_fragment(row: usize) -> Arc<RowSceneRetainedFragment> {
+    let text = Arc::<str>::from("x");
+    let text_style = TextStyle {
+        font: FontId::monospace(),
+        size: Px(14.0),
+        ..Default::default()
+    };
+    let constraints = CanvasTextConstraints {
+        max_width: Some(Px(256.0)),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    };
+    let row_geom_key = geom::RowGeomKey::for_plain(
+        &text,
+        &text_style,
+        (
+            constraints.max_width,
+            constraints.wrap,
+            constraints.overflow,
+            fret_core::TextAlign::Start,
+            1.0,
+        ),
+        fret_runtime::TextFontStackKey::default(),
+    );
+    Arc::new(RowSceneRetainedFragment {
+        content: Arc::new(RowContentSnapshot {
+            text,
+            range: row..row.saturating_add(1),
+            fold_map: None,
+            preedit_range: None,
+            row_spans: Arc::from([]),
+        }),
+        origin: Point::new(Px(0.0), Px(row as f32 * 16.0)),
+        geom: RowGeom {
+            row_range: row..row.saturating_add(1),
+            key: row_geom_key,
+            caret_stops: Vec::new(),
+            fold_map: None,
+            caret_rect_top: None,
+            caret_rect_height: None,
+            has_preedit: false,
+            preedit: None,
+        },
+        is_rich: false,
+        ops: Arc::from(Vec::<SceneOp>::new()),
+        hosted_resources: fret_ui::canvas::CanvasHostedResources::default(),
+    })
+}
+
+#[test]
+fn row_scene_replay_plan_rejects_stale_frame_and_skipped_rows() {
+    let entry0 = RowSceneReplayPlanEntry {
+        row: 0,
+        retained: test_retained_row_scene_fragment(0),
+        local_bounds: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(80.0), Px(16.0))),
+    };
+    let entry2 = RowSceneReplayPlanEntry {
+        row: 2,
+        retained: test_retained_row_scene_fragment(2),
+        local_bounds: Rect::new(Point::new(Px(0.0), Px(32.0)), Size::new(Px(80.0), Px(16.0))),
+    };
+
+    let mut stale = RowSceneReplayPlan {
+        frame_seq: 7,
+        entries: std::collections::VecDeque::from([entry0.clone()]),
+    };
+    let (entry, rejected, reason) = paint::take_row_scene_replay_plan_entry(Some(&mut stale), 8, 0);
+    assert!(entry.is_none());
+    assert_eq!(rejected, 1);
+    assert_eq!(reason, Some("frame_seq_mismatch"));
+    assert!(stale.entries.is_empty());
+
+    let mut advanced = RowSceneReplayPlan {
+        frame_seq: 9,
+        entries: std::collections::VecDeque::from([entry0, entry2]),
+    };
+    let (entry, rejected, reason) =
+        paint::take_row_scene_replay_plan_entry(Some(&mut advanced), 9, 1);
+    assert!(entry.is_none());
+    assert_eq!(rejected, 1);
+    assert_eq!(reason, Some("row_advanced_past_entry"));
+
+    let (entry, rejected, reason) =
+        paint::take_row_scene_replay_plan_entry(Some(&mut advanced), 9, 2);
+    assert_eq!(entry.as_ref().map(|entry| entry.row), Some(2));
+    assert_eq!(rejected, 0);
+    assert_eq!(reason, None);
+}
+
 #[test]
 fn paint_perf_records_windowed_surface_diagnostics() {
     let handle = CodeEditorHandle::new("hello\nworld");
@@ -202,8 +291,10 @@ fn paint_perf_records_windowed_surface_diagnostics() {
 #[test]
 fn prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint() {
     let text = "fn main() {\n    let x = 1;\n}\n".repeat(64);
+    let offscreen_caret = text.len();
     let handle = CodeEditorHandle::new(text);
     handle.set_language(Some(Arc::<str>::from("rust")));
+    handle.set_caret(offscreen_caret);
     handle.state.borrow_mut().paint_perf_enabled = true;
 
     let mut app = App::new();
@@ -242,19 +333,28 @@ fn prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint() {
     );
 
     let resized_bounds = Rect::new(bounds.origin, Size::new(Px(704.0), bounds.size.height));
-    let resized_visible_end = {
+    let (resized_visible_start, resized_visible_end) = {
         let st = handle.state.borrow();
-        *st.row_scene_cache
+        let start = *st
+            .row_scene_cache
+            .keys()
+            .min()
+            .expect("first frame should seed row scene cache entries");
+        let end = *st
+            .row_scene_cache
             .keys()
             .max()
-            .expect("first frame should seed row scene cache entries")
+            .expect("first frame should seed row scene cache entries");
+        (start, end)
     };
     {
         let mut st = handle.state.borrow_mut();
-        if let Some((old, _)) = st.row_scene_cache.remove(&resized_visible_end) {
-            st.row_scene_cache_scene_ops_len_total = st
-                .row_scene_cache_scene_ops_len_total
-                .saturating_sub(old.ops.len() as u64);
+        for row in [resized_visible_start, resized_visible_end] {
+            if let Some((old, _)) = st.row_scene_cache.remove(&row) {
+                st.row_scene_cache_scene_ops_len_total = st
+                    .row_scene_cache_scene_ops_len_total
+                    .saturating_sub(old.retained.ops.len() as u64);
+            }
         }
     }
     let before = handle.cache_stats();
@@ -328,12 +428,16 @@ fn prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint() {
         "paint should not run the full row scene path because the edge row had no entry"
     );
     assert_eq!(
+        perf.rows_scene_stored_at_visible_start, 0,
+        "paint should not store the newly exposed visible-start row"
+    );
+    assert_eq!(
         perf.rows_scene_stored_at_visible_end, 0,
         "paint should not store the newly exposed visible-end row"
     );
     assert_eq!(
-        perf.rows_scene_prepaint_edge_stored, 1,
-        "prepaint should explicitly prebuild the missing visible-end row"
+        perf.rows_scene_prepaint_edge_stored, 2,
+        "prepaint should explicitly prebuild both missing visible edge rows"
     );
     assert!(
         perf.row_scene_prepaint_edge_ops_stored > 0,
@@ -409,6 +513,80 @@ fn planned_replay_rows_with_selection_still_paint_overlay() {
             .saturating_sub(before.row_text_get_calls),
         0,
         "selection overlay should reuse planned replay content snapshots"
+    );
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
+fn prepaint_row_scene_replay_plan_skips_only_inline_preedit_rows() {
+    let text = "fn main() {\n    let x = 1;\n}\n".repeat(64);
+    let handle = CodeEditorHandle::new(text);
+    handle.set_language(Some(Arc::<str>::from("rust")));
+    handle.debug_set_compose_inline_preedit(true);
+    handle.set_selection(Selection {
+        anchor: "fn main() {\n    let ".len(),
+        focus: "fn main() {\n    let ".len(),
+    });
+    handle.set_preedit_debug("xy", Some((1, 1)));
+    handle.state.borrow_mut().paint_perf_enabled = true;
+
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let bounds = editor_ui_bounds();
+    let mut services = FakeServices::default();
+
+    let _ = render_code_editor_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        handle.clone(),
+        bounds,
+    );
+
+    let before = handle.cache_stats();
+    let _ = render_code_editor_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        handle.clone(),
+        bounds,
+    );
+    let after = handle.cache_stats();
+    let perf = handle
+        .paint_perf_frame()
+        .expect("paint perf frame should be enabled in tests that set the env");
+
+    assert!(
+        perf.rows_scene_prepaint_candidates > perf.rows_scene_prepaint_skip_preedit,
+        "preedit should not suppress planning for unrelated visible rows"
+    );
+    assert!(
+        perf.rows_scene_prepaint_skip_preedit > 0,
+        "the composed preedit row must stay on the paint-time path"
+    );
+    assert!(
+        perf.rows_scene_prepaint_planned > 0,
+        "non-preedit rows should still use the prepaint replay plan"
+    );
+    assert_eq!(
+        perf.rows_scene_prepaint_plan_used, perf.rows_scene_prepaint_planned,
+        "paint should consume each planned non-preedit row"
+    );
+    assert!(
+        after
+            .row_scene_hits
+            .saturating_sub(before.row_scene_hits)
+            .saturating_add(
+                after
+                    .row_scene_fast_hits
+                    .saturating_sub(before.row_scene_fast_hits),
+            )
+            >= perf.rows_scene_prepaint_planned,
+        "prepaint planning should account for retained row-scene hits"
     );
 }
 
@@ -515,12 +693,14 @@ fn prepaint_row_scene_replay_plan_uses_cached_syntax_replay_context() {
         (
             RowSceneCacheEntry {
                 key: row_scene_key,
-                content,
-                origin: content_bounds.origin,
-                geom,
-                is_rich: true,
-                ops,
-                hosted_resources,
+                retained: Arc::new(RowSceneRetainedFragment {
+                    content,
+                    origin: content_bounds.origin,
+                    geom,
+                    is_rich: true,
+                    ops,
+                    hosted_resources,
+                }),
                 syntax_replay_key: Some(syntax_replay_key),
             },
             1,
@@ -554,6 +734,19 @@ fn prepaint_row_scene_replay_plan_uses_cached_syntax_replay_context() {
     );
 
     assert_eq!(plan.entries.len(), 1);
+    let retained = Arc::clone(
+        &st.row_scene_cache
+            .get(&0)
+            .expect("seeded row scene entry")
+            .0
+            .retained,
+    );
+    let planned = plan.entries.front().expect("planned retained row entry");
+    assert!(
+        Arc::ptr_eq(&planned.retained, &retained),
+        "prepaint plan should point at the retained row fragment instead of cloning it"
+    );
+    assert_eq!(planned.local_bounds, content_bounds);
     assert_eq!(
         st.cache_stats.syntax_get_calls, 0,
         "planner should trust cached replay context instead of looking up syntax spans"

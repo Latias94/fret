@@ -55,6 +55,10 @@ struct CommandAvailabilityQueryCount {
 }
 
 impl<H: UiHost> Widget<H> for CountingAvailabilityNode {
+    fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+        true
+    }
+
     fn command_availability(
         &self,
         cx: &mut crate::widget::CommandAvailabilityCx<'_, H>,
@@ -238,6 +242,125 @@ fn action_availability_snapshot_publishes_focus_traversal_gating() {
 }
 
 #[test]
+fn action_availability_snapshot_reuses_focus_traversal_within_frame() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("focus.next"),
+        widget_command_meta("Focus Next"),
+    );
+    app.register_command(
+        CommandId::from("focus.previous"),
+        widget_command_meta("Focus Previous"),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_debug_enabled(true);
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    let leaf = ui.create_node(FocusableLeaf);
+    ui.set_root(root);
+    ui.add_child(root, leaf);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    app.advance_frame();
+    ui.begin_debug_frame_if_needed(app.frame_id());
+    publish_snapshot(&mut ui, &mut app, window);
+    assert_eq!(
+        ui.debug_command_availability_hotspots()
+            .iter()
+            .filter(|hotspot| hotspot.route == "focus_traversal_snapshot")
+            .count(),
+        1,
+        "focus.next/focus.previous should share one traversal query inside a publication"
+    );
+
+    ui.pending_post_layout_window_runtime_snapshot_refine = true;
+    publish_snapshot(&mut ui, &mut app, window);
+    assert_eq!(
+        ui.debug_command_availability_hotspots()
+            .iter()
+            .filter(|hotspot| hotspot.route == "focus_traversal_snapshot")
+            .count(),
+        1,
+        "same-frame re-publication should reuse the frame-level traversal availability cache"
+    );
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    assert_eq!(
+        svc.available(window, &CommandId::from("focus.next")),
+        Some(true)
+    );
+    assert_eq!(
+        svc.available(window, &CommandId::from("focus.previous")),
+        Some(true)
+    );
+}
+
+#[test]
+fn action_availability_snapshot_refreshes_focus_traversal_on_next_frame() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("focus.next"),
+        widget_command_meta("Focus Next"),
+    );
+    app.register_command(
+        CommandId::from("focus.previous"),
+        widget_command_meta("Focus Previous"),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_debug_enabled(true);
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    let leaf = ui.create_node(FocusableLeaf);
+    ui.set_root(root);
+    ui.add_child(root, leaf);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    app.advance_frame();
+    ui.begin_debug_frame_if_needed(app.frame_id());
+    ui.pending_post_layout_window_runtime_snapshot_refine = true;
+    publish_snapshot(&mut ui, &mut app, window);
+    assert_eq!(
+        ui.debug_command_availability_hotspots()
+            .iter()
+            .filter(|hotspot| hotspot.route == "focus_traversal_snapshot")
+            .count(),
+        1
+    );
+
+    app.advance_frame();
+    ui.begin_debug_frame_if_needed(app.frame_id());
+    ui.pending_post_layout_window_runtime_snapshot_refine = true;
+    publish_snapshot(&mut ui, &mut app, window);
+
+    assert_eq!(
+        ui.debug_command_availability_hotspots()
+            .iter()
+            .filter(|hotspot| hotspot.route == "focus_traversal_snapshot")
+            .count(),
+        1,
+        "new frames should compute their own traversal availability instead of reusing stale cache"
+    );
+}
+
+#[test]
 fn action_availability_snapshot_skips_recompute_when_inputs_are_unchanged() {
     let mut app = crate::test_host::TestHost::new();
     app.set_global(PlatformCapabilities::default());
@@ -364,6 +487,72 @@ fn action_availability_snapshot_ignores_pointer_arbitration_only_changes() {
 }
 
 #[test]
+fn pointer_move_publishes_input_context_without_command_availability_recompute() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("test.available"),
+        widget_command_meta("Available"),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(CountingAvailabilityNode);
+    ui.set_root(root);
+    ui.set_focus(Some(root));
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    publish_snapshot(&mut ui, &mut app, window);
+    let baseline_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(baseline_count, 1);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: Point::new(Px(10.0), Px(10.0)),
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let post_move_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(
+        post_move_count, baseline_count,
+        "pointer move should refresh input context without republishing widget command availability"
+    );
+
+    assert!(
+        app.global::<fret_runtime::WindowInputContextService>()
+            .and_then(|svc| svc.snapshot(window))
+            .is_some(),
+        "pointer move should still publish the latest window input context"
+    );
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    assert_eq!(
+        svc.available(window, &CommandId::from("test.available")),
+        Some(true)
+    );
+}
+
+#[test]
 fn action_availability_snapshot_does_not_scan_unfocused_subtree() {
     let mut app = crate::test_host::TestHost::new();
     app.set_global(PlatformCapabilities::default());
@@ -448,6 +637,78 @@ fn action_availability_snapshot_matches_no_focus_dispatch_subtree_fallback() {
         svc.available(window, &CommandId::from("test.available")),
         Some(true)
     );
+}
+
+#[test]
+fn action_availability_snapshot_uses_explicit_action_route_fallback_root() {
+    use crate::elements::{GlobalElementId, NodeEntry};
+
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("test.available"),
+        widget_command_meta("Available"),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_debug_enabled(true);
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    let focused = ui.create_node(FocusableLeaf);
+    let action_root_element = GlobalElementId(0xA11CE);
+    let action_root = ui.create_node_for_element(action_root_element, CountingAvailabilityNode);
+    ui.set_root(root);
+    ui.add_child(root, focused);
+    ui.add_child(root, action_root);
+    ui.set_focus(Some(focused));
+
+    let frame_id = app.frame_id();
+    crate::elements::with_window_state(&mut app, window, |st| {
+        st.set_node_entry(
+            action_root_element,
+            NodeEntry {
+                node: action_root,
+                last_seen_frame: frame_id,
+                root: action_root_element,
+            },
+        );
+        st.record_action_route_fallback_root(action_root_element);
+    });
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    app.advance_frame();
+    ui.begin_debug_frame_if_needed(app.frame_id());
+    publish_snapshot(&mut ui, &mut app, window);
+
+    let query_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(query_count, 1);
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    assert_eq!(
+        svc.available(window, &CommandId::from("test.available")),
+        Some(true)
+    );
+
+    let route_hotspots: Vec<_> = ui
+        .debug_command_availability_hotspots()
+        .iter()
+        .filter(|hotspot| hotspot.route == "action_route_fallback_roots")
+        .collect();
+    assert_eq!(route_hotspots.len(), 1);
+    assert_eq!(route_hotspots[0].start_node, action_root);
+    assert_eq!(route_hotspots[0].resolved_node, Some(action_root));
+    assert_eq!(route_hotspots[0].start_element, Some(action_root_element));
 }
 
 #[test]

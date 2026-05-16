@@ -68,6 +68,14 @@ pub(super) fn add_paint_perf_elapsed(us: &mut u64, ns: &mut u64, started: Instan
     *ns = ns.saturating_add(nanos);
 }
 
+pub(super) fn row_requires_paint_time_preedit(st: &CodeEditorState, row: usize) -> bool {
+    st.preedit.is_some()
+        && st
+            .paint_frame_overlay
+            .caret
+            .is_some_and(|caret| caret.row == row)
+}
+
 pub(super) fn frame_cache_max_entries(st: &CodeEditorState, max_entries: usize) -> usize {
     if max_entries == 0 {
         return 0;
@@ -130,10 +138,16 @@ pub(super) fn prepaint_row_scene_replay_plan_for_frame_with_edge_prebuild(
 ) -> RowSceneReplayPlan {
     let row_count = st.display_map.row_count();
     if row_count > 0 {
-        let edge = frame.visible_end.min(row_count.saturating_sub(1));
-        if !st.row_scene_cache.contains_key(&edge)
-            && let Some(rect) = frame.row_rect(content_bounds, edge)
-        {
+        let end = frame.visible_end.min(row_count.saturating_sub(1));
+        let start = frame.visible_start.min(end);
+        let mut last_prebuilt = None::<usize>;
+        for edge in [start, end] {
+            if last_prebuilt == Some(edge) || st.row_scene_cache.contains_key(&edge) {
+                continue;
+            }
+            let Some(rect) = frame.row_rect(content_bounds, edge) else {
+                continue;
+            };
             let _ = cx.with_scene_painter(|painter| {
                 prebuild_edge_row_scene_fragment_for_frame(
                     painter,
@@ -148,6 +162,7 @@ pub(super) fn prepaint_row_scene_replay_plan_for_frame_with_edge_prebuild(
                     theme_revision,
                 )
             });
+            last_prebuilt = Some(edge);
         }
     }
 
@@ -179,20 +194,12 @@ pub(super) fn take_row_scene_replay_plan_entry(
     }
 
     let mut rejected = 0usize;
-    while plan
-        .entries
-        .front()
-        .is_some_and(|entry| entry.payload.row < row)
-    {
+    while plan.entries.front().is_some_and(|entry| entry.row < row) {
         let _ = plan.entries.pop_front();
         rejected = rejected.saturating_add(1);
     }
 
-    if plan
-        .entries
-        .front()
-        .is_some_and(|entry| entry.payload.row == row)
-    {
+    if plan.entries.front().is_some_and(|entry| entry.row == row) {
         return (plan.entries.pop_front(), rejected, None);
     }
 
@@ -278,7 +285,7 @@ pub(super) fn prebuild_edge_row_scene_fragment_for_frame(
     fg: Color,
     theme_revision: u64,
 ) -> Option<RowSceneReplayPlanEntry> {
-    if st.preedit.is_some() {
+    if row_requires_paint_time_preedit(st, row) {
         return None;
     }
     if st.row_scene_cache.contains_key(&row) {
@@ -479,19 +486,10 @@ pub(super) fn prebuild_edge_row_scene_fragment_for_frame(
         preedit: None,
     };
 
-    let fragment = painter.scene_fragment(
-        RowSceneFragmentPayload {
-            row,
-            content: Arc::clone(&row_content),
-            geom: geom.clone(),
-            is_rich: row_scene_is_rich,
-        },
-        rect,
-        origin,
-    );
+    let fragment = painter.scene_fragment((), rect, origin);
 
     #[cfg(feature = "syntax")]
-    scene::store_row_scene_cache(
+    let retained = scene::store_row_scene_cache(
         st,
         row,
         row_scene_key,
@@ -506,7 +504,11 @@ pub(super) fn prebuild_edge_row_scene_fragment_for_frame(
     );
     geom_cache::store_row_geom_cache(st, row, Some(geom), text_cache_max_entries, perf_enabled);
 
-    Some(fragment)
+    retained.map(|retained| RowSceneReplayPlanEntry {
+        row,
+        retained,
+        local_bounds: rect,
+    })
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -558,7 +560,7 @@ pub(super) fn paint_row(
         .as_ref()
         .filter(|_| replay_plan_entry_matches_rect)
     {
-        Arc::clone(&entry.payload.content)
+        Arc::clone(&entry.retained.content)
     } else if perf_enabled {
         let started = Instant::now();
         let out = cached_row_content_snapshot(st, row, text_cache_max_entries);
@@ -688,18 +690,17 @@ pub(super) fn paint_row(
     if let Some(entry) = replay_plan_entry.as_ref() {
         if entry.local_bounds == rect {
             row_scene_key = None;
-            row_scene_is_rich = entry.payload.is_rich;
+            row_scene_is_rich = entry.retained.is_rich;
             row_scene_replayed = true;
-            drew_rich = entry.payload.is_rich;
-            row_preedit = entry.payload.geom.preedit;
-            fresh_geom = Some(entry.payload.geom.clone());
+            drew_rich = entry.retained.is_rich;
+            row_preedit = entry.retained.geom.preedit;
             scene::replay_row_scene_plan_entry(painter, st, entry, origin);
         }
     }
 
     if can_return_after_planned_replay {
         let geom_for_cache = replay_plan_entry.as_ref().and_then(|entry| {
-            (!st.row_geom_cache.contains_key(&row)).then(|| entry.payload.geom.clone())
+            (!st.row_geom_cache.contains_key(&row)).then(|| entry.retained.geom.clone())
         });
         geom_cache::store_row_geom_cache(
             st,
@@ -722,6 +723,11 @@ pub(super) fn paint_row(
             }
         }
         return;
+    }
+    if replay_plan_entry_matches_rect {
+        fresh_geom = replay_plan_entry
+            .as_ref()
+            .map(|entry| entry.retained.geom.clone());
     }
 
     let line = Arc::clone(&row_content.text);

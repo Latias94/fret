@@ -233,6 +233,13 @@ Establish and maintain an editor-grade performance contract comparable to Zed/GP
     `target/fret-diag/perf-complex-editor-shape-pin-keys-baseline-check-v1/1778516630518/bundle.json` passed the
     checked-in v1 contract with worst top total `2206us`, `top_renderer_prepare_text_us` p50/p95/max `424/426/426us`,
     and payload `254/192368`.
+  - Follow-up local attribution after the Windows RTX4090 closeout was deferred: renderer text prepare now reports
+    subphase timings and glyph/blob counts through renderer snapshots, UI diagnostics frame stats, and `diag stats`.
+    The local macOS M4 smoke
+    `target/fret-diag/renderer-text-prepare-subphase-typical-smoke/1778924874759/bundle.schema2.json` shows
+    `renderer_prepare_text_us` p95 `339us`, with `collect_pin_keys` p95 `326us`, `bucket_delta` p95 `13us`, and
+    prewarm/pin-update/flush-upload at `0us`. This points the next baseline-neutral optimization at stable-frame
+    scene text pin-key aggregation rather than atlas upload or broad paint traversal rewrites.
 - IMUI hello smoke correctness recheck:
   - `FRET_DIAG=1 FRET_DIAG_DIR=target/fret-diag/imui-hello-demo-screenshot-recheck FRET_DIAG_GPU_SCREENSHOTS=1 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-editor/imui/local-debug/imui-hello-demo-screenshot.json --dir target/fret-diag/imui-hello-demo-screenshot-recheck --session-auto --timeout-ms 180000 --launch -- cargo run -p fret-demo --bin imui_hello_demo`
   - Screenshot evidence:
@@ -454,8 +461,83 @@ optimizations only where attribution points, and stabilize the result as a durab
 | Formal evidence pass covers typical autoscroll, complex wheel, and resize jitter with repeat/warmup and no repeat=1-only conclusions. | Perf log entries `2026-05-16 01:03:00 +08:00`, `2026-05-16 02:31:15 +08:00`, `2026-05-16 03:51:42 +08:00`, `2026-05-16 04:54:35 +08:00`, and `2026-05-16 05:14:52 +08:00`; overlay-disabled worst bundles under `target/fret-diag/editor-paint-overlay-disabled-20260516-*`. | Covered for macOS M4 evidence. Not sufficient for Windows baseline promotion. |
 | Attribution identifies whether the remaining cost belongs to editor row replay/cache, generic Canvas/paint traversal, or renderer text/encode/upload. | Row replay/cache remains healthy; renderer text prepare got one reversible owner slice; `WindowedRowsSurface` attribution, paint-widget hotspot summary, host-widget subphase summary, and per-row gap fields are now in `crates/fret-diag/src/stats/bundle_stats_report.inc.rs`. | Covered enough to reject broad row/display-list rewrites. Remaining owner is outer paint traversal / host-widget aggregate unless target evidence changes. |
 | At least one reversible optimization is landed and verified without weakening renderer payload thresholds. | Renderer glyph pin-key bucket sizing, host-widget record lookup slimming, and observed-deps empty fast path were validated with focused checks; baselines stayed unchanged from local macOS evidence. | Covered locally; keep all slices rollbackable and baseline-neutral until target re-seed. |
-| Contract stabilization promotes or validates the final thresholds on the target machine profile. | Current checked-in Windows contracts exist for resize, editor resize, autoscroll steady, autoscroll typical, and complex wheel; `audit_perf_baselines.py --strict` passes for the matrix. The target-machine runner is now `tools/perf/diag_editor_paint_contract_validate.py`; synced artifacts can be rechecked with `tools/perf/diag_editor_paint_contract_verify_artifacts.py`; the local closeout gate is `tools/perf/diag_editor_paint_contract_closeout.py`. The validation runner rejects existing non-empty non-dry-run output directories by default, preflight checks the required overlay-disabled script env defaults, the verifier requires non-empty `date_tag` fields, rejects drift from the required Windows command shape, rejects paint-perf env on baseline-validation direct `diag perf` commands, requires paint-perf coverage and overlay-zero stats (`top_code_editor_torture_overlay_us=0` / `code_editor_paint_perf.max.us_torture_overlay=0`) in the attribution directory, and the closeout CLI has unit coverage for both verifier-fail and verifier-pass non-dry-run paths. | Not complete. Needs deliberate Windows RTX4090 overlay-disabled validation with `check.perf_thresholds.json` `failures=[]`; only a threshold re-seed path additionally needs `selection-summary.json` plus the no-silent-threshold-loosening evidence. |
+| Contract stabilization promotes or validates the final thresholds on the target machine profile. | Current checked-in Windows contracts exist for resize, editor resize, autoscroll steady, autoscroll typical, and complex wheel; `audit_perf_baselines.py --strict` passes for the matrix. The target-machine runner is now `tools/perf/diag_editor_paint_contract_validate.py`; synced artifacts can be rechecked with `tools/perf/diag_editor_paint_contract_verify_artifacts.py`; the local closeout gate is `tools/perf/diag_editor_paint_contract_closeout.py`. The validation runner rejects existing non-empty non-dry-run output directories by default, preflight checks the required overlay-disabled script env defaults, the verifier requires non-empty `date_tag` fields, rejects drift from the required Windows command shape, rejects paint-perf env on baseline-validation direct `diag perf` commands, requires paint-perf coverage and overlay-zero stats (`top_code_editor_torture_overlay_us=0` / `code_editor_paint_perf.max.us_torture_overlay=0`) in the attribution directory, projects per-probe `decision_inputs` for the final owner choice, and the closeout CLI has unit coverage for both verifier-fail and verifier-pass non-dry-run paths. | Deferred TODO. Needs deliberate Windows RTX4090 overlay-disabled validation with `check.perf_thresholds.json` `failures=[]`; only a threshold re-seed path additionally needs `selection-summary.json` plus the no-silent-threshold-loosening evidence. Local optimization may continue, but it is not a substitute for this target-machine artifact. |
 | P1.5 Editor Canvas paint replay can be closed. | Current audit, runbook, TODO, artifact verifier, and closeout gate now identify the remaining missing artifact, the target-machine runner command, the post-sync verification step, and the non-dry-run closeout behavior. | Not complete until target-machine validation, or a deliberate re-seed if validation fails, is recorded, verified, and the matrix/TODO are updated. |
+
+Local handoff audit update (2026-05-16 14:46 +0800): the current macOS M4 workspace cannot close the Windows RTX4090
+contract. `diag_editor_paint_contract_validate.py` rejects non-dry-run Windows-profile execution on this host, dry-run
+directories fail the artifact verifier because they intentionally lack real `summary.json` files, and only the
+artifact-independent local closeout gates are green. Clean Windows handoff plans live under
+`target/fret-diag/editor-paint-contract-windows-handoff-*-plan*`; they are execution aids, not closeout evidence.
+
+Local continuation audit update (2026-05-16): after deferring the RTX4090 run in the local TODO queue, the closeout
+status is unchanged. `python3 tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260516-host-audit`
+rejects this Darwin/arm64 host with `windows-rtx4090 validation must run on the target Windows host`, while
+`python3 tools/perf/diag_editor_paint_contract_preflight.py` still passes its 8 local checks. Existing verifier and
+closeout summaries under `target/fret-diag/editor-paint-contract-validate-20260516-closeout-plan/` remain `ok=false`
+because both `target/fret-diag/editor-paint-contract-validate-20260516-closeout-plan/summary.json` and
+`target/fret-diag/editor-paint-contract-validate-20260516-closeout-plan-attrib/summary.json` are missing. The
+Windows handoff validation and attribution dry-run plans still exist and contain the expected four-step command
+shape, but they are not artifacts that satisfy the closeout objective.
+
+Active goal prompt-to-artifact checklist (2026-05-16): the closeout objective remains incomplete against actual
+artifacts, not just intent.
+
+| Objective requirement | Required artifact or command | Current evidence | Status |
+| --- | --- | --- | --- |
+| Run `tools/perf/diag_editor_paint_contract_validate.py` and produce a baseline validation artifact. | A non-dry-run Windows RTX4090 validation directory with `summary.json` kind `editor_paint_contract_validate_summary`, `with_paint_perf=false`, `ok=true`, and step threshold reports with `failures=[]`. | `python3 tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260516-completion-audit-host-guard` rejects this macOS arm64 host with `windows-rtx4090 validation must run on the target Windows host`; no matching validation `summary.json` exists under current `target/fret-diag/editor-paint-contract*` directories. | Missing. |
+| Run the same target-machine validation with `--with-paint-perf` and produce attribution artifacts. | A second non-dry-run Windows RTX4090 validation directory with `summary.json`, `with_paint_perf=true`, paint-perf coverage, and overlay-zero stats. | Only dry-run attribution plans exist locally. The artifact verifier report `target/fret-diag/editor-paint-contract-validate-20260516-completion-audit/artifact-verification.dry-run-negative.summary.json` fails because `target/fret-diag/editor-paint-contract-validate-20260516-closeout-plan-attrib/summary.json` is missing. | Missing. |
+| Confirm artifacts with the verifier and closeout tools. | `diag_editor_paint_contract_verify_artifacts.py` and `diag_editor_paint_contract_closeout.py` pass on the copied validation and attribution directories. | The verifier is green only for tool behavior; against current dry-run plan directories it correctly fails with missing validation and attribution summaries. The local preflight passes 8 checks but does not cover target-machine perf results. | Missing. |
+| Decide whether the next refactor lane is Canvas/paint replay, glyph/text-index/atlas residency, or no code change. | Decision based on verified target-machine baseline and attribution artifacts; the artifact verifier now projects the needed per-probe `decision_inputs` from `diag stats --json`. | macOS M4 evidence points away from Canvas wrapper and row replay and toward generic host-widget paint aggregate, but target-machine attribution is still absent. | Deferred with the Windows RTX4090 TODO. |
+
+Tooling regression check (2026-05-16): the closeout helper tests are green locally:
+`python3 tools/perf/test_diag_editor_paint_contract_preflight.py` (3 tests),
+`python3 tools/perf/test_diag_editor_paint_contract_validate.py` (10 tests),
+`python3 tools/perf/test_diag_editor_paint_contract_verify_artifacts.py` (10 tests), and
+`python3 tools/perf/test_diag_editor_paint_contract_closeout.py` (7 tests). This proves the local helper behavior, not
+the missing Windows RTX4090 validation artifacts.
+
+Active goal audit refresh (2026-05-16): the closeout objective remains incomplete on the current macOS host.
+
+- Baseline validation command:
+  `python3 tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260516-active-goal-audit`
+  exits `2` with `windows-rtx4090 validation must run on the target Windows host`.
+- Attribution validation command:
+  `python3 tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260516-active-goal-audit-attrib --with-paint-perf`
+  exits `2` with the same target-host guard.
+- Current target-machine dry-run handoff plan:
+  `target/fret-diag/editor-paint-contract-windows-handoff-20260516-active-goal-audit/handoff-plan.json`.
+- Missing-artifact verifier proof:
+  `target/fret-diag/editor-paint-contract-windows-handoff-20260516-active-goal-audit/verify/artifact-verification.missing-artifacts.summary.json`
+  records missing validation and attribution `summary.json` files.
+- Missing-artifact closeout proof:
+  `target/fret-diag/editor-paint-contract-windows-handoff-20260516-active-goal-audit/closeout/editor-paint-contract-closeout.missing-artifacts.summary.json`
+  records `ok=false` and `owner_decision.status=incomplete`.
+
+This refresh does not change the implementation owner. The next formal closeout action is still to run
+`python tools/perf/diag_editor_paint_contract_windows_handoff.py --date-tag <fresh-date>` on the Windows RTX4090 target
+host, then copy the validation and attribution directories back for verifier/closeout.
+
+Active goal readiness check (2026-05-16): the fast preflight still passes locally.
+
+- Command:
+  `python3 tools/perf/diag_editor_paint_contract_preflight.py --out-summary target/fret-diag/editor-paint-contract-preflight-active-goal-readiness/summary.json`
+- Result: `PASS: editor paint contract preflight (8 checks)`.
+- Summary:
+  `target/fret-diag/editor-paint-contract-preflight-active-goal-readiness/summary.json`.
+
+This validates script JSON, required overlay-disabled script contracts, diag script registry freshness, and the strict
+baseline matrix audit. It does not cover any Windows RTX4090 timing result and therefore does not satisfy the baseline
+or attribution artifact requirements.
+
+Active goal tooling check (2026-05-16):
+
+- Command:
+  `python3 -m unittest discover -s tools/perf -p 'test_diag_editor_paint_contract_*.py'`
+- Result: `43` tests passed.
+
+This proves the current editor-paint contract helper behavior, including handoff planning and verifier/closeout
+failure paths. It still does not replace the missing target-machine validation and attribution artifacts.
 
 ## Open Gaps
 
@@ -478,7 +560,10 @@ optimizations only where attribution points, and stabilize the result as a durab
    `target/fret-diag/editor-paint-contract-post-observed-deps-fastpath-20260516-typical-r3-cargo`,
    `target/fret-diag/editor-paint-contract-post-observed-deps-fastpath-20260516-complex-wheel-r3-cargo`, and
    `target/fret-diag/editor-paint-contract-post-observed-deps-fastpath-20260516-resize-jitter-r3-cargo`. That pass is
-   still evidence-only; a baseline decision requires a deliberate re-seed rather than using local machine evidence to
+   still evidence-only. A later local pass-level presence snapshot moves the typical autoscroll observed model/global
+   replay p95 from `24/23us` to `4/4us`
+   (`target/fret-diag/paint-observed-deps-presence-snapshot-typical-r3/1778921262429/stats.json`), but this remains
+   macOS M4 evidence. A baseline decision requires a deliberate re-seed rather than using local machine evidence to
    loosen or silently update thresholds.
 4. Keep Linux and any other non-Windows/macOS machine profiles explicit until a real Linux runner/profile and checked-in contract baseline exist. The current `ui-code-editor-resize-probes.linux-local.v1.json` export is smoke-only and does not close the gap.
 5. The current WSL code-editor resize smoke gate still times out on the current head after rebuild, with
@@ -510,8 +595,9 @@ renderer-side owner slice without loosening baselines, the `WindowedRowsSurface`
 verified on formal bundles, and `paint_widget_hotspot_summary` narrows the remaining editor paint owner to generic
 paint-widget aggregate overhead rather than Canvas wrapper, renderer payload, or code-editor row replay. Root-level
 host-widget subphase summaries now make that owner measurable, the first lookup-slimming slice is directionally
-positive, and the observed-deps presence-set fast path identifies and short-circuits the dominant empty lookup case.
-The same-mouth editor paint evidence path has been restored and the full three-probe post-fast-path pass is complete:
+positive, the observed-deps presence-set fast path identifies the dominant empty lookup case, and the paint-pass
+presence snapshot now keeps those empty siblings out of the runtime lookup path. The same-mouth editor paint evidence
+path has been restored and the full three-probe post-fast-path pass is complete:
 typical total/paint p95 `850/624us`, complex wheel `1115/838us`, and resize jitter `1563/631us`. Keep baselines
 unchanged from this macOS M4 evidence. Follow-up attribution now shows the Canvas wrapper itself is not the owner:
 Canvas-minus-`WindowedRowsSurface` callback p95 is only `2..4us`, while callback-minus-row-paint p95 is
@@ -523,5 +609,6 @@ editor bundles at `65/62/62ns` per row for `windowed_surface_paint_callback_minu
 `79/48/72ns` per row for `windowed_surface_row_callback_gap_per_row_ns` (typical autoscroll, complex wheel, and resize
 jitter respectively). That keeps the remaining surface gap in aggregate loop overhead territory rather than a standalone
 row hot loop. The next blocking step is target-machine validation with
-`python tools/perf/diag_editor_paint_contract_validate.py --date-tag <date>`; do not start another local optimization
-or baseline update unless the Windows RTX4090 artifacts shift the owner attribution.
+`python tools/perf/diag_editor_paint_contract_validate.py --date-tag <date>`. Local independent optimization slices may
+continue when they have their own evidence, but they are not substitutes for this target-machine closeout and must not
+drive checked-in baseline changes unless the Windows RTX4090 artifacts justify it.

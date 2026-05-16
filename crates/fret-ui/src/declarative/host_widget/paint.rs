@@ -97,7 +97,9 @@ impl ElementHostWidget {
 
         let debug_enabled = cx.tree.debug_enabled();
         let total_started = debug_enabled.then(Instant::now);
-        let (models_len, models_loop, globals_len, globals_loop) =
+        let observed_deps_presence = cx.tree.paint_observed_deps_presence_contains(self.element);
+        let should_query_observed_deps = observed_deps_presence.unwrap_or(true);
+        let (models_len, models_loop, globals_len, globals_loop) = if should_query_observed_deps {
             crate::elements::with_observed_deps_for_element(
                 cx.app,
                 window,
@@ -117,7 +119,15 @@ impl ElementHostWidget {
 
                     (models.len(), models_loop, globals.len(), globals_loop)
                 },
-            );
+            )
+        } else {
+            (
+                0,
+                debug_enabled.then(Default::default),
+                0,
+                debug_enabled.then(Default::default),
+            )
+        };
 
         if debug_enabled {
             let total_elapsed = total_started.map(|started| started.elapsed());
@@ -235,8 +245,8 @@ impl ElementHostWidget {
                     }
                 });
 
-                let focus_visible = crate::focus_visible::is_focus_visible(cx.app, cx.window);
-                let paint_focus_chrome = focused && focus_visible;
+                let paint_focus_chrome =
+                    focused && crate::focus_visible::is_focus_visible(cx.app, cx.window);
 
                 if paint_focus_chrome && let Some(border_color) = props.focus_border_color {
                     if let Some(dash) = props.border_dash

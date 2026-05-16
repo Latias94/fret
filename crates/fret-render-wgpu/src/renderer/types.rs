@@ -427,6 +427,17 @@ pub struct RenderPerfSnapshot {
     pub encoder_finish_us: u64,
     pub prepare_svg_us: u64,
     pub prepare_text_us: u64,
+    pub prepare_text_collect_pin_keys_us: u64,
+    pub prepare_text_bucket_delta_us: u64,
+    pub prepare_text_prewarm_us: u64,
+    pub prepare_text_pin_bucket_update_us: u64,
+    pub prepare_text_flush_uploads_us: u64,
+    pub prepare_text_scene_text_blobs: u64,
+    pub prepare_text_pinned_glyph_keys: u64,
+    pub prepare_text_prewarm_glyph_keys: u64,
+    pub prepare_text_retained_glyph_keys: u64,
+    pub prepare_text_added_glyph_keys: u64,
+    pub prepare_text_removed_glyph_keys: u64,
     pub encode_scene_stack_us: u64,
     pub encode_scene_clip_us: u64,
     pub encode_scene_mask_us: u64,
@@ -773,6 +784,17 @@ pub(super) struct RenderPerfStats {
     pub(super) encoder_finish: Duration,
     pub(super) prepare_svg: Duration,
     pub(super) prepare_text: Duration,
+    pub(super) prepare_text_collect_pin_keys: Duration,
+    pub(super) prepare_text_bucket_delta: Duration,
+    pub(super) prepare_text_prewarm: Duration,
+    pub(super) prepare_text_pin_bucket_update: Duration,
+    pub(super) prepare_text_flush_uploads: Duration,
+    pub(super) prepare_text_scene_text_blobs: u64,
+    pub(super) prepare_text_pinned_glyph_keys: u64,
+    pub(super) prepare_text_prewarm_glyph_keys: u64,
+    pub(super) prepare_text_retained_glyph_keys: u64,
+    pub(super) prepare_text_added_glyph_keys: u64,
+    pub(super) prepare_text_removed_glyph_keys: u64,
     pub(super) encode_scene_stack: Duration,
     pub(super) encode_scene_clip: Duration,
     pub(super) encode_scene_mask: Duration,
@@ -951,6 +973,35 @@ pub(super) struct RenderPerfStats {
 }
 
 impl RenderPerfStats {
+    pub(super) fn record_text_prepare_scene_perf(
+        &mut self,
+        perf: crate::text::TextPrepareScenePerf,
+    ) {
+        self.prepare_text_collect_pin_keys += perf.collect_pin_keys;
+        self.prepare_text_bucket_delta += perf.bucket_delta;
+        self.prepare_text_prewarm += perf.prewarm;
+        self.prepare_text_pin_bucket_update += perf.pin_bucket_update;
+        self.prepare_text_flush_uploads += perf.flush_uploads;
+        self.prepare_text_scene_text_blobs = self
+            .prepare_text_scene_text_blobs
+            .saturating_add(perf.scene_text_blobs);
+        self.prepare_text_pinned_glyph_keys = self
+            .prepare_text_pinned_glyph_keys
+            .saturating_add(perf.pinned_glyph_keys);
+        self.prepare_text_prewarm_glyph_keys = self
+            .prepare_text_prewarm_glyph_keys
+            .saturating_add(perf.prewarm_glyph_keys);
+        self.prepare_text_retained_glyph_keys = self
+            .prepare_text_retained_glyph_keys
+            .saturating_add(perf.retained_glyph_keys);
+        self.prepare_text_added_glyph_keys = self
+            .prepare_text_added_glyph_keys
+            .saturating_add(perf.added_glyph_keys);
+        self.prepare_text_removed_glyph_keys = self
+            .prepare_text_removed_glyph_keys
+            .saturating_add(perf.removed_glyph_keys);
+    }
+
     pub(super) fn record_encode_scene_family(
         &mut self,
         family: EncodeSceneFamily,

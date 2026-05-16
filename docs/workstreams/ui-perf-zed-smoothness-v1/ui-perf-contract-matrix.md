@@ -124,6 +124,20 @@ Budgets are guidance for representative probes. The committed gate is the script
   non-instrumented baseline check
   `target/fret-diag/perf-complex-editor-shape-pin-keys-baseline-check-v1/1778516630518/bundle.json` passes the current
   v1 contract. Keep the baseline unchanged unless a deliberate re-seed policy is chosen.
+- Renderer text pin buckets now delta-update each retained ring slot instead of releasing and re-pinning the entire
+  bucket every frame. The macOS M4 local smoke
+  `target/fret-diag/text-pin-bucket-delta-generation-typical-r3/{1778918296580,1778918301107,1778918305473}/bundle.schema2.json`
+  reports renderer text p95/max at `328/342us`, `328/332us`, and `331/340us`, compared with the earlier local
+  baseline `target/fret-diag/empty-observation-record-fastpath-typical-r3/1778913594775/bundle.schema2.json`
+  at `361/378us`. This is a renderer-internal text prepare win, not a Windows RTX 4090 closeout: total p95 still
+  moved with paint/prepaint noise (`637/716/683us`), so the larger editor owner remains Canvas / `paint.widget`
+  attribution until target-machine evidence says otherwise.
+- Paint observed-deps presence now has a paint-pass snapshot in `fret-ui`, so `ElementHostWidget::paint_impl` can skip
+  the runtime empty-deps lookup path for siblings with no declarative model/global observations. The macOS M4 local
+  smoke `target/fret-diag/paint-observed-deps-presence-snapshot-typical-r3/1778921262429/stats.json` moves
+  `paint_host_widget_observed_models_time_us` / `paint_host_widget_observed_globals_time_us` p95 from the prior local
+  `24/23us` to `4/4us`, while total p95 remains noise-sensitive (`637us -> 673us`). Keep this as baseline-neutral
+  local evidence; it does not replace the Windows RTX4090 closeout or justify a display-list rewrite.
 - The target-machine editor paint closeout now has a one-command local gate:
   `python tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-<date> --attribution-dir target/fret-diag/editor-paint-contract-validate-<date>-attrib`.
   It wraps the artifact verifier plus the local repo closeout gates without rerunning the probes.

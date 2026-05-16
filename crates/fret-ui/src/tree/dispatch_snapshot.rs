@@ -60,6 +60,7 @@ impl<H: UiHost> UiTree<H> {
     pub(in crate::tree) fn invalidate_dispatch_snapshot_cache(&mut self) {
         self.dispatch_snapshot_generation = self.dispatch_snapshot_generation.wrapping_add(1);
         self.dispatch_snapshot_cache.clear();
+        self.focus_traversal_availability_cache = None;
         #[cfg(feature = "diagnostics")]
         {
             self.debug_dispatch_snapshot = None;

@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "slug": "window-command-availability-snapshot-v2",
+  "title": "Window Command Availability Snapshot v2",
+  "status": "active",
+  "updated": "2026-05-16",
+  "scope_kind": "execution",
+  "problem": "Window runtime command/action availability publication must be bounded, observable, and frame-scoped. Pointer movement over overlay-heavy UI must not synchronously recompute full widget availability, overlay pointer-move dispatch must stay under the initial 1.5ms gate, and command availability frames above 500us must expose per-command/per-route attribution.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/window-command-availability-snapshot-v2/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/window-command-availability-snapshot-v2/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/window-command-availability-snapshot-v2/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/window-command-availability-snapshot-v2/EVIDENCE_AND_GATES.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run the UI Gallery overlay pointer-move steady perf script with suite prewarm/prelude normalization, then inspect the worst bundle with diag stats.",
+    "commands": [
+      "cargo run -p fretboard-dev --release -- diag perf --repeat 7 --warmup-frames 5 --reuse-launch --prelude-each-run --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --dir target/fret-diag/codex-command-availability-pointer-after-focus-cache-20260516 --max-pointer-move-dispatch-us 1500 --max-pointer-move-hit-test-us 500 tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json --launch -- cargo run -p fret-ui-gallery --release --features gallery-full",
+      "cargo run -p fretboard-dev --release -- diag stats target/fret-diag/codex-command-availability-pointer-after-focus-cache-20260516/1778905245660/bundle.schema2.json --sort command_availability --top 10",
+      "cargo run -p fretboard-dev --release -- diag stats target/fret-diag/codex-command-availability-pointer-after-focus-cache-20260516/1778905245660/bundle.schema2.json --sort command_availability --top 10 --json",
+      "jq '[.windows[]?.snapshots[]? | {frame_id, tick_id, count: ([.debug.command_availability_hotspots[]? | select(.route == \"focus_traversal_snapshot\")] | length), samples: [.debug.command_availability_hotspots[]? | select(.route == \"focus_traversal_snapshot\") | {command, route, elapsed_us, outcome}]} | select(.count > 0)]' target/fret-diag/codex-command-availability-pointer-after-focus-cache-20260516/1778905245660/bundle.schema2.json"
+    ]
+  },
+  "gates": [
+    {
+      "name": "command-availability-hotspot-stats-unit",
+      "command": "cargo nextest run -p fret-diag bundle_stats_projects_command_availability_hotspots --no-fail-fast"
+    },
+    {
+      "name": "window-runtime-snapshot-focused",
+      "command": "cargo nextest run -p fret-ui dispatch_event_publishes_post_dispatch_input_context_snapshot dispatch_command_publishes_post_dispatch_input_context_snapshot publish_window_runtime_snapshots_refreshes_pending_shortcut_overlay_input_context action_availability_snapshot_marks_unhandled_commands_unavailable --no-fail-fast"
+    },
+    {
+      "name": "focus-traversal-frame-cache-focused",
+      "command": "cargo nextest run -p fret-ui action_availability_snapshot_reuses_focus_traversal_within_frame action_availability_snapshot_refreshes_focus_traversal_on_next_frame action_availability_snapshot_publishes_focus_traversal_gating --no-fail-fast"
+    },
+    {
+      "name": "pointer-move-narrow-snapshot-focused",
+      "command": "cargo nextest run -p fret-ui pointer_move_publishes_input_context_without_command_availability_recompute --no-fail-fast"
+    },
+    {
+      "name": "changed-packages",
+      "command": "cargo nextest run -p fret-ui -p fret-bootstrap -p fret-diag --no-fail-fast"
+    },
+    {
+      "name": "overlay-pointer-move-1500us",
+      "command": "cargo run -p fretboard-dev --release -- diag perf --repeat 7 --warmup-frames 5 --reuse-launch --prelude-each-run --prewarm-script tools/diag-scripts/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/tooling-suite-prelude-reset-diagnostics.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --dir target/fret-diag/codex-command-availability-pointer-after-focus-cache-20260516 --max-pointer-move-dispatch-us 1500 --max-pointer-move-hit-test-us 500 tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json --launch -- cargo run -p fret-ui-gallery --release --features gallery-full"
+    },
+    {
+      "name": "perf-key-registry-in-sync",
+      "command": "cargo nextest run -p fret-diag registered_perf_key_inventory_doc_is_in_sync --no-fail-fast"
+    },
+    {
+      "name": "workstream-json-valid",
+      "command": "python -m json.tool docs/workstreams/window-command-availability-snapshot-v2/WORKSTREAM.json"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "crates/fret-ui/src/tree/commands.rs",
+    "crates/fret-ui/src/tree/tests/window_command_action_availability_snapshot.rs",
+    "crates/fret-ui/src/tree/debug/commands.rs",
+    "crates/fret-ui/src/tree/ui_tree_debug/record.rs",
+    "crates/fret-ui/src/tree/ui_tree_debug/frame.rs",
+    "crates/fret-ui/src/tree/ui_tree_debug/query.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_impl.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/layout_paint_hotspot_diagnostics.rs",
+    "crates/fret-diag/src/stats/bundle_stats_snapshot.rs",
+    "crates/fret-diag/src/stats/bundle_stats_report.inc.rs",
+    "crates/fret-diag/src/stats.rs",
+    "crates/fret-diag/src/stats/bundle_stats_sort.rs",
+    "target/fret-diag/codex-command-availability-pointer-after-focus-route-20260516/1778902482724/bundle.schema2.json",
+    "target/fret-diag/codex-command-availability-pointer-after-focus-route-20260516/stats.command_availability.top3.json",
+    "target/fret-diag/codex-command-availability-pointer-after-focus-cache-20260516/1778905245660/bundle.schema2.json",
+    "target/fret-diag/codex-command-availability-pointer-after-focus-cache-20260516/stats.command_availability.top10.json",
+    "target/fret-diag/codex-command-availability-pointer-after-focus-cache-20260516/focus_traversal_snapshot.by_frame.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0095-renderer-perf-snapshot-and-stress-harness.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue here for runtime/UI-tree command availability snapshot publication, attribution, and gates. Keep generic stats, diff, trace, and perf-key registry work in diag-perf-attribution-v1 or diag-perf-profiling-infra-v1; keep broad smoothness baselines in ui-perf-* lanes."
+  }
+}

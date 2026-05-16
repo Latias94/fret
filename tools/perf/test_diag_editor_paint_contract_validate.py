@@ -62,6 +62,40 @@ class EditorPaintContractValidateTests(unittest.TestCase):
         self.assertIn("FRET_CODE_EDITOR_DIAG_PAINT_PERF=1", " ".join(plan[1]["cmd"]))
         self.assertIn("FRET_CODE_EDITOR_DIAG_PAINT_PERF=1", " ".join(plan[2]["cmd"]))
 
+    def test_launch_cmd_flows_to_resize_and_direct_perf_steps(self) -> None:
+        launch_cmd = [
+            "cargo",
+            "run",
+            "-p",
+            "fret-ui-gallery",
+            "--release",
+            "--features",
+            "gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness",
+            "--",
+            "target/release/fret-ui-gallery",
+        ]
+        plan = validate.build_plan(
+            python_bin="python",
+            fretboard_bin="target/release/fretboard-dev",
+            launch_cmd=launch_cmd,
+            out_dir="target/fret-diag/editor-paint-contract-validate-test",
+            resize_attempts=3,
+            resize_repeat=7,
+            typical_repeat=15,
+            complex_repeat=7,
+            warmup_frames=5,
+            skip_preflight=True,
+            with_paint_perf=False,
+        )
+
+        resize_cmd = plan[0]["cmd"]
+        self.assertIn("--launch-cmd", resize_cmd)
+        self.assertIn("cargo run -p fret-ui-gallery", " ".join(resize_cmd))
+
+        typical_cmd = plan[1]["cmd"]
+        launch_idx = typical_cmd.index("--launch")
+        self.assertEqual(["--", *launch_cmd], typical_cmd[launch_idx + 1 :])
+
     def test_launch_cmd_from_args_defaults_to_inspectable_gallery_full(self) -> None:
         launch_cmd, launch_bin_path = validate._launch_cmd_from_args(
             Path("F:/repo"),

@@ -68,6 +68,68 @@ def _cmd_has_flag_value(cmd: object, flag: str, expected: str) -> bool:
     return _cmd_value(cmd, flag) == expected
 
 
+def _non_windows_bin(value: str) -> str:
+    return value.removesuffix(".exe")
+
+
+def _cmd_has_release_bin(
+    cmd: object,
+    *,
+    flag: str,
+    expected_windows_bin: str,
+    allow_non_windows: bool,
+) -> bool:
+    actual = _cmd_value(cmd, flag)
+    if actual == expected_windows_bin:
+        return True
+    return bool(allow_non_windows) and actual == _non_windows_bin(expected_windows_bin)
+
+
+def _token_list_contains_sequence(tokens: list[str], needle: list[str]) -> bool:
+    if not needle or len(needle) > len(tokens):
+        return False
+    end = len(tokens) - len(needle) + 1
+    for start in range(end):
+        if tokens[start : start + len(needle)] == needle:
+            return True
+    return False
+
+
+def _summary_launch_cmd(summary: dict[str, Any]) -> list[str]:
+    value = summary.get("launch_cmd")
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if isinstance(item, str)]
+
+
+def _cmd_launches_target(
+    cmd: object,
+    *,
+    summary_launch_cmd: list[str],
+    allow_non_windows: bool,
+) -> bool:
+    if not isinstance(cmd, list):
+        return False
+    tokens = [str(item) for item in cmd if isinstance(item, str)]
+    if validate._default_launch_bin() in tokens:
+        return True
+    if not bool(allow_non_windows):
+        return False
+    if _non_windows_bin(validate._default_launch_bin()) in tokens:
+        return True
+    return _token_list_contains_sequence(tokens, summary_launch_cmd)
+
+
+def _cmd_launch_cmd_matches_summary(cmd: object, summary_launch_cmd: list[str]) -> bool:
+    value = _cmd_value(cmd, "--launch-cmd")
+    if value is None:
+        return False
+    try:
+        return shlex.split(value) == summary_launch_cmd
+    except ValueError:
+        return False
+
+
 def _cmd_env_values(cmd: object) -> set[str]:
     if not isinstance(cmd, list):
         return set()
@@ -112,6 +174,8 @@ def _check_direct_diag_perf_cmd(
     errors: list[str],
     prefix: str,
     expect_with_paint_perf: bool,
+    summary_launch_cmd: list[str],
+    allow_non_windows: bool,
 ) -> None:
     if not _cmd_contains(cmd, "--reuse-launch"):
         errors.append(f"{prefix}: direct diag perf command must use --reuse-launch")
@@ -123,7 +187,13 @@ def _check_direct_diag_perf_cmd(
         errors.append(f"{prefix}: direct diag perf command must emit --json")
     if not _cmd_contains(cmd, "--launch"):
         errors.append(f"{prefix}: direct diag perf command must launch the target binary")
-    if not _cmd_has_default_launch(cmd):
+    has_default_launch = _cmd_has_default_launch(cmd)
+    has_allowed_local_launch = bool(allow_non_windows) and _cmd_launches_target(
+        cmd,
+        summary_launch_cmd=summary_launch_cmd,
+        allow_non_windows=allow_non_windows,
+    )
+    if not (has_default_launch or has_allowed_local_launch):
         errors.append(
             f"{prefix}: direct diag perf command must launch the default inspectable cargo command "
             f"or {validate._default_launch_bin()}"
@@ -160,16 +230,88 @@ def _check_threshold_file(path: Path, errors: list[str], prefix: str) -> None:
         errors.append(f"{prefix}: threshold failures must be [] in {path}")
 
 
+def _metric_group(doc: dict[str, Any], group: str) -> dict[str, Any]:
+    values = doc.get(group)
+    return values if isinstance(values, dict) else {}
+
+
+def _nested_metric(doc: dict[str, Any], *keys: str) -> Any:
+    value: Any = doc
+    for key in keys:
+        if not isinstance(value, dict):
+            return None
+        value = value.get(key)
+    return value
+
+
+def _decision_inputs_for_doc(doc: object) -> dict[str, Any]:
+    if not isinstance(doc, dict):
+        return {}
+    p95 = _metric_group(doc, "p95")
+    max_values = _metric_group(doc, "max")
+    code_editor = doc.get("code_editor_paint_perf")
+    if not isinstance(code_editor, dict):
+        code_editor = {}
+    paint_hotspots = doc.get("paint_widget_hotspot_summary")
+    if not isinstance(paint_hotspots, dict):
+        paint_hotspots = {}
+
+    return {
+        "paint_widget_p95_us": p95.get("paint_widget_time_us"),
+        "paint_widget_max_us": max_values.get("paint_widget_time_us"),
+        "renderer_prepare_text_p95_us": p95.get("renderer_prepare_text_us"),
+        "renderer_prepare_text_max_us": max_values.get("renderer_prepare_text_us"),
+        "renderer_encode_scene_p95_us": p95.get("renderer_encode_scene_us"),
+        "renderer_upload_p95_us": p95.get("renderer_upload_us"),
+        "code_editor_paint_perf_frames": code_editor.get("frames"),
+        "code_editor_total_p95_us": _nested_metric(code_editor, "p95", "us_total"),
+        "code_editor_windowed_surface_callback_p95_us": _nested_metric(
+            code_editor,
+            "p95",
+            "us_windowed_surface_paint_callback",
+        ),
+        "code_editor_windowed_surface_row_paint_p95_us": _nested_metric(
+            code_editor,
+            "p95",
+            "us_windowed_surface_row_paint",
+        ),
+        "code_editor_torture_overlay_max_us": _nested_metric(
+            code_editor,
+            "max",
+            "us_torture_overlay",
+        ),
+        "paint_widget_hotspot_summary": {
+            "frames_with_hotspots": paint_hotspots.get("frames_with_hotspots"),
+            "canvas_exclusive_p95_us": _nested_metric(
+                paint_hotspots,
+                "canvas",
+                "exclusive_us",
+                "p95",
+            ),
+            "non_canvas_exclusive_p95_us": _nested_metric(
+                paint_hotspots,
+                "non_canvas",
+                "exclusive_us",
+                "p95",
+            ),
+            "gap_to_code_editor_p95": paint_hotspots.get("gap_to_code_editor_p95"),
+            "code_editor_windowed_surface_p95": paint_hotspots.get(
+                "code_editor_windowed_surface_p95"
+            ),
+        },
+    }
+
+
 def _stats_coverage_from_step(
     step: dict[str, Any],
     errors: list[str],
     prefix: str,
     fallback_stats_path: Path,
-) -> dict[str, bool]:
+) -> tuple[dict[str, bool], dict[str, Any]]:
     stats = step.get("stats")
     if not isinstance(stats, dict):
         errors.append(f"{prefix}: missing stats result")
-        return validate.stats_coverage_for_doc(None)
+        return validate.stats_coverage_for_doc(None), {}
     if stats.get("ok") is not True:
         errors.append(f"{prefix}: stats result is not ok")
     missing_coverage = stats.get("missing_coverage")
@@ -179,15 +321,21 @@ def _stats_coverage_from_step(
     stdout_path = _artifact_path(stats.get("stdout"), fallback_stats_path)
     if not stdout_path.is_file():
         errors.append(f"{prefix}: stats stdout JSON missing: {stdout_path}")
-        return validate.stats_coverage_for_doc(None)
+        return validate.stats_coverage_for_doc(None), {}
     try:
-        return validate.stats_coverage_for_doc(_read_json(stdout_path))
+        doc = _read_json(stdout_path)
+        return validate.stats_coverage_for_doc(doc), _decision_inputs_for_doc(doc)
     except Exception as exc:
         errors.append(f"{prefix}: cannot read stats stdout JSON {stdout_path}: {exc}")
-        return validate.stats_coverage_for_doc(None)
+        return validate.stats_coverage_for_doc(None), {}
 
 
-def verify_summary_dir(path: Path, *, expect_with_paint_perf: bool) -> dict[str, Any]:
+def verify_summary_dir(
+    path: Path,
+    *,
+    expect_with_paint_perf: bool,
+    allow_non_windows: bool = False,
+) -> dict[str, Any]:
     summary_path = path / "summary.json"
     errors: list[str] = []
     step_reports: dict[str, Any] = {}
@@ -233,6 +381,7 @@ def verify_summary_dir(path: Path, *, expect_with_paint_perf: bool) -> dict[str,
         errors.append(f"with_paint_perf must be {expect_with_paint_perf}")
     if summary.get("stats_enabled") is not True:
         errors.append("stats_enabled must be true")
+    summary_launch_cmd = _summary_launch_cmd(summary)
 
     steps_obj = summary.get("steps")
     steps: dict[str, dict[str, Any]] = {}
@@ -267,11 +416,25 @@ def verify_summary_dir(path: Path, *, expect_with_paint_perf: bool) -> dict[str,
                 errors.append(f"{prefix}: resize suite must be {validate.RESIZE_SUITE}")
             if not _cmd_contains(cmd, validate.RESIZE_BASELINE):
                 errors.append(f"{prefix}: resize baseline missing from command")
-            if not _cmd_has_flag_value(cmd, "--fretboard-bin", validate._default_fretboard_bin()):
+            if not _cmd_has_release_bin(
+                cmd,
+                flag="--fretboard-bin",
+                expected_windows_bin=validate._default_fretboard_bin(),
+                allow_non_windows=allow_non_windows,
+            ):
                 errors.append(f"{prefix}: resize command must use release fretboard-dev.exe")
             has_default_launch_cmd = _cmd_has_default_launch_cmd_flag(cmd)
             has_legacy_launch_bin = _cmd_has_flag_value(cmd, "--launch-bin", validate._default_launch_bin())
-            if not (has_default_launch_cmd or has_legacy_launch_bin):
+            has_allowed_local_launch = bool(allow_non_windows) and (
+                _cmd_has_release_bin(
+                    cmd,
+                    flag="--launch-bin",
+                    expected_windows_bin=validate._default_launch_bin(),
+                    allow_non_windows=allow_non_windows,
+                )
+                or (summary_launch_cmd and _cmd_launch_cmd_matches_summary(cmd, summary_launch_cmd))
+            )
+            if not (has_default_launch_cmd or has_legacy_launch_bin or has_allowed_local_launch):
                 errors.append(
                     f"{prefix}: resize command must use the default inspectable cargo launch command "
                     f"or {validate._default_launch_bin()}"
@@ -284,6 +447,8 @@ def verify_summary_dir(path: Path, *, expect_with_paint_perf: bool) -> dict[str,
                 errors=errors,
                 prefix=prefix,
                 expect_with_paint_perf=expect_with_paint_perf,
+                summary_launch_cmd=summary_launch_cmd,
+                allow_non_windows=allow_non_windows,
             )
         elif name == "complex-wheel":
             if not _cmd_contains(cmd, validate.COMPLEX_WHEEL_BASELINE):
@@ -293,6 +458,8 @@ def verify_summary_dir(path: Path, *, expect_with_paint_perf: bool) -> dict[str,
                 errors=errors,
                 prefix=prefix,
                 expect_with_paint_perf=expect_with_paint_perf,
+                summary_launch_cmd=summary_launch_cmd,
+                allow_non_windows=allow_non_windows,
             )
 
         artifacts = step.get("artifacts")
@@ -307,7 +474,7 @@ def verify_summary_dir(path: Path, *, expect_with_paint_perf: bool) -> dict[str,
         )
         _check_threshold_file(check_path, errors, prefix)
 
-        coverage = _stats_coverage_from_step(
+        coverage, decision_inputs = _stats_coverage_from_step(
             step,
             errors,
             prefix,
@@ -325,6 +492,7 @@ def verify_summary_dir(path: Path, *, expect_with_paint_perf: bool) -> dict[str,
             "thresholds_ok": step.get("thresholds_ok"),
             "check_perf_thresholds_failures": artifacts.get("check_perf_thresholds_failures"),
             "stats_coverage": coverage,
+            "decision_inputs": decision_inputs,
         }
 
     return {
@@ -332,20 +500,35 @@ def verify_summary_dir(path: Path, *, expect_with_paint_perf: bool) -> dict[str,
         "summary": str(summary_path),
         "date_tag": summary.get("date_tag") if isinstance(summary.get("date_tag"), str) else None,
         "expect_with_paint_perf": expect_with_paint_perf,
+        "allow_non_windows": bool(allow_non_windows),
         "errors": errors,
         "steps": step_reports,
     }
 
 
-def verify_artifact_dirs(validation_dir: Path, attribution_dir: Path | None) -> dict[str, Any]:
-    validation = verify_summary_dir(validation_dir, expect_with_paint_perf=False)
+def verify_artifact_dirs(
+    validation_dir: Path,
+    attribution_dir: Path | None,
+    *,
+    allow_non_windows: bool = False,
+) -> dict[str, Any]:
+    validation = verify_summary_dir(
+        validation_dir,
+        expect_with_paint_perf=False,
+        allow_non_windows=allow_non_windows,
+    )
     attribution = None
     if attribution_dir is not None:
-        attribution = verify_summary_dir(attribution_dir, expect_with_paint_perf=True)
+        attribution = verify_summary_dir(
+            attribution_dir,
+            expect_with_paint_perf=True,
+            allow_non_windows=allow_non_windows,
+        )
     ok = bool(validation.get("ok")) and (attribution is None or bool(attribution.get("ok")))
     return {
         "kind": "editor_paint_contract_artifacts_verify_summary",
         "ok": ok,
+        "allow_non_windows": bool(allow_non_windows),
         "validation": validation,
         "attribution": attribution,
     }
@@ -367,11 +550,24 @@ def main() -> int:
         default="",
         help="Path for a JSON verification report. Defaults to <validation_dir>/artifact-verification.summary.json.",
     )
+    ap.add_argument(
+        "--allow-non-windows",
+        action="store_true",
+        default=False,
+        help=(
+            "Accept local non-Windows cargo-run launch commands. This is for local triage only; "
+            "formal Windows RTX4090 closeout should omit it."
+        ),
+    )
     args = ap.parse_args()
 
     validation_dir = Path(str(args.validation_dir))
     attribution_dir = Path(str(args.attribution_dir)) if str(args.attribution_dir).strip() else None
-    report = verify_artifact_dirs(validation_dir, attribution_dir)
+    report = verify_artifact_dirs(
+        validation_dir,
+        attribution_dir,
+        allow_non_windows=bool(args.allow_non_windows),
+    )
 
     out_report = Path(str(args.out_report)) if str(args.out_report).strip() else validation_dir / "artifact-verification.summary.json"
     _write_json(out_report, report)

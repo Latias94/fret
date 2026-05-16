@@ -417,6 +417,13 @@ impl<H: UiHost> UiTree<H> {
         self.debug_global_change_unobserved.as_slice()
     }
 
+    pub fn debug_command_availability_hotspots(&self) -> &[UiDebugCommandAvailabilityHotspot] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_command_availability_hotspots.as_slice()
+    }
+
     pub fn debug_node_bounds(&self, node: NodeId) -> Option<Rect> {
         self.nodes.get(node).map(|n| n.bounds)
     }

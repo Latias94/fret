@@ -28,6 +28,215 @@ Conventions:
 - “Perf gate” items should land with a runnable `fretboard-dev diag perf` command and a baseline/threshold update.
 - “Fearless refactor” items should include: (1) perf evidence, (2) correctness evidence, (3) rollback plan.
 
+## Current local checkpoint (updated 2026-05-16; Windows RTX4090 deferred)
+
+The target-machine Windows RTX4090 editor-paint closeout remains the formal contract gate, but it is not the
+current local execution blocker. Continue baseline-neutral local work only when it has its own evidence and does
+not update checked-in baselines.
+
+- [ ] Complete the formal Windows RTX4090 editor-paint closeout when the target machine is available.
+  - Required shape: run the validation directory without `--allow-non-windows`, run the attribution directory with
+    `--with-paint-perf`, then pass artifact verifier and closeout without `--allow-non-windows`.
+  - Preferred runner: `tools/perf/diag_editor_paint_contract_windows_handoff.py`
+  - This remains a TODO and must not be replaced by local macOS evidence.
+- [x] Keep a one-command target-machine handoff runner for the deferred Windows RTX4090 closeout.
+  - Runner: `tools/perf/diag_editor_paint_contract_windows_handoff.py`
+  - Sequence: release builds, preflight, baseline validation, `--with-paint-perf` attribution validation, artifact
+    verifier, and closeout gates. Use `--skip-build` only when the Windows target binaries are already current.
+  - Release build and preflight steps are fatal prerequisites; validation does not run if they fail.
+  - Dry-run evidence:
+    `target/fret-diag/editor-paint-contract-windows-handoff-workstream-gate/handoff-plan.json`
+  - Host guard evidence: non-dry-run on this macOS host exits with
+    `the editor paint contract handoff must run on the target Windows host`.
+- [x] Emit an explicit closeout owner decision from verified attribution artifacts.
+  - Surface: `tools/perf/diag_editor_paint_contract_closeout.py` now writes `owner_decision` into the closeout summary.
+  - Outcomes: `canvas-paint-replay`, `renderer-text-prepare`, or `no-code-change`; failed/missing artifacts produce
+    `status=incomplete` and no owner.
+  - Negative evidence:
+    `target/fret-diag/editor-paint-contract-validate-20260516-goal-audit/editor-paint-contract-closeout.after-owner-decision.summary.json`
+- [x] Run a baseline-neutral local editor-paint contract validation/attribution pass while Windows RTX4090 is deferred.
+  - Tooling: `diag_editor_paint_contract_validate.py` and `diag_resize_probes_gate.py` accept a full `--launch-cmd`;
+    verifier and closeout accept explicit `--allow-non-windows` for local triage only.
+  - Validation evidence:
+    `target/fret-diag/editor-paint-contract-validate-goal-audit-local-cargo/summary.json`
+  - Attribution evidence:
+    `target/fret-diag/editor-paint-contract-validate-goal-audit-local-cargo-attrib/summary.json`
+  - Verified local closeout:
+    `target/fret-diag/editor-paint-contract-validate-goal-audit-local-cargo/editor-paint-contract-closeout.summary.json`
+  - Result: all three probes passed their checked threshold reports on this local macOS M4 run, and local closeout
+    selected `owner=canvas-paint-replay` with complex-wheel `paint_widget_p95_us=509`,
+    `canvas_exclusive_p95_us=407`, and highest `renderer_prepare_text_p95_us=69`.
+  - Decision: do not start another renderer text/glyph residency slice from current evidence. The next local
+    optimization owner is Canvas/paint replay, while the formal Windows RTX4090 closeout remains a TODO.
+- [x] Re-run the three local editor paint probes after any host-widget, renderer-text, or paint-cache cleanup before
+  widening the implementation lane.
+  - Probes:
+    - `tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-typical.json`
+    - `tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json`
+    - `tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
+  - Required local evidence: repeat=3, warmup=5, standard prewarm/prelude hooks, overlay disabled, `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`,
+    and `fretboard-dev diag stats --sort time --top 15 --json` for the worst bundle.
+  - Do not treat this as Windows closeout or baseline promotion evidence.
+  - Latest local pass (2026-05-16, macOS M4; baseline-neutral):
+    - typical autoscroll: `target/fret-diag/local-next-editor-paint-20260516-after-no4090-typical-r3/1778928598441/bundle.schema2.json`
+    - complex wheel: `target/fret-diag/local-next-editor-paint-20260516-after-no4090-complex-wheel-r3/1778928659800/bundle.schema2.json`
+    - resize jitter: `target/fret-diag/local-next-editor-paint-20260516-after-no4090-resize-jitter-r3/1778928717171/bundle.schema2.json`
+  - Result:
+    - autoscroll p95: total `654 -> 682us`, paint `416 -> 451us`, `renderer_prepare_text_us 338 -> 35us`,
+      `renderer_prepare_text_collect_pin_keys_us 325 -> 22us`
+    - complex wheel p95: total `886 -> 808us`, paint `687 -> 662us`, `renderer_prepare_text_us 341 -> 47us`,
+      `renderer_prepare_text_collect_pin_keys_us 324 -> 29us`
+    - resize jitter p95: total `1501 -> 1689us`, layout `851 -> 862us`, `layout_engine_solve_time_us 399 -> 412us`,
+      `renderer_prepare_text_collect_pin_keys_us 347 -> 62us`
+  - Decision: the renderer text collector is no longer the dominant local owner on these probes. Keep the text
+    collector refactor as the landed local slice and move the next optimization discussion to resize layout roots /
+    solve batching, not another scene-text scan rewrite.
+- [x] Collapse visible row-rect generation into a windowed-row iterator before considering a broader surface rewrite.
+  - Change: `WindowedRowsPaintFrame::row_rects(...)` now generates visible row rectangles incrementally and is used by
+    `paint_windowed_rows(...)` plus code-editor row-scene prepaint planning.
+  - Gate:
+    `cargo nextest run -p fret-ui-kit windowed_rows_frame_row_rects_iterates_visible_rows --no-fail-fast`
+    and
+    `cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast`.
+  - Local no-4090 evidence:
+    `target/fret-diag/local-next-editor-paint-20260516-row-rect-iter-typical-r3/1778932552262/bundle.schema2.json`.
+  - Result: the local typical bundle's `code_editor_paint_perf.p95.us_total` moved `138 -> 119us`,
+    `us_windowed_surface_paint_callback` moved `176 -> 160us`, and `us_windowed_surface_row_paint` moved
+    `158 -> 141us`; the row replay shape stayed stable with `289` rows replayed and `0` rows stored.
+  - Decision: this is a small fixed-loop cleanup, not evidence for a broad windowed-surface, paint-cache, or
+    display-list rewrite. Later local contract attribution superseded the resize-first discussion and selected
+    Canvas/paint replay as the next local owner; keep Windows RTX4090 closeout as TODO.
+- [x] Attribute the remaining local paint/renderer split before another code change.
+  - Latest typical-only local smoke:
+    `target/fret-diag/paint-observed-deps-presence-snapshot-typical-r3/1778921262429/stats.json`.
+  - Current p95 total/paint/paint-widget is `673/423/263us`.
+  - Host-widget observed model/global replay is now `4/4us` p95 after the paint-pass presence snapshot.
+  - Remaining host-widget instance lookup is `42us` p95 across `252` calls; top sampled frames show visual-bounds
+    record/flush around `9..14us` and paint-cache key construction around `26..28us`.
+  - Renderer text/encode/upload remains visible at `324/150/85us` p95 in the same local smoke.
+  - Decision: do not start a broad `ElementHostWidget` or Canvas display-list rewrite from this evidence alone.
+    The next implementation owner should be chosen only after the three-probe local pass confirms whether the
+    residual is renderer text prepare, paint-cache/visual-bounds bookkeeping, or generic paint traversal noise.
+- [x] If renderer text prepare stays dominant across the three probes, add a narrow attribution slice before optimizing.
+  - Split `TextSystem::prepare_for_scene(...)` into scene pin-key collection, bucket delta, prewarm, and upload flush
+    timing.
+  - Implementation surface: renderer frame perf snapshots, UI diagnostics frame stats, and `fretboard-dev diag stats`
+    now expose renderer text prepare subphase timings and glyph/blob counts.
+  - Smoke evidence:
+    `target/fret-diag/renderer-text-prepare-subphase-typical-smoke/1778924874759/bundle.schema2.json`.
+  - Result: local typical p95 shows `renderer_prepare_text_us=339us`, with
+    `renderer_prepare_text_collect_pin_keys_us=326us`; bucket delta is only `13us`, prewarm/pin update/flush upload
+    are `0us`, and the top sampled frame reports `text_blobs=341`, `pinned_glyph_keys=322`, `retained_glyph_keys=322`,
+    `added_glyph_keys=0`, and `removed_glyph_keys=14`.
+  - Candidate follow-up only after attribution: reuse or fingerprint the per-scene text pin set across stable
+    row-replay frames, preserving atlas pin lifetime semantics.
+  - Do not change renderer payload thresholds from local macOS evidence.
+- [x] Optimize renderer text prepare only if the pin-key collection finding reproduces after the attribution slice lands.
+  - Candidate owner: `TextSystem::collect_scene_pinned_keys(...)` used to rebuild a `GlyphKeyBuckets` aggregate from
+    `Scene::text_blob_ids()` each frame even when row replay made the text blob set mostly stable.
+  - Implemented slice: a scene blob-id cache now tracks blob presence and per-blob pin-key refcounts, then updates the
+    aggregate incrementally instead of rescanning every blob shape on every frame.
+  - Repro/gate: reran the three local editor probes above plus the focused `fret-render-wgpu` atlas/reset regression
+    test.
+  - Result: the cached collector cut `renderer_prepare_text_collect_pin_keys_us` from `325/324/347us` p95 on the
+    original probes to `22/29/62us` p95 on the rerun probes. The resize probe still stays layout-dominant, so it is a
+    separate follow-on rather than a renderer-text problem.
+  - Keep any checked-in baseline change blocked on the Windows RTX4090 contract pass.
+- [ ] If paint-cache / visual-bounds bookkeeping is the local residual, optimize only the measured subphase.
+  - Candidate low-risk paths: avoid redundant visual-bounds writes, reuse small paint-cache key inputs, or reduce
+    per-node text-style fingerprint lookups when the node kind cannot carry inherited text style.
+  - Avoid replacing `WindowFrame.instances` or cloning semantics in this slice unless the instance lookup p95 grows
+    materially above the current `~42us` aggregate.
+  - [x] Make the residual measurable from root-level `diag stats --json` summaries before changing behavior.
+    - Surface: p50/p95/max now include `paint_cache_key_time_us`, `paint_cache_hit_check_time_us`,
+      `paint_record_visual_bounds_time_us`, `paint_record_visual_bounds_calls`, and
+      `paint_observation_record_time_us`.
+    - Local read: the latest no-4090 editor probes keep paint-cache key construction around `25..29us` in the top
+      frames and visual-bounds recording around `8..15us`; this is useful attribution, but not yet evidence for a
+      broad paint-cache or visual-bounds rewrite.
+- [ ] Keep structural refactors as separate follow-ons rather than reopening P1.5.
+  - Split a new narrow workstream only for hard structural changes such as true FrameArena/bump allocation,
+    `WindowFrame.children` arena/slab storage, explicit view-cache paint-skip semantics, or an editor row-fragment
+    replay contract.
+  - Do not split a new workstream for small local host-widget or renderer-text attribution slices.
+- [x] Start a narrow Canvas/paint replay investigation before any broad renderer or UI-tree rewrite.
+  - First evidence target: use the verified local attribution artifacts above and inspect why complex-wheel
+    `canvas_exclusive_p95_us` remains near `407us` while renderer text prepare is below `70us`.
+  - Candidate surfaces: Canvas command replay, paint widget hotspot accounting, row-scene replay boundaries, visual
+    bounds recording, and paint-cache key construction.
+  - Finding: the complex-wheel hotspot was not pure renderer/Canvas cost. Inline preedit caused
+    `replay_row_scene_plan_candidates_for_frame(...)` to return before planning any visible row, forcing the whole
+    editor surface onto paint-time row-scene probes.
+  - Fix: keep only the preedit/caret row on the paint-time path and allow unrelated rows to use retained prepaint
+    row-scene replay.
+  - Local no-4090 evidence:
+    `target/fret-diag/local-next-editor-paint-20260516-preedit-row-plan-complex-wheel-r3/worst.stats.json`.
+  - Result versus the previous local `prepaint-both-edges` complex-wheel run:
+    `rows_scene_prepaint_planned` moved `0 -> 288`, `rows_scene_prepaint_skip_preedit` moved `0 -> 1`,
+    code-editor `us_total` p95 moved `383 -> 111us`, windowed-surface paint callback p95 moved `414 -> 151us`,
+    Canvas exclusive p95 moved `419 -> 152us`, and frame paint p95 moved `679 -> 427us`.
+  - Tradeoff: prepaint p95 moved `122 -> 268us`; the next measured slice should reduce prepaint planning cost or
+    introduce a coarser row-fragment replay contract.
+  - Keep this as a measured slice; do not change baselines from local macOS evidence.
+- [ ] Reduce the residual prepaint row-scene planning cost after the inline-preedit replay recovery.
+  - [x] Split `us_row_scene_prepaint_plan` into cache-probe and key-compare attribution so the next change is
+    attributable.
+    - Surface: code-editor paint perf schema version `13`, `diag stats` p50/p95/max JSON, human stats output, and
+      `diag perf` repeat-summary rows now include `us_row_scene_prepaint_probe` and
+      `us_row_scene_prepaint_key_compare`.
+    - Local no-4090 evidence:
+      `target/fret-diag/local-next-editor-paint-20260516-prepaint-probe-attrib-complex-wheel-r3/worst.stats.json`.
+    - Result: complex-wheel worst-bundle frame p95 is total/paint/prepaint `808/433/275us`; code-editor paint p95 is
+      total/prepaint-plan/prepaint-probe/prepaint-key-compare/surface-callback
+      `113/95/77/7/153us`, with `288` rows prepaint-planned and `288` rows replayed.
+    - Decision: key comparison is not the local owner. The residual is cache probing plus replay-plan entry assembly
+      across the visible row set, so optimize row-fragment planning before touching renderer text/glyph residency.
+  - [x] Test the small reversible cleanup before a structural prototype.
+    - Experiment: use a single mutable cache lookup for prepaint hits and preallocate plan entries for the visible
+      row count.
+    - Local no-4090 evidence:
+      `target/fret-diag/local-next-editor-paint-20260516-prepaint-plan-small-opt-complex-wheel-r3/worst.stats.json`.
+    - Result versus the attribution run: code-editor paint p95 prepaint-plan was effectively flat `95 -> 94us`,
+      prepaint-probe regressed `77 -> 85us`, and frame total p95 moved `808 -> 829us`.
+    - Decision: do not keep this cleanup; the next real optimization is a row-fragment replay contract, not another
+      HashMap lookup micro-change.
+  - [x] Prototype a row-fragment replay contract that lets prepaint hand paint retained row fragments with less
+    per-row assembly cost in the hot callback.
+    - Follow-on lane:
+      `docs/workstreams/code-editor-row-fragment-replay-contract-v1/WORKSTREAM.json`.
+    - Implemented shape: `RowSceneReplayPlanEntry` points at `Arc<RowSceneRetainedFragment>` and carries only row
+      plus local-bounds metadata; no-overlay planned rows delay geometry cloning until the row-geom cache needs it.
+    - Local no-4090 complex-wheel evidence:
+      `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-r2/worst.stats.json`.
+    - Result: repeat-summary p95 `top_code_editor_row_scene_prepaint_probe_us` moved `77 -> 40us`,
+      `top_code_editor_row_scene_prepaint_plan_us` moved `95 -> 49us`, and
+      `top_code_editor_windowed_surface_paint_callback_us` moved `153 -> 120us`.
+    - Fresh next-owner read: worst r2 total frame was dominated by `layout_semantics_refresh_time_us=399us`
+      while renderer prepare text stayed at `37us` p95. Do not start renderer text/glyph residency from this result.
+  - [x] Re-run the three local editor paint probes after the row-fragment planning change; require the complex-wheel
+    p95 `us_row_scene_prepaint_probe` to move materially below the current `~77us` before claiming progress.
+    - Local no-4090 evidence:
+      - typical autoscroll:
+        `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-typical-r3/worst.stats.json`
+      - complex wheel:
+        `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-r2/worst.stats.json`
+      - resize jitter:
+        `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-resize-jitter-r3/worst.stats.json`
+    - Result: complex-wheel code-editor p95 `us_row_scene_prepaint_probe` is now `27us` in the worst-bundle stats,
+      down from the `77us` attribution baseline; typical autoscroll is `37us`; resize jitter is `54us`.
+    - Decision: row-fragment planning is no longer the local dominant owner. The next measurable owner is
+      resize-jitter layout roots / solve work, with the top layout hotspot in the gallery content `ScrollArea`.
+  - [ ] Attribute resize-jitter `ScrollArea` / view-cache-root layout churn before starting another editor paint slice.
+    - First question: why does the gallery content cache root report `reuse_reason=needs_rerender` during resize when
+      the row-fragment path is stable?
+    - Second question: whether the top `Scroll` layout hotspot is expected scroll extent observation under resize or
+      avoidable shadcn `ScrollArea` chrome/viewport subtree churn.
+    - Candidate owner: continue `scroll-optimization-v1` if this is mechanism-level scroll extent / deferred probe
+      behavior; keep it in `ui-perf-zed-smoothness-v1` if it is a resize solve batching contract; keep it in
+      `fret-ui-shadcn` only if the fix is recipe policy.
+  - Do not widen this into a renderer rewrite unless renderer prepare/encode becomes dominant in the local and
+    Windows RTX4090 evidence.
+
 ## Current priorities (updated 2026-02-08)
 
 - [x] Keep an explicit perf contract matrix for editor-grade probes.
@@ -683,6 +892,10 @@ Conventions:
           `WindowedRowsSurface` callback internals remain the next owner candidate:
           callback-minus-row-paint is `118..149us` p95, while row-paint-minus-code-editor-total
           is only `13..21us` p95.
+        - Local micro-slice: `ElementHostWidget::paint_impl` now short-circuits the container
+          `focus_visible` global lookup unless the container is focused, matching text input/area
+          paint behavior. This is a baseline-neutral traversal cleanup, not evidence for a
+          threshold update.
       - [x] Inspect `WindowedRowsSurface` callback overhead before changing behavior.
         - Start from `ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs`.
         - Preserve the existing code-editor row replay/cache evidence as a guardrail; do not
@@ -693,9 +906,82 @@ Conventions:
           complex wheel, and resize jitter bundles, the p95 values are `65/62/62ns` per row and
           `79/48/72ns` per row respectively. That keeps the remaining gap in aggregate loop overhead
           territory rather than a separate row hot loop.
+      - [ ] Continue non-RTX4090 local optimization triage without treating it as contract closeout.
+        - Current policy: keep the Windows RTX4090 validation as the target-machine TODO below, but
+          allow independent local slices when they have their own evidence and do not update checked-in
+          baselines.
+        - Current local smoke after the focus-visible short-circuit:
+          `target/fret-diag/container-focus-visible-short-circuit-typical-r3/1778912115985/bundle.schema2.json`.
+          `fretboard-dev diag stats` reports p95 total/prepaint/paint/paint_widget
+          `769/221/524/314us`, Canvas exclusive p95 `176us`, renderer text/encode/upload p95
+          `344/142/84us`, host instance/models/globals p95 `41/25/24us`, paint collapse p95
+          `52us`, and row replay/store p95 `289/0`.
+        - Local slice: `ObservationIndex::record` and `GlobalObservationIndex::record` now remove
+          previous node entries when the new observation list is empty instead of retaining empty
+          `by_node` entries for later view-cache collapse scans. Same-script local typical evidence
+          in `target/fret-diag/empty-observation-record-fastpath-typical-r3` moves
+          `paint_collapse_observations_time_us` p95 from `52us` to `17..18us`, while row
+          replay/store remains `289/0`. Treat the run-1 total-frame outlier (`1715us`) as local
+          scheduler/noise evidence and do not update baselines.
+        - Local slice: paint now prepares an observed-deps presence snapshot once per `UiTree`
+          paint pass, and `ElementHostWidget::paint_impl` skips the runtime empty-deps lookup
+          path when that active snapshot says the element has no declarative model/global
+          observations. Same-script local typical evidence in
+          `target/fret-diag/paint-observed-deps-presence-snapshot-typical-r3/1778921262429/stats.json`
+          moves `paint_host_widget_observed_models_time_us` / `paint_host_widget_observed_globals_time_us`
+          p95 from `24/23us` to `4/4us`. This is a baseline-neutral host-widget traversal cleanup,
+          not Windows RTX4090 closeout evidence.
+        - Local slice: code-editor torture autoscroll now requests paint-only RAF from the
+          `WindowedRowsSurface` paint hook. This removes the generic `notify/animation_frame_request`
+          cache-root dirty source while preserving the real scroll-handle window update signal.
+          Local no-4090 evidence:
+          `target/fret-diag/local-next-no4090-paint-only-raf-typical-20260516-r3/worst.stats.json`,
+          `target/fret-diag/local-next-no4090-paint-only-raf-complex-wheel-20260516-r3/worst.stats.json`,
+          and
+          `target/fret-diag/local-next-no4090-resize-jitter-paint-only-raf-20260516-r3/worst.stats.json`.
+          The three probes keep row replay healthy (`rows_scene_stored` p95 `0/1/0`, replay hit rate
+          `100%`) and reduce the resize-jitter p95 total/layout/prepaint/paint from
+          `1494/903/221/632us` to `1479/865/183/613us`. This is still baseline-neutral local
+          evidence only.
+        - Formal owner decision from the three-probe editor contract remains unchanged: the
+          dominant residual is still `paint.widget` / Canvas aggregate work, with renderer text
+          prepare visible but not yet the primary limiter. The next implementation slice should
+          inspect remaining host-widget instance lookup plus paint cache / visual-bounds
+          bookkeeping before any glyph/text-index residency or broad display-list rewrite.
+        - Near-term local owner order:
+          1. Re-run the three editor paint probes locally after any host-widget cleanup to confirm
+             the typical-only smoke generalizes to complex wheel and resize jitter.
+          2. Attribute the remaining outer paint traversal cost before changing behavior, especially
+             `paint_host_widget_instance_lookup_time_us`, paint-cache key / replay bookkeeping, and
+             visual-bounds flush. Consider scratch-map reuse or recording already-collapsed
+             view-cache-root observations only if bundles keep this above noise.
+          3. Audit policy/component focus-visible lookups in ecosystem crates and only short-circuit
+             the obvious `focused && focus_visible` cases with targeted tests; this is a small
+             traversal cleanup, not a core contract change.
+          4. Investigate a retained-windowed-paint scroll update path that does not mark the parent
+             content view-cache root `needs_rerender` when retained row fragments already cover the
+             visible row window. Keep `Scroll.windowed_paint=true` as the conservative default for
+             non-retained surfaces.
+          5. Refresh or close the older `ui-perf-paint-pass-breakdown-v1` notes before using them as
+             a current execution source; the active editor-paint evidence now lives in this lane.
+        - Do not split a new workstream for the above. Split a narrow follow-on only when the next
+          slice becomes a hard contract or structural rewrite, such as true FrameArena/bump allocation,
+          `WindowFrame.children` arena/slab storage, explicit view-cache paint-skip semantics, or an
+          editor Canvas/row-fragment replay contract.
       - [ ] Stabilize the target-machine editor paint contract before closing P1.5.
+        - Current execution policy: defer this as the Windows RTX4090 TODO while continuing independent local
+          optimization slices. Do not treat local macOS evidence or dry-run plans as substitutes for the required
+          target-machine validation and attribution directories.
         - Required artifact: Windows RTX4090 overlay-disabled validation for typical autoscroll, complex wheel, and
           code-editor resize jitter; use a deliberate re-seed path only if the validation evidence justifies it.
+        - Latest local handoff audits: perf log entries `2026-05-16 14:46:00 +0800` and
+          `2026-05-16 18:26:00 +0800` confirm the current macOS M4 workspace cannot produce the required closeout
+          artifacts. The target-machine runner rejects non-dry-run execution on non-Windows hosts, and the verifier /
+          closeout tools reject dry-run directories because they lack real validation/attribution `summary.json` files.
+        - Clean Windows handoff plans:
+          `target/fret-diag/editor-paint-contract-windows-handoff-validation-plan/validation-plan.json`,
+          `target/fret-diag/editor-paint-contract-windows-handoff-attribution-plan/validation-plan.json`, and
+          `target/fret-diag/editor-paint-contract-windows-handoff-closeout-plan.json`.
         - Target-machine runner:
           `python tools/perf/diag_editor_paint_contract_validate.py --date-tag <date>`.
           Use `--dry-run` on non-target hosts to inspect the command plan. Use a fresh `--date-tag` / `--out-dir` for
@@ -721,7 +1007,9 @@ Conventions:
             stats (`top_code_editor_torture_overlay_us=0` / `code_editor_paint_perf.max.us_torture_overlay=0`).
         - Required evidence: ordinary validation must provide `check.perf_thresholds.json` with
           `failures=[]`, worst-bundle `diag stats` summaries for paint/widget, code-editor paint perf, and
-          renderer text/encode/upload. A deliberate re-seed path must additionally provide
+          renderer text/encode/upload. The artifact verifier projects these raw fields as per-probe
+          `decision_inputs` so closeout can choose Canvas/paint, renderer text, or no-code-change from the synced
+          artifacts. A deliberate re-seed path must additionally provide
           `selection-summary.json` plus no-threshold-loosening evidence unless a policy note intentionally
           justifies the reset.
         - Guardrail: do not update checked-in baselines from macOS M4 evidence and do not mark P1.5

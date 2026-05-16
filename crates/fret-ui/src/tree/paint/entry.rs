@@ -166,6 +166,17 @@ impl<H: UiHost> UiTree<H> {
                     self.paint_cache.invalidate_recording();
                 }
 
+                if let Some(window) = self.window {
+                    crate::elements::observed_deps_presence_copy_into(
+                        app,
+                        window,
+                        &mut self.scratch_paint_observed_deps_presence,
+                    );
+                    self.scratch_paint_observed_deps_presence_active = true;
+                } else {
+                    self.scratch_paint_observed_deps_presence.clear();
+                    self.scratch_paint_observed_deps_presence_active = false;
+                }
                 self.scratch_visual_bounds_records.clear();
 
                 let (roots, roots_elapsed) = fret_perf::measure_span(
@@ -342,6 +353,8 @@ impl<H: UiHost> UiTree<H> {
         if let Some(paint_elapsed) = paint_elapsed {
             self.debug_stats.paint_time = paint_elapsed;
         }
+        self.scratch_paint_observed_deps_presence.clear();
+        self.scratch_paint_observed_deps_presence_active = false;
     }
 
     pub fn paint(
@@ -353,6 +366,20 @@ impl<H: UiHost> UiTree<H> {
         scene: &mut Scene,
         scale_factor: f32,
     ) {
+        let was_presence_active = self.scratch_paint_observed_deps_presence_active;
+        if !was_presence_active {
+            if let Some(window) = self.window {
+                crate::elements::observed_deps_presence_copy_into(
+                    app,
+                    window,
+                    &mut self.scratch_paint_observed_deps_presence,
+                );
+                self.scratch_paint_observed_deps_presence_active = true;
+            } else {
+                self.scratch_paint_observed_deps_presence.clear();
+                self.scratch_paint_observed_deps_presence_active = false;
+            }
+        }
         self.paint_node(
             app,
             services,
@@ -363,5 +390,9 @@ impl<H: UiHost> UiTree<H> {
             crate::tree::paint_style::PaintStyleState::default(),
             Transform2D::IDENTITY,
         );
+        if !was_presence_active {
+            self.scratch_paint_observed_deps_presence.clear();
+            self.scratch_paint_observed_deps_presence_active = false;
+        }
     }
 }

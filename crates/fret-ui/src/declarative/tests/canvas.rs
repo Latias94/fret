@@ -6,6 +6,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use super::*;
 use fret_core::FontId;
+use fret_runtime::Model;
 
 #[derive(Debug, Clone)]
 struct TestFragmentPlan {
@@ -85,6 +86,72 @@ fn canvas_resolves_passive_text_style_and_foreground_from_current_scope() {
     assert_eq!(resolved.line_height, Some(Px(25.0)));
     assert_eq!(resolved.weight, fret_core::FontWeight::SEMIBOLD);
     assert_eq!(*captured_fg.borrow(), Some(inherited_fg));
+}
+
+#[test]
+fn canvas_paint_observation_replays_without_runtime_empty_deps_lookup_for_empty_siblings() {
+    let mut app = TestHost::new();
+    let model: Model<u32> = app.models_mut().insert(0);
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+    ui.set_paint_cache_enabled(false);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let observed = model.clone();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "canvas-paint-observation-presence",
+        |cx| {
+            cx.observe_model(&observed, Invalidation::Paint);
+            vec![cx.stack(|cx| {
+                vec![
+                    cx.canvas(crate::element::CanvasProps::default(), |_p| {}),
+                    cx.canvas(crate::element::CanvasProps::default(), |_p| {}),
+                    cx.canvas(crate::element::CanvasProps::default(), |_p| {}),
+                ]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    let stats = ui.debug_stats();
+    let first_calls = stats.paint_host_widget_observed_deps_calls;
+    assert!(first_calls > 0);
+    assert_eq!(stats.paint_host_widget_observed_models_non_empty_calls, 1);
+    assert_eq!(
+        stats.paint_host_widget_observed_deps_empty_calls,
+        first_calls - 1
+    );
+
+    app.advance_frame();
+    scene.clear();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    let stats = ui.debug_stats();
+    assert_eq!(stats.paint_host_widget_observed_deps_calls, first_calls);
+    assert_eq!(
+        stats.paint_host_widget_observed_deps_empty_calls,
+        first_calls - 1
+    );
+    assert_eq!(stats.paint_host_widget_observed_models_non_empty_calls, 1);
+
+    ui.test_clear_node_invalidations(root);
+    let _ = model.update(&mut app, |value, _cx| *value += 1);
+    let changed = app.take_changed_models();
+    assert!(ui.propagate_model_changes(&mut app, &changed));
 }
 
 #[test]

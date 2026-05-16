@@ -99,6 +99,14 @@ fn snapshot_code_editor_paint_perf(
             "us_row_scene_prepaint_plan",
             "ns_row_scene_prepaint_plan"
         ),
+        us_row_scene_prepaint_probe: us_field!(
+            "us_row_scene_prepaint_probe",
+            "ns_row_scene_prepaint_probe"
+        ),
+        us_row_scene_prepaint_key_compare: us_field!(
+            "us_row_scene_prepaint_key_compare",
+            "ns_row_scene_prepaint_key_compare"
+        ),
         us_row_scene_capture_ops: us_field!(
             "us_row_scene_capture_ops",
             "ns_row_scene_capture_ops"
@@ -808,6 +816,50 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .unwrap_or(0);
             let renderer_prepare_text_us = stats
                 .and_then(|m| m.get("renderer_prepare_text_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_text_collect_pin_keys_us = stats
+                .and_then(|m| m.get("renderer_prepare_text_collect_pin_keys_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_text_bucket_delta_us = stats
+                .and_then(|m| m.get("renderer_prepare_text_bucket_delta_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_text_prewarm_us = stats
+                .and_then(|m| m.get("renderer_prepare_text_prewarm_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_text_pin_bucket_update_us = stats
+                .and_then(|m| m.get("renderer_prepare_text_pin_bucket_update_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_text_flush_uploads_us = stats
+                .and_then(|m| m.get("renderer_prepare_text_flush_uploads_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_text_scene_text_blobs = stats
+                .and_then(|m| m.get("renderer_prepare_text_scene_text_blobs"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_text_pinned_glyph_keys = stats
+                .and_then(|m| m.get("renderer_prepare_text_pinned_glyph_keys"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_text_prewarm_glyph_keys = stats
+                .and_then(|m| m.get("renderer_prepare_text_prewarm_glyph_keys"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_text_retained_glyph_keys = stats
+                .and_then(|m| m.get("renderer_prepare_text_retained_glyph_keys"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_text_added_glyph_keys = stats
+                .and_then(|m| m.get("renderer_prepare_text_added_glyph_keys"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_text_removed_glyph_keys = stats
+                .and_then(|m| m.get("renderer_prepare_text_removed_glyph_keys"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
             let renderer_prepare_svg_us = stats
@@ -1750,6 +1802,7 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .collect::<Vec<_>>();
             let paint_text_prepare_hotspots =
                 snapshot_paint_text_prepare_hotspots(&semantics, s, 3);
+            let command_availability_hotspots = snapshot_command_availability_hotspots(s, 5);
             let model_change_hotspots = snapshot_model_change_hotspots(s, 3);
             let model_change_unobserved = snapshot_model_change_unobserved(s, 3);
             let global_change_hotspots = snapshot_global_change_hotspots(s, 3);
@@ -1889,6 +1942,21 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .max(layout_observation_record_globals_items);
             out.max_prepaint_time_us = out.max_prepaint_time_us.max(prepaint_time_us);
             out.max_paint_time_us = out.max_paint_time_us.max(paint_time_us);
+            out.max_paint_record_visual_bounds_time_us = out
+                .max_paint_record_visual_bounds_time_us
+                .max(paint_record_visual_bounds_time_us);
+            out.max_paint_record_visual_bounds_calls = out
+                .max_paint_record_visual_bounds_calls
+                .max(paint_record_visual_bounds_calls);
+            out.max_paint_cache_key_time_us = out
+                .max_paint_cache_key_time_us
+                .max(paint_cache_key_time_us);
+            out.max_paint_cache_hit_check_time_us = out
+                .max_paint_cache_hit_check_time_us
+                .max(paint_cache_hit_check_time_us);
+            out.max_paint_observation_record_time_us = out
+                .max_paint_observation_record_time_us
+                .max(paint_observation_record_time_us);
             out.max_paint_host_widget_observed_models_time_us = out
                 .max_paint_host_widget_observed_models_time_us
                 .max(paint_host_widget_observed_models_time_us);
@@ -1990,6 +2058,21 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.max_renderer_prepare_text_us = out
                 .max_renderer_prepare_text_us
                 .max(renderer_prepare_text_us);
+            out.max_renderer_prepare_text_collect_pin_keys_us = out
+                .max_renderer_prepare_text_collect_pin_keys_us
+                .max(renderer_prepare_text_collect_pin_keys_us);
+            out.max_renderer_prepare_text_bucket_delta_us = out
+                .max_renderer_prepare_text_bucket_delta_us
+                .max(renderer_prepare_text_bucket_delta_us);
+            out.max_renderer_prepare_text_prewarm_us = out
+                .max_renderer_prepare_text_prewarm_us
+                .max(renderer_prepare_text_prewarm_us);
+            out.max_renderer_prepare_text_pin_bucket_update_us = out
+                .max_renderer_prepare_text_pin_bucket_update_us
+                .max(renderer_prepare_text_pin_bucket_update_us);
+            out.max_renderer_prepare_text_flush_uploads_us = out
+                .max_renderer_prepare_text_flush_uploads_us
+                .max(renderer_prepare_text_flush_uploads_us);
 
             rows.push(BundleStatsSnapshotRow {
                 window: window_id,
@@ -2132,6 +2215,17 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_record_passes_us,
                 renderer_encoder_finish_us,
                 renderer_prepare_text_us,
+                renderer_prepare_text_collect_pin_keys_us,
+                renderer_prepare_text_bucket_delta_us,
+                renderer_prepare_text_prewarm_us,
+                renderer_prepare_text_pin_bucket_update_us,
+                renderer_prepare_text_flush_uploads_us,
+                renderer_prepare_text_scene_text_blobs,
+                renderer_prepare_text_pinned_glyph_keys,
+                renderer_prepare_text_prewarm_glyph_keys,
+                renderer_prepare_text_retained_glyph_keys,
+                renderer_prepare_text_added_glyph_keys,
+                renderer_prepare_text_removed_glyph_keys,
                 renderer_prepare_svg_us,
                 renderer_uniform_bytes,
                 renderer_instance_bytes,
@@ -2324,6 +2418,7 @@ pub(super) fn bundle_stats_from_json_with_options(
                 widget_measure_hotspots,
                 paint_widget_hotspots,
                 paint_text_prepare_hotspots,
+                command_availability_hotspots,
                 model_change_hotspots,
                 model_change_unobserved,
                 global_change_hotspots,
@@ -2409,6 +2504,8 @@ pub(super) fn bundle_stats_from_json_with_options(
             us_row_scene_replay_touch: metric!(us_row_scene_replay_touch),
             us_row_scene_replay_ops: metric!(us_row_scene_replay_ops),
             us_row_scene_prepaint_plan: metric!(us_row_scene_prepaint_plan),
+            us_row_scene_prepaint_probe: metric!(us_row_scene_prepaint_probe),
+            us_row_scene_prepaint_key_compare: metric!(us_row_scene_prepaint_key_compare),
             us_row_scene_capture_ops: metric!(us_row_scene_capture_ops),
             us_row_scene_store: metric!(us_row_scene_store),
             us_row_scene_prepaint_edge_store: metric!(us_row_scene_prepaint_edge_store),
@@ -2481,6 +2578,26 @@ pub(super) fn bundle_stats_from_json_with_options(
     (out.p50_prepaint_time_us, out.p95_prepaint_time_us) =
         p50_p95(rows.iter().map(|r| r.prepaint_time_us));
     (out.p50_paint_time_us, out.p95_paint_time_us) = p50_p95(rows.iter().map(|r| r.paint_time_us));
+    (
+        out.p50_paint_record_visual_bounds_time_us,
+        out.p95_paint_record_visual_bounds_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.paint_record_visual_bounds_time_us));
+    (
+        out.p50_paint_record_visual_bounds_calls,
+        out.p95_paint_record_visual_bounds_calls,
+    ) = p50_p95(rows.iter().map(|r| r.paint_record_visual_bounds_calls as u64));
+    (
+        out.p50_paint_cache_key_time_us,
+        out.p95_paint_cache_key_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.paint_cache_key_time_us));
+    (
+        out.p50_paint_cache_hit_check_time_us,
+        out.p95_paint_cache_hit_check_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.paint_cache_hit_check_time_us));
+    (
+        out.p50_paint_observation_record_time_us,
+        out.p95_paint_observation_record_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.paint_observation_record_time_us));
     (
         out.p50_paint_input_context_time_us,
         out.p95_paint_input_context_time_us,
@@ -2649,6 +2766,29 @@ pub(super) fn bundle_stats_from_json_with_options(
         out.p50_renderer_prepare_text_us,
         out.p95_renderer_prepare_text_us,
     ) = p50_p95(rows.iter().map(|r| r.renderer_prepare_text_us));
+    (
+        out.p50_renderer_prepare_text_collect_pin_keys_us,
+        out.p95_renderer_prepare_text_collect_pin_keys_us,
+    ) = p50_p95(rows.iter().map(|r| r.renderer_prepare_text_collect_pin_keys_us));
+    (
+        out.p50_renderer_prepare_text_bucket_delta_us,
+        out.p95_renderer_prepare_text_bucket_delta_us,
+    ) = p50_p95(rows.iter().map(|r| r.renderer_prepare_text_bucket_delta_us));
+    (
+        out.p50_renderer_prepare_text_prewarm_us,
+        out.p95_renderer_prepare_text_prewarm_us,
+    ) = p50_p95(rows.iter().map(|r| r.renderer_prepare_text_prewarm_us));
+    (
+        out.p50_renderer_prepare_text_pin_bucket_update_us,
+        out.p95_renderer_prepare_text_pin_bucket_update_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.renderer_prepare_text_pin_bucket_update_us),
+    );
+    (
+        out.p50_renderer_prepare_text_flush_uploads_us,
+        out.p95_renderer_prepare_text_flush_uploads_us,
+    ) = p50_p95(rows.iter().map(|r| r.renderer_prepare_text_flush_uploads_us));
     out.code_editor_paint_perf.p50 = code_editor_paint_perf_percentile(
         rows.iter().filter_map(|r| r.code_editor_paint_perf.as_ref()),
         0.50,
@@ -2721,6 +2861,22 @@ pub(super) fn bundle_stats_from_json_with_options(
                     .then_with(|| b.dispatch_time_us.cmp(&a.dispatch_time_us))
                     .then_with(|| b.total_time_us.cmp(&a.total_time_us))
                     .then_with(|| b.invalidation_walk_nodes.cmp(&a.invalidation_walk_nodes))
+            });
+        }
+        BundleStatsSort::CommandAvailability => {
+            rows.sort_by(|a, b| {
+                b.window_runtime_snapshot_command_availability_time_us
+                    .cmp(&a.window_runtime_snapshot_command_availability_time_us)
+                    .then_with(|| {
+                        b.window_runtime_snapshot_command_availability_eval_time_us
+                            .cmp(&a.window_runtime_snapshot_command_availability_eval_time_us)
+                    })
+                    .then_with(|| {
+                        b.window_runtime_snapshot_command_registry_collect_time_us
+                            .cmp(&a.window_runtime_snapshot_command_registry_collect_time_us)
+                    })
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+                    .then_with(|| b.dispatch_time_us.cmp(&a.dispatch_time_us))
             });
         }
         BundleStatsSort::RendererEncodeScene => {

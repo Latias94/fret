@@ -369,6 +369,34 @@
       "unit": "count"
     },
     {
+      "key": "paint_host_widget_observed_deps_calls",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "paint_host_widget_observed_deps_empty_calls",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "paint_host_widget_observed_models_non_empty_calls",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "paint_host_widget_observed_globals_non_empty_calls",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
       "key": "paint_host_widget_instance_lookup_time_us",
       "kind": "timing",
       "scope": "frame",
@@ -922,6 +950,83 @@
       "scope": "frame",
       "suggested_aggregate": "p95",
       "unit": "us"
+    },
+    {
+      "key": "renderer_prepare_text_collect_pin_keys_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_prepare_text_bucket_delta_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_prepare_text_prewarm_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_prepare_text_pin_bucket_update_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_prepare_text_flush_uploads_us",
+      "kind": "timing",
+      "scope": "frame",
+      "suggested_aggregate": "p95",
+      "unit": "us"
+    },
+    {
+      "key": "renderer_prepare_text_scene_text_blobs",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_prepare_text_pinned_glyph_keys",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_prepare_text_retained_glyph_keys",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_prepare_text_added_glyph_keys",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_prepare_text_removed_glyph_keys",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "renderer_prepare_text_prewarm_glyph_keys",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
     },
     {
       "key": "renderer_encode_scene_stack_us",

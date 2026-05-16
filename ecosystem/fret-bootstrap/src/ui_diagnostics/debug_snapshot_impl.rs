@@ -407,6 +407,17 @@ impl UiTreeDebugSnapshotV1 {
                 .iter()
                 .map(UiPaintTextPrepareHotspotV1::from_hotspot)
                 .collect(),
+            command_availability_hotspots: ui
+                .debug_command_availability_hotspots()
+                .iter()
+                .map(|h| {
+                    UiCommandAvailabilityHotspotV1::from_hotspot(
+                        h,
+                        window,
+                        element_runtime_state,
+                    )
+                })
+                .collect(),
             input_arbitration: UiInputArbitrationSnapshotV1::from_snapshot(
                 ui.input_arbitration_snapshot(),
             ),

@@ -93,6 +93,10 @@
       "command": "python tools/perf/diag_editor_paint_contract_validate.py --dry-run --date-tag workstream-gate"
     },
     {
+      "name": "editor-paint-contract-windows-handoff-plan",
+      "command": "python tools/perf/diag_editor_paint_contract_windows_handoff.py --dry-run --date-tag workstream-gate"
+    },
+    {
       "name": "editor-paint-contract-artifacts-verify",
       "command": "python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-<date> --attribution-dir target/fret-diag/editor-paint-contract-validate-<date>-attrib"
     },
@@ -114,9 +118,11 @@
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-audit.md",
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md",
     "docs/workstreams/ui-perf-zed-smoothness-v1/editor-paint-contract-stabilization-runbook.md",
+    "docs/workstreams/ui-perf-zed-smoothness-v1/GOAL_AUDIT_2026-05-16.md",
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-todo.md",
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md",
     "docs/workstreams/code-editor-prepaint-planner-cost-v1/CLOSEOUT_AUDIT_2026-05-16.md",
+    "docs/workstreams/code-editor-row-fragment-replay-contract-v1/WORKSTREAM.json",
     "docs/workstreams/perf-baselines/README.md",
     "docs/workstreams/standalone/ui-perf-setter-idempotency-v1.md",
     "docs/workstreams/diag-v2-hardening-and-switches-v1/README.md",
@@ -128,11 +134,20 @@
     "crates/fret-ui/src/tree/tests/interactive_resize_flow_rebuild.rs",
     "crates/fret-ui/src/tree/tests/paint_cache.rs",
     "crates/fret-diag/src/compare.rs",
+    "crates/fret-diag/src/diag_perf/code_editor_rows.rs",
+    "crates/fret-diag/src/diag_perf/reporting.rs",
+    "crates/fret-diag/src/diag_perf/runs_rows.rs",
+    "crates/fret-diag/src/diag_perf/stats_rows.rs",
+    "crates/fret-diag/src/stats/bundle_stats_compute.inc.rs",
+    "crates/fret-diag/src/stats/bundle_stats_report.inc.rs",
+    "apps/fret-ui-gallery/src/driver/diag_snapshot.rs",
     "apps/fret-ui-gallery/src/ui/previews/pages/editors/markdown.rs",
     "ecosystem/fret-code-editor-buffer/src/lib.rs",
+    "ecosystem/fret-code-editor/src/editor/diagnostics.rs",
     "ecosystem/fret-code-editor/src/editor/handle/model.rs",
     "ecosystem/fret-code-editor/src/editor/handle/view.rs",
     "ecosystem/fret-code-editor/src/editor/paint/mod.rs",
+    "ecosystem/fret-code-editor/src/editor/paint/scene.rs",
     "ecosystem/fret-code-editor/src/editor/state.rs",
     "ecosystem/fret-code-editor/src/editor/tests/row_geom_cache.rs",
     "ecosystem/fret-code-editor/src/editor/tests/row_text_cache.rs",
@@ -150,6 +165,8 @@
     "tools/perf/test_diag_editor_paint_contract_preflight.py",
     "tools/perf/diag_editor_paint_contract_validate.py",
     "tools/perf/test_diag_editor_paint_contract_validate.py",
+    "tools/perf/diag_editor_paint_contract_windows_handoff.py",
+    "tools/perf/test_diag_editor_paint_contract_windows_handoff.py",
     "tools/perf/diag_editor_paint_contract_verify_artifacts.py",
     "tools/perf/test_diag_editor_paint_contract_verify_artifacts.py",
     "tools/perf/diag_editor_paint_contract_closeout.py",
@@ -174,6 +191,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Current blocking action is target-machine Editor Canvas paint validation on Windows RTX4090 with tools/perf/diag_editor_paint_contract_validate.py, first without --with-paint-perf for the failures=[] artifact and then with --with-paint-perf for attribution stats. Do not start another local optimization or baseline update unless those target artifacts shift the owner attribution. Split narrow follow-ons only for implementation-heavy rewrites, Linux profile adoption, or code-editor feature closure when the audit or contract matrix identifies a concrete hotspot or missing environment profile. Do not mark the broader performance goal complete while ui-perf-contract-audit.md still says the goal is active or while Linux and other environment-specific baselines remain missing."
+    "notes": "Current formal closeout action is target-machine Editor Canvas paint validation on Windows RTX4090 with tools/perf/diag_editor_paint_contract_validate.py, first without --with-paint-perf for the failures=[] artifact and then with --with-paint-perf for attribution stats. When this target-machine artifact is deliberately deferred, continue the local TODO queue in ui-perf-zed-smoothness-v1-todo.md with baseline-neutral evidence only. Local independent optimization slices may continue when they have their own evidence, but they are not substitutes for this closeout and must not drive checked-in baseline changes unless the Windows RTX4090 artifacts justify it. Split narrow follow-ons only for implementation-heavy rewrites, Linux profile adoption, or code-editor feature closure when the audit or contract matrix identifies a concrete hotspot or missing environment profile. Do not mark the broader performance goal complete while ui-perf-contract-audit.md still says the goal is active or while Linux and other environment-specific baselines remain missing."
   }
 }

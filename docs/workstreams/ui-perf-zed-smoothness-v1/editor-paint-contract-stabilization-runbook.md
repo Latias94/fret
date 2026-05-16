@@ -57,7 +57,22 @@ only for debugging a failed runner path; do not use it for closeout evidence.
 
 ## Target-Machine Runner
 
-Prefer the checked-in runner for the full Windows RTX4090 validation pass:
+Prefer the checked-in handoff runner for the full Windows RTX4090 closeout sequence:
+
+```powershell
+python tools/perf/diag_editor_paint_contract_windows_handoff.py `
+  --date-tag <date>
+```
+
+This single command builds the release binaries, runs the fast preflight, runs the baseline-validation pass, runs the
+`--with-paint-perf` attribution pass, verifies artifacts, and runs the local closeout gates. It does not bypass the
+target-machine requirement; use `--dry-run` on non-target hosts to inspect the command plan without producing
+misleading local artifacts. Use `--skip-build` only when the target release binaries are already current.
+Build and preflight steps are fatal prerequisites: if either fails, the handoff stops before running validation.
+When producing a dry-run handoff plan from a non-target host for someone else to run on Windows, pass
+`--python-bin python` so the stored plan uses a portable Windows command instead of the local host's Python path.
+
+Use the lower-level validation runner directly only when you need to debug one validation directory at a time:
 
 ```powershell
 python tools/perf/diag_editor_paint_contract_validate.py `
@@ -94,6 +109,10 @@ python tools/perf/diag_editor_paint_contract_verify_artifacts.py `
 This verifier checks that both summaries carry a non-empty `date_tag`, that the baseline-validation pass used the
 expected repeat/warmup shape, that every probe has `check.perf_thresholds.json` with `failures=[]`, that `diag stats
 --json` output exists for every worst bundle, and that the attribution pass includes `code_editor_paint_perf` coverage.
+For each verified probe, the report also projects `decision_inputs` from the captured `diag stats --json` output:
+paint-widget p95/max, renderer text/encode/upload p95, code-editor paint p95/max counters, and the
+`paint_widget_hotspot_summary` split needed to decide whether the next owner is Canvas/paint traversal, renderer text
+prepare, or no code change.
 It also rejects target summaries whose stored commands drift from the contract shape: resize must use the Windows
 code-editor resize suite plus release `fretboard-dev.exe` and either the default inspectable cargo gallery launch or the
 legacy release `fret-ui-gallery.exe`, while the direct `diag perf` probes must use `--reuse-launch`, the standard font
@@ -101,6 +120,44 @@ prewarm and reset-diagnostics prelude, `--json`, the default inspectable cargo g
 binary, and the required overlay-disabled env set. The baseline-validation direct `diag perf` commands must not set
 `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`; that flag belongs to the attribution directory for direct probes. The resize
 helper may still collect its code-editor paint-perf fields internally.
+
+The closeout summary also emits `owner_decision` after artifact verification. The decision maps verified attribution
+inputs to one of the closeout actions:
+
+- `canvas-paint-replay`: open a Canvas / paint replay implementation slice.
+- `renderer-text-prepare`: open a glyph / text-index / atlas residency slice.
+- `no-code-change`: lock gates and docs without another implementation slice.
+
+If the artifacts are missing or fail verification, `owner_decision.status` is `incomplete` and no owner is selected.
+
+## Minimal Closeout Sequence
+
+Use this sequence on the Windows RTX4090 target host after building the release binaries. It is the shortest command
+chain that can satisfy the closeout objective; dry-run output and non-target-host output are not valid substitutes.
+
+```powershell
+$DateTag = "YYYYMMDD-editor-paint"
+
+python tools/perf/diag_editor_paint_contract_validate.py `
+  --date-tag $DateTag
+
+python tools/perf/diag_editor_paint_contract_validate.py `
+  --date-tag "$DateTag-attrib" `
+  --with-paint-perf
+```
+
+After both output directories are synced back to the workspace that will update the docs, run the verifier/closeout
+gate:
+
+```powershell
+python tools/perf/diag_editor_paint_contract_closeout.py `
+  "target/fret-diag/editor-paint-contract-validate-$DateTag" `
+  --attribution-dir "target/fret-diag/editor-paint-contract-validate-$DateTag-attrib"
+```
+
+Closeout is valid only when the first directory has a baseline-validation `summary.json` with
+`with_paint_perf=false`, the second directory has an attribution `summary.json` with `with_paint_perf=true`, and the
+closeout command reports `ok=true`.
 
 ## Validate Current Contracts First
 

@@ -817,7 +817,7 @@ fn view_cache_scroll_handle_window_update_marks_cache_root_needs_rerender() {
 }
 
 #[test]
-fn view_cache_scroll_windowed_paint_marks_cache_root_needs_rerender() {
+fn view_cache_scroll_windowed_paint_marks_cache_root_paint_dirty_without_rerender() {
     let mut app = crate::test_host::TestHost::new();
 
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
@@ -891,7 +891,8 @@ fn view_cache_scroll_windowed_paint_marks_cache_root_needs_rerender() {
         ui.nodes[id].view_cache_needs_rerender = false;
     }
 
-    // Programmatic scroll should mark the cache root dirty so windowed paint surfaces can update.
+    // Programmatic scroll should repaint the cache root so windowed paint surfaces can update
+    // without rerunning the declarative cache-root closure.
     scroll_handle.set_offset(fret_core::Point::new(
         fret_core::Px(0.0),
         fret_core::Px(250.0),
@@ -903,10 +904,17 @@ fn view_cache_scroll_windowed_paint_marks_cache_root_needs_rerender() {
         true,
     );
 
-    assert!(ui.nodes[boundary].view_cache_needs_rerender);
-    assert!(!ui.should_reuse_view_cache_node(boundary));
-    // The scroll node itself remains hit-test-only invalidated; the rerender flag carries the
-    // windowed-paint contract.
+    assert!(
+        !ui.nodes[boundary].view_cache_needs_rerender,
+        "windowed-paint offset changes should repaint without forcing a view-cache rerender"
+    );
+    assert!(ui.should_reuse_view_cache_node(boundary));
+    assert!(
+        ui.nodes[boundary].invalidation.paint,
+        "windowed-paint offset changes must still invalidate paint-cache replay"
+    );
+    // The scroll node itself remains hit-test-only invalidated; the cache root paint invalidation
+    // carries the windowed-paint contract.
     assert!(ui.nodes[scroll_node].invalidation.hit_test);
 }
 
@@ -1337,8 +1345,12 @@ fn view_cache_scroll_handle_ignores_detached_same_frame_stale_bindings() {
     );
 
     assert!(
-        ui.nodes[live_boundary].view_cache_needs_rerender,
-        "the attached cache root should still observe the windowed-paint scroll update"
+        !ui.nodes[live_boundary].view_cache_needs_rerender,
+        "the attached cache root should repaint without forcing a view-cache rerender"
+    );
+    assert!(
+        ui.nodes[live_boundary].invalidation.paint,
+        "the attached cache root should still observe the windowed-paint repaint"
     );
     assert!(
         !ui.nodes[stale_boundary].view_cache_needs_rerender,

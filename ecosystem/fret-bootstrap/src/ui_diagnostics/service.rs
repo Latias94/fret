@@ -1971,6 +1971,9 @@ mod service_tests {
         let mut perf = fret_render::RendererPerfFrameSample::default().perf;
         perf.frames = 1;
         perf.encode_scene_us = 42;
+        perf.prepare_text_collect_pin_keys_us = 5;
+        perf.prepare_text_prewarm_us = 6;
+        perf.prepare_text_pinned_glyph_keys = 77;
         perf.instance_bytes = 2048;
         perf.encode_scene_text_ops = 17;
         let sample = fret_render::RendererPerfFrameSample {
@@ -1992,6 +1995,9 @@ mod service_tests {
         assert_eq!(stats.renderer_frame_id, 9);
         assert_eq!(stats.renderer_frames, 1);
         assert_eq!(stats.renderer_encode_scene_us, 42);
+        assert_eq!(stats.renderer_prepare_text_collect_pin_keys_us, 5);
+        assert_eq!(stats.renderer_prepare_text_prewarm_us, 6);
+        assert_eq!(stats.renderer_prepare_text_pinned_glyph_keys, 77);
         assert_eq!(stats.renderer_instance_bytes, 2048);
         assert_eq!(stats.renderer_encode_scene_text_ops, 17);
     }
