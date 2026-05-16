@@ -529,6 +529,15 @@ This validates script JSON, required overlay-disabled script contracts, diag scr
 baseline matrix audit. It does not cover any Windows RTX4090 timing result and therefore does not satisfy the baseline
 or attribution artifact requirements.
 
+Active goal tooling check (2026-05-16):
+
+- Command:
+  `python3 -m unittest discover -s tools/perf -p 'test_diag_editor_paint_contract_*.py'`
+- Result: `43` tests passed.
+
+This proves the current editor-paint contract helper behavior, including handoff planning and verifier/closeout
+failure paths. It still does not replace the missing target-machine validation and attribution artifacts.
+
 ## Open Gaps
 
 1. The broad `ui-gallery-steady` suite remains evidence-only until it is redefined as a suite-of-contracts or its
