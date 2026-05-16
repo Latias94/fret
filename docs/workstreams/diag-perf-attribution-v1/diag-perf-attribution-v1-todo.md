@@ -48,6 +48,9 @@
     `fret-bootstrap` `ui_app_driver` apps.
   - Diagnostics drive-script overhead is recorded separately as
     `fret.ui.diagnostics.drive_script`, so scripted-input cost does not disappear into app phases.
+  - Diagnostics snapshot/export overhead is recorded separately as
+    `fret.ui.diagnostics.snapshot`, so bundle snapshot/debug-extension/dump work does not have to
+    be inferred from unaccounted frame tail time.
   - The command palette and default preferences overlays are recorded as nested app-loop spans:
     `fret.ui.view.command_palette_overlay` and `fret.ui.view.preferences_overlay`, so editor
     overlay costs can be separated from the parent View span.
@@ -56,7 +59,7 @@
     caller-provided `FRET_DIAG_REAL_SPANS` override.
   - The Chrome trace exporter merges the extension payload when a bundle contains it.
   - Gate:
-    `cargo nextest run -p fret-bootstrap --features diagnostics,ui-app-driver,ui-app-command-palette real_perf_spans_extension_value_is_v1_payload perf_span_capture_records_frame_relative_driver_phase perf_span_capture_allows_nested_phase_recording perf_span_capture_records_view_command_palette_overlay_phase perf_span_capture_records_view_preferences_overlay_phase perf_span_capture_records_diagnostics_drive_script_phase --no-fail-fast`
+    `cargo nextest run -p fret-bootstrap --features diagnostics,ui-app-driver,ui-app-command-palette real_perf_spans_extension_value_is_v1_payload record_snapshot_includes_diagnostics_snapshot_span_at_frame_relative_start perf_span_capture_records_frame_relative_driver_phase perf_span_capture_allows_nested_phase_recording perf_span_capture_records_view_command_palette_overlay_phase perf_span_capture_records_view_preferences_overlay_phase perf_span_capture_records_diagnostics_drive_script_phase --no-fail-fast`
   - CLI gate:
     `cargo nextest run -p fret-diag perf_contract_captures_threshold_and_suite_args migrated_perf_subset_builds_a_real_perf_context trace_real_spans_launch_env_injects_opt_in_flag trace_real_spans_launch_env_preserves_explicit_override trace_real_spans_launch_env_requires_launched_process --no-fail-fast`
 - [ ] Future: expand real-span coverage beyond the first nested editor-overlay cases when a

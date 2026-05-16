@@ -95,6 +95,9 @@ Remaining gaps / follow-ups:
     with `FRET_DIAG_REAL_SPANS=1` (View, Overlay, Layout, Paint).
   - 2026-05-16: diagnostics drive-script overhead is split into its own real span
     (`fret.ui.diagnostics.drive_script`) instead of being folded into the snapshot/driver block.
+  - 2026-05-16: diagnostics snapshot/export overhead is split into its own real span
+    (`fret.ui.diagnostics.snapshot`) so diagnostics bundle/debug-extension/dump work is visible
+    instead of hiding in frame tail time.
   - 2026-05-16: the first nested app-loop spans landed for editor overlays
     (`fret.ui.view.command_palette_overlay` and `fret.ui.view.preferences_overlay`), so those
     costs no longer have to be inferred from the parent View span alone.

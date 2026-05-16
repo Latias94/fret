@@ -2554,6 +2554,9 @@ fn ui_app_render<S>(
         );
 
         app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            let real_perf_span_start_us = perf_span_capture
+                .as_ref()
+                .map(UiDriverPerfSpanCapture::frame_elapsed_us);
             if let Some(capture) = perf_span_capture.as_mut() {
                 capture.record_for_window(svc, window);
             }
@@ -2565,6 +2568,7 @@ fn ui_app_render<S>(
                 scale_factor,
                 &mut state.ui,
                 element_runtime,
+                real_perf_span_start_us,
                 scene,
             );
             let defer_dump_until_renderer_perf =
