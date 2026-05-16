@@ -592,7 +592,7 @@ fn sortable_header_visual<H: UiHost>(
     cx.container(cell, move |cx| {
         let mut children = Vec::new();
         if let Some(label) = visible_label.clone() {
-            children.push(cx.text(label));
+            children.push(table_header_label_text(cx, label));
         }
         if let Some(direction) = sort_direction {
             children.push(cx.text(Arc::<str>::from(sort_direction_indicator(direction))));
@@ -624,7 +624,7 @@ fn wrap_plain_header_cell<H: UiHost>(
     resize_response: &mut TableColumnResizeResponse,
 ) -> AnyElement {
     let content = visible_label
-        .map(|label| cx.text(label))
+        .map(|label| table_header_label_text(cx, label))
         .unwrap_or_else(|| empty_cell(cx));
     let content = table_header_content_box(cx, content);
     wrap_table_header_cell(
@@ -649,6 +649,13 @@ fn table_header_content_box<H: UiHost>(
     props.layout.flex.shrink = 1.0;
     props.padding = table_cell_padding().into();
     cx.container(props, move |_cx| vec![content])
+}
+
+fn table_header_label_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: Arc<str>,
+) -> AnyElement {
+    crate::declarative::text::text_table_cell(cx, label)
 }
 
 fn wrap_table_header_cell<H: UiHost>(
@@ -924,5 +931,44 @@ fn resolve_table_palette(theme: &Theme) -> TablePalette {
         border,
         header_bg,
         striped_bg,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size, TextOverflow, TextWrap};
+    use fret_ui::element::ElementKind;
+    use fret_ui::elements;
+
+    fn test_bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(160.0)),
+        )
+    }
+
+    #[test]
+    fn table_header_label_uses_shared_table_cell_text_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+            table_header_label_text(cx, Arc::from("Very long table header"))
+        });
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected table header label to be text");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(el.inherited_text_style.is_some());
     }
 }

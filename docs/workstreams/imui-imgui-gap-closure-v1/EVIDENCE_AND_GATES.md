@@ -177,6 +177,10 @@ Run evidence:
   `ImUiTableRow::cell_text(...)` through it instead of bare paragraph text. Gate:
   `cargo nextest run -p fret-ui-kit --features imui --lib
   table_cell_text_uses_compact_single_line_truncation --no-fail-fast`.
+- 2026-05-16: routed sortable and plain IMUI table header labels through
+  `text_table_cell(...)` too. Header labels now share compact single-line ellipsis semantics with
+  body cells instead of default word wrapping. Gate: `cargo nextest run -p fret-ui-kit --features
+  imui --lib table_header_label_uses_shared_table_cell_text_role --no-fail-fast`.
 - 2026-05-16: introduced `text_control_readout(...)` as the shared compact control-readout text
   role. The UI Gallery code-editor toolbar keeps its doc-layout helper, but that helper now
   delegates to `fret-ui-kit::declarative::text::text_control_readout(...)`, so dense status/readout

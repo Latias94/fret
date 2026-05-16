@@ -436,6 +436,8 @@ def main() -> None:
                 "2026-05-16 control readout text role follow-up",
                 "`text_control_readout(...)` now lives beside",
                 "`text_table_cell(...)` in `fret-ui-kit::declarative::text`",
+                "2026-05-16 table header text follow-up",
+                "sortable/plain table header labels now reuse",
                 "2026-05-16 button label text role follow-up",
                 "`text_button_label(...)` now owns compact",
                 "2026-05-16 code block text role follow-up",
@@ -532,6 +534,7 @@ def main() -> None:
                 "`ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs`",
                 "`ecosystem/fret-ui-kit/src/imui/menu_controls.rs`",
                 "`ecosystem/fret-ui-kit/src/imui/selectable_controls.rs`",
+                "`ecosystem/fret-ui-kit/src/imui/table_controls.rs`",
                 "`ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs`",
                 "`tools/gate_imui_editor_collection_source.py`",
                 "`tools/diag_gate_imui_p2_devtools_first_open.py`",
@@ -570,6 +573,8 @@ def main() -> None:
                 "introduced `text_control_readout(...)` as the shared compact control-readout text",
                 "delegates to `fret-ui-kit::declarative::text::text_control_readout(...)`",
                 "control_readout_text_uses_muted_compact_single_line_truncation",
+                "routed sortable and plain IMUI table header labels through",
+                "table_header_label_uses_shared_table_cell_text_role",
                 "introduced `text_button_label(...)` as the shared compact button-label text role",
                 "routed IMUI `control_text(...)` through it",
                 "button_label_text_uses_medium_single_line_truncation",
@@ -639,6 +644,18 @@ def main() -> None:
             forbidden=[
                 "text.wrap = fret_core::TextWrap::None;",
                 "text.overflow = fret_core::TextOverflow::Ellipsis;",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/table_controls.rs"),
+            required=[
+                "fn table_header_label_text",
+                "crate::declarative::text::text_table_cell(cx, label)",
+                "table_header_label_uses_shared_table_cell_text_role",
+            ],
+            forbidden=[
+                "children.push(cx.text(label));",
+                ".map(|label| cx.text(label))",
             ],
         ),
         SourceCheck(

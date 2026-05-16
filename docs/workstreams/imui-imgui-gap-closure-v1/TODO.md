@@ -188,6 +188,9 @@ Readiness order for the next locally testable review slices:
    `ImUiTableRow::cell_text(...)` routes through the shared `text_table_cell(...)` helper instead
    of bare paragraph text. Remaining advanced-table candidates are freeze panes, column visibility,
    and old columns API shape.
+   2026-05-16 table header text follow-up: sortable/plain table header labels now reuse
+   `text_table_cell(...)` too, so header text follows the same single-line ellipsis role as body
+   cells instead of falling back to default word wrapping.
    2026-05-16 control readout text role follow-up: `text_control_readout(...)` now lives beside
    `text_table_cell(...)` in `fret-ui-kit::declarative::text`, and the UI Gallery code-editor
    toolbar readouts route through that shared role instead of carrying app-local text layout policy.
