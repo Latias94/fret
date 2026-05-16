@@ -279,10 +279,11 @@ Exit criteria:
   2026-05-17 color preview/tooltip text result: color side-preview captions and tooltip numeric
   lines now use dedicated editor readout helpers. This keeps readout/caption semantics out of
   popup-list rows while eliminating the remaining local `TextProps` in those color surfaces.
-  2026-05-17 property chrome text result: property-group header labels and property-row reset
-  glyphs now reuse editor readout helpers. Fixed inspector chrome text no longer hand-rolls local
-  `TextProps`, so header and reset glyph behavior remains single-line and line-box constrained
-  under resize.
+  2026-05-17 property chrome text result: property-group header labels, property-row reset glyphs,
+  and inspector panel titles now reuse editor readout helpers. Fixed inspector chrome text no
+  longer hand-rolls local/default `TextProps`, so header, title, and reset glyph behavior remains
+  single-line and line-box constrained under resize. A narrow-header `InspectorPanel` layout gate
+  proves long titles stay one measured line beside toolbar siblings.
   2026-05-17 text role matrix result: `P3_TEXT_ROLE_MATRIX_2026-05-17.md` now records the stable
   base role vocabulary for future resize triage: control readout, button label, paragraph, code
   text, and table cell text. The matrix treats wrapping paragraph/validation copy as an explicit

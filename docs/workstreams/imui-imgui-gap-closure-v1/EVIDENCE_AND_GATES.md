@@ -342,15 +342,20 @@ Run evidence:
   enum_select_item_test_id_segment_is_stable_ascii empty_label_is_inline_only
   color_copy_entries_match_imgui_copy_as_payloads
   popup_options_default_to_imgui_like_hue_bar_surface --no-fail-fast`.
-- 2026-05-17: introduced `editor_property_group_header_text_props(...)` and
-  introduced `editor_property_row_reset_glyph_text_props(...)` in
-  `ecosystem/fret-ui-editor/src/primitives/readout.rs`, then routed `PropertyGroup` header labels
-  and `PropertyRow` reset glyphs through those shared roles. This
-  removes local inspector chrome `TextProps` policy from the composites while keeping fixed-row
-  text single-line, shrinkable where needed, and line-height constrained under resize. Gate:
+- 2026-05-17: introduced `editor_property_group_header_text_props(...)`,
+  introduced `editor_property_row_reset_glyph_text_props(...)`. This slice also
+  introduced `editor_inspector_panel_title_text_props(...)` in
+  `ecosystem/fret-ui-editor/src/primitives/readout.rs`, then routed `PropertyGroup` header labels,
+  `PropertyRow` reset glyphs, and `InspectorPanel` titles through those shared roles. This removes
+  local inspector chrome/default text policy from the composites while keeping fixed-row text
+  single-line, shrinkable where needed, and line-height constrained under resize. The
+  `InspectorPanel` layout gate renders a narrow header with toolbar siblings and proves the title
+  remains one measured line. Gate:
   `cargo nextest run -p fret-ui-editor
   editor_property_group_header_text_is_single_line_and_shrinkable
-  editor_property_row_reset_glyph_text_keeps_fixed_button_line_box --no-fail-fast`.
+  editor_property_row_reset_glyph_text_keeps_fixed_button_line_box
+  editor_inspector_panel_title_text_is_single_line_and_shrinkable
+  inspector_panel_title_stays_single_line_when_header_is_narrow --no-fail-fast`.
 - 2026-05-17: removed clipping from `PropertyRow` value slots while keeping fixed label/reset/action
   chrome clipped. This is the layout-container side of the text-role contract: wrapping validation
   prose such as `NumericInput` inline errors may grow to multiple lines, so the parent value slot

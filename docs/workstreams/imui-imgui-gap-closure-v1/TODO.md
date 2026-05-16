@@ -273,10 +273,12 @@ Readiness order for the next locally testable review slices:
    2026-05-17 color preview/tooltip text follow-up: color side-preview captions and tooltip
    numeric lines now use dedicated editor readout helpers instead of local `TextProps`, keeping
    them separate from popup-list rows while preserving single-line resize behavior.
-   2026-05-17 property chrome text follow-up: property-group header labels and property-row reset
-   glyphs now share editor readout helpers instead of local `TextProps`. Fixed inspector chrome
-   text stays single-line, min-width-zero where it shrinks, and line-height constrained under
-   resize without moving editor-specific policy into `fret-imui`.
+   2026-05-17 property chrome text follow-up: property-group header labels, property-row reset
+   glyphs, and inspector panel titles now share editor readout helpers instead of local/default
+   text policy. Fixed inspector chrome text stays single-line, min-width-zero where it shrinks, and
+   line-height constrained under resize without moving editor-specific policy into `fret-imui`.
+   The inspector title path also has a narrow-header layout gate with toolbar siblings, so panel
+   titles cannot drift back to default word wrapping.
    2026-05-17 text role matrix follow-up: `P3_TEXT_ROLE_MATRIX_2026-05-17.md` now freezes the
    stable base role vocabulary for resize triage: control readout, button label, paragraph, code
    text, and table cell text. The matrix also classifies current derived roles, keeps wrapping text

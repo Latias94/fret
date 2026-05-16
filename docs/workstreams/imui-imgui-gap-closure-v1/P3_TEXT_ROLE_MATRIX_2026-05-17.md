@@ -50,7 +50,8 @@ component should construct `TextProps` locally.
   according to the slot.
 - Editor readout primitives in `fret-ui-editor/src/primitives/readout.rs`: editor-specific status
   badges, inline errors, validation messages, section labels, preview captions, tooltip readouts,
-  and property chrome. Direct editor `TextProps` construction stays allowlisted to primitive owners.
+  inspector panel titles, and property chrome. Direct editor `TextProps` construction stays
+  allowlisted to primitive owners.
 - Editor popup/list primitives in `fret-ui-editor/src/primitives/popup_list.rs`: editor assist and
   popup row text roles. They remain editor-layer policy, not `fret-imui` runtime behavior.
 
@@ -77,7 +78,7 @@ component should construct `TextProps` locally.
 - IMUI consumers:
   - `cargo nextest run -p fret-ui-kit --features imui --lib imui_text_item_is_single_line_and_shrinkable imui_text_wrapped_is_explicit_wrapping_text compact_paragraph_text_uses_wrapping_fill_width_layout menu_item_shortcut_text_uses_shared_control_readout_role menu_item_label_text_uses_shared_list_row_text_role control_label_text_uses_fill_width_single_line_truncation --no-fail-fast`
 - Editor consumers:
-  - `cargo nextest run -p fret-ui-editor editor_input_value_text_is_single_line_and_shrinkable editor_inline_error_text_is_single_line_and_shrinkable editor_validation_message_text_wraps_and_shrinks popup_list_row_text_is_single_line_and_shrinkable editor_property_group_header_text_is_single_line_and_shrinkable --no-fail-fast`
+  - `cargo nextest run -p fret-ui-editor editor_input_value_text_is_single_line_and_shrinkable editor_inline_error_text_is_single_line_and_shrinkable editor_validation_message_text_wraps_and_shrinks popup_list_row_text_is_single_line_and_shrinkable editor_property_group_header_text_is_single_line_and_shrinkable editor_inspector_panel_title_text_is_single_line_and_shrinkable inspector_panel_title_stays_single_line_when_header_is_narrow --no-fail-fast`
 - Source contract:
   - `python tools/gate_imui_workstream_source.py`
 - Layout-container regression:

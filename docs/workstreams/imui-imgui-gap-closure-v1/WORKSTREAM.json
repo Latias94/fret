@@ -199,7 +199,7 @@
     },
     {
       "name": "editor property chrome text semantics",
-      "command": "cargo nextest run -p fret-ui-editor editor_property_group_header_text_is_single_line_and_shrinkable editor_property_row_reset_glyph_text_keeps_fixed_button_line_box --no-fail-fast"
+      "command": "cargo nextest run -p fret-ui-editor editor_property_group_header_text_is_single_line_and_shrinkable editor_property_row_reset_glyph_text_keeps_fixed_button_line_box editor_inspector_panel_title_text_is_single_line_and_shrinkable inspector_panel_title_stays_single_line_when_header_is_narrow --no-fail-fast"
     },
     {
       "name": "editor property wrapping value overflow and layout",
@@ -377,6 +377,7 @@
     "ecosystem/fret-ui-editor/src/primitives/input_group.rs",
     "ecosystem/fret-ui-editor/src/primitives/popup_list.rs",
     "ecosystem/fret-ui-editor/src/primitives/readout.rs",
+    "ecosystem/fret-ui-editor/src/composites/inspector_panel.rs",
     "ecosystem/fret-ui-editor/src/composites/property_group.rs",
     "ecosystem/fret-ui-editor/src/composites/property_grid.rs",
     "ecosystem/fret-ui-editor/src/composites/property_row.rs",
