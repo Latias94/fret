@@ -31,7 +31,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-alert-tabs-trigger-preview" }
+        "target": { "kind": "test_id", "id": "ui-gallery-alert-demo-docsec-tabs-trigger-preview" }
       },
       "timeout_frames": 240
     },
@@ -41,7 +41,7 @@
 
     {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-alert-tabs-trigger-code" },
+      "target": { "kind": "test_id", "id": "ui-gallery-alert-demo-docsec-tabs-trigger-code" },
       "stable_frames": 4,
       "max_move_px": 0.5,
       "timeout_frames": 240

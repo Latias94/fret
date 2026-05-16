@@ -731,6 +731,79 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         self.request_sink_redraw(window);
                     }
                 }
+                Effect::WindowMetricsSetPreferences {
+                    window: target_window,
+                    color_scheme,
+                    prefers_reduced_motion,
+                    text_scale_factor,
+                } => {
+                    if target_window != self.app_window {
+                        continue;
+                    }
+                    let override_entry = self
+                        .diag_window_preference_overrides
+                        .entry(target_window)
+                        .or_default();
+                    if color_scheme.is_some() {
+                        override_entry.color_scheme = color_scheme;
+                    }
+                    if prefers_reduced_motion.is_some() {
+                        override_entry.prefers_reduced_motion = prefers_reduced_motion;
+                    }
+                    if text_scale_factor.is_some() {
+                        override_entry.text_scale_factor = text_scale_factor;
+                    }
+
+                    let mut changed = false;
+                    self.app.with_global_mut(
+                        fret_core::WindowMetricsService::default,
+                        |svc, _app| {
+                            if let Some(value) = color_scheme {
+                                let current = svc.color_scheme(target_window);
+                                let current_known = svc.color_scheme_is_known(target_window);
+                                let needs_set = if value.is_none() {
+                                    !current_known || current.is_some()
+                                } else {
+                                    !current_known || current != value
+                                };
+                                if needs_set {
+                                    svc.set_color_scheme(target_window, value);
+                                    changed = true;
+                                }
+                            }
+                            if let Some(value) = prefers_reduced_motion {
+                                let current = svc.prefers_reduced_motion(target_window);
+                                let current_known =
+                                    svc.prefers_reduced_motion_is_known(target_window);
+                                let needs_set = if value.is_none() {
+                                    !current_known || current.is_some()
+                                } else {
+                                    !current_known || current != value
+                                };
+                                if needs_set {
+                                    svc.set_prefers_reduced_motion(target_window, value);
+                                    changed = true;
+                                }
+                            }
+                            if let Some(value) = text_scale_factor {
+                                let current = svc.text_scale_factor(target_window);
+                                let current_known = svc.text_scale_factor_is_known(target_window);
+                                let needs_set = if value.is_none() {
+                                    !current_known || current.is_some()
+                                } else {
+                                    !current_known || current != value
+                                };
+                                if needs_set {
+                                    svc.set_text_scale_factor(target_window, value);
+                                    changed = true;
+                                }
+                            }
+                        },
+                    );
+                    if changed {
+                        self.request_sink_redraw(window);
+                    }
+                }
                 Effect::ImageRegisterRgba8 {
                     window: target_window,
                     token,

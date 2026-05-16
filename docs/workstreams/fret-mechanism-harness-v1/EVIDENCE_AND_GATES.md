@@ -2266,6 +2266,149 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `.fret/diag/runs/ui-gallery-motion-preset-runtime-token-mutation-f115c/script.result.json`
   - packed evidence:
     `.fret/diag/runs/ui-gallery-motion-preset-runtime-token-mutation-f115c/share/1778919283142.zip`
+- Platform preference runtime environment mutation gate:
+  `tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json`
+  - invariant:
+    Diagnostics-injected platform preferences must travel through the same runner-owned
+    `WindowMetricsService` path as platform environment events, and both app snapshot readers and
+    `ElementContext` environment queries must observe the resulting color scheme, reduced-motion,
+    and text-scale values.
+  - implementation anchors:
+    `crates/fret-diag-protocol/src/lib.rs`,
+    `crates/fret-runtime/src/effect.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs`,
+    `crates/fret-launch/src/runner/desktop/runner/effects.rs`,
+    `crates/fret-launch/src/runner/web/effects.rs`,
+    `apps/fret-ui-gallery/src/driver/diag_snapshot.rs`,
+    `apps/fret-ui-gallery/src/ui/snippets/motion_presets/environment_probe.rs`,
+    `tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json`, and
+    `tools/diag-scripts/suites/ui-gallery-motion-pilot/suite.json`.
+  - finding:
+    found a harness script reliability defect. The first runtime run timed out while waiting for
+    `ui-gallery-motion-presets-environment-probe` because the script never navigated from the
+    default page into Motion Presets. The script now performs the same explicit nav-search and page
+    click flow used by the existing Motion Presets scripts.
+  - protocol roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_platform_preferences_runtime_environment_mutation script_v2_roundtrip_set_window_preferences_defaults --no-fail-fast`
+  - protocol roundtrip result:
+    passed, 2 tests; Nextest run id `f5713881-de6d-4eb3-9f4c-4d7d77e76697`.
+  - registry gate:
+    `python tools/check_diag_scripts_registry.py`
+  - registry result:
+    passed.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed before the final script navigation hardening.
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json --dir .fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation-rerun --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - first runtime failure:
+    `.fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation/script.result.json`
+    reported `timeout.tooling.script_result`; the step sidecar
+    `.fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation/1778922372693-script-step-0002-wait_until-timeout/test_ids.index.json`
+    contained `ui-gallery-nav-motion-presets` but not the page or probe ids.
+  - runtime result after script navigation hardening:
+    passed; run id `1778922706072`.
+  - runtime evidence:
+    `.fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation-rerun/script.result.json`
+  - packed evidence:
+    `.fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation-rerun/share/1778922706072.zip`
+- Diagnostics authoring page-entry lint gate:
+  `tools/check_diag_scripts_registry.py`
+  - scope:
+    promoted `ui-gallery-motion-pilot` scripts, Motion Presets page-local selectors with
+    `ui-gallery-motion-presets-*` test ids.
+  - invariant:
+    a script may not wait for, click, scroll, move to, or capture a page-local Motion Presets
+    selector until it has first proved the owning page root `ui-gallery-page-motion-presets`.
+    The always-visible shell motion preset trigger is allowlisted because it exists outside the
+    Motion Presets page body.
+  - finding:
+    found and fixed an existing script authoring debt:
+    `ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json` navigated to
+    Motion Presets but waited for a page-local trigger without first asserting the page root.
+  - implementation anchors:
+    `tools/check_diag_scripts_registry.py`,
+    `tools/test_check_diag_scripts_registry.py`,
+    `tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json`,
+    `tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json`, and
+    `tools/diag-scripts/suites/ui-gallery-motion-pilot/suite.json`.
+  - lint self-test gate:
+    `python tools/test_check_diag_scripts_registry.py`
+  - lint self-test result:
+    passed, 3 tests.
+  - registry gate:
+    `python tools/check_diag_scripts_registry.py`
+  - registry result:
+    passed.
+  - follow-up audit result:
+    promoted Select scripts had 0 page-entry violations; promoted Combobox scripts initially had
+    36 under a page-root-only rule, but they had explicit
+    `FRET_UI_GALLERY_START_PAGE=combobox` defaults, so start-page defaults now count as valid entry
+    evidence and Combobox is strict too. Promoted DataTable scripts still had 166 page-entry
+    violations and remain a follow-on cleanup lane rather than a strict-lint candidate.
+- AlertAction component-slot marker gate:
+  - invariant:
+    recipe-internal slot classification must not use globally exported diagnostics `test_id`s.
+    Internal slots should be discoverable by composition code without entering semantics, layout,
+    hit testing, or accessibility surfaces.
+  - implementation anchors:
+    `crates/fret-ui/src/element.rs` and `ecosystem/fret-ui-shadcn/src/alert.rs`.
+  - focused gate:
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib alert_action`
+  - focused result:
+    passed, 6 tests.
+  - runtime gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta.json --dir .fret/diag/runs/ui-gallery-alert-tabs-component-slot-fix --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1778926130298`.
+  - packed evidence:
+    `.fret/diag/runs/ui-gallery-alert-tabs-component-slot-fix/share/1778926130298.zip`
+- Drawer snap-point visible-click and dismiss-contract gates:
+  - invariant:
+    long-page Drawer scripts must prove a trigger is visible/hittable before `click_stable`, and
+    snap-point drag gates must encode the component's actual Vaul-style policy: releasing near a
+    snap point settles, while dragging far enough down can dismiss and should restore focus.
+  - implementation anchors:
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/labels.rs`, and
+    `tools/diag-scripts/ui-gallery/drawer/`.
+  - diagnostics unit gate:
+    `cargo test --profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics --lib click_stable_timeout`
+  - diagnostics unit result:
+    passed, 3 tests.
+  - reason-code gate:
+    `cargo test --profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics --lib labels_reason_code_tests`
+  - reason-code result:
+    passed, 1 test.
+  - runtime gates:
+    `ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta.json`,
+    `ui-gallery-drawer-snap-points-drag-settle.json`, and
+    `ui-gallery-drawer-snap-points-spring-midflight-retarget-fixed-frame-delta.json`.
+  - runtime results:
+    passed with run ids `1778928529130`, `1778928579053`, and `1778928911018`.
+  - packed evidence:
+    `.fret/diag/runs/ui-gallery-drawer-snap-points-visible-click-fix/share/1778928529130.zip`,
+    `.fret/diag/runs/ui-gallery-drawer-snap-points-drag-settle-visible-click-fix/share/1778928579053.zip`,
+    and
+    `.fret/diag/runs/ui-gallery-drawer-snap-points-spring-dismiss-contract-fix-2/share/1778928911018.zip`.
+- Sidebar tooling-timeout evidence gap:
+  - invariant:
+    when a script is stuck in a long-running intent step such as `click_stable`, external
+    script-result timeout handling must leave a bounded bundle with selector, hit-test, and
+    click-stable traces.
+  - current status:
+    open. No fix has landed yet.
+  - repro:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-toggle-fixed-frame-delta.json --dir .fret/diag/runs/ui-gallery-sidebar-toggle-triage --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - repro result:
+    failed with `timeout.tooling.script_result`; run `1778930062035` remained at step 8
+    `click_stable` and did not produce a forced bundle.
+  - evidence:
+    `.fret/diag/runs/ui-gallery-sidebar-toggle-triage/script.result.json` and
+    `.fret/diag/runs/ui-gallery-sidebar-toggle-triage/1778930062035/script.result.json`.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

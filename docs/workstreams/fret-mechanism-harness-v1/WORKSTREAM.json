@@ -774,12 +774,20 @@
       "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-preset-runtime-token-mutation.json --dir .fret/diag/runs/ui-gallery-motion-preset-runtime-token-mutation-f115c --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe"
     },
     {
+      "name": "ui-gallery-platform-preferences-runtime-environment-mutation-diag",
+      "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json --dir .fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation-rerun --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
       "name": "workstream-catalog",
       "command": "python tools/check_workstream_catalog.py"
     },
     {
       "name": "diag-script-registry",
       "command": "python tools/check_diag_scripts_registry.py"
+    },
+    {
+      "name": "diag-script-registry-lint-tests",
+      "command": "python tools/test_check_diag_scripts_registry.py"
     }
   ],
   "evidence": [
@@ -952,7 +960,15 @@
     ".fret/diag/runs/ui-gallery-motion-preset-runtime-token-mutation-f115c/share/1778919283142.zip",
     "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-preset-runtime-token-mutation.json",
     "tools/diag-scripts/suites/ui-gallery-motion-pilot/suite.json",
+    ".fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation-rerun/script.result.json",
+    ".fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation-rerun/share/1778922706072.zip",
+    "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json",
+    "tools/check_diag_scripts_registry.py",
+    "tools/test_check_diag_scripts_registry.py",
+    "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json",
     "apps/fret-ui-gallery/src/driver/diag_snapshot.rs",
+    "apps/fret-ui-gallery/src/ui/pages/motion_presets.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/motion_presets/environment_probe.rs",
     "ecosystem/fret-ui-kit/src/overlay.rs",
     "ecosystem/fret-ui-shadcn/src/popover.rs",
     "ecosystem/fret-ui-shadcn/src/select.rs",

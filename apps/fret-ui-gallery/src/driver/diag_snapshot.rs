@@ -47,6 +47,38 @@ fn theme_color_scheme_json(scheme: Option<fret_core::window::ColorScheme>) -> se
     }
 }
 
+fn window_metrics_preferences_snapshot_json(
+    app: &App,
+    window: fret_core::AppWindowId,
+) -> serde_json::Value {
+    app.global::<fret_core::WindowMetricsService>()
+        .map(|svc| {
+            let text_scale_factor = svc.text_scale_factor(window);
+            serde_json::json!({
+                "schema_version": 1,
+                "color_scheme_known": svc.color_scheme_is_known(window),
+                "color_scheme": theme_color_scheme_json(svc.color_scheme(window)),
+                "prefers_reduced_motion_known": svc.prefers_reduced_motion_is_known(window),
+                "prefers_reduced_motion": svc.prefers_reduced_motion(window),
+                "text_scale_factor_known": svc.text_scale_factor_is_known(window),
+                "text_scale_factor": text_scale_factor.map(rounded_f32),
+                "text_scale_factor_milli": text_scale_factor.map(|value| scaled_f32(value, 1000.0)),
+            })
+        })
+        .unwrap_or_else(|| {
+            serde_json::json!({
+                "schema_version": 1,
+                "color_scheme_known": false,
+                "color_scheme": null,
+                "prefers_reduced_motion_known": false,
+                "prefers_reduced_motion": null,
+                "text_scale_factor_known": false,
+                "text_scale_factor": null,
+                "text_scale_factor_milli": null,
+            })
+        })
+}
+
 fn scaled_f32(value: f32, scale: f32) -> i64 {
     (value * scale).round() as i64
 }
@@ -790,6 +822,10 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                     serde_json::json!(motion_preset_open),
                 );
                 shell.insert("theme_runtime".to_string(), theme_runtime_snapshot_json(app));
+                shell.insert(
+                    "window_metrics_preferences".to_string(),
+                    window_metrics_preferences_snapshot_json(app, window),
+                );
                 shell.insert("cmdk_query_len_bytes".to_string(), serde_json::json!(cmdk_query.len() as u64));
                 shell.insert("last_action_len_bytes".to_string(), serde_json::json!(last_action.len() as u64));
                 shell.insert("last_action".to_string(), serde_json::json!(last_action.to_string()));

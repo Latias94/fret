@@ -481,9 +481,27 @@ pub(super) fn handle_window_effect_steps(
             }
         }
         UiActionStepV2::SetWindowInsets {
+            window: target_window,
             safe_area_insets,
             occlusion_insets,
         } => {
+            let Some(target_window) = svc.resolve_window_target_for_active_step(
+                window,
+                anchor_window,
+                target_window.as_ref(),
+            ) else {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-set_window_insets-window-not-found"
+                ));
+                *stop_script = true;
+                *failure_reason = Some("window_target_unresolved".to_string());
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                active.v2_step_state = None;
+                output.request_redraw = true;
+                return;
+            };
+
             let edges_from_insets = |insets: UiPaddingInsetsV1| fret_core::Edges {
                 left: fret_core::Px(insets.left_px),
                 top: fret_core::Px(insets.top_px),
@@ -500,9 +518,67 @@ pub(super) fn handle_window_effect_steps(
             };
 
             output.effects.push(Effect::WindowMetricsSetInsets {
-                window,
+                window: target_window,
                 safe_area_insets: to_override(safe_area_insets),
                 occlusion_insets: to_override(occlusion_insets),
+            });
+            active.wait_until = None;
+            active.screenshot_wait = None;
+            active.next_step = active.next_step.saturating_add(1);
+            output.request_redraw = true;
+        }
+        UiActionStepV2::SetWindowPreferences {
+            window: target_window,
+            color_scheme,
+            prefers_reduced_motion,
+            text_scale_factor,
+        } => {
+            let Some(target_window) = svc.resolve_window_target_for_active_step(
+                window,
+                anchor_window,
+                target_window.as_ref(),
+            ) else {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-set_window_preferences-window-not-found"
+                ));
+                *stop_script = true;
+                *failure_reason = Some("window_target_unresolved".to_string());
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                active.v2_step_state = None;
+                output.request_redraw = true;
+                return;
+            };
+
+            let color_scheme = match color_scheme {
+                fret_diag_protocol::UiColorSchemeOverrideV1::NoChange => None,
+                fret_diag_protocol::UiColorSchemeOverrideV1::Clear => Some(None),
+                fret_diag_protocol::UiColorSchemeOverrideV1::Set { value } => {
+                    let value = match value {
+                        fret_diag_protocol::UiColorSchemeV1::Light => fret_core::ColorScheme::Light,
+                        fret_diag_protocol::UiColorSchemeV1::Dark => fret_core::ColorScheme::Dark,
+                    };
+                    Some(Some(value))
+                }
+            };
+
+            let bool_override = |value: fret_diag_protocol::UiBoolOverrideV1| match value {
+                fret_diag_protocol::UiBoolOverrideV1::NoChange => None,
+                fret_diag_protocol::UiBoolOverrideV1::Clear => Some(None),
+                fret_diag_protocol::UiBoolOverrideV1::Set { value } => Some(Some(value)),
+            };
+
+            let f32_override = |value: fret_diag_protocol::UiF32OverrideV1| match value {
+                fret_diag_protocol::UiF32OverrideV1::NoChange => None,
+                fret_diag_protocol::UiF32OverrideV1::Clear => Some(None),
+                fret_diag_protocol::UiF32OverrideV1::Set { value } => Some(Some(value)),
+            };
+
+            output.effects.push(Effect::WindowMetricsSetPreferences {
+                window: target_window,
+                color_scheme,
+                prefers_reduced_motion: bool_override(prefers_reduced_motion),
+                text_scale_factor: f32_override(text_scale_factor),
             });
             active.wait_until = None;
             active.screenshot_wait = None;

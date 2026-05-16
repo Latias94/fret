@@ -1093,6 +1093,69 @@ Status: complete for shell-level UI Gallery theme/motion preference changes
 - The first runtime draft exposed a diagnostics oracle weakness, not a component defect: raw `f32`
   easing/bounce values are unsuitable for strict JSON equality. The snapshot now exposes rounded
   readable values plus milli-scaled integer fields, and the script asserts the integer fields.
-- Remaining follow-up: add runner/platform-injected environment preference gates for OS-level
-  reduced-motion/color-scheme changes. This slice covers the Gallery shell selectors, not the
-  platform event path.
+- Follow-up completed by M68: runner/platform-injected environment preference changes now have a
+  separate runtime gate. This slice covers the Gallery shell selectors; M68 covers the platform
+  event path.
+
+## M68: Platform Preference Runtime Environment Gate
+
+Status: complete for runner-injected platform preference changes
+
+- Added `set_window_preferences` to diagnostics script v2 and mapped it through runtime effects,
+  desktop/web runner handling, and the same `WindowMetricsService` path used by real platform
+  environment changes.
+- Added a Motion Presets `environment_probe` that reads color scheme, reduced motion, and text
+  scale through `ElementContext` environment queries, plus a matching UI Gallery app snapshot under
+  `/shell/window_metrics_preferences`.
+- Added `ui-gallery-platform-preferences-runtime-environment-mutation.json` and promoted it into
+  `ui-gallery-motion-pilot`.
+- The first real runtime run exposed a harness script defect, not a mechanism defect: the script
+  waited for the Motion Presets page probe while still on the default page. It now navigates to the
+  page explicitly before waiting for the probe.
+- The passing gate proves the full chain:
+  `diag script -> runtime Effect -> runner -> WindowMetricsService -> global change notification -> ElementRuntime environment query -> UI Gallery snapshot/probe`.
+
+## M69: UI Gallery Page-Entry Authoring Lint
+
+Status: complete for promoted Motion Presets scripts
+
+- Added a scoped registry lint for `ui-gallery-motion-pilot`: page-local
+  `ui-gallery-motion-presets-*` selectors require a prior page-root proof for
+  `ui-gallery-page-motion-presets`.
+- The first strict pass found and fixed an existing script authoring issue:
+  `ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json` navigated to Motion
+  Presets but did not assert the page root before waiting for a page-local trigger.
+- Added `tools/test_check_diag_scripts_registry.py` so the lint proves three cases directly: a bad
+  page-local selector before page entry fails, a selector after page entry passes, and the global
+  shell motion preset trigger remains allowed.
+- The lint turns the F116 false-timeout lesson into a reusable harness guard instead of relying on
+  individual agents to remember the page-entry convention.
+- Follow-up audit extended the same rule to promoted Select scripts, where the current audit
+  showed zero page-entry violations. Combobox became strict after the lint learned to treat
+  explicit `FRET_UI_GALLERY_START_PAGE=combobox` defaults as valid entry evidence. DataTable is not
+  yet a strict page-entry family; it needs cleanup before the same rule can be enabled there without
+  introducing historical noise.
+
+## M70: Motion-Pilot Alert/Drawer Defect Discovery
+
+Status: complete for AlertAction slot metadata and Drawer snap-point gates; Sidebar remains the
+next open diagnostics-timeout slice.
+
+- Reran `ui-gallery-motion-pilot` after the page-entry lint work and confirmed the suite continued
+  to find real issues rather than only validating new harness code.
+- The first blocker was a recipe/diagnostics boundary defect: `AlertAction` used a fixed internal
+  diagnostics `test_id` as a slot marker, producing duplicate exported test ids in UI Gallery.
+- Added layout-transparent `AnyElement::component_slot(...)` and migrated `AlertAction` to use it,
+  keeping internal recipe classification out of semantics, layout, hit testing, and a11y.
+- The next blocker was Drawer snap-point clickability: the trigger existed but was far below the
+  visible window, proving that UI Gallery long-page scripts must assert visibility before
+  `click_stable`.
+- `click_stable` timeout diagnostics now report target/window geometry and classify fully offscreen
+  targets as `click_stable.target_outside_window`.
+- All promoted Drawer snap-point scripts now scroll the trigger into view and assert window bounds
+  before clicking.
+- The spring-retarget Drawer script now encodes the correct Vaul-style policy: a sufficiently large
+  downward drag may dismiss the drawer, and the gate verifies content removal plus focus restore.
+- Rerunning the motion-pilot suite advanced past Drawer, Motion Presets, and Overlay Dialog before
+  exposing the next open harness gap: Sidebar `click_stable` can run until external tooling timeout
+  without producing a forced triage bundle.

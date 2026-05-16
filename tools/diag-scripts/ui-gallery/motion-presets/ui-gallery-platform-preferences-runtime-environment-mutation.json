@@ -1,0 +1,199 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: platform preferences drive runtime environment queries",
+    "tags": [
+      "ui-gallery",
+      "mechanism_harness",
+      "environment",
+      "window_metrics",
+      "runtime",
+      "app-snapshot",
+      "mutation"
+    ],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Injects diagnostics-only platform preference changes through the runner WindowMetricsService path.",
+      "Asserts both the UI Gallery app snapshot and an ElementContext environment-query probe observe the same color scheme, reduced-motion, and text-scale values."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "motion presets" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-motion-presets" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-motion-presets" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-motion-presets" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-motion-presets-environment-probe"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "set_window_preferences",
+      "color_scheme": { "kind": "set", "value": "dark" },
+      "prefers_reduced_motion": { "kind": "set", "value": true },
+      "text_scale_factor": { "kind": "set", "value": 1.25 }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/window_metrics_preferences/color_scheme",
+        "value": "dark"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/window_metrics_preferences/prefers_reduced_motion",
+        "value": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/window_metrics_preferences/text_scale_factor_milli",
+        "value": 1250
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-motion-presets-environment-probe-color-scheme-dark"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-motion-presets-environment-probe-reduced-motion-true"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-motion-presets-environment-probe-text-scale-1.25"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "set_window_preferences",
+      "color_scheme": { "kind": "set", "value": "light" },
+      "prefers_reduced_motion": { "kind": "set", "value": false },
+      "text_scale_factor": { "kind": "set", "value": 1.0 }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/window_metrics_preferences/color_scheme",
+        "value": "light"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/window_metrics_preferences/prefers_reduced_motion",
+        "value": false
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/window_metrics_preferences/text_scale_factor_milli",
+        "value": 1000
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-motion-presets-environment-probe-color-scheme-light"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-motion-presets-environment-probe-reduced-motion-false"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-motion-presets-environment-probe-text-scale-1.00"
+        }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-platform-preferences-runtime-environment-mutation" }
+  ]
+}

@@ -40,6 +40,11 @@ pub struct AnyElement {
     pub semantics_decoration: Option<SemanticsDecoration>,
     /// Layout-transparent key context identifier used by shortcut/keymap `when` expressions.
     pub key_context: Option<Arc<str>>,
+    /// Layout-transparent component-owned slot marker.
+    ///
+    /// This is for component internals that need to classify child elements before mount. It is not
+    /// exported to diagnostics, semantics, hit testing, layout, or platform accessibility.
+    pub component_slot: Option<Arc<str>>,
 }
 
 impl AnyElement {
@@ -52,6 +57,7 @@ impl AnyElement {
             inherited_text_style: None,
             semantics_decoration: None,
             key_context: None,
+            component_slot: None,
         }
     }
 
@@ -160,6 +166,15 @@ impl AnyElement {
     /// This is a layout-transparent annotation used by `when` expressions via `keyctx.*`.
     pub fn key_context(mut self, key_context: impl Into<Arc<str>>) -> Self {
         self.key_context = Some(key_context.into());
+        self
+    }
+
+    /// Attach a component-internal slot marker without exposing a diagnostics selector.
+    ///
+    /// Use this for recipe-owned child classification. Use [`AnyElement::test_id`] when the caller
+    /// or diagnostics harness must be able to locate the element globally.
+    pub fn component_slot(mut self, slot: impl Into<Arc<str>>) -> Self {
+        self.component_slot = Some(slot.into());
         self
     }
 }

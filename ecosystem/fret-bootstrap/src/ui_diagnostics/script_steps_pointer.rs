@@ -1726,9 +1726,11 @@ pub(super) fn handle_click_stable_step(
                         svc.cfg.max_debug_string_bytes,
                     );
                 }
-                if let Some(note) =
-                    click_stable_timeout_hit_test_note(&active.hit_test_trace, step_index as u32)
-                {
+                if let Some(note) = click_stable_timeout_hit_test_note_with_window(
+                    &active.hit_test_trace,
+                    step_index as u32,
+                    Some(window_bounds),
+                ) {
                     push_script_event_log(
                         active,
                         &svc.cfg,
@@ -1748,7 +1750,15 @@ pub(super) fn handle_click_stable_step(
                 *force_dump_label =
                     Some(format!("script-step-{step_index:04}-click_stable-timeout"));
                 *stop_script = true;
-                *failure_reason = Some("click_stable_timeout".to_string());
+                let timeout_reason = match click_stable_timeout_target_window_relation(
+                    &active.hit_test_trace,
+                    step_index as u32,
+                    window_bounds,
+                ) {
+                    Some("outside_window") => "click_stable_timeout_target_outside_window",
+                    _ => "click_stable_timeout",
+                };
+                *failure_reason = Some(timeout_reason.to_string());
                 active.v2_step_state = None;
                 output.request_redraw = true;
             } else {
@@ -1928,17 +1938,32 @@ pub(super) fn click_stable_timeout_hit_test_note(
     trace: &[UiHitTestTraceEntryV1],
     step_index: u32,
 ) -> Option<String> {
+    click_stable_timeout_hit_test_note_with_window(trace, step_index, None)
+}
+
+fn click_stable_timeout_hit_test_note_with_window(
+    trace: &[UiHitTestTraceEntryV1],
+    step_index: u32,
+    window_bounds: Option<Rect>,
+) -> Option<String> {
     let hit = trace
         .iter()
         .rev()
         .find(|entry| entry.step_index == step_index)?;
 
+    let geometry_note = click_stable_timeout_geometry_note(hit, window_bounds);
+
     Some(format!(
-        "hit_test={} position={} intended_node_id={:?} intended_test_id={:?} hit_node_id={:?} hit_semantics_node_id={:?} hit_semantics_test_id={:?} includes_intended={:?} hit_path_contains_intended={:?} blocking_reason={:?} blocking_root={:?} blocking_layer_id={:?} routing_explain={:?} barrier_root={:?} focus_barrier_root={:?} pointer_occlusion={:?} pointer_occlusion_layer_id={:?} pointer_occlusion_test_id={:?} pointer_capture_active={:?} pointer_capture_layer_id={:?} pointer_capture_test_id={:?} note={:?}",
+        "hit_test={} position={} intended_node_id={:?} intended_test_id={:?} intended_bounds={}{} hit_node_id={:?} hit_semantics_node_id={:?} hit_semantics_test_id={:?} includes_intended={:?} hit_path_contains_intended={:?} blocking_reason={:?} blocking_root={:?} blocking_layer_id={:?} routing_explain={:?} barrier_root={:?} focus_barrier_root={:?} pointer_occlusion={:?} pointer_occlusion_layer_id={:?} pointer_occlusion_test_id={:?} pointer_capture_active={:?} pointer_capture_layer_id={:?} pointer_capture_test_id={:?} note={:?}",
         selector_debug_summary(&hit.selector),
         point_summary(hit.position),
         hit.intended_node_id,
         hit.intended_test_id.as_deref(),
+        hit.intended_bounds
+            .as_ref()
+            .map(ui_rect_summary)
+            .unwrap_or_else(|| "<none>".to_string()),
+        geometry_note,
         hit.hit_node_id,
         hit.hit_semantics_node_id,
         hit.hit_semantics_test_id.as_deref(),
@@ -1958,6 +1983,73 @@ pub(super) fn click_stable_timeout_hit_test_note(
         hit.pointer_capture_test_id.as_deref(),
         hit.note.as_deref()
     ))
+}
+
+fn click_stable_timeout_target_window_relation(
+    trace: &[UiHitTestTraceEntryV1],
+    step_index: u32,
+    window_bounds: Rect,
+) -> Option<&'static str> {
+    let hit = trace
+        .iter()
+        .rev()
+        .find(|entry| entry.step_index == step_index)?;
+    hit.intended_bounds
+        .as_ref()
+        .map(|bounds| ui_rect_window_relation(bounds, window_bounds))
+}
+
+fn click_stable_timeout_geometry_note(
+    hit: &UiHitTestTraceEntryV1,
+    window_bounds: Option<Rect>,
+) -> String {
+    let Some(window_bounds) = window_bounds else {
+        return String::new();
+    };
+    let Some(bounds) = hit.intended_bounds.as_ref() else {
+        return format!(" window_bounds={}", rect_summary(window_bounds));
+    };
+    format!(
+        " target_window_relation={} window_bounds={}",
+        ui_rect_window_relation(bounds, window_bounds),
+        rect_summary(window_bounds)
+    )
+}
+
+fn ui_rect_window_relation(rect: &UiRectV1, window: Rect) -> &'static str {
+    let rx0 = rect.x_px;
+    let ry0 = rect.y_px;
+    let rx1 = rx0 + rect.w_px.max(0.0);
+    let ry1 = ry0 + rect.h_px.max(0.0);
+    let wx0 = window.origin.x.0;
+    let wy0 = window.origin.y.0;
+    let wx1 = wx0 + window.size.width.0.max(0.0);
+    let wy1 = wy0 + window.size.height.0.max(0.0);
+
+    if rect.w_px <= 0.0 || rect.h_px <= 0.0 || wx1 <= wx0 || wy1 <= wy0 {
+        return "empty_or_degenerate";
+    }
+    if rx1 <= wx0 || rx0 >= wx1 || ry1 <= wy0 || ry0 >= wy1 {
+        return "outside_window";
+    }
+    if rx0 >= wx0 && ry0 >= wy0 && rx1 <= wx1 && ry1 <= wy1 {
+        return "within_window";
+    }
+    "partially_outside_window"
+}
+
+fn ui_rect_summary(rect: &UiRectV1) -> String {
+    format!(
+        "x={} y={} w={} h={}",
+        rect.x_px, rect.y_px, rect.w_px, rect.h_px
+    )
+}
+
+fn rect_summary(rect: Rect) -> String {
+    format!(
+        "x={} y={} w={} h={}",
+        rect.origin.x.0, rect.origin.y.0, rect.size.width.0, rect.size.height.0
+    )
 }
 
 pub(super) fn selectable_span_timeout_hit_test_note(
@@ -2135,6 +2227,38 @@ mod tests {
         assert!(note.contains(
             "note=Some(\"click_selectable_text_span_stable.timeout.no_semantics_match\")"
         ));
+    }
+
+    #[test]
+    fn click_stable_timeout_note_identifies_offscreen_targets() {
+        let mut hit = hit_trace(12);
+        hit.intended_bounds = Some(UiRectV1 {
+            x_px: 294.0,
+            y_px: 2068.0,
+            w_px: 106.0,
+            h_px: 36.0,
+        });
+        let window_bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(1080.0), Px(720.0)),
+        );
+
+        let note = click_stable_timeout_hit_test_note_with_window(&[hit], 12, Some(window_bounds))
+            .unwrap();
+
+        assert!(note.contains("target_window_relation=outside_window"));
+        assert!(note.contains("intended_bounds=x=294 y=2068 w=106 h=36"));
+        assert_eq!(
+            click_stable_timeout_target_window_relation(
+                &[hit_trace(12)],
+                12,
+                Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    fret_core::Size::new(Px(100.0), Px(100.0)),
+                ),
+            ),
+            Some("within_window")
+        );
     }
 }
 

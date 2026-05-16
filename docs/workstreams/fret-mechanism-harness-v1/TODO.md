@@ -112,8 +112,15 @@ date: 2026-05-12
     diagnostics oracle issue: strict JSON equality on raw `f32` token values produced false
     failures, so the Gallery app snapshot now publishes rounded readable values plus milli-scaled
     integer fields for stable token assertions.
-- [ ] Add runner/platform-injected UI Gallery diagnostics for runtime platform
+- [x] Add runner/platform-injected UI Gallery diagnostics for runtime platform
   preference/environment changes once a stable demo page exists.
+  - Result: `ui-gallery-platform-preferences-runtime-environment-mutation.json` now drives
+    diagnostics-only platform preference updates through the runner `WindowMetricsService` path and
+    asserts both the UI Gallery app snapshot and an `ElementContext` environment-query probe see
+    the same color scheme, reduced-motion, and text-scale values. The first real run exposed a
+    harness script defect rather than a mechanism defect: the script waited for the Motion Presets
+    page probe without first navigating to that page. The script now enters the page explicitly and
+    the runtime gate passes.
 - [x] Add a UI Gallery pointer occlusion diagnostics gate once a stable overlay demo exposes test
   ids for underlay and overlay state.
   - Result: `ui-gallery-context-menu-occlusion-wheel-pass-through.json` now asserts the content
@@ -515,6 +522,37 @@ date: 2026-05-12
     `click_stable` on `ui-gallery-combobox-*` or `ui-gallery-select-*` targets. The full
     `ui-gallery-combobox` and `ui-gallery-select` suites pass after rebuilding the diagnostics
     runner.
+- [x] Add a diagnostics script lint for page-local UI Gallery selectors that rely on the default
+  page instead of proving or navigating to the owning page.
+  - Result: `tools/check_diag_scripts_registry.py` now enforces a scoped page-entry rule for
+    `ui-gallery-motion-pilot`: scripts that use `ui-gallery-motion-presets-*` page-local selectors
+    must first wait for `ui-gallery-page-motion-presets`, while the always-visible shell motion
+    preset trigger remains allowlisted. The first strict audit found and fixed an existing
+    Motion Presets script debt: `ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json`
+    entered the page but did not assert the page root before waiting for a page-local trigger.
+    The follow-up candidate audit found promoted `ui-gallery-select` already at 0 page-entry
+    violations, so Select is now included in the strict page-entry gate. Combobox initially showed
+    36 violations under a page-root-only rule, but those scripts use explicit
+    `FRET_UI_GALLERY_START_PAGE=combobox` defaults; the lint now treats those defaults as valid
+    entry evidence and Combobox is strict too. DataTable still has 166 promoted-suite page-entry
+    violations and remains a deliberate follow-on cleanup lane. `tools/test_check_diag_scripts_registry.py`
+    locks the lint with bad-script, good-script, shell-trigger, Select page-entry, and Combobox
+    start-page cases.
+- [x] Continue `ui-gallery-motion-pilot` until it finds a real component/mechanism or harness
+  boundary issue beyond the existing Motion Presets gates.
+  - Result: the suite found and fixed `AlertAction` internal slot marker pollution by moving slot
+    classification from exported diagnostics `test_id`s to `AnyElement::component_slot(...)`.
+    It then found Drawer snap-point scripts that confused existence with hittability; those scripts
+    now scroll long-page triggers into view and assert window bounds before `click_stable`, and the
+    spring-retarget gate now verifies the actual dismiss/focus-restore contract.
+- [ ] Fix diagnostics timeout handling so a long-running intent step leaves a forced bundle.
+  - Current repro: `ui-gallery-sidebar-toggle-fixed-frame-delta.json` stalls at step 8
+    `click_stable` until the external CLI reports `timeout.tooling.script_result`, but no bounded
+    bundle is produced. Fix this first, then rerun the Sidebar script to determine whether the
+    owning defect is Sidebar recipe code, scroll/hit-test mechanism code, or script preconditions.
+- [ ] Migrate non-user-facing recipe structural marker `test_id`s to `component_slot`.
+  - Candidate families: Card-like internal structure markers and any fixed `__fret_shadcn.*`
+    markers that are used only for recipe composition rather than diagnostics selectors.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.

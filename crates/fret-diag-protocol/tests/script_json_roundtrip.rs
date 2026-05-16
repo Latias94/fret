@@ -105,6 +105,31 @@ fn script_v2_roundtrip_ui_gallery_motion_preset_runtime_token_mutation() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_platform_preferences_runtime_environment_mutation() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_set_window_preferences_defaults() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "set_window_preferences",
+      "window": { "kind": "first_seen" },
+      "color_scheme": { "kind": "clear" },
+      "prefers_reduced_motion": { "kind": "set", "value": true },
+      "text_scale_factor": { "kind": "set", "value": 1.25 }
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v1_roundtrip_active_item_is_predicate() {
     assert_script_v1_roundtrip(
         r#"{
