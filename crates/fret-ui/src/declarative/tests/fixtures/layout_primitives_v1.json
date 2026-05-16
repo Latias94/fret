@@ -333,6 +333,46 @@
       }
     },
     {
+      "id": "flex-percent-basis-keeps-auto-height-fixed-sibling",
+      "scenario": { "kind": "flex_percent_basis_keeps_auto_height_fixed_sibling" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "flex-percent-content" },
+            "metric": "height",
+            "comparison": "eq",
+            "value_px": 10.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "flex-percent-fixed-sibling" },
+            "metric": "height",
+            "comparison": "eq",
+            "value_px": 36.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "flex-percent-stack" },
+            "metric": "height",
+            "comparison": "eq",
+            "value_px": 52.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "flex-percent-fixed-sibling" },
+            "metric": "top",
+            "comparison": "eq",
+            "value_px": 16.0,
+            "eps_px": 0.01
+          }
+        ]
+      }
+    },
+    {
       "id": "transparent-wrapper-preserves-fill",
       "scenario": { "kind": "transparent_wrapper_preserves_fill" },
       "oracle": {

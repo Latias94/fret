@@ -27,6 +27,7 @@ enum LayoutPrimitiveScenario {
     ScrollRootPreservesChildLayoutBounds,
     AbsoluteInsetFractionResolvesAgainstContainingBlock,
     FlexCrossAxisStretch,
+    FlexPercentBasisKeepsAutoHeightFixedSibling,
     TransparentWrapperPreservesFill,
     ChromeContainerStretchKeepsOuterBox,
     GridFrAutoTrackNegotiation,
@@ -682,6 +683,39 @@ fn build_scenario(
                         .test_id("stretch-control"),
                 ]
             })]
+        }
+        LayoutPrimitiveScenario::FlexPercentBasisKeepsAutoHeightFixedSibling => {
+            let mut stack_layout = crate::element::LayoutStyle::default();
+            stack_layout.size.width = Length::Px(Px(120.0));
+            let stack = crate::element::FlexProps {
+                layout: stack_layout,
+                direction: fret_core::Axis::Vertical,
+                gap: Px(6.0).into(),
+                align: CrossAlign::Start,
+                ..Default::default()
+            };
+
+            let mut content = crate::element::ContainerProps::default();
+            content.layout.flex.grow = 1.0;
+            content.layout.flex.shrink = 1.0;
+            content.layout.flex.basis = Length::Fraction(0.0);
+            content.layout.size.min_width = Some(Length::Px(Px(0.0)));
+
+            let mut control = crate::element::ContainerProps::default();
+            control.layout.size.width = Length::Px(Px(80.0));
+            control.layout.size.height = Length::Px(Px(36.0));
+
+            vec![
+                cx.flex(stack, |cx| {
+                    vec![
+                        cx.container(content, |cx| vec![cx.text("x")])
+                            .test_id("flex-percent-content"),
+                        cx.container(control, |_cx| Vec::new())
+                            .test_id("flex-percent-fixed-sibling"),
+                    ]
+                })
+                .test_id("flex-percent-stack"),
+            ]
         }
         LayoutPrimitiveScenario::TransparentWrapperPreservesFill => {
             let mut outer = crate::element::ContainerProps::default();
