@@ -239,6 +239,9 @@ Exit criteria:
   2026-05-16 control chrome fill-text result: shared checkbox/radio/switch labels, combo preview
   text, and slider captions now use single-line shrink/ellipsis layout through
   `control_chrome::fill_text(...)`, removing another fixed-height control wrapping path.
+  2026-05-17 control label text result: `text_control_label(...)` now owns the compact control
+  label role in `fret-ui-kit::declarative::text`, and `control_chrome::fill_text(...)` delegates
+  to that shared role instead of carrying local `TextProps` policy.
   2026-05-17 editor input value text result: `editor_input_value_text(...)` now owns the shared
   numeric scrub-readout text role for drag-value and axis-drag-value controls. The role stays in
   `fret-ui-editor` because it depends on editor density/chrome policy, but it now has the same

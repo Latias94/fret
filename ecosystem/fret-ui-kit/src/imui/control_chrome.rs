@@ -2,9 +2,9 @@
 
 use std::sync::Arc;
 
-use fret_core::{Axis, Color, Corners, Edges, Px, TextOverflow, TextWrap};
+use fret_core::{Axis, Color, Corners, Edges, Px};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, PressableState, TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, PressableState,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
@@ -193,17 +193,7 @@ pub(super) fn fill_text<H: UiHost>(
     text: Arc<str>,
     color: Color,
 ) -> AnyElement {
-    let mut props = TextProps::new(text);
-    props.layout.size.width = Length::Fill;
-    props.layout.size.height = Length::Auto;
-    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
-    props.layout.flex.grow = 1.0;
-    props.layout.flex.shrink = 1.0;
-    props.layout.flex.basis = Length::Px(Px(0.0));
-    props.wrap = TextWrap::None;
-    props.overflow = TextOverflow::Ellipsis;
-    props.color = Some(color);
-    cx.text_props(props)
+    crate::declarative::text::text_control_label(cx, text).inherit_foreground(color)
 }
 
 pub(super) fn caption_text<H: UiHost>(
@@ -296,8 +286,8 @@ mod tests {
         assert!(props.color.is_none());
         assert_eq!(props.layout.flex.shrink, 1.0);
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
-        assert_eq!(props.wrap, TextWrap::None);
-        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(props.wrap, fret_core::TextWrap::None);
+        assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
         assert!(el.inherited_text_style.is_some());
         assert_eq!(el.inherited_foreground, Some(foreground));
     }
@@ -320,13 +310,16 @@ mod tests {
             panic!("expected fill_text(...) to build a Text element");
         };
 
-        assert_eq!(props.color, Some(foreground));
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
         assert_eq!(props.layout.size.width, Length::Fill);
         assert_eq!(props.layout.flex.grow, 1.0);
         assert_eq!(props.layout.flex.shrink, 1.0);
         assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
-        assert_eq!(props.wrap, TextWrap::None);
-        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(props.wrap, fret_core::TextWrap::None);
+        assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
+        assert!(el.inherited_text_style.is_some());
+        assert_eq!(el.inherited_foreground, Some(foreground));
     }
 }

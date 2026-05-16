@@ -251,11 +251,18 @@ Run evidence:
   local `TextProps` policy or default word wrapping; they stay single-line, shrinkable, and
   ellipsis-truncated under resize. Gate: `cargo nextest run -p fret-ui-kit --features imui --lib
   section_chrome_label_text_uses_single_line_truncation --no-fail-fast`.
+- 2026-05-17: introduced `text_control_label(...)` as the shared compact control-label text role
+  and routed `control_chrome::fill_text(...)` through it. Checkbox/radio/switch labels plus
+  combo/slider captions keep their fill, grow, shrink, `min-width: 0`, and ellipsis behavior
+  without owning local `TextProps` policy inside IMUI chrome. Gate: `cargo nextest run -p
+  fret-ui-kit --features imui --lib control_label_text_uses_fill_width_single_line_truncation
+  imui_fill_text_is_single_line_and_shrinkable imui_control_text_uses_shared_button_label_role
+  --no-fail-fast`.
 - 2026-05-16: hardened `tools/gate_imui_workstream_source.py` with an explicit allowlist for the
   remaining direct `TextProps::new(...)` constructors under `fret-ui-kit::imui`: bullet prose,
-  control chrome, disclosure indicator, facade `text`/`text_wrapped`, and floating title. New
-  direct constructors now fail the source gate unless they are routed through the shared text roles
-  or intentionally added to the allowlist. Gate: `python tools/gate_imui_workstream_source.py`.
+  disclosure indicator, facade `text`/`text_wrapped`, and floating title. New direct constructors
+  now fail the source gate unless they are routed through the shared text roles or intentionally
+  added to the allowlist. Gate: `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: introduced `editor_input_value_text(...)` in `fret-ui-editor` input-group primitives
   and routed drag-value plus axis-drag-value scrub readouts through it. The helper keeps editor
   numeric value text fill-width, `min-width: 0`, shrinkable, single-line, and ellipsis-truncated
@@ -332,6 +339,8 @@ Run evidence:
   `cargo nextest run -p fret-ui-kit --features imui --lib
   input_text_model_uses_compact_imui_chrome_without_focus_ring
   textarea_model_uses_compact_imui_chrome_without_focus_ring --no-fail-fast`.
+- 2026-05-17: `control_chrome::fill_text(...)` now delegates to the shared
+  `text_control_label(...)` role instead of keeping that layout policy local to IMUI chrome.
 - 2026-05-14: made `DisclosureResponse` / `ComboResponse` accessor-first for trigger/open/toggle
   state too. Public callers now read trigger details through `response()` and semantic helpers, the
   response types no longer expose external `Default` construction, and

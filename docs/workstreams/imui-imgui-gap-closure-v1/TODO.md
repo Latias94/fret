@@ -234,6 +234,9 @@ Readiness order for the next locally testable review slices:
    captions now inherit the same compact single-line shrink/ellipsis posture through
    `control_chrome::fill_text(...)`, so fixed-height control chrome cannot grow rows by word
    wrapping under resize.
+   2026-05-17 control label text follow-up: `text_control_label(...)` now owns compact control
+   labels in `fret-ui-kit::declarative::text`, and `control_chrome::fill_text(...)` routes through
+   it instead of owning local `TextProps` policy.
    2026-05-17 editor input value text follow-up: `fret-ui-editor` now shares
    `editor_input_value_text(...)` for drag-value and axis-drag-value scrub readouts. The helper
    keeps numeric value text fill-width, `min-width: 0`, shrinkable, single-line, and ellipsis

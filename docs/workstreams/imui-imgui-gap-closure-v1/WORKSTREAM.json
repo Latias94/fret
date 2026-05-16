@@ -163,7 +163,7 @@
     },
     {
       "name": "imui control chrome fill text semantics",
-      "command": "cargo nextest run -p fret-ui-kit --features imui --lib imui_fill_text_is_single_line_and_shrinkable imui_control_text_uses_shared_button_label_role --no-fail-fast"
+      "command": "cargo nextest run -p fret-ui-kit --features imui --lib control_label_text_uses_fill_width_single_line_truncation imui_fill_text_is_single_line_and_shrinkable imui_control_text_uses_shared_button_label_role --no-fail-fast"
     },
     {
       "name": "imui menu shortcut text role reuse",
