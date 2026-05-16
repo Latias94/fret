@@ -21,6 +21,9 @@ enum LayoutPrimitiveScenario {
     MinMaxClampsFillChild,
     PercentMinMaxBehavesLikeAutoUnderIndefiniteMeasure,
     TextWrapHeightContributesToRow,
+    TextMeasurePaintWrapWidthColumn,
+    TextMeasurePaintWrapWidthMaxWidthRow,
+    TextMeasurePaintOverflowScale,
     ScrollRootPreservesChildLayoutBounds,
     AbsoluteInsetFractionResolvesAgainstContainingBlock,
     FlexCrossAxisStretch,
@@ -68,25 +71,28 @@ fn observe_case(
     );
     ui.set_root(root);
 
-    let scalar_metrics =
-        observe_scalar_metrics(&mut ui, &mut app, &mut services, root, &case.scenario)?;
+    let pre_layout_scalar_metrics =
+        observe_pre_layout_scalar_metrics(&mut ui, &mut app, &mut services, root, &case.scenario)?;
     ui.request_semantics_snapshot();
-    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let scale_factor = scale_factor_for_scenario(&case.scenario);
+    ui.layout_all(&mut app, &mut services, bounds, scale_factor);
 
     let mut scene = Scene::default();
-    if matches!(
-        case.scenario,
-        LayoutPrimitiveScenario::VisualVsHitBoundsFollowRenderTransform
-    ) {
-        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    if scenario_needs_paint(&case.scenario) {
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, scale_factor);
     }
 
+    let post_layout_scalar_metrics =
+        observe_post_layout_scalar_metrics(&ui, &services, root, &case.scenario)?;
     let snapshot = ui
         .semantics_snapshot()
         .cloned()
         .ok_or_else(|| ScenarioObserveError::new("missing semantics snapshot"))?;
     let mut observed = ObservedTree::from_semantics_snapshot(&snapshot, bounds);
-    for (id, value) in scalar_metrics {
+    for (id, value) in pre_layout_scalar_metrics
+        .into_iter()
+        .chain(post_layout_scalar_metrics)
+    {
         observed.set_metric(id, value);
     }
 
@@ -124,7 +130,24 @@ fn observe_case(
     Ok(observed)
 }
 
-fn observe_scalar_metrics(
+fn scale_factor_for_scenario(scenario: &LayoutPrimitiveScenario) -> f32 {
+    match scenario {
+        LayoutPrimitiveScenario::TextMeasurePaintOverflowScale => 1.25,
+        _ => 1.0,
+    }
+}
+
+fn scenario_needs_paint(scenario: &LayoutPrimitiveScenario) -> bool {
+    matches!(
+        scenario,
+        LayoutPrimitiveScenario::VisualVsHitBoundsFollowRenderTransform
+            | LayoutPrimitiveScenario::TextMeasurePaintWrapWidthColumn
+            | LayoutPrimitiveScenario::TextMeasurePaintWrapWidthMaxWidthRow
+            | LayoutPrimitiveScenario::TextMeasurePaintOverflowScale
+    )
+}
+
+fn observe_pre_layout_scalar_metrics(
     ui: &mut UiTree<TestHost>,
     app: &mut TestHost,
     services: &mut LayoutPrimitiveServices,
@@ -195,6 +218,189 @@ fn observe_scalar_metrics(
         ("percent_min_max.max.definite_width", max_definite.width.0),
         ("percent_min_max.min.definite_width", min_definite.width.0),
     ])
+}
+
+fn observe_post_layout_scalar_metrics(
+    ui: &UiTree<TestHost>,
+    services: &LayoutPrimitiveServices,
+    root: NodeId,
+    scenario: &LayoutPrimitiveScenario,
+) -> Result<Vec<(&'static str, f32)>, ScenarioObserveError> {
+    match scenario {
+        LayoutPrimitiveScenario::TextMeasurePaintWrapWidthColumn => {
+            let col = child_at(ui, root, 0, "column root")?;
+            let text = child_at(ui, col, 0, "column text")?;
+            let sibling = child_at(ui, col, 1, "column sibling")?;
+            let text_bounds = ui
+                .debug_node_bounds(text)
+                .ok_or_else(|| ScenarioObserveError::new("missing column text bounds"))?;
+            let sibling_bounds = ui
+                .debug_node_bounds(sibling)
+                .ok_or_else(|| ScenarioObserveError::new("missing column sibling bounds"))?;
+            let (measured, prepared, prepared_metrics) =
+                text_constraint_pair_for_width(services, Px(40.0), fret_core::TextWrap::Word)?;
+
+            Ok(vec![
+                (
+                    "text_measure_paint.column.wrap_width_delta",
+                    max_width_delta(measured, prepared),
+                ),
+                (
+                    "text_measure_paint.column.prepared_height",
+                    prepared_metrics.size.height.0,
+                ),
+                (
+                    "text_measure_paint.column.sibling_after_painted_height",
+                    sibling_bounds.origin.y.0
+                        - (text_bounds.origin.y.0 + prepared_metrics.size.height.0),
+                ),
+            ])
+        }
+        LayoutPrimitiveScenario::TextMeasurePaintWrapWidthMaxWidthRow => {
+            let container = child_at(ui, root, 0, "max-width container")?;
+            let col = child_at(ui, container, 0, "max-width column")?;
+            let row = child_at(ui, col, 0, "max-width row")?;
+            let sibling = child_at(ui, col, 1, "max-width sibling")?;
+            let wrapped = child_at(ui, row, 1, "max-width wrapped text")?;
+            let wrapped_bounds = ui
+                .debug_node_bounds(wrapped)
+                .ok_or_else(|| ScenarioObserveError::new("missing max-width wrapped bounds"))?;
+            let sibling_bounds = ui
+                .debug_node_bounds(sibling)
+                .ok_or_else(|| ScenarioObserveError::new("missing max-width sibling bounds"))?;
+            let (measured, prepared, prepared_metrics) =
+                widest_text_constraint_pair_for_wrap(services, fret_core::TextWrap::WordBreak)?;
+
+            Ok(vec![
+                (
+                    "text_measure_paint.max_width_row.wrap_width_delta",
+                    max_width_delta(measured, prepared),
+                ),
+                (
+                    "text_measure_paint.max_width_row.prepared_height",
+                    prepared_metrics.size.height.0,
+                ),
+                (
+                    "text_measure_paint.max_width_row.sibling_after_painted_height",
+                    sibling_bounds.origin.y.0
+                        - (wrapped_bounds.origin.y.0 + prepared_metrics.size.height.0),
+                ),
+            ])
+        }
+        LayoutPrimitiveScenario::TextMeasurePaintOverflowScale => {
+            let (measured, prepared, _prepared_metrics) =
+                text_constraint_pair_for_width(services, Px(40.0), fret_core::TextWrap::None)?;
+
+            Ok(vec![
+                (
+                    "text_measure_paint.overflow_scale.wrap_width_delta",
+                    max_width_delta(measured, prepared),
+                ),
+                (
+                    "text_measure_paint.overflow_scale.scale_delta",
+                    measured.scale_factor - prepared.scale_factor,
+                ),
+                (
+                    "text_measure_paint.overflow_scale.wrap_same",
+                    bool_metric(measured.wrap == prepared.wrap),
+                ),
+                (
+                    "text_measure_paint.overflow_scale.overflow_same",
+                    bool_metric(measured.overflow == prepared.overflow),
+                ),
+            ])
+        }
+        _ => Ok(Vec::new()),
+    }
+}
+
+fn child_at(
+    ui: &UiTree<TestHost>,
+    node: NodeId,
+    index: usize,
+    label: &str,
+) -> Result<NodeId, ScenarioObserveError> {
+    ui.children(node)
+        .get(index)
+        .copied()
+        .ok_or_else(|| ScenarioObserveError::new(format!("missing {label} at index {index}")))
+}
+
+fn text_constraint_pair_for_width(
+    services: &LayoutPrimitiveServices,
+    width: Px,
+    wrap: fret_core::TextWrap,
+) -> Result<(TextConstraints, TextConstraints, TextMetrics), ScenarioObserveError> {
+    let measured = services
+        .measured
+        .iter()
+        .copied()
+        .find(|constraints| {
+            constraints.wrap == wrap
+                && constraints
+                    .max_width
+                    .is_some_and(|max| (max.0 - width.0).abs() < 0.01)
+        })
+        .ok_or_else(|| ScenarioObserveError::new("missing measured text constraints"))?;
+    let (prepared, metrics) = services
+        .prepared
+        .iter()
+        .copied()
+        .zip(services.prepared_metrics.iter().copied())
+        .find(|(constraints, _metrics)| {
+            constraints.wrap == wrap
+                && constraints
+                    .max_width
+                    .is_some_and(|max| (max.0 - width.0).abs() < 0.01)
+        })
+        .ok_or_else(|| ScenarioObserveError::new("missing prepared text constraints"))?;
+
+    Ok((measured, prepared, metrics))
+}
+
+fn widest_text_constraint_pair_for_wrap(
+    services: &LayoutPrimitiveServices,
+    wrap: fret_core::TextWrap,
+) -> Result<(TextConstraints, TextConstraints, TextMetrics), ScenarioObserveError> {
+    let measured = services
+        .measured
+        .iter()
+        .copied()
+        .filter(|constraints| constraints.wrap == wrap)
+        .max_by(|a, b| {
+            a.max_width
+                .unwrap_or(Px(0.0))
+                .0
+                .total_cmp(&b.max_width.unwrap_or(Px(0.0)).0)
+        })
+        .ok_or_else(|| ScenarioObserveError::new("missing measured wrapped text constraints"))?;
+    let (prepared, metrics) = services
+        .prepared
+        .iter()
+        .copied()
+        .zip(services.prepared_metrics.iter().copied())
+        .filter(|(constraints, _metrics)| constraints.wrap == wrap)
+        .max_by(|(a, _), (b, _)| {
+            a.max_width
+                .unwrap_or(Px(0.0))
+                .0
+                .total_cmp(&b.max_width.unwrap_or(Px(0.0)).0)
+        })
+        .ok_or_else(|| ScenarioObserveError::new("missing prepared wrapped text constraints"))?;
+
+    Ok((measured, prepared, metrics))
+}
+
+fn max_width_delta(measured: TextConstraints, prepared: TextConstraints) -> f32 {
+    measured.max_width.unwrap_or(Px(0.0)).0 - prepared.max_width.unwrap_or(Px(0.0)).0
+}
+
+fn bool_metric(value: bool) -> f32 {
+    if value {
+        1.0
+    } else {
+        0.0
+    }
 }
 
 fn build_scenario(
@@ -313,6 +519,100 @@ fn build_scenario(
                     ]
                 })
                 .test_id("wrap-row")]
+        }
+        LayoutPrimitiveScenario::TextMeasurePaintWrapWidthColumn => {
+            let mut text_props = crate::element::TextProps::new("wrap me");
+            text_props.layout.size.width = Length::Px(Px(40.0));
+            text_props.wrap = fret_core::TextWrap::Word;
+
+            let mut sibling = crate::element::ContainerProps::default();
+            sibling.layout.size.width = Length::Fill;
+            sibling.layout.size.height = Length::Px(Px(10.0));
+
+            vec![cx
+                .column(crate::element::ColumnProps::default(), |cx| {
+                    vec![
+                        cx.text_props(text_props).test_id("measure-paint-text"),
+                        cx.container(sibling, |_cx| Vec::new())
+                            .test_id("measure-paint-sibling"),
+                    ]
+                })
+                .test_id("measure-paint-column")]
+        }
+        LayoutPrimitiveScenario::TextMeasurePaintWrapWidthMaxWidthRow => {
+            let mut container_layout = crate::element::LayoutStyle::default();
+            container_layout.size.width = Length::Fill;
+            container_layout.size.max_width = Some(Length::Px(Px(90.0)));
+
+            let mut row_layout = crate::element::LayoutStyle::default();
+            row_layout.size.width = Length::Fill;
+
+            let mut wrapped_layout = crate::element::LayoutStyle::default();
+            wrapped_layout.flex.grow = 1.0;
+            wrapped_layout.flex.shrink = 1.0;
+            wrapped_layout.size.min_width = Some(Length::Px(Px(0.0)));
+
+            let mut sibling = crate::element::ContainerProps::default();
+            sibling.layout.size.width = Length::Fill;
+            sibling.layout.size.height = Length::Px(Px(10.0));
+
+            vec![cx
+                .container(
+                    crate::element::ContainerProps {
+                        layout: container_layout,
+                        ..Default::default()
+                    },
+                    |cx| {
+                        vec![cx
+                            .column(crate::element::ColumnProps::default(), |cx| {
+                                vec![
+                                    cx.flex(
+                                        crate::element::FlexProps {
+                                            layout: row_layout,
+                                            direction: fret_core::Axis::Horizontal,
+                                            gap: Px(4.0).into(),
+                                            justify: MainAlign::Start,
+                                            align: CrossAlign::Start,
+                                            wrap: false,
+                                            ..Default::default()
+                                        },
+                                        |cx| {
+                                            vec![
+                                                cx.text("x").test_id("measure-paint-row-bullet"),
+                                                cx.text_props(crate::element::TextProps {
+                                                    layout: wrapped_layout,
+                                                    text: Arc::from("wrapwrapwrap"),
+                                                    style: None,
+                                                    color: None,
+                                                    wrap: fret_core::TextWrap::WordBreak,
+                                                    overflow: fret_core::TextOverflow::Clip,
+                                                    align: fret_core::TextAlign::Start,
+                                                    ink_overflow:
+                                                        crate::element::TextInkOverflow::None,
+                                                })
+                                                .test_id("measure-paint-row-text"),
+                                            ]
+                                        },
+                                    )
+                                    .test_id("measure-paint-row"),
+                                    cx.container(sibling, |_cx| Vec::new())
+                                        .test_id("measure-paint-row-sibling"),
+                                ]
+                            })
+                            .test_id("measure-paint-row-column")]
+                    },
+                )
+                .test_id("measure-paint-row-container")]
+        }
+        LayoutPrimitiveScenario::TextMeasurePaintOverflowScale => {
+            let mut text_props = crate::element::TextProps::new("ellipsis me");
+            text_props.layout.size.width = Length::Px(Px(40.0));
+            text_props.wrap = fret_core::TextWrap::None;
+            text_props.overflow = fret_core::TextOverflow::Ellipsis;
+
+            vec![cx
+                .text_props(text_props)
+                .test_id("measure-paint-overflow-scale-text")]
         }
         LayoutPrimitiveScenario::ScrollRootPreservesChildLayoutBounds => {
             let mut scroll = crate::element::ScrollProps::default();
@@ -511,7 +811,11 @@ fn build_scenario(
 }
 
 #[derive(Default)]
-struct LayoutPrimitiveServices;
+struct LayoutPrimitiveServices {
+    measured: Vec<TextConstraints>,
+    prepared: Vec<TextConstraints>,
+    prepared_metrics: Vec<TextMetrics>,
+}
 
 impl TextService for LayoutPrimitiveServices {
     fn prepare(
@@ -519,16 +823,27 @@ impl TextService for LayoutPrimitiveServices {
         input: &fret_core::TextInput,
         constraints: TextConstraints,
     ) -> (fret_core::TextBlobId, TextMetrics) {
-        (
-            fret_core::TextBlobId::default(),
-            self.measure(input, constraints),
-        )
+        let metrics = self.fake_metrics(input, constraints);
+        self.prepared.push(constraints);
+        self.prepared_metrics.push(metrics);
+        (fret_core::TextBlobId::default(), metrics)
     }
 
     fn release(&mut self, _blob: fret_core::TextBlobId) {}
 
     fn measure(
         &mut self,
+        input: &fret_core::TextInput,
+        constraints: TextConstraints,
+    ) -> TextMetrics {
+        self.measured.push(constraints);
+        self.fake_metrics(input, constraints)
+    }
+}
+
+impl LayoutPrimitiveServices {
+    fn fake_metrics(
+        &self,
         input: &fret_core::TextInput,
         constraints: TextConstraints,
     ) -> TextMetrics {

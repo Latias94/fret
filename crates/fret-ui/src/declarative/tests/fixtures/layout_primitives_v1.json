@@ -171,6 +171,100 @@
       }
     },
     {
+      "id": "text-measure-paint-wrap-width-column",
+      "scenario": { "kind": "text_measure_paint_wrap_width_column" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "text_measure_paint.column.wrap_width_delta",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "text_measure_paint.column.prepared_height",
+            "comparison": "ge",
+            "value": 20.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "text_measure_paint.column.sibling_after_painted_height",
+            "comparison": "ge",
+            "value": 0.0,
+            "eps": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "text-measure-paint-wrap-width-max-width-row",
+      "scenario": { "kind": "text_measure_paint_wrap_width_max_width_row" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "text_measure_paint.max_width_row.wrap_width_delta",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "text_measure_paint.max_width_row.prepared_height",
+            "comparison": "ge",
+            "value": 20.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "text_measure_paint.max_width_row.sibling_after_painted_height",
+            "comparison": "ge",
+            "value": 0.0,
+            "eps": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "text-measure-paint-overflow-scale",
+      "scenario": { "kind": "text_measure_paint_overflow_scale" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "text_measure_paint.overflow_scale.wrap_width_delta",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "text_measure_paint.overflow_scale.scale_delta",
+            "comparison": "eq",
+            "value": 0.0,
+            "eps": 0.000001
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "text_measure_paint.overflow_scale.wrap_same",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "text_measure_paint.overflow_scale.overflow_same",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.01
+          }
+        ]
+      }
+    },
+    {
       "id": "scroll-root-preserves-child-layout-bounds",
       "scenario": { "kind": "scroll_root_preserves_child_layout_bounds" },
       "oracle": {

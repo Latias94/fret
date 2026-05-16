@@ -600,8 +600,14 @@ date: 2026-05-12
     suite across percent sizing, min/max constraints, percent min/max intrinsic measurement,
     wrapped text height propagation, scroll-root child layout bounds, and absolute percent inset
     placement. No new mechanism defect was reproduced; the slice closed a harness coverage gap.
-- [ ] Add the next layout primitive companion for text measurement/paint agreement or
+- [x] Add the next layout primitive companion for text measurement/paint agreement or
   RTL/writing-mode behavior once the mechanism owner and public direction model are clear.
+  - Result: added text measurement/paint agreement cases for column wrap width, max-width row wrap
+    width, and overflow/scale constraints. No new mechanism defect was reproduced; the harness now
+    records text measure/prepare constraint deltas and painted-height layout follow-through as
+    scalar fixture metrics.
+- [ ] Add RTL/writing-mode layout primitive cases once the direction/writing-mode contract is
+  explicit enough to avoid encoding a recipe policy as a mechanism oracle.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.

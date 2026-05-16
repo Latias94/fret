@@ -37,6 +37,9 @@ cargo test --profile dev-fast -p fret-ui-shadcn --test recipe_typeahead_mechanis
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_primitives_match_oracles -- --nocapture
 ```
 
+Current layout primitive fixture coverage includes text measurement/paint agreement metrics for
+column wrap width, max-width row wrap width, and overflow/scale constraints.
+
 ## Suite Lint Policy Gates
 
 ```powershell
