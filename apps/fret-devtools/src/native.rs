@@ -128,6 +128,7 @@ const IMUI_PRODUCT_WORKFLOW_SUITE: &str =
 const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[
     "perf-docking/regression.summary.json",
     "perf-docking/check.perf_thresholds.json",
+    "perf-docking/*/trace.chrome.json",
 ];
 const DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID: &str = "demo-metrics-debug";
 const DEVTOOLS_DEMO_EDITOR_PROOF_COMMAND: &str =
@@ -7958,7 +7959,7 @@ mod tests {
             "product workflow docs: docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md"
         ));
         assert!(text.contains(
-            "product workflow artifacts: perf-docking/regression.summary.json, perf-docking/check.perf_thresholds.json"
+            "product workflow artifacts: perf-docking/regression.summary.json, perf-docking/check.perf_thresholds.json, perf-docking/*/trace.chrome.json"
         ));
     }
 

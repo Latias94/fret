@@ -122,7 +122,24 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
                 .saturating_add(prepaint_time_us)
                 .saturating_add(paint_time_us);
             let frame_dur_us = total_time_us.max(phase_sum_us);
+            let frame_ts_us = if frame_dur_us > 0 {
+                frame_start_us.min(frame_end_us_hint.saturating_sub(frame_dur_us))
+            } else {
+                frame_start_us
+            };
             if frame_dur_us == 0 {
+                real_span_event_count =
+                    real_span_event_count.saturating_add(push_real_span_extension_events(
+                        &mut events,
+                        pid,
+                        tid,
+                        frame_ts_us,
+                        tick_id,
+                        frame_id,
+                        window_id_u64,
+                        s,
+                        &mut real_span_extension_keys,
+                    ));
                 continue;
             }
 
@@ -132,8 +149,6 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
             } else {
                 frame_dur_us
             };
-
-            let frame_ts_us = frame_start_us.min(frame_end_us_hint.saturating_sub(frame_dur_us));
 
             events.push(chrome_x(
                 perf_keys::TOTAL_TIME_US.trace_event_name(),
@@ -721,6 +736,60 @@ mod tests {
                 .and_then(|v| v.as_str()),
             Some("view")
         );
+    }
+
+    #[test]
+    fn chrome_trace_keeps_real_span_extension_when_synthetic_stats_are_zero() {
+        let bundle = serde_json::json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 7,
+                "snapshots": [{
+                    "tick_id": 3,
+                    "frame_id": 5,
+                    "window": 7,
+                    "frame_clock": { "now_monotonic_ms": 1000, "delta_ms": 16 },
+                    "debug": {
+                        "stats": {
+                            "total_time_us": 0,
+                            "layout_time_us": 0,
+                            "paint_time_us": 0
+                        },
+                        "extensions": {
+                            "fret.perf.spans.v1": {
+                                "schema_version": "v1",
+                                "spans": [{
+                                    "name": "fret.ui.view",
+                                    "cat": "ui.driver",
+                                    "start_us": 7,
+                                    "dur_us": 42,
+                                    "args": { "phase": "view" }
+                                }]
+                            }
+                        }
+                    }
+                }]
+            }]
+        });
+
+        let trace = chrome_trace_json_from_bundle_value(&bundle).expect("trace");
+        assert_eq!(
+            trace.get("trace_source").and_then(|v| v.as_str()),
+            Some(
+                crate::perf_schema::PERF_TRACE_SOURCE_BUNDLE_SYNTHETIC_PHASES_WITH_EXTENSION_SPANS
+            )
+        );
+        assert_eq!(
+            trace.get("real_spans_included").and_then(|v| v.as_bool()),
+            Some(true)
+        );
+        assert_eq!(
+            trace.get("real_span_event_count").and_then(|v| v.as_u64()),
+            Some(1)
+        );
+        let names = trace_event_names(&trace);
+        assert!(names.contains(&"fret.ui.view"));
+        assert!(!names.contains(&"fret.frame"));
     }
 
     #[test]

@@ -74,7 +74,11 @@ IMUI_DOCKING_PERF_SUITE = "tools/diag-scripts/suites/perf-docking-arbitration-st
 IMUI_DOCKING_PERF_ARTIFACTS = {
     "perf-docking/regression.summary.json",
     "perf-docking/check.perf_thresholds.json",
+    "perf-docking/*/trace.chrome.json",
 }
+PERF_TRACE_CHROME_KIND = "perf_trace_chrome"
+PERF_TRACE_SOURCE_WITH_REAL_SPANS = "bundle_synthetic_phases_with_extension_spans"
+PERF_TRACE_REAL_SPAN_EXTENSION_KEY = "fret.perf.spans.v1"
 
 ALL_GATES = [
     DISCOVERY,
@@ -848,6 +852,7 @@ def _validate_discovery(repo_root: Path, fretboard_exe: Path) -> None:
     _assert_contains(tool_apps.stdout, IMUI_DOCKING_PERF_SUITE, "list tool apps")
     _assert_contains(tool_apps.stdout, "perf-docking/regression.summary.json", "list tool apps")
     _assert_contains(tool_apps.stdout, "perf-docking/check.perf_thresholds.json", "list tool apps")
+    _assert_contains(tool_apps.stdout, "perf-docking/*/trace.chrome.json", "list tool apps")
     _assert_contains(tool_apps.stdout, "fret-devtools", "list tool apps")
     _assert_contains(tool_apps.stdout, "cargo run -p fret-devtools", "list tool apps")
     _assert_contains(tool_apps.stdout, DEVTOOLS_GUI_DOC, "list tool apps")
@@ -965,6 +970,32 @@ def _validate_docking_perf_thresholds(
         raise SystemExit("docking perf thresholds rows do not match the promoted suite")
 
 
+def _validate_docking_perf_trace(bundle_path: Path, script: str) -> Path:
+    trace_path = bundle_path.parent / "trace.chrome.json"
+    if not trace_path.is_file():
+        raise SystemExit(f"docking perf item has no readable Chrome trace artifact: {script}")
+    trace = _read_json_file(trace_path)
+    if trace.get("kind") != PERF_TRACE_CHROME_KIND:
+        raise SystemExit(f"docking perf trace has unexpected kind: {trace_path}")
+    if trace.get("trace_source") != PERF_TRACE_SOURCE_WITH_REAL_SPANS:
+        raise SystemExit(f"docking perf trace did not include real span source: {trace_path}")
+    if trace.get("real_spans_included") is not True:
+        raise SystemExit(f"docking perf trace did not include real spans: {trace_path}")
+    real_span_event_count = trace.get("real_span_event_count")
+    if not isinstance(real_span_event_count, int) or real_span_event_count <= 0:
+        raise SystemExit(f"docking perf trace has no real span events: {trace_path}")
+    real_span_extension_keys = trace.get("real_span_extension_keys")
+    if (
+        not isinstance(real_span_extension_keys, list)
+        or PERF_TRACE_REAL_SPAN_EXTENSION_KEY not in real_span_extension_keys
+    ):
+        raise SystemExit(f"docking perf trace is missing real span extension key: {trace_path}")
+    trace_events = trace.get("traceEvents")
+    if not isinstance(trace_events, list) or not trace_events:
+        raise SystemExit(f"docking perf trace has no Chrome trace events: {trace_path}")
+    return trace_path
+
+
 def _validate_docking_perf_summary(repo_root: Path, out_dir: Path) -> None:
     summary_path = out_dir / "regression.summary.json"
     summary = _read_json_file(summary_path)
@@ -991,6 +1022,7 @@ def _validate_docking_perf_summary(repo_root: Path, out_dir: Path) -> None:
     seen_scripts: set[str] = set()
     seen_bundles: set[Path] = set()
     seen_perf_summaries: set[Path] = set()
+    seen_traces: set[Path] = set()
     seen_thresholds: set[Path] = set()
     items = summary.get("items")
     if not isinstance(items, list) or len(items) != len(expected_scripts):
@@ -1031,6 +1063,7 @@ def _validate_docking_perf_summary(repo_root: Path, out_dir: Path) -> None:
         if bundle_path is None or not bundle_path.is_file():
             raise SystemExit(f"docking perf item has no readable bundle artifact: {script}")
         seen_bundles.add(bundle_path)
+        seen_traces.add(_validate_docking_perf_trace(bundle_path, script))
         perf_summary_path = _path_from_json(evidence.get("perf_summary_json"))
         if perf_summary_path is None or not perf_summary_path.is_file():
             raise SystemExit(f"docking perf item has no readable perf summary artifact: {script}")
@@ -1044,6 +1077,8 @@ def _validate_docking_perf_summary(repo_root: Path, out_dir: Path) -> None:
         raise SystemExit("docking perf regression summary scripts do not match the promoted suite")
     if len(seen_thresholds) != 1:
         raise SystemExit("docking perf regression summary should point at one shared threshold artifact")
+    if len(seen_traces) != len(expected_scripts):
+        raise SystemExit("docking perf regression summary should point at one trace per perf script")
     for threshold_path in seen_thresholds:
         _validate_docking_perf_thresholds(threshold_path, expected_scripts)
     for perf_summary_path in seen_perf_summaries:
@@ -1301,6 +1336,7 @@ def _run_launched_gates(
             "1",
             "--warmup-frames",
             "5",
+            "--trace-real-spans",
             *_docking_perf_threshold_args(),
             "--reuse-launch",
             "--env",

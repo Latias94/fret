@@ -72,6 +72,7 @@ const IMUI_PRODUCT_WORKFLOW_SUITE: &str =
 const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[
     "perf-docking/regression.summary.json",
     "perf-docking/check.perf_thresholds.json",
+    "perf-docking/*/trace.chrome.json",
 ];
 
 #[derive(Clone)]
@@ -3060,7 +3061,7 @@ mod tests {
             "product workflow docs: docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md"
         ));
         assert!(text.contains(
-            "product workflow artifacts: perf-docking/regression.summary.json, perf-docking/check.perf_thresholds.json"
+            "product workflow artifacts: perf-docking/regression.summary.json, perf-docking/check.perf_thresholds.json, perf-docking/*/trace.chrome.json"
         ));
     }
 

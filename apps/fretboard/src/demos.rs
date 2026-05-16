@@ -85,6 +85,7 @@ const IMUI_DOCKING_PERF_SUITE: &str =
 const IMUI_DOCKING_PERF_ARTIFACTS: &[&str] = &[
     "perf-docking/regression.summary.json",
     "perf-docking/check.perf_thresholds.json",
+    "perf-docking/*/trace.chrome.json",
 ];
 
 pub(crate) fn list_tool_apps(args: Vec<String>) -> Result<(), String> {
@@ -550,6 +551,9 @@ mod tests {
                 && workflow
                     .expected_artifacts
                     .contains(&"perf-docking/check.perf_thresholds.json")
+                && workflow
+                    .expected_artifacts
+                    .contains(&"perf-docking/*/trace.chrome.json")
         }));
     }
 
@@ -582,21 +586,27 @@ mod tests {
         let workflows = value["product_workflows"]
             .as_array()
             .expect("product_workflows array");
-        assert!(workflows.iter().any(|workflow| workflow["id"] == "imui-product-chain"
-            && workflow["command"] == "python tools/diag_gate_imui_product_chain.py"
-            && workflow["focused_command"]
-                == "python tools/diag_gate_imui_product_chain.py --only discovery"
-            && workflow["launched_command"]
-                == "python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release"
-            && workflow["docs"]
-                == "docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md"
-            && workflow["suite"]
-                == "tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json"
-            && workflow["expected_artifacts"]
+        assert!(workflows.iter().any(|workflow| {
+            let artifacts = workflow["expected_artifacts"]
                 .as_array()
-                .expect("expected_artifacts array")
-                .iter()
-                .any(|artifact| artifact == "perf-docking/check.perf_thresholds.json")));
+                .expect("expected_artifacts array");
+            workflow["id"] == "imui-product-chain"
+                && workflow["command"] == "python tools/diag_gate_imui_product_chain.py"
+                && workflow["focused_command"]
+                    == "python tools/diag_gate_imui_product_chain.py --only discovery"
+                && workflow["launched_command"]
+                    == "python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release"
+                && workflow["docs"]
+                    == "docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md"
+                && workflow["suite"]
+                    == "tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json"
+                && artifacts
+                    .iter()
+                    .any(|artifact| artifact == "perf-docking/check.perf_thresholds.json")
+                && artifacts
+                    .iter()
+                    .any(|artifact| artifact == "perf-docking/*/trace.chrome.json")
+        }));
 
         let tools = value["tool_apps"].as_array().expect("tool_apps array");
         assert!(tools.iter().any(|tool| tool["id"] == "fret-devtools"

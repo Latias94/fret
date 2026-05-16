@@ -1992,6 +1992,56 @@ mod service_tests {
     }
 
     #[test]
+    fn record_snapshot_includes_recorded_real_perf_spans_extension() {
+        let window = app_window(1);
+        let app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let scene = Scene::default();
+        let mut svc = UiDiagnosticsService::default();
+        svc.cfg.enabled = true;
+
+        let mut capture = UiRealPerfSpanCaptureV1::new_for_test(Instant::now());
+        capture.push_phase(
+            "fret.ui.view",
+            "view",
+            "service_test",
+            0,
+            Duration::from_micros(12),
+        );
+        capture.record_for_window(&mut svc, window);
+
+        svc.record_snapshot(
+            &app,
+            window,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                fret_core::Size::new(Px(100.0), Px(100.0)),
+            ),
+            1.0,
+            &mut ui,
+            None,
+            &scene,
+        );
+
+        let extension = svc
+            .per_window
+            .get(&window)
+            .and_then(|ring| ring.snapshots.back())
+            .and_then(|snapshot| snapshot.debug.extensions.as_ref())
+            .and_then(|extensions| extensions.get(REAL_PERF_SPANS_EXTENSION_KEY_V1))
+            .expect("real perf spans extension");
+        assert_eq!(
+            extension.pointer("/spans/0/name").and_then(|v| v.as_str()),
+            Some("fret.ui.view")
+        );
+        assert_eq!(
+            extension.pointer("/spans/0/args/source").and_then(|v| v.as_str()),
+            Some("service_test")
+        );
+    }
+
+    #[test]
     fn step_start_retains_semantics_scroll_idle_stable_trace_for_passed_evidence() {
         let svc = UiDiagnosticsService::default();
         let app = App::new();
