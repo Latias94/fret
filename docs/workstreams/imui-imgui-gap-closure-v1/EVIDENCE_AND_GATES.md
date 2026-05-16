@@ -73,6 +73,8 @@ Last updated: 2026-05-17
   - `ecosystem/fret-ui-editor/src/primitives/input_group.rs`
   - `ecosystem/fret-ui-editor/src/primitives/readout.rs`
   - `ecosystem/fret-ui-editor/src/controls/field_status.rs`
+  - `ecosystem/fret-ui-editor/src/controls/color_edit.rs`
+  - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/numeric.rs`
   - `ecosystem/fret-ui-editor/src/controls/drag_value.rs`
   - `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs`
   - `ecosystem/fret/src/lib.rs`
@@ -252,6 +254,12 @@ Run evidence:
   editor_status_badge_text_uses_compact_single_line_readout_role
   error_badge_palette_keeps_short_visible_label loading_badge_palette_uses_short_label
   loading_badge_palette_stays_darker_than_editor_foreground --no-fail-fast`.
+- 2026-05-17: introduced `editor_inline_error_text_props(...)` for compact single-line editor error
+  readouts and routed both `ColorEdit` root errors and popup numeric errors through it. The role is
+  destructive-color aware through caller-supplied color, fill-width, `min-width: 0`, and ellipsis
+  truncated; wrapping validation prose remains a separate explicit control policy. Gate: `cargo
+  nextest run -p fret-ui-editor editor_inline_error_text_is_single_line_and_shrinkable
+  numeric_readout_formats_rgb_hsv_and_optional_alpha --no-fail-fast`.
 - 2026-05-16: tightened `UiWriterImUiFacadeExt::text(...)` to match Dear ImGui's default
   `Text()` posture: single-line, shrinkable, `min-width: 0`, and ellipsis-truncated under resize.
   Added `UiWriterImUiFacadeExt::text_wrapped(...)` as the explicit wrapping path for explanatory

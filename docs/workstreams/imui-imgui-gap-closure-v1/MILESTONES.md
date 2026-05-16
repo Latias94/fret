@@ -243,6 +243,9 @@ Exit criteria:
   2026-05-17 editor status badge text result: `FieldStatusBadge` no longer hand-rolls badge label
   `TextProps`; it uses `editor_status_badge_text_props(...)` from the editor readout primitive
   layer, preserving compact centered ellipsis text while keeping role policy reusable.
+  2026-05-17 editor inline error text result: `ColorEdit` root errors and popup numeric errors now
+  share `editor_inline_error_text_props(...)`, so compact destructive readouts are single-line,
+  shrinkable, and owned by the editor readout primitive layer instead of duplicated per surface.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

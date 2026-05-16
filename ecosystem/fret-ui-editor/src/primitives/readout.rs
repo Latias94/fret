@@ -97,11 +97,42 @@ pub(crate) fn editor_status_badge_text_props(
     }
 }
 
+pub(crate) fn editor_inline_error_text_props(
+    text: Arc<str>,
+    color: Color,
+    row_height: Px,
+) -> TextProps {
+    TextProps {
+        layout: LayoutStyle {
+            size: SizeStyle {
+                width: Length::Fill,
+                height: Length::Auto,
+                min_width: Some(Length::Px(Px(0.0))),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        text,
+        style: Some(typography::as_control_text(TextStyle {
+            size: Px(10.0),
+            line_height: Some(row_height),
+            ..Default::default()
+        })),
+        color: Some(color),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Ellipsis,
+        align: TextAlign::Start,
+        ink_overflow: Default::default(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
 
-    use super::{compact_readout_text_px, editor_status_badge_text_props};
+    use super::{
+        compact_readout_text_px, editor_inline_error_text_props, editor_status_badge_text_props,
+    };
     use fret_core::{Color, FontWeight, Px, TextAlign, TextOverflow, TextWrap};
     use fret_ui::element::Length;
 
@@ -133,5 +164,23 @@ mod tests {
         assert_eq!(style.size, Px(9.0));
         assert_eq!(style.weight, FontWeight::MEDIUM);
         assert_eq!(style.line_height, Some(Px(14.0)));
+    }
+
+    #[test]
+    fn editor_inline_error_text_is_single_line_and_shrinkable() {
+        let color = Color::from_srgb_hex_rgb(0xFF_44_44);
+        let props = editor_inline_error_text_props(Arc::from("Invalid hex color"), color, Px(20.0));
+
+        assert_eq!(props.color, Some(color));
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.height, Length::Auto);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(props.align, TextAlign::Start);
+
+        let style = props.style.expect("inline error text should set style");
+        assert_eq!(style.size, Px(10.0));
+        assert_eq!(style.line_height, Some(Px(20.0)));
     }
 }

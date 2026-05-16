@@ -178,6 +178,10 @@
       "command": "cargo nextest run -p fret-ui-editor editor_status_badge_text_uses_compact_single_line_readout_role error_badge_palette_keeps_short_visible_label loading_badge_palette_uses_short_label loading_badge_palette_stays_darker_than_editor_foreground --no-fail-fast"
     },
     {
+      "name": "editor inline error text semantics",
+      "command": "cargo nextest run -p fret-ui-editor editor_inline_error_text_is_single_line_and_shrinkable numeric_readout_formats_rgb_hsv_and_optional_alpha --no-fail-fast"
+    },
+    {
       "name": "fret-examples imui proof check",
       "command": "cargo check -p fret-examples"
     },
@@ -343,6 +347,8 @@
     "ecosystem/fret-ui-editor/src/primitives/input_group.rs",
     "ecosystem/fret-ui-editor/src/primitives/readout.rs",
     "ecosystem/fret-ui-editor/src/controls/field_status.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/popup/numeric.rs",
     "ecosystem/fret-ui-editor/src/controls/drag_value.rs",
     "ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs",
     "ecosystem/fret-ui-editor/src/controls/vec_edit.rs",

@@ -238,6 +238,9 @@ Readiness order for the next locally testable review slices:
    2026-05-17 editor status badge text follow-up: `FieldStatusBadge` now routes its compact label
    through `editor_status_badge_text_props(...)`, keeping badge text in the editor readout
    primitive layer instead of hand-rolling `TextProps` inside the control.
+   2026-05-17 editor inline error text follow-up: `ColorEdit` and its numeric popup now share
+   `editor_inline_error_text_props(...)` for compact single-line destructive readouts, leaving
+   wrapping validation prose to controls that explicitly need multi-line errors.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
