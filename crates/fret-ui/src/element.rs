@@ -1730,6 +1730,8 @@ impl Default for RovingFocusProps {
 pub struct PressableA11y {
     pub role: Option<SemanticsRole>,
     pub label: Option<Arc<str>>,
+    /// Optional value text for composite pressables such as combobox/select triggers.
+    pub value: Option<Arc<str>>,
     /// Optional hierarchy level for outline/tree semantics (1-based).
     pub level: Option<u32>,
     /// Debug/test-only identifier for deterministic automation.
