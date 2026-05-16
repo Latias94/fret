@@ -28,6 +28,49 @@ Conventions:
 - “Perf gate” items should land with a runnable `fretboard-dev diag perf` command and a baseline/threshold update.
 - “Fearless refactor” items should include: (1) perf evidence, (2) correctness evidence, (3) rollback plan.
 
+## Current local checkpoint (updated 2026-05-16; Windows RTX4090 deferred)
+
+The target-machine Windows RTX4090 editor-paint closeout remains the formal contract gate, but it is not the
+current local execution blocker. Continue baseline-neutral local work only when it has its own evidence and does
+not update checked-in baselines.
+
+- [ ] Re-run the three local editor paint probes after any host-widget, renderer-text, or paint-cache cleanup before
+  widening the implementation lane.
+  - Probes:
+    - `tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-typical.json`
+    - `tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json`
+    - `tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
+  - Required local evidence: repeat=3, warmup=5, standard prewarm/prelude hooks, overlay disabled, `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`,
+    and `fretboard-dev diag stats --sort time --top 15 --json` for the worst bundle.
+  - Do not treat this as Windows closeout or baseline promotion evidence.
+- [ ] Attribute the remaining local paint/renderer split before another code change.
+  - Latest typical-only local smoke:
+    `target/fret-diag/paint-observed-deps-presence-snapshot-typical-r3/1778921262429/stats.json`.
+  - Current p95 total/paint/paint-widget is `673/423/263us`.
+  - Host-widget observed model/global replay is now `4/4us` p95 after the paint-pass presence snapshot.
+  - Remaining host-widget instance lookup is `42us` p95 across `252` calls; top sampled frames show visual-bounds
+    record/flush around `9..14us` and paint-cache key construction around `26..28us`.
+  - Renderer text/encode/upload remains visible at `324/150/85us` p95 in the same local smoke.
+  - Decision: do not start a broad `ElementHostWidget` or Canvas display-list rewrite from this evidence alone.
+    The next implementation owner should be chosen only after the three-probe local pass confirms whether the
+    residual is renderer text prepare, paint-cache/visual-bounds bookkeeping, or generic paint traversal noise.
+- [ ] If renderer text prepare stays dominant across the three probes, add a narrow attribution slice before optimizing.
+  - Split `TextSystem::prepare_for_scene(...)` into scene pin-key collection, bucket delta, prewarm, and upload flush
+    timing.
+  - Candidate follow-up only after attribution: reuse or fingerprint the per-scene text pin set across stable
+    row-replay frames, preserving atlas pin lifetime semantics.
+  - Do not change renderer payload thresholds from local macOS evidence.
+- [ ] If paint-cache / visual-bounds bookkeeping is the local residual, optimize only the measured subphase.
+  - Candidate low-risk paths: avoid redundant visual-bounds writes, reuse small paint-cache key inputs, or reduce
+    per-node text-style fingerprint lookups when the node kind cannot carry inherited text style.
+  - Avoid replacing `WindowFrame.instances` or cloning semantics in this slice unless the instance lookup p95 grows
+    materially above the current `~42us` aggregate.
+- [ ] Keep structural refactors as separate follow-ons rather than reopening P1.5.
+  - Split a new narrow workstream only for hard structural changes such as true FrameArena/bump allocation,
+    `WindowFrame.children` arena/slab storage, explicit view-cache paint-skip semantics, or an editor row-fragment
+    replay contract.
+  - Do not split a new workstream for small local host-widget or renderer-text attribution slices.
+
 ## Current priorities (updated 2026-02-08)
 
 - [x] Keep an explicit perf contract matrix for editor-grade probes.

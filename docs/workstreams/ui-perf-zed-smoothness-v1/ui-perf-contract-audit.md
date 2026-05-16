@@ -462,6 +462,16 @@ directories fail the artifact verifier because they intentionally lack real `sum
 artifact-independent local closeout gates are green. Clean Windows handoff plans live under
 `target/fret-diag/editor-paint-contract-windows-handoff-*-plan*`; they are execution aids, not closeout evidence.
 
+Local continuation audit update (2026-05-16): after deferring the RTX4090 run in the local TODO queue, the closeout
+status is unchanged. `python3 tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260516-host-audit`
+rejects this Darwin/arm64 host with `windows-rtx4090 validation must run on the target Windows host`, while
+`python3 tools/perf/diag_editor_paint_contract_preflight.py` still passes its 8 local checks. Existing verifier and
+closeout summaries under `target/fret-diag/editor-paint-contract-validate-20260516-closeout-plan/` remain `ok=false`
+because both `target/fret-diag/editor-paint-contract-validate-20260516-closeout-plan/summary.json` and
+`target/fret-diag/editor-paint-contract-validate-20260516-closeout-plan-attrib/summary.json` are missing. The
+Windows handoff validation and attribution dry-run plans still exist and contain the expected four-step command
+shape, but they are not artifacts that satisfy the closeout objective.
+
 Active goal prompt-to-artifact checklist (2026-05-16): the closeout objective remains incomplete against actual
 artifacts, not just intent.
 
