@@ -970,6 +970,22 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/declarative/list.rs"),
+            required=[
+                "fn list_from_strings_row_contents",
+                "crate::declarative::text::text_chrome_glyph(cx, leading)",
+                "crate::declarative::text::text_list_row_label(cx, label)",
+                "crate::declarative::text::text_control_readout(cx, trailing)",
+                "list_from_strings_uses_shared_single_line_text_roles",
+            ],
+            forbidden=[
+                "out.push(cx.text(leading));",
+                "out.push(cx.text(label));",
+                "out.push(cx.text(trailing));",
+                "let trailing = if i % 5 == 0 { \"⌘O\" } else { \"\" };",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs"),
             required=[
                 "crate::declarative::text::text_chrome_title(cx, title.clone())",

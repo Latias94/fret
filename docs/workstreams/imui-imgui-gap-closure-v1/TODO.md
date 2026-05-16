@@ -345,6 +345,11 @@ Readiness order for the next locally testable review slices:
    with mixed single-line and wrapping rows. The test proves a multi-line validation
    value grows its row and pushes the following row down, so the fix is locked at the realistic
    inspector-grid composition layer instead of only the single-row container layer.
+   2026-05-17 generic list text follow-up: `list_from_strings(...)`, the compatibility string-list
+   helper over retained virtual lists, now routes leading glyphs, row labels, and trailing shortcuts
+   through `text_chrome_glyph(...)`, `text_list_row_label(...)`, and
+   `text_control_readout(...)` instead of bare `cx.text(...)`. The helper remains a generic
+   declarative kit convenience, not an IMUI runtime/list-box widening.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

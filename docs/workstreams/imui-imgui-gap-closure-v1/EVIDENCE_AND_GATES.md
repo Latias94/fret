@@ -309,6 +309,13 @@ Run evidence:
   Gate: `cargo nextest run -p fret-ui-kit --features imui --lib
   chrome_glyph_text_uses_fixed_slot_single_line_clip
   disclosure_indicator_uses_shared_chrome_glyph_text_role --no-fail-fast`.
+- 2026-05-17: routed `list_from_strings(...)` row text through the shared text-role vocabulary.
+  Leading list glyphs now use `text_chrome_glyph(...)`, row labels use
+  `text_list_row_label(...)`, and trailing shortcut/readout text uses
+  `text_control_readout(...)`. This closes a generic fixed-row compatibility-helper path without
+  adding an IMUI ListBox API or moving policy into `fret-imui`. Gates: `cargo nextest run -p
+  fret-ui-kit --features imui --lib list_from_strings_uses_shared_single_line_text_roles
+  --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: routed floating-window close button glyphs through the same
   `text_chrome_glyph(...)` role via `floating_window_close_glyph_text(...)`. This keeps fixed
   title-bar action chrome on the shared single-line clip contract instead of bare `cx.text(...)`
@@ -1064,5 +1071,13 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `cargo fmt -p fret-ui-kit` passed.
 - `cargo nextest run -p fret-ui-kit --features imui --lib base_single_line_text_roles_stay_single_line_under_narrow_layout paragraph_text_role_measures_multiple_lines_under_narrow_layout --no-fail-fast` passed.
 - `python tools/gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.
+
+2026-05-17 generic list text-role slice:
+
+- `cargo fmt -p fret-ui-kit` passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib list_from_strings_uses_shared_single_line_text_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.

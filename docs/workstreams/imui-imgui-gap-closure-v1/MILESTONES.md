@@ -320,6 +320,11 @@ Exit criteria:
   inspector composition level too. A narrow `PropertyGrid` with single-line rows before/after a
   wrapping validation row proves that the wrapping row grows and pushes following rows down instead
   of preserving a fixed-row-height assumption.
+  2026-05-17 generic list text result: the compatibility `list_from_strings(...)` helper now uses
+  the shared text-role vocabulary for fixed virtual-list rows. Leading status glyphs use
+  `text_chrome_glyph(...)`, labels use `text_list_row_label(...)`, and trailing shortcut text uses
+  `text_control_readout(...)`, with a focused structure test and source-gate marker preventing the
+  old bare `cx.text(...)` row path from returning.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.
