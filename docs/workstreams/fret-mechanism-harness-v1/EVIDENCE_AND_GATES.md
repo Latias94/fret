@@ -2766,6 +2766,32 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - full-suite result:
     `target/fret-diag-scroll-area-suite-pointer-current-state-lint-v1/sessions/1778956501773-46724/suite.summary.json`
     reports the suite passed.
+- Command strict diagnostics authoring:
+  - invariant:
+    promoted Command scripts must prove the owning Command page before using page-local
+    `ui-gallery-command-*` selectors, and long-page content clicks must use stable clicks with
+    target-level window visibility proof.
+  - findings:
+    enabling strict lint for the promoted Command suite found 4 missing page-entry proofs, 20 plain
+    long-page content clicks, and 6 stable-click targets that depended on nearby/root visibility
+    instead of target-level visibility. These were harness authoring gaps; the hardened Command
+    suite did not reproduce a new component or `fret-ui` mechanism defect.
+  - implementation anchors:
+    `tools/check_diag_scripts_registry.py`,
+    `tools/test_check_diag_scripts_registry.py`,
+    `tools/diag-scripts/suites/ui-gallery-command/suite.json`,
+    and promoted Command scripts under `tools/diag-scripts/ui-gallery/command/`.
+  - lint gates:
+    `python tools/test_check_diag_scripts_registry.py`,
+    `python tools/check_diag_scripts_registry.py`
+  - lint results:
+    passed; registry self-tests ran 18 tests.
+  - full-suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-command --dir target/fret-diag-command-suite-strict-authoring-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - full-suite result:
+    `target/fret-diag-command-suite-strict-authoring-v1/sessions/1778966586171-88944/suite.summary.json`
+    reports `status=passed`, 18/18 rows, `scripts_with_evidence=18`, and
+    `focus_mismatch_total=0`.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

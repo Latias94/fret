@@ -647,3 +647,10 @@ date: 2026-05-12
     overlay targets, hidden overlay targets, and removed overlay targets. No new mechanism defect
     was reproduced after F138; the slice turns the Select-discovered hidden-layer timer defect into
     durable, case-addressable harness coverage.
+- [x] Promote the Command suite into strict diagnostics authoring coverage.
+  - Result: strict page-entry and long-page click-visibility lint now cover promoted
+    `ui-gallery-command` scripts. The candidate audit found 4 page-entry violations, 20 plain
+    long-page content clicks, and 6 missing target-level visibility proofs. These were harness
+    authoring defects, not Command component or `fret-ui` mechanism defects: the full Command suite
+    passes 18/18 after replacing content clicks with guarded `click_stable`, adding missing
+    visibility guards, and adding the missing Command page-root proof.

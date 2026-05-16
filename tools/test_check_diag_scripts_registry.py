@@ -217,6 +217,59 @@ class DiagScriptRegistryLintTests(unittest.TestCase):
 
             self.assertEqual([], violations)
 
+    def test_command_page_local_selector_requires_page_entry(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/command/bad.json"
+            self.write_script(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "click_stable",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-command-behavior-input",
+                        },
+                    },
+                ],
+            )
+
+            violations = REGISTRY.lint_strict_page_entry(
+                root, self.registry_for(rel, ["ui-gallery-command"])
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertIn("ui-gallery-page-command", violations[0])
+            self.assertIn("ui-gallery-command-behavior-input", violations[0])
+
+    def test_command_start_page_default_allows_page_local_selector(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/command/start-page.json"
+            self.write_script_with_meta(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "click_stable",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-command-behavior-input",
+                        },
+                    },
+                ],
+                {"env_defaults": {"FRET_UI_GALLERY_START_PAGE": "command"}},
+            )
+
+            violations = REGISTRY.lint_strict_page_entry(
+                root, self.registry_for(rel, ["ui-gallery-command"])
+            )
+
+            self.assertEqual([], violations)
+
     def test_combobox_start_page_default_allows_page_local_selector(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
@@ -471,6 +524,41 @@ class DiagScriptRegistryLintTests(unittest.TestCase):
 
             violations = REGISTRY.lint_strict_click_visibility(
                 root, self.registry_for(rel, ["ui-gallery-scroll-area"])
+            )
+
+            self.assertEqual([], violations)
+
+    def test_command_long_page_click_stable_accepts_ensure_visible_window_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/command/good-visible.json"
+            self.write_script(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "ensure_visible",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-command-behavior-input",
+                        },
+                        "within_window": True,
+                        "padding_px": 4.0,
+                        "timeout_frames": 600,
+                    },
+                    {
+                        "type": "click_stable",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-command-behavior-input",
+                        },
+                    },
+                ],
+            )
+
+            violations = REGISTRY.lint_strict_click_visibility(
+                root, self.registry_for(rel, ["ui-gallery-command"])
             )
 
             self.assertEqual([], violations)

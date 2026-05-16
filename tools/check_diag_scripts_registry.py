@@ -31,12 +31,14 @@ SUITES_DIR = SCRIPTS_DIR / "suites"
 PRELUDE_DIR = SCRIPTS_DIR / "_prelude"
 SUITE_MANIFEST_FILENAMES = ["suite.json", "_suite.json"]
 STRICT_CLICK_VISIBILITY_SUITES = {
+    "ui-gallery-command",
     "ui-gallery-combobox",
     "ui-gallery-scroll-area",
     "ui-gallery-select",
     "ui-gallery-motion-pilot",
 }
 STRICT_UI_GALLERY_CONTENT_TEST_ID_PREFIXES = (
+    "ui-gallery-command-",
     "ui-gallery-combobox-",
     "ui-gallery-scroll-area-",
     "ui-gallery-scrollbar-",
@@ -56,6 +58,7 @@ CURRENT_STATE_CONVERGENCE_PREDICATES = {
     "input_pointer_capture_active_is",
 }
 STRICT_PAGE_ENTRY_SUITES = {
+    "ui-gallery-command",
     "ui-gallery-motion-pilot",
     "ui-gallery-select",
     "ui-gallery-combobox",
@@ -64,6 +67,13 @@ STRICT_PAGE_ENTRY_SUITES = {
     "ui-gallery-data-table-view-cache-torture",
 }
 UI_GALLERY_PAGE_ENTRY_RULES = {
+    "command": {
+        "page_id": "ui-gallery-page-command",
+        "entry_ids": ("ui-gallery-page-command", "ui-gallery-command-component"),
+        "content_prefixes": ("ui-gallery-command-",),
+        "start_page_values": ("command",),
+        "global_ids": (),
+    },
     "motion_presets": {
         "page_id": "ui-gallery-page-motion-presets",
         "content_prefixes": ("ui-gallery-motion-presets-",),
@@ -580,6 +590,11 @@ def lint_strict_click_visibility(repo_root: Path, registry: dict[str, Any]) -> l
                     target_id = test_id_from_target_ref(predicate.get("target"))
                     if target_id is not None and is_strict_ui_gallery_content_target(target_id):
                         visible_targets.add(target_id)
+
+            if step_type == "ensure_visible" and step.get("within_window") is True:
+                target_id = test_id_from_target_ref(step.get("target"))
+                if target_id is not None and is_strict_ui_gallery_content_target(target_id):
+                    visible_targets.add(target_id)
 
             if step_type == "click":
                 target_id = test_id_from_target_ref(step.get("target"))
