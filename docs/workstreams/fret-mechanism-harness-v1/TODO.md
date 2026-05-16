@@ -679,3 +679,7 @@ date: 2026-05-12
     case as an intentional collision flip (`preferred_side=bottom`, `chosen_side=top`,
     `flipped=true`) because the current page geometry leaves only ~43px below the trigger. The
     full `ui-gallery-hover-card` suite passes 6/6.
+- [x] Promote Menubar submenu placement traces into a focused runtime suite.
+  - Result: `ui-gallery-menubar-placement` now gates the existing LTR submenu, RTL wide submenu,
+    and RTL tight-left collision scripts as a small durable placement suite. The suite passed 3/3
+    with zero lint errors/warnings; no new Menubar or overlay mechanism defect was reproduced.

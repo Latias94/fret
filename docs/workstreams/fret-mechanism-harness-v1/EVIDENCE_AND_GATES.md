@@ -2878,6 +2878,30 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag-hover-card-suite-after-sides-placement-oracle-v1/sessions/1778972760323-23244/suite.summary.json`
     reports `status=passed`, 6/6 rows, `scripts_with_evidence=6`, and
     `focus_mismatch_total=0`.
+- Menubar submenu placement focused suite:
+  - invariant:
+    Menubar submenu placement must cover LTR physical-right placement, RTL physical-left placement,
+    and RTL tight-left collision flip behavior as a small independently runnable runtime gate.
+  - findings:
+    the three Menubar placement scripts were already useful, but only broad suites reached them.
+    This was a harness packaging gap rather than a recipe or mechanism defect.
+  - implementation anchors:
+    `tools/diag-scripts/suites/ui-gallery-menubar-placement/suite.json`,
+    `tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-submenu-placement-trace.json`,
+    `tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-rtl-submenu-placement-trace.json`,
+    and
+    `tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-rtl-submenu-tight-left-collision.json`.
+  - lint gates:
+    `python tools/test_check_diag_scripts_registry.py`,
+    `python tools/check_diag_scripts_registry.py`
+  - lint results:
+    passed; registry self-tests ran 21 tests.
+  - full-suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-menubar-placement --dir target/fret-diag-menubar-placement-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - full-suite result:
+    `target/fret-diag-menubar-placement-suite-v1/sessions/1778973313432-109176/suite.summary.json`
+    reports `status=passed`, 3/3 rows, `scripts_with_evidence=3`,
+    `focus_mismatch_total=0`, and zero lint errors/warnings for all rows.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`
