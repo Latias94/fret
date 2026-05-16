@@ -13,7 +13,9 @@ use crate::primitives::colors::{
     editor_border, editor_foreground, editor_muted_foreground, editor_subtle_bg,
 };
 use crate::primitives::inspector_layout::InspectorLayoutMetrics;
-use crate::primitives::readout::editor_property_row_reset_glyph_text_props;
+use crate::primitives::readout::{
+    editor_property_row_label_text_props, editor_property_row_reset_glyph_text_props,
+};
 use crate::primitives::visuals::{editor_icon_button_bg, editor_icon_button_border};
 
 #[cfg(test)]
@@ -30,6 +32,23 @@ fn mark_property_row_value_slot(element: AnyElement) -> AnyElement {
 }
 
 pub type OnPropertyRowReset = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx) + 'static>;
+
+pub(crate) fn property_row_label_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let (fg, row_height) = {
+        let theme = Theme::global(&*cx.app);
+        let metrics = InspectorLayoutMetrics::resolve(theme);
+        (editor_muted_foreground(theme), metrics.density.row_height)
+    };
+
+    cx.text_props(editor_property_row_label_text_props(
+        text.into(),
+        fg,
+        row_height,
+    ))
+}
 
 #[derive(Debug, Clone)]
 pub struct PropertyRowResetOptions {
@@ -295,8 +314,9 @@ impl PropertyRow {
                             layout: LayoutStyle {
                                 size: SizeStyle {
                                     width: Length::Px(label_w),
-                                    height: Length::Auto,
+                                    height: Length::Px(density.row_height),
                                     min_height: Some(Length::Px(density.row_height)),
+                                    max_height: Some(Length::Px(density.row_height)),
                                     ..Default::default()
                                 },
                                 flex: FlexItemStyle {
@@ -484,8 +504,9 @@ impl PropertyRow {
                                         layout: LayoutStyle {
                                             size: SizeStyle {
                                                 width: Length::Fill,
-                                                height: Length::Auto,
+                                                height: Length::Px(density.row_height),
                                                 min_height: Some(Length::Px(density.row_height)),
+                                                max_height: Some(Length::Px(density.row_height)),
                                                 ..Default::default()
                                             },
                                             flex: FlexItemStyle {
@@ -619,17 +640,19 @@ impl PropertyRow {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
+    use std::sync::{Arc, Mutex};
 
     use fret_app::App;
     use fret_core::{AppWindowId, Color, Point, Px, Rect, Size, TextStyle};
     use fret_ui::element::{AnyElement, ElementKind, Overflow};
     use fret_ui::elements::GlobalElementId;
-    use fret_ui::{UiTree, declarative};
+    use fret_ui::{Theme, UiTree, declarative};
 
     use super::{
         PROPERTY_ROW_VALUE_SLOT, PropertyRow, PropertyRowLayoutVariant, PropertyRowOptions,
+        property_row_label_text,
     };
+    use crate::primitives::inspector_layout::InspectorLayoutMetrics;
     use crate::primitives::readout::editor_validation_message_text_props;
     use crate::test_support::WrappingTextServices;
 
@@ -664,7 +687,7 @@ mod tests {
                     })
                     .into_element(
                         cx,
-                        |cx| cx.text("Exposure"),
+                        |cx| property_row_label_text(cx, "Exposure"),
                         |cx| {
                             cx.text_props(editor_validation_message_text_props(
                                 Arc::from(
@@ -691,6 +714,71 @@ mod tests {
             props.layout.overflow,
             Overflow::Visible,
             "row value slot must let wrapping value children grow and paint inside their measured line boxes; fixed chrome slots may clip themselves"
+        );
+    }
+
+    #[test]
+    fn row_label_slot_keeps_fixed_line_box_when_label_text_wraps_under_narrow_layout() {
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let mut services = WrappingTextServices;
+        let row_id = Arc::new(Mutex::new(None::<GlobalElementId>));
+        let expected_row_height = Arc::new(Mutex::new(None::<Px>));
+
+        let row_id_for_render = Arc::clone(&row_id);
+        let expected_row_height_for_render = Arc::clone(&expected_row_height);
+        let root = declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "property-row-wrapping-label-layout",
+            move |cx| {
+                let metrics = InspectorLayoutMetrics::resolve(Theme::global(&*cx.app));
+                *expected_row_height_for_render.lock().unwrap() = Some(metrics.density.row_height);
+
+                let row = PropertyRow::new()
+                    .options(PropertyRowOptions {
+                        variant: PropertyRowLayoutVariant::Row,
+                        label_width: Some(Px(48.0)),
+                        gap: Some(Px(8.0)),
+                        trailing_gap: Some(Px(0.0)),
+                        value_max_width: Some(Px(1024.0)),
+                        test_id: Some(Arc::from("inspector.long-label")),
+                        ..Default::default()
+                    })
+                    .into_element(
+                        cx,
+                        |cx| {
+                            cx.text(
+                                "Very long property label that would normally wrap under resize",
+                            )
+                        },
+                        |cx| cx.text("0.50"),
+                        |_cx| None,
+                    );
+                *row_id_for_render.lock().unwrap() = Some(row.id);
+                vec![row]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+        let row_id = row_id.lock().unwrap().expect("row id");
+        let expected_row_height = expected_row_height
+            .lock()
+            .unwrap()
+            .expect("expected row height");
+        let row_bounds = fret_ui::elements::current_bounds_for_element(&mut app, window, row_id)
+            .expect("row bounds");
+
+        assert!(
+            row_bounds.size.height.0 <= expected_row_height.0 + 0.5,
+            "property-row label chrome must not grow fixed-height rows when bare/default text wraps under resize: row={row_bounds:?} expected_row_height={expected_row_height:?}"
         );
     }
 
@@ -733,7 +821,7 @@ mod tests {
                     })
                     .into_element(
                         cx,
-                        |cx| cx.text("Exposure"),
+                        |cx| property_row_label_text(cx, "Exposure"),
                         |cx| {
                             let text = cx.text_props(editor_validation_message_text_props(
                                 Arc::from(

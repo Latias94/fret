@@ -24,6 +24,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use super::property_row::PropertyRowOptions;
+use super::property_row::property_row_label_text;
 use super::{PropertyGrid, PropertyGroup, PropertyRow};
 use crate::controls::{
     ColorEdit, ColorEditOptions, DragValue, DragValueOptions, IconButton, IconButtonOptions,
@@ -225,7 +226,7 @@ impl GradientEditor {
                     })
                     .into_element(
                         cx,
-                        |cx| cx.text("Angle"),
+                        |cx| property_row_label_text(cx, "Angle"),
                         |cx| {
                             DragValue::from_presentation(m, NumericPresentation::<f64>::degrees(0))
                                 .options(DragValueOptions {
@@ -342,7 +343,7 @@ fn stop_row<H: UiHost>(
 
     PropertyRow::new().options(row_options).into_element(
         cx,
-        |cx| cx.text("Stop"),
+        |cx| property_row_label_text(cx, "Stop"),
         move |cx| {
             cx.flex(
                 FlexProps {

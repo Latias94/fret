@@ -12,7 +12,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, ElementContextAccess, Theme, UiHost};
 
-use crate::composites::property_row::PropertyRow;
+use crate::composites::property_row::{PropertyRow, property_row_label_text};
 use crate::composites::property_row::{PropertyRowLayoutVariant, PropertyRowOptions};
 use crate::primitives::EditorDensity;
 use crate::primitives::inspector_layout::InspectorLayoutMetrics;
@@ -139,6 +139,14 @@ impl PropertyGridRowCx {
         self.row_options.clone()
     }
 
+    pub fn label_text<H: UiHost>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+        text: impl Into<Arc<str>>,
+    ) -> AnyElement {
+        property_row_label_text(cx, text)
+    }
+
     pub fn row<H: UiHost>(
         &self,
         cx: &mut ElementContext<'_, H>,
@@ -243,7 +251,7 @@ mod tests {
                                 test_id: Some(Arc::from("inspector.grid.exposure")),
                                 ..Default::default()
                             }),
-                            |cx| cx.text("Exposure"),
+                            |cx| rows.label_text(cx, "Exposure"),
                             |cx| {
                                 cx.text_props(editor_inline_error_text_props(
                                     Arc::from("0.50"),
@@ -262,7 +270,7 @@ mod tests {
                                 test_id: Some(Arc::from("inspector.grid.validation")),
                                 ..Default::default()
                             }),
-                            |cx| cx.text("Validation"),
+                            |cx| rows.label_text(cx, "Validation"),
                             |cx| {
                                 let text = cx.text_props(editor_validation_message_text_props(
                                     Arc::from(
@@ -285,7 +293,7 @@ mod tests {
                                 test_id: Some(Arc::from("inspector.grid.roughness")),
                                 ..Default::default()
                             }),
-                            |cx| cx.text("Roughness"),
+                            |cx| rows.label_text(cx, "Roughness"),
                             |cx| {
                                 cx.text_props(editor_inline_error_text_props(
                                     Arc::from("0.25"),

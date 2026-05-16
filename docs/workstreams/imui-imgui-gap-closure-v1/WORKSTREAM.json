@@ -199,7 +199,7 @@
     },
     {
       "name": "editor property chrome text semantics",
-      "command": "cargo nextest run -p fret-ui-editor editor_property_group_header_text_is_single_line_and_shrinkable editor_property_row_reset_glyph_text_keeps_fixed_button_line_box editor_inspector_panel_title_text_is_single_line_and_shrinkable inspector_panel_title_stays_single_line_when_header_is_narrow --no-fail-fast"
+      "command": "cargo nextest run -p fret-ui-editor editor_property_group_header_text_is_single_line_and_shrinkable editor_property_row_label_text_is_single_line_and_shrinkable editor_property_row_reset_glyph_text_keeps_fixed_button_line_box editor_inspector_panel_title_text_is_single_line_and_shrinkable inspector_panel_title_stays_single_line_when_header_is_narrow row_label_slot_keeps_fixed_line_box_when_label_text_wraps_under_narrow_layout --no-fail-fast"
     },
     {
       "name": "editor property wrapping value overflow and layout",

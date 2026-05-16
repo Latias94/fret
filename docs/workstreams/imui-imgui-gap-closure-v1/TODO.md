@@ -279,6 +279,11 @@ Readiness order for the next locally testable review slices:
    line-height constrained under resize without moving editor-specific policy into `fret-imui`.
    The inspector title path also has a narrow-header layout gate with toolbar siblings, so panel
    titles cannot drift back to default word wrapping.
+   2026-05-17 property-row label text follow-up: `editor_property_row_label_text_props(...)` now
+   owns fixed inspector label text, and eager/virtualized property-grid row contexts expose
+   `label_text(...)` as the preferred first-party label path. `PropertyRow` label slots also clamp
+   their own line boxes to the editor row height, so accidental bare/default label text cannot
+   reintroduce row growth under resize.
    2026-05-17 text role matrix follow-up: `P3_TEXT_ROLE_MATRIX_2026-05-17.md` now freezes the
    stable base role vocabulary for resize triage: control readout, button label, paragraph, code
    text, and table cell text. The matrix also classifies current derived roles, keeps wrapping text

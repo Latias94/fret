@@ -50,8 +50,8 @@ component should construct `TextProps` locally.
   according to the slot.
 - Editor readout primitives in `fret-ui-editor/src/primitives/readout.rs`: editor-specific status
   badges, inline errors, validation messages, section labels, preview captions, tooltip readouts,
-  inspector panel titles, and property chrome. Direct editor `TextProps` construction stays
-  allowlisted to primitive owners.
+  inspector panel titles, property-row labels, and property chrome. Direct editor `TextProps`
+  construction stays allowlisted to primitive owners.
 - Editor popup/list primitives in `fret-ui-editor/src/primitives/popup_list.rs`: editor assist and
   popup row text roles. They remain editor-layer policy, not `fret-imui` runtime behavior.
 
@@ -78,10 +78,11 @@ component should construct `TextProps` locally.
 - IMUI consumers:
   - `cargo nextest run -p fret-ui-kit --features imui --lib imui_text_item_is_single_line_and_shrinkable imui_text_wrapped_is_explicit_wrapping_text compact_paragraph_text_uses_wrapping_fill_width_layout menu_item_shortcut_text_uses_shared_control_readout_role menu_item_label_text_uses_shared_list_row_text_role control_label_text_uses_fill_width_single_line_truncation --no-fail-fast`
 - Editor consumers:
-  - `cargo nextest run -p fret-ui-editor editor_input_value_text_is_single_line_and_shrinkable editor_inline_error_text_is_single_line_and_shrinkable editor_validation_message_text_wraps_and_shrinks popup_list_row_text_is_single_line_and_shrinkable editor_property_group_header_text_is_single_line_and_shrinkable editor_inspector_panel_title_text_is_single_line_and_shrinkable inspector_panel_title_stays_single_line_when_header_is_narrow --no-fail-fast`
+  - `cargo nextest run -p fret-ui-editor editor_input_value_text_is_single_line_and_shrinkable editor_inline_error_text_is_single_line_and_shrinkable editor_validation_message_text_wraps_and_shrinks popup_list_row_text_is_single_line_and_shrinkable editor_property_group_header_text_is_single_line_and_shrinkable editor_property_row_label_text_is_single_line_and_shrinkable editor_inspector_panel_title_text_is_single_line_and_shrinkable inspector_panel_title_stays_single_line_when_header_is_narrow --no-fail-fast`
 - Source contract:
   - `python tools/gate_imui_workstream_source.py`
 - Layout-container regression:
+  - `cargo nextest run -p fret-ui-editor row_label_slot_keeps_fixed_line_box_when_label_text_wraps_under_narrow_layout --no-fail-fast`
   - `cargo nextest run -p fret-ui-editor row_value_slot_keeps_overflow_visible_for_wrapping_value_children row_value_slot_grows_to_wrapping_value_text_under_narrow_layout property_grid_keeps_rows_separated_when_value_text_wraps_under_narrow_layout --no-fail-fast`
 
 ## Result
@@ -94,3 +95,5 @@ must not clip explicit wrapping validation/prose children. The layout-level regr
 narrow wrapping validation text grows the value slot and row bounds instead of painting past the row
 bottom. The second regression covers `PropertyGrid` as the realistic inspector composition: mixed
 single-line and wrapping rows stay vertically separated when the validation row grows.
+The label-side follow-up adds the opposite guardrail: fixed property-row label chrome keeps a
+single row-height line box even if a caller accidentally supplies bare/default wrapping text.

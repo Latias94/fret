@@ -171,6 +171,10 @@ Exit criteria:
   path instead of growing a second row-policy wrapper.
   2026-05-14 follow-up result: both eager and virtualized grid row contexts are now opaque; row
   options stay crate-local while external callers use row helpers instead of public fields.
+  2026-05-17 text-role follow-up result: eager and virtualized grid row contexts now expose
+  `label_text(...)` for fixed inspector row labels. `PropertyRow` also clamps label slot line boxes
+  to the editor row height, so default/bare label text cannot wrap and grow fixed inspector rows
+  under resize.
   2026-05-14 inspector follow-up result: `InspectorPanelCx` now exposes query behavior through
   methods and keeps `query_lower` private.
   2026-05-16 child-region resize result: `imui-child-region-resize-y-v1` and

@@ -352,7 +352,9 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
             test_id: Some(Arc::from("tests.property_grid")),
             ..Default::default()
         }),
-        move |cx, row_cx| vec![row_cx.row(cx, |cx| cx.text("Name"), |cx| cx.text("Cube"))],
+        move |cx, row_cx| {
+            vec![row_cx.row(cx, |cx| row_cx.label_text(cx, "Name"), |cx| cx.text("Cube"))]
+        },
     );
 
     let gradient_stops: Arc<[GradientStopBinding]> = vec![GradientStopBinding {
@@ -386,7 +388,7 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
         move |cx, index, row_cx| {
             row_cx.row(
                 cx,
-                |cx| cx.text(format!("Item {index}")),
+                |cx| row_cx.label_text(cx, format!("Item {index}")),
                 |cx| cx.text("Value"),
             )
         },

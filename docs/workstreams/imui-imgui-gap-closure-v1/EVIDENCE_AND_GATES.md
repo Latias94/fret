@@ -356,6 +356,15 @@ Run evidence:
   editor_property_row_reset_glyph_text_keeps_fixed_button_line_box
   editor_inspector_panel_title_text_is_single_line_and_shrinkable
   inspector_panel_title_stays_single_line_when_header_is_narrow --no-fail-fast`.
+- 2026-05-17: introduced `editor_property_row_label_text_props(...)` and the property-grid row
+  context `label_text(...)` convenience path for fixed inspector label chrome. `PropertyRow` label
+  slots now clamp their own line box to the editor row height, so accidental bare/default label
+  text cannot wrap and grow a fixed-height row under resize. `GradientEditor`, eager
+  `PropertyGrid`, and virtualized grid smoke usage now route first-party labels through the helper,
+  while arbitrary custom label elements remain possible for fully custom rows. Gate:
+  `cargo nextest run -p fret-ui-editor
+  editor_property_row_label_text_is_single_line_and_shrinkable
+  row_label_slot_keeps_fixed_line_box_when_label_text_wraps_under_narrow_layout --no-fail-fast`.
 - 2026-05-17: removed clipping from `PropertyRow` value slots while keeping fixed label/reset/action
   chrome clipped. This is the layout-container side of the text-role contract: wrapping validation
   prose such as `NumericInput` inline errors may grow to multiple lines, so the parent value slot

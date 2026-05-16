@@ -273,6 +273,35 @@ pub(crate) fn editor_inspector_panel_title_text_props(
     }
 }
 
+pub(crate) fn editor_property_row_label_text_props(
+    text: Arc<str>,
+    color: Color,
+    row_height: Px,
+) -> TextProps {
+    TextProps {
+        layout: LayoutStyle {
+            size: SizeStyle {
+                width: Length::Fill,
+                height: Length::Auto,
+                min_width: Some(Length::Px(Px(0.0))),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        text,
+        style: Some(typography::as_control_text(TextStyle {
+            size: Px(11.0),
+            line_height: Some(row_height),
+            ..Default::default()
+        })),
+        color: Some(color),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Ellipsis,
+        align: TextAlign::Start,
+        ink_overflow: Default::default(),
+    }
+}
+
 pub(crate) fn editor_inline_control_label_text_props(
     text: Arc<str>,
     color: Color,
@@ -391,9 +420,10 @@ mod tests {
         compact_readout_text_px, editor_inline_control_label_text_props,
         editor_inline_error_text_props, editor_inspector_panel_title_text_props,
         editor_preview_caption_text_props, editor_property_group_header_text_props,
-        editor_property_row_reset_glyph_text_props, editor_section_badge_text_props,
-        editor_section_heading_text_props, editor_status_badge_text_props,
-        editor_tooltip_readout_text_props, editor_validation_message_text_props,
+        editor_property_row_label_text_props, editor_property_row_reset_glyph_text_props,
+        editor_section_badge_text_props, editor_section_heading_text_props,
+        editor_status_badge_text_props, editor_tooltip_readout_text_props,
+        editor_validation_message_text_props,
     };
     use fret_core::{Color, FontWeight, Px, TextAlign, TextOverflow, TextStyle, TextWrap};
     use fret_ui::element::Length;
@@ -583,6 +613,30 @@ mod tests {
             .expect("inline control label text should set style");
         assert_eq!(style.size, Px(10.0));
         assert_eq!(style.line_height, Some(Px(12.0)));
+    }
+
+    #[test]
+    fn editor_property_row_label_text_is_single_line_and_shrinkable() {
+        let color = Color::from_srgb_hex_rgb(0xAA_BB_CC);
+        let props = editor_property_row_label_text_props(
+            Arc::from("Very Long Property Label"),
+            color,
+            Px(20.0),
+        );
+
+        assert_eq!(props.color, Some(color));
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.height, Length::Auto);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(props.align, TextAlign::Start);
+
+        let style = props
+            .style
+            .expect("property row label text should set style");
+        assert_eq!(style.size, Px(11.0));
+        assert_eq!(style.line_height, Some(Px(20.0)));
     }
 
     #[test]

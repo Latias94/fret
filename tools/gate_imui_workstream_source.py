@@ -61,7 +61,7 @@ EDITOR_DIRECT_TEXT_PROPS_ALLOWED = {
         "TextProps {": 2,
     },
     Path("ecosystem/fret-ui-editor/src/primitives/readout.rs"): {
-        "TextProps {": 12,
+        "TextProps {": 13,
     },
 }
 
@@ -455,7 +455,7 @@ def main() -> None:
                 "editor_status_badge_text_uses_compact_single_line_readout_role error_badge_palette_keeps_short_visible_label",
                 "editor_inline_error_text_is_single_line_and_shrinkable editor_preview_caption_text_is_single_line_and_shrinkable editor_tooltip_readout_text_is_single_line_and_shrinkable numeric_readout_formats_rgb_hsv_and_optional_alpha color_tooltip_lines_match_imgui_hex_rgb_hsv_preview_text",
                 "editor_section_badge_text_is_single_line_centered_badge_label editor_section_heading_text_is_single_line_and_shrinkable editor_inline_control_label_text_is_single_line_and_shrinkable transform_edit_axis_outcome_exposes_read_only_signals",
-                "editor_property_group_header_text_is_single_line_and_shrinkable editor_property_row_reset_glyph_text_keeps_fixed_button_line_box editor_inspector_panel_title_text_is_single_line_and_shrinkable inspector_panel_title_stays_single_line_when_header_is_narrow",
+                "editor_property_group_header_text_is_single_line_and_shrinkable editor_property_row_label_text_is_single_line_and_shrinkable editor_property_row_reset_glyph_text_keeps_fixed_button_line_box editor_inspector_panel_title_text_is_single_line_and_shrinkable inspector_panel_title_stays_single_line_when_header_is_narrow row_label_slot_keeps_fixed_line_box_when_label_text_wraps_under_narrow_layout",
                 "row_value_slot_keeps_overflow_visible_for_wrapping_value_children",
                 "row_value_slot_grows_to_wrapping_value_text_under_narrow_layout",
                 "property_grid_keeps_rows_separated_when_value_text_wraps_under_narrow_layout",
@@ -4203,6 +4203,7 @@ def main() -> None:
                 "pub(crate) fn editor_property_group_header_text_props",
                 "pub(crate) fn editor_inspector_panel_title_text_props",
                 "pub(crate) fn editor_inline_control_label_text_props",
+                "pub(crate) fn editor_property_row_label_text_props",
                 "pub(crate) fn editor_property_row_reset_glyph_text_props",
                 "pub(crate) fn editor_preview_caption_text_props",
                 "pub(crate) fn editor_tooltip_readout_text_props",
@@ -4220,6 +4221,7 @@ def main() -> None:
                 "editor_property_group_header_text_is_single_line_and_shrinkable",
                 "editor_inspector_panel_title_text_is_single_line_and_shrinkable",
                 "editor_inline_control_label_text_is_single_line_and_shrinkable",
+                "editor_property_row_label_text_is_single_line_and_shrinkable",
                 "editor_property_row_reset_glyph_text_keeps_fixed_button_line_box",
                 "editor_preview_caption_text_is_single_line_and_shrinkable",
                 "editor_tooltip_readout_text_is_single_line_and_shrinkable",
@@ -4259,9 +4261,14 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/composites/property_row.rs"),
             required=[
-                "use crate::primitives::readout::editor_property_row_reset_glyph_text_props;",
+                "editor_property_row_label_text_props, editor_property_row_reset_glyph_text_props,",
+                "pub(crate) fn property_row_label_text",
+                "editor_property_row_label_text_props(",
                 "editor_property_row_reset_glyph_text_props(",
+                "height: Length::Px(density.row_height),",
+                "max_height: Some(Length::Px(density.row_height)),",
                 "mark_property_row_value_slot(cx.container(",
+                "row_label_slot_keeps_fixed_line_box_when_label_text_wraps_under_narrow_layout",
                 "row_value_slot_keeps_overflow_visible_for_wrapping_value_children",
                 "row_value_slot_grows_to_wrapping_value_text_under_narrow_layout",
                 "WrappingTextServices",
@@ -4743,6 +4750,8 @@ def main() -> None:
                 "pub struct PropertyGridRowCx",
                 "pub fn density(&self) -> EditorDensity",
                 "pub(crate) fn row_options(&self) -> PropertyRowOptions",
+                "pub fn label_text<H: UiHost>(",
+                "property_row_label_text(cx, text)",
                 "pub fn row<H: UiHost>(",
                 "pub fn row_with<H: UiHost>(",
                 "row.options(self.row_options())",
@@ -4769,6 +4778,8 @@ def main() -> None:
                 "impl PropertyGridVirtualizedRowCx",
                 "pub fn density(&self) -> EditorDensity",
                 "pub(crate) fn row_options(&self) -> PropertyRowOptions",
+                "pub fn label_text<H: UiHost>(",
+                "property_row_label_text(cx, text)",
                 "pub fn row<H: UiHost>(",
                 "pub fn row_with<H: UiHost>(",
                 "row.options(self.row_options())",
@@ -4783,6 +4794,7 @@ def main() -> None:
             required=[
                 "imui::property_grid_virtualized(",
                 "row_cx.row(",
+                "row_cx.label_text(cx,",
                 "format!(\"Item {index}\")",
             ],
             forbidden=[
