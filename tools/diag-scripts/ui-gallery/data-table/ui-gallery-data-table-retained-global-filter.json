@@ -188,7 +188,7 @@
     {
       "clear_before_type": true,
       "target": {
-        "id": "data-table-toolbar-global-filter-input",
+        "id": "ui-gallery-data-table-torture-toolbar-global-filter-input",
         "kind": "test_id"
       },
       "text": "Process 123",

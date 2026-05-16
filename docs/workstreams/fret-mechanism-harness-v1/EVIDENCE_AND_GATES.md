@@ -2792,6 +2792,42 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag-command-suite-strict-authoring-v1/sessions/1778966586171-88944/suite.summary.json`
     reports `status=passed`, 18/18 rows, `scripts_with_evidence=18`, and
     `focus_mismatch_total=0`.
+- DataTable runtime semantics lint cleanup:
+  - invariant:
+    runtime evidence suites must catch visual-pass semantics drift: same-page recipe instances need
+    unique diagnostics ids, and interactive button action owners need accessible names on the action
+    node itself.
+  - findings:
+    `ui-gallery-shadcn-runtime-evidence` passed the DataTable pagination runtime assertions but
+    failed suite lint on duplicate `data-table-toolbar-column-filter-input` ids and missing labels
+    on table header sort buttons.
+  - implementation anchors:
+    `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs`,
+    `ecosystem/fret-ui-kit/src/declarative/table.rs`,
+    `ecosystem/fret-ui-shadcn/tests/data_table_toolbar_global_filter.rs`,
+    UI Gallery DataTable snippets under `apps/fret-ui-gallery/src/ui/snippets/data_table/`,
+    and retained/view-cache DataTable scripts under `tools/diag-scripts/ui-gallery/data-table/`.
+  - focused gates:
+    `cargo test --profile dev-fast -p fret-ui-shadcn --test data_table_toolbar_global_filter data_table_toolbar_test_id_prefix_scopes_owned_inputs -- --nocapture`,
+    `cargo test --profile dev-fast -p fret-ui-kit --lib table_virtualized_sort_header_button_exposes_accessible_label -- --nocapture`,
+    and
+    `cargo test --profile dev-fast -p fret-ui-kit --lib table_virtualized_retained_header_debug_ids_click_sort_actions -- --nocapture`.
+  - focused gate results:
+    passed.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - focused runtime gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-default-pagination-collection-metadata.json --dir target/fret-diag-data-table-default-pagination-lint-fix-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime result:
+    passed with run id `1778969776320`.
+  - suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target/fret-diag-shadcn-runtime-evidence-after-datatable-lint-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - suite result:
+    `target/fret-diag-shadcn-runtime-evidence-after-datatable-lint-v1/sessions/1778969813032-104196/suite.summary.json`
+    reports `status=passed`, 10/10 rows, `scripts_with_evidence=10`, and
+    `focus_mismatch_total=0`.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

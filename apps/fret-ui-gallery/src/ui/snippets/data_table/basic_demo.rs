@@ -256,6 +256,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .column_filter("email")
         .column_filter_placeholder("Filter emails...")
         .column_filter_a11y_label("Email filter")
+        .test_id_prefix("ui-gallery-data-table-basic-toolbar")
         .faceted_selected_badges_query(shadcn::DataTableToolbarResponsiveQuery::Viewport)
         .columns_button_label("Columns")
         .show_pinning_menu(false)

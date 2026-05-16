@@ -73,6 +73,16 @@ fn find_by_role_and_label<'a>(
         .unwrap_or_else(|| panic!("missing semantics node role={role:?} label={label:?}"))
 }
 
+fn find_by_test_id<'a>(
+    snap: &'a fret_core::SemanticsSnapshot,
+    id: &str,
+) -> &'a fret_core::SemanticsNode {
+    snap.nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some(id))
+        .unwrap_or_else(|| panic!("missing semantics node with test_id={id:?}"))
+}
+
 #[test]
 fn data_table_toolbar_global_filter_updates_table_state_and_resets_page_index() {
     let window = AppWindowId::default();
@@ -144,6 +154,87 @@ fn data_table_toolbar_global_filter_updates_table_state_and_resets_page_index() 
         st.global_filter.as_ref().and_then(|v| v.as_str()),
         Some("foo"),
         "expected global filter to trim and update TableState"
+    );
+}
+
+#[test]
+fn data_table_toolbar_test_id_prefix_scopes_owned_inputs() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(900.0), Px(240.0)),
+    );
+
+    let mut app = App::new();
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
+        &mut app,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
+    );
+
+    let columns: Arc<[ColumnDef<()>]> =
+        Arc::from(vec![ColumnDef::<()>::new("name")].into_boxed_slice());
+    let state = app.models_mut().insert(TableState::default());
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let render = |ui: &mut UiTree<App>, app: &mut App, services: &mut dyn fret_core::UiServices| {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "data-table-toolbar-prefixed-ids",
+            |cx| {
+                let toolbar =
+                    shadcn::DataTableToolbar::new(state.clone(), columns.clone(), |col| {
+                        Arc::clone(&col.id)
+                    })
+                    .show_global_filter(true)
+                    .column_filter("name")
+                    .column_filter_a11y_label("Name filter")
+                    .show_columns_menu(false)
+                    .show_pinning_menu(false)
+                    .show_selected_text(false)
+                    .test_id_prefix("orders-toolbar")
+                    .into_element(cx);
+                vec![toolbar]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+    };
+
+    for _ in 0..2 {
+        render(&mut ui, &mut app, &mut services);
+    }
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+    find_by_test_id(&snap, "orders-toolbar-global-filter-input");
+    find_by_test_id(&snap, "orders-toolbar-column-filter-input");
+    assert!(
+        snap.nodes.iter().all(|n| {
+            !matches!(
+                n.test_id.as_deref(),
+                Some(
+                    "data-table-toolbar-global-filter-input"
+                        | "data-table-toolbar-column-filter-input"
+                )
+            )
+        }),
+        "prefixed toolbar should not also expose the historical unscoped input ids"
     );
 }
 

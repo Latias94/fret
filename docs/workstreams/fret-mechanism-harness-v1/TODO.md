@@ -654,3 +654,13 @@ date: 2026-05-12
     authoring defects, not Command component or `fret-ui` mechanism defects: the full Command suite
     passes 18/18 after replacing content clicks with guarded `click_stable`, adding missing
     visibility guards, and adding the missing Command page-root proof.
+- [x] Continue the shadcn runtime evidence suite until it finds a real semantics or diagnostics
+  surface defect.
+  - Result: `ui-gallery-shadcn-runtime-evidence` reached the DataTable pagination gate and exposed
+    real semantics lint defects after the runtime assertions passed: duplicate DataTable toolbar
+    input `test_id`s across same-page examples and missing accessible names on table header sort
+    button action owners. `DataTableToolbar::test_id_prefix(...)` now scopes recipe-owned child ids
+    for multi-instance pages, UI Gallery DataTable/torture surfaces use scoped ids, retained and
+    view-cache scripts target the scoped torture toolbar ids, and virtualized table header
+    pressables now export labels in retained and non-retained paths. The suite passes 10/10 after
+    rebuilding `fret-ui-gallery`.

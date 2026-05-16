@@ -285,6 +285,13 @@ struct DataTableToolbarRuntime {
     last_faceted_selected: Option<(ColumnId, HashSet<Arc<str>>)>,
 }
 
+fn data_table_toolbar_test_id(prefix: Option<&Arc<str>>, suffix: &str, fallback: &str) -> Arc<str> {
+    match prefix {
+        Some(prefix) => Arc::<str>::from(format!("{prefix}-{suffix}")),
+        None => Arc::<str>::from(fallback),
+    }
+}
+
 /// shadcn/ui `DataTable` toolbar (recipe).
 ///
 /// This is a v1 convenience surface that wires common controls to `TableState`:
@@ -308,6 +315,7 @@ pub struct DataTableToolbar<TData> {
     show_selected_text: bool,
     faceted_filter: Option<FacetedFilterConfig>,
     faceted_selected_badges_query: DataTableToolbarResponsiveQuery,
+    test_id_prefix: Option<Arc<str>>,
     trailing: Vec<AnyElement>,
 }
 
@@ -364,6 +372,7 @@ impl<TData> DataTableToolbar<TData> {
             show_selected_text: true,
             faceted_filter: None,
             faceted_selected_badges_query: DataTableToolbarResponsiveQuery::Viewport,
+            test_id_prefix: None,
             trailing: Vec::new(),
         }
     }
@@ -488,11 +497,23 @@ impl<TData> DataTableToolbar<TData> {
         self
     }
 
+    /// Scopes toolbar-owned diagnostic ids for pages that render multiple toolbar instances.
+    ///
+    /// Without a prefix, the recipe preserves the historical single-instance ids such as
+    /// `data-table-toolbar-column-filter-input`. With a prefix, child ids become
+    /// `{prefix}-column-filter-input`, `{prefix}-global-filter-input`, and
+    /// `{prefix}-faceted-{column}-trigger`.
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id_prefix = Some(prefix.into());
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement
     where
         TData: 'static,
     {
+        let test_id_prefix = self.test_id_prefix.clone();
         let mut region_layout = LayoutStyle::default();
         region_layout.size.width = Length::Fill;
         let region_props = LayoutQueryRegionProps {
@@ -995,6 +1016,7 @@ impl<TData> DataTableToolbar<TData> {
                     .map(|(open, query)| (cfg.clone(), open, query))
             })
             .map(|(cfg, open, query)| {
+                let test_id_prefix_for_faceted = test_id_prefix.clone();
                 let faceted_items = faceted_items.clone();
                 let button_label = cfg.button_label.clone();
                 let selected_labels: Vec<Arc<str>> = faceted_items
@@ -1013,12 +1035,21 @@ impl<TData> DataTableToolbar<TData> {
                     .unwrap_or_default();
 
                 let col_seg = sanitize_test_id_segment(cfg.column_id.as_ref());
-                let trigger_test_id =
-                    Arc::<str>::from(format!("data-table-toolbar-faceted-{col_seg}-trigger"));
-                let input_test_id =
-                    Arc::<str>::from(format!("data-table-toolbar-faceted-{col_seg}-input"));
-                let item_prefix =
-                    Arc::<str>::from(format!("data-table-toolbar-faceted-{col_seg}-item-"));
+                let trigger_test_id = data_table_toolbar_test_id(
+                    test_id_prefix_for_faceted.as_ref(),
+                    &format!("faceted-{col_seg}-trigger"),
+                    &format!("data-table-toolbar-faceted-{col_seg}-trigger"),
+                );
+                let input_test_id = data_table_toolbar_test_id(
+                    test_id_prefix_for_faceted.as_ref(),
+                    &format!("faceted-{col_seg}-input"),
+                    &format!("data-table-toolbar-faceted-{col_seg}-input"),
+                );
+                let item_prefix = data_table_toolbar_test_id(
+                    test_id_prefix_for_faceted.as_ref(),
+                    &format!("faceted-{col_seg}-item-"),
+                    &format!("data-table-toolbar-faceted-{col_seg}-item-"),
+                );
 
                 let input_id_cell: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
 
@@ -1029,6 +1060,7 @@ impl<TData> DataTableToolbar<TData> {
                 let trigger_selected_count = selected_count;
                 let trigger_badges_query = self.faceted_selected_badges_query;
                 let trigger_badges_query_region_id = toolbar_region_id;
+                let trigger_test_id_prefix = test_id_prefix_for_faceted.clone();
 
                 let faceted_items_for_content = faceted_items.clone();
                 let query = query.clone();
@@ -1120,9 +1152,13 @@ impl<TData> DataTableToolbar<TData> {
                                                 .py(Space::N0p5);
 
                                             if !show_labels {
-                                                let count_test_id = Arc::<str>::from(format!(
-                                                    "data-table-toolbar-faceted-{col_seg}-badge-count"
-                                                ));
+                                                let count_test_id = data_table_toolbar_test_id(
+                                                    trigger_test_id_prefix.as_ref(),
+                                                    &format!("faceted-{col_seg}-badge-count"),
+                                                    &format!(
+                                                        "data-table-toolbar-faceted-{col_seg}-badge-count"
+                                                    ),
+                                                );
                                                 children.push(
                                                     crate::badge::Badge::new(Arc::<str>::from(
                                                         trigger_selected_count.to_string(),
@@ -1133,9 +1169,13 @@ impl<TData> DataTableToolbar<TData> {
                                                     .into_element(cx),
                                                 );
                                             } else if trigger_selected_count > 2 {
-                                                let summary_test_id = Arc::<str>::from(format!(
-                                                    "data-table-toolbar-faceted-{col_seg}-badge-summary"
-                                                ));
+                                                let summary_test_id = data_table_toolbar_test_id(
+                                                    trigger_test_id_prefix.as_ref(),
+                                                    &format!("faceted-{col_seg}-badge-summary"),
+                                                    &format!(
+                                                        "data-table-toolbar-faceted-{col_seg}-badge-summary"
+                                                    ),
+                                                );
                                                 children.push(
                                                     crate::badge::Badge::new(Arc::<str>::from(
                                                         format!("{trigger_selected_count} selected"),
@@ -1149,9 +1189,15 @@ impl<TData> DataTableToolbar<TData> {
                                                 for (idx, label) in
                                                     trigger_selected_labels.iter().cloned().enumerate()
                                                 {
-                                                    let label_test_id = Arc::<str>::from(format!(
-                                                        "data-table-toolbar-faceted-{col_seg}-badge-label-{idx}"
-                                                    ));
+                                                    let label_test_id = data_table_toolbar_test_id(
+                                                        trigger_test_id_prefix.as_ref(),
+                                                        &format!(
+                                                            "faceted-{col_seg}-badge-label-{idx}"
+                                                        ),
+                                                        &format!(
+                                                            "data-table-toolbar-faceted-{col_seg}-badge-label-{idx}"
+                                                        ),
+                                                    );
                                                     children.push(
                                                         crate::badge::Badge::new(label)
                                                             .variant(
@@ -1367,23 +1413,33 @@ impl<TData> DataTableToolbar<TData> {
             });
 
                 let filter_layout = self.filter_layout.clone();
+                let global_filter_test_id = data_table_toolbar_test_id(
+                    test_id_prefix.as_ref(),
+                    "global-filter-input",
+                    "data-table-toolbar-global-filter-input",
+                );
                 let global_filter = filter_model.as_ref().map(|m| {
                     Input::new(m.clone())
                         .a11y_label("Global filter")
                         .a11y_role(SemanticsRole::TextField)
                         .placeholder(self.filter_placeholder.clone())
-                        .test_id("data-table-toolbar-global-filter-input")
+                        .test_id(global_filter_test_id.clone())
                         .chrome_motion(false)
                         .refine_layout(filter_layout.clone())
                         .into_element(cx)
                 });
 
+                let column_filter_test_id = data_table_toolbar_test_id(
+                    test_id_prefix.as_ref(),
+                    "column-filter-input",
+                    "data-table-toolbar-column-filter-input",
+                );
                 let column_filter = column_filter_model.as_ref().map(|m| {
                     Input::new(m.clone())
                         .a11y_label(self.column_filter_a11y_label.clone())
                         .a11y_role(SemanticsRole::TextField)
                         .placeholder(self.column_filter_placeholder.clone())
-                        .test_id("data-table-toolbar-column-filter-input")
+                        .test_id(column_filter_test_id.clone())
                         .chrome_motion(false)
                         .refine_layout(filter_layout.clone())
                         .into_element(cx)
@@ -1398,6 +1454,11 @@ impl<TData> DataTableToolbar<TData> {
                     .ok()
                     .unwrap_or(false);
                 let reset_button = reset_filters.then(|| {
+                    let reset_test_id = data_table_toolbar_test_id(
+                        test_id_prefix.as_ref(),
+                        "reset-filters",
+                        "data-table-toolbar-reset-filters",
+                    );
                     let state = self.state.clone();
                     let filter_model = filter_model.clone();
                     let column_filter_model = column_filter_model.clone();
@@ -1440,7 +1501,7 @@ impl<TData> DataTableToolbar<TData> {
                     Button::new("Reset")
                         .variant(ButtonVariant::Ghost)
                         .size(ButtonSize::Sm)
-                        .test_id("data-table-toolbar-reset-filters")
+                        .test_id(reset_test_id)
                         .children(vec![
                             icon::icon(cx, fret_icons::IconId::new_static("lucide.x")),
                             ui::text("Reset").into_element(cx),

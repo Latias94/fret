@@ -126,6 +126,29 @@ fn sort_for_column(sorting: &[SortSpec], id: &ColumnId) -> Option<bool> {
         .map(|s| s.desc)
 }
 
+fn header_label_for_semantics(
+    label: Arc<str>,
+    sort_state: Option<bool>,
+    sorting: &[SortSpec],
+    col_id: &str,
+) -> Arc<str> {
+    let Some(desc) = sort_state else {
+        return label;
+    };
+
+    let dir = if desc { "descending" } else { "ascending" };
+    if sorting.len() > 1
+        && let Some(order) = sorting
+            .iter()
+            .position(|s| s.column.as_ref() == col_id)
+            .map(|idx| idx + 1)
+    {
+        return Arc::<str>::from(format!("{label}, sorted {dir}, priority {order}"));
+    }
+
+    Arc::<str>::from(format!("{label}, sorted {dir}"))
+}
+
 #[cfg(test)]
 fn next_sort_for_column(current: Option<bool>) -> Option<bool> {
     match current {
@@ -948,6 +971,20 @@ mod tests {
         let mut root = fret_core::NodeId::default();
         pump(&mut ui, &mut app, &mut services, &mut root);
 
+        let snap = ui
+            .semantics_snapshot()
+            .expect("expected retained table semantics before header click");
+        let name_header = snap
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some("table-retained-sort-header-name"))
+            .expect("expected retained name header semantics");
+        assert_eq!(
+            name_header.label.as_deref(),
+            Some("name"),
+            "retained sortable header button should expose its own accessible label"
+        );
+
         click_header(
             &mut ui,
             &mut app,
@@ -1521,6 +1558,101 @@ mod tests {
             cell_bounds.size.width.0 <= 80.0,
             "expected the cell subtree to be clamped to the column width (got {:.2}px)",
             cell_bounds.size.width.0
+        );
+    }
+
+    #[test]
+    fn table_virtualized_sort_header_button_exposes_accessible_label() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let mut state_value = TableState::default();
+        state_value.pagination.page_size = 1;
+        let state = app.models_mut().insert(state_value);
+
+        let data = vec![0u32];
+        let columns = vec![{
+            let mut col = ColumnDef::new("name").sort_by(|left: &u32, right: &u32| left.cmp(right));
+            col.size = 120.0;
+            col.enable_resizing = false;
+            col
+        }];
+        let scroll = VirtualListScrollHandle::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![table_virtualized(
+                    cx,
+                    &data,
+                    &columns,
+                    state.clone(),
+                    &scroll,
+                    0,
+                    &|_row, i| RowKey::from_index(i),
+                    None,
+                    TableViewProps {
+                        draw_frame: false,
+                        enable_column_resizing: false,
+                        row_height: Some(Px(40.0)),
+                        header_height: Some(Px(40.0)),
+                        ..Default::default()
+                    },
+                    |_row| None,
+                    |cx, col, _sort| [cx.text(col.id.as_ref())],
+                    |cx, row, col| [cx.text(format!("{}-{}", col.id.as_ref(), row.index))],
+                    None,
+                    TableDebugIds {
+                        header_cell_test_id_prefix: Some(Arc::<str>::from("table-sort-header-")),
+                        ..Default::default()
+                    },
+                )]
+            })
+        };
+
+        for _ in 0..3 {
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("expected a semantics snapshot");
+        let header = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("table-sort-header-name"))
+            .expect("expected sortable header semantics");
+        assert_eq!(
+            header.role,
+            SemanticsRole::Button,
+            "sortable header test id should target the action owner"
+        );
+        assert_eq!(
+            header.label.as_deref(),
+            Some("name"),
+            "sortable header button should expose its own accessible label"
         );
     }
 
@@ -4068,6 +4200,12 @@ where
                                                     ))
                                                 },
                                             );
+                                        let header_semantics_label = header_label_for_semantics(
+                                            label.clone(),
+                                            sort_state,
+                                            sorting.as_slice(),
+                                            col_id.as_ref(),
+                                        );
 
                                         cx.container(
                                             ContainerProps {
@@ -4104,7 +4242,7 @@ where
                                                         enabled,
                                                         a11y: PressableA11y {
                                                             role: Some(SemanticsRole::Button),
-                                                            label: Some(label.clone()),
+                                                            label: Some(header_semantics_label.clone()),
                                                             test_id: debug_test_id.clone(),
                                                             ..Default::default()
                                                         },
@@ -6187,6 +6325,12 @@ where
                                                                                             role: Some(
                                                                                                 SemanticsRole::Button,
                                                                                             ),
+                                                                                            label: Some(header_label_for_semantics(
+                                                                                                col_id.clone(),
+                                                                                                sort_state,
+                                                                                                state_value.sorting.as_slice(),
+                                                                                                col_id.as_ref(),
+                                                                                            )),
                                                                                             test_id: explicit_test_id.clone(),
                                                                                         ..Default::default()
                                                                                     },
