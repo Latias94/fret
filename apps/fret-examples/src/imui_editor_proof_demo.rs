@@ -443,11 +443,14 @@ fn proof_drag_preview_card<H: UiHost>(
         props.border_color = Some(theme.color_token("border"));
         props.corner_radii = Corners::all(Px(8.0));
 
-        let text = subtitle
-            .as_ref()
-            .map(|subtitle| format!("{title}\n{subtitle}"))
-            .unwrap_or_else(|| title.as_ref().to_string());
-        out.push(cx.container(props, move |cx| vec![cx.text(text)]));
+        out.push(cx.container(props, move |cx| {
+            let mut children = Vec::new();
+            children.push(decl_text::text_section_chrome_label(cx, title.clone()));
+            if let Some(subtitle) = subtitle.as_ref() {
+                children.push(decl_text::text_control_readout(cx, subtitle.clone()));
+            }
+            children
+        }));
     })
 }
 
@@ -4247,6 +4250,27 @@ fn before_close_window(app: &mut KernelApp, closing_window: AppWindowId) -> bool
 mod tests {
     use super::*;
 
+    use fret_app::App;
+    use fret_core::{AppWindowId, TextWrap};
+    use fret_ui::element::ElementKind;
+    use fret_ui::elements;
+
+    fn test_bounds() -> Rect {
+        Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(96.0)))
+    }
+
+    fn collect_text_props<'a>(
+        element: &'a fret_ui::element::AnyElement,
+        out: &mut Vec<&'a fret_ui::element::TextProps>,
+    ) {
+        if let ElementKind::Text(props) = &element.kind {
+            out.push(props);
+        }
+        for child in &element.children {
+            collect_text_props(child, out);
+        }
+    }
+
     #[test]
     fn authoring_parity_blend_slider_uses_formatter_percent_without_extra_suffix() {
         let presentation = authoring_parity_blend_presentation();
@@ -4409,5 +4433,31 @@ mod tests {
             proof_outliner_order_line(&items),
             "Order: Camera -> Post FX -> Cube -> Key light"
         );
+    }
+
+    #[test]
+    fn proof_drag_preview_card_uses_single_line_text_roles() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let card = elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+            proof_drag_preview_card(
+                Arc::from("Material asset"),
+                Some(Arc::from("assets/materials/brushed-metal.mat")),
+            )
+            .into_element(cx)
+        });
+
+        let mut text_props = Vec::new();
+        collect_text_props(&card, &mut text_props);
+        assert_eq!(text_props.len(), 2);
+        assert_eq!(text_props[0].text.as_ref(), "Material asset");
+        assert_eq!(
+            text_props[1].text.as_ref(),
+            "assets/materials/brushed-metal.mat"
+        );
+        for props in text_props {
+            assert_eq!(props.wrap, TextWrap::None);
+            assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        }
     }
 }

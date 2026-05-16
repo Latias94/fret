@@ -304,6 +304,8 @@ Readiness order for the next locally testable review slices:
    2026-05-17 editor proof readout follow-up: `imui_editor_proof_demo` now routes selected
    empty-state labels, authoring shared-state readouts, and the declarative gradient section label
    through proof-local helpers backed by shared text roles instead of bare `cx.text(...)`.
+   2026-05-17 drag-preview text follow-up: proof drag-preview cards now render title and subtitle
+   as separate shared text-role elements instead of a newline-joined bare text blob.
    2026-05-17 gradient editor empty-state follow-up: `GradientEditor` now routes its `No stops`
    empty-state label through an editor readout primitive instead of bare/default text, keeping
    compact inspector empty states single-line and shrinkable under resize.

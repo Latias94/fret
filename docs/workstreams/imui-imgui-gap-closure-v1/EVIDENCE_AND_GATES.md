@@ -407,6 +407,12 @@ Run evidence:
   `proof_section_chrome_label(...)` backed by `text_section_chrome_label(...)`. Gates:
   `python tools/gate_imui_workstream_source.py` and
   `cargo check -p fret-demo --bin imui_editor_proof_demo`.
+- 2026-05-17: migrated `imui_editor_proof_demo` drag-preview cards away from a newline-joined bare
+  text blob. Preview titles now use `text_section_chrome_label(...)`, optional subtitles use
+  `text_control_readout(...)`, and `proof_drag_preview_card_uses_single_line_text_roles` locks the
+  two-line preview as two single-line role elements. Gates: `cargo nextest run -p fret-examples
+  --lib proof_drag_preview_card_uses_single_line_text_roles --no-fail-fast`, `cargo check -p
+  fret-demo --bin imui_editor_proof_demo`, and `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: introduced `editor_empty_state_text_props(...)` for compact editor empty-state
   labels and routed `GradientEditor`'s `No stops` label through
   `gradient_editor_empty_state_text(...)`. This removes another real component bare-text path while

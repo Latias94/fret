@@ -4601,6 +4601,9 @@ def main() -> None:
                 "fn proof_empty_state_text",
                 "fn proof_section_chrome_label",
                 "decl_text::text_section_chrome_label(cx, text)",
+                "children.push(decl_text::text_section_chrome_label(cx, title.clone()));",
+                "children.push(decl_text::text_control_readout(cx, subtitle.clone()));",
+                "proof_drag_preview_card_uses_single_line_text_roles",
                 "vec_edit_axis_label(outcome.axis())",
                 "edit_session_outcome_label(outcome.outcome())",
                 "transform_edit_section_label(outcome.section())",
@@ -4633,6 +4636,8 @@ def main() -> None:
                 'cx.text(shading_line)',
                 'cx.text(gradient_line)',
                 'cx.text("Gradient editor")\n                        .test_id("imui-editor-proof.authoring.declarative.gradient.label")',
+                'format!("{title}\\n{subtitle}")',
+                "vec![cx.text(text)]",
             ],
         ),
         SourceCheck(
