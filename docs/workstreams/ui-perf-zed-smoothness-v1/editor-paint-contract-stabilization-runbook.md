@@ -56,9 +56,10 @@ python tools/perf/diag_editor_paint_contract_windows_handoff.py `
   --date-tag <date>
 ```
 
-This single command runs the fast preflight, the baseline-validation pass, the `--with-paint-perf` attribution pass,
-artifact verification, and the local closeout gates. It does not bypass the target-machine requirement; use `--dry-run`
-on non-target hosts to inspect the command plan without producing misleading local artifacts.
+This single command builds the release binaries, runs the fast preflight, runs the baseline-validation pass, runs the
+`--with-paint-perf` attribution pass, verifies artifacts, and runs the local closeout gates. It does not bypass the
+target-machine requirement; use `--dry-run` on non-target hosts to inspect the command plan without producing
+misleading local artifacts. Use `--skip-build` only when the target release binaries are already current.
 
 Use the lower-level validation runner directly only when you need to debug one validation directory at a time:
 
@@ -67,7 +68,8 @@ python tools/perf/diag_editor_paint_contract_validate.py `
   --date-tag <date>
 ```
 
-Run the release builds above first; the runner fails fast if the expected Windows binaries are missing.
+Run the release builds above first when using the lower-level runner directly; it fails fast if the expected Windows
+binaries are missing.
 Use `--dry-run` on non-target hosts to inspect the exact command plan without producing misleading local evidence.
 For non-dry-run validation, use a fresh `--date-tag` / `--out-dir`; the runner rejects an existing non-empty output
 directory by default so closeout evidence cannot accidentally mix stale dry-run or failed-run artifacts. Use

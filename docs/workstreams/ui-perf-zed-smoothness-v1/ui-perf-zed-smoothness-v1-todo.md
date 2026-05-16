@@ -36,8 +36,8 @@ not update checked-in baselines.
 
 - [x] Keep a one-command target-machine handoff runner for the deferred Windows RTX4090 closeout.
   - Runner: `tools/perf/diag_editor_paint_contract_windows_handoff.py`
-  - Sequence: preflight, baseline validation, `--with-paint-perf` attribution validation, artifact verifier, and
-    closeout gates.
+  - Sequence: release builds, preflight, baseline validation, `--with-paint-perf` attribution validation, artifact
+    verifier, and closeout gates. Use `--skip-build` only when the Windows target binaries are already current.
   - Dry-run evidence:
     `target/fret-diag/editor-paint-contract-windows-handoff-workstream-gate/handoff-plan.json`
   - Host guard evidence: non-dry-run on this macOS host exits with

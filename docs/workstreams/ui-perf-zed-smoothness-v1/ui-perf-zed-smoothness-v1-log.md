@@ -105,6 +105,32 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 19:20:28 +0800 (handoff runner builds release targets)
+
+Question:
+- Can the Windows handoff runner be a true one-command target-machine entry point instead of assuming the required
+  release `.exe` binaries were built manually first?
+
+Change:
+- `diag_editor_paint_contract_windows_handoff.py` now adds release build steps for `fretboard-dev` and
+  `fret-ui-gallery` before preflight/validation.
+- Added `--skip-build` for the rare case where the Windows target binaries are already current.
+
+Validation:
+```bash
+python3 -m unittest discover -s tools/perf -p 'test_diag_editor_paint_contract_*.py'
+python3 tools/perf/diag_editor_paint_contract_windows_handoff.py --dry-run --date-tag workstream-gate
+```
+
+Results:
+- The editor-paint contract tool suite passed: 39 tests.
+- Dry-run plan now starts with `build-fretboard-dev` and `build-fret-ui-gallery`, then continues to preflight,
+  baseline validation, attribution validation, artifact verification, and closeout.
+
+Decision:
+- Keep the handoff runner as the preferred target-machine command; the lower-level validation runner remains available
+  for debugging one validation directory at a time.
+
 ## 2026-05-16 19:15:39 +0800 (closeout owner decision)
 
 Question:

@@ -5,11 +5,12 @@ Run the Windows RTX4090 editor paint contract handoff.
 This helper does not replace the target-machine validation itself. It packages
 the exact sequence needed for the formal closeout:
 
-1. preflight
-2. baseline validation
-3. attribution validation
-4. artifact verification
-5. local closeout gates
+1. release builds
+2. preflight
+3. baseline validation
+4. attribution validation
+5. artifact verification
+6. local closeout gates
 
 Use ``--dry-run`` on a non-target machine to inspect the command plan without
 producing misleading validation artifacts.
@@ -27,6 +28,8 @@ from pathlib import Path
 from typing import Any
 
 import diag_editor_paint_contract_validate as validate
+
+GALLERY_FEATURES = "gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness"
 
 
 def _workspace_root() -> Path:
@@ -81,12 +84,42 @@ def build_plan(
     python_bin: str,
     date_tag: str,
     out_dir: str,
+    skip_build: bool,
     skip_preflight: bool,
 ) -> list[dict[str, Any]]:
     validation_dir = _validation_dir(date_tag)
     attribution_dir = _attribution_dir(date_tag)
 
     plan: list[dict[str, Any]] = []
+    if not skip_build:
+        plan.extend(
+            [
+                {
+                    "name": "build-fretboard-dev",
+                    "out_dir": f"{out_dir}/build-fretboard-dev",
+                    "cmd": [
+                        "cargo",
+                        "build",
+                        "-p",
+                        "fretboard-dev",
+                        "--release",
+                    ],
+                },
+                {
+                    "name": "build-fret-ui-gallery",
+                    "out_dir": f"{out_dir}/build-fret-ui-gallery",
+                    "cmd": [
+                        "cargo",
+                        "build",
+                        "-p",
+                        "fret-ui-gallery",
+                        "--release",
+                        "--features",
+                        GALLERY_FEATURES,
+                    ],
+                },
+            ]
+        )
     if not skip_preflight:
         plan.append(
             {
@@ -177,6 +210,12 @@ def main() -> int:
     ap.add_argument("--date-tag", default=_default_date_tag())
     ap.add_argument("--out-dir", default="")
     ap.add_argument("--python-bin", default=sys.executable)
+    ap.add_argument(
+        "--skip-build",
+        action="store_true",
+        default=False,
+        help="Skip the release build steps when the target binaries are already current.",
+    )
     ap.add_argument("--skip-preflight", action="store_true", default=False)
     ap.add_argument("--dry-run", action="store_true", default=False)
     ap.add_argument(
@@ -214,6 +253,7 @@ def main() -> int:
         python_bin=str(args.python_bin),
         date_tag=str(args.date_tag),
         out_dir=out_dir,
+        skip_build=bool(args.skip_build),
         skip_preflight=bool(args.skip_preflight),
     )
 

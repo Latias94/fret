@@ -17,21 +17,44 @@ class EditorPaintContractWindowsHandoffTests(unittest.TestCase):
             python_bin="python",
             date_tag="unit-date",
             out_dir="target/fret-diag/handoff-unit-date",
+            skip_build=False,
             skip_preflight=False,
         )
 
         self.assertEqual(
-            ["preflight", "baseline-validation", "attribution-validation", "verify-artifacts", "closeout"],
+            [
+                "build-fretboard-dev",
+                "build-fret-ui-gallery",
+                "preflight",
+                "baseline-validation",
+                "attribution-validation",
+                "verify-artifacts",
+                "closeout",
+            ],
             [step["name"] for step in plan],
         )
 
         validation_dir = validate._default_out_dir("unit-date")
         attribution_dir = validate._default_out_dir("unit-date-attrib")
 
-        baseline = plan[1]["cmd"]
-        attribution = plan[2]["cmd"]
-        verify_cmd = plan[3]["cmd"]
-        closeout_cmd = plan[4]["cmd"]
+        build_gallery = plan[1]["cmd"]
+        baseline = plan[3]["cmd"]
+        attribution = plan[4]["cmd"]
+        verify_cmd = plan[5]["cmd"]
+        closeout_cmd = plan[6]["cmd"]
+
+        self.assertEqual(
+            [
+                "cargo",
+                "build",
+                "-p",
+                "fret-ui-gallery",
+                "--release",
+                "--features",
+                handoff.GALLERY_FEATURES,
+            ],
+            build_gallery,
+        )
 
         self.assertIn("tools/perf/diag_editor_paint_contract_validate.py", baseline)
         self.assertIn("--date-tag", baseline)
@@ -53,11 +76,33 @@ class EditorPaintContractWindowsHandoffTests(unittest.TestCase):
             python_bin="python",
             date_tag="unit-date",
             out_dir="target/fret-diag/handoff-unit-date",
+            skip_build=False,
             skip_preflight=True,
         )
 
         self.assertEqual(
-            ["baseline-validation", "attribution-validation", "verify-artifacts", "closeout"],
+            [
+                "build-fretboard-dev",
+                "build-fret-ui-gallery",
+                "baseline-validation",
+                "attribution-validation",
+                "verify-artifacts",
+                "closeout",
+            ],
+            [step["name"] for step in plan],
+        )
+
+    def test_plan_can_skip_release_builds(self) -> None:
+        plan = handoff.build_plan(
+            python_bin="python",
+            date_tag="unit-date",
+            out_dir="target/fret-diag/handoff-unit-date",
+            skip_build=True,
+            skip_preflight=False,
+        )
+
+        self.assertEqual(
+            ["preflight", "baseline-validation", "attribution-validation", "verify-artifacts", "closeout"],
             [step["name"] for step in plan],
         )
 
@@ -88,7 +133,15 @@ class EditorPaintContractWindowsHandoffTests(unittest.TestCase):
         self.assertEqual("editor_paint_contract_windows_handoff_plan", summary["kind"])
         self.assertEqual("unit-date", summary["date_tag"])
         self.assertEqual(
-            ["preflight", "baseline-validation", "attribution-validation", "verify-artifacts", "closeout"],
+            [
+                "build-fretboard-dev",
+                "build-fret-ui-gallery",
+                "preflight",
+                "baseline-validation",
+                "attribution-validation",
+                "verify-artifacts",
+                "closeout",
+            ],
             [step["name"] for step in summary["steps"]],
         )
 
