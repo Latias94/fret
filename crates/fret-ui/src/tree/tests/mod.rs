@@ -259,6 +259,7 @@ mod semantics_slider_set_value_gate;
 mod stack_safety;
 mod subtree_layout_dirty_underflow_repair;
 mod timer_dispatch;
+mod timer_dispatch_harness;
 mod transforms;
 mod view_cache;
 mod window_command_action_availability_snapshot;

@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui.timer-dispatch.mechanism-harness-v1",
+  "owner_layer": "crates/fret-ui",
+  "domains": ["overlay"],
+  "cases": [
+    {
+      "id": "visible-base-target-receives-targeted-timer",
+      "scenario": {
+        "kind": "timer_dispatch",
+        "steps": [
+          { "op": "record_timer_target", "target": "base", "token": 1 },
+          { "op": "dispatch_timer", "token": 1, "label": "after_timer" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "capture.after_timer.base.timer_hits", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.after_timer.overlay.timer_hits", "comparison": "eq", "value": 0.0 }
+        ]
+      }
+    },
+    {
+      "id": "visible-hit-test-inert-overlay-target-receives-targeted-timer",
+      "scenario": {
+        "kind": "timer_dispatch",
+        "overlay_visible": true,
+        "overlay_hit_testable": false,
+        "steps": [
+          { "op": "record_timer_target", "target": "overlay", "token": 2 },
+          { "op": "dispatch_timer", "token": 2, "label": "after_timer" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "capture.after_timer.base.timer_hits", "comparison": "eq", "value": 0.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.after_timer.overlay.timer_hits", "comparison": "eq", "value": 1.0 }
+        ]
+      }
+    },
+    {
+      "id": "hidden-overlay-target-is-ignored-and-visible-broadcast-continues",
+      "scenario": {
+        "kind": "timer_dispatch",
+        "overlay_visible": false,
+        "steps": [
+          { "op": "record_timer_target", "target": "overlay", "token": 3 },
+          { "op": "dispatch_timer", "token": 3, "label": "after_timer" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "capture.after_timer.base.timer_hits", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.after_timer.overlay.timer_hits", "comparison": "eq", "value": 0.0 }
+        ]
+      }
+    },
+    {
+      "id": "removed-overlay-target-is-missing-and-visible-broadcast-continues",
+      "scenario": {
+        "kind": "timer_dispatch",
+        "remove_overlay_before_dispatch": true,
+        "steps": [
+          { "op": "record_timer_target", "target": "overlay", "token": 4 },
+          { "op": "dispatch_timer", "token": 4, "label": "after_timer" }
+        ]
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "capture.after_timer.base.timer_hits", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "capture.after_timer.overlay.timer_hits", "comparison": "eq", "value": 0.0 }
+        ]
+      }
+    }
+  ]
+}

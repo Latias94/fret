@@ -642,3 +642,8 @@ date: 2026-05-12
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.
+- [x] Promote timer-target visibility semantics into a fixture-driven mechanism matrix.
+  - Result: `timer_dispatch_v1.json` now covers visible base targets, visible but hit-test-inert
+    overlay targets, hidden overlay targets, and removed overlay targets. No new mechanism defect
+    was reproduced after F138; the slice turns the Select-discovered hidden-layer timer defect into
+    durable, case-addressable harness coverage.
