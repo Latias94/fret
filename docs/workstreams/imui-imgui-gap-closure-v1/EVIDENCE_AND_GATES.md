@@ -355,8 +355,13 @@ Run evidence:
   chrome clipped. This is the layout-container side of the text-role contract: wrapping validation
   prose such as `NumericInput` inline errors may grow to multiple lines, so the parent value slot
   must not clip the measured line box under resize. Gates:
-  `cargo nextest run -p fret-ui-editor row_value_slot_keeps_overflow_visible_for_wrapping_value_children --no-fail-fast`
+  `cargo nextest run -p fret-ui-editor row_value_slot_keeps_overflow_visible_for_wrapping_value_children row_value_slot_grows_to_wrapping_value_text_under_narrow_layout --no-fail-fast`
   and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-17: added a layout-level `PropertyRow` resize regression for wrapping validation text.
+  The test renders a narrow row with `editor_validation_message_text_props(...)`, runs the real
+  `UiTree::layout_all(...)` path through public element-bounds queries, and asserts that the
+  measured multi-line text bottom stays inside the value slot and row bounds. This closes the
+  evidence gap between the structural overflow contract and the visual resize bug report.
 - 2026-05-17: added `P3_TEXT_ROLE_MATRIX_2026-05-17.md` as the resize triage contract for the
   current text-role work. It names the stable base roles (`text_control_readout(...)`,
   `text_button_label(...)`, `text_paragraph(...)` / `text_paragraph_break_words(...)`,
@@ -925,3 +930,7 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools/gate_imui_workstream_source.py` passed.
 - `cargo check -p fret-examples-imui` passed.
 - `git diff --check` passed.
+
+2026-05-17 property-row wrapping value layout gate:
+
+- `cargo nextest run -p fret-ui-editor row_value_slot_grows_to_wrapping_value_text_under_narrow_layout --no-fail-fast` passed.

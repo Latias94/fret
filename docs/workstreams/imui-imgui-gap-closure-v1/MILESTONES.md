@@ -292,6 +292,10 @@ Exit criteria:
   visible so wrapping validation/prose children can contribute and paint multi-line height under
   resize. The fixed label/reset/action chrome slots remain clipped. This closes the first concrete
   layout-container fix from the text-role matrix without moving policy into `fret-imui`.
+  2026-05-17 property-row wrapping layout result: the overflow fix now has a layout-level gate.
+  A narrow `PropertyRow` with `editor_validation_message_text_props(...)` runs through
+  `UiTree::layout_all(...)`, then public element-bounds queries assert that the wrapped validation
+  text is contained by the value slot and row bounds instead of painting past the row bottom.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

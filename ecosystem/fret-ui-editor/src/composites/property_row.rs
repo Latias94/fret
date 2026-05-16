@@ -622,9 +622,15 @@ mod tests {
     use std::sync::Arc;
 
     use fret_app::App;
-    use fret_core::Px;
-    use fret_core::{AppWindowId, Color, Point, Rect, Size, TextStyle};
+    use fret_core::text::{TextOverflow, TextWrap};
+    use fret_core::{
+        AppWindowId, Color, MaterialDescriptor, MaterialId, MaterialRegistrationError, PathCommand,
+        PathConstraints, PathId, PathMetrics, PathService, PathStyle, Point, Px, Rect, Size, SvgId,
+        SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics, TextService, TextStyle,
+    };
     use fret_ui::element::{AnyElement, ElementKind, Overflow};
+    use fret_ui::elements::GlobalElementId;
+    use fret_ui::{UiTree, declarative};
 
     use super::{
         PROPERTY_ROW_VALUE_SLOT, PropertyRow, PropertyRowLayoutVariant, PropertyRowOptions,
@@ -646,6 +652,83 @@ mod tests {
             .children
             .iter()
             .find_map(|child| find_component_slot(child, slot))
+    }
+
+    #[derive(Default)]
+    struct WrappingTextServices;
+
+    impl TextService for WrappingTextServices {
+        fn prepare(
+            &mut self,
+            input: &TextInput,
+            constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            let text = input.text();
+            let char_width = Px(7.0);
+            let line_height = Px(14.0);
+            let unwrapped_width = Px(text.chars().count() as f32 * char_width.0);
+            let lines = match (constraints.wrap, constraints.max_width) {
+                (TextWrap::None, _) | (_, None) => 1usize,
+                (_, Some(max_width)) if max_width.0 <= char_width.0 => text.chars().count().max(1),
+                (_, Some(max_width)) => {
+                    let chars_per_line = (max_width.0 / char_width.0).floor().max(1.0) as usize;
+                    text.chars().count().max(1).div_ceil(chars_per_line)
+                }
+            };
+            let width = match (constraints.overflow, constraints.max_width) {
+                (TextOverflow::Ellipsis, Some(max_width)) => Px(unwrapped_width.0.min(max_width.0)),
+                (_, Some(max_width)) if constraints.wrap != TextWrap::None => {
+                    Px(unwrapped_width.0.min(max_width.0))
+                }
+                _ => unwrapped_width,
+            };
+
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(width, Px(lines as f32 * line_height.0)),
+                    baseline: Px(11.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for WrappingTextServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for WrappingTextServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for WrappingTextServices {
+        fn register_material(
+            &mut self,
+            _desc: MaterialDescriptor,
+        ) -> Result<MaterialId, MaterialRegistrationError> {
+            Err(MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: MaterialId) -> bool {
+            false
+        }
     }
 
     #[test]
@@ -689,6 +772,106 @@ mod tests {
             props.layout.overflow,
             Overflow::Visible,
             "row value slot must let wrapping value children grow and paint inside their measured line boxes; fixed chrome slots may clip themselves"
+        );
+    }
+
+    #[test]
+    fn row_value_slot_grows_to_wrapping_value_text_under_narrow_layout() {
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(180.0), Px(120.0)),
+        );
+        let mut services = WrappingTextServices;
+        let row_id = Arc::new(std::sync::Mutex::new(None::<GlobalElementId>));
+        let value_slot_id = Arc::new(std::sync::Mutex::new(None::<GlobalElementId>));
+        let validation_text_id = Arc::new(std::sync::Mutex::new(None::<GlobalElementId>));
+
+        let row_id_for_render = Arc::clone(&row_id);
+        let value_slot_id_for_render = Arc::clone(&value_slot_id);
+        let validation_text_id_for_render = Arc::clone(&validation_text_id);
+        let root = declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "property-row-wrapping-value-layout",
+            move |cx| {
+                let row = PropertyRow::new()
+                    .options(PropertyRowOptions {
+                        variant: PropertyRowLayoutVariant::Row,
+                        label_width: Some(Px(104.0)),
+                        gap: Some(Px(8.0)),
+                        trailing_gap: Some(Px(0.0)),
+                        value_max_width: Some(Px(1024.0)),
+                        test_id: Some(Arc::from("inspector.exposure")),
+                        ..Default::default()
+                    })
+                    .into_element(
+                        cx,
+                        |cx| cx.text("Exposure"),
+                        |cx| {
+                            let text = cx.text_props(editor_validation_message_text_props(
+                                Arc::from(
+                                    "Value must stay between 0.0 and 1.0 for this render target.",
+                                ),
+                                Color::from_srgb_hex_rgb(0xCC_44_44),
+                                TextStyle::default(),
+                            ));
+                            *validation_text_id_for_render.lock().unwrap() = Some(text.id);
+                            text
+                        },
+                        |_cx| None,
+                    );
+
+                let value_slot = find_component_slot(&row, PROPERTY_ROW_VALUE_SLOT)
+                    .expect("property row should mark its value slot for layout tests");
+                *row_id_for_render.lock().unwrap() = Some(row.id);
+                *value_slot_id_for_render.lock().unwrap() = Some(value_slot.id);
+
+                vec![row]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let row_id = row_id.lock().unwrap().expect("row id");
+        let value_slot_id = value_slot_id.lock().unwrap().expect("value slot id");
+        let validation_text_id = validation_text_id
+            .lock()
+            .unwrap()
+            .expect("validation text id");
+
+        let row_bounds = fret_ui::elements::current_bounds_for_element(&mut app, window, row_id)
+            .expect("row bounds");
+        let value_bounds =
+            fret_ui::elements::current_bounds_for_element(&mut app, window, value_slot_id)
+                .expect("value slot bounds");
+        let text_bounds =
+            fret_ui::elements::current_bounds_for_element(&mut app, window, validation_text_id)
+                .expect("validation text bounds");
+
+        assert!(
+            text_bounds.size.height.0 > 28.0,
+            "validation text should wrap to multiple measured lines under narrow layout: {text_bounds:?}"
+        );
+        assert!(
+            value_bounds.size.height.0 + 0.5 >= text_bounds.size.height.0,
+            "value slot should grow to contain wrapping validation text: value={value_bounds:?} text={text_bounds:?}"
+        );
+        assert!(
+            row_bounds.size.height.0 + 0.5 >= value_bounds.size.height.0,
+            "property row should grow to contain its value slot: row={row_bounds:?} value={value_bounds:?}"
+        );
+        assert!(
+            text_bounds.origin.y.0 + text_bounds.size.height.0
+                <= value_bounds.origin.y.0 + value_bounds.size.height.0 + 0.5,
+            "validation text bottom should stay inside value slot bottom: value={value_bounds:?} text={text_bounds:?}"
         );
     }
 }

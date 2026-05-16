@@ -81,7 +81,7 @@ component should construct `TextProps` locally.
 - Source contract:
   - `python tools/gate_imui_workstream_source.py`
 - Layout-container regression:
-  - `cargo nextest run -p fret-ui-editor row_value_slot_keeps_overflow_visible_for_wrapping_value_children --no-fail-fast`
+  - `cargo nextest run -p fret-ui-editor row_value_slot_keeps_overflow_visible_for_wrapping_value_children row_value_slot_grows_to_wrapping_value_text_under_narrow_layout --no-fail-fast`
 
 ## Result
 
@@ -89,4 +89,6 @@ This is a contract/guard slice only. It does not claim that every text surface i
 been migrated. It makes future resize fixes cheaper to classify: either a surface maps to one of the
 stable roles above, or the work must explain why a new derived role is needed and add a focused gate.
 The first follow-up container fix is `PropertyRow`: fixed chrome slots still clip, but value slots
-must not clip explicit wrapping validation/prose children.
+must not clip explicit wrapping validation/prose children. The layout-level regression verifies that
+narrow wrapping validation text grows the value slot and row bounds instead of painting past the row
+bottom.

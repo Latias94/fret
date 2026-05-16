@@ -287,6 +287,10 @@ Readiness order for the next locally testable review slices:
    validation messages can grow with their measured multi-line height instead of painting past a
    clipped inspector row. Fixed label/reset/action chrome slots still clip themselves; this is a
    layout-container contract fix in `fret-ui-editor`, not a `fret-imui` runtime/API widening.
+   2026-05-17 property-row wrapping layout follow-up: the value-slot fix now has a real layout
+   gate, not only a structural overflow check. A narrow row with the editor validation-message role
+   runs through `UiTree::layout_all(...)`, and public element-bounds queries prove the multi-line
+   validation text is contained by the value slot and row bounds.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
