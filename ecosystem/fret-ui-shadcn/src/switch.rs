@@ -1897,7 +1897,7 @@ mod tests {
     }
 
     #[test]
-    fn command_gating_switch_is_disabled_when_widget_action_is_unavailable() {
+    fn command_gating_switch_ignores_derived_widget_action_availability_snapshot() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
@@ -1953,11 +1953,14 @@ mod tests {
             .iter()
             .find(|n| n.test_id.as_deref() == Some("disabled-switch"))
             .expect("expected a semantics node for the switch test_id");
-        assert!(node.flags.disabled);
+        assert!(
+            !node.flags.disabled,
+            "component render-time gating must not consume the previous frame's derived widget action availability"
+        );
     }
 
     #[test]
-    fn command_gating_switch_prefers_window_command_gating_snapshot_when_present() {
+    fn command_gating_switch_respects_window_command_gating_enabled_override_when_present() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
@@ -1983,9 +1986,10 @@ mod tests {
         app.set_global(WindowCommandGatingService::default());
         app.with_global_mut(WindowCommandGatingService::default, |svc, app| {
             let input_ctx = crate::command_gating::default_input_context(app);
-            let enabled_overrides: HashMap<CommandId, bool> = HashMap::new();
+            let mut enabled_overrides: HashMap<CommandId, bool> = HashMap::new();
+            enabled_overrides.insert(cmd.clone(), false);
             let mut availability: HashMap<CommandId, bool> = HashMap::new();
-            availability.insert(cmd.clone(), false);
+            availability.insert(cmd.clone(), true);
             let _token = svc.push_snapshot(
                 window,
                 WindowCommandGatingSnapshot::new(input_ctx, enabled_overrides)
@@ -2027,6 +2031,110 @@ mod tests {
             .find(|n| n.test_id.as_deref() == Some("disabled-switch"))
             .expect("expected a semantics node for the switch test_id");
         assert!(node.flags.disabled);
+    }
+
+    #[test]
+    fn switch_command_enabled_semantics_update_when_window_override_changes() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let checked = app.models_mut().insert(false);
+        let cmd = CommandId::from("test.dynamic-widget-action");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Dynamic Widget Action").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandEnabledService::default());
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        fn set_command_enabled(
+            app: &mut App,
+            window: AppWindowId,
+            command: &CommandId,
+            enabled: bool,
+        ) {
+            app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
+                svc.set_enabled(window, command.clone(), enabled);
+            });
+        }
+
+        fn render_dynamic_switch(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut FakeServices,
+            window: AppWindowId,
+            bounds: Rect,
+            checked: &Model<bool>,
+            command: &CommandId,
+        ) -> fret_core::NodeId {
+            fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "command-gating-switch-dynamic-window-enabled",
+                |cx| {
+                    vec![
+                        Switch::new(checked.clone())
+                            .a11y_label("Switch")
+                            .on_click(command.clone())
+                            .test_id("dynamic-command-switch")
+                            .into_element(cx),
+                    ]
+                },
+            )
+        }
+
+        let render_and_snapshot =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+                let root = render_dynamic_switch(ui, app, services, window, bounds, &checked, &cmd);
+                ui.set_root(root);
+                ui.request_semantics_snapshot();
+                ui.layout_all(app, services, bounds, 1.0);
+            };
+
+        let assert_switch = |ui: &UiTree<App>,
+                             disabled_expected: bool,
+                             focus_expected: bool,
+                             invoke_expected: bool,
+                             checked_expected| {
+            let snap = ui.semantics_snapshot().expect("semantics snapshot");
+            let node = snap
+                .nodes
+                .iter()
+                .find(|n| n.test_id.as_deref() == Some("dynamic-command-switch"))
+                .expect("switch semantics node");
+            assert_eq!(node.flags.disabled, disabled_expected);
+            assert_eq!(node.actions.focus, focus_expected);
+            assert_eq!(node.actions.invoke, invoke_expected);
+            assert_eq!(node.flags.checked, Some(checked_expected));
+        };
+
+        set_command_enabled(&mut app, window, &cmd, false);
+        render_and_snapshot(&mut ui, &mut app, &mut services);
+        assert_switch(&ui, true, false, false, false);
+
+        set_command_enabled(&mut app, window, &cmd, true);
+        render_and_snapshot(&mut ui, &mut app, &mut services);
+        assert_switch(&ui, false, true, true, false);
+
+        let _ = app.models_mut().update(&checked, |value| *value = true);
+        ui.propagate_pending_model_changes(&mut app);
+        render_and_snapshot(&mut ui, &mut app, &mut services);
+        assert_switch(&ui, false, true, true, true);
+
+        set_command_enabled(&mut app, window, &cmd, false);
+        render_and_snapshot(&mut ui, &mut app, &mut services);
+        assert_switch(&ui, true, false, false, true);
     }
 
     #[test]

@@ -52,6 +52,19 @@ pub(super) fn register_commands_and_menus(app: &mut App) {
             .with_keywords(["preferences", "menubar", "enabled", "disable", "debug"]),
     );
     app.commands_mut().register(
+        CommandId::new(CMD_SWITCH_COMMAND_GATE_ACTION),
+        CommandMeta::new("Switch Command Gate Action")
+            .with_scope(fret_runtime::CommandScope::Widget)
+            .with_category("Gallery")
+            .with_keywords(["switch", "command", "gating", "harness"]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_SWITCH_COMMAND_GATE_TOGGLE_ENABLED),
+        CommandMeta::new("Toggle Switch Command Gate Enabled")
+            .with_category("Gallery")
+            .with_keywords(["switch", "command", "enabled", "harness"]),
+    );
+    app.commands_mut().register(
         CommandId::new(CMD_MENU_BAR_OS_AUTO),
         CommandMeta::new("Menu Bar (OS): Auto")
             .with_category("Settings")

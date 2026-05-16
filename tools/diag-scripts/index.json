@@ -10703,6 +10703,31 @@
       ]
     },
     {
+      "id": "ui-gallery-switch-command-gated-action-state",
+      "path": "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-command-gated-action-state.json",
+      "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "action-state",
+        "command-gating",
+        "mutation",
+        "semantics",
+        "shadcn",
+        "switch",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Verifies that an external WindowCommandEnabledService override can disable and re-enable a Switch action without stale derived action-availability feedback keeping the control disabled."
+      ]
+    },
+    {
       "id": "ui-gallery-switch-docs-label-clicks",
       "path": "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-docs-label-clicks.json",
       "required_capabilities": [

@@ -896,6 +896,34 @@ impl UiGalleryDriver {
                     });
                 }
             }
+            CMD_SWITCH_COMMAND_GATE_ACTION => {
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("switch.command_gate.action");
+                });
+            }
+            CMD_SWITCH_COMMAND_GATE_TOGGLE_ENABLED => {
+                let action = CommandId::new(CMD_SWITCH_COMMAND_GATE_ACTION);
+                let is_disabled = app
+                    .global::<WindowCommandEnabledService>()
+                    .and_then(|svc| svc.enabled(window, &action))
+                    == Some(false);
+
+                app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
+                    if is_disabled {
+                        svc.clear_command(window, &action);
+                    } else {
+                        svc.set_enabled(window, action.clone(), false);
+                    }
+                });
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = if is_disabled {
+                        Arc::<str>::from("switch.command_gate.enabled")
+                    } else {
+                        Arc::<str>::from("switch.command_gate.disabled")
+                    };
+                });
+                app.request_redraw(window);
+            }
             CMD_PROGRESS_INC => {
                 let before = app.models().get_copied(&state.progress).unwrap_or(0.0);
                 let after = (before + 10.0).min(100.0);

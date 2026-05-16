@@ -804,6 +804,9 @@ pub(crate) const CMD_APP_SETTINGS_APPLY: &str = "ui_gallery.app.settings.apply";
 pub(crate) const CMD_APP_SETTINGS_WRITE_PROJECT: &str = "ui_gallery.app.settings.write_project";
 pub(crate) const CMD_APP_TOGGLE_PREFERENCES_ENABLED: &str =
     "ui_gallery.app.preferences.toggle_enabled";
+pub(crate) const CMD_SWITCH_COMMAND_GATE_ACTION: &str = "ui_gallery.switch.command_gate.action";
+pub(crate) const CMD_SWITCH_COMMAND_GATE_TOGGLE_ENABLED: &str =
+    "ui_gallery.switch.command_gate.toggle_enabled";
 
 pub(crate) const CMD_MENU_BAR_OS_AUTO: &str = "ui_gallery.menu_bar.os.auto";
 pub(crate) const CMD_MENU_BAR_OS_ON: &str = "ui_gallery.menu_bar.os.on";

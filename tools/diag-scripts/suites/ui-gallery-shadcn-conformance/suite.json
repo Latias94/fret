@@ -90,6 +90,7 @@
     "tools/diag-scripts/ui-gallery-sidebar-provider-shortcut-toggle-focus.json",
     "tools/diag-scripts/ui-gallery-sonner-live-region-mutation.json",
     "tools/diag-scripts/ui-gallery-switch-docs-label-clicks.json",
+    "tools/diag-scripts/ui-gallery-switch-command-gated-action-state.json",
     "tools/diag-scripts/ui-gallery-switch-read-only-dynamic-action-state.json",
     "tools/diag-scripts/ui-gallery-switch-read-only-action-state.json",
     "tools/diag-scripts/ui-gallery-switch-docs-smoke.json",
