@@ -1044,3 +1044,20 @@ Status: complete for the Switch read-only runtime gate and owning recipe fix
   `.fret/diag/runs/ui-gallery-switch-read-only-action-state-f112/share/1778909364811.zip`.
 - Remaining follow-up: add dynamic non-list action-state mutation coverage where read-only or
   command-gated availability changes across frames without remounting the control.
+
+## M65: Dynamic Read-Only Switch Action-State Gate
+
+Status: complete for the UI Gallery dynamic read-only companion
+
+- Extended the read-only Switch UI Gallery snippet with a policy toggle that flips read-only state
+  in place.
+- Added focused recipe coverage for `read_only=true -> false -> true` semantics mutation. The first
+  draft exposed a harness modeling issue: component props do not change unless the declarative root
+  is rerendered after the model update. The corrected focused gate rerenders and passes.
+- Added and promoted `ui-gallery-switch-read-only-dynamic-action-state.json`.
+- The runtime gate proves the same control transitions from `read_only=true/invoke=false` to
+  `read_only=false/invoke=true`, allows one checked-state mutation while editable, then returns to
+  `read_only=true/invoke=false` and suppresses further mutation.
+- No new runtime mechanism or recipe defect was reproduced after the F112 Switch fix.
+- Remaining follow-up: add command-gated non-list action-state mutation, where command availability
+  snapshots can change independently from the widget-local model.

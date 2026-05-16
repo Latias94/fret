@@ -1303,6 +1303,112 @@ mod tests {
     }
 
     #[test]
+    fn switch_read_only_semantics_update_when_policy_model_changes() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(160.0), Px(80.0)),
+        );
+        let mut services = FakeServices;
+
+        let checked = app.models_mut().insert(true);
+        let read_only = app.models_mut().insert(true);
+
+        fn render_dynamic_switch(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut FakeServices,
+            window: AppWindowId,
+            bounds: Rect,
+            checked: &Model<bool>,
+            read_only: &Model<bool>,
+        ) -> fret_core::NodeId {
+            fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "shadcn-switch-read-only-dynamic-semantics",
+                |cx| {
+                    let is_read_only = cx.watch_model(read_only).copied().unwrap_or(true);
+                    vec![
+                        Switch::new(checked.clone())
+                            .read_only(is_read_only)
+                            .a11y_label("Switch")
+                            .test_id("dynamic-readonly-switch")
+                            .into_element(cx),
+                    ]
+                },
+            )
+        }
+
+        let root = render_dynamic_switch(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            &checked,
+            &read_only,
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let assert_switch = |ui: &UiTree<App>, read_only_expected: bool, invoke_expected: bool| {
+            let snap = ui.semantics_snapshot().expect("semantics snapshot");
+            let node = snap
+                .nodes
+                .iter()
+                .find(|n| n.test_id.as_deref() == Some("dynamic-readonly-switch"))
+                .expect("switch semantics node");
+            assert_eq!(node.flags.checked, Some(true));
+            assert_eq!(node.flags.read_only, read_only_expected);
+            assert!(node.actions.focus, "switch should stay focusable");
+            assert_eq!(node.actions.invoke, invoke_expected);
+        };
+
+        assert_switch(&ui, true, false);
+
+        let _ = app.models_mut().update(&read_only, |value| *value = false);
+        ui.propagate_pending_model_changes(&mut app);
+        let root = render_dynamic_switch(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            &checked,
+            &read_only,
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        assert_switch(&ui, false, true);
+
+        let _ = app.models_mut().update(&read_only, |value| *value = true);
+        ui.propagate_pending_model_changes(&mut app);
+        let root = render_dynamic_switch(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            &checked,
+            &read_only,
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        assert_switch(&ui, true, false);
+    }
+
+    #[test]
     fn field_label_click_dispatches_action_for_snapshot_switch_control() {
         let window = AppWindowId::default();
         let mut app = App::new();

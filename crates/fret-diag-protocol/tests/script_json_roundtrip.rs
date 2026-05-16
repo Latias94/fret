@@ -375,6 +375,13 @@ fn script_v2_roundtrip_ui_gallery_switch_read_only_action_state() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_switch_read_only_dynamic_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-switch-read-only-dynamic-action-state.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_card_description_no_early_wrap() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-card-description-no-early-wrap.json"

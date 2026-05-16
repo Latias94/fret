@@ -191,6 +191,13 @@ date: 2026-05-12
     Diagnostics now has a `read_only_is` predicate and the runtime gate asserts `read_only=true`,
     `disabled=false`, `focus=true`, `invoke=false`, and no checked-state mutation after pointer,
     associated-label, Space, or Enter activation attempts.
+- [x] Add a dynamic companion for non-list read-only action-state mutation.
+  - Result: `ui-gallery-switch-read-only-dynamic-action-state.json` now toggles the same Switch
+    from read-only to editable and back, proving `read_only` and `invoke` semantics refresh across
+    frames and that checked-state mutation is allowed only while editable. No new runtime defect was
+    reproduced after the F112 Switch fix. The first focused test draft caught a harness modeling
+    issue: changing a model without rerendering the declarative root cannot prove component props
+    changed.
 - [x] Promote Combobox visual/style coverage into an explicit fixture-style matrix that tracks
   component state, theme, viewport, screenshot gate, geometry predicates, and current owner/gap.
 - [x] Harden the Button Group size gate with stable icon-only `Add` anchors and geometry predicates.

@@ -71,6 +71,12 @@ date: 2026-05-12
   pointer, associated-label, Space, and Enter activation attempts without changing checked state.
   The first focused oracle found and fixed a shadcn recipe defect where
   `Switch::read_only(true)` blocked mutation but still exposed `actions.invoke=true`.
+  `ui-gallery-switch-read-only-dynamic-action-state.json` now covers the dynamic companion: the same
+  non-list Switch changes `read_only=true -> false -> true` across frames, refreshes `invoke`
+  semantics in both directions, allows checked-state mutation only while editable, and stays
+  focusable throughout. The focused recipe gate also captured a harness modeling rule: prop-driven
+  semantics mutations must rerender the declarative root after model changes before asserting the
+  next snapshot.
 - Select active-descendant/view-cache update:
   `ui-gallery-select-roving-skips-disabled-orange.json` now proves that pointer-open followed by
   ArrowDown updates the runtime active descendant through the real UI Gallery Select page, including

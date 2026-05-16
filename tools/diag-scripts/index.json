@@ -10770,6 +10770,30 @@
       ]
     },
     {
+      "id": "ui-gallery-switch-read-only-dynamic-action-state",
+      "path": "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-read-only-dynamic-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "action-state",
+        "mutation",
+        "read-only",
+        "semantics",
+        "shadcn",
+        "switch",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Verifies that toggling a Switch from read-only to editable and back refreshes read_only/invoke semantics without remounting the docs surface."
+      ]
+    },
+    {
       "id": "ui-gallery-table-docs-smoke",
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-docs-smoke.json",
       "required_capabilities": [

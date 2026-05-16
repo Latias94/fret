@@ -2151,6 +2151,45 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `.fret/diag/runs/ui-gallery-switch-read-only-action-state-f112/script.result.json`
   - packed evidence:
     `.fret/diag/runs/ui-gallery-switch-read-only-action-state-f112/share/1778909364811.zip`
+- Switch dynamic read-only action-state runtime gate:
+  `tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-read-only-dynamic-action-state.json`
+  - invariant:
+    read-only policy changes must refresh a non-list Switch's `read_only` and `invoke` semantics
+    across frames, while preserving focusability and checked-state behavior.
+  - implementation anchors:
+    `apps/fret-ui-gallery/src/ui/snippets/switch/read_only.rs`,
+    `ecosystem/fret-ui-shadcn/src/switch.rs`,
+    `tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-read-only-dynamic-action-state.json`,
+    `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`, and
+    `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+  - finding:
+    no new runtime defect reproduced after F112. The first focused test draft exposed a test
+    modeling issue: changing a model without rerendering the declarative root cannot prove
+    component props changed. The corrected focused gate and runtime gate both pass.
+  - focused recipe command:
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib switch_read_only_semantics_update_when_policy_model_changes -- --nocapture`
+  - focused recipe result:
+    passed, 1 test.
+  - protocol roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_switch_read_only_dynamic_action_state script_v2_roundtrip_ui_gallery_switch_read_only_action_state --no-fail-fast`
+  - protocol roundtrip result:
+    passed, 2 tests; Nextest run id `be780bca-1c2b-4a26-9322-cdefd3de970a`.
+  - registry gate:
+    `python tools/check_diag_scripts_registry.py`
+  - registry result:
+    passed.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-read-only-dynamic-action-state.json --dir .fret/diag/runs/ui-gallery-switch-read-only-dynamic-action-state-f113 --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1778910608918`.
+  - runtime evidence:
+    `.fret/diag/runs/ui-gallery-switch-read-only-dynamic-action-state-f113/script.result.json`
+  - packed evidence:
+    `.fret/diag/runs/ui-gallery-switch-read-only-dynamic-action-state-f113/share/1778910608918.zip`
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`
