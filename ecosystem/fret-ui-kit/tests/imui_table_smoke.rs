@@ -3,8 +3,9 @@
 use fret_core::{Color, Px};
 use fret_ui::UiHost;
 use fret_ui_kit::imui::{
-    ImUiTableColumnVisibilityState, TableCellOptions, TableColumn, TableColumnWidth, TableOptions,
-    TableRowOptions, TableSortDirection, UiWriterImUiFacadeExt,
+    ImUiTableColumnVisibilityState, MenuItemOptions, TableCellOptions, TableColumn,
+    TableColumnWidth, TableOptions, TableRowOptions, TableSortDirection, UiWriterImUiFacadeExt,
+    table_column_visibility_menu_item,
 };
 
 #[allow(dead_code)]
@@ -62,6 +63,29 @@ fn table_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
         },
     );
     let _ = response.header_at(0);
+}
+
+#[allow(dead_code)]
+fn table_column_visibility_menu_item_api_compiles<H: UiHost>(
+    ui: &mut impl UiWriterImUiFacadeExt<H>,
+    model: &fret_runtime::Model<ImUiTableColumnVisibilityState>,
+) {
+    let column = TableColumn::px("Status###asset-status", Px(96.0));
+
+    let response = table_column_visibility_menu_item(
+        ui,
+        &column,
+        model,
+        MenuItemOptions {
+            test_id: Some("table.column.status".into()),
+            ..Default::default()
+        },
+    );
+
+    if let Some(response) = response {
+        let _ = response.clicked();
+        let _ = response.changed();
+    }
 }
 
 #[test]

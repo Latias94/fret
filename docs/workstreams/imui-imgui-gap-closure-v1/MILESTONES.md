@@ -215,6 +215,11 @@ Exit criteria:
   persistence, header-menu policy, freeze panes, and old columns API shape stay candidate-only. A
   `fret-imui` composition gate proves the helper can drive table rendering while the runtime
   facade remains policy-light.
+  2026-05-17 table visibility menu-item result: `table_column_visibility_menu_item(...)` now
+  bridges `TableColumn`, existing checkbox menu item behavior, and
+  `ImUiTableColumnVisibilityState`. Callers still own where that menu is presented; automatic
+  header context-menu popup wiring, persistence, freeze panes, and old columns API shape stay
+  candidate-only.
   2026-05-16 control readout text role result: `text_control_readout(...)` now sits in
   `fret-ui-kit::declarative::text` beside `text_table_cell(...)`. The UI Gallery code-editor
   readouts still use the doc-layout app helper, but that helper delegates to the shared role, so

@@ -1101,6 +1101,98 @@ fn table_helper_applies_runtime_column_visibility_state() {
 }
 
 #[test]
+fn table_column_visibility_menu_item_updates_visibility_state() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(160.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let model = app
+        .models_mut()
+        .insert(ImUiTableColumnVisibilityState::default());
+    let column = TableColumn::px("Status###status", Px(96.0));
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-column-visibility-menu",
+        |cx| {
+            crate::imui_raw(cx, |ui| {
+                let _ = table_column_visibility_menu_item(
+                    ui,
+                    &column,
+                    &model,
+                    MenuItemOptions {
+                        test_id: Some(Arc::from("imui-table-column-visibility-menu.status")),
+                        ..Default::default()
+                    },
+                );
+            })
+        },
+    );
+
+    let item = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-column-visibility-menu.status",
+    );
+    click_at(&mut ui, &mut app, &mut services, item);
+
+    app.advance_frame();
+    let changed = Rc::new(Cell::new(false));
+    let visible = Rc::new(Cell::new(true));
+    let changed_out = changed.clone();
+    let visible_out = visible.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-column-visibility-menu",
+        |cx| {
+            crate::imui_raw(cx, |ui| {
+                let response = table_column_visibility_menu_item(
+                    ui,
+                    &column,
+                    &model,
+                    MenuItemOptions {
+                        test_id: Some(Arc::from("imui-table-column-visibility-menu.status")),
+                        ..Default::default()
+                    },
+                )
+                .expect("column has stable id");
+                changed_out.set(response.changed());
+                let value = ui
+                    .cx_mut()
+                    .app
+                    .models()
+                    .get_cloned(&model)
+                    .map(|state| state.is_visible("status", column.visible))
+                    .unwrap_or(column.visible);
+                visible_out.set(value);
+            })
+        },
+    );
+
+    assert!(changed.get());
+    assert!(!visible.get());
+}
+
+#[test]
 fn table_helper_applies_explicit_row_and_cell_background_overrides() {
     let window = AppWindowId::default();
     let bounds = Rect::new(

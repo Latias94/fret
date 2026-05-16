@@ -222,6 +222,13 @@ Run evidence:
   nextest run -p fret-imui table_helper_applies_runtime_column_visibility_state
   table_helper_skips_hidden_columns_in_header_and_body --no-fail-fast`, and `python
   tools/gate_imui_workstream_source.py`.
+- 2026-05-17: added a table column visibility menu-item bridge through
+  `table_column_visibility_menu_item(...)`. The helper stays in `fret-ui-kit::imui`, reuses the
+  existing checkbox menu-item behavior, updates `ImUiTableColumnVisibilityState`, and intentionally
+  does not add automatic header context-menu popup wiring or persistence. Gates: `cargo nextest run
+  -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`, `cargo nextest run -p
+  fret-imui table_column_visibility_menu_item_updates_visibility_state --no-fail-fast`, and
+  `python tools/gate_imui_workstream_source.py`.
 - 2026-05-16: introduced `text_control_readout(...)` as the shared compact control-readout text
   role. The UI Gallery code-editor toolbar keeps its doc-layout helper, but that helper now
   delegates to `fret-ui-kit::declarative::text::text_control_readout(...)`, so dense status/readout

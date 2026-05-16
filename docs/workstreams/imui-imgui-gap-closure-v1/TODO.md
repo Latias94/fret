@@ -206,6 +206,11 @@ Readiness order for the next locally testable review slices:
    header-menu policy, freeze panes, and old columns API shape remain separate follow-ons. A
    `fret-imui` composition test proves the helper drives the existing table render path without
    moving the state policy into `fret-imui`.
+   2026-05-17 table visibility menu-item follow-up: `table_column_visibility_menu_item(...)` now
+   provides the checkbox menu-item bridge between `TableColumn` and
+   `ImUiTableColumnVisibilityState`. It reuses existing menu item policy and leaves automatic
+   header context-menu popup wiring, persistence, freeze panes, and old columns API shape as
+   separate follow-ons.
    2026-05-16 control readout text role follow-up: `text_control_readout(...)` now lives beside
    `text_table_cell(...)` in `fret-ui-kit::declarative::text`, and the UI Gallery code-editor
    toolbar readouts route through that shared role instead of carrying app-local text layout policy.

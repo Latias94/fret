@@ -15,8 +15,9 @@ backgrounds, explicit per-row/per-cell background overrides now have a narrow pr
 `TableRowOptions::background` and `TableCellOptions::background`, and static author-declared
 column visibility now has a narrow proof through `TableColumn::hidden()` /
 `TableColumn::with_visible(bool)`. Runtime hideable-column policy now has a narrow helper proof
-through `ImUiTableColumnVisibilityState`; persistence, header-menu policy, freeze panes, and old
-columns API remain candidate-only.
+through `ImUiTableColumnVisibilityState`, and header menu-item composition has a bridge through
+`table_column_visibility_menu_item(...)`; automatic header context-menu popup wiring, persistence,
+freeze panes, and old columns API remain candidate-only.
 
 ## Decision
 
@@ -50,7 +51,7 @@ Keep the owner split:
 | Menus / menu bars / popups / modals | `menu_bar`, `begin_menu`, `begin_submenu`, menu items, `open_popup`, `begin_popup_menu`, context menu helpers, modal helpers | Covered at policy layer; dismissal/focus policy stays in ecosystem |
 | Tooltips | `tooltip_text`, `tooltip`, `TooltipOptions` | Covered enough for current response-driven usage |
 | Tabs | `tab_bar`, `ImUiTabBar`, `tab_item`, response reporting | Covered for current shell/editor proofs |
-| Tables | `table`, `ImUiTable`, `TableColumn`, `TableColumn::hidden`, `TableColumn::with_visible`, `ImUiTableColumnVisibilityState`, `TableOptions::striped`, `TableRowOptions::background`, `TableCellOptions::background`, sort/resize/header responses, virtual-list support | Covered for basic/sort/resize/striped-row, static column visibility, runtime hideable-column helper proof, and explicit row/cell background proof paths; remaining advanced table flags should be split by proof |
+| Tables | `table`, `ImUiTable`, `TableColumn`, `TableColumn::hidden`, `TableColumn::with_visible`, `ImUiTableColumnVisibilityState`, `table_column_visibility_menu_item`, `TableOptions::striped`, `TableRowOptions::background`, `TableCellOptions::background`, sort/resize/header responses, virtual-list support | Covered for basic/sort/resize/striped-row, static column visibility, runtime hideable-column helper proof, header menu-item composition, and explicit row/cell background proof paths; remaining advanced table flags should be split by proof |
 | Drag and drop | response-driven `drag_source` / `drop_target` with typed payloads | Covered with Fret-native response style; do not copy begin/end mutable payload grammar |
 | Draw list / images | `debug_draw`, `ImUiDebugDrawList`, paths, channels, mesh, image/SVG variants | Strong local coverage; keep feature growth in debug-draw follow-ons |
 | Color edit / picker | `fret-ui-editor::ColorEdit` through `fret::imui::editor::color_edit` | Covered as editor-control policy, not generic kit vocabulary |
@@ -76,8 +77,8 @@ public helper widening:
 4. **Advanced table flags**
    - Sorting, resize handles, alternating row backgrounds, explicit per-row/per-cell background
      override targets, and a narrow runtime hideable-column helper already have proof.
-   - Freeze panes, persistence, header-menu policy, and old columns API should stay narrow
-     follow-ons.
+   - Automatic header context-menu popup wiring, freeze panes, persistence, and old columns API
+     should stay narrow follow-ons.
 5. **Child-region flag mirrors beyond manual resize**
    - `ResizeY` and `ResizeX` now have closed proof lanes.
    - Auto-resize, nav flattening, and clipping-return behavior still need behavior-specific proof
@@ -100,10 +101,12 @@ public helper widening:
 - `TableOptions::striped` is already the current alternating row-background policy, while
   `TableRowOptions::background` / `TableCellOptions::background` cover explicit per-row/per-cell
   override targets. `TableColumn::hidden()` / `TableColumn::with_visible(bool)` cover static
-  author-declared visibility, and `ImUiTableColumnVisibilityState` gives runtime visibility
-  overrides a narrow stable-id helper before table render. Do not treat Dear ImGui `RowBg` or
-  visibility parity as wholly missing; the remaining table axes are freeze panes, persistence,
-  header-menu policy, and old columns API shape, which still need narrow proofs.
+  author-declared visibility, `ImUiTableColumnVisibilityState` gives runtime visibility overrides
+  a narrow stable-id helper before table render, and `table_column_visibility_menu_item(...)`
+  provides the menu checkbox bridge for callers that own a popup/menu surface. Do not treat Dear
+  ImGui `RowBg` or visibility parity as wholly missing; the remaining table axes are automatic
+  header context-menu popup wiring, freeze panes, persistence, and old columns API shape, which
+  still need narrow proofs.
 - `ecosystem/fret-ui-editor/src/imui.rs` is only a thin adapter layer that forwards editor controls
   and composites through `into_element(...)`.
 - `repo-ref/imgui/imgui.h` still groups the upstream surface by Windows, Child Windows, Widgets,

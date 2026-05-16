@@ -5,7 +5,7 @@ use std::sync::Arc;
 use fret_runtime::Model;
 use fret_ui::{ElementContext, UiHost};
 
-use super::TableColumn;
+use super::{MenuItemOptions, ResponseExt, TableColumn, UiWriterImUiFacadeExt};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct TableColumnVisibilityOverride {
@@ -16,8 +16,8 @@ struct TableColumnVisibilityOverride {
 /// Model state for runtime table-column visibility.
 ///
 /// This intentionally stays policy-only: it maps stable column ids to visible flags and then
-/// produces a new `TableColumn` list. Persistence, header menus, and freeze panes are separate
-/// table policies.
+/// produces a new `TableColumn` list. Persistence, automatic header context-menu wiring, and
+/// freeze panes are separate table policies.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ImUiTableColumnVisibilityState {
     overrides: Vec<TableColumnVisibilityOverride>,
@@ -128,6 +128,47 @@ pub fn table_column_visibility_use_model<H: UiHost>(
     default_value: impl FnOnce() -> ImUiTableColumnVisibilityState,
 ) -> crate::primitives::controllable_state::ControllableModel<ImUiTableColumnVisibilityState> {
     crate::primitives::controllable_state::use_controllable_model(cx, controlled, default_value)
+}
+
+pub fn table_column_visibility_menu_item<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
+    ui: &mut W,
+    column: &TableColumn,
+    model: &Model<ImUiTableColumnVisibilityState>,
+    options: MenuItemOptions,
+) -> Option<ResponseExt> {
+    let id = column.id.clone()?;
+    if id.is_empty() {
+        return None;
+    }
+
+    let label = column
+        .header
+        .clone()
+        .unwrap_or_else(|| Arc::from(id.as_ref()));
+    let visible = ui.with_cx_mut(|cx| {
+        cx.read_model(model, fret_ui::Invalidation::Paint, |_app, state| {
+            state.is_visible(id.as_ref(), column.visible)
+        })
+        .unwrap_or(column.visible)
+    });
+
+    let mut response = ui.menu_item_checkbox_with_options(label, visible, options);
+    if response.clicked() {
+        let changed_to = !visible;
+        let mut changed = false;
+        let _ = ui.with_cx_mut(|cx| {
+            cx.app.models_mut().update(model, |state| {
+                if state.is_visible(id.as_ref(), column.visible) != changed_to {
+                    state.set_visible(id.clone(), changed_to);
+                    changed = true;
+                }
+            })
+        });
+        response.set_core_changed(changed);
+        response.merge_edited(changed);
+    }
+
+    Some(response)
 }
 
 #[cfg(test)]
