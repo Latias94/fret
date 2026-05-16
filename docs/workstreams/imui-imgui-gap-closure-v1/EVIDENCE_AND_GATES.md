@@ -196,6 +196,11 @@ Run evidence:
   `text_table_cell(...)` too. Header labels now share compact single-line ellipsis semantics with
   body cells instead of default word wrapping. Gate: `cargo nextest run -p fret-ui-kit --features
   imui --lib table_header_label_uses_shared_table_cell_text_role --no-fail-fast`.
+- 2026-05-17: routed sortable IMUI table header sort indicators through `text_chrome_glyph(...)`
+  instead of bare `cx.text(...)`. Header labels remain table-cell text, while sort arrows are now
+  fixed chrome glyphs with single-line clip semantics. Gate: `cargo nextest run -p fret-ui-kit
+  --features imui --lib table_sort_indicator_uses_shared_chrome_glyph_text_role
+  --no-fail-fast`.
 - 2026-05-16: added static table column visibility through `TableColumn::hidden()` and
   `TableColumn::with_visible(bool)`. Hidden columns still consume author-submitted row cells in
   declared column order, but they do not render header/body cells and do not emit header responses.

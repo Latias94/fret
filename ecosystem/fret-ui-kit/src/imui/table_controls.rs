@@ -460,6 +460,16 @@ fn sort_direction_indicator(direction: TableSortDirection) -> &'static str {
     }
 }
 
+fn table_sort_indicator_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    direction: TableSortDirection,
+) -> AnyElement {
+    crate::declarative::text::text_chrome_glyph(
+        cx,
+        Arc::<str>::from(sort_direction_indicator(direction)),
+    )
+}
+
 fn sort_direction_a11y_label(direction: TableSortDirection) -> &'static str {
     match direction {
         TableSortDirection::Ascending => "ascending",
@@ -607,7 +617,7 @@ fn sortable_header_visual<H: UiHost>(
             children.push(table_header_label_text(cx, label));
         }
         if let Some(direction) = sort_direction {
-            children.push(cx.text(Arc::<str>::from(sort_direction_indicator(direction))));
+            children.push(table_sort_indicator_text(cx, direction));
         }
         if children.is_empty() {
             Vec::new()
@@ -991,6 +1001,28 @@ mod tests {
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(el.inherited_text_style.is_some());
+    }
+
+    #[test]
+    fn table_sort_indicator_uses_shared_chrome_glyph_text_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+            table_sort_indicator_text(cx, TableSortDirection::Ascending)
+        });
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected table sort indicator to be text");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Clip);
         assert!(el.inherited_text_style.is_some());
     }
 

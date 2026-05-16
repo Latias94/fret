@@ -191,6 +191,9 @@ Readiness order for the next locally testable review slices:
    2026-05-16 table header text follow-up: sortable/plain table header labels now reuse
    `text_table_cell(...)` too, so header text follows the same single-line ellipsis role as body
    cells instead of falling back to default word wrapping.
+   2026-05-17 table sort glyph follow-up: sortable header sort indicators now reuse
+   `text_chrome_glyph(...)`, keeping table header labels on table-cell text while treating arrows
+   as fixed chrome glyphs.
    2026-05-16 static table column visibility follow-up: `TableColumn::hidden()` and
    `TableColumn::with_visible(bool)` now provide a narrow author-declared visibility API. Hidden
    columns keep row cell submission in declared column order but skip header/body rendering and do

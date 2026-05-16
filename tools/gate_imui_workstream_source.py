@@ -1040,7 +1040,10 @@ def main() -> None:
             required=[
                 "fn table_header_label_text",
                 "crate::declarative::text::text_table_cell(cx, label)",
+                "fn table_sort_indicator_text",
+                "crate::declarative::text::text_chrome_glyph(",
                 "table_header_label_uses_shared_table_cell_text_role",
+                "table_sort_indicator_uses_shared_chrome_glyph_text_role",
                 ".filter(|(_, column)| column.visible)",
                 "if !column.visible",
                 "visible_columns.len()",
@@ -1049,6 +1052,7 @@ def main() -> None:
             ],
             forbidden=[
                 "children.push(cx.text(label));",
+                "children.push(cx.text(Arc::<str>::from(sort_direction_indicator(direction))));",
                 ".map(|label| cx.text(label))",
             ],
         ),
