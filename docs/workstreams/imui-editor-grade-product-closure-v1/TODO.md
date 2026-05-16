@@ -428,4 +428,6 @@ reopen.
       parity lane or start a narrower follow-on there instead of bloating this folder.
       Result: after the P1 shell closeout and the umbrella maintenance refresh, the active
       execution priority continues in `docs/workstreams/docking-multiwindow-imgui-parity/`, with
-      `WORKSTREAM.json` and `M0_BASELINE_AUDIT_2026-04-13.md` as the first-open resume surface.
+      `WORKSTREAM.json`, `M0_BASELINE_AUDIT_2026-04-13.md`, and
+      `M19_WAYLAND_ACCEPTANCE_OPEN_GUARD_2026-05-17.md` as the current resume surface. M19 keeps
+      local policy-skip evidence from being mistaken for real Wayland compositor acceptance.

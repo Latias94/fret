@@ -183,6 +183,7 @@ DevTools full clippy is now a current maintenance gate for the P2 diagnostics/de
 - `docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md`
+- `docs/workstreams/docking-multiwindow-imgui-parity/M19_WAYLAND_ACCEPTANCE_OPEN_GUARD_2026-05-17.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
 - `docs/ui-diagnostics-and-scripted-tests.md`
 - `docs/diagnostics-first-open.md`
@@ -926,6 +927,11 @@ The 2026-05-16 `M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md` note broaden
 policy-skip gate into a Windows plus Linux/X11 sidecar matrix. Both probes stop at
 `skipped_policy` before script execution, so the evidence strengthens local admission posture
 without claiming `DW-P1-linux-003` real-host Wayland acceptance.
+
+The 2026-05-17 `M19_WAYLAND_ACCEPTANCE_OPEN_GUARD_2026-05-17.md` note freezes that interpretation
+in the docking source gate: `DW-P1-linux-003` must remain in progress, the manual Wayland
+acceptance checkbox must remain open, and the M5 runbook stays the next true closure path until a
+real Wayland compositor evidence note exists.
 
 ### Lane hygiene gates
 
