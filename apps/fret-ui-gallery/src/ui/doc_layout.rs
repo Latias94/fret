@@ -486,6 +486,41 @@ where
     })
 }
 
+fn control_readout_text_props<T>(theme: &Theme, text: T) -> TextProps
+where
+    T: Into<Arc<str>>,
+{
+    let style =
+        fret_ui_kit::typography::control_text_style(theme, fret_ui_kit::typography::UiTextSize::Xs);
+    let color = theme
+        .color_by_key("muted-foreground")
+        .or_else(|| theme.color_by_key("muted_foreground"))
+        .unwrap_or_else(|| theme.color_token("foreground"));
+
+    let mut layout = fret_ui::element::LayoutStyle::default();
+    layout.flex.shrink = 1.0;
+    layout.size.min_width = Some(fret_ui::element::Length::Px(Px(0.0)));
+
+    TextProps {
+        layout,
+        text: text.into(),
+        style: Some(style),
+        color: Some(color),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Ellipsis,
+        align: fret_core::TextAlign::Start,
+        ink_overflow: fret_ui::element::TextInkOverflow::None,
+    }
+}
+
+pub(in crate::ui) fn control_readout_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
+where
+    T: Into<Arc<str>>,
+{
+    let theme = Theme::global(&*cx.app);
+    cx.text_props(control_readout_text_props(theme, text))
+}
+
 pub(in crate::ui) fn notes_block<I, T>(lines: I) -> impl IntoUiElement<fret_app::App> + use<I, T>
 where
     I: IntoIterator<Item = T>,
@@ -755,6 +790,7 @@ fn slugify_for_test_id(input: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_core::{TextOverflow, TextWrap};
 
     #[test]
     fn doc_section_focus_matches_title_and_stable_ids() {
@@ -788,6 +824,23 @@ mod tests {
             Some("ui-gallery-combobox-usage"),
             &filters
         ));
+    }
+
+    #[test]
+    fn control_readout_text_is_single_line_and_can_shrink_in_dense_rows() {
+        let app = fret_app::App::new();
+        let theme = Theme::global(&app);
+        let props = control_readout_text_props(theme, "Soft wrap: 80 cols");
+
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(
+            props.layout.size.min_width,
+            Some(fret_ui::element::Length::Px(Px(0.0)))
+        );
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert!(props.style.is_some());
+        assert!(props.color.is_some());
     }
 }
 

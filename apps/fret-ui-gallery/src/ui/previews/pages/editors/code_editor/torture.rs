@@ -146,7 +146,7 @@ fn build_torture_overlay_feature_hook(cx: &mut AppComponentCx<'_>) -> AnyElement
 
     ui::h_row(move |cx| {
         vec![
-            cx.text("Assist:"),
+            doc_layout::control_readout_text(cx, "Assist:"),
             shadcn::Button::new("Open actions")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
@@ -333,7 +333,7 @@ pub(in crate::ui) fn preview_code_editor_torture(
                             shadcn::Switch::new(syntax_rust.clone())
                                 .a11y_label("Toggle Rust syntax highlighting")
                                 .into_element(cx),
-                            cx.text(if syntax_enabled {
+                            doc_layout::control_readout_text(cx, if syntax_enabled {
                                 "Syntax: Rust (tree-sitter)"
                             } else {
                                 "Syntax: disabled"
@@ -345,7 +345,7 @@ pub(in crate::ui) fn preview_code_editor_torture(
                             shadcn::Switch::new(boundary_identifier.clone())
                                 .a11y_label("Toggle identifier word boundaries")
                                 .into_element(cx),
-                            cx.text(if boundary_identifier_enabled {
+                            doc_layout::control_readout_text(cx, if boundary_identifier_enabled {
                                 "Word boundaries: Identifier"
                             } else {
                                 "Word boundaries: UnicodeWord"
@@ -395,7 +395,7 @@ pub(in crate::ui) fn preview_code_editor_torture(
                                 .test_id("ui-gallery-code-editor-torture-soft-wrap-set-on")
                                 .on_activate(set_soft_wrap_on.clone())
                                 .into_element(cx),
-                            cx.text(if soft_wrap_enabled {
+                            doc_layout::control_readout_text(cx, if soft_wrap_enabled {
                                 "Soft wrap: 80 cols"
                             } else {
                                 "Soft wrap: off"
@@ -448,7 +448,7 @@ pub(in crate::ui) fn preview_code_editor_torture(
                                     host.request_redraw(action_cx.window);
                                 }))
                                 .into_element(cx),
-                            cx.text(if allow_decorations_under_preedit_enabled {
+                            doc_layout::control_readout_text(cx, if allow_decorations_under_preedit_enabled {
                                 "Preedit decorations: on"
                             } else {
                                 "Preedit decorations: off"
@@ -483,7 +483,7 @@ pub(in crate::ui) fn preview_code_editor_torture(
                                     })
                                 })
                                 .into_element(cx),
-                            cx.text(if compose_inline_preedit_enabled {
+                            doc_layout::control_readout_text(cx, if compose_inline_preedit_enabled {
                                 "Preedit composition: view (composed)"
                             } else {
                                 "Preedit composition: paint (injected)"
@@ -504,7 +504,7 @@ pub(in crate::ui) fn preview_code_editor_torture(
                                 .test_id("ui-gallery-code-editor-torture-folds-set-on")
                                 .on_activate(set_folds_on.clone())
                                 .into_element(cx),
-                            cx.text(if folds_enabled {
+                            doc_layout::control_readout_text(cx, if folds_enabled {
                                 "Folds: fixture"
                             } else {
                                 "Folds: off"
@@ -525,7 +525,7 @@ pub(in crate::ui) fn preview_code_editor_torture(
                                 .test_id("ui-gallery-code-editor-torture-inlays-set-on")
                                 .on_activate(set_inlays_on.clone())
                                 .into_element(cx),
-                             cx.text(if inlays_enabled {
+                             doc_layout::control_readout_text(cx, if inlays_enabled {
                                  "Inlays: fixture"
                              } else {
                                  "Inlays: off"
@@ -581,7 +581,7 @@ pub(in crate::ui) fn preview_code_editor_torture(
                                     host.request_redraw(action_cx.window);
                                 }))
                                 .into_element(cx),
-                            cx.text(format!("Interaction: {mode_label}")),
+                            doc_layout::control_readout_text(cx, format!("Interaction: {mode_label}")),
                         ]
                     }).gap(Space::N2).items_center().into_element(cx),
             ]
