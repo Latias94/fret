@@ -90,6 +90,35 @@ binary, and the required overlay-disabled env set. The baseline-validation direc
 `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`; that flag belongs to the attribution directory for direct probes. The resize
 helper may still collect its code-editor paint-perf fields internally.
 
+## Minimal Closeout Sequence
+
+Use this sequence on the Windows RTX4090 target host after building the release binaries. It is the shortest command
+chain that can satisfy the closeout objective; dry-run output and non-target-host output are not valid substitutes.
+
+```powershell
+$DateTag = "YYYYMMDD-editor-paint"
+
+python tools/perf/diag_editor_paint_contract_validate.py `
+  --date-tag $DateTag
+
+python tools/perf/diag_editor_paint_contract_validate.py `
+  --date-tag "$DateTag-attrib" `
+  --with-paint-perf
+```
+
+After both output directories are synced back to the workspace that will update the docs, run the verifier/closeout
+gate:
+
+```powershell
+python tools/perf/diag_editor_paint_contract_closeout.py `
+  "target/fret-diag/editor-paint-contract-validate-$DateTag" `
+  --attribution-dir "target/fret-diag/editor-paint-contract-validate-$DateTag-attrib"
+```
+
+Closeout is valid only when the first directory has a baseline-validation `summary.json` with
+`with_paint_perf=false`, the second directory has an attribution `summary.json` with `with_paint_perf=true`, and the
+closeout command reports `ok=true`.
+
 ## Validate Current Contracts First
 
 Resize:
