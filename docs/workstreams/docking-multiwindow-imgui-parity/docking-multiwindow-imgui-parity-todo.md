@@ -351,6 +351,12 @@ Each TODO is labeled:
     - [x] Workstream gate commands now expose both the cold-start policy-skip path and the
       `--reuse-built` drift check, and the machine-readable gate list uses repo-local `python`
       commands without shell redirection.
+    - [x] Wayland acceptance-open source guard now prevents local policy-skip evidence from being
+      recorded as compositor acceptance:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M19_WAYLAND_ACCEPTANCE_OPEN_GUARD_2026-05-17.md`
+      - `tools/gate_docking_multiwindow_workstream_source.py`
+      - The gate requires this TODO item to remain `[~]`, the manual Wayland acceptance checkbox to
+        remain open, and the M5 runbook to stay the `role: next` closure path.
     - [ ] Manual Wayland compositor acceptance remains open.
   - Acceptance (manual; Linux Wayland compositor):
     - See `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md` for the canonical command set and evidence review flow.

@@ -261,6 +261,8 @@ Current policy (Wayland):
   `docs/workstreams/docking-multiwindow-imgui-parity/M4_WAYLAND_DEGRADATION_POLICY_2026-04-21.md`.
 - Real-host compositor acceptance for that posture now uses
   `docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md`.
+- Latest acceptance-open source guard:
+  `docs/workstreams/docking-multiwindow-imgui-parity/M19_WAYLAND_ACCEPTANCE_OPEN_GUARD_2026-05-17.md`.
 
 ## Capabilities (contract) — windowing quality signals (v1)
 

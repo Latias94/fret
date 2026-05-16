@@ -198,17 +198,46 @@ def _check_docs(failures: list[str]) -> None:
         failures=failures,
     )
     _require_markers(
+        Path("docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md"),
+        required=[
+            "Status: active capture runbook",
+            "Run this only on a Linux native Wayland session.",
+            "FRET_DOCK_TEAROFF_LOG=1 cargo run -p fretboard-dev -- diag campaign run",
+            "imui-p3-wayland-real-host",
+            "FRET_DOCK_TEAROFF_LOG=1 cargo run -p fretboard-dev -- diag run",
+            "docking-arbitration-demo-wayland-degrade-no-os-tearoff.json",
+            "known_window_count_is(n=1)",
+            "diag windows <bundle_dir> --json",
+            "diag dock-graph <bundle_dir> --json",
+            "no matches for the acceptance run",
+            "non-qualifying host should produce `check.environment.json`",
+            "should not be counted as a compositor",
+            "When a run satisfies the checklist above, record it in a new dated evidence note",
+        ],
+        forbidden=[
+            "Status: accepted",
+            "Status: closed",
+            "closes `DW-P1-linux-003`",
+        ],
+        failures=failures,
+    )
+    _require_markers(
         Path("docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json"),
         required=[
             "\"updated\": \"2026-05-16\"",
             "M16_SOURCE_DRIFT_GUARD_2026-05-14.md",
             "M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md",
             "M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md",
+            "M19_WAYLAND_ACCEPTANCE_OPEN_GUARD_2026-05-17.md",
             "python tools/gate_docking_multiwindow_workstream_source.py",
             "python tools/diag_gate_docking_wayland_policy_skip.py",
             "python tools/diag_gate_docking_wayland_policy_skip.py --reuse-built",
             "p3-wayland-policy-skip-local-cold-start",
             "p3-wayland-policy-skip-local-drift-reuse-built",
+            "\"role\": \"next\"",
+            "M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md",
+            "Wayland compositor acceptance runbook as the next true closure path for `DW-P1-linux-003`",
+            "local policy-skip evidence is not Wayland compositor acceptance",
             "python -m json.tool docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json",
             "tools/gate_docking_multiwindow_workstream_source.py",
             "tools/diag_gate_docking_wayland_policy_skip.py",
@@ -233,13 +262,22 @@ def _check_docs(failures: list[str]) -> None:
     _require_markers(
         Path("docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md"),
         required=[
+            "[~] DW-P1-linux-003 Wayland-safe degradation policy for follow-mode.",
+            "[ ] Manual Wayland compositor acceptance remains open.",
+            "Acceptance (manual; Linux Wayland compositor):",
             "M16_SOURCE_DRIFT_GUARD_2026-05-14.md",
             "M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md",
             "M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md",
+            "M19_WAYLAND_ACCEPTANCE_OPEN_GUARD_2026-05-17.md",
             "source drift guard now validates docking suite membership",
             "Local Wayland policy-skip gate now proves non-Wayland sidecars stop before script execution",
             "Local Wayland policy-skip matrix now covers each Wayland campaign admission predicate",
             "Workstream gate commands now expose both the cold-start policy-skip path",
+            "Wayland acceptance-open source guard now prevents local policy-skip evidence from being",
+        ],
+        forbidden=[
+            "[x] DW-P1-linux-003 Wayland-safe degradation policy for follow-mode.",
+            "[x] Manual Wayland compositor acceptance remains open.",
         ],
         failures=failures,
     )
@@ -264,6 +302,32 @@ def _check_docs(failures: list[str]) -> None:
             "\"existing_filesystem\"",
             "\"script-results\"",
             "\"suite-results\"",
+        ],
+        failures=failures,
+    )
+    _require_markers(
+        Path("docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md"),
+        required=[
+            "Latest acceptance-open source guard:",
+            "M19_WAYLAND_ACCEPTANCE_OPEN_GUARD_2026-05-17.md",
+        ],
+        failures=failures,
+    )
+    _require_markers(
+        Path("docs/workstreams/docking-multiwindow-imgui-parity/M19_WAYLAND_ACCEPTANCE_OPEN_GUARD_2026-05-17.md"),
+        required=[
+            "Status: source guard refresh; no Wayland acceptance claim.",
+            "`DW-P1-linux-003` remains `[~]`",
+            "\"Manual Wayland compositor acceptance remains open\" to remain unchecked",
+            "`WORKSTREAM.json` to keep the M5 runbook as the `role: next` closure path",
+            "does not close `DW-P1-linux-003`",
+            "python tools/gate_docking_multiwindow_workstream_source.py",
+            "python tools/gate_imui_workstream_source.py",
+        ],
+        forbidden=[
+            "Status: accepted",
+            "Status: closed",
+            "closes `DW-P1-linux-003`",
         ],
         failures=failures,
     )
