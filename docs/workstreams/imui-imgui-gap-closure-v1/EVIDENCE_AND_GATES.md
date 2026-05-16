@@ -209,6 +209,19 @@ Run evidence:
   fret-ui-kit --features imui --test imui_table_smoke table_column_visibility_helpers_compile
   --no-fail-fast`, and `cargo nextest run -p fret-imui
   table_helper_skips_hidden_columns_in_header_and_body --no-fail-fast`.
+- 2026-05-17: added runtime table-column visibility state through
+  `ImUiTableColumnVisibilityState`. The helper stays in `fret-ui-kit::imui`, keeps storage opaque,
+  applies stable-id overrides to `TableColumn` lists before render, and intentionally does not add
+  persistence, header-menu policy, freeze panes, or a Dear ImGui-style mutable table runtime.
+  Gates: `cargo nextest run -p fret-ui-kit --features imui --lib
+  visibility_state_applies_runtime_overrides_by_stable_column_id
+  visibility_state_leaves_unlisted_and_unidentified_columns_at_declared_visibility
+  visibility_state_toggle_uses_current_override_or_default_visibility --no-fail-fast`, `cargo
+  nextest run -p fret-ui-kit --features imui --test imui_table_smoke
+  table_column_visibility_state_applies_runtime_visibility_by_column_id --no-fail-fast`, `cargo
+  nextest run -p fret-imui table_helper_applies_runtime_column_visibility_state
+  table_helper_skips_hidden_columns_in_header_and_body --no-fail-fast`, and `python
+  tools/gate_imui_workstream_source.py`.
 - 2026-05-16: introduced `text_control_readout(...)` as the shared compact control-readout text
   role. The UI Gallery code-editor toolbar keeps its doc-layout helper, but that helper now
   delegates to `fret-ui-kit::declarative::text::text_control_readout(...)`, so dense status/readout

@@ -3,8 +3,8 @@
 use fret_core::{Color, Px};
 use fret_ui::UiHost;
 use fret_ui_kit::imui::{
-    TableCellOptions, TableColumn, TableColumnWidth, TableOptions, TableRowOptions,
-    TableSortDirection, UiWriterImUiFacadeExt,
+    ImUiTableColumnVisibilityState, TableCellOptions, TableColumn, TableColumnWidth, TableOptions,
+    TableRowOptions, TableSortDirection, UiWriterImUiFacadeExt,
 };
 
 #[allow(dead_code)]
@@ -134,6 +134,28 @@ fn table_column_visibility_helpers_compile() {
 
     let visible_again = hidden.with_visible(true);
     assert!(visible_again.visible);
+}
+
+#[test]
+fn table_column_visibility_state_applies_runtime_visibility_by_column_id() {
+    let columns = [
+        TableColumn::fill("Name###asset-name"),
+        TableColumn::px("Status###asset-status", Px(96.0)),
+        TableColumn::px("Owner###asset-owner", Px(88.0)).hidden(),
+    ];
+    let state = ImUiTableColumnVisibilityState::new([
+        ("asset-status", false),
+        ("asset-owner", true),
+        ("missing", false),
+    ]);
+
+    let applied = state.apply_to_columns(&columns);
+
+    assert!(applied[0].visible);
+    assert!(!applied[1].visible);
+    assert!(applied[2].visible);
+    assert_eq!(state.visibility_for("asset-status"), Some(false));
+    assert!(state.is_visible("asset-owner", false));
 }
 
 #[test]

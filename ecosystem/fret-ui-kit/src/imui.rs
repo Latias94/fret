@@ -54,6 +54,7 @@ mod selectable_controls;
 mod separator_text_controls;
 mod slider_controls;
 mod tab_family_controls;
+mod table_column_visibility;
 mod table_controls;
 mod text_controls;
 mod text_picker_controls;
@@ -137,4 +138,7 @@ pub use response::{
     VirtualListResponse,
 };
 pub use tab_family_controls::ImUiTabBar;
+pub use table_column_visibility::{
+    ImUiTableColumnVisibilityState, table_column_visibility_use_model,
+};
 pub use table_controls::{ImUiTable, ImUiTableRow};

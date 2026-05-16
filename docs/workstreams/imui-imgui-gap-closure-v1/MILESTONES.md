@@ -208,6 +208,12 @@ Exit criteria:
   ImGui's mutable table runtime. Hidden columns still consume submitted row cells in declared order
   but skip header/body rendering and header responses; runtime hideable columns, persistence, and
   header-menu policy stay candidate-only.
+  2026-05-17 runtime table column visibility result: `ImUiTableColumnVisibilityState` now covers
+  runtime stable-id visibility overrides as a policy-layer helper in `fret-ui-kit::imui`. It
+  produces an adjusted `TableColumn` list and reuses the existing hidden-column render contract;
+  persistence, header-menu policy, freeze panes, and old columns API shape stay candidate-only. A
+  `fret-imui` composition gate proves the helper can drive table rendering while the runtime
+  facade remains policy-light.
   2026-05-16 control readout text role result: `text_control_readout(...)` now sits in
   `fret-ui-kit::declarative::text` beside `text_table_cell(...)`. The UI Gallery code-editor
   readouts still use the doc-layout app helper, but that helper delegates to the shared role, so

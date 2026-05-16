@@ -199,6 +199,12 @@ Readiness order for the next locally testable review slices:
    columns keep row cell submission in declared column order but skip header/body rendering and do
    not emit header responses. Runtime hideable columns, persistence, and header-menu policy remain
    separate follow-ons.
+   2026-05-17 runtime table column visibility follow-up: `ImUiTableColumnVisibilityState` now
+   provides a narrow stable-id visibility override helper in `fret-ui-kit::imui`. It applies to
+   `TableColumn` lists before render and reuses the existing hidden-column path; persistence,
+   header-menu policy, freeze panes, and old columns API shape remain separate follow-ons. A
+   `fret-imui` composition test proves the helper drives the existing table render path without
+   moving the state policy into `fret-imui`.
    2026-05-16 control readout text role follow-up: `text_control_readout(...)` now lives beside
    `text_table_cell(...)` in `fret-ui-kit::declarative::text`, and the UI Gallery code-editor
    toolbar readouts route through that shared role instead of carrying app-local text layout policy.
