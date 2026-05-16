@@ -397,21 +397,15 @@ where
                         },
                         move |ui| {
                             let element = ui.with_cx_mut(|cx| {
-                                let mut props = fret_ui::element::TextProps::new(title.clone());
-                                props.layout.size.width = if resizable_layout {
-                                    Length::Fill
+                                let title = if resizable_layout {
+                                    crate::declarative::text::text_chrome_title(cx, title.clone())
                                 } else {
-                                    Length::Auto
+                                    crate::declarative::text::text_section_chrome_label(
+                                        cx,
+                                        title.clone(),
+                                    )
                                 };
-                                if resizable_layout {
-                                    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
-                                    props.layout.flex.grow = 1.0;
-                                    props.layout.flex.shrink = 1.0;
-                                    props.layout.flex.basis = Length::Px(Px(0.0));
-                                }
-                                props.wrap = fret_core::TextWrap::None;
-                                props.overflow = fret_core::TextOverflow::Ellipsis;
-                                cx.text_props(props).attach_semantics(
+                                title.attach_semantics(
                                     fret_ui::element::SemanticsDecoration::default()
                                         .test_id(title_bar_test_id.clone()),
                                 )

@@ -55,9 +55,6 @@ IMUI_DIRECT_TEXT_PROPS_ALLOWED = {
     Path("ecosystem/fret-ui-kit/src/imui/facade_writer.rs"): {
         "let mut props = fret_ui::element::TextProps::new(text);": 2,
     },
-    Path("ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs"): {
-        "let mut props = fret_ui::element::TextProps::new(title.clone());": 1,
-    },
 }
 
 
@@ -363,7 +360,7 @@ def main() -> None:
                 "imui_fill_text_is_single_line_and_shrinkable imui_control_text_uses_shared_button_label_role",
                 "control_label_text_uses_fill_width_single_line_truncation",
                 "menu_item_shortcut_text_uses_shared_control_readout_role menu_item_label_text_uses_shared_list_row_text_role",
-                "section_chrome_label_text_uses_single_line_truncation",
+                "chrome_title_text_uses_fill_width_single_line_truncation section_chrome_label_text_uses_single_line_truncation",
                 "editor_input_value_text_is_single_line_and_shrinkable drag_value axis_drag_value",
                 "editor_status_badge_text_uses_compact_single_line_readout_role error_badge_palette_keeps_short_visible_label",
                 "editor_inline_error_text_is_single_line_and_shrinkable editor_preview_caption_text_is_single_line_and_shrinkable editor_tooltip_readout_text_is_single_line_and_shrinkable numeric_readout_formats_rgb_hsv_and_optional_alpha color_tooltip_lines_match_imgui_hex_rgb_hsv_preview_text",
@@ -723,6 +720,9 @@ def main() -> None:
                 "menu_item_shortcut_text_uses_shared_control_readout_role",
                 "introduced `text_section_chrome_label(...)` as the shared compact section/chrome",
                 "label role and routed IMUI `separator_text` labels through it",
+                "introduced `text_chrome_title(...)` as the shared fill-width chrome title role",
+                "routed floating window title-bar text through shared chrome text helpers",
+                "chrome_title_text_uses_fill_width_single_line_truncation",
                 "section_chrome_label_text_uses_single_line_truncation",
                 "hardened `tools/gate_imui_workstream_source.py` with an explicit allowlist",
                 "remaining direct `TextProps::new(...)` constructors under `fret-ui-kit::imui`",
@@ -759,6 +759,7 @@ def main() -> None:
                 "pub fn text_button_label",
                 "pub fn text_control_label",
                 "pub fn text_section_chrome_label",
+                "pub fn text_chrome_title",
                 "pub fn text_code_block",
                 "pub fn text_paragraph",
                 "pub fn text_paragraph_break_words",
@@ -770,9 +771,22 @@ def main() -> None:
                 "control_readout_text_uses_muted_compact_single_line_truncation",
                 "button_label_text_uses_medium_single_line_truncation",
                 "control_label_text_uses_fill_width_single_line_truncation",
+                "chrome_title_text_uses_fill_width_single_line_truncation",
                 "section_chrome_label_text_uses_single_line_truncation",
             ],
             forbidden=[],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs"),
+            required=[
+                "crate::declarative::text::text_chrome_title(cx, title.clone())",
+                "crate::declarative::text::text_section_chrome_label(",
+            ],
+            forbidden=[
+                "TextProps::new(title.clone())",
+                "props.wrap = fret_core::TextWrap::None;",
+                "props.overflow = fret_core::TextOverflow::Ellipsis;",
+            ],
         ),
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/separator_text_controls.rs"),

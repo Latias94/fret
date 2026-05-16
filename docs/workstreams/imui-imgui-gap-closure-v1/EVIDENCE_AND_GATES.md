@@ -251,6 +251,12 @@ Run evidence:
   local `TextProps` policy or default word wrapping; they stay single-line, shrinkable, and
   ellipsis-truncated under resize. Gate: `cargo nextest run -p fret-ui-kit --features imui --lib
   section_chrome_label_text_uses_single_line_truncation --no-fail-fast`.
+- 2026-05-17: introduced `text_chrome_title(...)` as the shared fill-width chrome title role and
+  routed floating window title-bar text through shared chrome text helpers. Resizable floating
+  titles keep fill, grow, shrink, `min-width: 0`, and ellipsis behavior; non-resizable titles reuse
+  `text_section_chrome_label(...)` instead of local `TextProps`. Gate: `cargo nextest run -p
+  fret-ui-kit --features imui --lib chrome_title_text_uses_fill_width_single_line_truncation
+  section_chrome_label_text_uses_single_line_truncation --no-fail-fast`.
 - 2026-05-17: introduced `text_control_label(...)` as the shared compact control-label text role
   and routed `control_chrome::fill_text(...)` through it. Checkbox/radio/switch labels plus
   combo/slider captions keep their fill, grow, shrink, `min-width: 0`, and ellipsis behavior
@@ -260,9 +266,9 @@ Run evidence:
   --no-fail-fast`.
 - 2026-05-16: hardened `tools/gate_imui_workstream_source.py` with an explicit allowlist for the
   remaining direct `TextProps::new(...)` constructors under `fret-ui-kit::imui`: bullet prose,
-  disclosure indicator, facade `text`/`text_wrapped`, and floating title. New direct constructors
-  now fail the source gate unless they are routed through the shared text roles or intentionally
-  added to the allowlist. Gate: `python tools/gate_imui_workstream_source.py`.
+  disclosure indicator, and facade `text`/`text_wrapped`. New direct constructors now fail the
+  source gate unless they are routed through the shared text roles or intentionally added to the
+  allowlist. Gate: `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: introduced `editor_input_value_text(...)` in `fret-ui-editor` input-group primitives
   and routed drag-value plus axis-drag-value scrub readouts through it. The helper keeps editor
   numeric value text fill-width, `min-width: 0`, shrinkable, single-line, and ellipsis-truncated

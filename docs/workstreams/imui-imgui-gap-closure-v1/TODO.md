@@ -222,6 +222,9 @@ Readiness order for the next locally testable review slices:
    2026-05-17 section chrome label text follow-up: `text_section_chrome_label(...)` now owns
    compact separator/section chrome labels in `fret-ui-kit::declarative::text`, and IMUI
    `separator_text` labels route through it instead of local default-wrapping `TextProps`.
+   2026-05-17 chrome title text follow-up: `text_chrome_title(...)` now owns fill-width floating
+   window title-bar text, and floating window titles route through shared chrome text roles instead
+   of local `TextProps`.
    2026-05-16 text role source-gate follow-up: `tools/gate_imui_workstream_source.py` now keeps an
    explicit allowlist for remaining direct `TextProps::new(...)` constructors under
    `fret-ui-kit::imui`, so new compact IMUI text policy cannot bypass the shared role vocabulary

@@ -228,6 +228,9 @@ Exit criteria:
   separator/section chrome labels in `fret-ui-kit::declarative::text`. IMUI `separator_text`
   labels use that shared role, so section chrome stays single-line, shrinkable, and ellipsis-based
   under resize instead of inheriting default word wrapping.
+  2026-05-17 chrome title text result: `text_chrome_title(...)` now owns fill-width floating
+  window title-bar text. Resizable floating titles keep fill/grow/min-width-zero behavior, while
+  non-resizable titles reuse the section/chrome label role instead of local `TextProps`.
   2026-05-16 text role source-gate result: `tools/gate_imui_workstream_source.py` now freezes the
   remaining direct `TextProps::new(...)` constructors under `fret-ui-kit::imui` behind an explicit
   allowlist, forcing future compact text policy additions through the shared role vocabulary or an
