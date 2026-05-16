@@ -2561,6 +2561,36 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `.fret/diag/runs/ui-gallery-carousel-loop-continuity-after-inner-label-fix/1778943271162-ui-gallery-carousel-loop-continuity-end/check.lint.json`.
   - focused lint results:
     all report `error_issues=0`, `warning_issues=0`.
+- Tabs shared-indicator non-empty diagnostics bounds:
+  - invariant:
+    decorative visual surfaces that carry generated diagnostics `test_id`s must have non-empty
+    bounds even when pointer hit-testing is disabled.
+  - finding:
+    the Motion Presets `ui-gallery-motion-presets-fluid-tabs-shared-indicator` node had zero
+    semantics bounds because the Tabs shared indicator used a default auto-sized
+    `hit_test_gate(false)` around an absolute canvas. Fret's self-drawn layout path needs explicit
+    Fill sizing here; CSS-style inset fill is not enough.
+  - implementation anchor:
+    `ecosystem/fret-ui-shadcn/src/tabs.rs`.
+  - focused unit gate:
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib tabs_shared_indicator_test_id_has_non_empty_bounds -- --nocapture`
+  - focused unit result:
+    passed.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - focused runtime gates:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json --dir .fret/diag/runs/ui-gallery-platform-preferences-after-tabs-indicator-fill --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json --dir .fret/diag/runs/ui-gallery-fluid-tabs-after-tabs-indicator-fill --timeout-ms 300000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime results:
+    passed with run ids `1778944327922` and `1778944371703`; focused lint reports
+    `error_issues=0`, `warning_issues=0` for both bundles.
+  - full-suite follow-up:
+    `.fret/diag/runs/ui-gallery-motion-pilot-after-carousel-tabs-cleanup/sessions/1778944420308-93620/suite.summary.json`
+  - full-suite result:
+    passed, 14/14 rows, `scripts_with_evidence=14`, `focus_mismatch_total=0`,
+    `lint_error_total=0`, `lint_warning_total=0`.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

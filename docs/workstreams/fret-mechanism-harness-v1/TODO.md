@@ -572,7 +572,7 @@ date: 2026-05-12
     `attach_test_id`, or shortcut `key_context`. `tools/test_check_shadcn_internal_slots.py`
     covers the allowed `component_slot` path plus bad constant naming, bad test-id use, and bad
     key-context use.
-- [ ] Continue `ui-gallery-motion-pilot` to find the next runtime-visible harness or component
+- [x] Continue `ui-gallery-motion-pilot` to find the next runtime-visible harness or component
   boundary issue.
   - Progress: the next Sonner gate found a real overlay policy defect. A local named Sonner
     Toaster and the shell's unnamed Toaster both rendered the same named toast, creating duplicate
@@ -590,6 +590,12 @@ date: 2026-05-12
     inner control but forgot `.a11y_label(...)`; this was a first-party fixture/demo quality gap,
     not a Button mechanism defect. The focused Carousel gates now pass and lint clean after adding
     the accessible name.
+  - Result: the remaining Motion Presets `layout.zero_size` warning exposed a shadcn Tabs recipe
+    layout bug. The shared indicator's non-hit-test wrapper and absolute canvas both relied on
+    CSS-like inset fill behavior without explicit Fill sizing, so the diagnostics node could be
+    0px wide. Tabs now sizes the shared indicator gate and canvas explicitly, focused unit/runtime
+    gates pass, and the full `ui-gallery-motion-pilot` suite is 14/14 with zero lint warnings.
+- [ ] Pick the next harness slice outside the now-clean `ui-gallery-motion-pilot` suite.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.
