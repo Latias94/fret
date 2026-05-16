@@ -38,7 +38,7 @@ Status: Active
     windowed-paint scroll reuse semantics, not in shadcn `ScrollArea` recipe policy.
 - [x] Add one focused gate before changing behavior, preferably a single resize-jitter diag script plus
   `diag stats --sort time --top 15 --json` evidence.
-- [ ] Investigate a retained-windowed-paint scroll update path that can avoid marking the parent
+- [x] Investigate a retained-windowed-paint scroll update path that can avoid marking the parent
   content view-cache root `needs_rerender` when the current retained row-fragment cache already
   covers the visible row window.
   - Guardrail: do not weaken `Scroll.windowed_paint=true` globally. The existing rule is still
@@ -46,6 +46,24 @@ Status: Active
     updates.
   - Required proof: a focused Rust regression for the retained/windowed case plus the same
     resize-jitter diag sample showing row replay/store invariants stay stable.
+  - Implemented proof: `Scroll.windowed_paint` offset-only updates now mark the cache root paint
+    dirty with `ScrollHandleWindowUpdate` instead of forcing the nearest view-cache root to
+    rerender. Non-retained `VirtualList` window updates still keep the rerender escape hatch.
+  - Post-merge local evidence:
+    `target/fret-diag/local-next-no4090-windowed-scroll-paint-only-post-merge-20260517-r3/worst.stats.json`.
+  - Result: repeat=3 p95 total/layout/solve/prepaint/paint is `1697/1048/346/260/408us`;
+    `top_view_cache_roots_needs_rerender=0`, `top_view_cache_roots_reused=1`, row replay/store
+    stays `289/0`, and row-scene replay hit rate stays `100%`.
+- [ ] Attribute the remaining changing-bounds content `Scroll` layout cost after the view-cache
+  root rerender escape is gone.
+  - Current owner: worst-bundle `layout_roots_time_us=812us` and `layout_engine_solve_time_us=346us`;
+    the content `Scroll` hotspot is still visible (`214us` exclusive, `533us` inclusive) while
+    renderer text and code-editor row replay remain bounded.
+  - The top solves are all `new_frame_key_changed` small-width-delta solves with `measure_time_us=0`,
+    so the first follow-up should target bounds-change solve/apply work before any text-measure cache
+    or renderer work.
+  - Candidate: a narrower contained-root changing-bounds apply/solve path, not a shadcn
+    `ScrollArea` recipe rewrite and not another renderer/text slice.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

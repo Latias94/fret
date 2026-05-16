@@ -105,6 +105,38 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-17 00:15:00 +0800 (windowed scroll paint-only post-merge proof)
+
+Question:
+- After merging `origin/main`, does the retained/windowed scroll update optimization still remove the
+  content view-cache root rerender owner on the local resize-jitter probe?
+
+Change:
+- No new runtime change in this entry. Rebuilt `fretboard-dev --release`, launched the gallery with
+  `cargo run -p fret-ui-gallery --release --features gallery-full`, and reran the resize-jitter sample
+  against merge commit `1ce3aa98e2` plus the prior `c451fb07bc` optimization.
+
+Evidence:
+- Repeat summary / artifacts:
+  `target/fret-diag/local-next-no4090-windowed-scroll-paint-only-post-merge-20260517-r3/regression.summary.json`
+- Worst stats:
+  `target/fret-diag/local-next-no4090-windowed-scroll-paint-only-post-merge-20260517-r3/worst.stats.json`
+- Worst bundle:
+  `target/fret-diag/local-next-no4090-windowed-scroll-paint-only-post-merge-20260517-r3/1778948069413/bundle.schema2.json`
+
+Results:
+| script | p95 total | layout | solve | prepaint | paint | view-cache needs_rerender | rows replayed/stored |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| resize jitter | 1697 | 1048 | 346 | 260 | 408 | 0 | 289/0 |
+
+Decision:
+- Keep the retained/windowed-paint scroll update optimization. It removes the parent cache-root rerender owner while
+  preserving row replay/store invariants and 100% row-scene replay hit rate.
+- Do not reopen renderer text, shadcn `ScrollArea` policy, or editor row replay from this evidence. The next local owner
+  is changing-bounds layout/root solve under the content `Scroll` (`layout_roots_time_us=812us` in the worst bundle);
+  the top solves are small-width-delta `new_frame_key_changed` solves with `measure_time_us=0`.
+- This is macOS M4/no-4090 evidence only and does not replace the deferred Windows RTX4090 closeout.
+
 ## 2026-05-16 23:16:27 +0800 (code-editor torture autoscroll paint-only RAF)
 
 Question:

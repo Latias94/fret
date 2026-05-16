@@ -95,6 +95,39 @@ Follow-up local no-4090 attribution (2026-05-16):
     rerender only when a retained/windowed surface can prove the current visible row window is
     already covered by retained row fragments.
 
+Post-merge retained/windowed scroll update proof (2026-05-17):
+
+- Evidence:
+  `target/fret-diag/local-next-no4090-windowed-scroll-paint-only-post-merge-20260517-r3/worst.stats.json`
+- Worst bundle:
+  `target/fret-diag/local-next-no4090-windowed-scroll-paint-only-post-merge-20260517-r3/1778948069413/bundle.schema2.json`
+- Command shape:
+  - `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
+  - repeat `3`, warmup `5`, standard prewarm/prelude hooks, overlay disabled, view-cache shell enabled,
+    code-editor paint perf enabled, scroll/layout profiling enabled.
+  - Launch command: `cargo run -p fret-ui-gallery --release --features gallery-full`.
+- Focused gates:
+  - `cargo nextest run -p fret-ui scroll --no-fail-fast`
+  - `cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast`
+  - `cargo nextest run -p fret-ui-kit windowed_rows_frame_row_rects_iterates_visible_rows --no-fail-fast`
+  - `cargo fmt --check`
+- Result:
+  - repeat=3 p95 total/layout/solve/prepaint/paint: `1697/1048/346/260/408us`.
+  - Worst-bundle p95 layout roots / layout solve / paint widget: `812/346/250us`.
+  - View-cache root classification: `top_view_cache_roots_needs_rerender=0`,
+    `top_view_cache_roots_reused=1`.
+  - Code-editor row guardrails: rows replayed/stored `289/0`, replay hit rate `100%`,
+    code-editor p95 total/windowed callback/row paint `116/149/131us`.
+  - Renderer text remains bounded at `65us` p95 in the repeat summary and `67us` in the worst-bundle stats.
+  - Top layout solves are changing-bounds solves with no measured text/widget time: content `Semantics`
+    `169us` (`available_w_delta=-3`, `subtree_nodes=136`, `measure_time_us=0`), root `Stack`
+    `137us` (`available_w_delta=-4`, `subtree_nodes=104`, `measure_time_us=0`), and nav `Container`
+    `33us` (`available_w_delta=-1`, `subtree_nodes=10`, `measure_time_us=0`).
+- Decision:
+  - The retained/windowed-paint view-cache rerender escape is resolved and should stay mechanism-layer.
+  - The remaining local owner is now changing-bounds layout/root solve under the content `Scroll`, not
+    parent view-cache rerender, renderer text, shadcn `ScrollArea` recipe policy, or editor row replay.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:

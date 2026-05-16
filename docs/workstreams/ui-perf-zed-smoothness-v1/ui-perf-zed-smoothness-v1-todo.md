@@ -226,7 +226,7 @@ not update checked-in baselines.
       down from the `77us` attribution baseline; typical autoscroll is `37us`; resize jitter is `54us`.
     - Decision: row-fragment planning is no longer the local dominant owner. The next measurable owner is
       resize-jitter layout roots / solve work, with the top layout hotspot in the gallery content `ScrollArea`.
-  - [ ] Attribute resize-jitter `ScrollArea` / view-cache-root layout churn before starting another editor paint slice.
+  - [x] Attribute resize-jitter `ScrollArea` / view-cache-root layout churn before starting another editor paint slice.
     - First question: why does the gallery content cache root report `reuse_reason=needs_rerender` during resize when
       the row-fragment path is stable?
     - Second question: whether the top `Scroll` layout hotspot is expected scroll extent observation under resize or
@@ -234,6 +234,19 @@ not update checked-in baselines.
     - Candidate owner: continue `scroll-optimization-v1` if this is mechanism-level scroll extent / deferred probe
       behavior; keep it in `ui-perf-zed-smoothness-v1` if it is a resize solve batching contract; keep it in
       `fret-ui-shadcn` only if the fix is recipe policy.
+    - Follow-up result: the retained/windowed scroll update path now keeps the content view-cache root reusable
+      (`top_view_cache_roots_needs_rerender=0`, `top_view_cache_roots_reused=1`) while row replay/store remains
+      `289/0`.
+    - Post-merge evidence:
+      `target/fret-diag/local-next-no4090-windowed-scroll-paint-only-post-merge-20260517-r3/worst.stats.json`.
+    - Next owner: changing-bounds layout/root solve under the content `Scroll` (`layout_roots_time_us=812us`,
+      `layout_engine_solve_time_us=346us` in the worst bundle), not another editor paint, renderer text, or shadcn
+      recipe slice.
+  - [ ] Reduce the remaining resize-jitter changing-bounds layout/root solve cost without weakening scroll extent
+    correctness.
+    - Candidate: a contained-root apply/solve path that handles bounds-only changes after the cache-root remains reused.
+    - Required proof: one focused Rust gate plus a repeat=3 resize-jitter bundle preserving the row replay/store and
+      view-cache reuse invariants above.
   - Do not widen this into a renderer rewrite unless renderer prepare/encode becomes dominant in the local and
     Windows RTX4090 evidence.
 
