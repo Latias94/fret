@@ -714,13 +714,16 @@ impl<H: UiHost> UiTree<H> {
                     && scroll_props.windowed_paint
                 {
                     // Windowed paint surfaces (ADR 0175) depend on the scroll offset to determine
-                    // which content is painted into the scrollable space. When view-cache reuse is
-                    // enabled, a scroll transform update alone is insufficient: the cached subtree
-                    // must be allowed to rerender so its paint handlers can run for the new visible
-                    // window. Without this, scroll can appear to show stale content.
+                    // which content is painted into the scrollable space. A scroll transform
+                    // update alone is insufficient: the nearest view-cache paint entry must be
+                    // invalidated so paint handlers can run for the new visible window. The
+                    // declarative subtree can still be reused because the stable Scroll + Canvas
+                    // structure does not need a render-closure rerun for offset-only changes.
                     if self.view_cache_enabled() && change.offset_changed {
-                        self.mark_nearest_view_cache_root_needs_rerender(
+                        self.mark_invalidation_dedup_with_detail(
                             node,
+                            Invalidation::Paint,
+                            &mut visited,
                             UiDebugInvalidationSource::Other,
                             UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
                         );

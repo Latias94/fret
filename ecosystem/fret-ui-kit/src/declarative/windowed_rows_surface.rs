@@ -273,7 +273,7 @@ impl Default for WindowedRowsSurfaceProps {
                 ..Default::default()
             },
             // This surface's paint output depends on the scroll offset (visible window changes), so
-            // scroll-handle updates must be allowed to invalidate view-cache reuse.
+            // scroll-handle updates must repaint even when the view-cache render subtree is reused.
             windowed_paint: true,
             ..Default::default()
         };
@@ -523,7 +523,7 @@ pub fn windowed_rows_surface<H: UiHost>(
     scroll.axis = ScrollAxis::Y;
     scroll.scroll_handle = Some(scroll_handle.clone());
     // This surface's paint output depends on the scroll offset (visible window changes), so
-    // scroll-handle updates must be allowed to invalidate view-cache reuse.
+    // scroll-handle updates must repaint even when the view-cache render subtree is reused.
     scroll.windowed_paint = true;
 
     canvas.layout.size.width = Length::Fill;
@@ -761,7 +761,7 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
     scroll.axis = ScrollAxis::Y;
     scroll.scroll_handle = Some(scroll_handle.clone());
     // This surface's paint output depends on the scroll offset (visible window changes), so
-    // scroll-handle updates must be allowed to invalidate view-cache reuse.
+    // scroll-handle updates must repaint even when the view-cache render subtree is reused.
     scroll.windowed_paint = true;
 
     canvas.layout.size.width = Length::Fill;

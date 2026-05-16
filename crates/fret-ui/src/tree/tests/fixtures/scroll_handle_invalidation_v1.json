@@ -5,7 +5,7 @@
   "domains": ["layout", "invalidation"],
   "cases": [
     {
-      "id": "windowed-scroll-offset-change-dirties-cache-root",
+      "id": "windowed-scroll-offset-change-repaints-cache-root-without-rerender",
       "scenario": {
         "kind": "tree",
         "root": "root",
@@ -45,13 +45,19 @@
             "kind": "mechanism_metric",
             "metric_id": "capture.after_scroll.node.cache_root.view_cache_needs_rerender",
             "comparison": "eq",
-            "value": 1.0
+            "value": 0.0
           },
           {
             "kind": "mechanism_metric",
             "metric_id": "capture.after_scroll.node.cache_root.should_reuse_view_cache",
             "comparison": "eq",
-            "value": 0.0
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_scroll.node.cache_root.paint_dirty",
+            "comparison": "eq",
+            "value": 1.0
           },
           {
             "kind": "mechanism_metric",
@@ -70,11 +76,23 @@
             "metric_id": "capture.after_scroll.node.cache_root.dirty_cache_root",
             "comparison": "eq",
             "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_scroll.debug.invalidation_walks_since_baseline.inv.paint_count",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_scroll.debug.invalidation_walks_since_baseline.detail.scroll_handle_window_update_count",
+            "comparison": "eq",
+            "value": 1.0
           }
         ]
       },
       "evidence": {
-        "note": "Windowed scroll paint depends on the current scroll offset; an external offset change must dirty the nearest reusable cache root."
+        "note": "Windowed scroll paint depends on the current scroll offset; an external offset change must invalidate paint-cache replay without forcing the reusable cache root to rerender."
       }
     },
     {
@@ -370,6 +388,18 @@
           {
             "kind": "mechanism_metric",
             "metric_id": "capture.after_scroll.node.live_cache_root.view_cache_needs_rerender",
+            "comparison": "eq",
+            "value": 0.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_scroll.node.live_cache_root.should_reuse_view_cache",
+            "comparison": "eq",
+            "value": 1.0
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "capture.after_scroll.node.live_cache_root.paint_dirty",
             "comparison": "eq",
             "value": 1.0
           },
