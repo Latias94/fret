@@ -120,11 +120,30 @@ Validation:
 cargo fmt -p fret-ui --check
 cargo check -p fret-ui
 cargo nextest run -p fret-ui -E 'test(~focus_visible) | test(~focus_ring) | test(~focus_scope) | test(~paint)' --no-fail-fast
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-typical.json \
+  --repeat 3 --warmup-frames 5 --reuse-launch \
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_A11Y_DISABLE=1 \
+  --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0 \
+  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --sort time --top 15 --json \
+  --dir target/fret-diag/container-focus-visible-short-circuit-typical-r3 \
+  --launch -- cargo run -p fret-ui-gallery --release --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
 ```
 
 Results:
 - `cargo check -p fret-ui` passed.
 - The focused nextest slice passed: 91 tests run, 91 passed.
+- Local typical-autoscroll perf smoke passed. Worst bundle:
+  `target/fret-diag/container-focus-visible-short-circuit-typical-r3/1778912115985/bundle.schema2.json`.
+  Repeat stats: total p50/p95/max `850/867/867us`, paint `538/554/554us`, renderer text p95/max `354/354us`,
+  row replay/store p95 `289/0`, torture overlay `0`.
 
 Decision:
 - Keep this as a narrow `ElementHostWidget` paint traversal micro-optimization. It is not large enough to justify a
