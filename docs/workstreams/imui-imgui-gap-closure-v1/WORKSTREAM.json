@@ -143,7 +143,7 @@
     },
     {
       "name": "imui component surface facade anchors",
-      "command": "rg -n \"fn (button|small_button|arrow_button|checkbox_model|radio|switch_model|slider_f32_model|combo|combo_model|selectable|multi_selectable|tree_node|collapsing_header|child_region|virtual_list|table|tab_bar|open_popup|begin_popup|tooltip|drag_source|drop_target|debug_draw)\" ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer"
+      "command": "rg -n \"fn (text|text_wrapped|button|small_button|arrow_button|checkbox_model|radio|switch_model|slider_f32_model|combo|combo_model|selectable|multi_selectable|tree_node|collapsing_header|child_region|virtual_list|table|tab_bar|open_popup|begin_popup|tooltip|drag_source|drop_target|debug_draw)\" ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer"
     },
     {
       "name": "imui component surface editor anchors",
@@ -156,6 +156,14 @@
     {
       "name": "imui component surface kit smoke",
       "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test imui_combo_smoke --test imui_table_smoke --test imui_disclosure_smoke --test imui_textarea_smoke --test imui_drag_drop_smoke --test imui_virtual_list_smoke --test imui_debug_draw_smoke --test imui_tooltip_smoke --no-fail-fast"
+    },
+    {
+      "name": "imui text item resize semantics",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --lib imui_text_item_is_single_line_and_shrinkable imui_text_wrapped_is_explicit_wrapping_text --no-fail-fast"
+    },
+    {
+      "name": "fret-examples imui proof check",
+      "command": "cargo check -p fret-examples"
     },
     {
       "name": "imui design surface editor anchors",
@@ -347,6 +355,8 @@
     "apps/fret-examples/tests/imui_editor_collection_box_select_surface.rs",
     "apps/fret-examples/tests/imui_editor_collection_zoom_surface.rs",
     "apps/fret-examples/src/imui_editor_proof_demo.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/collection.rs",
+    "apps/fret-examples/src/workspace_shell_demo.rs",
     "apps/fret-examples/src/editor_notes_demo.rs",
     "apps/fret-ui-gallery/src/ui/doc_layout.rs",
     "apps/fret-ui-gallery/tests/code_editor_control_readout_surface.rs",

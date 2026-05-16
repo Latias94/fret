@@ -221,6 +221,10 @@ Exit criteria:
   label role for menu items, selectables, and tree/disclosure rows. It preserves regular `text-sm`
   styling with fill-width, min-width-zero, single-line ellipsis behavior, so row labels do not wrap
   or grow row height under resize.
+  2026-05-16 IMUI text item resize result: `UiWriterImUiFacadeExt::text(...)` now mirrors Dear
+  ImGui's default `Text()` semantics by staying single-line and shrinkable with ellipsis under
+  resize. `text_wrapped(...)` is the explicit wrapping escape hatch, and the editor/workspace proof
+  prose that should wrap now opts into it.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

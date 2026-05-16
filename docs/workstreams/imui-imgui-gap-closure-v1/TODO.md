@@ -216,6 +216,10 @@ Readiness order for the next locally testable review slices:
    selectable/menu/tree row label text. IMUI menu items, selectables, and disclosure/tree rows use
    the shared role, giving them fill-width, min-width-zero, single-line ellipsis semantics without
    recasting them as button labels.
+   2026-05-16 IMUI text item resize follow-up: `UiWriterImUiFacadeExt::text(...)` now follows Dear
+   ImGui's default `Text()` posture by staying single-line, shrinkable, and ellipsis-truncated
+   under narrow resize. `text_wrapped(...)` is the explicit opt-in path for explanatory copy that
+   should wrap, and first-party proof prose now uses that API.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
