@@ -621,6 +621,11 @@ date: 2026-05-12
     now part of the promoted `ui-gallery-scroll-area` suite. No new mechanism defect was
     reproduced; the slice fixed a harness promotion gap where dynamic scroll extent growth was
     checked only by a standalone script.
+- [x] Turn the promoted DataTable page-entry authoring debt into a strict registry lint gate.
+  - Result: the first candidate audit reported 174 violations across 21 promoted scripts under a
+    single-root model. The actual harness gap was rule expressiveness: DataTable has multiple valid
+    page/variant roots. `check_diag_scripts_registry.py` now supports `entry_ids`, strict
+    page-entry is enabled for the promoted DataTable suites, and the registry/self-test gates pass.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.

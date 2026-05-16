@@ -274,6 +274,94 @@ class DiagScriptRegistryLintTests(unittest.TestCase):
             self.assertEqual(1, len(violations))
             self.assertIn("ui-gallery-page-combobox", violations[0])
 
+    def test_data_table_page_entry_allows_variant_root(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/data-table/good.json"
+            self.write_script(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "wait_until",
+                        "predicate": {
+                            "kind": "exists",
+                            "target": {
+                                "kind": "test_id",
+                                "id": "ui-gallery-data-table-default-root",
+                            },
+                        },
+                    },
+                    {
+                        "type": "click_stable",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-data-table-default-next",
+                        },
+                    },
+                ],
+            )
+
+            violations = REGISTRY.lint_strict_page_entry(
+                root, self.registry_for(rel, ["ui-gallery-data-table"])
+            )
+
+            self.assertEqual([], violations)
+
+    def test_data_table_page_local_selector_requires_page_entry(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/data-table/bad.json"
+            self.write_script(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "click_stable",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-data-table-default-next",
+                        },
+                    },
+                ],
+            )
+
+            violations = REGISTRY.lint_strict_page_entry(
+                root, self.registry_for(rel, ["ui-gallery-data-table"])
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertIn("ui-gallery-data-table-component", violations[0])
+            self.assertIn("ui-gallery-data-table-default-next", violations[0])
+
+    def test_data_table_torture_start_page_default_allows_page_local_selector(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/data-table/torture-start-page.json"
+            self.write_script_with_meta(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "click_stable",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-data-table-torture-reset-state",
+                        },
+                    },
+                ],
+                {"env_defaults": {"FRET_UI_GALLERY_START_PAGE": "data_table_torture"}},
+            )
+
+            violations = REGISTRY.lint_strict_page_entry(
+                root, self.registry_for(rel, ["ui-gallery-data-table-retained"])
+            )
+
+            self.assertEqual([], violations)
+
     def test_sidebar_long_page_click_requires_content_scroll_visibility(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

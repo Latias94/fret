@@ -2396,8 +2396,25 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     promoted Select scripts had 0 page-entry violations; promoted Combobox scripts initially had
     36 under a page-root-only rule, but they had explicit
     `FRET_UI_GALLERY_START_PAGE=combobox` defaults, so start-page defaults now count as valid entry
-    evidence and Combobox is strict too. Promoted DataTable scripts still had 166 page-entry
-    violations and remain a follow-on cleanup lane rather than a strict-lint candidate.
+    evidence and Combobox is strict too.
+  - DataTable follow-up:
+    the first candidate audit reported 174 DataTable violations across 21 promoted scripts under a
+    single-root model. The actual gap was diagnostics rule expressiveness: promoted DataTable
+    scripts prove entry through several valid variant roots such as
+    `ui-gallery-data-table-default-root`, `ui-gallery-data-table-basic-root`,
+    `ui-gallery-data-table-listlike-root`, `ui-gallery-data-table-reusable-root`,
+    `ui-gallery-data-table-rtl-root`, and `ui-gallery-data-table-torture-root`. The page-entry
+    lint now supports `entry_ids`, strict DataTable page-entry is enabled for
+    `ui-gallery-data-table`, `ui-gallery-data-table-retained`, and
+    `ui-gallery-data-table-view-cache-torture`, and the candidate violation count is 0.
+  - current lint self-test gate:
+    `python tools/test_check_diag_scripts_registry.py`
+  - current lint self-test result:
+    passed, 11 tests.
+  - current registry gate:
+    `python tools/check_diag_scripts_registry.py`
+  - current registry result:
+    passed.
 - AlertAction component-slot marker gate:
   - invariant:
     recipe-internal slot classification must not use globally exported diagnostics `test_id`s.

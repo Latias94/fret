@@ -40,7 +40,14 @@ STRICT_UI_GALLERY_CONTENT_TEST_ID_PREFIXES = (
     "ui-gallery-select-",
     "ui-gallery-sidebar-",
 )
-STRICT_PAGE_ENTRY_SUITES = {"ui-gallery-motion-pilot", "ui-gallery-select", "ui-gallery-combobox"}
+STRICT_PAGE_ENTRY_SUITES = {
+    "ui-gallery-motion-pilot",
+    "ui-gallery-select",
+    "ui-gallery-combobox",
+    "ui-gallery-data-table",
+    "ui-gallery-data-table-retained",
+    "ui-gallery-data-table-view-cache-torture",
+}
 UI_GALLERY_PAGE_ENTRY_RULES = {
     "motion_presets": {
         "page_id": "ui-gallery-page-motion-presets",
@@ -61,6 +68,22 @@ UI_GALLERY_PAGE_ENTRY_RULES = {
         "page_id": "ui-gallery-page-select",
         "content_prefixes": ("ui-gallery-select-",),
         "start_page_values": ("select",),
+        "global_ids": (),
+    },
+    "data_table": {
+        "page_id": "ui-gallery-data-table-component",
+        "entry_ids": (
+            "ui-gallery-data-table-component",
+            "ui-gallery-data-table-root",
+            "ui-gallery-data-table-default-root",
+            "ui-gallery-data-table-basic-root",
+            "ui-gallery-data-table-listlike-root",
+            "ui-gallery-data-table-reusable-root",
+            "ui-gallery-data-table-rtl-root",
+            "ui-gallery-data-table-torture-root",
+        ),
+        "content_prefixes": ("ui-gallery-data-table-", "data-table-"),
+        "start_page_values": ("data_table", "data_table_torture"),
         "global_ids": (),
     },
 }
@@ -379,6 +402,16 @@ def is_page_scoped_test_id(test_id: str, rule: dict[str, Any]) -> bool:
     return isinstance(prefixes, tuple) and any(test_id.startswith(prefix) for prefix in prefixes)
 
 
+def page_entry_ids(rule: dict[str, Any]) -> tuple[str, ...]:
+    entry_ids = rule.get("entry_ids")
+    if isinstance(entry_ids, tuple):
+        return entry_ids
+    page_id = rule.get("page_id")
+    if isinstance(page_id, str):
+        return (page_id,)
+    return ()
+
+
 def start_pages_from_meta(obj: Any) -> set[str]:
     meta = obj.get("meta") if isinstance(obj, dict) else None
     if not isinstance(meta, dict):
@@ -440,8 +473,8 @@ def lint_strict_page_entry(repo_root: Path, registry: dict[str, Any]) -> list[st
             step_type = step.get("type")
             ids = collect_test_ids(step)
             for page_name, rule in UI_GALLERY_PAGE_ENTRY_RULES.items():
-                page_id = rule.get("page_id")
-                if isinstance(page_id, str) and page_id in ids:
+                entry_ids = page_entry_ids(rule)
+                if any(entry_id in ids for entry_id in entry_ids):
                     entered_pages.add(page_name)
 
                 if step_type in {
@@ -458,9 +491,15 @@ def lint_strict_page_entry(repo_root: Path, registry: dict[str, Any]) -> list[st
                             is_page_scoped_test_id(test_id, rule)
                             and page_name not in entered_pages
                         ):
+                            page_id = rule.get("page_id")
+                            page_hint = (
+                                page_id
+                                if isinstance(page_id, str)
+                                else ", ".join(entry_ids)
+                            )
                             violations.append(
                                 f"{rel_path}: step {index}: page-local selector `{test_id}` "
-                                f"requires a prior wait/assert for `{page_id}`"
+                                f"requires a prior wait/assert for `{page_hint}`"
                             )
                             break
 
