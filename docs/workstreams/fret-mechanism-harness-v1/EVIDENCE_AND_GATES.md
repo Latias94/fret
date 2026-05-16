@@ -2535,6 +2535,32 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - full-suite result:
     passed, 14/14 rows; summary
     `.fret/diag/runs/ui-gallery-motion-pilot-after-toast-action-label-fix/sessions/1778941744107-108312/suite.summary.json`.
+- Carousel demo inner-button accessible name:
+  - invariant:
+    UI Gallery fixture/demo controls that are exposed as interactive semantics nodes must have a
+    stable accessible name, even when their visual label is intentionally empty.
+  - finding:
+    three Carousel motion-pilot scripts reported `semantics.missing_label` for
+    `ui-gallery-carousel-demo-inner-button`; the demo used `Button::new("")` without
+    `.a11y_label(...)`.
+  - implementation anchor:
+    `apps/fret-ui-gallery/src/ui/snippets/carousel/demo.rs`.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - focused runtime gates:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery-carousel-expandable-fixed-frame-delta.json --dir .fret/diag/runs/ui-gallery-carousel-expandable-after-inner-label-fix --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery-carousel-focus-watch-tab-scrolls-gate.json --dir .fret/diag/runs/ui-gallery-carousel-focus-watch-after-inner-label-fix --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery-carousel-loop-continuity-touch-gate.json --dir .fret/diag/runs/ui-gallery-carousel-loop-continuity-after-inner-label-fix --timeout-ms 300000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime results:
+    passed with run ids `1778942849445`, `1778943027333`, and `1778943151863`.
+  - focused lint evidence:
+    `.fret/diag/runs/ui-gallery-carousel-expandable-after-inner-label-fix/1778942966450-ui-gallery-carousel-expandable-fixed-frame-delta/check.lint.json`,
+    `.fret/diag/runs/ui-gallery-carousel-focus-watch-after-inner-label-fix/1778943117290-ui-gallery-carousel-focus-watch-tab-scrolls/check.lint.json`, and
+    `.fret/diag/runs/ui-gallery-carousel-loop-continuity-after-inner-label-fix/1778943271162-ui-gallery-carousel-loop-continuity-end/check.lint.json`.
+  - focused lint results:
+    all report `error_issues=0`, `warning_issues=0`.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

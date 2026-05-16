@@ -585,6 +585,11 @@ date: 2026-05-12
     as the button accessible name. `fret-ui-kit` now labels those pressables from `ToastAction`, a
     focused semantics snapshot test covers action/cancel labels, the Sonner focused gate lint is
     clean, and the full `ui-gallery-motion-pilot` suite still passes 14/14.
+  - Progress: the three Carousel `semantics.missing_label` warnings all pointed at the same
+    UI Gallery nested demo button. The demo intentionally created `Button::new("")` for a small
+    inner control but forgot `.a11y_label(...)`; this was a first-party fixture/demo quality gap,
+    not a Button mechanism defect. The focused Carousel gates now pass and lint clean after adding
+    the accessible name.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.
