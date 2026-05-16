@@ -246,6 +246,10 @@ Exit criteria:
   2026-05-17 editor inline error text result: `ColorEdit` root errors and popup numeric errors now
   share `editor_inline_error_text_props(...)`, so compact destructive readouts are single-line,
   shrinkable, and owned by the editor readout primitive layer instead of duplicated per surface.
+  2026-05-17 transform label text result: `TransformEdit` section badges, section headings, and
+  inline link/uniform labels now reuse editor readout text helpers. The control no longer carries
+  local compact-label `TextProps`, so future resize fixes happen in the shared editor text role
+  layer instead of per-transform branches.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

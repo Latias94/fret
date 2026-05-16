@@ -8,16 +8,14 @@
 use std::panic::Location;
 use std::sync::Arc;
 
-use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Corners, Edges, FontWeight, Px, TextAlign, TextStyle};
+use fret_core::{Axis, Corners, Edges, Px};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle,
-    SpacingLength, TextProps,
+    SpacingLength,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::typography;
 
 use crate::controls::{
     AxisDragValueOutcome, Checkbox, CheckboxOptions, NumericFormatFn, NumericParseFn,
@@ -26,6 +24,10 @@ use crate::controls::{
 };
 use crate::primitives::colors::{editor_border, editor_muted_foreground, editor_subtle_bg};
 use crate::primitives::input_group::derived_test_id;
+use crate::primitives::readout::{
+    editor_inline_control_label_text_props, editor_section_badge_text_props,
+    editor_section_heading_text_props,
+};
 use crate::primitives::{EditorDensity, NumericPresentation};
 
 fn derived_id_source(base: Option<&Arc<str>>, suffix: &str) -> Option<Arc<str>> {
@@ -616,28 +618,11 @@ fn section_row<H: UiHost>(
                     ..Default::default()
                 },
                 move |cx| {
-                    vec![cx.text_props(TextProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Fill,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        text: Arc::from(short),
-                        style: Some(typography::as_control_text(TextStyle {
-                            size: Px(11.0),
-                            weight: FontWeight::SEMIBOLD,
-                            line_height: Some(density.row_height),
-                            ..Default::default()
-                        })),
-                        color: Some(label_fg),
-                        wrap: TextWrap::None,
-                        overflow: TextOverflow::Clip,
-                        align: TextAlign::Center,
-                        ink_overflow: Default::default(),
-                    })]
+                    vec![cx.text_props(editor_section_badge_text_props(
+                        Arc::from(short),
+                        label_fg,
+                        density.row_height,
+                    ))]
                 },
             ));
 
@@ -673,27 +658,12 @@ fn section_row<H: UiHost>(
                     move |cx| {
                         vec![
                             el,
-                            cx.text_props(TextProps {
-                                layout: LayoutStyle {
-                                    size: SizeStyle {
-                                        width: Length::Auto,
-                                        height: Length::Auto,
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                text: Arc::from("Link"),
-                                style: Some(typography::as_control_text(TextStyle {
-                                    size: Px(11.0),
-                                    line_height: Some(density.row_height),
-                                    ..Default::default()
-                                })),
-                                color: Some(label_fg),
-                                wrap: TextWrap::None,
-                                overflow: TextOverflow::Clip,
-                                align: TextAlign::Start,
-                                ink_overflow: Default::default(),
-                            }),
+                            cx.text_props(editor_inline_control_label_text_props(
+                                Arc::from("Link"),
+                                label_fg,
+                                Px(11.0),
+                                density.row_height,
+                            )),
                         ]
                     },
                 ));
@@ -732,28 +702,10 @@ fn section_col<H: UiHost>(
         },
         move |cx| {
             vec![
-                cx.text_props(TextProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Auto,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    text: Arc::from(label),
-                    style: Some(typography::as_control_text(TextStyle {
-                        size: Px(11.0),
-                        weight: FontWeight::SEMIBOLD,
-                        line_height: Some(Px(14.0)),
-                        ..Default::default()
-                    })),
-                    color: Some(label_fg),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Ellipsis,
-                    align: TextAlign::Start,
-                    ink_overflow: Default::default(),
-                }),
+                cx.text_props(editor_section_heading_text_props(
+                    Arc::from(label),
+                    label_fg,
+                )),
                 content(cx),
             ]
         },
@@ -825,27 +777,12 @@ fn section_col_with_link<H: UiHost>(
                     move |cx| {
                         vec![
                             el,
-                            cx.text_props(TextProps {
-                                layout: LayoutStyle {
-                                    size: SizeStyle {
-                                        width: Length::Auto,
-                                        height: Length::Auto,
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                text: Arc::from("Uniform"),
-                                style: Some(typography::as_control_text(TextStyle {
-                                    size: Px(10.0),
-                                    line_height: Some(Px(12.0)),
-                                    ..Default::default()
-                                })),
-                                color: Some(label_fg),
-                                wrap: TextWrap::None,
-                                overflow: TextOverflow::Ellipsis,
-                                align: TextAlign::Start,
-                                ink_overflow: Default::default(),
-                            }),
+                            cx.text_props(editor_inline_control_label_text_props(
+                                Arc::from("Uniform"),
+                                label_fg,
+                                Px(10.0),
+                                Px(12.0),
+                            )),
                         ]
                     },
                 ));

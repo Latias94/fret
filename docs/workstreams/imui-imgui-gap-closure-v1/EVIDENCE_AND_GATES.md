@@ -260,6 +260,16 @@ Run evidence:
   truncated; wrapping validation prose remains a separate explicit control policy. Gate: `cargo
   nextest run -p fret-ui-editor editor_inline_error_text_is_single_line_and_shrinkable
   numeric_readout_formats_rgb_hsv_and_optional_alpha --no-fail-fast`.
+- 2026-05-17: introduced shared transform-label text helpers in
+  `ecosystem/fret-ui-editor/src/primitives/readout.rs` and routed `TransformEdit` section badges,
+  section headings, and inline link/uniform checkbox labels through them. The control no longer
+  owns local `TextProps` literals for compact labels, and those labels now consistently stay
+  single-line, `min-width: 0` where they need to shrink, and ellipsis/clip constrained under
+  resize. Gate: `cargo nextest run -p fret-ui-editor
+  editor_section_badge_text_is_single_line_centered_badge_label
+  editor_section_heading_text_is_single_line_and_shrinkable
+  editor_inline_control_label_text_is_single_line_and_shrinkable
+  transform_edit_axis_outcome_exposes_read_only_signals --no-fail-fast`.
 - 2026-05-16: tightened `UiWriterImUiFacadeExt::text(...)` to match Dear ImGui's default
   `Text()` posture: single-line, shrinkable, `min-width: 0`, and ellipsis-truncated under resize.
   Added `UiWriterImUiFacadeExt::text_wrapped(...)` as the explicit wrapping path for explanatory

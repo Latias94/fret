@@ -182,6 +182,10 @@
       "command": "cargo nextest run -p fret-ui-editor editor_inline_error_text_is_single_line_and_shrinkable numeric_readout_formats_rgb_hsv_and_optional_alpha --no-fail-fast"
     },
     {
+      "name": "editor transform label text semantics",
+      "command": "cargo nextest run -p fret-ui-editor editor_section_badge_text_is_single_line_centered_badge_label editor_section_heading_text_is_single_line_and_shrinkable editor_inline_control_label_text_is_single_line_and_shrinkable transform_edit_axis_outcome_exposes_read_only_signals --no-fail-fast"
+    },
+    {
       "name": "fret-examples imui proof check",
       "command": "cargo check -p fret-examples"
     },
