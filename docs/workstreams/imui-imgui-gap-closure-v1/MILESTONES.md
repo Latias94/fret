@@ -224,6 +224,10 @@ Exit criteria:
   2026-05-16 menu shortcut readout reuse result: IMUI menu shortcut labels now reuse
   `text_control_readout(...)` as muted compact auxiliary readouts, keeping shortcut text inside the
   stable control-readout role instead of adding another menu-specific text policy.
+  2026-05-17 section chrome label text result: `text_section_chrome_label(...)` now owns compact
+  separator/section chrome labels in `fret-ui-kit::declarative::text`. IMUI `separator_text`
+  labels use that shared role, so section chrome stays single-line, shrinkable, and ellipsis-based
+  under resize instead of inheriting default word wrapping.
   2026-05-16 text role source-gate result: `tools/gate_imui_workstream_source.py` now freezes the
   remaining direct `TextProps::new(...)` constructors under `fret-ui-kit::imui` behind an explicit
   allowlist, forcing future compact text policy additions through the shared role vocabulary or an

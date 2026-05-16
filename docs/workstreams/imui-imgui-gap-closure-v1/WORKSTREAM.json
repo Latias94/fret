@@ -170,6 +170,10 @@
       "command": "cargo nextest run -p fret-ui-kit --features imui --lib menu_item_shortcut_text_uses_shared_control_readout_role menu_item_label_text_uses_shared_list_row_text_role --no-fail-fast"
     },
     {
+      "name": "imui section chrome label text semantics",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --lib section_chrome_label_text_uses_single_line_truncation --no-fail-fast"
+    },
+    {
       "name": "editor input value text semantics",
       "command": "cargo nextest run -p fret-ui-editor editor_input_value_text_is_single_line_and_shrinkable drag_value axis_drag_value --no-fail-fast"
     },
@@ -352,6 +356,7 @@
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/multi_select.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/separator_text_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/response/widgets.rs",
     "ecosystem/fret-ui-kit/src/imui/options/collections.rs",
     "ecosystem/fret-ui-editor/src/imui.rs",

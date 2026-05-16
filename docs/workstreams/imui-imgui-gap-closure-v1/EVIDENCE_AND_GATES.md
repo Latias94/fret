@@ -53,6 +53,7 @@ Last updated: 2026-05-17
   - `ecosystem/fret-ui-kit/src/imui/menu_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs`
+  - `ecosystem/fret-ui-kit/src/imui/separator_text_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs`
   - `ecosystem/fret-ui-kit/src/imui/table_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs`
@@ -245,11 +246,16 @@ Run evidence:
   ellipsis-truncated without adding a menu-specific shortcut role. Gate: `cargo nextest run -p
   fret-ui-kit --features imui --lib menu_item_shortcut_text_uses_shared_control_readout_role
   menu_item_label_text_uses_shared_list_row_text_role --no-fail-fast`.
+- 2026-05-17: introduced `text_section_chrome_label(...)` as the shared compact section/chrome
+  label role and routed IMUI `separator_text` labels through it. Separator labels no longer carry
+  local `TextProps` policy or default word wrapping; they stay single-line, shrinkable, and
+  ellipsis-truncated under resize. Gate: `cargo nextest run -p fret-ui-kit --features imui --lib
+  section_chrome_label_text_uses_single_line_truncation --no-fail-fast`.
 - 2026-05-16: hardened `tools/gate_imui_workstream_source.py` with an explicit allowlist for the
   remaining direct `TextProps::new(...)` constructors under `fret-ui-kit::imui`: bullet prose,
-  control chrome, disclosure indicator, facade `text`/`text_wrapped`, floating title, and separator
-  label. New direct constructors now fail the source gate unless they are routed through the shared
-  text roles or intentionally added to the allowlist. Gate: `python tools/gate_imui_workstream_source.py`.
+  control chrome, disclosure indicator, facade `text`/`text_wrapped`, and floating title. New
+  direct constructors now fail the source gate unless they are routed through the shared text roles
+  or intentionally added to the allowlist. Gate: `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: introduced `editor_input_value_text(...)` in `fret-ui-editor` input-group primitives
   and routed drag-value plus axis-drag-value scrub readouts through it. The helper keeps editor
   numeric value text fill-width, `min-width: 0`, shrinkable, single-line, and ellipsis-truncated

@@ -252,6 +252,34 @@ pub fn text_button_label<H: UiHost>(
     )
 }
 
+/// Declarative text helper for compact section and chrome labels.
+///
+/// Use this for separator labels, panel-section headings, and similar fixed chrome. These labels
+/// should stay on one line and truncate under resize instead of increasing row height.
+pub fn text_section_chrome_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_sm_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
 /// Declarative text helper that matches Tailwind's `text-xs` default usage in shadcn recipes.
 ///
 /// Themes can override this via:
@@ -742,5 +770,29 @@ mod tests {
             el.inherited_text_style,
             Some(text_button_label_refinement(&theme))
         );
+    }
+
+    #[test]
+    fn section_chrome_label_text_uses_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_section_chrome_label(cx, "Inspector section heading with a long name")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_section_chrome_label(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
     }
 }
