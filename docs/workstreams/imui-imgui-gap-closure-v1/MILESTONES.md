@@ -255,6 +255,9 @@ Exit criteria:
   from those editor assist surfaces while keeping the behavior in `fret-ui-editor`, not
   `fret-imui`. Color-edit copy menu rows and popup option captions now use the same popup-list text
   family through explicit aligned variants, while preview/tooltip text stays separate.
+  2026-05-17 color preview/tooltip text result: color side-preview captions and tooltip numeric
+  lines now use dedicated editor readout helpers. This keeps readout/caption semantics out of
+  popup-list rows while eliminating the remaining local `TextProps` in those color surfaces.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

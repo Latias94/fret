@@ -78,6 +78,8 @@ Last updated: 2026-05-17
   - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/copy.rs`
   - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/numeric.rs`
   - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/options.rs`
+  - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview.rs`
+  - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/tooltip.rs`
   - `ecosystem/fret-ui-editor/src/controls/drag_value.rs`
   - `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs`
   - `ecosystem/fret-ui-editor/src/controls/enum_select.rs`
@@ -264,7 +266,15 @@ Run evidence:
   destructive-color aware through caller-supplied color, fill-width, `min-width: 0`, and ellipsis
   truncated; wrapping validation prose remains a separate explicit control policy. Gate: `cargo
   nextest run -p fret-ui-editor editor_inline_error_text_is_single_line_and_shrinkable
-  numeric_readout_formats_rgb_hsv_and_optional_alpha --no-fail-fast`.
+  editor_preview_caption_text_is_single_line_and_shrinkable
+  editor_tooltip_readout_text_is_single_line_and_shrinkable
+  numeric_readout_formats_rgb_hsv_and_optional_alpha
+  color_tooltip_lines_match_imgui_hex_rgb_hsv_preview_text --no-fail-fast`.
+- 2026-05-17: introduced `editor_preview_caption_text_props(...)` and
+  `editor_tooltip_readout_text_props(...)` for color side-preview captions and color tooltip
+  numeric lines. These stay in the editor readout primitive layer instead of being folded into
+  popup-list rows, preserving the semantic distinction while removing local `TextProps` policy from
+  `color_edit/popup/preview.rs` and `color_edit/popup/tooltip.rs`.
 - 2026-05-17: introduced shared transform-label text helpers in
   `ecosystem/fret-ui-editor/src/primitives/readout.rs` and routed `TransformEdit` section badges,
   section headings, and inline link/uniform checkbox labels through them. The control no longer

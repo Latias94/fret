@@ -179,7 +179,7 @@
     },
     {
       "name": "editor inline error text semantics",
-      "command": "cargo nextest run -p fret-ui-editor editor_inline_error_text_is_single_line_and_shrinkable numeric_readout_formats_rgb_hsv_and_optional_alpha --no-fail-fast"
+      "command": "cargo nextest run -p fret-ui-editor editor_inline_error_text_is_single_line_and_shrinkable editor_preview_caption_text_is_single_line_and_shrinkable editor_tooltip_readout_text_is_single_line_and_shrinkable numeric_readout_formats_rgb_hsv_and_optional_alpha color_tooltip_lines_match_imgui_hex_rgb_hsv_preview_text --no-fail-fast"
     },
     {
       "name": "editor transform label text semantics",
@@ -360,6 +360,8 @@
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/copy.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/numeric.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/options.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/popup/tooltip.rs",
     "ecosystem/fret-ui-editor/src/controls/drag_value.rs",
     "ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs",
     "ecosystem/fret-ui-editor/src/controls/enum_select.rs",

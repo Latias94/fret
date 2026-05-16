@@ -250,6 +250,9 @@ Readiness order for the next locally testable review slices:
    `editor_popup_empty_text_props(...)`, replacing `TextProps::new(...)` default word wrapping in
    popup/editor assist surfaces. Color-edit copy menu rows and popup option captions now reuse the
    same popup-list family through start-aligned, centered-row, and fixed-caption variants.
+   2026-05-17 color preview/tooltip text follow-up: color side-preview captions and tooltip
+   numeric lines now use dedicated editor readout helpers instead of local `TextProps`, keeping
+   them separate from popup-list rows while preserving single-line resize behavior.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

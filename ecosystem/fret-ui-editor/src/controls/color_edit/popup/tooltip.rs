@@ -1,12 +1,11 @@
 use std::sync::Arc;
 
-use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Color, Corners, Edges, Px, SemanticsRole, TextAlign, TextStyle};
+use fret_core::{Axis, Color, Corners, Edges, Px, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::action::DismissReason;
 use fret_ui::element::{
     AnchoredProps, AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length,
-    MainAlign, SemanticsDecoration, SizeStyle, SpacingLength, TextProps,
+    MainAlign, SemanticsDecoration, SizeStyle, SpacingLength,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
@@ -17,6 +16,7 @@ use super::super::model::{format_hex, hsv_numeric_text, rgb_numeric_text};
 use super::super::{ColorEditAlphaPreview, ColorEditTooltipOptions};
 use super::preview::{color_preview_stack, preview_color_for_alpha_visibility};
 use crate::primitives::colors::{editor_foreground, editor_popup_background, editor_popup_border};
+use crate::primitives::readout::editor_tooltip_readout_text_props;
 
 pub(in crate::controls::color_edit) fn request_color_tooltip_overlay<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -209,31 +209,9 @@ fn color_tooltip_panel<H: UiHost>(
                                         .iter()
                                         .cloned()
                                         .map(|line| {
-                                            cx.text_props(TextProps {
-                                                layout: LayoutStyle {
-                                                    size: SizeStyle {
-                                                        width: Length::Auto,
-                                                        height: Length::Auto,
-                                                        ..Default::default()
-                                                    },
-                                                    ..Default::default()
-                                                },
-                                                text: line,
-                                                style: Some(
-                                                    fret_ui_kit::typography::as_control_text(
-                                                        TextStyle {
-                                                            size: Px(10.0),
-                                                            line_height: Some(Px(13.0)),
-                                                            ..Default::default()
-                                                        },
-                                                    ),
-                                                ),
-                                                color: Some(fg),
-                                                wrap: TextWrap::None,
-                                                overflow: TextOverflow::Ellipsis,
-                                                align: TextAlign::Start,
-                                                ink_overflow: Default::default(),
-                                            })
+                                            cx.text_props(editor_tooltip_readout_text_props(
+                                                line, fg,
+                                            ))
                                         })
                                         .collect::<Vec<_>>()
                                 },
