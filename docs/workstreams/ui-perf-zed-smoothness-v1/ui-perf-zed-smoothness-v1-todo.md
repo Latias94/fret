@@ -659,6 +659,10 @@ Conventions:
           `WindowedRowsSurface` callback internals remain the next owner candidate:
           callback-minus-row-paint is `118..149us` p95, while row-paint-minus-code-editor-total
           is only `13..21us` p95.
+        - Local micro-slice: `ElementHostWidget::paint_impl` now short-circuits the container
+          `focus_visible` global lookup unless the container is focused, matching text input/area
+          paint behavior. This is a baseline-neutral traversal cleanup, not evidence for a
+          threshold update.
       - [x] Inspect `WindowedRowsSurface` callback overhead before changing behavior.
         - Start from `ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs`.
         - Preserve the existing code-editor row replay/cache evidence as a guardrail; do not

@@ -105,6 +105,31 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 14:48:00 +0800 (container focus-visible paint short-circuit)
+
+Question:
+- Is there any local, baseline-neutral paint traversal optimization worth doing before the Windows RTX4090 closeout?
+
+Change:
+- `ElementHostWidget::paint_impl` now matches the existing `TextInput` / `TextArea` pattern and queries
+  `focus_visible` only when the container is actually focused. This avoids one focus-visible global lookup for the
+  common unfocused container paint path without changing focus-border or focus-ring behavior.
+
+Validation:
+```bash
+cargo fmt -p fret-ui --check
+cargo check -p fret-ui
+cargo nextest run -p fret-ui -E 'test(~focus_visible) | test(~focus_ring) | test(~focus_scope) | test(~paint)' --no-fail-fast
+```
+
+Results:
+- `cargo check -p fret-ui` passed.
+- The focused nextest slice passed: 91 tests run, 91 passed.
+
+Decision:
+- Keep this as a narrow `ElementHostWidget` paint traversal micro-optimization. It is not large enough to justify a
+  baseline update, and it does not replace the deferred Windows RTX4090 validation TODO.
+
 ## 2026-05-16 14:47:00 +0800 (local verifier decision-input projection)
 
 Question:
