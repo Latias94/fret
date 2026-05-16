@@ -105,6 +105,14 @@ cleared; when layout readiness changes after final layout, the key changes and t
 Diagnostics attribution is intentionally recorded only on cache miss. A same-frame cache hit should
 not create another `focus_traversal_snapshot` hotspot, because no traversal work happened.
 
+## Action Route Fallback Root Timing
+
+The timed `action_route_fallback_roots` route must not do extra fallback-root discovery just to
+label diagnostics. The route resolves the explicit fallback roots once, evaluates availability from
+that same resolved node stream, and reuses the first live fallback root as the hotspot start node.
+This keeps route attribution faithful to the work being timed while avoiding duplicate
+`ElementRuntime` fallback-root collection and live-node resolution in diagnostics-enabled builds.
+
 ## Current Evidence
 
 - Source anchors:
@@ -119,4 +127,5 @@ not create another `focus_traversal_snapshot` hotspot, because no traversal work
   - `target/fret-diag/codex-command-availability-pointer-after-focus-cache-20260516/focus_traversal_snapshot.by_frame.json`
 - Focused test evidence:
   - `cargo nextest run -p fret-ui action_availability_snapshot_reuses_focus_traversal_within_frame action_availability_snapshot_refreshes_focus_traversal_on_next_frame action_availability_snapshot_publishes_focus_traversal_gating --no-fail-fast`
+  - `cargo nextest run -p fret-ui window_command_action_availability_snapshot --no-fail-fast`
   - `cargo nextest run -p fret-diag bundle_stats_projects_command_availability_hotspots --no-fail-fast`

@@ -988,24 +988,45 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let roots = crate::elements::action_route_fallback_roots(app, window);
+        let (availability, resolved_node, _) = self
+            .command_availability_in_action_route_fallback_root_elements(
+                app, input_ctx, command, window, roots,
+            );
+        (availability, resolved_node)
+    }
+
+    fn command_availability_in_action_route_fallback_root_elements(
+        &mut self,
+        app: &mut H,
+        input_ctx: &InputContext,
+        command: &CommandId,
+        window: AppWindowId,
+        roots: impl IntoIterator<Item = GlobalElementId>,
+    ) -> (CommandAvailability, Option<NodeId>, Option<NodeId>) {
+        let mut first_resolved_root = None;
         for element in roots {
             let Some(node) =
                 self.resolve_live_attached_node_for_element(app, Some(window), element)
             else {
                 continue;
             };
+            first_resolved_root.get_or_insert(node);
             let (availability, resolved_node) =
                 self.command_availability_from_node(app, input_ctx, node, command);
             match availability {
                 CommandAvailability::Available => {
-                    return (availability, resolved_node.or(Some(node)));
+                    return (
+                        availability,
+                        resolved_node.or(Some(node)),
+                        first_resolved_root,
+                    );
                 }
-                CommandAvailability::Blocked => return (availability, None),
+                CommandAvailability::Blocked => return (availability, None, first_resolved_root),
                 CommandAvailability::NotHandled => {}
             }
         }
 
-        (CommandAvailability::NotHandled, None)
+        (CommandAvailability::NotHandled, None, first_resolved_root)
     }
 
     fn timed_command_availability_in_action_route_fallback_roots(
@@ -1016,26 +1037,27 @@ impl<H: UiHost> UiTree<H> {
         route: &'static str,
         window: AppWindowId,
     ) -> (CommandAvailability, Option<NodeId>) {
-        let start_node = self
-            .window
-            .and_then(|window| {
-                crate::elements::action_route_fallback_roots(app, window)
-                    .into_iter()
-                    .find_map(|element| {
-                        self.resolve_live_attached_node_for_element(app, Some(window), element)
-                    })
-            })
-            .or_else(|| {
-                self.base_layer
-                    .and_then(|id| self.layers.get(id).map(|l| l.root))
-            });
         let start_time = if self.debug_enabled {
             Some(Instant::now())
         } else {
             None
         };
-        let (availability, resolved_node) =
-            self.command_availability_in_action_route_fallback_roots(app, input_ctx, command);
+        let (availability, resolved_node, start_node) = if let Some(active_window) = self.window {
+            let roots = crate::elements::action_route_fallback_roots(app, active_window);
+            self.command_availability_in_action_route_fallback_root_elements(
+                app,
+                input_ctx,
+                command,
+                active_window,
+                roots,
+            )
+        } else {
+            (CommandAvailability::NotHandled, None, None)
+        };
+        let start_node = start_node.or_else(|| {
+            self.base_layer
+                .and_then(|id| self.layers.get(id).map(|l| l.root))
+        });
         if let (Some(start_time), Some(start_node)) = (start_time, start_node) {
             self.debug_record_command_availability_hotspot(
                 app,

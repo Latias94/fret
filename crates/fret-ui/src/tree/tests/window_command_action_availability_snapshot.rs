@@ -640,6 +640,78 @@ fn action_availability_snapshot_matches_no_focus_dispatch_subtree_fallback() {
 }
 
 #[test]
+fn action_availability_snapshot_uses_explicit_action_route_fallback_root() {
+    use crate::elements::{GlobalElementId, NodeEntry};
+
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("test.available"),
+        widget_command_meta("Available"),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_debug_enabled(true);
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    let focused = ui.create_node(FocusableLeaf);
+    let action_root_element = GlobalElementId(0xA11CE);
+    let action_root = ui.create_node_for_element(action_root_element, CountingAvailabilityNode);
+    ui.set_root(root);
+    ui.add_child(root, focused);
+    ui.add_child(root, action_root);
+    ui.set_focus(Some(focused));
+
+    let frame_id = app.frame_id();
+    crate::elements::with_window_state(&mut app, window, |st| {
+        st.set_node_entry(
+            action_root_element,
+            NodeEntry {
+                node: action_root,
+                last_seen_frame: frame_id,
+                root: action_root_element,
+            },
+        );
+        st.record_action_route_fallback_root(action_root_element);
+    });
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    app.advance_frame();
+    ui.begin_debug_frame_if_needed(app.frame_id());
+    publish_snapshot(&mut ui, &mut app, window);
+
+    let query_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(query_count, 1);
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    assert_eq!(
+        svc.available(window, &CommandId::from("test.available")),
+        Some(true)
+    );
+
+    let route_hotspots: Vec<_> = ui
+        .debug_command_availability_hotspots()
+        .iter()
+        .filter(|hotspot| hotspot.route == "action_route_fallback_roots")
+        .collect();
+    assert_eq!(route_hotspots.len(), 1);
+    assert_eq!(route_hotspots[0].start_node, action_root);
+    assert_eq!(route_hotspots[0].resolved_node, Some(action_root));
+    assert_eq!(route_hotspots[0].start_element, Some(action_root_element));
+}
+
+#[test]
 fn action_availability_snapshot_publishes_focus_menu_bar_gating() {
     let mut app = crate::test_host::TestHost::new();
     app.set_global(PlatformCapabilities::default());

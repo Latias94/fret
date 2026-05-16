@@ -27,8 +27,10 @@ Last updated: 2026-05-16
 - [ ] Promote a first-party check that fails when command availability publication exceeds 500us and
   no hotspots are present.
 - [ ] Consider a dedicated `diag stats` gate flag for command availability attribution presence.
-- [ ] Audit whether `command_availability_in_action_route_fallback_roots` should avoid resolving
-  fallback roots twice when diagnostics are enabled.
+- [x] Audit whether `command_availability_in_action_route_fallback_roots` should avoid resolving
+  fallback roots twice when diagnostics are enabled. The timed route now resolves fallback roots once and reuses the
+  first resolved root as the debug hotspot start node; focused coverage:
+  `action_availability_snapshot_uses_explicit_action_route_fallback_root`.
 - [x] Audit repeated `focus_traversal_snapshot` publication within one frame; the latest evidence
   shows the redundant repeated 99-105us samples are removed by the frame-level cache.
 

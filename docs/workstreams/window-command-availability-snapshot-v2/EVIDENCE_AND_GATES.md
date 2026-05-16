@@ -123,6 +123,17 @@ cargo nextest run -p fret-ui \
 
 Latest result: 1 passed.
 
+Focused action-route fallback root timing coverage:
+
+```bash
+cargo nextest run -p fret-ui window_command_action_availability_snapshot --no-fail-fast
+```
+
+Latest result: 14 passed. This includes
+`action_availability_snapshot_uses_explicit_action_route_fallback_root`, which proves explicit
+action-route fallback roots still publish availability with focus present and that the debug hotspot
+start node is the same resolved fallback root used by availability traversal.
+
 Focused migrated parser and registry gates:
 
 ```bash
