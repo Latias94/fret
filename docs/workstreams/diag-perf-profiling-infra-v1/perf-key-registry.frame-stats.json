@@ -369,6 +369,34 @@
       "unit": "count"
     },
     {
+      "key": "paint_host_widget_observed_deps_calls",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "paint_host_widget_observed_deps_empty_calls",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "paint_host_widget_observed_models_non_empty_calls",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "paint_host_widget_observed_globals_non_empty_calls",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
       "key": "paint_host_widget_instance_lookup_time_us",
       "kind": "timing",
       "scope": "frame",

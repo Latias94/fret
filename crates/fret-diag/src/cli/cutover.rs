@@ -6205,7 +6205,8 @@ mod tests {
             &[
                 "trace".to_string(),
                 "target/fret-diag/demo".to_string(),
-                "--json".to_string(),
+                "--dir".to_string(),
+                "target/fret-diag".to_string(),
             ],
             &workspace_root,
         ) {
@@ -6213,7 +6214,7 @@ mod tests {
             Some(Ok(_)) => panic!("unsupported migrated trace flags should be rejected"),
             None => panic!("trace should stay on migrated parser"),
         };
-        assert!(trace_err.contains("--json"));
+        assert!(trace_err.contains("--dir"));
 
         let resolve_err = match maybe_parse_migrated_command_with_workspace(
             &[

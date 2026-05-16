@@ -2,8 +2,8 @@ use crate::{
     Theme, UiHost, declarative,
     elements::GlobalElementId,
     widget::{
-        CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, PlatformTextInputCx, SemanticsCx,
-        Widget,
+        CommandAvailability, CommandCx, EventCx, Invalidation, LayoutCx, PaintCx,
+        PlatformTextInputCx, SemanticsCx, Widget,
     },
 };
 use fret_core::time::{Duration, Instant};
@@ -70,8 +70,9 @@ use debug::{
 };
 pub use debug::{
     PointerOcclusion, UiDebugBoundaryStats, UiDebugCacheRootReuseReason, UiDebugCacheRootStats,
-    UiDebugDirtyView, UiDebugFrameStats, UiDebugGlobalChangeHotspot, UiDebugGlobalChangeUnobserved,
-    UiDebugHitTest, UiDebugHoverDeclarativeInvalidationHotspot, UiDebugInvalidationDetail,
+    UiDebugCommandAvailabilityHotspot, UiDebugDirtyView, UiDebugFrameStats,
+    UiDebugGlobalChangeHotspot, UiDebugGlobalChangeUnobserved, UiDebugHitTest,
+    UiDebugHoverDeclarativeInvalidationHotspot, UiDebugInvalidationDetail,
     UiDebugInvalidationSource, UiDebugInvalidationWalk, UiDebugLayerInfo,
     UiDebugLayoutDirtyDescendant, UiDebugLayoutEngineMeasureChildHotspot,
     UiDebugLayoutEngineMeasureHotspot, UiDebugLayoutEngineSolve, UiDebugLayoutHotspot,
@@ -235,6 +236,27 @@ impl From<&InputContext> for WindowCommandActionAvailabilityInputSignature {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct WindowFocusTraversalAvailabilityCacheKey {
+    pub(crate) frame_id: FrameId,
+    pub(crate) dispatch_snapshot_generation: u64,
+    pub(crate) window: Option<AppWindowId>,
+    pub(crate) active_layer_roots: Vec<NodeId>,
+    pub(crate) barrier_root: Option<NodeId>,
+    pub(crate) scope_root: Option<NodeId>,
+    pub(crate) resolved_scope_root: Option<NodeId>,
+    pub(crate) command_availability_revision: u64,
+    pub(crate) layout_ready: bool,
+    pub(crate) inspection_active: bool,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct WindowFocusTraversalAvailabilityCacheEntry {
+    pub(crate) key: WindowFocusTraversalAvailabilityCacheKey,
+    pub(crate) availability: CommandAvailability,
+    pub(crate) needs_layout_refine: bool,
+}
+
 /// Retained UI tree and per-window interaction state machine.
 ///
 /// `UiTree` owns the widget/node graph for a single window and is responsible for:
@@ -303,6 +325,7 @@ pub struct UiTree<H: UiHost> {
     command_availability_revision: u64,
     last_window_command_action_availability_snapshot_signature:
         Option<WindowCommandActionAvailabilitySnapshotSignature>,
+    focus_traversal_availability_cache: Option<WindowFocusTraversalAvailabilityCacheEntry>,
 
     #[cfg(debug_assertions)]
     debug_last_declarative_render_root_frame_id: Option<FrameId>,
@@ -330,6 +353,7 @@ pub struct UiTree<H: UiHost> {
     debug_model_change_unobserved: Vec<UiDebugModelChangeUnobserved>,
     debug_global_change_hotspots: Vec<UiDebugGlobalChangeHotspot>,
     debug_global_change_unobserved: Vec<UiDebugGlobalChangeUnobserved>,
+    debug_command_availability_hotspots: Vec<UiDebugCommandAvailabilityHotspot>,
     debug_hover_edge_this_frame: bool,
     debug_hover_declarative_invalidations:
         HashMap<NodeId, UiDebugHoverDeclarativeInvalidationCounts>,

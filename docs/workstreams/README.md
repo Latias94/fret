@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-05-15
+Catalog updated: 2026-05-16
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 380
+- Dedicated directories: 381
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2287,6 +2287,7 @@ Rule:
 - `docs/workstreams/unified-authoring-builder-v1/` — first 2026-01-20, latest 2026-03-12, 2 markdown docs
 - `docs/workstreams/view-locals-authoring-fearless-refactor-v1/` — first 2026-03-20, latest 2026-03-20, 5 markdown docs
 - `docs/workstreams/webview-wry-v1/` — first 2026-02-11, latest 2026-02-16, 2 markdown docs
+- `docs/workstreams/window-command-availability-snapshot-v2/` — first n/a, latest n/a, 4 markdown docs (active runtime command/action availability publication lane; includes `WORKSTREAM.json`)
 - `docs/workstreams/workstream-catalog-integrity-gate-v1/` — first n/a, latest n/a, 8 markdown docs (closed closeout record for the section-aware gate that keeps workstream directory/file catalog indexes aligned with actual `docs/workstreams` contents and common maintainer gate entrypoints)
 - `docs/workstreams/workspace-crate-boundaries-v1/` — first 2026-02-07, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/workspace-shell-tabstrip-fearless-refactor-v1/` — first 2026-02-28, latest 2026-03-05, 6 markdown docs

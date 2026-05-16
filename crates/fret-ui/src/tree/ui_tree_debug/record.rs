@@ -78,6 +78,57 @@ impl<H: UiHost> UiTree<H> {
         (None, widget_kind, widget_path)
     }
 
+    pub(crate) fn debug_record_command_availability_hotspot(
+        &mut self,
+        _app: &mut H,
+        _window: AppWindowId,
+        command: &CommandId,
+        route: &'static str,
+        start_node: NodeId,
+        resolved_node: Option<NodeId>,
+        outcome: CommandAvailability,
+        elapsed: Duration,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+
+        const MAX_COMMAND_AVAILABILITY_HOTSPOTS: usize = 12;
+        const MIN_COMMAND_AVAILABILITY_HOTSPOT_US: u128 = 25;
+
+        if elapsed.as_micros() < MIN_COMMAND_AVAILABILITY_HOTSPOT_US
+            && self.debug_command_availability_hotspots.len() >= MAX_COMMAND_AVAILABILITY_HOTSPOTS
+        {
+            return;
+        }
+
+        let start_element = self.nodes.get(start_node).and_then(|n| n.element);
+        let resolved_element =
+            resolved_node.and_then(|node| self.nodes.get(node).and_then(|n| n.element));
+
+        let record = UiDebugCommandAvailabilityHotspot {
+            command: command.clone(),
+            route,
+            start_node,
+            resolved_node,
+            outcome,
+            elapsed,
+            start_element,
+            resolved_element,
+        };
+
+        let idx = self
+            .debug_command_availability_hotspots
+            .iter()
+            .position(|h| record.elapsed > h.elapsed)
+            .unwrap_or(self.debug_command_availability_hotspots.len());
+        self.debug_command_availability_hotspots.insert(idx, record);
+        if self.debug_command_availability_hotspots.len() > MAX_COMMAND_AVAILABILITY_HOTSPOTS {
+            self.debug_command_availability_hotspots
+                .truncate(MAX_COMMAND_AVAILABILITY_HOTSPOTS);
+        }
+    }
+
     pub(crate) fn debug_record_hover_edge_pressable(&mut self) {
         if !self.debug_enabled {
             return;

@@ -1750,6 +1750,7 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .collect::<Vec<_>>();
             let paint_text_prepare_hotspots =
                 snapshot_paint_text_prepare_hotspots(&semantics, s, 3);
+            let command_availability_hotspots = snapshot_command_availability_hotspots(s, 5);
             let model_change_hotspots = snapshot_model_change_hotspots(s, 3);
             let model_change_unobserved = snapshot_model_change_unobserved(s, 3);
             let global_change_hotspots = snapshot_global_change_hotspots(s, 3);
@@ -2324,6 +2325,7 @@ pub(super) fn bundle_stats_from_json_with_options(
                 widget_measure_hotspots,
                 paint_widget_hotspots,
                 paint_text_prepare_hotspots,
+                command_availability_hotspots,
                 model_change_hotspots,
                 model_change_unobserved,
                 global_change_hotspots,
@@ -2721,6 +2723,22 @@ pub(super) fn bundle_stats_from_json_with_options(
                     .then_with(|| b.dispatch_time_us.cmp(&a.dispatch_time_us))
                     .then_with(|| b.total_time_us.cmp(&a.total_time_us))
                     .then_with(|| b.invalidation_walk_nodes.cmp(&a.invalidation_walk_nodes))
+            });
+        }
+        BundleStatsSort::CommandAvailability => {
+            rows.sort_by(|a, b| {
+                b.window_runtime_snapshot_command_availability_time_us
+                    .cmp(&a.window_runtime_snapshot_command_availability_time_us)
+                    .then_with(|| {
+                        b.window_runtime_snapshot_command_availability_eval_time_us
+                            .cmp(&a.window_runtime_snapshot_command_availability_eval_time_us)
+                    })
+                    .then_with(|| {
+                        b.window_runtime_snapshot_command_registry_collect_time_us
+                            .cmp(&a.window_runtime_snapshot_command_registry_collect_time_us)
+                    })
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+                    .then_with(|| b.dispatch_time_us.cmp(&a.dispatch_time_us))
             });
         }
         BundleStatsSort::RendererEncodeScene => {

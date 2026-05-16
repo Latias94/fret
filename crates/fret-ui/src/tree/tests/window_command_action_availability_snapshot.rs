@@ -238,6 +238,125 @@ fn action_availability_snapshot_publishes_focus_traversal_gating() {
 }
 
 #[test]
+fn action_availability_snapshot_reuses_focus_traversal_within_frame() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("focus.next"),
+        widget_command_meta("Focus Next"),
+    );
+    app.register_command(
+        CommandId::from("focus.previous"),
+        widget_command_meta("Focus Previous"),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_debug_enabled(true);
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    let leaf = ui.create_node(FocusableLeaf);
+    ui.set_root(root);
+    ui.add_child(root, leaf);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    app.advance_frame();
+    ui.begin_debug_frame_if_needed(app.frame_id());
+    publish_snapshot(&mut ui, &mut app, window);
+    assert_eq!(
+        ui.debug_command_availability_hotspots()
+            .iter()
+            .filter(|hotspot| hotspot.route == "focus_traversal_snapshot")
+            .count(),
+        1,
+        "focus.next/focus.previous should share one traversal query inside a publication"
+    );
+
+    ui.pending_post_layout_window_runtime_snapshot_refine = true;
+    publish_snapshot(&mut ui, &mut app, window);
+    assert_eq!(
+        ui.debug_command_availability_hotspots()
+            .iter()
+            .filter(|hotspot| hotspot.route == "focus_traversal_snapshot")
+            .count(),
+        1,
+        "same-frame re-publication should reuse the frame-level traversal availability cache"
+    );
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    assert_eq!(
+        svc.available(window, &CommandId::from("focus.next")),
+        Some(true)
+    );
+    assert_eq!(
+        svc.available(window, &CommandId::from("focus.previous")),
+        Some(true)
+    );
+}
+
+#[test]
+fn action_availability_snapshot_refreshes_focus_traversal_on_next_frame() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("focus.next"),
+        widget_command_meta("Focus Next"),
+    );
+    app.register_command(
+        CommandId::from("focus.previous"),
+        widget_command_meta("Focus Previous"),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_debug_enabled(true);
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    let leaf = ui.create_node(FocusableLeaf);
+    ui.set_root(root);
+    ui.add_child(root, leaf);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    app.advance_frame();
+    ui.begin_debug_frame_if_needed(app.frame_id());
+    ui.pending_post_layout_window_runtime_snapshot_refine = true;
+    publish_snapshot(&mut ui, &mut app, window);
+    assert_eq!(
+        ui.debug_command_availability_hotspots()
+            .iter()
+            .filter(|hotspot| hotspot.route == "focus_traversal_snapshot")
+            .count(),
+        1
+    );
+
+    app.advance_frame();
+    ui.begin_debug_frame_if_needed(app.frame_id());
+    ui.pending_post_layout_window_runtime_snapshot_refine = true;
+    publish_snapshot(&mut ui, &mut app, window);
+
+    assert_eq!(
+        ui.debug_command_availability_hotspots()
+            .iter()
+            .filter(|hotspot| hotspot.route == "focus_traversal_snapshot")
+            .count(),
+        1,
+        "new frames should compute their own traversal availability instead of reusing stale cache"
+    );
+}
+
+#[test]
 fn action_availability_snapshot_skips_recompute_when_inputs_are_unchanged() {
     let mut app = crate::test_host::TestHost::new();
     app.set_global(PlatformCapabilities::default());

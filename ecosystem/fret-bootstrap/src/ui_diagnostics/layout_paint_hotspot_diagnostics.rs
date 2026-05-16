@@ -278,6 +278,64 @@ pub struct UiWidgetMeasureHotspotV1 {
     pub inclusive_time_us: u64,
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct UiCommandAvailabilityHotspotV1 {
+    pub command: String,
+    pub route: String,
+    pub start_node: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolved_node: Option<u64>,
+    pub outcome: String,
+    pub elapsed_us: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start_element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start_element_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start_element_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolved_element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolved_element_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolved_element_path: Option<String>,
+}
+
+impl UiCommandAvailabilityHotspotV1 {
+    pub fn from_hotspot(
+        h: &fret_ui::tree::UiDebugCommandAvailabilityHotspot,
+        window: AppWindowId,
+        element_runtime_state: Option<&ElementRuntime>,
+    ) -> Self {
+        let start_element_path = h.start_element.and_then(|id| {
+            element_runtime_state.and_then(|runtime| runtime.debug_path_for_element(window, id))
+        });
+        let resolved_element_path = h.resolved_element.and_then(|id| {
+            element_runtime_state.and_then(|runtime| runtime.debug_path_for_element(window, id))
+        });
+
+        Self {
+            command: h.command.as_str().to_string(),
+            route: h.route.to_string(),
+            start_node: h.start_node.data().as_ffi(),
+            resolved_node: h.resolved_node.map(|node| node.data().as_ffi()),
+            outcome: match h.outcome {
+                fret_ui::CommandAvailability::Available => "available",
+                fret_ui::CommandAvailability::Blocked => "blocked",
+                fret_ui::CommandAvailability::NotHandled => "not_handled",
+            }
+            .to_string(),
+            elapsed_us: h.elapsed.as_micros() as u64,
+            start_element: h.start_element.map(|id| id.0),
+            start_element_kind: None,
+            start_element_path,
+            resolved_element: h.resolved_element.map(|id| id.0),
+            resolved_element_kind: None,
+            resolved_element_path,
+        }
+    }
+}
+
 impl UiWidgetMeasureHotspotV1 {
     fn from_hotspot(h: &fret_ui::tree::UiDebugWidgetMeasureHotspot) -> Self {
         Self {

@@ -58,6 +58,7 @@ impl<H: UiHost> Default for UiTree<H> {
             dispatch_snapshot_cache: Vec::new(),
             command_availability_revision: 0,
             last_window_command_action_availability_snapshot_signature: None,
+            focus_traversal_availability_cache: None,
             #[cfg(debug_assertions)]
             debug_last_declarative_render_root_frame_id: None,
             debug_enabled: false,
@@ -83,6 +84,7 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_model_change_unobserved: Vec::new(),
             debug_global_change_hotspots: Vec::new(),
             debug_global_change_unobserved: Vec::new(),
+            debug_command_availability_hotspots: Vec::new(),
             debug_hover_edge_this_frame: false,
             debug_hover_declarative_invalidations: HashMap::new(),
             debug_dirty_views: Vec::new(),

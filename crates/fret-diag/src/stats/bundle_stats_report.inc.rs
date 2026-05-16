@@ -542,6 +542,7 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) widget_measure_hotspots: Vec<BundleStatsWidgetMeasureHotspot>,
     pub(super) paint_widget_hotspots: Vec<BundleStatsPaintWidgetHotspot>,
     pub(super) paint_text_prepare_hotspots: Vec<BundleStatsPaintTextPrepareHotspot>,
+    pub(super) command_availability_hotspots: Vec<BundleStatsCommandAvailabilityHotspot>,
     pub(super) model_change_hotspots: Vec<BundleStatsModelChangeHotspot>,
     pub(super) model_change_unobserved: Vec<BundleStatsModelChangeUnobserved>,
     pub(super) global_change_hotspots: Vec<BundleStatsGlobalChangeHotspot>,
@@ -1345,6 +1346,41 @@ pub(super) struct BundleStatsWidgetMeasureHotspot {
     pub(super) inclusive_time_us: u64,
     pub(super) role: Option<String>,
     pub(super) test_id: Option<String>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(super) struct BundleStatsCommandAvailabilityHotspot {
+    pub(super) command: String,
+    pub(super) route: String,
+    pub(super) start_node: u64,
+    pub(super) resolved_node: Option<u64>,
+    pub(super) outcome: String,
+    pub(super) elapsed_us: u64,
+    pub(super) start_element: Option<u64>,
+    pub(super) start_element_kind: Option<String>,
+    pub(super) start_element_path: Option<String>,
+    pub(super) resolved_element: Option<u64>,
+    pub(super) resolved_element_kind: Option<String>,
+    pub(super) resolved_element_path: Option<String>,
+}
+
+impl BundleStatsCommandAvailabilityHotspot {
+    fn to_json(&self) -> Value {
+        serde_json::json!({
+            "command": self.command,
+            "route": self.route,
+            "start_node": self.start_node,
+            "resolved_node": self.resolved_node,
+            "outcome": self.outcome,
+            "elapsed_us": self.elapsed_us,
+            "start_element": self.start_element,
+            "start_element_kind": self.start_element_kind,
+            "start_element_path": self.start_element_path,
+            "resolved_element": self.resolved_element,
+            "resolved_element_kind": self.resolved_element_kind,
+            "resolved_element_path": self.resolved_element_path,
+        })
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -2722,6 +2758,47 @@ impl BundleStatsReport {
                     row.window_runtime_snapshot_widget_command_count,
                     row.window_runtime_snapshot_command_registry_collect_time_us,
                     row.window_runtime_snapshot_command_availability_eval_time_us
+                );
+            }
+            if !row.command_availability_hotspots.is_empty() {
+                let items: Vec<String> = row
+                    .command_availability_hotspots
+                    .iter()
+                    .map(|h| {
+                        let start = h
+                            .start_element_path
+                            .as_deref()
+                            .or(h.start_element_kind.as_deref())
+                            .unwrap_or("unknown");
+                        let resolved = h
+                            .resolved_element_path
+                            .as_deref()
+                            .or(h.resolved_element_kind.as_deref())
+                            .unwrap_or("none");
+                        format!(
+                            "{}@{}={}us outcome={} start_node={} resolved_node={} start_el={} resolved_el={} start={} resolved={}",
+                            h.command,
+                            h.route,
+                            h.elapsed_us,
+                            h.outcome,
+                            h.start_node,
+                            h.resolved_node
+                                .map(|node| node.to_string())
+                                .unwrap_or_else(|| "none".to_string()),
+                            h.start_element
+                                .map(|element| element.to_string())
+                                .unwrap_or_else(|| "none".to_string()),
+                            h.resolved_element
+                                .map(|element| element.to_string())
+                                .unwrap_or_else(|| "none".to_string()),
+                            compact_string_middle(start, 40, 40),
+                            compact_string_middle(resolved, 40, 40)
+                        )
+                    })
+                    .collect();
+                println!(
+                    "    window_runtime_snapshot.command_availability.hotspots: {}",
+                    items.join(" | ")
                 );
             }
         }
@@ -6831,6 +6908,16 @@ impl BundleStatsReport {
                 obj.insert(
                     "paint_text_prepare_hotspots".to_string(),
                     Value::Array(paint_text_prepare_hotspots),
+                );
+
+                let command_availability_hotspots = row
+                    .command_availability_hotspots
+                    .iter()
+                    .map(BundleStatsCommandAvailabilityHotspot::to_json)
+                    .collect::<Vec<_>>();
+                obj.insert(
+                    "command_availability_hotspots".to_string(),
+                    Value::Array(command_availability_hotspots),
                 );
 
                 let model_change_hotspots = row

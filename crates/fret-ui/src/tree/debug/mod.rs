@@ -1,3 +1,4 @@
+mod commands;
 #[cfg(feature = "diagnostics")]
 mod diagnostics;
 #[cfg(feature = "diagnostics")]
@@ -12,6 +13,7 @@ mod text;
 mod view_cache;
 mod virtual_list;
 
+pub use commands::UiDebugCommandAvailabilityHotspot;
 pub use frame_stats::UiDebugFrameStats;
 pub use invalidation::{
     UiDebugDirtyView, UiDebugGlobalChangeHotspot, UiDebugGlobalChangeUnobserved,

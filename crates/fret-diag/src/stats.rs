@@ -211,12 +211,12 @@ pub(super) use windowed_rows::{
 };
 
 use bundle_stats_snapshot::{
-    SemanticsIndex, format_text_prepare_reasons, snapshot_global_change_hotspots,
-    snapshot_global_change_unobserved, snapshot_layout_engine_solves, snapshot_layout_hotspots,
-    snapshot_layout_request_build_roots, snapshot_lookup_semantics, snapshot_model_change_hotspots,
-    snapshot_model_change_unobserved, snapshot_paint_text_prepare_hotspots,
-    snapshot_paint_widget_hotspots, snapshot_scroll_layout_profiles,
-    snapshot_widget_measure_hotspots,
+    SemanticsIndex, format_text_prepare_reasons, snapshot_command_availability_hotspots,
+    snapshot_global_change_hotspots, snapshot_global_change_unobserved,
+    snapshot_layout_engine_solves, snapshot_layout_hotspots, snapshot_layout_request_build_roots,
+    snapshot_lookup_semantics, snapshot_model_change_hotspots, snapshot_model_change_unobserved,
+    snapshot_paint_text_prepare_hotspots, snapshot_paint_widget_hotspots,
+    snapshot_scroll_layout_profiles, snapshot_widget_measure_hotspots,
 };
 
 fn bundle_artifact_alias_pair(bundle_path: &Path) -> (String, String) {
@@ -1796,6 +1796,138 @@ mod tests {
             json.pointer("/max/paint_host_widget_instance_lookup_time_us")
                 .and_then(|v| v.as_u64()),
             Some(32)
+        );
+    }
+
+    #[test]
+    fn bundle_stats_projects_command_availability_hotspots() {
+        let bundle = serde_json::json!({
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    {
+                        "frame_id": 9,
+                        "tick_id": 10,
+                        "timestamp_unix_ms": 11,
+                        "debug": {
+                            "stats": {
+                                "total_time_us": 5000,
+                                "dispatch_time_us": 20,
+                                "window_runtime_snapshot_command_availability_time_us": 30,
+                                "window_runtime_snapshot_widget_command_count": 1,
+                                "window_runtime_snapshot_command_registry_collect_time_us": 10,
+                                "window_runtime_snapshot_command_availability_eval_time_us": 20
+                            }
+                        }
+                    },
+                    {
+                        "frame_id": 10,
+                        "tick_id": 11,
+                        "timestamp_unix_ms": 12,
+                        "debug": {
+                            "stats": {
+                                "total_time_us": 100,
+                                "dispatch_time_us": 20,
+                                "window_runtime_snapshot_command_availability_time_us": 900,
+                                "window_runtime_snapshot_widget_command_count": 2,
+                                "window_runtime_snapshot_command_registry_collect_time_us": 10,
+                                "window_runtime_snapshot_command_availability_eval_time_us": 890
+                            },
+                            "command_availability_hotspots": [
+                                {
+                                    "command": "editor.save",
+                                    "route": "focused_or_default",
+                                    "start_node": 7,
+                                    "resolved_node": 9,
+                                    "outcome": "available",
+                                    "elapsed_us": 700,
+                                    "start_element": 17,
+                                    "start_element_kind": "Button",
+                                    "start_element_path": "app/root/save-button",
+                                    "resolved_element": 19,
+                                    "resolved_element_kind": "Editor",
+                                    "resolved_element_path": "app/root/editor"
+                                },
+                                {
+                                    "command": "editor.format",
+                                    "route": "action_route_fallback_roots",
+                                    "start_node": 3,
+                                    "outcome": "not_handled",
+                                    "elapsed_us": 200,
+                                    "start_element_kind": "WindowRoot"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }]
+        });
+
+        let report = bundle_stats_from_json_with_options(
+            &bundle,
+            2,
+            BundleStatsSort::Time,
+            BundleStatsOptions { warmup_frames: 0 },
+        )
+        .expect("bundle stats");
+
+        let command_row = report
+            .top
+            .iter()
+            .find(|row| row.window_runtime_snapshot_command_availability_time_us == 900)
+            .expect("command availability row");
+        assert_eq!(command_row.command_availability_hotspots.len(), 2);
+        assert_eq!(
+            command_row.command_availability_hotspots[0].command,
+            "editor.save"
+        );
+        assert_eq!(command_row.command_availability_hotspots[0].elapsed_us, 700);
+        assert_eq!(command_row.command_availability_hotspots[0].start_node, 7);
+        assert_eq!(
+            command_row.command_availability_hotspots[0].resolved_node,
+            Some(9)
+        );
+        assert_eq!(
+            command_row.command_availability_hotspots[0]
+                .start_element_path
+                .as_deref(),
+            Some("app/root/save-button")
+        );
+
+        let sorted_report = bundle_stats_from_json_with_options(
+            &bundle,
+            1,
+            BundleStatsSort::CommandAvailability,
+            BundleStatsOptions { warmup_frames: 0 },
+        )
+        .expect("bundle stats sorted by command availability");
+        let top = sorted_report.top.first().expect("top row");
+        assert_eq!(
+            top.window_runtime_snapshot_command_availability_time_us,
+            900
+        );
+        assert_eq!(top.command_availability_hotspots[0].command, "editor.save");
+
+        let json = sorted_report.to_json();
+        assert_eq!(
+            json.pointer("/top/0/command_availability_hotspots/0/command")
+                .and_then(|v| v.as_str()),
+            Some("editor.save")
+        );
+        assert_eq!(
+            json.pointer("/top/0/command_availability_hotspots/0/route")
+                .and_then(|v| v.as_str()),
+            Some("focused_or_default")
+        );
+        assert_eq!(
+            json.pointer("/top/0/command_availability_hotspots/0/start_node")
+                .and_then(|v| v.as_u64()),
+            Some(7)
+        );
+        assert_eq!(
+            json.pointer("/top/0/command_availability_hotspots/0/resolved_element")
+                .and_then(|v| v.as_u64()),
+            Some(19)
         );
     }
 }

@@ -72,6 +72,8 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub paint_text_prepare_hotspots: Vec<UiPaintTextPrepareHotspotV1>,
     #[serde(default)]
+    pub command_availability_hotspots: Vec<UiCommandAvailabilityHotspotV1>,
+    #[serde(default)]
     pub input_arbitration: UiInputArbitrationSnapshotV1,
     /// Best-effort command gating decisions for a small set of "interesting" commands.
     ///

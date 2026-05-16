@@ -7,6 +7,7 @@ pub(crate) enum BundleStatsSort {
     UiThreadCpuCycles,
     Dispatch,
     HitTest,
+    CommandAvailability,
     RendererEncodeScene,
     RendererEnsurePipelines,
     RendererPlanCompile,
@@ -44,6 +45,9 @@ impl BundleStatsSort {
             "cpu_cycles" | "cycles" | "ui_thread_cpu_cycles" => Ok(Self::UiThreadCpuCycles),
             "dispatch" => Ok(Self::Dispatch),
             "hit_test" => Ok(Self::HitTest),
+            "command_availability"
+            | "commands"
+            | "window_runtime_snapshot_command_availability" => Ok(Self::CommandAvailability),
             "encode_scene" | "encode" | "renderer_encode_scene" => Ok(Self::RendererEncodeScene),
             "ensure_pipelines" | "ensure" | "renderer_ensure_pipelines" => {
                 Ok(Self::RendererEnsurePipelines)
@@ -117,7 +121,7 @@ impl BundleStatsSort {
                 Ok(Self::RendererIntermediatePoolFreeTextures)
             }
             other => Err(format!(
-                "invalid --sort value: {other} (expected: invalidation|time|cpu_time|cpu_cycles|dispatch|hit_test|encode_scene|ensure_pipelines|plan_compile|upload|record_passes|encoder_finish|prepare_text|draw_calls|pipeline_switches|bind_group_switches|atlas_upload_bytes|atlas_evicted_pages|svg_upload_bytes|image_upload_bytes|svg_cache_misses|svg_evictions|intermediate_budget_bytes|intermediate_in_use_bytes|intermediate_peak_bytes|intermediate_release_targets|intermediate_allocations|intermediate_reuses|intermediate_releases|pool_evictions|intermediate_free_bytes|intermediate_free_textures)"
+                "invalid --sort value: {other} (expected: invalidation|time|cpu_time|cpu_cycles|dispatch|hit_test|command_availability|encode_scene|ensure_pipelines|plan_compile|upload|record_passes|encoder_finish|prepare_text|draw_calls|pipeline_switches|bind_group_switches|atlas_upload_bytes|atlas_evicted_pages|svg_upload_bytes|image_upload_bytes|svg_cache_misses|svg_evictions|intermediate_budget_bytes|intermediate_in_use_bytes|intermediate_peak_bytes|intermediate_release_targets|intermediate_allocations|intermediate_reuses|intermediate_releases|pool_evictions|intermediate_free_bytes|intermediate_free_textures)"
             )),
         }
     }
@@ -130,6 +134,7 @@ impl BundleStatsSort {
             Self::UiThreadCpuCycles => "cpu_cycles",
             Self::Dispatch => "dispatch",
             Self::HitTest => "hit_test",
+            Self::CommandAvailability => "command_availability",
             Self::RendererEncodeScene => "encode_scene",
             Self::RendererEnsurePipelines => "ensure_pipelines",
             Self::RendererPlanCompile => "plan_compile",

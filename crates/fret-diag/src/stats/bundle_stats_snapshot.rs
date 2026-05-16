@@ -1,8 +1,8 @@
 use super::{
-    BundleStatsGlobalChangeHotspot, BundleStatsGlobalChangeUnobserved,
-    BundleStatsLayoutDirtyDescendant, BundleStatsLayoutEngineMeasureChildHotspot,
-    BundleStatsLayoutEngineMeasureHotspot, BundleStatsLayoutEngineSolve,
-    BundleStatsLayoutEngineSolveProfile, BundleStatsLayoutHotspot,
+    BundleStatsCommandAvailabilityHotspot, BundleStatsGlobalChangeHotspot,
+    BundleStatsGlobalChangeUnobserved, BundleStatsLayoutDirtyDescendant,
+    BundleStatsLayoutEngineMeasureChildHotspot, BundleStatsLayoutEngineMeasureHotspot,
+    BundleStatsLayoutEngineSolve, BundleStatsLayoutEngineSolveProfile, BundleStatsLayoutHotspot,
     BundleStatsLayoutRequestBuildRoot, BundleStatsModelChangeHotspot,
     BundleStatsModelChangeUnobserved, BundleStatsPaintTextPrepareHotspot,
     BundleStatsPaintWidgetHotspot, BundleStatsScrollLayoutKindProfile,
@@ -607,6 +607,68 @@ pub(super) fn snapshot_widget_measure_hotspots(
         item.test_id = test_id;
     }
 
+    out
+}
+
+pub(super) fn snapshot_command_availability_hotspots(
+    snapshot: &serde_json::Value,
+    max: usize,
+) -> Vec<BundleStatsCommandAvailabilityHotspot> {
+    let hotspots = snapshot
+        .get("debug")
+        .and_then(|v| v.get("command_availability_hotspots"))
+        .and_then(|v| v.as_array())
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
+
+    if hotspots.is_empty() {
+        return Vec::new();
+    }
+
+    let mut out: Vec<BundleStatsCommandAvailabilityHotspot> = hotspots
+        .iter()
+        .take(max.max(1))
+        .map(|h| BundleStatsCommandAvailabilityHotspot {
+            command: h
+                .get("command")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(),
+            route: h
+                .get("route")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(),
+            start_node: h.get("start_node").and_then(|v| v.as_u64()).unwrap_or(0),
+            resolved_node: h.get("resolved_node").and_then(|v| v.as_u64()),
+            outcome: h
+                .get("outcome")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(),
+            elapsed_us: h.get("elapsed_us").and_then(|v| v.as_u64()).unwrap_or(0),
+            start_element: h.get("start_element").and_then(|v| v.as_u64()),
+            start_element_kind: h
+                .get("start_element_kind")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            start_element_path: h
+                .get("start_element_path")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            resolved_element: h.get("resolved_element").and_then(|v| v.as_u64()),
+            resolved_element_kind: h
+                .get("resolved_element_kind")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            resolved_element_path: h
+                .get("resolved_element_path")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+        })
+        .collect();
+    out.sort_by(|a, b| b.elapsed_us.cmp(&a.elapsed_us));
+    out.truncate(max.max(1));
     out
 }
 
