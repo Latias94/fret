@@ -10,6 +10,7 @@ pub(super) fn preview_switch(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let description = snippets::description::render(cx);
     let choice_card = snippets::choice_card::render(cx);
     let disabled = snippets::disabled::render(cx);
+    let read_only = snippets::read_only::render(cx);
     let invalid = snippets::invalid::render(cx);
     let sizes = snippets::sizes::render(cx);
     let rtl = snippets::rtl::render(cx);
@@ -51,6 +52,10 @@ pub(super) fn preview_switch(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         .description("Disabled switches block interaction and let the surrounding field own the muted state.")
         .test_id_prefix("ui-gallery-switch-disabled")
         .code_rust_from_file_region(snippets::disabled::SOURCE, "example");
+    let read_only = DocSection::build(cx, "Read Only", read_only)
+        .description("Read-only switches remain observable and focusable while suppressing value changes and invoke semantics.")
+        .test_id_prefix("ui-gallery-switch-read-only")
+        .code_rust_from_file_region(snippets::read_only::SOURCE, "example");
     let invalid = DocSection::build(cx, "Invalid", invalid)
         .description(
             "Invalid state uses root `Switch::aria_invalid(true)` on the control and caller-owned `Field::invalid(true)` on the composition.",
@@ -87,6 +92,7 @@ pub(super) fn preview_switch(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
             description,
             choice_card,
             disabled,
+            read_only,
             invalid,
             sizes,
             rtl,

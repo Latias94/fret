@@ -368,6 +368,13 @@ fn script_v2_roundtrip_ui_gallery_sonner_live_region_mutation() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_switch_read_only_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-switch-read-only-action-state.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_card_description_no_early_wrap() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-card-description-no-early-wrap.json"

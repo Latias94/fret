@@ -1024,3 +1024,23 @@ Status: complete for Popover and DropdownMenu runtime gates
   makes future outside-press consumption regressions visible.
 - Remaining follow-up: move to semantics/accessibility runtime gates unless fresh Radix parity
   evidence demands additional click-through families.
+
+## M64: Read-Only Switch Semantics Action-State Gate
+
+Status: complete for the Switch read-only runtime gate and owning recipe fix
+
+- Added diagnostics protocol support for `read_only_is`, including typed builder support,
+  bootstrap predicate evaluation, wait trace selector recording, serialization tests, and predicate
+  evaluator tests.
+- Strengthened the existing focused `Switch::read_only(true)` test with focus/invoke action-state
+  assertions. The first run found a real recipe defect: read-only Switch blocked pointer mutation
+  but still exposed `actions.invoke=true`.
+- Fixed `ecosystem/fret-ui-shadcn` Switch so read-only attaches `read_only=true` and
+  `invokable=false` semantics while preserving focusability.
+- Added a UI Gallery read-only Switch teaching surface and promoted
+  `ui-gallery-switch-read-only-action-state.json` into `ui-gallery-shadcn-conformance`.
+- Focused recipe, diagnostics protocol, bootstrap predicate, registry, build, and runtime gates all
+  pass. Runtime evidence is packed at
+  `.fret/diag/runs/ui-gallery-switch-read-only-action-state-f112/share/1778909364811.zip`.
+- Remaining follow-up: add dynamic non-list action-state mutation coverage where read-only or
+  command-gated availability changes across frames without remounting the control.

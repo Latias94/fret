@@ -182,6 +182,15 @@ date: 2026-05-12
     `script_v2_roundtrip_ui_gallery_popover_click_through_outside_press_focus_underlay
     script_v2_roundtrip_ui_gallery_dropdown_nonmodal_outside_press_focus_underlay` passed with
     Nextest run id `c563620f-80b3-4933-9da6-48d657c68a38`.
+- [x] Add a non-list semantics/action-state runtime gate where visual behavior can pass while
+  accessibility action metadata is stale.
+  - Result: `ui-gallery-switch-read-only-action-state.json` now gates a read-only Switch through
+    real UI Gallery runtime. The first focused oracle found a real shadcn recipe defect:
+    `Switch::read_only(true)` blocked pointer mutation but still exposed `actions.invoke=true`.
+    The fix attaches `read_only=true` and `invokable=false` semantics while preserving focusability.
+    Diagnostics now has a `read_only_is` predicate and the runtime gate asserts `read_only=true`,
+    `disabled=false`, `focus=true`, `invoke=false`, and no checked-state mutation after pointer,
+    associated-label, Space, or Enter activation attempts.
 - [x] Promote Combobox visual/style coverage into an explicit fixture-style matrix that tracks
   component state, theme, viewport, screenshot gate, geometry predicates, and current owner/gap.
 - [x] Harden the Button Group size gate with stable icon-only `Add` anchors and geometry predicates.

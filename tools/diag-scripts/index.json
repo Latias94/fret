@@ -10747,6 +10747,29 @@
       ]
     },
     {
+      "id": "ui-gallery-switch-read-only-action-state",
+      "path": "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-read-only-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "action-state",
+        "read-only",
+        "semantics",
+        "shadcn",
+        "switch",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Verifies that a read-only Switch exposes read_only=true, focus=true, invoke=false, and stays checked after pointer, label, Space, and Enter activation attempts."
+      ]
+    },
+    {
       "id": "ui-gallery-table-docs-smoke",
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-docs-smoke.json",
       "required_capabilities": [

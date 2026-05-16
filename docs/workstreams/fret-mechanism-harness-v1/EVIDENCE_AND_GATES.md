@@ -2100,6 +2100,57 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `python tools/check_diag_scripts_registry.py`
   - registry result:
     passed.
+- Switch read-only action-state runtime gate:
+  `tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-read-only-action-state.json`
+  - invariant:
+    a read-only Switch must remain observable and focusable, publish `read_only=true`, keep
+    `disabled=false`, suppress `invoke`, and reject pointer, associated-label, Space, and Enter
+    activation attempts without changing checked state.
+  - implementation anchors:
+    `crates/fret-diag-protocol/src/lib.rs`,
+    `crates/fret-diag-protocol/src/builder.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs`,
+    `ecosystem/fret-ui-shadcn/src/switch.rs`,
+    `apps/fret-ui-gallery/src/ui/snippets/switch/read_only.rs`,
+    `apps/fret-ui-gallery/src/ui/pages/switch.rs`,
+    `tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-read-only-action-state.json`,
+    and `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+  - finding:
+    found a real shadcn recipe semantics defect. `Switch::read_only(true)` already blocked pointer
+    mutation, but its semantics snapshot still exposed `actions.invoke=true`.
+  - before focused command:
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib switch_read_only_exposes_semantics_and_blocks_activation -- --nocapture`
+  - before focused result:
+    failed with `read-only switches must not expose invoke semantics`.
+  - focused recipe command after fix:
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib switch_read_only_exposes_semantics_and_blocks_activation -- --nocapture`
+  - focused recipe result:
+    passed, 1 test.
+  - protocol gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_read_only_is_serializes_and_deserializes predicate_disabled_is_serializes_and_deserializes predicate_semantics_action_is_serializes_and_deserializes script_v2_roundtrip_ui_gallery_switch_read_only_action_state --no-fail-fast`
+  - protocol result:
+    passed, 4 tests; Nextest run id `c521d101-11fc-4c8e-b094-47bea4a5b822`.
+  - bootstrap predicate gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics read_only_is_matches_semantics_read_only_flag disabled_is_matches_semantics_disabled_flag semantics_action_is_matches_all_exported_action_flags --no-fail-fast`
+  - bootstrap predicate result:
+    passed, 3 tests; Nextest run id `6b8a60cd-00a7-44ab-93bc-9e8a5cce6fce`.
+  - registry gate:
+    `python tools/check_diag_scripts_registry.py`
+  - registry result:
+    passed.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-read-only-action-state.json --dir .fret/diag/runs/ui-gallery-switch-read-only-action-state-f112 --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1778909364811`.
+  - runtime evidence:
+    `.fret/diag/runs/ui-gallery-switch-read-only-action-state-f112/script.result.json`
+  - packed evidence:
+    `.fret/diag/runs/ui-gallery-switch-read-only-action-state-f112/share/1778909364811.zip`
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

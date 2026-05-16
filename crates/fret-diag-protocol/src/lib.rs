@@ -2043,6 +2043,10 @@ pub enum UiPredicateV1 {
         target: UiSelectorV1,
         disabled: bool,
     },
+    ReadOnlyIs {
+        target: UiSelectorV1,
+        read_only: bool,
+    },
     /// True when the target exists and its structured accessibility action surface matches.
     ///
     /// This intentionally checks the semantics action contract, not whether an input gesture can
@@ -4498,6 +4502,30 @@ mod tests {
 
         let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
         assert!(matches!(roundtrip, UiPredicateV1::DisabledIs { .. }));
+    }
+
+    #[test]
+    fn predicate_read_only_is_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::ReadOnlyIs {
+            target: UiSelectorV1::TestId {
+                id: "readonly-switch".to_string(),
+                root_z_index: None,
+            },
+            read_only: true,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "read_only_is",
+                "target": { "kind": "test_id", "id": "readonly-switch" },
+                "read_only": true,
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(roundtrip, UiPredicateV1::ReadOnlyIs { .. }));
     }
 
     #[test]

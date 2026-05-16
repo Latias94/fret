@@ -91,6 +91,10 @@ pub fn disabled_is(target: UiSelectorV1, disabled: bool) -> UiPredicateV1 {
     UiPredicateV1::DisabledIs { target, disabled }
 }
 
+pub fn read_only_is(target: UiSelectorV1, read_only: bool) -> UiPredicateV1 {
+    UiPredicateV1::ReadOnlyIs { target, read_only }
+}
+
 pub fn semantics_action_is(
     target: UiSelectorV1,
     action: UiSemanticsActionV1,

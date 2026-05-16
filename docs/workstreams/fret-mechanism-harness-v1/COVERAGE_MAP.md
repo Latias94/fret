@@ -64,6 +64,13 @@ date: 2026-05-12
   tests, including a view-cache-hit retained-render movement case. The remaining high-risk gap is a
   runtime UI Gallery companion only if a real surface can move cached overlay sources across
   viewport roots.
+- Read-only non-list action-state update:
+  `read_only_is` now lets diagnostics assert the semantics read-only flag directly. The UI Gallery
+  Switch gate `ui-gallery-switch-read-only-action-state.json` proves a read-only Switch remains
+  focusable, reports `read_only=true`, keeps `disabled=false`, suppresses `invoke`, and rejects
+  pointer, associated-label, Space, and Enter activation attempts without changing checked state.
+  The first focused oracle found and fixed a shadcn recipe defect where
+  `Switch::read_only(true)` blocked mutation but still exposed `actions.invoke=true`.
 - Select active-descendant/view-cache update:
   `ui-gallery-select-roving-skips-disabled-orange.json` now proves that pointer-open followed by
   ArrowDown updates the runtime active descendant through the real UI Gallery Select page, including

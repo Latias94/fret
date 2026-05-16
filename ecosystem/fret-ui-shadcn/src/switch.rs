@@ -783,7 +783,7 @@ impl Switch {
             let pressable = if read_only || required {
                 let mut decoration = SemanticsDecoration::default();
                 if read_only {
-                    decoration = decoration.read_only(true);
+                    decoration = decoration.read_only(true).invokable(false);
                 }
                 if required {
                     decoration = decoration.required(true);
@@ -1257,6 +1257,14 @@ mod tests {
             .expect("switch semantics node");
         assert!(node.flags.read_only);
         assert_eq!(node.flags.checked, Some(false));
+        assert!(
+            node.actions.focus,
+            "read-only switches should remain focusable"
+        );
+        assert!(
+            !node.actions.invoke,
+            "read-only switches must not expose invoke semantics"
+        );
 
         let switch_node = ui.children(root)[0];
         let switch_bounds = ui.debug_node_bounds(switch_node).expect("switch bounds");
