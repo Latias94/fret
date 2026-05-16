@@ -75,6 +75,7 @@ component should construct `TextProps` locally.
 
 - Shared role behavior:
   - `cargo nextest run -p fret-ui-kit --features imui --lib control_readout_text_uses_muted_compact_single_line_truncation button_label_text_uses_medium_single_line_truncation prose_variants_and_code_wrap_install_semantic_inherited_overrides table_cell_text_uses_compact_single_line_truncation --no-fail-fast`
+  - `cargo nextest run -p fret-ui-kit --features imui --lib base_single_line_text_roles_stay_single_line_under_narrow_layout paragraph_text_role_measures_multiple_lines_under_narrow_layout --no-fail-fast`
 - IMUI consumers:
   - `cargo nextest run -p fret-ui-kit --features imui --lib imui_text_item_is_single_line_and_shrinkable imui_text_wrapped_is_explicit_wrapping_text compact_paragraph_text_uses_wrapping_fill_width_layout menu_item_shortcut_text_uses_shared_control_readout_role menu_item_label_text_uses_shared_list_row_text_role control_label_text_uses_fill_width_single_line_truncation --no-fail-fast`
 - Editor consumers:

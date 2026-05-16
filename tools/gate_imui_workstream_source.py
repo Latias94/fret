@@ -699,6 +699,7 @@ def main() -> None:
                 "parent must measure/grow for multiple lines.",
                 "Do not add a public `TextRole` enum until at least two consumers need a data-driven role value.",
                 "cargo nextest run -p fret-ui-kit --features imui --lib control_readout_text_uses_muted_compact_single_line_truncation",
+                "cargo nextest run -p fret-ui-kit --features imui --lib base_single_line_text_roles_stay_single_line_under_narrow_layout",
                 "cargo nextest run -p fret-ui-editor editor_input_value_text_is_single_line_and_shrinkable",
                 "editor_inspector_panel_title_text_is_single_line_and_shrinkable",
                 "inspector_panel_title_stays_single_line_when_header_is_narrow",
@@ -942,6 +943,9 @@ def main() -> None:
                 "chrome_glyph_text_uses_fixed_slot_single_line_clip",
                 "chrome_title_text_uses_fill_width_single_line_truncation",
                 "section_chrome_label_text_uses_single_line_truncation",
+                "base_single_line_text_roles_stay_single_line_under_narrow_layout",
+                "paragraph_text_role_measures_multiple_lines_under_narrow_layout",
+                "ui.layout_all(",
             ],
             forbidden=[
                 "pub enum TextRole",

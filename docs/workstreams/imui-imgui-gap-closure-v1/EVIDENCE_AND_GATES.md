@@ -230,6 +230,14 @@ Run evidence:
   text-role vocabulary pass without breaking shadcn/Tailwind-oriented naming. Gate: `cargo nextest
   run -p fret-ui-kit --features imui --lib
   prose_variants_and_code_wrap_install_semantic_inherited_overrides --no-fail-fast`.
+- 2026-05-17: added a shared text-role layout gate in
+  `fret-ui-kit::declarative::text`. The gate uses a wrapping fake text service plus
+  `UiTree::layout_all(...)` to prove the base single-line roles (`text_control_readout(...)`,
+  `text_button_label(...)`, `text_table_cell(...)`, and `text_code_block(...)`) stay one measured
+  line under narrow resize, while `text_paragraph(...)` measures as multiple lines. Gate:
+  `cargo nextest run -p fret-ui-kit --features imui --lib
+  base_single_line_text_roles_stay_single_line_under_narrow_layout
+  paragraph_text_role_measures_multiple_lines_under_narrow_layout --no-fail-fast`.
 - 2026-05-17: introduced `text_compact_paragraph(...)` as the shared dense wrapping paragraph role
   for editor/IMUI body copy. IMUI `bullet_text(...)` labels and
   `UiWriterImUiFacadeExt::text_wrapped(...)` now route through it, preserving explicit wrapping
@@ -1027,6 +1035,14 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `cargo fmt -p fret-examples` passed.
 - `cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --test editor_notes_device_shell_surface --no-fail-fast` passed.
 - `cargo check -p fret-demo --bin editor_notes_demo` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.
+
+2026-05-17 shared text-role layout gate:
+
+- `cargo fmt -p fret-ui-kit` passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib base_single_line_text_roles_stay_single_line_under_narrow_layout paragraph_text_role_measures_multiple_lines_under_narrow_layout --no-fail-fast` passed.
 - `python tools/gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.

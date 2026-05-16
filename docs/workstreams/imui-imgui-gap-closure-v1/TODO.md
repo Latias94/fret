@@ -317,6 +317,9 @@ Readiness order for the next locally testable review slices:
    text, and table cell text. The matrix also classifies current derived roles, keeps wrapping text
    out of fixed-height control rows unless parents measure multi-line height, and explicitly
    rejects adding a public `TextRole` enum until two consumers need a data-driven role value.
+   2026-05-17 shared text-role layout gate follow-up: the base shared text roles now have a real
+   narrow-layout regression proving single-line roles stay one measured line while paragraph text
+   measures multi-line height through `UiTree::layout_all(...)`.
    2026-05-17 property-row value overflow follow-up: `PropertyRow` value slots no longer force
    `Overflow::Clip`, so explicit wrapping validation/prose children such as `NumericInput` inline
    validation messages can grow with their measured multi-line height instead of painting past a
