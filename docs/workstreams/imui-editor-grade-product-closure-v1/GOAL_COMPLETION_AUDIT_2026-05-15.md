@@ -4,7 +4,8 @@ Status: Not complete. Continue through narrow follow-ons.
 
 This audit refreshes the 2026-05-13 completion read after the latest product-chain discovery,
 docking Wayland admission, local policy-skip, perf-threshold, DevTools first-class gate UI, and
-P4 performance-alignment slices.
+P4 performance-alignment slices. The 2026-05-16 M18 local policy-skip matrix keeps this verdict
+current without changing the completion status.
 It is deliberately strict: a green source gate or manifest only counts when it covers the actual
 requirement being claimed.
 
@@ -41,13 +42,13 @@ architecture intact:
 | Product workflow is coherent | `tools/diag_gate_imui_product_chain.py` validates cookbook, editor controls, editor proof, editor notes, workspace shell, docking campaign manifest, DevTools/tool-app discovery, and the perf-docking entrypoint metadata. | Partially met |
 | First-contact editor-control evidence exists | `P0_CONSUMER_WORKFLOW_AUDIT_2026-05-13.md` records the launched `imui_editor_controls_basics` smoke and roughness typing suite evidence. | Met for first-contact editor controls |
 | Editor-notes/workbench product evidence exists | `editor_notes_demo` and `editor_notes_device_shell_demo` suites are promoted into the product-chain gate, including the selection-sync and device-shell a11y repair evidence. | Met for current promoted scripts |
-| DevTools/Demo/Metrics discoverability is closed | `fretboard-dev --help`, `fretboard-dev list --help`, `list tool-apps`, `list tool-apps --json`, `product_workflows.imui-product-chain`, and the GUI `demo-metrics-debug` route are gated. The DevTools GUI first-class gate UI is closed for stale paint/scene, pixels-changed, perf thresholds, resource footprint thresholds, and selected-summary follow-ups. The M6 DevTools live-inspect payload, UI-gallery dogfood workflow, and 50k semantics-tree scalability slices are now recorded as closed in `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-todo.md` and `EVIDENCE_AND_GATES.md`. The M0 secondary layout/element tree entrypoints are also closed as semantics-derived views, with an explicit caveat that they are not full native layout-engine or declarative runtime snapshots. Remaining DevTools risk is broader always-available product maturity, not those specific M0/M6 bullets. | Partially met |
+| DevTools/Demo/Metrics entrypoint discoverability is gated | `fretboard-dev --help`, `fretboard-dev list --help`, `list tool-apps`, `list tool-apps --json`, `product_workflows.imui-product-chain`, and the GUI `demo-metrics-debug` route are gated. The DevTools GUI first-class gate UI is closed for stale paint/scene, pixels-changed, perf thresholds, resource footprint thresholds, and selected-summary follow-ups. The M6 DevTools live-inspect payload, UI-gallery dogfood workflow, and 50k semantics-tree scalability slices are now recorded as closed in `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-todo.md` and `EVIDENCE_AND_GATES.md`. The M0 secondary layout/element tree entrypoints are also closed as semantics-derived views, with an explicit caveat that they are not full native layout-engine or declarative runtime snapshots. Remaining DevTools risk is broader always-available product maturity, not those specific M0/M6 bullets. | Partially met |
 | Docking bounded campaign is green | `M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md` records the launched bounded P3 campaign passing 4/4 scripts. | Met for generic bounded campaign |
-| Wayland source/admission posture is current | `M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`, `M16_SOURCE_DRIFT_GUARD_2026-05-14.md`, and `M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md` cover local source policy, manifest/script drift, and non-Wayland `skipped_policy` behavior. | Met for local policy gates |
-| Full platform-specific hand-feel is closed | `DW-P1-linux-003` still requires a real Linux Wayland compositor run from `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md`. | Not met |
-| Performance discipline is closed | Product-chain `perf-docking` now has CPU/layout/pointer/renderer thresholds, DevTools selected-summary drill-down surfaces perf evidence, and P4 is registered, but broad smoothness attribution remains in dedicated perf lanes. | Partially met |
+| Wayland source/admission posture is current | `M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`, `M16_SOURCE_DRIFT_GUARD_2026-05-14.md`, `M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md`, and `M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md` cover local source policy, manifest/script drift, the first non-Wayland `skipped_policy` gate, and the Windows plus Linux/X11 sidecar matrix. | Met for local policy gates |
+| Full platform-specific hand-feel remains open | `DW-P1-linux-003` still requires a real Linux Wayland compositor run from `M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md`. | Not met |
+| Performance discipline is guarded, not closed | Product-chain `perf-docking` now has CPU/layout/pointer/renderer thresholds, DevTools selected-summary drill-down surfaces perf evidence, and P4 is registered, but broad smoothness attribution remains in dedicated perf lanes. | Partially met |
 | Helper/API widening remains proof-led | The gap lane keeps widget/API widening candidate-only unless repeated first-party proof surfaces justify the owner and gate. | Met as a rule; not a completion claim |
-| Full Dear ImGui-class editor maturity is closed | Remaining gaps include real-host OS-window hand-feel, DevTools GUI productization, perf attribution/smoothness, and future proof-led helper candidates. | Not met |
+| Full Dear ImGui-class editor maturity remains open | Remaining gaps include real-host OS-window hand-feel, DevTools GUI productization, perf attribution/smoothness, and future proof-led helper candidates. | Not met |
 
 ## Current Strengths
 
@@ -62,7 +63,8 @@ architecture intact:
   projections own gate templates and structured runnable args, while the GUI owns form UX,
   launch buttons, and bounded result histories.
 - The Wayland local boundary is more honest than before: source/admission and non-Wayland
-  policy-skip behavior are gated without pretending to close real-host Wayland acceptance.
+  policy-skip behavior are gated, including the M18 Windows plus Linux/X11 sidecar matrix, without
+  pretending to close real-host Wayland acceptance.
 - Performance pressure is now explicitly registered as an attribution/smoothness discipline problem,
   not a reason to copy Dear ImGui or egui runtime/API shape.
 
@@ -76,8 +78,9 @@ architecture intact:
 - **DevTools GUI productization remains partial.** The CLI/tool-app/product-workflow discovery path,
   GUI `demo-metrics-debug` route, first-class gate UI, live inspect overlay details, UI-gallery
   dogfood workflow, 50k semantics-tree scalability proof, and semantics-derived Layout/Elements
-  secondary tree entrypoints are now gated, but Dear ImGui-style always-available tooling still
-  needs broader product maturity beyond those first-open, M0, and M6 closure slices.
+  secondary tree entrypoints are now gated, including a `--discovery-only --reuse-built` drift check
+  for the first-open entrypoints. Dear ImGui-style always-available tooling still needs broader
+  product maturity beyond those first-open, M0, and M6 closure slices.
 - **Performance is guarded, not closed.** The `perf-docking` product-chain entrypoint now enforces
   conservative thresholds and DevTools can surface selected perf evidence, but that is not the same
   as full smoothness attribution or broad editor workload acceptance.
@@ -94,7 +97,7 @@ python -m json.tool docs/workstreams/imui-editor-grade-product-closure-v1/WORKST
 python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json
 python -m json.tool docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json
 python tools/gate_imui_workstream_source.py
-python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built
 python tools/diag_gate_imui_product_chain.py --only discovery
 python tools/diag_gate_docking_wayland_policy_skip.py
 python tools/check_workstream_catalog.py

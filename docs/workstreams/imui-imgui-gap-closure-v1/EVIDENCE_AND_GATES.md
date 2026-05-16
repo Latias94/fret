@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-05-15
+Last updated: 2026-05-16
 
 ## Evidence Anchors
 
@@ -58,13 +58,25 @@ Last updated: 2026-05-15
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/value_models.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs`
+  - `ecosystem/fret-ui-kit/src/imui/image_item_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/response/widgets.rs`
+  - `ecosystem/fret-ui-kit/tests/imui_image_item_smoke.rs`
   - `ecosystem/fret-ui-editor/src/imui.rs`
   - `ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs`
   - `ecosystem/fret-ui-editor/src/controls/drag_value.rs`
   - `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs`
   - `ecosystem/fret/src/lib.rs`
   - `apps/fret-cookbook/src/lib.rs`
+- Closed image item and child resize follow-ons:
+  - `docs/workstreams/imui-image-item-proof-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-image-item-proof-v1/DESIGN.md`
+  - `docs/workstreams/imui-image-item-proof-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-child-region-resize-y-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-child-region-resize-y-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-child-region-resize-x-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-child-region-resize-x-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-selectable-highlight-policy-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-selectable-highlight-policy-v1/EVIDENCE_AND_GATES.md`
 - Current proof surfaces:
   - `apps/fret-cookbook/README.md`
   - `apps/fret-cookbook/EXAMPLES.md`
@@ -73,6 +85,7 @@ Last updated: 2026-05-15
   - `apps/fret-cookbook/examples/imui_debug_draw_basics.rs`
   - `apps/fret-cookbook/examples/imui_editor_controls_basics.rs`
   - `apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs`
+  - `apps/fret-examples-imui/src/imui_interaction_showcase_demo.rs`
   - `apps/fret-examples/src/imui_editor_proof_demo.rs`
   - `tools/gate_imui_editor_collection_source.py`
   - `apps/fret-examples/src/imui_editor_proof_demo/collection.rs`
@@ -133,6 +146,20 @@ Run evidence:
 - 2026-05-14: made `FloatingAreaResponse` / `FloatingWindowResponse` accessor-first too. Floating
   response identity, geometry, drag, resize, and collapse state now stay behind methods instead of
   public fields, and the floating tests use `resp.id()` instead of `resp.area.id`.
+- 2026-05-16: refreshed the public `window(...)` posture in
+  `ecosystem/fret-ui-kit/src/imui/facade_writer.rs`. The source docs now describe the current
+  in-window floating surface instead of deferring z-order/focus arbitration to a future work item.
+  Evidence anchors: `ecosystem/fret-imui/src/tests/floating/movement_z_order.rs` covers
+  bring-to-front hit-test order, `input_modes.rs` covers focus-on-click vs activation plus
+  no-inputs / pointer-pass-through behavior, and `window_options.rs` covers close, resize, and
+  collapse policy.
+- 2026-05-16: narrowed the table advanced-gap wording in
+  `docs/workstreams/imui-imgui-gap-closure-v1/P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`.
+  `TableOptions::striped` remains the existing alternating row-background policy, with proof in
+  `apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs`,
+  `ecosystem/fret-ui-kit/tests/imui_table_smoke.rs`, and
+  `ecosystem/fret-imui/src/tests/composition/layout_collections.rs`. The remaining table
+  background gap is explicit per-row/per-cell override policy, not all row background behavior.
 - 2026-05-14: made `DisclosureResponse` / `ComboResponse` accessor-first for trigger/open/toggle
   state too. Public callers now read trigger details through `response()` and semantic helpers, the
   response types no longer expose external `Default` construction, and
@@ -318,6 +345,7 @@ Use these for the current child-region readiness note:
 ```powershell
 cargo nextest run -p fret-imui child_region --no-fail-fast
 cargo nextest run -p fret-ui-kit --features imui --test imui_child_region_smoke --no-fail-fast
+cargo nextest run -p fret-ui-kit --features imui child_region_resize --no-fail-fast
 cargo check -p fret-demo --bin workspace_shell_demo
 ```
 
@@ -535,18 +563,20 @@ Run evidence:
 
 ## P3 Diagnostics / DevTools First-Open Gate
 
-Use these gates for the current Dear ImGui-class diagnostics discoverability read. The fast gate
-verifies the first-open DevTools/tool-app discovery index and repo-owned campaign preflight that a
-maintainer should find before opening the GUI/MCP branch. The launched gate verifies the shared
-CLI-first path that DevTools GUI and MCP consume later: direct script run, named bundle capture,
-latest bundle resolution through `script.result.json:last_bundle_dir`, bundle compare, campaign
-execution, `diag summarize`, and `diag dashboard`. The gate writes `gate.progress.jsonl` in launched
-mode so an outer timeout still leaves the last reached stage. Use `--reuse-built` when the binaries
-are already present and the goal is to re-check the diagnostics path without hiding it behind a
-large Rust build.
+Use these gates for the current Dear ImGui-class diagnostics discoverability read. The discovery
+gate verifies the first-open DevTools/tool-app discovery index and repo-owned campaign preflight
+that a maintainer should find before opening the GUI/MCP branch. `--discovery-only` is the
+cold-start entry and may still build `fretboard-dev`; use `--discovery-only --reuse-built` for the
+fast drift check when the binary is already present and the goal is to validate the discovery path
+without hiding it behind a large Rust build. The launched gate verifies the shared CLI-first path
+that DevTools GUI and MCP consume later: direct script run, named bundle capture, latest bundle
+resolution through `script.result.json:last_bundle_dir`, bundle compare, campaign execution,
+`diag summarize`, and `diag dashboard`. The gate writes `gate.progress.jsonl` in launched mode so
+an outer timeout still leaves the last reached stage.
 
 ```powershell
 python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built
 python tools/diag_gate_imui_p2_devtools_first_open.py --out-dir target/imui-p2-devtools-first-open-smoke
 python tools/diag_gate_imui_p2_devtools_first_open.py --reuse-built --out-dir target/imui-p2-devtools-first-open-smoke
 ```
@@ -570,6 +600,10 @@ Run evidence:
   locally. The gate now validates `fretboard-dev list tool-apps` human and JSON output, the
   `docs/diagnostics-first-open.md` first-open anchor, the DevTools GUI and MCP launch/docs/gate
   entries, and `fretboard-dev diag doctor campaigns --json` with `ok=true`.
+- 2026-05-16: `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`
+  passed locally. This is the preferred quick drift check for the first-open discovery surface when
+  `target/debug/fretboard-dev.exe` already exists; the non-`--reuse-built` discovery form remains
+  the cold-start entry that also proves the maintainer build path.
 - 2026-05-14: tightened the first-open discovery gate so `docs/diagnostics-first-open.md` must link
   maintainers from aggregate `skipped_policy` outcomes to the policy-skip / capability-provenance
   checklist, while preserving the distinction between `capability_source` and
@@ -649,3 +683,12 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - Passing focused crate tests proves current helper behavior did not regress. It does not justify
   widening public APIs.
 - Public helper widening still needs a separate follow-on, two proof surfaces, and a focused gate.
+
+## Latest Focused Results
+
+2026-05-16 teaching-comment cleanup:
+
+- `python tools/gate_imui_facade_teaching_source.py` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `cargo check -p fret-examples-imui` passed.
+- `git diff --check` passed.

@@ -16,9 +16,9 @@ use fret_diag::{
     devtools_gate_script_target_profile_ids_v1,
 };
 use fret_diag::regression_summary::{
-    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionSummaryV1,
-    regression_bundle_followup_command_lines, regression_bundle_followup_commands,
-    regression_summary_drilldown,
+    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1,
+    RegressionBundleFollowupCommandV1, RegressionSummaryV1, regression_bundle_followup_command_lines,
+    regression_bundle_followup_commands, regression_summary_drilldown,
 };
 use fret_diag::transport::{
     ClientKindV1, DevtoolsWsClientConfig, DiagTransportKind, FsDiagTransportConfig,
@@ -77,6 +77,9 @@ const CMD_REGRESSION_RUN_FOLLOWUP_LAYOUT_PERF: &str =
 const CMD_REGRESSION_RUN_FOLLOWUP_MEMORY: &str = "fret.devtools.regression.followup.memory";
 const CMD_REGRESSION_RUN_FOLLOWUP_TRIAGE: &str = "fret.devtools.regression.followup.triage";
 const CMD_REGRESSION_RUN_FOLLOWUP_HOTSPOTS: &str = "fret.devtools.regression.followup.hotspots";
+const CMD_REGRESSION_RUN_FOLLOWUP_TRACE: &str = "fret.devtools.regression.followup.trace";
+const CMD_REGRESSION_RUN_FOLLOWUP_COMMAND: &str =
+    "fret.devtools.regression.followup.run_command";
 const CMD_COPY_FOLLOWUP_RESULT_PATH: &str = "fret.devtools.regression.followup.copy_result_path";
 const CMD_COPY_FOLLOWUP_RESULT_JSON: &str = "fret.devtools.regression.followup.copy_result_json";
 const CMD_COPY_FOLLOWUP_RESULT_COMMAND: &str =
@@ -171,7 +174,19 @@ struct State {
     gate_profile_perf_warmup_frames: Model<String>,
     gate_profile_perf_threshold_agg: Model<String>,
     gate_profile_perf_max_top_total_us: Model<String>,
+    gate_profile_perf_max_top_layout_us: Model<String>,
+    gate_profile_perf_max_top_solve_us: Model<String>,
+    gate_profile_perf_max_pointer_move_dispatch_us: Model<String>,
+    gate_profile_perf_max_pointer_move_hit_test_us: Model<String>,
+    gate_profile_perf_max_pointer_move_global_changes: Model<String>,
     gate_profile_perf_max_renderer_encode_scene_us: Model<String>,
+    gate_profile_perf_max_renderer_upload_us: Model<String>,
+    gate_profile_perf_max_renderer_record_passes_us: Model<String>,
+    gate_profile_perf_max_renderer_encoder_finish_us: Model<String>,
+    gate_profile_perf_max_renderer_prepare_text_us: Model<String>,
+    gate_profile_perf_max_renderer_prepare_svg_us: Model<String>,
+    gate_profile_perf_max_renderer_instance_bytes: Model<String>,
+    gate_profile_perf_max_renderer_encode_scene_text_ops: Model<String>,
     gate_profile_resource_target: Model<String>,
     gate_profile_resource_max_working_set_bytes: Model<String>,
     gate_profile_resource_max_peak_working_set_bytes: Model<String>,
@@ -240,6 +255,7 @@ struct State {
     followup_result_history: Model<Vec<followup::FollowupResultHistoryEntry>>,
     followup_selected_result_path: Model<Option<Arc<str>>>,
     followup_last_error: Model<Option<Arc<str>>>,
+    followup_pending_command_id: Model<Option<Arc<str>>>,
     viewer_url: Model<String>,
 
     last_pick_json: Model<String>,
@@ -367,14 +383,59 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let gate_profile_open = app.models_mut().insert(false);
     let gate_profile_script_json = app.models_mut().insert(String::new());
     let gate_profile_test_id = app.models_mut().insert(String::new());
+    let perf_defaults = DevtoolsGatePerfThresholdCommandInputV1::product_chain_docking_defaults();
     let gate_profile_perf_target = app
         .models_mut()
-        .insert("perf-docking-arbitration-steady".to_string());
-    let gate_profile_perf_repeat = app.models_mut().insert("7".to_string());
-    let gate_profile_perf_warmup_frames = app.models_mut().insert("5".to_string());
-    let gate_profile_perf_threshold_agg = app.models_mut().insert("p95".to_string());
-    let gate_profile_perf_max_top_total_us = app.models_mut().insert(String::new());
-    let gate_profile_perf_max_renderer_encode_scene_us = app.models_mut().insert(String::new());
+        .insert(perf_defaults.target.to_string());
+    let gate_profile_perf_repeat = app.models_mut().insert(perf_defaults.repeat.to_string());
+    let gate_profile_perf_warmup_frames = app
+        .models_mut()
+        .insert(perf_defaults.warmup_frames.to_string());
+    let gate_profile_perf_threshold_agg = app
+        .models_mut()
+        .insert(perf_defaults.perf_threshold_agg.to_string());
+    let gate_profile_perf_max_top_total_us = app
+        .models_mut()
+        .insert(perf_defaults.max_top_total_us.to_string());
+    let gate_profile_perf_max_top_layout_us = app
+        .models_mut()
+        .insert(perf_defaults.max_top_layout_us.to_string());
+    let gate_profile_perf_max_top_solve_us = app
+        .models_mut()
+        .insert(perf_defaults.max_top_solve_us.to_string());
+    let gate_profile_perf_max_pointer_move_dispatch_us = app
+        .models_mut()
+        .insert(perf_defaults.max_pointer_move_dispatch_us.to_string());
+    let gate_profile_perf_max_pointer_move_hit_test_us = app
+        .models_mut()
+        .insert(perf_defaults.max_pointer_move_hit_test_us.to_string());
+    let gate_profile_perf_max_pointer_move_global_changes = app
+        .models_mut()
+        .insert(perf_defaults.max_pointer_move_global_changes.to_string());
+    let gate_profile_perf_max_renderer_encode_scene_us = app
+        .models_mut()
+        .insert(perf_defaults.max_renderer_encode_scene_us.to_string());
+    let gate_profile_perf_max_renderer_upload_us = app
+        .models_mut()
+        .insert(perf_defaults.max_renderer_upload_us.to_string());
+    let gate_profile_perf_max_renderer_record_passes_us = app
+        .models_mut()
+        .insert(perf_defaults.max_renderer_record_passes_us.to_string());
+    let gate_profile_perf_max_renderer_encoder_finish_us = app
+        .models_mut()
+        .insert(perf_defaults.max_renderer_encoder_finish_us.to_string());
+    let gate_profile_perf_max_renderer_prepare_text_us = app
+        .models_mut()
+        .insert(perf_defaults.max_renderer_prepare_text_us.to_string());
+    let gate_profile_perf_max_renderer_prepare_svg_us = app
+        .models_mut()
+        .insert(perf_defaults.max_renderer_prepare_svg_us.to_string());
+    let gate_profile_perf_max_renderer_instance_bytes = app
+        .models_mut()
+        .insert(perf_defaults.max_renderer_instance_bytes.to_string());
+    let gate_profile_perf_max_renderer_encode_scene_text_ops = app
+        .models_mut()
+        .insert(perf_defaults.max_renderer_encode_scene_text_ops.to_string());
     let gate_profile_resource_target = app
         .models_mut()
         .insert("tools/diag-scripts/ui-gallery-intro-idle.json".to_string());
@@ -458,6 +519,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         .insert(Vec::<followup::FollowupResultHistoryEntry>::new());
     let followup_selected_result_path = app.models_mut().insert(None::<Arc<str>>);
     let followup_last_error = app.models_mut().insert(None::<Arc<str>>);
+    let followup_pending_command_id = app.models_mut().insert(None::<Arc<str>>);
     let viewer_url = app.models_mut().insert("http://localhost:5173".to_string());
     let last_pick_json = app.models_mut().insert(String::new());
     let last_inspect_hover_json = app.models_mut().insert(String::new());
@@ -555,7 +617,19 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         gate_profile_perf_warmup_frames,
         gate_profile_perf_threshold_agg,
         gate_profile_perf_max_top_total_us,
+        gate_profile_perf_max_top_layout_us,
+        gate_profile_perf_max_top_solve_us,
+        gate_profile_perf_max_pointer_move_dispatch_us,
+        gate_profile_perf_max_pointer_move_hit_test_us,
+        gate_profile_perf_max_pointer_move_global_changes,
         gate_profile_perf_max_renderer_encode_scene_us,
+        gate_profile_perf_max_renderer_upload_us,
+        gate_profile_perf_max_renderer_record_passes_us,
+        gate_profile_perf_max_renderer_encoder_finish_us,
+        gate_profile_perf_max_renderer_prepare_text_us,
+        gate_profile_perf_max_renderer_prepare_svg_us,
+        gate_profile_perf_max_renderer_instance_bytes,
+        gate_profile_perf_max_renderer_encode_scene_text_ops,
         gate_profile_resource_target,
         gate_profile_resource_max_working_set_bytes,
         gate_profile_resource_max_peak_working_set_bytes,
@@ -621,6 +695,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         followup_result_history,
         followup_selected_result_path,
         followup_last_error,
+        followup_pending_command_id,
         viewer_url,
         last_pick_json,
         last_inspect_hover_json,
@@ -729,8 +804,50 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.gate_profile_perf_warmup_frames, Invalidation::Paint);
     cx.observe_model(&st.gate_profile_perf_threshold_agg, Invalidation::Paint);
     cx.observe_model(&st.gate_profile_perf_max_top_total_us, Invalidation::Paint);
+    cx.observe_model(&st.gate_profile_perf_max_top_layout_us, Invalidation::Paint);
+    cx.observe_model(&st.gate_profile_perf_max_top_solve_us, Invalidation::Paint);
+    cx.observe_model(
+        &st.gate_profile_perf_max_pointer_move_dispatch_us,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_perf_max_pointer_move_hit_test_us,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_perf_max_pointer_move_global_changes,
+        Invalidation::Paint,
+    );
     cx.observe_model(
         &st.gate_profile_perf_max_renderer_encode_scene_us,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_perf_max_renderer_upload_us,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_perf_max_renderer_record_passes_us,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_perf_max_renderer_encoder_finish_us,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_perf_max_renderer_prepare_text_us,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_perf_max_renderer_prepare_svg_us,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_perf_max_renderer_instance_bytes,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.gate_profile_perf_max_renderer_encode_scene_text_ops,
         Invalidation::Paint,
     );
     cx.observe_model(&st.gate_profile_resource_target, Invalidation::Paint);
@@ -3643,6 +3760,19 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                     .into_element(cx),
             );
         }
+        if selected_followup_commands
+            .iter()
+            .any(|command| command.id == "trace")
+        {
+            out.push(
+                shadcn::Button::new("Run trace")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(followup_in_flight)
+                    .on_click(CMD_REGRESSION_RUN_FOLLOWUP_TRACE)
+                    .into_element(cx),
+            );
+        }
         if selected_followup_result_path.is_some() {
             out.push(
                 shadcn::Button::new("Copy selected follow-up result")
@@ -4083,6 +4213,13 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         &selected_followup_history_entries,
         selected_followup_result_path.as_deref(),
     );
+    let selected_runnable_followup_actions =
+        runnable_followup_command_actions(
+            cx,
+            &st.followup_pending_command_id,
+            &selected_followup_commands,
+            followup_in_flight,
+        );
     let selected_followup_result_json_blob = text_blob_sized(
         cx,
         if selected_followup_result_json.trim().is_empty() {
@@ -4150,6 +4287,12 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             selected_followup_result_history_list,
         ],
     );
+    let selected_runnable_followup_actions_section = diag_section(
+        cx,
+        "Runnable Follow-up Actions",
+        "Run any bundle-local follow-up command generated for the selected summary.",
+        vec![selected_runnable_followup_actions],
+    );
     let selected_followup_result_json_section = diag_section(
         cx,
         "Follow-up Result JSON",
@@ -4159,7 +4302,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
     let selected_followup_commands_section = diag_section(
         cx,
         "Follow-up Commands",
-        "Concrete stats, triage, hotspot, visual-compare, and footprint commands are generated from the selected bundle directory.",
+        "Concrete stats, triage, hotspot, trace, visual-compare, and footprint commands are generated from the selected bundle directory.",
         vec![selected_followup_commands_blob],
     );
     let selected_runnable_followup_commands_section = diag_section(
@@ -4228,6 +4371,7 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             selected_followup_result_detail_section,
             selected_followup_result_summary_section,
             selected_followup_result_history_section,
+            selected_runnable_followup_actions_section,
             selected_followup_result_json_section,
             selected_followup_commands_section,
             selected_runnable_followup_commands_section,
@@ -4392,6 +4536,76 @@ fn followup_history_list(
         fret_ui_kit::LayoutRefinement::default()
             .w_full()
             .min_h(Px(116.0)),
+    )
+    .into_element(cx)
+}
+
+fn runnable_followup_command_action_lines(
+    commands: &[RegressionBundleFollowupCommandV1],
+) -> Vec<String> {
+    commands
+        .iter()
+        .filter(|command| !command.requires_baseline)
+        .map(|command| format!("{} ({})", command.label, command.id))
+        .collect()
+}
+
+fn runnable_followup_command_actions(
+    cx: &mut ElementContext<'_, App>,
+    pending_command_id_model: &Model<Option<Arc<str>>>,
+    commands: &[RegressionBundleFollowupCommandV1],
+    in_flight: bool,
+) -> AnyElement {
+    let runnable = commands
+        .iter()
+        .filter(|command| !command.requires_baseline)
+        .collect::<Vec<_>>();
+    if runnable.is_empty() {
+        return cx.text("No runnable follow-up commands for this selection.");
+    }
+
+    let rows = runnable
+        .into_iter()
+        .map(|command| {
+            let command_id = command.id.clone();
+            let command_label = command.label.clone();
+            let command_line = command.command_line.clone();
+            let pending_command_id_model = pending_command_id_model.clone();
+            let action = CommandId::from(CMD_REGRESSION_RUN_FOLLOWUP_COMMAND);
+            let on_run: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, reason| {
+                    let _ = host.models_mut().update(&pending_command_id_model, |value| {
+                        *value = Some(Arc::<str>::from(command_id.clone()))
+                    });
+                    host.record_pending_command_dispatch_source(action_cx, &action, reason);
+                    host.dispatch_command(Some(action_cx.window), action.clone());
+                });
+            let label = shadcn::Badge::new(command_label)
+                .variant(shadcn::BadgeVariant::Secondary)
+                .into_element(cx);
+            let run = shadcn::Button::new("Run")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(in_flight)
+                .on_activate(on_run)
+                .into_element(cx);
+            let command = text_blob_sized(cx, command_line, Px(42.0));
+            ui::h_row(|_cx| [label, run, command])
+            .gap(fret_ui_kit::Space::N2)
+            .items_center()
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx)
+        })
+        .collect::<Vec<_>>();
+
+    shadcn::ScrollArea::new([ui::v_stack(|_cx| rows)
+        .gap(fret_ui_kit::Space::N2)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx)])
+    .refine_layout(
+        fret_ui_kit::LayoutRefinement::default()
+            .w_full()
+            .max_h(Px(160.0)),
     )
     .into_element(cx)
 }
@@ -4901,9 +5115,78 @@ fn generated_gate_command_from_state(
             .models()
             .read(&st.gate_profile_perf_max_top_total_us, |v| v.clone())
             .unwrap_or_default();
+        let max_top_layout_us = app
+            .models()
+            .read(&st.gate_profile_perf_max_top_layout_us, |v| v.clone())
+            .unwrap_or_default();
+        let max_top_solve_us = app
+            .models()
+            .read(&st.gate_profile_perf_max_top_solve_us, |v| v.clone())
+            .unwrap_or_default();
+        let max_pointer_move_dispatch_us = app
+            .models()
+            .read(&st.gate_profile_perf_max_pointer_move_dispatch_us, |v| {
+                v.clone()
+            })
+            .unwrap_or_default();
+        let max_pointer_move_hit_test_us = app
+            .models()
+            .read(&st.gate_profile_perf_max_pointer_move_hit_test_us, |v| {
+                v.clone()
+            })
+            .unwrap_or_default();
+        let max_pointer_move_global_changes = app
+            .models()
+            .read(&st.gate_profile_perf_max_pointer_move_global_changes, |v| {
+                v.clone()
+            })
+            .unwrap_or_default();
         let max_renderer_encode_scene_us = app
             .models()
             .read(&st.gate_profile_perf_max_renderer_encode_scene_us, |v| v.clone())
+            .unwrap_or_default();
+        let max_renderer_upload_us = app
+            .models()
+            .read(&st.gate_profile_perf_max_renderer_upload_us, |v| {
+                v.clone()
+            })
+            .unwrap_or_default();
+        let max_renderer_record_passes_us = app
+            .models()
+            .read(&st.gate_profile_perf_max_renderer_record_passes_us, |v| {
+                v.clone()
+            })
+            .unwrap_or_default();
+        let max_renderer_encoder_finish_us = app
+            .models()
+            .read(&st.gate_profile_perf_max_renderer_encoder_finish_us, |v| {
+                v.clone()
+            })
+            .unwrap_or_default();
+        let max_renderer_prepare_text_us = app
+            .models()
+            .read(&st.gate_profile_perf_max_renderer_prepare_text_us, |v| {
+                v.clone()
+            })
+            .unwrap_or_default();
+        let max_renderer_prepare_svg_us = app
+            .models()
+            .read(&st.gate_profile_perf_max_renderer_prepare_svg_us, |v| {
+                v.clone()
+            })
+            .unwrap_or_default();
+        let max_renderer_instance_bytes = app
+            .models()
+            .read(&st.gate_profile_perf_max_renderer_instance_bytes, |v| {
+                v.clone()
+            })
+            .unwrap_or_default();
+        let max_renderer_encode_scene_text_ops = app
+            .models()
+            .read(
+                &st.gate_profile_perf_max_renderer_encode_scene_text_ops,
+                |v| v.clone(),
+            )
             .unwrap_or_default();
         let input = DevtoolsGatePerfThresholdCommandInputV1::new(
             &target,
@@ -4911,7 +5194,19 @@ fn generated_gate_command_from_state(
             &warmup_frames,
             &perf_threshold_agg,
             &max_top_total_us,
+            &max_top_layout_us,
+            &max_top_solve_us,
+            &max_pointer_move_dispatch_us,
+            &max_pointer_move_hit_test_us,
+            &max_pointer_move_global_changes,
             &max_renderer_encode_scene_us,
+            &max_renderer_upload_us,
+            &max_renderer_record_passes_us,
+            &max_renderer_encoder_finish_us,
+            &max_renderer_prepare_text_us,
+            &max_renderer_prepare_svg_us,
+            &max_renderer_instance_bytes,
+            &max_renderer_encode_scene_text_ops,
         );
         return Some(devtools_gate_perf_threshold_command(input));
     }
@@ -5129,6 +5424,31 @@ fn on_command(
         }
         CMD_REGRESSION_RUN_FOLLOWUP_HOTSPOTS => {
             run_selected_regression_followup(app, st, "hotspots");
+            app.request_redraw(window);
+        }
+        CMD_REGRESSION_RUN_FOLLOWUP_TRACE => {
+            run_selected_regression_followup(app, st, "trace");
+            app.request_redraw(window);
+        }
+        CMD_REGRESSION_RUN_FOLLOWUP_COMMAND => {
+            let command_id = app
+                .models()
+                .read(&st.followup_pending_command_id, |v| v.clone())
+                .ok()
+                .flatten();
+            let _ = app
+                .models_mut()
+                .update(&st.followup_pending_command_id, |v| *v = None);
+            let Some(command_id) = command_id else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "follow-up refused (missing command payload)",
+                );
+                app.request_redraw(window);
+                return;
+            };
+            run_selected_regression_followup(app, st, command_id.as_ref());
             app.request_redraw(window);
         }
         CMD_COPY_FOLLOWUP_RESULT_PATH => {
@@ -7092,56 +7412,223 @@ fn script_target_gate_inputs(cx: &mut ElementContext<'_, App>, st: &State) -> An
 }
 
 fn perf_threshold_gate_inputs(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
-    let target_input = shadcn::Input::new(st.gate_profile_perf_target.clone())
-        .placeholder("script-or-suite")
-        .a11y_label("Perf gate target")
-        .test_id("devtools.gate.perf_target")
-        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(300.0)))
-        .into_element(cx);
-    let repeat_input = shadcn::Input::new(st.gate_profile_perf_repeat.clone())
-        .placeholder("repeat")
-        .a11y_label("Perf gate repeat")
-        .test_id("devtools.gate.perf_repeat")
-        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(92.0)))
-        .into_element(cx);
-    let warmup_input = shadcn::Input::new(st.gate_profile_perf_warmup_frames.clone())
-        .placeholder("warmup")
-        .a11y_label("Perf gate warmup frames")
-        .test_id("devtools.gate.perf_warmup_frames")
-        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(104.0)))
-        .into_element(cx);
-    let agg_input = shadcn::Input::new(st.gate_profile_perf_threshold_agg.clone())
-        .placeholder("agg")
-        .a11y_label("Perf gate aggregate")
-        .test_id("devtools.gate.perf_threshold_agg")
-        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(84.0)))
-        .into_element(cx);
-    let max_total_input = shadcn::Input::new(st.gate_profile_perf_max_top_total_us.clone())
-        .placeholder("max total us")
-        .a11y_label("Perf gate max top total microseconds")
-        .test_id("devtools.gate.perf_max_top_total_us")
-        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(150.0)))
-        .into_element(cx);
-    let max_renderer_input =
-        shadcn::Input::new(st.gate_profile_perf_max_renderer_encode_scene_us.clone())
-            .placeholder("max encode us")
-            .a11y_label("Perf gate max renderer encode scene microseconds")
-            .test_id("devtools.gate.perf_max_renderer_encode_scene_us")
-            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(160.0)))
-            .into_element(cx);
+    let target_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_target.clone(),
+        "script-or-suite",
+        "Perf gate target",
+        "devtools.gate.perf_target",
+        300.0,
+    );
+    let repeat_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_repeat.clone(),
+        "repeat",
+        "Perf gate repeat",
+        "devtools.gate.perf_repeat",
+        92.0,
+    );
+    let warmup_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_warmup_frames.clone(),
+        "warmup",
+        "Perf gate warmup frames",
+        "devtools.gate.perf_warmup_frames",
+        104.0,
+    );
+    let agg_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_threshold_agg.clone(),
+        "agg",
+        "Perf gate aggregate",
+        "devtools.gate.perf_threshold_agg",
+        84.0,
+    );
+    let max_total_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_top_total_us.clone(),
+        "max total us",
+        "Perf gate max top total microseconds",
+        "devtools.gate.perf_max_top_total_us",
+        136.0,
+    );
+    let max_layout_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_top_layout_us.clone(),
+        "max layout us",
+        "Perf gate max top layout microseconds",
+        "devtools.gate.perf_max_top_layout_us",
+        138.0,
+    );
+    let max_solve_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_top_solve_us.clone(),
+        "max solve us",
+        "Perf gate max top solve microseconds",
+        "devtools.gate.perf_max_top_solve_us",
+        132.0,
+    );
+    let max_pointer_dispatch_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_pointer_move_dispatch_us.clone(),
+        "max dispatch us",
+        "Perf gate max pointer-move dispatch microseconds",
+        "devtools.gate.perf_max_pointer_move_dispatch_us",
+        152.0,
+    );
+    let max_pointer_hit_test_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_pointer_move_hit_test_us.clone(),
+        "max hit-test us",
+        "Perf gate max pointer-move hit-test microseconds",
+        "devtools.gate.perf_max_pointer_move_hit_test_us",
+        152.0,
+    );
+    let max_pointer_global_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_pointer_move_global_changes.clone(),
+        "max global changes",
+        "Perf gate max pointer-move global changes",
+        "devtools.gate.perf_max_pointer_move_global_changes",
+        160.0,
+    );
+    let max_renderer_encode_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_renderer_encode_scene_us.clone(),
+        "max encode us",
+        "Perf gate max renderer encode scene microseconds",
+        "devtools.gate.perf_max_renderer_encode_scene_us",
+        148.0,
+    );
+    let max_renderer_upload_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_renderer_upload_us.clone(),
+        "max upload us",
+        "Perf gate max renderer upload microseconds",
+        "devtools.gate.perf_max_renderer_upload_us",
+        136.0,
+    );
+    let max_renderer_record_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_renderer_record_passes_us.clone(),
+        "max record us",
+        "Perf gate max renderer record passes microseconds",
+        "devtools.gate.perf_max_renderer_record_passes_us",
+        140.0,
+    );
+    let max_renderer_finish_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_renderer_encoder_finish_us.clone(),
+        "max finish us",
+        "Perf gate max renderer encoder finish microseconds",
+        "devtools.gate.perf_max_renderer_encoder_finish_us",
+        140.0,
+    );
+    let max_renderer_text_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_renderer_prepare_text_us.clone(),
+        "max text us",
+        "Perf gate max renderer prepare text microseconds",
+        "devtools.gate.perf_max_renderer_prepare_text_us",
+        130.0,
+    );
+    let max_renderer_svg_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_renderer_prepare_svg_us.clone(),
+        "max svg us",
+        "Perf gate max renderer prepare SVG microseconds",
+        "devtools.gate.perf_max_renderer_prepare_svg_us",
+        126.0,
+    );
+    let max_renderer_instance_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_renderer_instance_bytes.clone(),
+        "max instance bytes",
+        "Perf gate max renderer instance bytes",
+        "devtools.gate.perf_max_renderer_instance_bytes",
+        166.0,
+    );
+    let max_renderer_text_ops_input = gate_string_input(
+        cx,
+        st.gate_profile_perf_max_renderer_encode_scene_text_ops.clone(),
+        "max text ops",
+        "Perf gate max renderer encode scene text ops",
+        "devtools.gate.perf_max_renderer_encode_scene_text_ops",
+        142.0,
+    );
     let run_inputs = ui::h_row(|_cx| [target_input, repeat_input, warmup_input, agg_input])
         .gap(fret_ui_kit::Space::N2)
         .items_center()
         .layout(fret_ui_kit::LayoutRefinement::default().w_full())
         .into_element(cx);
-    let threshold_inputs = ui::h_row(|_cx| [max_total_input, max_renderer_input])
+    let top_threshold_inputs =
+        ui::h_row(|_cx| [max_total_input, max_layout_input, max_solve_input])
+            .gap(fret_ui_kit::Space::N2)
+            .items_center()
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx);
+    let pointer_threshold_inputs = ui::h_row(|_cx| {
+        [
+            max_pointer_dispatch_input,
+            max_pointer_hit_test_input,
+            max_pointer_global_input,
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx);
+    let renderer_time_inputs = ui::h_row(|_cx| {
+        [
+            max_renderer_encode_input,
+            max_renderer_upload_input,
+            max_renderer_record_input,
+            max_renderer_finish_input,
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx);
+    let renderer_payload_inputs = ui::h_row(|_cx| {
+        [
+            max_renderer_text_input,
+            max_renderer_svg_input,
+            max_renderer_instance_input,
+            max_renderer_text_ops_input,
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx);
+    ui::v_stack(|_cx| {
+        [
+            run_inputs,
+            top_threshold_inputs,
+            pointer_threshold_inputs,
+            renderer_time_inputs,
+            renderer_payload_inputs,
+        ]
+    })
         .gap(fret_ui_kit::Space::N2)
-        .items_center()
         .layout(fret_ui_kit::LayoutRefinement::default().w_full())
-        .into_element(cx);
-    ui::v_stack(|_cx| [run_inputs, threshold_inputs])
-        .gap(fret_ui_kit::Space::N2)
-        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx)
+}
+
+fn gate_string_input(
+    cx: &mut ElementContext<'_, App>,
+    model: Model<String>,
+    placeholder: &'static str,
+    a11y_label: &'static str,
+    test_id: &'static str,
+    width_px: f32,
+) -> AnyElement {
+    shadcn::Input::new(model)
+        .placeholder(placeholder)
+        .a11y_label(a11y_label)
+        .test_id(test_id)
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(width_px)))
         .into_element(cx)
 }
 
@@ -7548,8 +8035,10 @@ mod tests {
             "pixels changed: cargo run -p fretboard-dev -- diag run <script.json> --check-pixels-changed <test-id> --json"
         ));
         assert!(text.contains(
-            "perf thresholds: cargo run -p fretboard-dev -- diag perf <script-or-suite> --repeat 7 --warmup-frames 5 --perf-threshold-agg p95 --max-top-total-us <us> --max-renderer-encode-scene-us <us> --json"
+            "perf thresholds: cargo run -p fretboard-dev -- diag perf <script-or-suite> --repeat 7 --warmup-frames 5 --perf-threshold-agg p95 --max-top-total-us <us> --max-top-layout-us <us> --max-top-solve-us <us>"
         ));
+        assert!(text.contains("--max-pointer-move-global-changes <count>"));
+        assert!(text.contains("--max-renderer-encode-scene-text-ops <ops> --json"));
         assert!(text.contains(
             "resource footprint thresholds: cargo run -p fretboard-dev -- diag repro <script-or-suite> --max-working-set-bytes <bytes> --max-peak-working-set-bytes <bytes> --max-cpu-avg-percent-total-cores <percent> --json --launch -- <app-command>"
         ));
@@ -7742,7 +8231,7 @@ mod tests {
                     "status": "failed_deterministic",
                     "lane": "perf",
                     "evidence": {
-                        "bundle_dir": "target/fret-diag/perf-docking/run-a",
+                        "bundle_artifact": "target/fret-diag/perf-docking/run-a/bundle.schema2.json",
                         "triage_artifact": "target/fret-diag/perf-docking/run-a/triage.json",
                         "script_result": "target/fret-diag/perf-docking/run-a/script.result.json",
                         "screenshots_manifest": "target/fret-diag/perf-docking/run-a/screenshots.manifest.json",
@@ -7763,7 +8252,8 @@ mod tests {
                                 {
                                     "metric": "top_total_time_us",
                                     "observed": 24000,
-                                    "threshold": 20000
+                                    "threshold": 20000,
+                                    "evidence_bundle": "target/fret-diag/perf-docking/run-threshold/bundle.schema2.json"
                                 }
                             ]
                         }
@@ -7776,7 +8266,10 @@ mod tests {
         let data = load_regression_summary_drilldown(&path).expect("load drilldown");
         assert_eq!(
             data.bundle_dirs,
-            vec!["target/fret-diag/perf-docking/run-a".to_string()]
+            vec![
+                "target/fret-diag/perf-docking/run-threshold".to_string(),
+                "target/fret-diag/perf-docking/run-a".to_string(),
+            ]
         );
         let text = data.perf_evidence_lines.join("\n");
         assert!(text.contains(
@@ -7815,6 +8308,27 @@ mod tests {
         );
 
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn runnable_followup_command_action_lines_surface_indexed_bundle_commands() {
+        let commands = regression_bundle_followup_commands([
+            "target/fret-diag/perf-docking/run-threshold",
+            "target/fret-diag/perf-docking/run-a",
+        ]);
+
+        let lines = runnable_followup_command_action_lines(&commands);
+        assert!(lines.contains(&"diag stats (stats)".to_string()));
+        assert!(lines.contains(&"triage (triage)".to_string()));
+        assert!(lines.contains(&"trace (trace)".to_string()));
+        assert!(lines.contains(&"diag stats [2] (stats-2)".to_string()));
+        assert!(lines.contains(&"triage [2] (triage-2)".to_string()));
+        assert!(lines.contains(&"trace [2] (trace-2)".to_string()));
+        assert!(
+            !lines
+                .iter()
+                .any(|line| line.contains("visual compare") || line.contains("footprint compare"))
+        );
     }
 
     #[test]

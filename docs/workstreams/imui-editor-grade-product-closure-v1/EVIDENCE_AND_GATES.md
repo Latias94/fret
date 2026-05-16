@@ -182,6 +182,7 @@ DevTools full clippy is now a current maintenance gate for the P2 diagnostics/de
 - `docs/workstreams/docking-multiwindow-imgui-parity/M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md`
+- `docs/workstreams/docking-multiwindow-imgui-parity/M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
 - `docs/ui-diagnostics-and-scripted-tests.md`
 - `docs/diagnostics-first-open.md`
@@ -587,8 +588,8 @@ DevTools GUI first-class gate command follow-up (2026-05-15):
   entrypoints.
 - The selected-summary inspector now also consumes the shared `fret-diag` regression-bundle
   follow-up projection, generating concrete commands from the selected `bundle_dir`: `diag stats`,
-  `diag layout-perf-summary`, `diag memory-summary`, `diag triage`, `diag hotspots`, visual
-  compare, and footprint compare.
+  `diag layout-perf-summary`, `diag memory-summary`, `diag triage`, `diag hotspots`,
+  `diag trace`, visual compare, and footprint compare.
 - That projection is now structured: direct bundle-local commands carry concrete `diag_args`, while
   visual/footprint compare commands are marked as baseline-required manual follow-ups. GUI and MCP
   consumers can therefore separate runnable actions from placeholder compare templates.
@@ -621,12 +622,20 @@ DevTools GUI first-class gate command follow-up (2026-05-15):
   reports and AI-assisted triage can use the exact payload shown in the panel.
 - This is a DevTools/diagnostics productization slice: it keeps existing `fretboard-dev diag`
   commands visible without moving gate policy into `fret-ui` or `fret-imui`.
+- 2026-05-16 maintenance: the same shared projection now includes runnable selected-bundle
+  `diag trace <bundle> --json` actions in GUI and MCP surfaces, keeping Chrome trace artifact
+  generation in the diagnostics owner lane.
+- 2026-05-16 maintenance: GUI-launched trace follow-up result records now include
+  `output_artifacts[].path` for the generated `trace.chrome.json`, and the selected-result summary
+  and detail blocks surface that artifact path for reuse.
 - Focused source gates:
 
 ```text
 cargo nextest run -p fret-diag regression_bundle_followup_command_lines_use_selected_bundle_dir --no-fail-fast
 cargo nextest run -p fret-diag regression_bundle_followup_commands_classify_runnable_and_baseline_required --no-fail-fast
-cargo nextest run -p fret-devtools regression_followup_command_rejects_baseline_required_commands regression_followup_command_returns_direct_diag_args regression_followup_result_record_has_stable_shape regression_followup_result_summary_lines_project_status_and_duration regression_followup_result_history_summary_filters_to_selected_bundle regression_followup_result_history_latest_path_prefers_selected_bundle regression_followup_result_history_selected_entry_overrides_latest_when_matching regression_followup_result_history_entry_detail_lines_surface_repro_fields file_url_from_path_projects_native_artifact_paths --no-fail-fast
+cargo nextest run -p fret-diag regression_bundle_followup_commands_cover_each_selected_bundle --no-fail-fast
+cargo nextest run -p fret-devtools regression_followup_command_rejects_baseline_required_commands regression_followup_command_returns_direct_diag_args regression_followup_result_record_has_stable_shape regression_followup_trace_result_record_projects_output_artifact regression_followup_result_summary_lines_project_status_and_duration regression_followup_result_summary_lines_project_output_artifacts regression_followup_result_history_summary_filters_to_selected_bundle regression_followup_result_history_latest_path_prefers_selected_bundle regression_followup_result_history_selected_entry_overrides_latest_when_matching regression_followup_result_history_entry_detail_lines_surface_repro_fields file_url_from_path_projects_native_artifact_paths runnable_followup_command_action_lines_surface_indexed_bundle_commands --no-fail-fast
+cargo nextest run -p fret-devtools-mcp build_regression_dashboard_result_limits_top_rows_and_builds_human_summary --no-fail-fast
 cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
 python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
 python tools/diag_gate_imui_product_chain.py --only discovery
@@ -665,6 +674,9 @@ DevTools MCP product-workflow projection follow-up (2026-05-15):
 - The MCP dashboard result also exposes `runnable_followup_command_lines` and
   `manual_followup_command_lines`, mirroring the GUI's separation between direct bundle-local
   follow-ups and baseline-required compare follow-ups.
+- The same result now exposes structured `followup_commands`, `runnable_followup_commands`, and
+  `manual_followup_commands` rows with `diag_args`, so AI consumers can run bundle-local actions
+  like `trace` without parsing command-line strings.
 - The default product-chain discovery gate now source-checks the MCP projection alongside the GUI
   first-open panel, so `fretboard-dev list tool-apps`, the GUI shell, and the MCP adapter cannot
   silently diverge on the product workflow route.
@@ -780,6 +792,43 @@ cargo nextest run -p fret-diag contract_help_mentions_the_migrated_command_surfa
 python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release --out-dir target/imui-product-chain-perf-docking-renderer-threshold-gate-2026-05-15
 ```
 
+DevTools GUI perf-threshold preset closure (2026-05-16):
+
+- `crates/fret-diag/src/devtools_gate_profiles.rs` now owns the product-chain docking perf preset
+  used by the GUI generated gate form: `perf-docking-arbitration-steady`, repeat `1`, warmup `5`,
+  aggregate `max`, and the full CPU/layout/pointer/renderer threshold flag set mirrored from
+  `tools/diag_gate_imui_product_chain.py`.
+- `apps/fret-devtools/src/native.rs` renders first-class inputs for top/layout/solve,
+  pointer-move dispatch/hit-test/global-change thresholds, renderer encode/upload/record/finish,
+  text/SVG prepare, instance bytes, and encode-scene text ops, then delegates command generation
+  and `diag_args` validation back to the shared `fret-diag` projection.
+- Perf regression summaries now keep attribution follow-ups runnable: new `diag perf` rows include
+  `bundle_dir`, and the shared regression-summary drill-down recovers bundle roots from older
+  `bundle_artifact` / threshold failure `evidence_bundle` paths for DevTools stats/triage/hotspots
+  follow-up commands.
+- 2026-05-16 maintenance: the same selected-bundle projection now includes `diag trace <bundle>
+  --json`, so failing perf-threshold bundles can produce trace artifact metadata from the same
+  GUI/MCP follow-up surface as stats, triage, and hotspots.
+- 2026-05-16 maintenance: the GUI follow-up result schema now records trace output artifacts
+  explicitly, so `trace.chrome.json` becomes part of the selected-result summary/detail evidence
+  rather than a path the user has to infer from the bundle directory.
+- The shared follow-up projection now emits commands for every selected bundle root, with stable
+  first-bundle command ids for GUI run buttons and indexed labels/ids for additional
+  threshold-failure bundles shown to GUI/MCP consumers.
+- The DevTools selected-summary inspector now renders runnable follow-up command actions from that
+  shared projection, so indexed threshold-failure bundle commands can be launched from the GUI
+  instead of only copied from the command text block.
+- Focused source gates:
+
+```text
+cargo nextest run -p fret-diag devtools_gate_perf_threshold_command_preserves_placeholders_until_filled devtools_gate_perf_threshold_command_includes_runnable_diag_args devtools_gate_perf_threshold_command_quotes_target_and_rejects_invalid_numbers devtools_gate_perf_threshold_product_chain_defaults_are_runnable --no-fail-fast
+cargo nextest run -p fret-diag regression_summary_drilldown_projects_perf_evidence regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required regression_bundle_followup_commands_cover_each_selected_bundle perf_row_to_regression_item_uses_single_run_bundle_artifact perf_row_to_regression_item_marks_threshold_failures --no-fail-fast
+cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
+cargo nextest run -p fret-devtools runnable_followup_command_action_lines_surface_indexed_bundle_commands load_regression_summary_drilldown_collects_perf_evidence --no-fail-fast
+cargo nextest run -p fret-devtools-mcp build_regression_dashboard_result_limits_top_rows_and_builds_human_summary --no-fail-fast
+python tools/diag_gate_imui_product_chain.py --only discovery --reuse-built
+```
+
 DevTools/product workflow discovery follow-up (2026-05-15): `fretboard-dev list tool-apps` now
 prints a `workflow: imui-product-chain` row, and `fretboard-dev list tool-apps --json` exposes the
 same route under `product_workflows`. The default discovery gate validates the default
@@ -803,6 +852,11 @@ verification rerun also green at
 `target/fret-diag/campaigns/imui-p3-multiwindow-parity/1778656624160`. This closes the generic
 bounded-campaign gap, but not Linux Wayland compositor acceptance or every platform-specific
 real-host hand-feel risk.
+
+The 2026-05-16 `M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md` note broadens the M17 local
+policy-skip gate into a Windows plus Linux/X11 sidecar matrix. Both probes stop at
+`skipped_policy` before script execution, so the evidence strengthens local admission posture
+without claiming `DW-P1-linux-003` real-host Wayland acceptance.
 
 ### Lane hygiene gates
 

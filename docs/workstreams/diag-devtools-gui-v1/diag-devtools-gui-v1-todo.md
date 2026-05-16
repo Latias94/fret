@@ -131,13 +131,17 @@ Conventions:
   - [x] GUI generated gate results now keep a bounded selectable history with details, summary,
         raw JSON preview, copy actions, and platform URL open support for the selected artifact.
   - [x] Selected-summary follow-up commands generated from the selected `bundle_dir`, covering
-        stats, layout perf, memory, triage, hotspots, visual compare, and footprint compare.
+        stats, layout perf, memory, triage, hotspots, trace, visual compare, and footprint compare.
   - [x] Structured follow-up command projection separates bundle-local runnable commands from
         baseline-required manual compare commands for GUI and MCP consumers.
   - [x] GUI selected-summary inspector can launch bundle-local runnable follow-ups and records
         in-flight/error status without treating baseline-required compare commands as runnable.
+  - [x] GUI selected-summary inspector can launch the selected-bundle `trace` follow-up through the
+        same shared diagnostics runner as stats, layout, memory, triage, and hotspots.
   - [x] GUI-launched follow-ups write `.fret/diag/followups/*.json` result records and expose the
         latest result path for copying.
+  - [x] Trace follow-up result records include `output_artifacts[].path` for
+        `trace.chrome.json`, and the selected-summary summary/details blocks surface that artifact.
   - [x] GUI selected-summary inspector mirrors the latest selected-bundle follow-up result JSON
         inline for pass/fail/error/timing triage.
   - [x] GUI selected-summary inspector shows a structured selected-bundle follow-up result summary
@@ -156,6 +160,13 @@ Conventions:
   - [x] stale paint/scene launch/run + result artifact history,
   - [x] pixels changed launch/run + result artifact history,
   - [x] perf thresholds,
+        Evidence: the generated perf-threshold gate form now uses shared
+        `fret-diag` product-chain docking defaults for `perf-docking-arbitration-steady`, including
+        repeat/warmup/aggregate run knobs and the full CPU/layout/pointer/renderer threshold flag
+        set mirrored from `tools/diag_gate_imui_product_chain.py`. Guarded by
+        `cargo nextest run -p fret-diag devtools_gate_perf_threshold_command_preserves_placeholders_until_filled devtools_gate_perf_threshold_command_includes_runnable_diag_args devtools_gate_perf_threshold_command_quotes_target_and_rejects_invalid_numbers devtools_gate_perf_threshold_product_chain_defaults_are_runnable --no-fail-fast`,
+        `cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast`,
+        and `python tools/diag_gate_imui_product_chain.py --only discovery --reuse-built`.
   - [x] resource footprint thresholds.
 - [x] Live inspect payloads (keep minimal):
   - [x] hover events (`inspect.hover`) with node id + selector JSON + bounds,
@@ -217,6 +228,8 @@ Conventions:
         through the `devtools mcp ai scenario doc` check, which validates the scenario steps,
         artifact resources, subscriptions, and matching `apps/fret-devtools-mcp` tool/resource
         implementation anchors.
+  - [x] `fret_diag_regression_dashboard` exposes structured follow-up command rows with
+        `diag_args` and baseline classification, alongside the existing command-line strings.
 
 ## Cross-cutting hygiene
 

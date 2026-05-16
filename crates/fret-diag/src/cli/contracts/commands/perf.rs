@@ -65,6 +65,9 @@ pub(crate) struct PerfCommandArgs {
     #[arg(long = "trace")]
     pub trace_chrome: bool,
 
+    #[arg(long = "trace-real-spans")]
+    pub trace_real_spans: bool,
+
     #[arg(long = "check-perf-hints")]
     pub check_perf_hints: bool,
 

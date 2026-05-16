@@ -9,4 +9,7 @@ pub(crate) struct TraceCommandArgs {
 
     #[arg(long = "trace-out", value_name = "PATH")]
     pub trace_out: Option<PathBuf>,
+
+    #[arg(long = "json")]
+    pub json: bool,
 }

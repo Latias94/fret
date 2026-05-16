@@ -361,6 +361,7 @@ struct TraceCmdContext {
     rest: Vec<String>,
     workspace_root: PathBuf,
     trace_out: Option<PathBuf>,
+    stats_json: bool,
 }
 
 struct TriageCmdContext {
@@ -2146,6 +2147,7 @@ fn parse_trace_command(
         rest: vec![args.source],
         workspace_root: workspace_root.to_path_buf(),
         trace_out: args.trace_out,
+        stats_json: args.json,
     }))
 }
 
@@ -2732,7 +2734,8 @@ fn parse_perf_command(
             suite_prelude_scripts: args.prelude_scripts,
             suite_prewarm_scripts: args.prewarm_scripts,
             timeout_ms: args.timing.timeout_ms,
-            trace_chrome: args.trace_chrome,
+            trace_chrome: args.trace_chrome || args.trace_real_spans,
+            trace_real_spans: args.trace_real_spans,
             warmup_frames: args.timing.warmup_frames,
         },
     ))
@@ -3444,9 +3447,13 @@ pub(crate) fn dispatch_diag_command_with_mode(
                 ctx.stats_json,
             )
         }
-        Ok(MigratedDiagCommand::Trace(ctx)) => {
-            crate::commands::trace::cmd_trace(&ctx.rest, false, &ctx.workspace_root, ctx.trace_out)
-        }
+        Ok(MigratedDiagCommand::Trace(ctx)) => crate::commands::trace::cmd_trace(
+            &ctx.rest,
+            false,
+            &ctx.workspace_root,
+            ctx.trace_out,
+            ctx.stats_json,
+        ),
         Ok(MigratedDiagCommand::Triage(ctx)) => crate::commands::artifacts::cmd_triage(
             &ctx.rest,
             false,
@@ -5084,6 +5091,7 @@ mod tests {
             "target/fret-diag/demo".to_string(),
             "--trace-out".to_string(),
             "target/trace.chrome.json".to_string(),
+            "--json".to_string(),
         ];
 
         let parsed = maybe_parse_migrated_command_with_workspace(&args, &workspace_root)
@@ -5099,6 +5107,7 @@ mod tests {
             ctx.trace_out,
             Some(PathBuf::from("target/trace.chrome.json"))
         );
+        assert!(ctx.stats_json);
     }
 
     #[test]
@@ -5433,6 +5442,7 @@ mod tests {
             "target/fret-diag-cutover-perf".to_string(),
             "--repeat".to_string(),
             "7".to_string(),
+            "--trace-real-spans".to_string(),
             "--top".to_string(),
             "9".to_string(),
             "--sort".to_string(),
@@ -5473,6 +5483,8 @@ mod tests {
 
         assert_eq!(ctx.rest, vec!["ui-gallery".to_string()]);
         assert_eq!(ctx.perf_repeat, 7);
+        assert!(ctx.trace_chrome);
+        assert!(ctx.trace_real_spans);
         assert_eq!(ctx.stats_top, 9);
         assert_eq!(ctx.sort_override, Some(crate::BundleStatsSort::Time));
         assert!(ctx.suite_prelude_each_run);

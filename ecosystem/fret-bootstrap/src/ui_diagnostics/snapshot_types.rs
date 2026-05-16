@@ -8,6 +8,7 @@ pub(super) struct WindowRing {
     pub(super) snapshots: VecDeque<UiDiagnosticsSnapshotV1>,
     pub(super) snapshot_seq: u64,
     pub(super) viewport_input_this_frame: Vec<UiViewportInputEventV1>,
+    pub(super) real_perf_spans_this_frame: Vec<UiPerfSpanV1>,
     pub(super) last_changed_models: Vec<u64>,
     pub(super) last_changed_globals: Vec<String>,
     pub(super) test_id_bounds: HashMap<String, Rect>,
@@ -62,6 +63,7 @@ impl WindowRing {
         self.snapshots.clear();
         self.snapshot_seq = 0;
         self.viewport_input_this_frame.clear();
+        self.real_perf_spans_this_frame.clear();
         self.last_changed_models.clear();
         self.last_changed_globals.clear();
         self.test_id_bounds.clear();
@@ -85,6 +87,18 @@ impl WindowRing {
             self.snapshots.pop_front();
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct UiPerfSpanV1 {
+    pub name: String,
+    pub cat: String,
+    pub start_us: u64,
+    pub dur_us: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tid: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub args: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

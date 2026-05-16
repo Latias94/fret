@@ -88,6 +88,30 @@ Shipped in this workstream (commit-addressable, additive changes):
 Remaining gaps / follow-ups:
 
 - Opt-in “real spans” tracing (beyond synthetic phase timelines), with a stable artifact story.
+  - 2026-05-16: the Chrome trace exporter can merge the additive
+    `debug.extensions["fret.perf.spans.v1"]` payload into `traceEvents` and reports
+    `real_spans_included=true` when such spans are present.
+  - 2026-05-16: `fret-bootstrap` `ui_app_driver` apps can emit initial top-level app-loop spans
+    with `FRET_DIAG_REAL_SPANS=1` (View, Overlay, Layout, Paint).
+  - 2026-05-16: diagnostics drive-script overhead is split into its own real span
+    (`fret.ui.diagnostics.drive_script`) instead of being folded into the snapshot/driver block.
+  - 2026-05-16: the first nested app-loop spans landed for editor overlays
+    (`fret.ui.view.command_palette_overlay` and `fret.ui.view.preferences_overlay`), so those
+    costs no longer have to be inferred from the parent View span alone.
+  - 2026-05-16: `diag perf --trace-real-spans --launch -- <app command>` requests a Chrome trace
+    artifact and injects that opt-in flag for launched perf runs while preserving explicit caller
+    overrides.
+  - 2026-05-16: requested `diag perf` Chrome trace exports now fail visibly instead of silently
+    dropping the artifact when trace generation fails.
+  - 2026-05-16: regression-bundle follow-up projection now exposes `diag trace <bundle> --json`
+    alongside stats/triage/hotspots, so DevTools GUI and MCP consumers can generate trace artifacts
+    from selected failing bundle dirs without re-deriving commands.
+  - 2026-05-16: DevTools trace follow-up result records now carry `output_artifacts` for the
+    generated `trace.chrome.json`, and the GUI summary/details surface that path directly.
+  - 2026-05-16: MCP regression dashboards now expose structured follow-up command rows with
+    `diag_args`, keeping AI-driven trace/stats/triage actions aligned with the GUI projection.
+  - Still remaining: broader nested runtime spans beyond these first overlay cases and external
+    profiler/Tracy correlation for concrete attribution cases.
 
 ## Proposed architecture (v1)
 
@@ -218,9 +242,15 @@ timeline; low overhead).
 - For an existing bundle:
   - `fretboard-dev diag trace <bundle_dir|bundle.json>`
   - Optional output override: `--trace-out <path>`
+  - Metadata report for scripts/automation: `--json`
+  - Regression dashboards expose the same command as a bundle-local runnable follow-up named
+    `trace`, indexed per selected bundle when a summary contains multiple failing bundle dirs.
+  - GUI-launched trace follow-up records expose `output_artifacts[].path` for the generated
+    `trace.chrome.json` artifact.
 
 Open the resulting JSON in Chrome tracing UI (or compatible viewers) to correlate phases with
-`tick_id` / `frame_id`.
+`tick_id` / `frame_id`. Use `--json` when you only need the trace artifact path, trace source, and
+real-span counts/extension keys.
 
 ## Validation / gates
 

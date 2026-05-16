@@ -18,6 +18,7 @@ fn selectable_api_compiles<H: UiHost>(
         "selectable.with_options",
         SelectableOptions {
             selected: true,
+            highlighted: true,
             a11y_role: Some(SemanticsRole::TreeItem),
             ..Default::default()
         },
@@ -36,6 +37,7 @@ fn selectable_option_defaults_compile() {
     assert!(options.enabled);
     assert!(options.focusable);
     assert!(!options.selected);
+    assert!(!options.highlighted);
     assert!(options.close_popup.is_none());
     assert_eq!(options.a11y_role, Some(SemanticsRole::ListBoxOption));
 }

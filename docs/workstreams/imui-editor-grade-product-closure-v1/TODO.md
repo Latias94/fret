@@ -187,18 +187,22 @@ reopen.
       this also repairs the underlying `diag repro` contract so working-set, peak-working-set, and
       CPU-average thresholds are real parsed CLI inputs before the GUI exposes them.
       Maintenance: selected regression summaries now generate concrete `bundle_dir` follow-up
-      commands for stats, layout perf, memory, triage, hotspots, visual compare, and footprint
-      compare from a shared `fret-diag` projection, reducing GUI-to-CLI friction without adding
-      GUI-private diagnostics semantics.
+      commands for stats, layout perf, memory, triage, hotspots, trace, visual compare, and
+      footprint compare from a shared `fret-diag` projection, reducing GUI-to-CLI friction without
+      adding GUI-private diagnostics semantics.
       Maintenance: MCP `fret_diag_regression_dashboard` now consumes that same shared regression
       drill-down/follow-up projection, so AI-driven diagnostics receives the same bundle dirs,
       capability provenance, perf evidence, and concrete next-command hints as the GUI.
+      Maintenance: the MCP dashboard now exposes structured follow-up command rows with
+      `diag_args`, preserving the runnable/manual split without shell-string parsing.
       Maintenance: the shared follow-up projection now carries structured command metadata and
       separates bundle-local runnable commands from baseline-required manual compare commands, so
       GUI and MCP consumers do not present placeholder compare commands as ready-to-run actions.
       Maintenance: the DevTools GUI selected-summary inspector can now launch bundle-local
-      runnable follow-ups (`stats`, `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`)
-      through the shared diagnostics engine and records in-flight/error status in the GUI.
+      runnable follow-ups (`stats`, `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`,
+      `trace`) through the shared diagnostics engine and records in-flight/error status in the GUI.
+      Maintenance: trace follow-up results now project `trace.chrome.json` through
+      `output_artifacts`, and the selected-result summary/details show that artifact path directly.
       Maintenance: each GUI-launched follow-up now writes a lightweight
       `.fret/diag/followups/*.json` result artifact and exposes the latest result path for copying.
       Maintenance: the selected-summary inspector mirrors that latest selected-bundle follow-up
@@ -271,9 +275,10 @@ reopen.
 ## Closeout / follow-on management
 
 - [x] Refresh the goal-completion audit after the latest product-chain discovery, Wayland
-      admission/policy-skip, and perf-threshold slices.
+      admission/policy-skip including the M18 matrix, and perf-threshold slices.
       Result: `GOAL_COMPLETION_AUDIT_2026-05-15.md` keeps the umbrella in maintenance and
-      explicitly not complete. Real-host Wayland compositor acceptance, DevTools GUI
+      explicitly not complete. The M18 local policy-skip matrix broadens the M17 gate across
+      Windows and Linux/X11 sidecars, but real-host Wayland compositor acceptance, DevTools GUI
       productization, and broader perf attribution/smoothness remain owner-lane work, not
       `fret-imui` or runtime widening.
 - [x] Keep pure teaching-surface cleanup out of this umbrella unless it becomes the dominant

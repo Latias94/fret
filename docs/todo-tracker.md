@@ -205,6 +205,32 @@ It complements (but does not replace) ADRs:
   - Scope: split `ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs` into private command,
     paint, path, and geometry owners without public API widening or behavior changes; the
     closeout audit records the explicit no-split verdict for source-owner-specific test modules.
+- Closed image item proof follow-on:
+  - `docs/workstreams/imui-image-item-proof-v1/DESIGN.md`
+  - `docs/workstreams/imui-image-item-proof-v1/TODO.md`
+  - `docs/workstreams/imui-image-item-proof-v1/MILESTONES.md`
+  - `docs/workstreams/imui-image-item-proof-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-image-item-proof-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-image-item-proof-v1/CLOSEOUT_AUDIT_2026-05-16.md`
+  - Scope: closed after adding response-bearing image item / image button authoring in
+    `fret-ui-kit::imui` over
+    the existing Fret image mechanism, while keeping asset loading app-owned and `fret-imui`
+    policy-light.
+- Closed child-region resize follow-ons:
+  - `docs/workstreams/imui-child-region-resize-y-v1/DESIGN.md`
+  - `docs/workstreams/imui-child-region-resize-y-v1/CLOSEOUT_AUDIT_2026-05-15.md`
+  - `docs/workstreams/imui-child-region-resize-x-v1/DESIGN.md`
+  - `docs/workstreams/imui-child-region-resize-x-v1/CLOSEOUT_AUDIT_2026-05-16.md`
+  - Scope: closed after adding axis-specific child-region resize policy in
+    `fret-ui-kit::imui`. Height and width state remain app-owned through response helpers, while
+    auto-resize, nav flattening, visibility-return semantics, and generic `BeginChild()` flag
+    mirroring remain candidate-only follow-ons.
+- Closed selectable highlight policy follow-on:
+  - `docs/workstreams/imui-selectable-highlight-policy-v1/DESIGN.md`
+  - `docs/workstreams/imui-selectable-highlight-policy-v1/CLOSEOUT_AUDIT_2026-05-16.md`
+  - Scope: closed after adding `SelectableOptions::highlighted` in `fret-ui-kit::imui` and fixing
+    the input-text picker active candidate to use highlighted visuals without reporting selected
+    semantics.
 - Maintenance umbrella for the remaining Dear ImGui-class maturity gap:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/M0_BASELINE_AUDIT_2026-04-12.md`
@@ -216,6 +242,8 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json`
   - Current status: not complete; keep execution in narrow owner lanes for real-host Wayland
     hand-feel, DevTools GUI productization, and broader perf attribution/smoothness.
+    Latest docking evidence includes the M18 Windows plus Linux/X11 local policy-skip matrix, which
+    does not replace real-host Wayland compositor acceptance.
 - Closed narrow follow-on for IMUI text input policy depth (read-only, select-all-on-focus, and
   multiline AllowTabInput policy):
   - `docs/workstreams/imui-text-input-policy-depth-v1/DESIGN.md`
@@ -1349,8 +1377,8 @@ It complements (but does not replace) ADRs:
   and the 2026-05-15 source-drift guard follow-up in
   `docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md`
   now also guards the Wayland campaign/script admission contract
-  and `docs/workstreams/docking-multiwindow-imgui-parity/M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md`
-  proves local non-Wayland sidecars stop at `skipped_policy` before script execution
+  and `docs/workstreams/docking-multiwindow-imgui-parity/M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md`
+  proves local Windows and Linux/X11 sidecars stop at `skipped_policy` before script execution
   and the launched bounded-campaign repair is recorded in
   `docs/workstreams/docking-multiwindow-imgui-parity/M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md`;
   platform-specific real-host acceptance remains open.
@@ -1738,7 +1766,7 @@ It complements (but does not replace) ADRs:
     - Latest local Wayland-boundary refresh: `docs/workstreams/docking-multiwindow-imgui-parity/M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`
     - Latest source-drift guard: `docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md`
       (2026-05-15 follow-up guards Wayland campaign/script admission)
-    - Latest local Wayland policy-skip gate: `docs/workstreams/docking-multiwindow-imgui-parity/M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md`
+    - Latest local Wayland policy-skip matrix: `docs/workstreams/docking-multiwindow-imgui-parity/M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md`
     - Launched bounded-campaign repair: `docs/workstreams/docking-multiwindow-imgui-parity/M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md`
     - Baseline: `docs/workstreams/docking-multiwindow-imgui-parity/M0_BASELINE_AUDIT_2026-04-13.md`
     - Narrative: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`

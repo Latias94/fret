@@ -96,16 +96,23 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
 - The selected regression summary inspector now consumes the shared `fret-diag`
   regression-bundle follow-up projection, generating concrete commands from the selected
   `bundle_dir` (`diag stats`, `layout-perf-summary`, `memory-summary`, `triage`, `hotspots`,
-  visual compare, and footprint compare), so authors can move from failing aggregate summary to the
-  next diagnostic command without re-deriving paths by hand.
+  `trace`, visual compare, and footprint compare), so authors can move from failing aggregate
+  summary to the next diagnostic command without re-deriving paths by hand.
 - The same projection now carries structured follow-up command metadata. The GUI separates
   bundle-local runnable commands from manual compare commands that still require a baseline, so
   placeholder compare commands are visible without being presented as ready-to-run actions.
+- The bundle-local runnable set now includes `diag trace <bundle> --json`, which keeps Chrome trace
+  artifact generation in the same selected-summary action surface as stats, layout, memory, triage,
+  and hotspots.
 - Bundle-local runnable follow-ups can now be launched from the selected-summary inspector through
   the shared diagnostics engine, with in-flight/error status recorded in the GUI; baseline-required
   compare commands remain manual until the user supplies a baseline.
 - Each GUI-launched follow-up now writes a result JSON under `.fret/diag/followups/` and exposes the
   latest result path for copying, so the GUI path leaves a lightweight evidence artifact.
+- Trace follow-up result JSON now includes an `output_artifacts` entry for
+  `trace.chrome.json`; the summary and details blocks render that artifact path directly, so a
+  successful trace run leaves a clickable/copyable evidence trail instead of only a pass/fail
+  status.
 - The selected-summary inspector also mirrors the latest selected-bundle follow-up result JSON
   inline, making pass/fail/error/timing metadata visible without leaving the DevTools surface.
 - The same inspector projects that selected-bundle follow-up result into a structured summary above
@@ -148,7 +155,9 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   selection changes and manual refreshes bypass the throttle.
 - The MCP `fret_diag_regression_dashboard` tool now consumes the same shared regression drill-down
   and follow-up projection, so GUI and AI workflows see the same bundle dirs, capability
-  provenance, perf evidence, and next-command hints.
+  provenance, perf evidence, and next-command hints. It exposes both command-line strings and
+  structured follow-up command rows with `diag_args`, so AI clients can run bundle-local actions
+  like `trace` without parsing shell text.
 
 ## Goals (v1)
 

@@ -97,6 +97,48 @@ fn build_script_env_defaults_for_perf_launch(
     Ok(script_launch_env)
 }
 
+fn apply_trace_real_spans_launch_env(
+    launch_env: &mut Vec<(String, String)>,
+    trace_real_spans: bool,
+    has_launch: bool,
+) -> Result<(), String> {
+    if !trace_real_spans {
+        return Ok(());
+    }
+    if !has_launch {
+        return Err(
+            "--trace-real-spans requires --launch so diag perf can inject FRET_DIAG_REAL_SPANS into the app process"
+                .to_string(),
+        );
+    }
+    let _ = ensure_env_var(launch_env, "FRET_DIAG_REAL_SPANS", "1");
+    Ok(())
+}
+
+fn write_perf_chrome_trace_if_requested(
+    bundle_path: &Path,
+    trace_chrome: bool,
+) -> Result<(), String> {
+    if !trace_chrome {
+        return Ok(());
+    }
+
+    let dir = bundle_path.parent().ok_or_else(|| {
+        format!(
+            "failed to write requested Chrome trace: bundle path has no parent: {}",
+            bundle_path.display()
+        )
+    })?;
+    let trace_path = dir.join("trace.chrome.json");
+    crate::trace::write_chrome_trace_from_bundle_path(bundle_path, &trace_path).map_err(|err| {
+        format!(
+            "failed to write requested Chrome trace for perf bundle {} to {}: {err}",
+            bundle_path.display(),
+            trace_path.display()
+        )
+    })
+}
+
 fn perf_row_status_and_reason(
     row: &serde_json::Value,
     threshold_failures: &[serde_json::Value],
@@ -241,6 +283,10 @@ fn perf_row_to_regression_item(
         .and_then(|v| v.as_str())
         .or_else(|| row.get("bundle").and_then(|v| v.as_str()))
         .map(|v| v.to_string());
+    let bundle_dir = bundle_artifact
+        .as_deref()
+        .and_then(|path| crate::resolve_bundle_root_dir(Path::new(path)).ok())
+        .map(|path| path.display().to_string());
     let (status, reason_code, source_reason_code) =
         perf_row_status_and_reason(row, threshold_failures, hint_failures);
     let threshold_failure_count = threshold_failures.len();
@@ -277,7 +323,7 @@ fn perf_row_to_regression_item(
         attempts: None,
         evidence: Some(RegressionEvidenceV1 {
             bundle_artifact,
-            bundle_dir: None,
+            bundle_dir,
             triage_json: None,
             script_result_json: None,
             ai_packet_dir: None,
@@ -572,6 +618,7 @@ pub(crate) struct PerfCmdContext {
     pub suite_prewarm_scripts: Vec<PathBuf>,
     pub timeout_ms: u64,
     pub trace_chrome: bool,
+    pub trace_real_spans: bool,
     pub warmup_frames: u64,
 }
 
@@ -640,6 +687,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
         suite_prewarm_scripts,
         timeout_ms,
         trace_chrome,
+        trace_real_spans,
         warmup_frames,
     } = ctx;
 
@@ -787,6 +835,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
     std::fs::create_dir_all(&resolved_out_dir).map_err(|e| e.to_string())?;
     let perf_capabilities_check_path = resolved_out_dir.join("check.capabilities.json");
     let _ = ensure_env_var(&mut perf_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
+    apply_trace_real_spans_launch_env(&mut perf_launch_env, trace_real_spans, launch.is_some())?;
     if let Some(name) = suite_name.as_deref() {
         // Make the common UI gallery perf suites reproducible without requiring callers
         // to remember a pile of `--env` flags. Callers can still override them explicitly
@@ -1147,13 +1196,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                     )?;
                     report_warmup_frames = 0;
                 }
-                if trace_chrome && let Some(dir) = bundle_path.parent() {
-                    let trace_path = dir.join("trace.chrome.json");
-                    let _ = crate::trace::write_chrome_trace_from_bundle_path(
-                        &bundle_path,
-                        &trace_path,
-                    );
-                }
+                write_perf_chrome_trace_if_requested(&bundle_path, trace_chrome)?;
                 if wants_perf_hints {
                     let triage =
                         triage_json_from_stats(&bundle_path, &report, sort, report_warmup_frames);
@@ -1812,11 +1855,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
                 )?;
                 report_warmup_frames = 0;
             }
-            if trace_chrome && let Some(dir) = bundle_path.parent() {
-                let trace_path = dir.join("trace.chrome.json");
-                let _ =
-                    crate::trace::write_chrome_trace_from_bundle_path(&bundle_path, &trace_path);
-            }
+            write_perf_chrome_trace_if_requested(&bundle_path, trace_chrome)?;
 
             if wants_perf_hints {
                 let triage =
@@ -3094,6 +3133,18 @@ mod tests {
         path
     }
 
+    fn write_temp_perf_bundle(tag: &str, bundle: serde_json::Value) -> PathBuf {
+        let id = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
+        let dir =
+            std::env::temp_dir().join(format!("fret-diag-perf-{tag}-{}-{id}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("create temp bundle dir");
+        let path = dir.join("bundle.json");
+        std::fs::write(&path, serde_json::to_string_pretty(&bundle).unwrap())
+            .expect("write temp bundle");
+        path
+    }
+
     #[test]
     fn perf_launch_env_merges_script_env_defaults_and_preserves_explicit_env() {
         let script = write_temp_perf_script(
@@ -3148,6 +3199,112 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(a.parent().unwrap());
         let _ = std::fs::remove_dir_all(b.parent().unwrap());
+    }
+
+    #[test]
+    fn trace_real_spans_launch_env_injects_opt_in_flag() {
+        let mut launch_env = Vec::new();
+
+        apply_trace_real_spans_launch_env(&mut launch_env, true, true)
+            .expect("trace real spans should inject launch env");
+
+        assert_eq!(
+            launch_env,
+            vec![("FRET_DIAG_REAL_SPANS".to_string(), "1".to_string())]
+        );
+    }
+
+    #[test]
+    fn trace_real_spans_launch_env_preserves_explicit_override() {
+        let mut launch_env = vec![("FRET_DIAG_REAL_SPANS".to_string(), "0".to_string())];
+
+        apply_trace_real_spans_launch_env(&mut launch_env, true, true)
+            .expect("explicit env should be preserved");
+
+        assert_eq!(
+            launch_env,
+            vec![("FRET_DIAG_REAL_SPANS".to_string(), "0".to_string())]
+        );
+    }
+
+    #[test]
+    fn trace_real_spans_launch_env_requires_launched_process() {
+        let mut launch_env = Vec::new();
+
+        let err = apply_trace_real_spans_launch_env(&mut launch_env, true, false)
+            .expect_err("trace real spans should need launch");
+
+        assert!(err.contains("--trace-real-spans requires --launch"));
+        assert!(launch_env.is_empty());
+    }
+
+    #[test]
+    fn write_perf_chrome_trace_if_requested_writes_requested_artifact() {
+        let bundle = write_temp_perf_bundle(
+            "trace-write-ok",
+            serde_json::json!({
+                "schema_version": 2,
+                "windows": [{
+                    "window": 1,
+                    "snapshots": []
+                }]
+            }),
+        );
+
+        write_perf_chrome_trace_if_requested(&bundle, true)
+            .expect("requested trace should be written");
+
+        let trace_path = bundle.parent().unwrap().join("trace.chrome.json");
+        assert!(trace_path.is_file());
+        let trace: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&trace_path).expect("read trace"))
+                .expect("parse trace");
+        assert_eq!(
+            trace.get("kind").and_then(|v| v.as_str()),
+            Some(crate::perf_schema::PERF_TRACE_CHROME_KIND)
+        );
+
+        let _ = std::fs::remove_dir_all(bundle.parent().unwrap());
+    }
+
+    #[test]
+    fn write_perf_chrome_trace_if_requested_surfaces_export_failure() {
+        let id = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
+        let dir = std::env::temp_dir().join(format!(
+            "fret-diag-perf-trace-write-fail-{}-{id}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("create temp bundle dir");
+        let bundle = dir.join("bundle.json");
+        std::fs::write(&bundle, b"not-json").expect("write invalid bundle");
+
+        let err = write_perf_chrome_trace_if_requested(&bundle, true)
+            .expect_err("invalid bundle should fail trace export");
+
+        assert!(err.contains("failed to write requested Chrome trace"));
+        assert!(err.contains("bundle.json"));
+        assert!(!dir.join("trace.chrome.json").exists());
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn write_perf_chrome_trace_if_requested_noops_when_disabled() {
+        let bundle = write_temp_perf_bundle(
+            "trace-write-off",
+            serde_json::json!({
+                "schema_version": 2,
+                "windows": []
+            }),
+        );
+
+        write_perf_chrome_trace_if_requested(&bundle, false)
+            .expect("disabled trace should not fail");
+
+        assert!(!bundle.parent().unwrap().join("trace.chrome.json").exists());
+
+        let _ = std::fs::remove_dir_all(bundle.parent().unwrap());
     }
 
     #[test]
@@ -3435,6 +3592,10 @@ mod tests {
         assert_eq!(
             evidence.bundle_artifact.as_deref(),
             Some("F:/repo/.fret/single-run/bundle.schema2.json")
+        );
+        assert_eq!(
+            evidence.bundle_dir.as_deref(),
+            Some("F:/repo/.fret/single-run")
         );
         assert_eq!(
             evidence

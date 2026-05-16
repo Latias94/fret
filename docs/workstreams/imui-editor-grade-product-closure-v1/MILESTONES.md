@@ -326,9 +326,17 @@ Current status:
   footprint-compare commands. This keeps the failing-summary-to-next-command loop productized
   without moving diagnostics policy into `fret-imui` or leaving command composition as GUI-private
   logic.
+- 2026-05-16 DevTools selected-summary follow-up projection adds `diag trace <bundle> --json` to
+  the same shared GUI/MCP runnable action set, so Chrome trace artifact generation stays in the
+  diagnostics owner lane instead of becoming another GUI-private command path.
+- 2026-05-16 GUI-launched trace follow-ups now record `trace.chrome.json` in
+  `output_artifacts`, and the selected-result summary/details expose that artifact path for reuse.
 - 2026-05-15 DevTools MCP regression dashboard now consumes the same shared drill-down/follow-up
   projection, returning bundle dirs, capability provenance, perf evidence, and follow-up command
   lines in both structured JSON and the human summary.
+- 2026-05-16 DevTools MCP regression dashboard adds structured follow-up command rows with
+  `diag_args` and baseline classification, so AI consumers no longer need to parse command strings
+  to run bundle-local trace/stats/triage actions.
 - 2026-05-15 shared regression follow-up commands are now structured in
   `crates/fret-diag/src/regression_summary.rs`, with GUI/MCP consumers separating bundle-local
   runnable commands from baseline-required manual compare commands.

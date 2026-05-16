@@ -96,6 +96,12 @@ Recent landing in this priority bucket:
 - Campaign share handoff now carries failing item `bundle_artifact` paths in
   `share.manifest.json` and includes present bundle artifacts in `share/combined-failures.zip`,
   keeping raw bundle evidence additive without changing the Layer A `bundle_json` chunk contract.
+- Campaign and batch roots now persist `dashboard.txt` as the first-open human projection of the
+  shared dashboard vocabulary, expose additive `dashboard_text_path` / `dashboard_text_error`
+  fields, and include `_root/dashboard.txt` in `share/combined-failures.zip` when present.
+- Linux CI now runs the repo-owned campaign authoring preflight with
+  `cargo run -p fretboard-dev -- diag doctor campaigns --json`, while ad hoc manifest checks stay
+  on `diag campaign validate <manifest>`.
 
 Definition of done:
 

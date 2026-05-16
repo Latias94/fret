@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-05-15
+Last updated: 2026-05-16
 
 ## P0 - Source Baseline
 
@@ -30,6 +30,9 @@ Last updated: 2026-05-15
       Third slice landed: `apps/fret-examples/src/imui_editor_proof_demo.rs` and its
       `collection.rs` module now route golden-proof IMUI option/state types through `fret::imui`,
       while recipe-layer imports stay explicit.
+      2026-05-16 cleanup: `imui_interaction_showcase_demo` now describes its current root
+      `fret::imui` teaching surface instead of the historical direct `fret_imui` control-flow
+      wording, and the facade teaching source gate rejects that stale wording from returning.
 - [x] Identify duplicate helper aliases that can be deleted behind a source-policy gate.
       Audit result: historical duplicate aliases are already deleted from active source,
       `imui::adapters` is contract-only, and `*_with_options(...)` helpers are canonical explicit
@@ -164,6 +167,22 @@ Readiness order for the next locally testable review slices:
    Current readiness audit: `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md`. Current coverage is broad
    enough for the active editor proof; list-box, plot, image-item, style-editor, advanced-table, and
    child-flag mirrors remain behavior-specific candidates, not a broad widget backlog.
+   2026-05-16 follow-on result: `imui-image-item-proof-v1` closed after adding standalone
+   response-bearing image item / image button authoring in `fret-ui-kit::imui`, using Fret
+   `ImageId` and `ImageProps` without introducing Dear ImGui texture-ID runtime state or widening
+   `fret-imui`.
+   2026-05-16 selectable highlight result: `imui-selectable-highlight-policy-v1` closed after
+   adding a Dear ImGui-style forced-highlight policy to `SelectableOptions` and splitting the
+   input-text picker active-candidate visual from selected semantics.
+   2026-05-16 floating posture refresh: `window(...)` source docs now describe the current
+   in-window floating surface instead of deferring z-order/focus arbitration to a future work item.
+   Current `fret-imui` floating tests already cover bring-to-front hit-test order,
+   focus-on-click vs activation, no-inputs / pointer-pass-through policy, close, resize, and
+   collapse; OS-window tear-out and multi-viewport parity stay in docking/runner lanes.
+   2026-05-16 table gap wording refresh: the component catalog now distinguishes existing
+   `TableOptions::striped` alternating row backgrounds from the still-candidate per-row/per-cell
+   background override axis. Do not open a broad `imui-table-advanced-flags-v1` lane just because
+   the old wording said "row background targets."
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
@@ -189,6 +208,9 @@ Readiness order for the next locally testable review slices:
    Follow-on: `docs/workstreams/standalone/diag-devtools-gui-refresh-v1.md` and
    `docs/workstreams/diag-fearless-refactor-v2/README.md` keep the GUI
    productization / first-open workflow on the existing diagnostics-consumer lane.
+   2026-05-16 first-open gate wording follow-up: the IMUI gap lane now distinguishes the
+   cold-start `--discovery-only` entry from the fast `--discovery-only --reuse-built` drift check,
+   so diagnostics discoverability failures are not conflated with large Rust build cost.
 6. Collection helper readiness: keep app-owned until both proof surfaces require one helper.
    Current readiness audit: `P3_COLLECTION_HELPER_READINESS_2026-05-06.md`. The collection proof is
    editor-grade, but most behavior remains app-owned; the already-extracted shared pieces are
@@ -210,8 +232,10 @@ Readiness order for the next locally testable review slices:
 7. Child-region depth: reopen only with a concrete `BeginChild()`-style behavior target.
    Current readiness audit: `P3_CHILD_REGION_READINESS_2026-05-06.md`. Fret already covers
    keyed scrollable child areas, chrome, scroll handles, nested shell panes, and app-owned
-   collection behavior. The next credible follow-on is behavior-specific, with `ResizeY` first if a
-   proof needs it; do not open a generic `BeginChild()` flag-mirror lane.
+   collection behavior. The closed `imui-child-region-resize-y-v1` and
+   `imui-child-region-resize-x-v1` follow-ons now cover axis-specific manual resize with
+   app-owned size state; auto-resize, visibility-return, and nav-flattening remain
+   behavior-specific candidates. Do not open a generic `BeginChild()` flag-mirror lane.
 8. Multi-window parity: continue in `docking-multiwindow-imgui-parity`.
 9. Performance alignment: keep Dear ImGui-class smoothness pressure in the dedicated perf lanes and
    product-chain perf gates, not in a broad widget/API backlog.

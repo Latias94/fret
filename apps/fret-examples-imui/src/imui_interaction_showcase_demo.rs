@@ -9,7 +9,7 @@
 //!
 //! Showcase surface for immediate-mode interaction affordances.
 //! Current proof/contract surface stays in `imui_response_signals_demo`.
-//! This file intentionally mixes `fret_imui` control flow with shadcn shell chrome so the
+//! This file intentionally uses the root `fret::imui` lane with shadcn shell chrome so the
 //! immediate lane has one surface that looks like a product rather than a contract log.
 
 use std::sync::Arc;

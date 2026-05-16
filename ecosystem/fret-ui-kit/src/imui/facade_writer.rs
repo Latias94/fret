@@ -955,6 +955,39 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         button_controls::invisible_button_with_options(self, id, size, options)
     }
 
+    fn image_item(&mut self, id: &str, image: fret_core::ImageId, size: Size) -> ResponseExt {
+        self.image_item_with_options(id, image, size, ImageItemOptions::default())
+    }
+
+    fn image_item_with_options(
+        &mut self,
+        id: &str,
+        image: fret_core::ImageId,
+        size: Size,
+        options: ImageItemOptions,
+    ) -> ResponseExt {
+        image_item_controls::image_item_with_options(self, id, image, size, options)
+    }
+
+    fn image_button(&mut self, id: &str, image: fret_core::ImageId, size: Size) -> ResponseExt {
+        self.image_button_with_options(id, image, size, ImageItemOptions::button())
+    }
+
+    fn image_button_with_options(
+        &mut self,
+        id: &str,
+        image: fret_core::ImageId,
+        size: Size,
+        mut options: ImageItemOptions,
+    ) -> ResponseExt {
+        let was_plain_image_options = matches!(options.variant, ImageItemVariant::Image);
+        options.variant = ImageItemVariant::Button;
+        if was_plain_image_options {
+            options.focusable = true;
+        }
+        image_item_controls::image_item_with_options(self, id, image, size, options)
+    }
+
     fn button_with_options(
         &mut self,
         label: impl Into<Arc<str>>,
@@ -1198,16 +1231,20 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         text_controls::textarea_model_with_options(self, model, options)
     }
 
-    /// Render a minimal in-window floating window.
+    /// Render an in-window floating window.
     ///
-    /// This is intentionally v1-small:
+    /// Scope:
     /// - in-window (not an OS window / viewport),
     /// - draggable via the title bar,
-    /// - position is stored as element-local state under the window id scope.
+    /// - position is stored as element-local state under the window id scope,
+    /// - `floating_layer(...)` owns bring-to-front ordering and hit-test order,
+    /// - `WindowOptions` / `FloatingWindowOptions` own close, resize, collapse, focus-on-click,
+    ///   activate-on-click, and no-inputs / pointer-pass-through policy.
     ///
     /// Notes:
     /// - `id` must be stable across frames (mirrors Dear ImGui's "window name is the id" rule).
-    /// - Z-order and focus arbitration are tracked as a separate work item (see workstream TODO).
+    /// - OS-window tear-out and multi-viewport behavior are docking/runner concerns, not this
+    ///   in-window helper.
     fn window(
         &mut self,
         id: &str,

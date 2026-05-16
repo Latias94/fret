@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-15
+Last updated: 2026-05-16
 
 ## M0 - Current Source Baseline
 
@@ -32,6 +32,9 @@ Exit criteria:
   The third code slice routes `imui_editor_proof_demo` and its `collection.rs` module through the
   app-facing `fret::imui` facade for IMUI option/state types while keeping recipe-layer imports
   explicit. `fret-ui-editor::imui` was audited and remains a thin declarative-control adapter.
+  2026-05-16 teaching-comment cleanup: `imui_interaction_showcase_demo` now names the root
+  `fret::imui` lane instead of stale direct-`fret_imui` control-flow wording, with a source-gate
+  marker preventing that drift from returning.
 
 ## M2 - First Cleanup/Refactor Slice
 
@@ -151,6 +154,9 @@ Exit criteria:
   and pressable response assembly, including the container wrapper owner split, but did not widen
   the public surface. List-box, plotting, image item, style-editor, advanced-table, and child-flag
   work should be narrow proof-led follow-ons.
+  2026-05-16 image-item follow-on result: `imui-image-item-proof-v1` is the narrow proof lane for
+  response-bearing image item / image button authoring. It is intentionally a `fret-ui-kit::imui`
+  additive helper over existing `ImageId` / `ImageProps`, not a `fret-imui` runtime texture stack.
   Current design-surface audit result: keep imgui-class density as an opt-in editor token/preset
   outcome. `EditorThemePresetV1::ImguiLikeDense` is sufficient for the active proof; do not copy
   Dear ImGui's mutable style stack or make a generic style editor without visual/tooling proof.
@@ -167,9 +173,22 @@ Exit criteria:
   options stay crate-local while external callers use row helpers instead of public fields.
   2026-05-14 inspector follow-up result: `InspectorPanelCx` now exposes query behavior through
   methods and keeps `query_lower` private.
-  Current child-region audit result: keep `child-region depth` as a candidate-only item until a
-  behavior target such as `ResizeY`, auto-resize, clipping-return, or nav-flattening has a concrete
-  proof and gate.
+  2026-05-16 child-region resize result: `imui-child-region-resize-y-v1` and
+  `imui-child-region-resize-x-v1` are the closed proof lanes for axis-specific manual child-region
+  resize. Height/width state stays app-owned through response helpers, and broader child-region
+  behavior such as auto-resize, clipping-return, or nav-flattening remains candidate-only.
+  2026-05-16 selectable highlight result: `imui-selectable-highlight-policy-v1` is the closed proof
+  lane for forced selectable highlight visuals. Keyboard-active picker rows now use highlighted
+  policy instead of selected semantics, while broader selectable flags remain candidate-only.
+  2026-05-16 floating posture refresh result: the public `window(...)` docs no longer describe
+  z-order/focus arbitration as future work. `fret-ui-kit::imui` owns the in-window floating policy
+  knobs through `WindowOptions` / `FloatingWindowOptions`, and `fret-imui` floating tests cover
+  bring-to-front hit-test order, focus-on-click vs activation, no-inputs / pointer-pass-through,
+  close, resize, and collapse. Multi-window / viewport parity remains outside this helper.
+  2026-05-16 table gap wording result: the component catalog now treats alternating row backgrounds
+  as covered through `TableOptions::striped` and leaves only explicit per-row/per-cell background
+  overrides, freeze panes, column visibility, and old columns API as advanced-table follow-on
+  candidates.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.
@@ -186,6 +205,9 @@ Exit criteria:
   implementation queue. Product/golden workflow coherence, runner/backend multi-window hand-feel,
   and diagnostics/DevTools discoverability remain higher-value Dear ImGui-grade closure work than
   blind widget/API mirroring.
+  2026-05-16 first-open gate wording result: diagnostics/DevTools entrypoint discovery now has an
+  explicit cold-start gate and an explicit `--reuse-built` drift check. This keeps DevTools
+  discoverability source-backed without treating Rust build latency as a GUI/MCP product failure.
   Current performance-alignment review result: `P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md`
   belongs in the active gap lane's evidence set. Keep runtime smoothness work in
   `diag-perf-attribution-v1`, `ui-perf-zed-smoothness-v1`, and the product-chain docking perf gate;

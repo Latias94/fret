@@ -1,8 +1,13 @@
 use std::path::Path;
 
 use serde_json::Value;
+use std::collections::BTreeSet;
 
 use crate::perf_keys;
+
+const REAL_SPAN_EXTENSION_KEY_V1: &str = "fret.perf.spans.v1";
+const MAX_REAL_SPANS_PER_SNAPSHOT: usize = 512;
+const MAX_TRACE_LABEL_BYTES: usize = 160;
 
 const LAYOUT_SYNTHETIC_SUBPHASE_KEYS: &[perf_keys::PerfKey] = &[
     perf_keys::LAYOUT_COLLECT_ROOTS_TIME_US,
@@ -42,10 +47,18 @@ pub(crate) fn write_chrome_trace_from_bundle_path(
     bundle_path: &Path,
     out_path: &Path,
 ) -> Result<(), String> {
+    let trace = chrome_trace_json_from_bundle_path(bundle_path)?;
+    write_chrome_trace_value(out_path, &trace)
+}
+
+pub(crate) fn chrome_trace_json_from_bundle_path(bundle_path: &Path) -> Result<Value, String> {
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    let trace = chrome_trace_json_from_bundle_value(&bundle)?;
-    write_json_value_compact(out_path, &trace)
+    chrome_trace_json_from_bundle_value(&bundle)
+}
+
+pub(crate) fn write_chrome_trace_value(out_path: &Path, trace: &Value) -> Result<(), String> {
+    write_json_value_compact(out_path, trace)
 }
 
 fn write_json_value_compact(path: &Path, v: &Value) -> Result<(), String> {
@@ -66,6 +79,8 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
     let mut events: Vec<Value> = Vec::new();
     let pid: u32 = 1;
     let mut fallback_frame_start_us: u64 = 0;
+    let mut real_span_extension_keys: BTreeSet<String> = BTreeSet::new();
+    let mut real_span_event_count: u64 = 0;
 
     for w in windows {
         let window_id_u64 = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -270,16 +285,38 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
                     desired,
                 );
             }
+
+            real_span_event_count =
+                real_span_event_count.saturating_add(push_real_span_extension_events(
+                    &mut events,
+                    pid,
+                    tid,
+                    frame_ts_us,
+                    tick_id,
+                    frame_id,
+                    window_id_u64,
+                    s,
+                    &mut real_span_extension_keys,
+                ));
         }
     }
+
+    let real_spans_included = real_span_event_count > 0;
+    let trace_source = if real_spans_included {
+        crate::perf_schema::PERF_TRACE_SOURCE_BUNDLE_SYNTHETIC_PHASES_WITH_EXTENSION_SPANS
+    } else {
+        crate::perf_schema::PERF_TRACE_SOURCE_BUNDLE_SYNTHETIC_PHASES
+    };
 
     Ok(serde_json::json!({
         "schema_version": crate::perf_schema::PERF_TRACE_SCHEMA_VERSION,
         "kind": crate::perf_schema::PERF_TRACE_CHROME_KIND,
         "schema_policy": crate::perf_schema::schema_policy_json(),
         "source_bundle_schema_version": source_bundle_schema_version,
-        "trace_source": crate::perf_schema::PERF_TRACE_SOURCE_BUNDLE_SYNTHETIC_PHASES,
-        "real_spans_included": false,
+        "trace_source": trace_source,
+        "real_spans_included": real_spans_included,
+        "real_span_extension_keys": real_span_extension_keys.into_iter().collect::<Vec<_>>(),
+        "real_span_event_count": real_span_event_count,
         "registered_perf_keys": perf_keys::trace_exported_frame_keys_json(),
         "displayTimeUnit": "ms",
         "traceEvents": events,
@@ -287,8 +324,8 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
 }
 
 fn chrome_x(
-    name: &'static str,
-    cat: &'static str,
+    name: &str,
+    cat: &str,
     pid: u32,
     tid: u32,
     ts_us: u64,
@@ -305,6 +342,104 @@ fn chrome_x(
         "tid": tid,
         "args": args,
     })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn push_real_span_extension_events(
+    events: &mut Vec<Value>,
+    pid: u32,
+    default_tid: u32,
+    frame_ts_us: u64,
+    tick_id: u64,
+    frame_id: u64,
+    window_id: u64,
+    snapshot: &Value,
+    extension_keys: &mut BTreeSet<String>,
+) -> u64 {
+    let Some(payload) = snapshot
+        .pointer("/debug/extensions")
+        .and_then(|extensions| extensions.get(REAL_SPAN_EXTENSION_KEY_V1))
+    else {
+        return 0;
+    };
+    if payload
+        .get("_clipped")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+    {
+        return 0;
+    }
+    let Some(spans) = payload.get("spans").and_then(|v| v.as_array()) else {
+        return 0;
+    };
+
+    let mut pushed = 0_u64;
+    for (span_index, span) in spans.iter().take(MAX_REAL_SPANS_PER_SNAPSHOT).enumerate() {
+        let Some(dur_us) = span.get("dur_us").and_then(|v| v.as_u64()) else {
+            continue;
+        };
+        if dur_us == 0 {
+            continue;
+        }
+
+        let start_us = span
+            .get("start_us")
+            .or_else(|| span.get("ts_us"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let name = bounded_trace_label(span.get("name").and_then(|v| v.as_str()), "fret.real_span");
+        let cat = bounded_trace_label(
+            span.get("cat")
+                .or_else(|| span.get("category"))
+                .and_then(|v| v.as_str()),
+            "real_span",
+        );
+        let tid = span
+            .get("tid")
+            .and_then(|v| v.as_u64())
+            .map(|tid| (tid.min(u32::MAX as u64)) as u32)
+            .unwrap_or(default_tid);
+        let span_args = span.get("args").cloned().unwrap_or(Value::Null);
+
+        events.push(chrome_x(
+            &name,
+            &cat,
+            pid,
+            tid,
+            frame_ts_us.saturating_add(start_us),
+            dur_us,
+            serde_json::json!({
+                "source": "debug.extensions",
+                "extension_key": REAL_SPAN_EXTENSION_KEY_V1,
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "span_index": span_index,
+                "span_args": span_args,
+            }),
+        ));
+        pushed = pushed.saturating_add(1);
+    }
+
+    if pushed > 0 {
+        extension_keys.insert(REAL_SPAN_EXTENSION_KEY_V1.to_string());
+    }
+    pushed
+}
+
+fn bounded_trace_label(value: Option<&str>, fallback: &str) -> String {
+    let Some(value) = value.map(str::trim).filter(|v| !v.is_empty()) else {
+        return fallback.to_string();
+    };
+    if value.len() <= MAX_TRACE_LABEL_BYTES {
+        return value.to_string();
+    }
+
+    let mut end = MAX_TRACE_LABEL_BYTES;
+    while !value.is_char_boundary(end) {
+        end = end.saturating_sub(1);
+    }
+    format!("{}...", &value[..end])
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -484,6 +619,10 @@ mod tests {
             trace.get("real_spans_included").and_then(|v| v.as_bool()),
             Some(false)
         );
+        assert_eq!(
+            trace.get("real_span_event_count").and_then(|v| v.as_u64()),
+            Some(0)
+        );
         let registered_perf_keys = trace
             .get("registered_perf_keys")
             .and_then(|v| v.as_array())
@@ -503,6 +642,85 @@ mod tests {
         assert!(names.contains(&"fret.frame"));
         assert!(names.contains(&"layout.collect_roots"));
         assert!(names.contains(&"layout.engine_solve"));
+    }
+
+    #[test]
+    fn chrome_trace_merges_real_span_extension_events() {
+        let bundle = serde_json::json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 7,
+                "snapshots": [{
+                    "tick_id": 3,
+                    "frame_id": 5,
+                    "window": 7,
+                    "frame_clock": { "now_monotonic_ms": 1000, "delta_ms": 16 },
+                    "debug": {
+                        "stats": {
+                            "total_time_us": 1000,
+                            "layout_time_us": 400,
+                            "paint_time_us": 600
+                        },
+                        "extensions": {
+                            "fret.perf.spans.v1": {
+                                "schema_version": "v1",
+                                "spans": [{
+                                    "name": "fret.ui.view",
+                                    "cat": "ui.real",
+                                    "start_us": 7,
+                                    "dur_us": 42,
+                                    "args": { "phase": "view" }
+                                }]
+                            }
+                        }
+                    }
+                }]
+            }]
+        });
+
+        let trace = chrome_trace_json_from_bundle_value(&bundle).expect("trace");
+        assert_eq!(
+            trace.get("trace_source").and_then(|v| v.as_str()),
+            Some(
+                crate::perf_schema::PERF_TRACE_SOURCE_BUNDLE_SYNTHETIC_PHASES_WITH_EXTENSION_SPANS
+            )
+        );
+        assert_eq!(
+            trace.get("real_spans_included").and_then(|v| v.as_bool()),
+            Some(true)
+        );
+        assert_eq!(
+            trace.get("real_span_event_count").and_then(|v| v.as_u64()),
+            Some(1)
+        );
+        assert_eq!(
+            trace
+                .get("real_span_extension_keys")
+                .and_then(|v| v.as_array())
+                .and_then(|v| v.first())
+                .and_then(|v| v.as_str()),
+            Some("fret.perf.spans.v1")
+        );
+
+        let real = trace
+            .get("traceEvents")
+            .and_then(|v| v.as_array())
+            .expect("trace events")
+            .iter()
+            .find(|event| event.get("name").and_then(|v| v.as_str()) == Some("fret.ui.view"))
+            .expect("real span event");
+        assert_eq!(real.get("cat").and_then(|v| v.as_str()), Some("ui.real"));
+        assert_eq!(real.get("ts").and_then(|v| v.as_u64()), Some(984_007));
+        assert_eq!(real.get("dur").and_then(|v| v.as_u64()), Some(42));
+        assert_eq!(
+            real.pointer("/args/extension_key").and_then(|v| v.as_str()),
+            Some("fret.perf.spans.v1")
+        );
+        assert_eq!(
+            real.pointer("/args/span_args/phase")
+                .and_then(|v| v.as_str()),
+            Some("view")
+        );
     }
 
     #[test]

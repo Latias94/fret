@@ -64,8 +64,63 @@ schema:
   - `kind`: `perf_trace_chrome`
   - `schema_version`: `1`
   - `source_bundle_schema_version`: copied from the source bundle when available.
-  - `trace_source`: `bundle_synthetic_phases`
-  - `real_spans_included`: `false`
+  - `trace_source`: `bundle_synthetic_phases` unless the source bundle also contains supported
+    real-span extensions, then `bundle_synthetic_phases_with_extension_spans`.
+  - `real_spans_included`: `false` for synthetic-only traces, `true` when supported real spans
+    were merged into `traceEvents`.
+  - `real_span_extension_keys`: sorted list of debug-extension keys that contributed real spans.
+  - `real_span_event_count`: count of merged real-span events.
+- `diag trace --json`
+  - `kind`: `diag_trace_report`
+  - `schema_version`: `1`
+  - `schema_policy.compatibility`: `additive_only`
+  - `trace_chrome_json_path`: written Chrome trace artifact.
+  - `trace_source`, `real_spans_included`, `real_span_event_count`, and
+    `real_span_extension_keys`: copied from the generated trace so automation can inspect metadata
+    without loading the full `traceEvents` array.
+  - Regression selected-bundle follow-ups surface this as a runnable `trace` command with direct
+    `diag_args=["trace", <bundle_dir>, "--json"]`; indexed bundle dirs use `trace-2`, `trace-3`,
+    and so on.
+  - DevTools follow-up result records expose the generated trace as
+    `output_artifacts[].kind="trace.chrome.json"` plus `output_artifacts[].path`, and normalize the
+    stored path to `/` separators for stable GUI/MCP evidence.
+  - MCP regression dashboards expose the same commands as structured rows under
+    `followup_commands`, `runnable_followup_commands`, and `manual_followup_commands`, preserving
+    `diag_args` for clients that should not parse shell text.
+
+Supported real-span extension payload:
+
+- `debug.extensions["fret.perf.spans.v1"]`
+  - `schema_version`: `"v1"`
+  - `spans`: bounded array of frame-relative spans.
+  - Each span supports:
+    - `name`: Chrome trace event name.
+    - `cat` or `category`: Chrome trace category.
+    - `start_us` (or `ts_us`): microseconds after the synthetic frame start.
+    - `dur_us`: span duration in microseconds; zero-duration spans are ignored.
+    - `tid`: optional Chrome trace thread id override; defaults to the diagnostics window id.
+    - `args`: optional JSON payload nested under `traceEvents[].args.span_args`.
+
+This is an additive adapter only: the exporter consumes the extension when present, but runtime-wide
+real-span capture must stay explicitly opt-in in the app/runtime owner layer.
+
+Current writer:
+
+- Set `FRET_DIAG_REAL_SPANS=1` for `fret-bootstrap` `ui_app_driver` apps to write
+  `fret.perf.spans.v1` for the View, Overlay, Layout, and Paint driver phases.
+- The command palette and default preferences overlays are recorded as nested View subphases:
+  `fret.ui.view.command_palette_overlay` and `fret.ui.view.preferences_overlay`, so editor overlay
+  costs can be correlated separately from the parent View span.
+- Diagnostics-enabled `ui_app_driver` frames also record `fret.ui.diagnostics.drive_script` so
+  scripted-input overhead is visible without folding it into View/Layout/Paint.
+- Prefer `fretboard-dev diag perf ... --trace-real-spans --launch -- <app command>` when the tool
+  launches the app; this also requests a Chrome trace artifact and injects
+  `FRET_DIAG_REAL_SPANS=1` into the launched process unless the caller already set the variable
+  explicitly.
+- These are frame-relative real spans measured in the app loop, not synthetic subdivisions derived
+  from aggregate stats.
+- Broader nested spans (for example additional runtime hot paths or external profiler/Tracy
+  correlation) remain follow-up work.
 
 All six outputs include `schema_policy` with `compatibility=additive_only`. Field additions are
 allowed inside the current schema version. Field removals, semantic renames, or type changes require
@@ -84,7 +139,20 @@ Evidence anchors:
 - Gate artifact focused gate:
   `cargo nextest run -p fret-diag perf_thresholds_json_projects_renderer_thresholds perf_hints_json_is_versioned_and_additive_only --no-fail-fast`
 - Trace artifact focused gate:
-  `cargo nextest run -p fret-diag chrome_trace_includes_trace_events --no-fail-fast`
+  `cargo nextest run -p fret-diag chrome_trace_includes_trace_events chrome_trace_merges_real_span_extension_events --no-fail-fast`
+- Requested trace artifact reliability gate:
+  `cargo nextest run -p fret-diag write_perf_chrome_trace_if_requested_writes_requested_artifact write_perf_chrome_trace_if_requested_surfaces_export_failure write_perf_chrome_trace_if_requested_noops_when_disabled --no-fail-fast`
+- Trace JSON report focused gate:
+  `cargo nextest run -p fret-diag trace_command_report_json_projects_real_span_metadata trace_contract_captures_trace_out migrated_trace_builds_a_real_context contract_help_mentions_the_migrated_command_surfaces chrome_trace_merges_real_span_extension_events --no-fail-fast`
+- Regression follow-up trace action gate:
+  `cargo nextest run -p fret-diag regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required regression_bundle_followup_commands_cover_each_selected_bundle --no-fail-fast`
+- DevTools GUI/MCP trace projection gate:
+  `cargo nextest run -p fret-devtools runnable_followup_command_action_lines_surface_indexed_bundle_commands regression_followup_command_returns_direct_diag_args regression_followup_trace_result_record_projects_output_artifact regression_followup_result_summary_lines_project_output_artifacts --no-fail-fast`
+  and `cargo nextest run -p fret-devtools-mcp build_regression_dashboard_result_limits_top_rows_and_builds_human_summary --no-fail-fast`
+- Runtime extension writer focused gate:
+  `cargo nextest run -p fret-bootstrap --features diagnostics,ui-app-driver,ui-app-command-palette real_perf_spans_extension_value_is_v1_payload perf_span_capture_records_frame_relative_driver_phase perf_span_capture_allows_nested_phase_recording perf_span_capture_records_view_command_palette_overlay_phase perf_span_capture_records_view_preferences_overlay_phase perf_span_capture_records_diagnostics_drive_script_phase --no-fail-fast`
+- CLI opt-in focused gate:
+  `cargo nextest run -p fret-diag perf_contract_captures_threshold_and_suite_args migrated_perf_subset_builds_a_real_perf_context trace_real_spans_launch_env_injects_opt_in_flag trace_real_spans_launch_env_preserves_explicit_override trace_real_spans_launch_env_requires_launched_process --no-fail-fast`
 
 ## Core timing fields (per frame, in microseconds)
 
@@ -216,9 +284,10 @@ Tail perf (worst frames + attribution):
 Opt-in artifact for timeline correlation:
 
 - `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 1 --trace`
-- `target/release/fretboard.exe diag trace <bundle.json>`
+- `target/release/fretboard.exe diag trace <bundle.json> --json`
 
-Current trace artifacts are bundle-derived synthetic phase timelines. They are useful for correlating
-`fret.frame`, layout, prepaint, paint, and renderer-adjacent bundle stats in a Chrome trace viewer, but
-they do not contain live `tracing` / Tracy spans. Treat real-span capture as a separate opt-in profiling
-workflow until `real_spans_included=true` exists.
+Current trace artifacts are bundle-derived synthetic phase timelines, optionally enriched with
+`fret.perf.spans.v1` real spans when `real_spans_included=true`. They are useful for correlating
+`fret.frame`, layout, prepaint, paint, and renderer-adjacent bundle stats in a Chrome trace viewer.
+Treat broader runtime spans and Tracy correlation as separate opt-in profiling work until the source
+bundle provides those spans explicitly.

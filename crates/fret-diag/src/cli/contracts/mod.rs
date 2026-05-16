@@ -383,6 +383,8 @@ mod tests {
             "time",
             "--repeat",
             "11",
+            "--trace",
+            "--trace-real-spans",
             "--prewarm-script",
             "tools/diag-scripts/ui-gallery-intro-idle-screenshot.json",
             "--prelude-script",
@@ -420,6 +422,8 @@ mod tests {
         assert_eq!(args.top, 7);
         assert_eq!(args.sort, Some(crate::BundleStatsSort::Time));
         assert_eq!(args.repeat, 11);
+        assert!(args.trace_chrome);
+        assert!(args.trace_real_spans);
         assert!(args.prelude_each_run);
         assert_eq!(
             args.prewarm_scripts,
@@ -1550,6 +1554,7 @@ mod tests {
             "target/fret-diag/demo",
             "--trace-out",
             "target/trace.chrome.json",
+            "--json",
         ])
         .expect("trace contract should parse the supported subset");
 
@@ -1562,6 +1567,7 @@ mod tests {
             args.trace_out,
             Some(PathBuf::from("target/trace.chrome.json"))
         );
+        assert!(args.json);
     }
 
     #[test]
@@ -2785,6 +2791,7 @@ mod tests {
         assert!(test_ids_index_help.contains("--warmup-frames"));
         assert!(!test_ids_index_help.contains("--out"));
         assert!(trace_help.contains("--trace-out"));
+        assert!(trace_help.contains("--json"));
         assert!(triage_help.contains("--lite"));
         assert!(triage_help.contains("--metric"));
         assert!(windows_help.contains("--warmup-frames"));

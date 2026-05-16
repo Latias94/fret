@@ -660,6 +660,7 @@ The command prints the export directory path, and writes:
 
    - During perf runs: `cargo run -p fretboard-dev -- diag perf ui-gallery --trace --launch -- cargo run -p fret-ui-gallery --release`
    - For an existing bundle: `cargo run -p fretboard-dev -- diag trace <bundle_dir|bundle.json> [--trace-out <path>]`
+   - For a small metadata report without opening `traceEvents`: add `--json`.
 
 7. Optional: turn on the perf hints gate (heuristic, explainable warnings):
 

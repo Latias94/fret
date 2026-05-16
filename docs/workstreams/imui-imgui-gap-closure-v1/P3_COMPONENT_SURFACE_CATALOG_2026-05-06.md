@@ -1,7 +1,17 @@
 # P3 Component Surface Catalog - 2026-05-06
 
-Status: component surface audit; no implementation lane opened yet
-Last updated: 2026-05-14
+Status: component surface audit; partially superseded by closed proof lanes
+Last updated: 2026-05-16
+
+Status note (2026-05-16): this catalog remains the current component-surface gap map, but the
+image-item and child-region manual-resize candidates below have since landed in narrow proof lanes:
+`imui-image-item-proof-v1`, `imui-child-region-resize-y-v1`, and
+`imui-child-region-resize-x-v1`. Selectable forced-highlight visuals also landed in
+`imui-selectable-highlight-policy-v1`. The in-window floating-window posture has also been
+refreshed: current source/tests already cover z-order hit-testing, focus-on-click vs activation,
+no-inputs / pointer-pass-through policy, close, resize, and collapse behavior. The table
+advanced-gap wording has also been narrowed: `TableOptions::striped` already covers alternating row
+backgrounds, while per-row/per-cell background overrides remain candidate-only.
 
 ## Decision
 
@@ -28,13 +38,14 @@ Keep the owner split:
 | Boolean controls | `checkbox_model`, `radio`, `switch_model` | Covered; switch is a Fret policy addition, not Dear ImGui parity debt |
 | Input text / textarea | `input_text_model`, picker/history/completion helpers, `textarea_model`, input filters, undo command policy | Covered for current needs; mutable-buffer callback grammar remains intentionally absent |
 | Slider / drag value | `slider_f32_model` in kit, richer typed `Slider` / `DragValue` adapters in editor | Covered through split kit/editor ownership; generic numeric breadth belongs in editor controls first |
-| Combo / selectable / multi-select | `combo`, `combo_model`, `selectable`, `multi_selectable`, `ImUiMultiSelectState` | Covered for current examples; full app collection helper remains candidate-only |
+| Combo / selectable / multi-select | `combo`, `combo_model`, `selectable`, `multi_selectable`, `SelectableOptions::highlighted`, `ImUiMultiSelectState` | Covered for current examples; full app collection helper and broader selectable flag mirrors remain candidate-only |
 | Tree / disclosure | `collapsing_header`, `tree_node`, explicit `TreeNodeOptions::level` | Covered with Fret-native explicit identity/depth; do not copy implicit indent/ID stacks |
-| Child windows / scrolling | `child_region`, `scroll`, `virtual_list` | Covered for keyed scrollable panes; Dear ImGui child flags such as resize/auto-resize stay behavior-specific candidates |
+| Child windows / scrolling | `child_region`, `scroll`, `virtual_list`, `ChildRegionResize{X,Y}Options` | Covered for keyed scrollable panes and manual axis resize; Dear ImGui child flags such as auto-resize, clipping-return, and nav flattening stay behavior-specific candidates |
+| In-window floating windows / overlay areas | `floating_layer`, `floating_area`, `window`, `window_with_options`, `FloatingWindowOptions` | Covered for in-window drag, z-order hit-testing, focus/input policy, close, resize, and collapse; OS-window tear-out / multi-viewport parity stays in docking/runner lanes |
 | Menus / menu bars / popups / modals | `menu_bar`, `begin_menu`, `begin_submenu`, menu items, `open_popup`, `begin_popup_menu`, context menu helpers, modal helpers | Covered at policy layer; dismissal/focus policy stays in ecosystem |
 | Tooltips | `tooltip_text`, `tooltip`, `TooltipOptions` | Covered enough for current response-driven usage |
 | Tabs | `tab_bar`, `ImUiTabBar`, `tab_item`, response reporting | Covered for current shell/editor proofs |
-| Tables | `table`, `ImUiTable`, `TableColumn`, sort/resize/header responses, virtual-list support | Covered for basic/sort/resize proof paths; advanced table flags should be split by proof |
+| Tables | `table`, `ImUiTable`, `TableColumn`, `TableOptions::striped`, sort/resize/header responses, virtual-list support | Covered for basic/sort/resize/striped-row proof paths; advanced table flags should be split by proof |
 | Drag and drop | response-driven `drag_source` / `drop_target` with typed payloads | Covered with Fret-native response style; do not copy begin/end mutable payload grammar |
 | Draw list / images | `debug_draw`, `ImUiDebugDrawList`, paths, channels, mesh, image/SVG variants | Strong local coverage; keep feature growth in debug-draw follow-ons |
 | Color edit / picker | `fret-ui-editor::ColorEdit` through `fret::imui::editor::color_edit` | Covered as editor-control policy, not generic kit vocabulary |
@@ -53,20 +64,18 @@ public helper widening:
    - Fret has plot/chart ecosystem directions outside IMUI.
    - Start with an app or cookbook proof using existing plot/chart crates before adding an IMUI
      wrapper.
-3. **Standalone image widget**
-   - Debug draw has image commands; declarative UI has image assets/elements.
-   - Add an IMUI image widget only if immediate authorship needs a stable response-bearing image
-     item, not just drawing.
-4. **Style editor / style selector**
+3. **Style editor / style selector**
    - Dear ImGui exposes these as built-in tools.
    - Fret should use theme/editor tooling and diagnostics/devtools lanes; do not freeze a generic
      style editor API from this audit.
-5. **Advanced table flags**
-   - Sorting and resize handles have proof, but row background targets, freeze panes, column
-     visibility policies, and old columns API should stay narrow follow-ons.
-6. **Child-region flag mirrors**
-   - `ResizeY`, auto-resize, nav flattening, and clipping-return behavior need behavior-specific
-     proof and gates.
+4. **Advanced table flags**
+   - Sorting, resize handles, and alternating row backgrounds already have proof.
+   - Per-row/per-cell background override targets, freeze panes, column visibility policies, and
+     old columns API should stay narrow follow-ons.
+5. **Child-region flag mirrors beyond manual resize**
+   - `ResizeY` and `ResizeX` now have closed proof lanes.
+   - Auto-resize, nav flattening, and clipping-return behavior still need behavior-specific proof
+     and gates.
 
 ## Source-Backed Facts
 
@@ -79,6 +88,12 @@ public helper widening:
   structural containers now live in `ecosystem/fret-ui-kit/src/imui/facade_writer/`. The
   floating/popup trait default implementation bodies now live in
   `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs`.
+- `window(...)` is no longer a v1 posture with z-order/focus arbitration deferred: current
+  `fret-imui` floating tests cover bring-to-front hit-test order, focus-on-click independent from
+  activation, no-inputs / pointer-pass-through behavior, close, resize, and collapse.
+- `TableOptions::striped` is already the current alternating row-background policy. Do not treat
+  Dear ImGui `RowBg` parity as wholly missing; the unresolved axis is explicit per-row/per-cell
+  background override policy, which still needs a narrow proof.
 - `ecosystem/fret-ui-editor/src/imui.rs` is only a thin adapter layer that forwards editor controls
   and composites through `into_element(...)`.
 - `repo-ref/imgui/imgui.h` still groups the upstream surface by Windows, Child Windows, Widgets,
@@ -101,9 +116,9 @@ Suggested follow-on names:
 
 - `imui-list-box-proof-v1`
 - `imui-plot-adapter-proof-v1`
-- `imui-image-item-proof-v1`
 - `imui-table-advanced-flags-v1`
-- `imui-child-region-resize-y-v1`
+- `imui-child-region-auto-resize-v1`
+- `imui-child-region-visibility-return-v1`
 
 ## Gates
 

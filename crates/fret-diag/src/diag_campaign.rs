@@ -9,10 +9,10 @@ use crate::registry::campaigns::{
     load_manifest_campaigns_from_paths, parse_lane, source_kind_str,
 };
 use crate::regression_summary::{
-    DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionCampaignSummaryV1, RegressionEvidenceV1,
-    RegressionHighlightsV1, RegressionItemKindV1, RegressionItemSummaryV1, RegressionNotesV1,
-    RegressionRunSummaryV1, RegressionSourceV1, RegressionStatusV1, RegressionSummaryV1,
-    RegressionTotalsV1,
+    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1,
+    RegressionCampaignSummaryV1, RegressionEvidenceV1, RegressionHighlightsV1,
+    RegressionItemKindV1, RegressionItemSummaryV1, RegressionNotesV1, RegressionRunSummaryV1,
+    RegressionSourceV1, RegressionStatusV1, RegressionSummaryV1, RegressionTotalsV1,
 };
 
 const DIAG_CAMPAIGN_MANIFEST_KIND_V1: &str = "diag_campaign_manifest";
@@ -21,6 +21,7 @@ const DIAG_CAMPAIGN_BATCH_MANIFEST_KIND_V1: &str = "diag_campaign_batch_manifest
 const DIAG_CAMPAIGN_BATCH_RESULT_KIND_V1: &str = "diag_campaign_batch_result";
 const DIAG_CAMPAIGN_SHARE_MANIFEST_KIND_V1: &str = "diag_campaign_share_manifest";
 const DIAG_CAMPAIGN_VALIDATE_RESULT_KIND_V1: &str = "diag_campaign_validate_result";
+const DIAG_CAMPAIGN_DASHBOARD_TEXT_FILENAME_V1: &str = "dashboard.txt";
 
 #[derive(Debug, Clone)]
 pub(crate) struct CampaignCmdContext {
@@ -77,6 +78,8 @@ struct CampaignExecutionReport {
 struct CampaignExecutionOutcome {
     items_failed: usize,
     error: Option<String>,
+    dashboard_text_path: Option<PathBuf>,
+    dashboard_text_error: Option<String>,
     share_manifest_path: Option<PathBuf>,
     share_error: Option<String>,
     capabilities_check_path: Option<PathBuf>,
@@ -104,6 +107,8 @@ struct CampaignSummaryArtifacts {
     finished_unix_ms: u64,
     duration_ms: u64,
     summarize_error: Option<String>,
+    dashboard_text_path: Option<PathBuf>,
+    dashboard_text_error: Option<String>,
     share_manifest_path: Option<PathBuf>,
     share_error: Option<String>,
     capabilities_check_path: Option<PathBuf>,
@@ -126,6 +131,8 @@ struct CampaignSummaryFinalizePlan {
 #[derive(Debug, Clone)]
 struct CampaignSummaryFinalizeOutcome {
     summarize_error: Option<String>,
+    dashboard_text_path: Option<PathBuf>,
+    dashboard_text_error: Option<String>,
     share_manifest_path: Option<PathBuf>,
     share_error: Option<String>,
 }
@@ -197,6 +204,7 @@ struct CampaignBatchArtifacts {
 struct CampaignAggregateArtifacts {
     summary_path: PathBuf,
     index_path: PathBuf,
+    dashboard_text_path: Option<PathBuf>,
     share_manifest_path: Option<PathBuf>,
     capabilities_check_path: Option<PathBuf>,
     capability_source: Option<crate::CapabilitySource>,
@@ -205,6 +213,7 @@ struct CampaignAggregateArtifacts {
     environment_source_catalog_provenance: Option<crate::EnvironmentSourceCatalogProvenance>,
     environment_sources: Vec<crate::PublishedEnvironmentSourceArtifact>,
     summarize_error: Option<String>,
+    dashboard_text_error: Option<String>,
     share_error: Option<String>,
 }
 
@@ -212,6 +221,7 @@ struct CampaignAggregateArtifacts {
 struct CampaignAggregatePathProjection {
     summary_path: Option<String>,
     index_path: Option<String>,
+    dashboard_text_path: Option<String>,
     share_manifest_path: Option<String>,
     capabilities_check_path: Option<String>,
     environment_check_path: Option<String>,
@@ -1210,12 +1220,18 @@ fn collect_campaign_run_failures(
         command_failures.extend(
             [
                 campaign_batch_summarize_failure_text(batch),
+                campaign_batch_dashboard_text_failure_text(batch),
                 campaign_batch_share_failure_text(batch),
             ]
             .into_iter()
             .flatten(),
         );
     }
+    command_failures.extend(
+        reports
+            .iter()
+            .filter_map(campaign_report_dashboard_text_failure_text),
+    );
     command_failures.extend(
         reports
             .iter()
@@ -1274,6 +1290,20 @@ fn campaign_batch_share_failure_text(batch: &CampaignBatchArtifacts) -> Option<S
     })
 }
 
+fn campaign_batch_dashboard_text_failure_text(batch: &CampaignBatchArtifacts) -> Option<String> {
+    batch
+        .aggregate
+        .dashboard_text_error
+        .as_deref()
+        .map(|error| {
+            format!(
+                "campaign batch dashboard text export failed under {}: {}",
+                batch.batch_root.display(),
+                error
+            )
+        })
+}
+
 fn campaign_report_share_failure_text(report: &CampaignExecutionReport) -> Option<String> {
     report.aggregate.share_error.as_deref().map(|error| {
         format!(
@@ -1283,6 +1313,21 @@ fn campaign_report_share_failure_text(report: &CampaignExecutionReport) -> Optio
             error
         )
     })
+}
+
+fn campaign_report_dashboard_text_failure_text(report: &CampaignExecutionReport) -> Option<String> {
+    report
+        .aggregate
+        .dashboard_text_error
+        .as_deref()
+        .map(|error| {
+            format!(
+                "campaign `{}` dashboard text export failed under {}: {}",
+                report.campaign_id,
+                report.out_dir.display(),
+                error
+            )
+        })
 }
 
 fn print_campaign_run_output(
@@ -1358,9 +1403,16 @@ fn campaign_single_run_output_lines(report: &CampaignExecutionReport) -> Vec<Str
         .share_manifest_path
         .as_deref()
         .map(|share_manifest_path| {
+            let dashboard_text = report
+                .aggregate
+                .dashboard_text_path
+                .as_deref()
+                .map(|path| path.display().to_string())
+                .unwrap_or_else(|| "unknown".to_string());
             vec![format!(
-                "campaign: failed evidence exported (id={}, share_manifest={})",
+                "campaign: failed evidence exported (id={}, dashboard_text={}, share_manifest={})",
                 report.campaign_id,
+                dashboard_text,
                 share_manifest_path.display()
             )]
         })
@@ -1389,6 +1441,12 @@ fn campaign_batch_run_output_lines(outcome: &CampaignRunOutcome) -> Vec<String> 
     )];
     if let Some(batch) = outcome.batch.as_ref() {
         lines.push(format!("  batch_root: {}", batch.batch_root.display()));
+        if let Some(dashboard_text_line) = campaign_path_output_line(
+            "  dashboard_text",
+            batch.aggregate.dashboard_text_path.as_deref(),
+        ) {
+            lines.push(dashboard_text_line);
+        }
         if let Some(share_manifest_line) = campaign_share_manifest_output_line(
             "  share_manifest",
             batch.aggregate.share_manifest_path.as_deref(),
@@ -1418,6 +1476,12 @@ fn campaign_batch_report_output_lines(report: &CampaignExecutionReport) -> Vec<S
     ) {
         lines.push(capabilities_check_line);
     }
+    if let Some(dashboard_text_line) = campaign_path_output_line(
+        "    dashboard_text",
+        report.aggregate.dashboard_text_path.as_deref(),
+    ) {
+        lines.push(dashboard_text_line);
+    }
     if let Some(share_manifest_line) = campaign_share_manifest_output_line(
         "    share_manifest",
         report.aggregate.share_manifest_path.as_deref(),
@@ -1441,6 +1505,10 @@ fn campaign_capabilities_check_output_line(
 ) -> Option<String> {
     capabilities_check_path
         .map(|capabilities_check_path| format!("{label}: {}", capabilities_check_path.display()))
+}
+
+fn campaign_path_output_line(label: &str, path: Option<&Path>) -> Option<String> {
+    path.map(|path| format!("{label}: {}", path.display()))
 }
 
 fn campaign_run_selection_json(options: &CampaignRunOptions) -> serde_json::Value {
@@ -1570,6 +1638,8 @@ fn normalize_campaign_execution_outcome(
         Err(error) => CampaignExecutionOutcome {
             items_failed: item_count,
             error: Some(error),
+            dashboard_text_path: None,
+            dashboard_text_error: None,
             share_manifest_path: None,
             share_error: None,
             capabilities_check_path: None,
@@ -1590,6 +1660,8 @@ fn build_campaign_execution_report(
     let CampaignExecutionOutcome {
         items_failed,
         error,
+        dashboard_text_path,
+        dashboard_text_error,
         share_manifest_path,
         share_error,
         capabilities_check_path,
@@ -1604,6 +1676,8 @@ fn build_campaign_execution_report(
         out_dir: plan.campaign_root.clone(),
         aggregate: build_campaign_report_aggregate_artifacts(
             plan,
+            dashboard_text_path,
+            dashboard_text_error,
             share_manifest_path,
             share_error,
             capabilities_check_path,
@@ -1624,6 +1698,8 @@ fn build_campaign_execution_report(
 
 fn build_campaign_report_aggregate_artifacts(
     plan: &CampaignExecutionPlan,
+    dashboard_text_path: Option<PathBuf>,
+    dashboard_text_error: Option<String>,
     share_manifest_path: Option<PathBuf>,
     share_error: Option<String>,
     capabilities_check_path: Option<PathBuf>,
@@ -1636,6 +1712,7 @@ fn build_campaign_report_aggregate_artifacts(
     CampaignAggregateArtifacts {
         summary_path: plan.summary_path.clone(),
         index_path: plan.index_path.clone(),
+        dashboard_text_path,
         share_manifest_path,
         capabilities_check_path,
         capability_source,
@@ -1644,6 +1721,7 @@ fn build_campaign_report_aggregate_artifacts(
         environment_source_catalog_provenance,
         environment_sources,
         summarize_error: None,
+        dashboard_text_error,
         share_error,
     }
 }
@@ -1773,6 +1851,8 @@ fn maybe_execute_campaign_capability_preflight(
             &missing,
             &check_path,
         )),
+        dashboard_text_path: summary_artifacts.dashboard_text_path,
+        dashboard_text_error: summary_artifacts.dashboard_text_error,
         share_manifest_path: summary_artifacts.share_manifest_path,
         share_error: summary_artifacts.share_error,
         capabilities_check_path: Some(check_path),
@@ -2000,6 +2080,8 @@ fn maybe_execute_campaign_environment_admission(
             &evaluation,
             &check_path,
         )),
+        dashboard_text_path: summary_artifacts.dashboard_text_path,
+        dashboard_text_error: summary_artifacts.dashboard_text_error,
         share_manifest_path: summary_artifacts.share_manifest_path,
         share_error: summary_artifacts.share_error,
         capabilities_check_path: summary_artifacts.capabilities_check_path,
@@ -2711,6 +2793,7 @@ fn build_campaign_execution_outcome(
     let CampaignAggregateArtifacts {
         summary_path: _,
         index_path: _,
+        dashboard_text_path,
         share_manifest_path,
         capabilities_check_path,
         capability_source,
@@ -2719,6 +2802,7 @@ fn build_campaign_execution_outcome(
         environment_source_catalog_provenance,
         environment_sources,
         summarize_error,
+        dashboard_text_error,
         share_error,
     } = aggregate;
     let error =
@@ -2726,6 +2810,8 @@ fn build_campaign_execution_outcome(
     CampaignExecutionOutcome {
         items_failed,
         error,
+        dashboard_text_path,
+        dashboard_text_error,
         share_manifest_path,
         share_error,
         capabilities_check_path,
@@ -2878,6 +2964,12 @@ fn execute_campaign_summary_finalize_outcome(
         resolved_out_dir: plan.out_dir.clone(),
         stats_json: false,
     });
+    let summarize_error = summarize_result.err();
+    let (dashboard_text_path, dashboard_text_error) = if summarize_error.is_none() {
+        maybe_write_campaign_dashboard_text(&plan.out_dir, ctx.stats_top)
+    } else {
+        (None, None)
+    };
     let (share_manifest_path, share_error) = maybe_write_failure_share_manifest(
         &plan.out_dir,
         &plan.summary_path,
@@ -2888,7 +2980,9 @@ fn execute_campaign_summary_finalize_outcome(
     );
 
     CampaignSummaryFinalizeOutcome {
-        summarize_error: summarize_result.err(),
+        summarize_error,
+        dashboard_text_path,
+        dashboard_text_error,
         share_manifest_path,
         share_error,
     }
@@ -2903,6 +2997,8 @@ fn build_campaign_summary_artifacts(
         finished_unix_ms,
         duration_ms: finished_unix_ms.saturating_sub(created_unix_ms),
         summarize_error: outcome.summarize_error,
+        dashboard_text_path: outcome.dashboard_text_path,
+        dashboard_text_error: outcome.dashboard_text_error,
         share_manifest_path: outcome.share_manifest_path,
         share_error: outcome.share_error,
         capabilities_check_path: None,
@@ -3409,6 +3505,13 @@ fn build_campaign_combined_failure_root_zip_entries(
         entries.push(CampaignCombinedZipEntry {
             src: index_path,
             dest: "_root/regression.index.json".to_string(),
+        });
+    }
+    let dashboard_text_path = root_dir.join(DIAG_CAMPAIGN_DASHBOARD_TEXT_FILENAME_V1);
+    if dashboard_text_path.is_file() {
+        entries.push(CampaignCombinedZipEntry {
+            src: dashboard_text_path,
+            dest: "_root/dashboard.txt".to_string(),
         });
     }
     entries
@@ -3961,6 +4064,10 @@ fn campaign_batch_paths_json(
         serde_json::json!(paths.index_path),
     );
     payload.insert(
+        "dashboard_text_path".to_string(),
+        serde_json::json!(paths.dashboard_text_path),
+    );
+    payload.insert(
         "share_manifest_path".to_string(),
         serde_json::json!(paths.share_manifest_path),
     );
@@ -4022,7 +4129,45 @@ fn campaign_batch_status_json(
         "share_error".to_string(),
         serde_json::json!(batch.aggregate.share_error),
     );
+    payload.insert(
+        "dashboard_text_error".to_string(),
+        serde_json::json!(batch.aggregate.dashboard_text_error),
+    );
     payload
+}
+
+fn maybe_write_campaign_dashboard_text(
+    root_dir: &Path,
+    stats_top: usize,
+) -> (Option<PathBuf>, Option<String>) {
+    let index_path = root_dir.join(DIAG_REGRESSION_INDEX_FILENAME_V1);
+    let dashboard_text_path = root_dir.join(DIAG_CAMPAIGN_DASHBOARD_TEXT_FILENAME_V1);
+    match write_campaign_dashboard_text(&index_path, &dashboard_text_path, stats_top) {
+        Ok(()) => (Some(dashboard_text_path), None),
+        Err(error) => (None, Some(error)),
+    }
+}
+
+fn write_campaign_dashboard_text(
+    index_path: &Path,
+    dashboard_text_path: &Path,
+    stats_top: usize,
+) -> Result<(), String> {
+    let payload = read_json_value(index_path).ok_or_else(|| {
+        format!(
+            "failed to read dashboard index for campaign text projection: {}",
+            index_path.display()
+        )
+    })?;
+    let projection = crate::diag_dashboard::project_dashboard_summary(&payload, stats_top);
+    let mut text =
+        crate::diag_dashboard::dashboard_human_lines_from_projection(index_path, &projection)
+            .join("\n");
+    text.push('\n');
+    if let Some(parent) = dashboard_text_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    std::fs::write(dashboard_text_path, text.as_bytes()).map_err(|e| e.to_string())
 }
 
 fn maybe_write_failure_share_manifest(
@@ -4178,6 +4323,7 @@ fn build_campaign_aggregate_artifacts(
     CampaignAggregateArtifacts {
         summary_path: summary_path.to_path_buf(),
         index_path: index_path.to_path_buf(),
+        dashboard_text_path: summary_artifacts.dashboard_text_path.clone(),
         share_manifest_path: summary_artifacts.share_manifest_path.clone(),
         capabilities_check_path: summary_artifacts.capabilities_check_path.clone(),
         capability_source: summary_artifacts.capability_source.clone(),
@@ -4188,6 +4334,7 @@ fn build_campaign_aggregate_artifacts(
             .clone(),
         environment_sources: summary_artifacts.environment_sources.clone(),
         summarize_error: summary_artifacts.summarize_error.clone(),
+        dashboard_text_error: summary_artifacts.dashboard_text_error.clone(),
         share_error: summary_artifacts.share_error.clone(),
     }
 }
@@ -4196,6 +4343,7 @@ fn campaign_aggregate_json(aggregate: &CampaignAggregateArtifacts) -> serde_json
     serde_json::json!({
         "summary_path": aggregate.summary_path.is_file().then(|| aggregate.summary_path.display().to_string()),
         "index_path": aggregate.index_path.is_file().then(|| aggregate.index_path.display().to_string()),
+        "dashboard_text_path": aggregate.dashboard_text_path.as_ref().filter(|path| path.is_file()).map(|path| path.display().to_string()),
         "share_manifest_path": aggregate.share_manifest_path.as_ref().map(|path| path.display().to_string()),
         "capabilities_check_path": aggregate.capabilities_check_path.as_ref().map(|path| path.display().to_string()),
         "environment_check_path": aggregate.environment_check_path.as_ref().map(|path| path.display().to_string()),
@@ -4211,6 +4359,7 @@ fn campaign_aggregate_json(aggregate: &CampaignAggregateArtifacts) -> serde_json
             .map(|source| source.to_json_value())
             .collect::<Vec<_>>(),
         "summarize_error": aggregate.summarize_error.clone(),
+        "dashboard_text_error": aggregate.dashboard_text_error.clone(),
         "share_error": aggregate.share_error.clone(),
     })
 }
@@ -4233,9 +4382,21 @@ fn campaign_aggregate_path_projection(
             .is_file()
             .then(|| aggregate.index_path.display().to_string()),
     };
+    let dashboard_text_path = match path_mode {
+        CampaignReportPathMode::RunOutcome => aggregate
+            .dashboard_text_path
+            .as_ref()
+            .map(|path| path.display().to_string()),
+        CampaignReportPathMode::ResultArtifact => aggregate
+            .dashboard_text_path
+            .as_ref()
+            .filter(|path| path.is_file())
+            .map(|path| path.display().to_string()),
+    };
     CampaignAggregatePathProjection {
         summary_path,
         index_path,
+        dashboard_text_path,
         share_manifest_path: aggregate
             .share_manifest_path
             .as_ref()
@@ -4401,6 +4562,10 @@ fn campaign_report_status_json(
         "share_error".to_string(),
         serde_json::json!(report.aggregate.share_error),
     );
+    payload.insert(
+        "dashboard_text_error".to_string(),
+        serde_json::json!(report.aggregate.dashboard_text_error),
+    );
     payload
 }
 
@@ -4460,6 +4625,10 @@ fn campaign_report_paths_json(
     payload.insert(
         "index_path".to_string(),
         serde_json::json!(paths.index_path),
+    );
+    payload.insert(
+        "dashboard_text_path".to_string(),
+        serde_json::json!(paths.dashboard_text_path),
     );
     payload.insert(
         "share_manifest_path".to_string(),
@@ -5054,6 +5223,8 @@ mod tests {
 
         assert_eq!(outcome.items_failed, 3);
         assert_eq!(outcome.error.as_deref(), Some("boom"));
+        assert!(outcome.dashboard_text_path.is_none());
+        assert!(outcome.dashboard_text_error.is_none());
         assert!(outcome.share_manifest_path.is_none());
         assert!(outcome.share_error.is_none());
     }
@@ -5079,6 +5250,8 @@ mod tests {
         assert_eq!(report.scripts_total, 0);
         assert!(!report.ok);
         assert_eq!(report.error.as_deref(), Some("boom"));
+        assert!(report.aggregate.dashboard_text_path.is_none());
+        assert!(report.aggregate.dashboard_text_error.is_none());
         assert!(report.aggregate.share_manifest_path.is_none());
         assert!(report.aggregate.share_error.is_none());
     }
@@ -5092,6 +5265,8 @@ mod tests {
         let outcome = CampaignExecutionOutcome {
             items_failed: 1,
             error: Some("failed".to_string()),
+            dashboard_text_path: Some(PathBuf::from("dashboard.txt")),
+            dashboard_text_error: Some("dashboard failed".to_string()),
             share_manifest_path: Some(PathBuf::from("share/manifest.json")),
             share_error: Some("share failed".to_string()),
             capabilities_check_path: None,
@@ -5115,6 +5290,14 @@ mod tests {
         assert!(!report.ok);
         assert_eq!(report.error.as_deref(), Some("failed"));
         assert_eq!(
+            report.aggregate.dashboard_text_path,
+            Some(PathBuf::from("dashboard.txt"))
+        );
+        assert_eq!(
+            report.aggregate.dashboard_text_error.as_deref(),
+            Some("dashboard failed")
+        );
+        assert_eq!(
             report.aggregate.share_error.as_deref(),
             Some("share failed")
         );
@@ -5130,9 +5313,11 @@ mod tests {
         let share_manifest_path = root.join("share.manifest.json");
         let summary_path = root.join("regression.summary.json");
         let index_path = root.join(crate::regression_summary::DIAG_REGRESSION_INDEX_FILENAME_V1);
+        let dashboard_text_path = root.join(DIAG_CAMPAIGN_DASHBOARD_TEXT_FILENAME_V1);
         std::fs::write(&share_manifest_path, b"{}" as &[u8]).expect("write share manifest");
         std::fs::write(&summary_path, b"{}" as &[u8]).expect("write summary");
         std::fs::write(&index_path, b"{}" as &[u8]).expect("write index");
+        std::fs::write(&dashboard_text_path, b"dashboard" as &[u8]).expect("write dashboard");
 
         let entries = build_campaign_combined_failure_root_zip_entries(
             &root,
@@ -5140,11 +5325,63 @@ mod tests {
             &summary_path,
         );
 
-        assert_eq!(entries.len(), 3);
+        assert_eq!(entries.len(), 4);
         assert_eq!(entries[0].dest, "_root/share.manifest.json");
         assert_eq!(entries[1].dest, "_root/regression.summary.json");
         assert_eq!(entries[2].src, index_path);
         assert_eq!(entries[2].dest, "_root/regression.index.json");
+        assert_eq!(entries[3].src, dashboard_text_path);
+        assert_eq!(entries[3].dest, "_root/dashboard.txt");
+    }
+
+    #[test]
+    fn write_campaign_dashboard_text_uses_shared_dashboard_projection() {
+        let root = temp_test_root("dashboard-text");
+        let index_path = root.join(DIAG_REGRESSION_INDEX_FILENAME_V1);
+        let dashboard_text_path = root.join(DIAG_CAMPAIGN_DASHBOARD_TEXT_FILENAME_V1);
+        write_json_value(
+            &index_path,
+            &serde_json::json!({
+                "kind": "diag_regression_index",
+                "out_dir": root.display().to_string(),
+                "summaries": [
+                    {
+                        "path": "runs/failed/regression.summary.json",
+                        "lane": "smoke",
+                        "status": "failed",
+                        "failures": 2,
+                        "items_total": 3
+                    }
+                ],
+                "counters": {
+                    "by_status": { "failed": 1 },
+                    "by_lane": { "smoke": 1 },
+                    "by_tool": { "fretboard-dev diag campaign": 1 }
+                },
+                "top_reason_codes": [
+                    { "reason_code": "diag.test.failure", "count": 2 }
+                ],
+                "failing_summaries": [
+                    {
+                        "path": "runs/failed/regression.summary.json",
+                        "lane": "smoke",
+                        "failures": 2,
+                        "items_total": 3
+                    }
+                ]
+            }),
+        )
+        .expect("write index");
+
+        write_campaign_dashboard_text(&index_path, &dashboard_text_path, 5)
+            .expect("write dashboard text");
+
+        let text = std::fs::read_to_string(&dashboard_text_path).expect("read dashboard");
+        assert!(text.contains("regression index:"));
+        assert!(text.contains("normalized status counters:"));
+        assert!(text.contains("top reason codes:"));
+        assert!(text.contains("non-passing summaries:"));
+        assert!(text.contains("runs/failed/regression.summary.json"));
     }
 
     #[test]
@@ -6305,6 +6542,7 @@ mod tests {
             aggregate: CampaignAggregateArtifacts {
                 summary_path: PathBuf::from(format!("runs/{campaign_id}/regression.summary.json")),
                 index_path: PathBuf::from(format!("runs/{campaign_id}/regression.index.json")),
+                dashboard_text_path: None,
                 share_manifest_path: None,
                 capabilities_check_path: None,
                 capability_source: None,
@@ -6313,6 +6551,7 @@ mod tests {
                 environment_source_catalog_provenance: None,
                 environment_sources: Vec::new(),
                 summarize_error: None,
+                dashboard_text_error: None,
                 share_error: None,
             },
             items_total,
@@ -6345,6 +6584,8 @@ mod tests {
     fn campaign_single_run_output_lines_cover_success_and_failed_evidence() {
         let success_report = sample_campaign_execution_report("ui-gallery-smoke", true, 3, 0);
         let mut failed_report = sample_campaign_execution_report("docking-smoke", false, 5, 2);
+        failed_report.aggregate.dashboard_text_path =
+            Some(PathBuf::from("runs/docking-smoke/dashboard.txt"));
         failed_report.aggregate.share_manifest_path =
             Some(PathBuf::from("runs/docking-smoke/share.manifest.json"));
 
@@ -6355,6 +6596,7 @@ mod tests {
         assert!(success_lines[0].contains("campaign: ok (id=ui-gallery-smoke"));
         assert_eq!(failure_lines.len(), 1);
         assert!(failure_lines[0].contains("campaign: failed evidence exported (id=docking-smoke"));
+        assert!(failure_lines[0].contains("dashboard.txt"));
         assert!(failure_lines[0].contains("share.manifest.json"));
     }
 
@@ -6391,12 +6633,15 @@ mod tests {
             sample_campaign_execution_report("ui-gallery-smoke", false, 3, 1);
         report_with_share.aggregate.share_manifest_path =
             Some(PathBuf::from("runs/ui-gallery-smoke/share.manifest.json"));
+        report_with_share.aggregate.dashboard_text_path =
+            Some(PathBuf::from("runs/ui-gallery-smoke/dashboard.txt"));
         let report_without_share = sample_campaign_execution_report("docking-smoke", true, 5, 0);
         let batch = CampaignBatchArtifacts {
             batch_root: PathBuf::from("batch/root"),
             aggregate: CampaignAggregateArtifacts {
                 summary_path: PathBuf::from("batch/root/regression.summary.json"),
                 index_path: PathBuf::from("batch/root/regression.index.json"),
+                dashboard_text_path: Some(PathBuf::from("batch/root/dashboard.txt")),
                 share_manifest_path: Some(PathBuf::from("batch/root/share.manifest.json")),
                 capabilities_check_path: None,
                 capability_source: None,
@@ -6405,6 +6650,7 @@ mod tests {
                 environment_source_catalog_provenance: None,
                 environment_sources: Vec::new(),
                 summarize_error: None,
+                dashboard_text_error: None,
                 share_error: None,
             },
         };
@@ -6426,11 +6672,21 @@ mod tests {
         assert!(
             lines
                 .iter()
+                .any(|line| line == "  dashboard_text: batch/root/dashboard.txt")
+        );
+        assert!(
+            lines
+                .iter()
                 .any(|line| line == "  share_manifest: batch/root/share.manifest.json")
         );
         assert!(lines.iter().any(|line| {
             line.contains("  - ui-gallery-smoke [failed] items=3 failed=1 -> runs/ui-gallery-smoke")
         }));
+        assert!(
+            lines
+                .iter()
+                .any(|line| line == "    dashboard_text: runs/ui-gallery-smoke/dashboard.txt")
+        );
         assert!(lines.iter().any(|line| line == "    share_manifest: runs/ui-gallery-smoke/share.manifest.json"));
         assert!(lines.iter().any(|line| {
             line.contains("  - docking-smoke [ok] items=5 failed=0 -> runs/docking-smoke")
@@ -6681,6 +6937,7 @@ mod tests {
         let aggregate = CampaignAggregateArtifacts {
             summary_path: PathBuf::from("runs/ui-gallery-smoke/regression.summary.json"),
             index_path: PathBuf::from("runs/ui-gallery-smoke/regression.index.json"),
+            dashboard_text_path: None,
             share_manifest_path: Some(PathBuf::from("runs/ui-gallery-smoke/share.manifest.json")),
             capabilities_check_path: None,
             capability_source: None,
@@ -6700,6 +6957,7 @@ mod tests {
                 )),
             }],
             summarize_error: None,
+            dashboard_text_error: None,
             share_error: Some("share failed".to_string()),
         };
 
@@ -6743,6 +7001,7 @@ mod tests {
             aggregate: CampaignAggregateArtifacts {
                 summary_path: PathBuf::from("batch/root/regression.summary.json"),
                 index_path: PathBuf::from("batch/root/regression.index.json"),
+                dashboard_text_path: None,
                 share_manifest_path: Some(PathBuf::from("batch/root/share.manifest.json")),
                 capabilities_check_path: None,
                 capability_source: None,
@@ -6751,6 +7010,7 @@ mod tests {
                 environment_source_catalog_provenance: None,
                 environment_sources: Vec::new(),
                 summarize_error: Some("batch summarize failed".to_string()),
+                dashboard_text_error: None,
                 share_error: Some("batch share failed".to_string()),
             },
         };
@@ -6796,6 +7056,7 @@ mod tests {
             aggregate: CampaignAggregateArtifacts {
                 summary_path: PathBuf::from("batch/root/regression.summary.json"),
                 index_path: PathBuf::from("batch/root/regression.index.json"),
+                dashboard_text_path: None,
                 share_manifest_path: Some(PathBuf::from("batch/root/share.manifest.json")),
                 capabilities_check_path: None,
                 capability_source: None,
@@ -6804,6 +7065,7 @@ mod tests {
                 environment_source_catalog_provenance: None,
                 environment_sources: Vec::new(),
                 summarize_error: Some("batch summarize failed".to_string()),
+                dashboard_text_error: None,
                 share_error: Some("batch share failed".to_string()),
             },
         };
@@ -6834,6 +7096,7 @@ mod tests {
             aggregate: CampaignAggregateArtifacts {
                 summary_path: PathBuf::from("batch/root/regression.summary.json"),
                 index_path: PathBuf::from("batch/root/regression.index.json"),
+                dashboard_text_path: None,
                 share_manifest_path: Some(PathBuf::from("batch/root/share.manifest.json")),
                 capabilities_check_path: None,
                 capability_source: None,
@@ -6842,6 +7105,7 @@ mod tests {
                 environment_source_catalog_provenance: None,
                 environment_sources: Vec::new(),
                 summarize_error: None,
+                dashboard_text_error: None,
                 share_error: None,
             },
         };
@@ -6877,6 +7141,7 @@ mod tests {
             aggregate: CampaignAggregateArtifacts {
                 summary_path: PathBuf::from("batch/root/regression.summary.json"),
                 index_path: PathBuf::from("batch/root/regression.index.json"),
+                dashboard_text_path: None,
                 share_manifest_path: Some(PathBuf::from("batch/root/share.manifest.json")),
                 capabilities_check_path: None,
                 capability_source: None,
@@ -6885,6 +7150,7 @@ mod tests {
                 environment_source_catalog_provenance: None,
                 environment_sources: Vec::new(),
                 summarize_error: None,
+                dashboard_text_error: None,
                 share_error: Some("batch share failed".to_string()),
             },
         };
@@ -6958,6 +7224,8 @@ mod tests {
             finished_unix_ms: 55,
             duration_ms: 13,
             summarize_error: Some("summary failed".to_string()),
+            dashboard_text_path: None,
+            dashboard_text_error: None,
             share_manifest_path: Some(PathBuf::from("share/manifest.json")),
             share_error: Some("share failed".to_string()),
             capabilities_check_path: None,
@@ -7027,6 +7295,8 @@ mod tests {
             finished_unix_ms: 55,
             duration_ms: 13,
             summarize_error: None,
+            dashboard_text_path: None,
+            dashboard_text_error: None,
             share_manifest_path: None,
             share_error: None,
             capabilities_check_path: None,
@@ -7080,6 +7350,8 @@ mod tests {
             finished_unix_ms: 55,
             duration_ms: 13,
             summarize_error: Some("summary failed".to_string()),
+            dashboard_text_path: None,
+            dashboard_text_error: None,
             share_manifest_path: Some(PathBuf::from("share/manifest.json")),
             share_error: Some("share failed".to_string()),
             capabilities_check_path: None,
@@ -7131,6 +7403,8 @@ mod tests {
             finished_unix_ms: 88,
             duration_ms: 21,
             summarize_error: None,
+            dashboard_text_path: None,
+            dashboard_text_error: None,
             share_manifest_path: Some(PathBuf::from("batch/share.manifest.json")),
             share_error: Some("batch share failed".to_string()),
             capabilities_check_path: None,
@@ -7203,6 +7477,8 @@ mod tests {
             finished_unix_ms: 88,
             duration_ms: 21,
             summarize_error: None,
+            dashboard_text_path: None,
+            dashboard_text_error: None,
             share_manifest_path: Some(PathBuf::from("batch/share.manifest.json")),
             share_error: Some("batch share failed".to_string()),
             capabilities_check_path: None,
@@ -7266,6 +7542,8 @@ mod tests {
             finished_unix_ms: 88,
             duration_ms: 21,
             summarize_error: None,
+            dashboard_text_path: None,
+            dashboard_text_error: None,
             share_manifest_path: Some(PathBuf::from("batch/share.manifest.json")),
             share_error: None,
             capabilities_check_path: None,
@@ -7312,6 +7590,8 @@ mod tests {
             88,
             CampaignSummaryFinalizeOutcome {
                 summarize_error: Some("summary failed".to_string()),
+                dashboard_text_path: Some(PathBuf::from("dashboard.txt")),
+                dashboard_text_error: Some("dashboard failed".to_string()),
                 share_manifest_path: Some(PathBuf::from("share/manifest.json")),
                 share_error: Some("share failed".to_string()),
             },
@@ -7320,6 +7600,14 @@ mod tests {
         assert_eq!(artifacts.finished_unix_ms, 88);
         assert_eq!(artifacts.duration_ms, 0);
         assert_eq!(artifacts.summarize_error.as_deref(), Some("summary failed"));
+        assert_eq!(
+            artifacts.dashboard_text_path.as_deref(),
+            Some(Path::new("dashboard.txt"))
+        );
+        assert_eq!(
+            artifacts.dashboard_text_error.as_deref(),
+            Some("dashboard failed")
+        );
         assert_eq!(
             artifacts.share_manifest_path.as_deref(),
             Some(Path::new("share/manifest.json"))
@@ -7334,6 +7622,8 @@ mod tests {
             finished_unix_ms: 55,
             duration_ms: 13,
             summarize_error: Some("summary failed".to_string()),
+            dashboard_text_path: Some(PathBuf::from("dashboard.txt")),
+            dashboard_text_error: Some("dashboard failed".to_string()),
             share_manifest_path: Some(PathBuf::from("share/manifest.json")),
             share_error: Some("share failed".to_string()),
             capabilities_check_path: None,
@@ -7358,6 +7648,14 @@ mod tests {
         assert_eq!(
             finalization.aggregate.summarize_error.as_deref(),
             Some("summary failed")
+        );
+        assert_eq!(
+            finalization.aggregate.dashboard_text_path,
+            Some(PathBuf::from("dashboard.txt"))
+        );
+        assert_eq!(
+            finalization.aggregate.dashboard_text_error.as_deref(),
+            Some("dashboard failed")
         );
         assert_eq!(
             finalization.aggregate.share_error.as_deref(),
@@ -7428,6 +7726,8 @@ mod tests {
             finished_unix_ms: 88,
             duration_ms: 21,
             summarize_error: Some("batch summarize failed".to_string()),
+            dashboard_text_path: None,
+            dashboard_text_error: None,
             share_manifest_path: Some(PathBuf::from("batch/share.manifest.json")),
             share_error: Some("batch share failed".to_string()),
             capabilities_check_path: None,
@@ -7570,6 +7870,8 @@ mod tests {
             finished_unix_ms: 88,
             duration_ms: 21,
             summarize_error: Some("summary failed".to_string()),
+            dashboard_text_path: Some(PathBuf::from("batch/dashboard.txt")),
+            dashboard_text_error: Some("dashboard failed".to_string()),
             share_manifest_path: Some(PathBuf::from("batch/share.manifest.json")),
             share_error: Some("share failed".to_string()),
             capabilities_check_path: Some(PathBuf::from("batch/check.capabilities.json")),
@@ -7606,10 +7908,18 @@ mod tests {
             PathBuf::from("batch/root/regression.index.json")
         );
         assert_eq!(
+            aggregate.dashboard_text_path,
+            Some(PathBuf::from("batch/dashboard.txt"))
+        );
+        assert_eq!(
             aggregate.share_manifest_path,
             Some(PathBuf::from("batch/share.manifest.json"))
         );
         assert_eq!(aggregate.summarize_error.as_deref(), Some("summary failed"));
+        assert_eq!(
+            aggregate.dashboard_text_error.as_deref(),
+            Some("dashboard failed")
+        );
         assert_eq!(aggregate.share_error.as_deref(), Some("share failed"));
         assert_eq!(
             aggregate.environment_sources_path,
@@ -7640,6 +7950,8 @@ mod tests {
 
         let aggregate = build_campaign_report_aggregate_artifacts(
             &plan,
+            Some(PathBuf::from("dashboard.txt")),
+            Some("dashboard failed".to_string()),
             Some(PathBuf::from("share/manifest.json")),
             Some("share failed".to_string()),
             None,
@@ -7653,10 +7965,18 @@ mod tests {
         assert_eq!(aggregate.summary_path, plan.summary_path);
         assert_eq!(aggregate.index_path, plan.index_path);
         assert_eq!(
+            aggregate.dashboard_text_path,
+            Some(PathBuf::from("dashboard.txt"))
+        );
+        assert_eq!(
             aggregate.share_manifest_path,
             Some(PathBuf::from("share/manifest.json"))
         );
         assert!(aggregate.summarize_error.is_none());
+        assert_eq!(
+            aggregate.dashboard_text_error.as_deref(),
+            Some("dashboard failed")
+        );
         assert_eq!(aggregate.share_error.as_deref(), Some("share failed"));
     }
 
@@ -7669,6 +7989,7 @@ mod tests {
             aggregate: CampaignAggregateArtifacts {
                 summary_path: PathBuf::from("batch/root/regression.summary.json"),
                 index_path: PathBuf::from("batch/root/regression.index.json"),
+                dashboard_text_path: None,
                 share_manifest_path: None,
                 capabilities_check_path: None,
                 capability_source: None,
@@ -7677,6 +7998,7 @@ mod tests {
                 environment_source_catalog_provenance: None,
                 environment_sources: Vec::new(),
                 summarize_error: Some("batch summarize failed".to_string()),
+                dashboard_text_error: None,
                 share_error: Some("batch share failed".to_string()),
             },
         };
@@ -7890,6 +8212,8 @@ mod tests {
             finished_unix_ms: 55,
             duration_ms: 13,
             summarize_error: None,
+            dashboard_text_path: None,
+            dashboard_text_error: None,
             share_manifest_path: None,
             share_error: None,
             capabilities_check_path: None,
@@ -7927,6 +8251,8 @@ mod tests {
             finished_unix_ms: 55,
             duration_ms: 13,
             summarize_error: Some("summary failed".to_string()),
+            dashboard_text_path: Some(PathBuf::from("batch/dashboard.txt")),
+            dashboard_text_error: Some("dashboard failed".to_string()),
             share_manifest_path: Some(PathBuf::from("batch/share.manifest.json")),
             share_error: Some("share failed".to_string()),
             capabilities_check_path: None,
@@ -7964,6 +8290,11 @@ mod tests {
                 .get("index_path")
                 .is_some_and(|value| value.is_null())
         );
+        assert!(
+            aggregate
+                .get("dashboard_text_path")
+                .is_some_and(|value| value.is_null())
+        );
         assert_eq!(
             aggregate
                 .get("share_manifest_path")
@@ -7975,6 +8306,12 @@ mod tests {
                 .get("summarize_error")
                 .and_then(|value| value.as_str()),
             Some("summary failed")
+        );
+        assert_eq!(
+            aggregate
+                .get("dashboard_text_error")
+                .and_then(|value| value.as_str()),
+            Some("dashboard failed")
         );
         assert_eq!(
             aggregate
@@ -8113,12 +8450,14 @@ mod tests {
     fn collect_campaign_run_failures_tracks_run_batch_and_share_errors() {
         let mut failed_report = sample_campaign_execution_report("ui-gallery-smoke", false, 3, 1);
         failed_report.aggregate.share_error = Some("report share failed".to_string());
+        failed_report.aggregate.dashboard_text_error = Some("report dashboard failed".to_string());
         let reports = vec![failed_report];
         let batch = CampaignBatchArtifacts {
             batch_root: PathBuf::from("batch/root"),
             aggregate: CampaignAggregateArtifacts {
                 summary_path: PathBuf::from("batch/root/regression.summary.json"),
                 index_path: PathBuf::from("batch/root/regression.index.json"),
+                dashboard_text_path: None,
                 share_manifest_path: None,
                 capabilities_check_path: None,
                 capability_source: None,
@@ -8127,13 +8466,14 @@ mod tests {
                 environment_source_catalog_provenance: None,
                 environment_sources: Vec::new(),
                 summarize_error: Some("batch summarize failed".to_string()),
+                dashboard_text_error: Some("batch dashboard failed".to_string()),
                 share_error: Some("batch share failed".to_string()),
             },
         };
 
         let failures = collect_campaign_run_failures(&reports, Some(&batch), 1);
 
-        assert_eq!(failures.len(), 4);
+        assert_eq!(failures.len(), 6);
         assert!(failures.iter().any(|failure| {
             failure.contains("campaign run completed with 1 failed campaign(s)")
                 && failure.contains("ui-gallery-smoke: ui-gallery-smoke failed")
@@ -8143,8 +8483,16 @@ mod tests {
                 && failure.contains("batch summarize failed")
         }));
         assert!(failures.iter().any(|failure| {
+            failure.contains("campaign batch dashboard text export failed under batch/root")
+                && failure.contains("batch dashboard failed")
+        }));
+        assert!(failures.iter().any(|failure| {
             failure.contains("campaign batch share export failed under batch/root")
                 && failure.contains("batch share failed")
+        }));
+        assert!(failures.iter().any(|failure| {
+            failure.contains("campaign `ui-gallery-smoke` dashboard text export failed")
+                && failure.contains("report dashboard failed")
         }));
         assert!(failures.iter().any(|failure| {
             failure.contains("campaign `ui-gallery-smoke` share export failed")
@@ -8186,6 +8534,7 @@ mod tests {
             aggregate: CampaignAggregateArtifacts {
                 summary_path: plan.summary_path.clone(),
                 index_path: plan.index_path.clone(),
+                dashboard_text_path: None,
                 summarize_error: Some("summary boom".to_string()),
                 share_manifest_path: Some(PathBuf::from("share/manifest.json")),
                 capabilities_check_path: None,
@@ -8194,6 +8543,7 @@ mod tests {
                 environment_sources_path: None,
                 environment_source_catalog_provenance: None,
                 environment_sources: Vec::new(),
+                dashboard_text_error: None,
                 share_error: Some("share boom".to_string()),
             },
         };

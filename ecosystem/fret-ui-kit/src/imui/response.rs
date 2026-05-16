@@ -9,7 +9,7 @@ pub use drag::{DragResponse, DragSourceResponse, DropTargetResponse};
 pub use floating::{FloatingAreaResponse, FloatingWindowResponse};
 pub use hover::{ImUiHoveredFlags, ResponseExt};
 pub use widgets::{
-    ChildRegionResizeYResponse, ChildRegionResponse, ComboResponse, DisclosureResponse,
-    InputTextPickerResponse, TabBarResponse, TabTriggerResponse, TableColumnResizeResponse,
-    TableHeaderResponse, TableResponse, VirtualListResponse,
+    ChildRegionResizeXResponse, ChildRegionResizeYResponse, ChildRegionResponse, ComboResponse,
+    DisclosureResponse, InputTextPickerResponse, TabBarResponse, TabTriggerResponse,
+    TableColumnResizeResponse, TableHeaderResponse, TableResponse, VirtualListResponse,
 };

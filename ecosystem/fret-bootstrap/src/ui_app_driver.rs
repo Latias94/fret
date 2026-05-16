@@ -28,7 +28,7 @@ use std::sync::{Mutex, OnceLock};
 use fret_core::time::{Duration, Instant};
 
 #[cfg(feature = "diagnostics")]
-use crate::ui_diagnostics::UiDiagnosticsService;
+use crate::ui_diagnostics::{UiDiagnosticsService, UiPerfSpanV1};
 
 pub type ViewElements = Elements;
 
@@ -1925,6 +1925,10 @@ fn write_frame_hitch_log(line: &str) {
 #[derive(Debug, Clone, Copy)]
 enum UiDriverPhase {
     View,
+    #[cfg(all(feature = "diagnostics", feature = "ui-app-command-palette"))]
+    ViewCommandPaletteOverlay,
+    #[cfg(feature = "diagnostics")]
+    ViewPreferencesOverlay,
     Overlay,
     Layout,
     Paint,
@@ -1932,11 +1936,53 @@ enum UiDriverPhase {
     DiagnosticsDriveScript,
 }
 
+impl UiDriverPhase {
+    #[cfg(feature = "diagnostics")]
+    fn perf_span_name(self) -> &'static str {
+        match self {
+            Self::View => "fret.ui.view",
+            #[cfg(all(feature = "diagnostics", feature = "ui-app-command-palette"))]
+            Self::ViewCommandPaletteOverlay => "fret.ui.view.command_palette_overlay",
+            #[cfg(feature = "diagnostics")]
+            Self::ViewPreferencesOverlay => "fret.ui.view.preferences_overlay",
+            Self::Overlay => "fret.ui.overlay",
+            Self::Layout => "fret.ui.layout",
+            Self::Paint => "fret.ui.paint",
+            #[cfg(feature = "diagnostics")]
+            Self::DiagnosticsDriveScript => "fret.ui.diagnostics.drive_script",
+        }
+    }
+
+    #[cfg(feature = "diagnostics")]
+    fn perf_span_phase(self) -> &'static str {
+        match self {
+            Self::View => "view",
+            #[cfg(all(feature = "diagnostics", feature = "ui-app-command-palette"))]
+            Self::ViewCommandPaletteOverlay => "view_command_palette_overlay",
+            #[cfg(feature = "diagnostics")]
+            Self::ViewPreferencesOverlay => "view_preferences_overlay",
+            Self::Overlay => "overlay",
+            Self::Layout => "layout",
+            Self::Paint => "paint",
+            #[cfg(feature = "diagnostics")]
+            Self::DiagnosticsDriveScript => "diagnostics_drive_script",
+        }
+    }
+}
+
 #[cfg(feature = "tracing")]
 impl UiDriverPhase {
     fn make_span(self) -> tracing::Span {
         match self {
             Self::View => tracing::info_span!("fret.ui.view"),
+            #[cfg(all(feature = "diagnostics", feature = "ui-app-command-palette"))]
+            Self::ViewCommandPaletteOverlay => {
+                tracing::info_span!("fret.ui.view.command_palette_overlay")
+            }
+            #[cfg(feature = "diagnostics")]
+            Self::ViewPreferencesOverlay => {
+                tracing::info_span!("fret.ui.view.preferences_overlay")
+            }
             Self::Overlay => tracing::info_span!("fret.ui.overlay"),
             Self::Layout => tracing::info_span!("fret.ui.layout"),
             Self::Paint => tracing::info_span!("fret.ui.paint"),
@@ -1946,6 +1992,65 @@ impl UiDriverPhase {
             }
         }
     }
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug)]
+struct UiDriverPerfSpanCapture {
+    frame_start: Instant,
+    spans: Vec<UiPerfSpanV1>,
+}
+
+#[cfg(feature = "diagnostics")]
+impl UiDriverPerfSpanCapture {
+    fn new_if_enabled() -> Option<Self> {
+        diag_real_perf_spans_enabled().then(|| Self {
+            frame_start: Instant::now(),
+            spans: Vec::with_capacity(7),
+        })
+    }
+
+    fn take_spans(&mut self) -> Vec<UiPerfSpanV1> {
+        std::mem::take(&mut self.spans)
+    }
+
+    fn push_phase(&mut self, phase: UiDriverPhase, start_us: u64, duration: Duration) {
+        let dur_us = duration_micros_u64(duration);
+        if dur_us == 0 {
+            return;
+        }
+        self.spans.push(UiPerfSpanV1 {
+            name: phase.perf_span_name().to_string(),
+            cat: "ui.driver".to_string(),
+            start_us,
+            dur_us,
+            tid: None,
+            args: Some(serde_json::json!({
+                "phase": phase.perf_span_phase(),
+                "source": "ui_app_driver",
+            })),
+        });
+    }
+}
+
+#[cfg(feature = "diagnostics")]
+fn diag_real_perf_spans_enabled() -> bool {
+    std::env::var_os("FRET_DIAG_REAL_SPANS").is_some_and(|value| {
+        let value = value.to_string_lossy();
+        let value = value.trim();
+        if value.is_empty() {
+            return false;
+        }
+        !matches!(
+            value.to_ascii_lowercase().as_str(),
+            "0" | "false" | "off" | "no"
+        )
+    })
+}
+
+#[cfg(feature = "diagnostics")]
+fn duration_micros_u64(duration: Duration) -> u64 {
+    duration.as_micros().min(u64::MAX as u128) as u64
 }
 
 fn measure_ui_driver_phase<T>(
@@ -1968,6 +2073,56 @@ fn measure_ui_driver_phase<T>(
         let _ = phase;
         fret_perf::measure(time_enabled, f)
     }
+}
+
+#[cfg(feature = "diagnostics")]
+fn measure_ui_driver_phase_for_frame_with_capture<T>(
+    capture: &mut Option<UiDriverPerfSpanCapture>,
+    phase: UiDriverPhase,
+    time_enabled: bool,
+    f: impl FnOnce(&mut Option<UiDriverPerfSpanCapture>) -> T,
+) -> (T, Option<Duration>) {
+    let capture_start_us = capture
+        .as_ref()
+        .map(|capture| duration_micros_u64(capture.frame_start.elapsed()));
+    let (out, elapsed) =
+        measure_ui_driver_phase(phase, time_enabled || capture.is_some(), || f(capture));
+    if let (Some(capture), Some(start_us), Some(elapsed)) =
+        (capture.as_mut(), capture_start_us, elapsed)
+    {
+        capture.push_phase(phase, start_us, elapsed);
+    }
+    (out, elapsed)
+}
+
+#[cfg(feature = "diagnostics")]
+fn measure_ui_driver_phase_for_frame<T>(
+    capture: &mut Option<UiDriverPerfSpanCapture>,
+    phase: UiDriverPhase,
+    time_enabled: bool,
+    f: impl FnOnce() -> T,
+) -> (T, Option<Duration>) {
+    measure_ui_driver_phase_for_frame_with_capture(capture, phase, time_enabled, |_| f())
+}
+
+#[cfg(not(feature = "diagnostics"))]
+fn measure_ui_driver_phase_for_frame_with_capture<T>(
+    capture: &mut (),
+    phase: UiDriverPhase,
+    time_enabled: bool,
+    f: impl FnOnce(&mut ()) -> T,
+) -> (T, Option<Duration>) {
+    measure_ui_driver_phase(phase, time_enabled, || f(capture))
+}
+
+#[cfg(not(feature = "diagnostics"))]
+fn measure_ui_driver_phase_for_frame<T>(
+    capture: &mut (),
+    phase: UiDriverPhase,
+    time_enabled: bool,
+    f: impl FnOnce() -> T,
+) -> (T, Option<Duration>) {
+    measure_ui_driver_phase_for_frame_with_capture(capture, phase, time_enabled, |_| f())
 }
 
 fn ui_app_render<S>(
@@ -2002,6 +2157,10 @@ fn ui_app_render<S>(
     let _frame_guard = frame_span.enter();
 
     let hitch_config = frame_hitch_config();
+    #[cfg(feature = "diagnostics")]
+    let mut perf_span_capture = UiDriverPerfSpanCapture::new_if_enabled();
+    #[cfg(not(feature = "diagnostics"))]
+    let mut perf_span_capture = ();
     let hitch_total_started = hitch_config.map(|_| Instant::now());
     let mut hitch_view_ms: Option<u64> = None;
     let mut hitch_overlay_ms: Option<u64> = None;
@@ -2048,10 +2207,11 @@ fn ui_app_render<S>(
         }
     }
 
-    let (root, view_elapsed) = measure_ui_driver_phase(
+    let (root, view_elapsed) = measure_ui_driver_phase_for_frame_with_capture(
+        &mut perf_span_capture,
         UiDriverPhase::View,
         hitch_config.is_some(),
-        || {
+        |_frame_perf_span_capture| {
             fret_ui::frame_pipeline::render_base_root_with_changes(
                 &mut state.ui,
                 app,
@@ -2164,9 +2324,32 @@ fn ui_app_render<S>(
                                 hot.call((cx, &mut state.state))
                             };
 
-                            #[cfg(feature = "ui-app-command-palette")]
+                            #[cfg(all(
+                                feature = "ui-app-command-palette",
+                                feature = "diagnostics"
+                            ))]
+                            let _ = measure_ui_driver_phase_for_frame(
+                                _frame_perf_span_capture,
+                                UiDriverPhase::ViewCommandPaletteOverlay,
+                                false,
+                                || render_command_palette_overlay_if_needed(driver, cx, &mut out),
+                            );
+
+                            #[cfg(all(
+                                feature = "ui-app-command-palette",
+                                not(feature = "diagnostics")
+                            ))]
                             render_command_palette_overlay_if_needed(driver, cx, &mut out);
 
+                            #[cfg(feature = "diagnostics")]
+                            let _ = measure_ui_driver_phase_for_frame(
+                                _frame_perf_span_capture,
+                                UiDriverPhase::ViewPreferencesOverlay,
+                                false,
+                                || drive_preferences_overlay(cx),
+                            );
+
+                            #[cfg(not(feature = "diagnostics"))]
                             drive_preferences_overlay(cx);
                             out
                         });
@@ -2185,9 +2368,32 @@ fn ui_app_render<S>(
                             #[cfg(feature = "ui-app-command-palette")]
                             let mut out = out;
 
-                            #[cfg(feature = "ui-app-command-palette")]
+                            #[cfg(all(
+                                feature = "ui-app-command-palette",
+                                feature = "diagnostics"
+                            ))]
+                            let _ = measure_ui_driver_phase_for_frame(
+                                _frame_perf_span_capture,
+                                UiDriverPhase::ViewCommandPaletteOverlay,
+                                false,
+                                || render_command_palette_overlay_if_needed(driver, cx, &mut out),
+                            );
+
+                            #[cfg(all(
+                                feature = "ui-app-command-palette",
+                                not(feature = "diagnostics")
+                            ))]
                             render_command_palette_overlay_if_needed(driver, cx, &mut out);
 
+                            #[cfg(feature = "diagnostics")]
+                            let _ = measure_ui_driver_phase_for_frame(
+                                _frame_perf_span_capture,
+                                UiDriverPhase::ViewPreferencesOverlay,
+                                false,
+                                || drive_preferences_overlay(cx),
+                            );
+
+                            #[cfg(not(feature = "diagnostics"))]
                             drive_preferences_overlay(cx);
                             out
                         });
@@ -2209,10 +2415,14 @@ fn ui_app_render<S>(
     ));
     hotpatch_trace_log(&format!("ui_app_render: after set_root window={window:?}"));
 
-    let (_, overlay_elapsed) =
-        measure_ui_driver_phase(UiDriverPhase::Overlay, hitch_config.is_some(), || {
+    let (_, overlay_elapsed) = measure_ui_driver_phase_for_frame(
+        &mut perf_span_capture,
+        UiDriverPhase::Overlay,
+        hitch_config.is_some(),
+        || {
             OverlayController::render(&mut state.ui, app, services, window, bounds);
-        });
+        },
+    );
     if let Some(elapsed) = overlay_elapsed {
         hitch_overlay_ms = Some(elapsed.as_millis() as u64);
     }
@@ -2255,12 +2465,16 @@ fn ui_app_render<S>(
     state.ui.ingest_paint_cache_source(scene);
     scene.clear();
 
-    let (_, layout_elapsed) =
-        measure_ui_driver_phase(UiDriverPhase::Layout, hitch_config.is_some(), || {
+    let (_, layout_elapsed) = measure_ui_driver_phase_for_frame(
+        &mut perf_span_capture,
+        UiDriverPhase::Layout,
+        hitch_config.is_some(),
+        || {
             let mut frame =
                 UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
             frame.layout_all();
-        });
+        },
+    );
     let layout_total_ms: Option<u64> = layout_elapsed.map(|elapsed| elapsed.as_millis() as u64);
     hotpatch_trace_log(&format!(
         "ui_app_render: after layout_all window={window:?}"
@@ -2268,12 +2482,16 @@ fn ui_app_render<S>(
 
     let hitch_layout_ms = layout_total_ms;
 
-    let (_, paint_elapsed) =
-        measure_ui_driver_phase(UiDriverPhase::Paint, hitch_config.is_some(), || {
+    let (_, paint_elapsed) = measure_ui_driver_phase_for_frame(
+        &mut perf_span_capture,
+        UiDriverPhase::Paint,
+        hitch_config.is_some(),
+        || {
             let mut frame =
                 UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
             frame.paint_all(scene);
-        });
+        },
+    );
     if let Some(elapsed) = paint_elapsed {
         hitch_paint_ms = Some(elapsed.as_millis() as u64);
     }
@@ -2281,135 +2499,146 @@ fn ui_app_render<S>(
 
     #[cfg(feature = "diagnostics")]
     {
-        let _ = measure_ui_driver_phase(UiDriverPhase::DiagnosticsDriveScript, false, || {
-            // Drive scripted input after `paint_all()` so virtualization-heavy trees (e.g. VirtualList)
-            // have their realized item subtrees available for hit-testing.
-            //
-            // The injected events will typically affect the *next* frame; the diagnostics recorder
-            // below captures the current frame state.
-            let semantics_snapshot = state.ui.semantics_snapshot_arc();
-            let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-                svc.drive_script_for_window(
-                    app,
-                    services,
-                    window,
-                    bounds,
-                    scale_factor,
-                    Some(&mut state.ui),
-                    semantics_snapshot.as_deref(),
-                )
-            });
-            for effect in drive.effects {
-                app.push_effect(effect);
-            }
-            if drive.request_redraw {
-                app.request_redraw(window);
-                // Script-driven `wait_frames` needs a reliable way to advance frames even when the
-                // scene is otherwise idle. Requesting an animation frame ensures the runner
-                // schedules another render tick.
-                app.push_effect(Effect::RequestAnimationFrame(window));
-            }
-
-            let mut injected_any = false;
-            UiDiagnosticsService::with_script_injection_scope(|| {
-                for event in drive.events {
-                    injected_any = true;
-                    ui_app_handle_event(
-                        driver,
-                        WinitEventContext {
+        let _ = measure_ui_driver_phase_for_frame(
+            &mut perf_span_capture,
+            UiDriverPhase::DiagnosticsDriveScript,
+            false,
+            || {
+                // Drive scripted input after `paint_all()` so virtualization-heavy trees (e.g. VirtualList)
+                // have their realized item subtrees available for hit-testing.
+                //
+                // The injected events will typically affect the *next* frame; the diagnostics recorder
+                // below captures the current frame state.
+                let semantics_snapshot = state.ui.semantics_snapshot_arc();
+                let drive =
+                    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+                        svc.drive_script_for_window(
                             app,
                             services,
                             window,
-                            state,
-                        },
-                        &event,
-                    );
+                            bounds,
+                            scale_factor,
+                            Some(&mut state.ui),
+                            semantics_snapshot.as_deref(),
+                        )
+                    });
+                for effect in drive.effects {
+                    app.push_effect(effect);
                 }
-            });
+                if drive.request_redraw {
+                    app.request_redraw(window);
+                    // Script-driven `wait_frames` needs a reliable way to advance frames even when the
+                    // scene is otherwise idle. Requesting an animation frame ensures the runner
+                    // schedules another render tick.
+                    app.push_effect(Effect::RequestAnimationFrame(window));
+                }
 
-            // Scripted pointer steps often dispatch actions via `Effect::Command`. Flush those command
-            // effects eagerly so:
-            // - UI tree handlers run in the same render tick as the injected input, and
-            // - command dispatch diagnostics are available to scripted `wait_command_dispatch_trace`
-            //   without depending on runner-level effect timing.
-            if injected_any {
+                let mut injected_any = false;
                 UiDiagnosticsService::with_script_injection_scope(|| {
-                    const MAX_SCRIPT_COMMAND_FLUSH_ROUNDS: usize = 8;
-                    let mut deferred_effects: Vec<Effect> = Vec::new();
-                    for _ in 0..MAX_SCRIPT_COMMAND_FLUSH_ROUNDS {
-                        let effects = app.flush_effects();
-                        if effects.is_empty() {
-                            break;
-                        }
+                    for event in drive.events {
+                        injected_any = true;
+                        ui_app_handle_event(
+                            driver,
+                            WinitEventContext {
+                                app,
+                                services,
+                                window,
+                                state,
+                            },
+                            &event,
+                        );
+                    }
+                });
 
-                        let mut applied_any_command = false;
-                        for effect in effects {
-                            match effect {
-                                Effect::Command { window: w, command } => {
-                                    if w.is_none() || w == Some(window) {
-                                        applied_any_command = true;
-                                        ui_app_handle_command(
-                                            driver,
-                                            WinitCommandContext {
-                                                app,
-                                                services,
-                                                window,
-                                                state,
-                                            },
-                                            command,
-                                        );
-                                    } else {
-                                        deferred_effects
-                                            .push(Effect::Command { window: w, command });
+                // Scripted pointer steps often dispatch actions via `Effect::Command`. Flush those command
+                // effects eagerly so:
+                // - UI tree handlers run in the same render tick as the injected input, and
+                // - command dispatch diagnostics are available to scripted `wait_command_dispatch_trace`
+                //   without depending on runner-level effect timing.
+                if injected_any {
+                    UiDiagnosticsService::with_script_injection_scope(|| {
+                        const MAX_SCRIPT_COMMAND_FLUSH_ROUNDS: usize = 8;
+                        let mut deferred_effects: Vec<Effect> = Vec::new();
+                        for _ in 0..MAX_SCRIPT_COMMAND_FLUSH_ROUNDS {
+                            let effects = app.flush_effects();
+                            if effects.is_empty() {
+                                break;
+                            }
+
+                            let mut applied_any_command = false;
+                            for effect in effects {
+                                match effect {
+                                    Effect::Command { window: w, command } => {
+                                        if w.is_none() || w == Some(window) {
+                                            applied_any_command = true;
+                                            ui_app_handle_command(
+                                                driver,
+                                                WinitCommandContext {
+                                                    app,
+                                                    services,
+                                                    window,
+                                                    state,
+                                                },
+                                                command,
+                                            );
+                                        } else {
+                                            deferred_effects
+                                                .push(Effect::Command { window: w, command });
+                                        }
                                     }
+                                    other => deferred_effects.push(other),
                                 }
-                                other => deferred_effects.push(other),
+                            }
+
+                            if !applied_any_command {
+                                break;
                             }
                         }
 
-                        if !applied_any_command {
-                            break;
+                        for effect in deferred_effects {
+                            app.push_effect(effect);
                         }
-                    }
+                    });
+                }
+            },
+        );
 
-                    for effect in deferred_effects {
-                        app.push_effect(effect);
-                    }
-                });
+        let mut real_perf_spans = perf_span_capture
+            .as_mut()
+            .map(UiDriverPerfSpanCapture::take_spans)
+            .unwrap_or_default();
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            svc.record_perf_spans_v1(window, std::mem::take(&mut real_perf_spans));
+            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+            svc.record_snapshot(
+                app,
+                window,
+                bounds,
+                scale_factor,
+                &mut state.ui,
+                element_runtime,
+                scene,
+            );
+            let defer_dump_until_renderer_perf =
+                std::env::var_os("FRET_DIAG_RENDERER_PERF").is_some_and(|v| !v.is_empty());
+            if !defer_dump_until_renderer_perf {
+                if let Some(dir) = svc.maybe_dump_if_triggered() {
+                    #[cfg(feature = "tracing")]
+                    tracing::info!(window = ?window, out_dir = %dir.display(), "ui diagnostics dumped");
+                }
             }
-
-            app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-                let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-                svc.record_snapshot(
-                    app,
-                    window,
-                    bounds,
-                    scale_factor,
-                    &mut state.ui,
-                    element_runtime,
-                    scene,
-                );
-                let defer_dump_until_renderer_perf = std::env::var_os("FRET_DIAG_RENDERER_PERF")
-                    .is_some_and(|v| !v.is_empty());
-                if !defer_dump_until_renderer_perf {
-                    if let Some(dir) = svc.maybe_dump_if_triggered() {
-                        #[cfg(feature = "tracing")]
-                        tracing::info!(window = ?window, out_dir = %dir.display(), "ui diagnostics dumped");
-                    }
+            if svc.poll_exit_trigger() {
+                app.push_effect(Effect::QuitApp);
+            } else if svc.is_enabled() {
+                // Diagnostics are driven per-window after paint, but multi-window scripts may
+                // need a non-active window to continue ticking (e.g. tear-off creates a new
+                // window and focus shifts). Keep all known windows in the RAF set so scripted
+                // playback and timeouts remain deterministic.
+                for w in svc.known_windows().iter().copied() {
+                    app.request_redraw(w);
+                    app.push_effect(Effect::RequestAnimationFrame(w));
                 }
-                if svc.poll_exit_trigger() {
-                    app.push_effect(Effect::QuitApp);
-                } else if svc.is_enabled() {
-                    // Diagnostics are driven per-window after paint, but multi-window scripts may
-                    // need a non-active window to continue ticking (e.g. tear-off creates a new
-                    // window and focus shifts). Keep all known windows in the RAF set so scripted
-                    // playback and timeouts remain deterministic.
-                    for w in svc.known_windows().iter().copied() {
-                        app.request_redraw(w);
-                        app.push_effect(Effect::RequestAnimationFrame(w));
-                    }
-                }
-            });
+            }
         });
     }
 
@@ -2917,5 +3146,155 @@ mod tests {
         assert_ne!(middleware_seq, 0);
         assert_ne!(user_seq, 0);
         assert!(middleware_seq < user_seq);
+    }
+
+    #[cfg(feature = "diagnostics")]
+    #[test]
+    fn perf_span_capture_records_frame_relative_driver_phase() {
+        let mut capture = UiDriverPerfSpanCapture {
+            frame_start: Instant::now(),
+            spans: Vec::new(),
+        };
+
+        capture.push_phase(UiDriverPhase::View, 12, Duration::from_micros(34));
+
+        let spans = capture.take_spans();
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0].name, "fret.ui.view");
+        assert_eq!(spans[0].cat, "ui.driver");
+        assert_eq!(spans[0].start_us, 12);
+        assert_eq!(spans[0].dur_us, 34);
+        assert_eq!(
+            spans[0]
+                .args
+                .as_ref()
+                .and_then(|args| args.get("phase"))
+                .and_then(|v| v.as_str()),
+            Some("view")
+        );
+    }
+
+    #[cfg(feature = "diagnostics")]
+    #[test]
+    fn perf_span_capture_records_diagnostics_drive_script_phase() {
+        let mut capture = UiDriverPerfSpanCapture {
+            frame_start: Instant::now(),
+            spans: Vec::new(),
+        };
+
+        capture.push_phase(
+            UiDriverPhase::DiagnosticsDriveScript,
+            56,
+            Duration::from_micros(78),
+        );
+
+        let spans = capture.take_spans();
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0].name, "fret.ui.diagnostics.drive_script");
+        assert_eq!(spans[0].cat, "ui.driver");
+        assert_eq!(spans[0].start_us, 56);
+        assert_eq!(spans[0].dur_us, 78);
+        assert_eq!(
+            spans[0]
+                .args
+                .as_ref()
+                .and_then(|args| args.get("phase"))
+                .and_then(|v| v.as_str()),
+            Some("diagnostics_drive_script")
+        );
+    }
+
+    #[cfg(feature = "diagnostics")]
+    #[test]
+    fn perf_span_capture_records_view_preferences_overlay_phase() {
+        let mut capture = UiDriverPerfSpanCapture {
+            frame_start: Instant::now(),
+            spans: Vec::new(),
+        };
+
+        capture.push_phase(
+            UiDriverPhase::ViewPreferencesOverlay,
+            89,
+            Duration::from_micros(123),
+        );
+
+        let spans = capture.take_spans();
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0].name, "fret.ui.view.preferences_overlay");
+        assert_eq!(spans[0].cat, "ui.driver");
+        assert_eq!(spans[0].start_us, 89);
+        assert_eq!(spans[0].dur_us, 123);
+        assert_eq!(
+            spans[0]
+                .args
+                .as_ref()
+                .and_then(|args| args.get("phase"))
+                .and_then(|v| v.as_str()),
+            Some("view_preferences_overlay")
+        );
+    }
+
+    #[cfg(all(feature = "diagnostics", feature = "ui-app-command-palette"))]
+    #[test]
+    fn perf_span_capture_records_view_command_palette_overlay_phase() {
+        let mut capture = UiDriverPerfSpanCapture {
+            frame_start: Instant::now(),
+            spans: Vec::new(),
+        };
+
+        capture.push_phase(
+            UiDriverPhase::ViewCommandPaletteOverlay,
+            177,
+            Duration::from_micros(211),
+        );
+
+        let spans = capture.take_spans();
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0].name, "fret.ui.view.command_palette_overlay");
+        assert_eq!(spans[0].cat, "ui.driver");
+        assert_eq!(spans[0].start_us, 177);
+        assert_eq!(spans[0].dur_us, 211);
+        assert_eq!(
+            spans[0]
+                .args
+                .as_ref()
+                .and_then(|args| args.get("phase"))
+                .and_then(|v| v.as_str()),
+            Some("view_command_palette_overlay")
+        );
+    }
+
+    #[cfg(feature = "diagnostics")]
+    #[test]
+    fn perf_span_capture_allows_nested_phase_recording() {
+        let mut capture = Some(UiDriverPerfSpanCapture {
+            frame_start: Instant::now(),
+            spans: Vec::new(),
+        });
+
+        let (value, _) = measure_ui_driver_phase_for_frame_with_capture(
+            &mut capture,
+            UiDriverPhase::View,
+            false,
+            |capture| {
+                capture.as_mut().expect("active capture").push_phase(
+                    UiDriverPhase::ViewPreferencesOverlay,
+                    144,
+                    Duration::from_micros(55),
+                );
+                7
+            },
+        );
+
+        assert_eq!(value, 7);
+        let spans = capture.as_mut().expect("capture").take_spans();
+        assert!(
+            spans
+                .iter()
+                .any(|span| span.name == "fret.ui.view.preferences_overlay"
+                    && span.start_us == 144
+                    && span.dur_us == 55),
+            "expected nested preferences overlay span in {spans:?}"
+        );
     }
 }

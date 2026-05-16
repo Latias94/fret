@@ -59,8 +59,11 @@ Important files:
 - `campaign.result.json` or `batch.result.json`
 - `regression.summary.json`
 - `regression.index.json`
+- `dashboard.txt`
 
 These files are the intended first-open contract for CLI, DevTools, and future GUI/MCP consumers.
+`dashboard.txt` is the persisted human projection of the same shared dashboard vocabulary used by
+`diag dashboard`; it is not a separate source of truth.
 
 The canonical classification of that first-open set now lives in
 `ARTIFACT_AND_EVIDENCE_MODEL_V1.md`: manifests/results are the source-of-truth run records,
@@ -108,7 +111,9 @@ Current behavior:
 - reads `regression.summary.json` from the selected root,
 - defaults to failed items only,
 - generates AI-only share zips under `<root>/share/*.ai.zip`,
-- writes `<root>/share/share.manifest.json` with the selected items, share zip paths, and errors.
+- writes `<root>/share/share.manifest.json` with the selected items, share zip paths, and errors,
+- includes `_root/dashboard.txt` in `share/combined-failures.zip` when the aggregate dashboard text
+  exists.
 
 For campaign runs, failed roots now also best-effort generate the same `share/share.manifest.json`
 automatically during `diag campaign run` when aggregate summaries are available.
@@ -152,6 +157,6 @@ This preserves the workstream boundary decisions:
 
 This note does not decide the following yet:
 
-- whether campaign roots should also emit `dashboard.txt` or HTML,
+- whether campaign roots should also emit HTML,
 - whether failing evidence bundles should be generated automatically during `run`,
 - whether campaign manifests stay JSON-only forever.

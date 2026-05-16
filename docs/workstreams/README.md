@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 377
+- Dedicated directories: 380
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -296,9 +296,9 @@ Current source of truth for the in-tree immediate-mode stack:
     stack-reset closeouts without reopening runtime widening or generic helper-growth by default;
     the 2026-05-15 audit keeps the goal explicitly not complete until real-host Wayland hand-feel,
     DevTools GUI productization, and broader perf attribution/smoothness close in their owner
-    lanes; future `fret-ui-kit::imui` widening still needs the frozen two-surface proof budget
-    before review, and implementation-heavy work should stay in narrower follow-ons or the active
-    docking parity lane.
+    lanes; the 2026-05-16 M18 docking matrix is local policy-skip evidence only; future
+    `fret-ui-kit::imui` widening still needs the frozen two-surface proof budget before review, and
+    implementation-heavy work should stay in narrower follow-ons or the active docking parity lane.
 
 - Closed narrow P1 text input policy depth follow-on:
   - `docs/workstreams/imui-text-input-policy-depth-v1/WORKSTREAM.json`
@@ -1113,6 +1113,45 @@ Current source of truth for the in-tree immediate-mode stack:
     `ResizeX`, auto-resize, focus-boundary flattening, or a generic Dear ImGui `BeginChild()` flag
     mirror.
 
+- Closed child-region ResizeX follow-on:
+  - `docs/workstreams/imui-child-region-resize-x-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-child-region-resize-x-v1/DESIGN.md`
+  - `docs/workstreams/imui-child-region-resize-x-v1/TODO.md`
+  - `docs/workstreams/imui-child-region-resize-x-v1/MILESTONES.md`
+  - `docs/workstreams/imui-child-region-resize-x-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-child-region-resize-x-v1/CLOSEOUT_AUDIT_2026-05-16.md`
+  - `ecosystem/fret-ui-kit/src/imui/child_region.rs`
+  - `ecosystem/fret-ui-kit/src/imui/options/containers.rs`
+  - `ecosystem/fret-ui-kit/src/imui/response/widgets.rs`
+  - Scope: closed narrow follow-on for horizontal child-region resize policy in
+    `fret-ui-kit::imui`; width state stays app-owned through response helpers, composes with
+    `ResizeY`, and the lane must not broaden into auto-resize, focus-boundary flattening, or a
+    generic Dear ImGui `BeginChild()` flag mirror.
+
+- Closed selectable highlight policy follow-on:
+  - `docs/workstreams/imui-selectable-highlight-policy-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-selectable-highlight-policy-v1/DESIGN.md`
+  - `docs/workstreams/imui-selectable-highlight-policy-v1/TODO.md`
+  - `docs/workstreams/imui-selectable-highlight-policy-v1/MILESTONES.md`
+  - `docs/workstreams/imui-selectable-highlight-policy-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-selectable-highlight-policy-v1/CLOSEOUT_AUDIT_2026-05-16.md`
+  - Scope: closed narrow follow-on for Dear ImGui-style selectable highlight policy in
+    `fret-ui-kit::imui`; highlighted rows use hover-style visuals without changing selected
+    semantics, and the input-text picker active candidate no longer masquerades as selected.
+
+- Closed image item proof follow-on:
+  - `docs/workstreams/imui-image-item-proof-v1/WORKSTREAM.json`
+  - `docs/workstreams/imui-image-item-proof-v1/DESIGN.md`
+  - `docs/workstreams/imui-image-item-proof-v1/TODO.md`
+  - `docs/workstreams/imui-image-item-proof-v1/MILESTONES.md`
+  - `docs/workstreams/imui-image-item-proof-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/imui-image-item-proof-v1/CLOSEOUT_AUDIT_2026-05-16.md`
+  - `ecosystem/fret-ui-kit/src/imui/image_item_controls.rs`
+  - `ecosystem/fret-ui-kit/tests/imui_image_item_smoke.rs`
+  - Scope: closed narrow follow-on for response-bearing `fret-ui-kit::imui` image item and image
+    button authoring over Fret's existing `ImageId` / `ImageProps` mechanism; this must not import
+    Dear ImGui texture-ID state or widen `fret-imui`.
+
 - Closed narrow P1 collection box-select closeout record:
   - `docs/workstreams/imui-collection-box-select-v1/WORKSTREAM.json`
   - `docs/workstreams/imui-collection-box-select-v1/DESIGN.md`
@@ -1700,6 +1739,7 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/docking-multiwindow-imgui-parity/M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md`
+  - `docs/workstreams/docking-multiwindow-imgui-parity/M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md`
   - `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`
   - Scope: owns the remaining runner/backend multi-window hand-feel closure, starting from the
@@ -1712,8 +1752,8 @@ Current source of truth for the in-tree immediate-mode stack:
     2026-05-14, the local Wayland-boundary refresh is green for source policy, capability posture,
     fallback behavior, and campaign manifests. As of 2026-05-15, the source-drift guard validates
     docking suite membership, stale standalone-note drift, and the Wayland campaign/script
-    admission contract. The latest local policy-skip gate now proves a non-Wayland
-    `platform.capabilities` sidecar stops at `skipped_policy` before script execution.
+    admission contract. The latest local policy-skip matrix now proves Windows and Linux/X11
+    `platform.capabilities` sidecars stop at `skipped_policy` before script execution.
     Platform-specific real-host acceptance, especially the Wayland compositor runbook, remains open.
 
 - Closed narrow diagnostics follow-on for the mixed-DPI automation preflight gap:
@@ -1938,7 +1978,7 @@ Rule:
 - `docs/workstreams/docking-arbitration-diag-hardening-v1/` — first 2026-02-28, latest 2026-03-07, 3 markdown docs
 - `docs/workstreams/docking-hovered-window-contract-v1/` — first 2026-02-17, latest 2026-02-18, 2 markdown docs
 - `docs/workstreams/docking-multiviewport-arbitration-v1/` — first 2026-01-27, latest 2026-03-02, 2 markdown docs
-- `docs/workstreams/docking-multiwindow-imgui-parity/` — first 2026-01-27, latest 2026-05-15, 20 markdown docs
+- `docs/workstreams/docking-multiwindow-imgui-parity/` — first 2026-01-27, latest 2026-05-16, 21 markdown docs
 - `docs/workstreams/docking-nary-split-graph-v1/` — first 2026-02-11, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/docking-tabbar-fearless-refactor-v1/` — first 2026-02-28, latest 2026-03-05, 9 markdown docs
 - `docs/workstreams/ecosystem-integration-traits-v1/` — first 2026-03-11, latest 2026-03-12, 5 markdown docs
@@ -2054,6 +2094,9 @@ Rule:
 - `docs/workstreams/imui-ecosystem-facade-v3/` — first 2026-02-06, latest 2026-02-16, 2 markdown docs (historical archive; latest retained-compatibility closeout is `docs/workstreams/imui-compat-retained-surface-v1/CLOSEOUT_AUDIT_2026-03-31.md`)
 - `docs/workstreams/imui-child-region-depth-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the landed `ChildRegionChrome::{Framed, Bare}` slice and the no-further-generic-growth verdict for `BeginChild()`-scale child-region depth above the maintenance IMUI umbrella)
 - `docs/workstreams/imui-child-region-resize-y-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for `fret-ui-kit::imui` child-region vertical resize policy with app-owned height state and focused child-region gates)
+- `docs/workstreams/imui-child-region-resize-x-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for `fret-ui-kit::imui` child-region horizontal resize policy with app-owned width state and focused child-region gates)
+- `docs/workstreams/imui-selectable-highlight-policy-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for Dear ImGui-style selectable highlight policy that keeps keyboard-active rows visually emphasized without changing selected semantics)
+- `docs/workstreams/imui-image-item-proof-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for response-bearing IMUI image item / image button authoring over Fret `ImageId` and `ImageProps` without importing Dear ImGui texture-ID runtime state)
 - `docs/workstreams/imui-collection-box-select-v1/` — first n/a, latest n/a, 8 markdown docs (closed closeout record for the landed app-owned background marquee / box-select slice on the collection-first proof surface while the frozen proof-budget rule still blocks shared helper growth)
 - `docs/workstreams/imui-collection-keyboard-owner-v1/` — first n/a, latest n/a, 8 markdown docs (closed closeout record for the landed app-owned collection-scope keyboard-owner slice on the collection-first proof surface while the generic key-owner verdict and the frozen proof-budget rule still block shared helper growth)
 - `docs/workstreams/imui-collection-delete-action-v1/` — first n/a, latest n/a, 8 markdown docs (closed closeout record for the landed app-owned collection delete-selected slice on the collection-first proof surface while broader collection action semantics and the frozen proof-budget rule still block shared helper growth)

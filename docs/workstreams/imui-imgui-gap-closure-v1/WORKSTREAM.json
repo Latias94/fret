@@ -3,7 +3,7 @@
   "slug": "imui-imgui-gap-closure-v1",
   "title": "ImUi Dear ImGui Gap Closure v1",
   "status": "active",
-  "updated": "2026-05-15",
+  "updated": "2026-05-16",
   "scope_kind": "execution",
   "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "Refresh the Dear ImGui gap read from current Fret sources and repo-ref/imgui before further fearless refactors: identify stale parity conclusions, rank the remaining gaps, name delete/refactor candidates, and keep each follow-on tied to repro, gate, and evidence.",
@@ -190,8 +190,12 @@
       "command": "python tools/gate_imui_workstream_source.py; python tools/audit_crate.py --crate fret-imui; python tools/check_layering.py"
     },
     {
-      "name": "imui diagnostics devtools discovery",
+      "name": "imui diagnostics devtools discovery cold-start",
       "command": "python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only"
+    },
+    {
+      "name": "imui diagnostics devtools discovery drift reuse-built",
+      "command": "python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built"
     },
     {
       "name": "imui diagnostics devtools first-open",
@@ -276,6 +280,8 @@
     "docs/workstreams/imui-imgui-gap-closure-v1/P3_DESIGN_SURFACE_READINESS_2026-05-06.md",
     "docs/workstreams/imui-imgui-gap-closure-v1/P3_PORTING_SUGAR_READINESS_2026-05-06.md",
     "docs/workstreams/imui-imgui-gap-closure-v1/P3_CHILD_REGION_READINESS_2026-05-06.md",
+    "docs/workstreams/imui-child-region-resize-y-v1/WORKSTREAM.json",
+    "docs/workstreams/imui-child-region-resize-x-v1/WORKSTREAM.json",
     "docs/workstreams/imui-imgui-gap-closure-v1/P3_COLLECTION_HELPER_READINESS_2026-05-06.md",
     "docs/workstreams/imui-imgui-gap-closure-v1/P3_EXECUTION_PRIORITY_REVIEW_2026-05-06.md",
     "docs/workstreams/imui-imgui-gap-closure-v1/P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md",

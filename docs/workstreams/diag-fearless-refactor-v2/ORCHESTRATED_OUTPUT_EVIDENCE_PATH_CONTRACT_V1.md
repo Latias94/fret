@@ -74,12 +74,15 @@ Recommended aggregate fields:
 
 - `summary_path`
 - `index_path`
+- `dashboard_text_path`
 - `share_manifest_path`
 - `capabilities_check_path`
 
 Interpretation:
 
 - `summary_path` and `index_path` are the canonical first-open aggregate artifacts,
+- `dashboard_text_path` is a persisted human-readable projection of the same index/dashboard
+  vocabulary, not a separate source of truth,
 - `share_manifest_path` is an aggregate packaging/handoff path, not an item evidence path,
 - `capabilities_check_path` is an aggregate policy/preflight path, not a generic item evidence
   field.
@@ -159,6 +162,7 @@ orchestrated outputs:
 - `selected_bundle_json`
 - `packed_bundle_json`
 - `capabilities_check_path` at item root
+- `dashboard_text_path` at item root
 - `share_manifest_path` at item root
 
 Reason:

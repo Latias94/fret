@@ -44,8 +44,16 @@ struct FollowupResultRecordV1 {
     status: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    output_artifacts: Vec<FollowupOutputArtifactV1>,
     started_unix_ms: u64,
     finished_unix_ms: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct FollowupOutputArtifactV1 {
+    kind: &'static str,
+    path: String,
 }
 
 pub(crate) fn runnable_diag_args_for_followup_command(
@@ -108,6 +116,7 @@ pub(crate) fn followup_result_summary_lines(result_json: &str) -> Vec<String> {
     {
         lines.push(format!("error: {error}"));
     }
+    lines.extend(followup_output_artifact_lines_from_result_json(&value));
     let command_line = field("command_line");
     if command_line != "-" {
         lines.push(format!("command: {command_line}"));
@@ -214,6 +223,9 @@ pub(crate) fn followup_result_history_entry_detail_lines(
     if let Some(error) = entry.error.as_deref().filter(|value| !value.trim().is_empty()) {
         lines.push(format!("error: {error}"));
     }
+    if let Ok(value) = serde_json::from_str::<serde_json::Value>(&entry.result_json) {
+        lines.extend(followup_output_artifact_lines_from_result_json(&value));
+    }
     lines
 }
 
@@ -285,6 +297,7 @@ fn build_followup_result_record(
     result: &Result<(), String>,
 ) -> FollowupResultRecordV1 {
     let bundle_dir = followup_bundle_dir_from_diag_args(&diag_args);
+    let output_artifacts = followup_output_artifacts_for_command(command, &diag_args);
     FollowupResultRecordV1 {
         schema_version: 1,
         kind: "fret_devtools_regression_followup_result",
@@ -295,6 +308,7 @@ fn build_followup_result_record(
         bundle_dir,
         status: if result.is_ok() { "passed" } else { "failed" },
         error: result.as_ref().err().cloned(),
+        output_artifacts,
         started_unix_ms,
         finished_unix_ms,
     }
@@ -313,6 +327,73 @@ fn fallback_followup_result_json(error: &str) -> String {
         "error": error,
     })
     .to_string()
+}
+
+fn followup_output_artifacts_for_command(
+    command: &RegressionBundleFollowupCommandV1,
+    diag_args: &[String],
+) -> Vec<FollowupOutputArtifactV1> {
+    if !is_trace_followup_command_id(&command.id) {
+        return Vec::new();
+    }
+    let Some(bundle_arg) = diag_args.get(1).map(String::as_str) else {
+        return Vec::new();
+    };
+    trace_followup_output_path(bundle_arg)
+        .map(|path| {
+            vec![FollowupOutputArtifactV1 {
+                kind: "trace.chrome.json",
+                path,
+            }]
+        })
+        .unwrap_or_default()
+}
+
+fn is_trace_followup_command_id(id: &str) -> bool {
+    id == "trace"
+        || id
+            .strip_prefix("trace-")
+            .is_some_and(|suffix| !suffix.is_empty() && suffix.chars().all(|c| c.is_ascii_digit()))
+}
+
+fn trace_followup_output_path(bundle_arg: &str) -> Option<String> {
+    let trimmed = bundle_arg.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let path = PathBuf::from(trimmed);
+    let dir = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .filter(|name| name.ends_with(".json"))
+        .and_then(|_| path.parent().map(PathBuf::from))
+        .unwrap_or(path);
+    Some(
+        dir.join("trace.chrome.json")
+            .to_string_lossy()
+            .replace('\\', "/"),
+    )
+}
+
+fn followup_output_artifact_lines_from_result_json(value: &serde_json::Value) -> Vec<String> {
+    value
+        .get("output_artifacts")
+        .and_then(|value| value.as_array())
+        .into_iter()
+        .flatten()
+        .filter_map(|artifact| {
+            let kind = artifact
+                .get("kind")
+                .and_then(|value| value.as_str())
+                .filter(|value| !value.trim().is_empty())?;
+            let path = artifact
+                .get("path")
+                .and_then(|value| value.as_str())
+                .filter(|value| !value.trim().is_empty())?;
+            Some(format!("artifact {kind}: {path}"))
+        })
+        .take(8)
+        .collect()
 }
 
 fn write_followup_result_record(out_path: &PathBuf, result_json: &str) -> Result<(), String> {
@@ -556,6 +637,20 @@ mod tests {
                 "--json".to_string()
             ]
         );
+
+        let trace = commands
+            .iter()
+            .find(|command| command.id == "trace")
+            .expect("trace command");
+        let args = runnable_diag_args_for_followup_command(trace).expect("direct args");
+        assert_eq!(
+            args,
+            vec![
+                "trace".to_string(),
+                "target/fret-diag/run-a".to_string(),
+                "--json".to_string()
+            ]
+        );
     }
 
     #[test]
@@ -581,14 +676,33 @@ mod tests {
         assert_eq!(value["bundle_dir"], "target/fret-diag/run-a");
         assert_eq!(value["started_unix_ms"], 10);
         assert_eq!(value["finished_unix_ms"], 20);
+        assert!(value.get("output_artifacts").is_none());
 
         let command = regression_bundle_followup_commands(["target/fret-diag/run-a"])
             .into_iter()
             .find(|command| command.id == "stats")
             .expect("stats command");
-        let record = build_followup_result_record(&command, command.diag_args.clone(), 10, 20, &Ok(()));
+        let record =
+            build_followup_result_record(&command, command.diag_args.clone(), 10, 20, &Ok(()));
         let json = followup_result_record_json(&record).expect("record json text");
         assert!(json.contains("\"status\": \"passed\""));
+    }
+
+    #[test]
+    fn regression_followup_trace_result_record_projects_output_artifact() {
+        let command = regression_bundle_followup_commands(["target/fret-diag/run-a"])
+            .into_iter()
+            .find(|command| command.id == "trace")
+            .expect("trace command");
+        let record = build_followup_result_record(&command, command.diag_args.clone(), 10, 20, &Ok(()));
+        let value = serde_json::to_value(record).expect("record json");
+
+        assert_eq!(value["id"], "trace");
+        assert_eq!(value["output_artifacts"][0]["kind"], "trace.chrome.json");
+        assert_eq!(
+            value["output_artifacts"][0]["path"],
+            "target/fret-diag/run-a/trace.chrome.json"
+        );
     }
 
     #[test]
@@ -616,6 +730,34 @@ mod tests {
         assert!(text.contains("diag_args_count: 3"));
         assert!(text.contains("bundle_dir: target/fret-diag/run-a"));
         assert!(text.contains("error: boom"));
+    }
+
+    #[test]
+    fn regression_followup_result_summary_lines_project_output_artifacts() {
+        let json = serde_json::json!({
+            "schema_version": 1,
+            "kind": "fret_devtools_regression_followup_result",
+            "id": "trace",
+            "label": "trace",
+            "command_line": "cargo run -p fretboard-dev -- diag trace target/fret-diag/run-a --json",
+            "diag_args": ["trace", "target/fret-diag/run-a", "--json"],
+            "status": "passed",
+            "output_artifacts": [
+                {
+                    "kind": "trace.chrome.json",
+                    "path": "target/fret-diag/run-a/trace.chrome.json"
+                }
+            ],
+            "started_unix_ms": 10,
+            "finished_unix_ms": 25
+        })
+        .to_string();
+
+        let text = followup_result_summary_lines(&json).join("\n");
+
+        assert!(
+            text.contains("artifact trace.chrome.json: target/fret-diag/run-a/trace.chrome.json")
+        );
     }
 
     #[test]
@@ -754,7 +896,7 @@ mod tests {
 
     #[test]
     fn regression_followup_result_history_entry_detail_lines_surface_repro_fields() {
-        let entry = history_entry(
+        let mut entry = history_entry(
             "triage",
             "cargo run -p fretboard-dev -- diag triage target/fret-diag/run-a --json",
             ".fret/diag/followups/30-triage.json",
@@ -762,6 +904,15 @@ mod tests {
             "failed",
             Some("boom"),
         );
+        entry.result_json = serde_json::json!({
+            "output_artifacts": [
+                {
+                    "kind": "trace.chrome.json",
+                    "path": "target/fret-diag/run-a/trace.chrome.json"
+                }
+            ]
+        })
+        .to_string();
 
         let text = followup_result_history_entry_detail_lines(Some(&entry)).join("\n");
 
@@ -771,6 +922,9 @@ mod tests {
         assert!(text.contains("bundle_dir: target/fret-diag/run-a"));
         assert!(text.contains("command: cargo run -p fretboard-dev -- diag triage"));
         assert!(text.contains("error: boom"));
+        assert!(
+            text.contains("artifact trace.chrome.json: target/fret-diag/run-a/trace.chrome.json")
+        );
         assert_eq!(
             followup_result_history_entry_detail_lines(None),
             vec!["selected follow-up result: <none>".to_string()]

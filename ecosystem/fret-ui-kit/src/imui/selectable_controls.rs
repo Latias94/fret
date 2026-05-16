@@ -42,6 +42,7 @@ fn selectable_with_options_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized
         let enabled = options.enabled && !super::imui_is_disabled(cx);
         let focusable = enabled && options.focusable;
         let selected = options.selected;
+        let highlighted = enabled && options.highlighted;
         let close_popup = options.close_popup.clone();
         let activate_shortcut = options.activate_shortcut;
         let shortcut_repeat = options.shortcut_repeat;
@@ -193,6 +194,7 @@ fn selectable_with_options_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized
                 label.clone(),
                 enabled,
                 selected,
+                highlighted,
                 state,
             )]
         })
@@ -207,13 +209,14 @@ fn selectable_row_element<H: UiHost>(
     label: Arc<str>,
     enabled: bool,
     selected: bool,
+    highlighted: bool,
     state: fret_ui::element::PressableState,
 ) -> fret_ui::element::AnyElement {
     let palette = resolve_selectable_palette(
         Theme::global(&*cx.app),
         enabled,
         selected,
-        state.hovered || state.focused,
+        highlighted || state.hovered || state.focused,
         state.pressed,
     );
 
@@ -248,6 +251,7 @@ fn resolve_selectable_palette(
     hovered: bool,
     pressed: bool,
 ) -> SelectablePalette {
+    let hovered_or_pressed = enabled && (hovered || pressed);
     let selected_bg = theme
         .color_by_key("list.active.background")
         .or_else(|| theme.color_by_key("list.row.selected"))
@@ -262,7 +266,7 @@ fn resolve_selectable_palette(
         theme
             .color_by_key("muted-foreground")
             .unwrap_or_else(|| theme.color_token("muted-foreground"))
-    } else if !selected && (pressed || hovered) {
+    } else if !selected && hovered_or_pressed {
         theme
             .color_by_key("accent-foreground")
             .unwrap_or_else(|| theme.color_token("accent-foreground"))
@@ -274,7 +278,7 @@ fn resolve_selectable_palette(
 
     let bg = if selected {
         Some(selected_bg)
-    } else if pressed || hovered {
+    } else if hovered_or_pressed {
         Some(hover_bg)
     } else {
         None
@@ -321,5 +325,46 @@ mod tests {
         let disabled = resolve_selectable_palette(theme, false, false, false, false);
         assert_eq!(disabled.bg, None);
         assert_eq!(disabled.fg, Color::from_srgb_hex_rgb(0x88_99_aa));
+    }
+
+    #[test]
+    fn selectable_palette_highlight_uses_hover_style_without_selected_semantics() {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            let mut cfg = ThemeConfig::default();
+            cfg.colors
+                .insert("list.active.background".to_string(), "#224466".to_string());
+            cfg.colors
+                .insert("list.hover.background".to_string(), "#335577".to_string());
+            cfg.colors
+                .insert("foreground".to_string(), "#f5f6f7".to_string());
+            cfg.colors
+                .insert("accent-foreground".to_string(), "#fefefe".to_string());
+            cfg.colors
+                .insert("muted-foreground".to_string(), "#8899aa".to_string());
+            theme.apply_config_patch(&cfg);
+        });
+
+        let theme = Theme::global(&app);
+        let highlighted = resolve_selectable_palette(theme, true, false, true, false);
+        assert_eq!(highlighted.bg, Some(Color::from_srgb_hex_rgb(0x33_55_77)));
+        assert_eq!(highlighted.fg, Color::from_srgb_hex_rgb(0xfe_fe_fe));
+
+        let selected_highlighted = resolve_selectable_palette(theme, true, true, true, false);
+        assert_eq!(
+            selected_highlighted.bg,
+            Some(Color::from_srgb_hex_rgb(0x22_44_66))
+        );
+        assert_eq!(
+            selected_highlighted.fg,
+            Color::from_srgb_hex_rgb(0xf5_f6_f7)
+        );
+
+        let disabled_highlighted = resolve_selectable_palette(theme, false, false, true, false);
+        assert_eq!(disabled_highlighted.bg, None);
+        assert_eq!(
+            disabled_highlighted.fg,
+            Color::from_srgb_hex_rgb(0x88_99_aa)
+        );
     }
 }
