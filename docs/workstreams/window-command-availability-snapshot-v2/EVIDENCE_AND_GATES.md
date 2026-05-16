@@ -113,6 +113,16 @@ cargo nextest run -p fret-ui \
 
 Latest result: 3 passed.
 
+Focused pointer-move narrow snapshot coverage:
+
+```bash
+cargo nextest run -p fret-ui \
+  pointer_move_publishes_input_context_without_command_availability_recompute \
+  --no-fail-fast
+```
+
+Latest result: 1 passed.
+
 Focused migrated parser and registry gates:
 
 ```bash
@@ -152,6 +162,7 @@ Latest result: 3 passed.
 ## Source Anchors
 
 - `crates/fret-ui/src/tree/commands.rs`
+- `crates/fret-ui/src/tree/tests/window_command_action_availability_snapshot.rs`
 - `crates/fret-ui/src/tree/debug/commands.rs`
 - `crates/fret-ui/src/tree/ui_tree_debug/record.rs`
 - `crates/fret-ui/src/tree/ui_tree_debug/frame.rs`

@@ -22,7 +22,7 @@ Last updated: 2026-05-16
 
 ## Follow-Up Slices
 
-- [ ] Add a direct `fret-ui` unit test that proves `PointerEvent::Move` publishes only input-context
+- [x] Add a direct `fret-ui` unit test that proves `PointerEvent::Move` publishes only input-context
   state and not widget command availability.
 - [ ] Promote a first-party check that fails when command availability publication exceeds 500us and
   no hotspots are present.

@@ -55,6 +55,10 @@ struct CommandAvailabilityQueryCount {
 }
 
 impl<H: UiHost> Widget<H> for CountingAvailabilityNode {
+    fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+        true
+    }
+
     fn command_availability(
         &self,
         cx: &mut crate::widget::CommandAvailabilityCx<'_, H>,
@@ -480,6 +484,72 @@ fn action_availability_snapshot_ignores_pointer_arbitration_only_changes() {
         .map(|counter| counter.count)
         .unwrap_or(0);
     assert_eq!(second_count, 1);
+}
+
+#[test]
+fn pointer_move_publishes_input_context_without_command_availability_recompute() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("test.available"),
+        widget_command_meta("Available"),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(CountingAvailabilityNode);
+    ui.set_root(root);
+    ui.set_focus(Some(root));
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    publish_snapshot(&mut ui, &mut app, window);
+    let baseline_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(baseline_count, 1);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: Point::new(Px(10.0), Px(10.0)),
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let post_move_count = app
+        .global::<CommandAvailabilityQueryCount>()
+        .map(|counter| counter.count)
+        .unwrap_or(0);
+    assert_eq!(
+        post_move_count, baseline_count,
+        "pointer move should refresh input context without republishing widget command availability"
+    );
+
+    assert!(
+        app.global::<fret_runtime::WindowInputContextService>()
+            .and_then(|svc| svc.snapshot(window))
+            .is_some(),
+        "pointer move should still publish the latest window input context"
+    );
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    assert_eq!(
+        svc.available(window, &CommandId::from("test.available")),
+        Some(true)
+    );
 }
 
 #[test]

@@ -47,6 +47,10 @@
       "command": "cargo nextest run -p fret-ui action_availability_snapshot_reuses_focus_traversal_within_frame action_availability_snapshot_refreshes_focus_traversal_on_next_frame action_availability_snapshot_publishes_focus_traversal_gating --no-fail-fast"
     },
     {
+      "name": "pointer-move-narrow-snapshot-focused",
+      "command": "cargo nextest run -p fret-ui pointer_move_publishes_input_context_without_command_availability_recompute --no-fail-fast"
+    },
+    {
       "name": "changed-packages",
       "command": "cargo nextest run -p fret-ui -p fret-bootstrap -p fret-diag --no-fail-fast"
     },
@@ -69,6 +73,7 @@
   ],
   "evidence": [
     "crates/fret-ui/src/tree/commands.rs",
+    "crates/fret-ui/src/tree/tests/window_command_action_availability_snapshot.rs",
     "crates/fret-ui/src/tree/debug/commands.rs",
     "crates/fret-ui/src/tree/ui_tree_debug/record.rs",
     "crates/fret-ui/src/tree/ui_tree_debug/frame.rs",
