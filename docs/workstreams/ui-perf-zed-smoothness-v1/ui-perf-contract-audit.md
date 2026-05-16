@@ -517,6 +517,18 @@ This refresh does not change the implementation owner. The next formal closeout 
 `python tools/perf/diag_editor_paint_contract_windows_handoff.py --date-tag <fresh-date>` on the Windows RTX4090 target
 host, then copy the validation and attribution directories back for verifier/closeout.
 
+Active goal readiness check (2026-05-16): the fast preflight still passes locally.
+
+- Command:
+  `python3 tools/perf/diag_editor_paint_contract_preflight.py --out-summary target/fret-diag/editor-paint-contract-preflight-active-goal-readiness/summary.json`
+- Result: `PASS: editor paint contract preflight (8 checks)`.
+- Summary:
+  `target/fret-diag/editor-paint-contract-preflight-active-goal-readiness/summary.json`.
+
+This validates script JSON, required overlay-disabled script contracts, diag script registry freshness, and the strict
+baseline matrix audit. It does not cover any Windows RTX4090 timing result and therefore does not satisfy the baseline
+or attribution artifact requirements.
+
 ## Open Gaps
 
 1. The broad `ui-gallery-steady` suite remains evidence-only until it is redefined as a suite-of-contracts or its
