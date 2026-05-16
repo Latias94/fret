@@ -84,6 +84,13 @@ not update checked-in baselines.
     frames while preserving atlas pin bucket ring semantics, reset-generation cleanup, and add/remove deltas.
   - Repro/gate before landing: rerun the three local editor probes above plus a focused `fret-render-wgpu` atlas reset
     regression test. Keep any checked-in baseline change blocked on the Windows RTX4090 contract pass.
+  - Non-landed experiment result (2026-05-16): exact previous-`text_blob_ids` sequence caching does not help the
+    typical autoscroll probe because the visible text blob sequence changes each frame; a rough-capacity one-pass
+    collector also regressed `collect_pin_keys` p95. Do not land either approach without a new positive measurement.
+  - Next credible design: incremental aggregation with text-blob add/remove accounting, likely by maintaining
+    per-glyph refcounts for the current scene text set or by carrying row-scene/recording-level pin-key summaries.
+    This should be treated as a small design slice before implementation, because it changes the collector model from
+    rebuild-every-frame to diff/reuse.
 - [ ] If paint-cache / visual-bounds bookkeeping is the local residual, optimize only the measured subphase.
   - Candidate low-risk paths: avoid redundant visual-bounds writes, reuse small paint-cache key inputs, or reduce
     per-node text-style fingerprint lookups when the node kind cannot carry inherited text style.

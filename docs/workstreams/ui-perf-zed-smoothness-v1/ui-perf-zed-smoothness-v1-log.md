@@ -15065,3 +15065,30 @@ Decision:
 - The first safe prototype should preserve atlas pin lifetime semantics and use a scene/text-blob fingerprint or
   retained bucket reuse to avoid rebuilding the same per-scene pin set every frame.
 - Keep this evidence baseline-neutral. It does not close the Windows RTX4090 editor paint contract.
+
+## 2026-05-16 18:23:00 +0800 (non-landed scene pin-key cache experiments)
+
+Question:
+- Can the renderer text prepare owner be optimized with a small cache before opening a broader collector design?
+
+Non-landed experiments:
+- Exact previous-`text_blob_ids` sequence cache inside `TextSystem`.
+  - Result: no useful hit pattern for the typical autoscroll probe; the visible text blob sequence changes frame to
+    frame.
+  - Evidence:
+    `target/fret-diag/scene-pin-key-cache-typical-smoke/1778926377133/bundle.schema2.json`
+  - Stats: `renderer_prepare_text_us` p95 `337us`; `collect_pin_keys` p95 `324us`; `bucket_delta` p95 `25us`.
+- Rough-capacity one-pass `collect_scene_pinned_keys(...)` collector.
+  - Result: worse than the baseline two-pass exact-capacity collector on this probe, likely from HashSet growth and
+    extra cache snapshot work.
+  - Evidence:
+    `target/fret-diag/scene-pin-key-cache-one-pass-typical-smoke/1778926824953/bundle.schema2.json`
+  - Stats: `renderer_prepare_text_us` p95 `358us`; `collect_pin_keys` p95 `342us`; `bucket_delta` p95 `25us`.
+
+Decision:
+- Revert the code experiments; do not land either approach.
+- The next credible renderer text optimization is not a simple previous-scene cache. It needs an incremental
+  aggregation model that can account for text blob additions/removals across scrolling frames, such as per-glyph
+  refcounts for the current scene text set or row-scene/recording-level pin-key summaries.
+- Keep this as local macOS M4 negative evidence only. It does not affect Windows baselines or the deferred RTX4090
+  closeout.
