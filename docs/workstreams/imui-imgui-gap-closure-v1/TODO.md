@@ -253,6 +253,10 @@ Readiness order for the next locally testable review slices:
    2026-05-17 color preview/tooltip text follow-up: color side-preview captions and tooltip
    numeric lines now use dedicated editor readout helpers instead of local `TextProps`, keeping
    them separate from popup-list rows while preserving single-line resize behavior.
+   2026-05-17 property chrome text follow-up: property-group header labels and property-row reset
+   glyphs now share editor readout helpers instead of local `TextProps`. Fixed inspector chrome
+   text stays single-line, min-width-zero where it shrinks, and line-height constrained under
+   resize without moving editor-specific policy into `fret-imui`.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

@@ -73,6 +73,8 @@ Last updated: 2026-05-17
   - `ecosystem/fret-ui-editor/src/primitives/input_group.rs`
   - `ecosystem/fret-ui-editor/src/primitives/popup_list.rs`
   - `ecosystem/fret-ui-editor/src/primitives/readout.rs`
+  - `ecosystem/fret-ui-editor/src/composites/property_group.rs`
+  - `ecosystem/fret-ui-editor/src/composites/property_row.rs`
   - `ecosystem/fret-ui-editor/src/controls/field_status.rs`
   - `ecosystem/fret-ui-editor/src/controls/color_edit.rs`
   - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/copy.rs`
@@ -300,6 +302,15 @@ Run evidence:
   enum_select_item_test_id_segment_is_stable_ascii empty_label_is_inline_only
   color_copy_entries_match_imgui_copy_as_payloads
   popup_options_default_to_imgui_like_hue_bar_surface --no-fail-fast`.
+- 2026-05-17: introduced `editor_property_group_header_text_props(...)` and
+  introduced `editor_property_row_reset_glyph_text_props(...)` in
+  `ecosystem/fret-ui-editor/src/primitives/readout.rs`, then routed `PropertyGroup` header labels
+  and `PropertyRow` reset glyphs through those shared roles. This
+  removes local inspector chrome `TextProps` policy from the composites while keeping fixed-row
+  text single-line, shrinkable where needed, and line-height constrained under resize. Gate:
+  `cargo nextest run -p fret-ui-editor
+  editor_property_group_header_text_is_single_line_and_shrinkable
+  editor_property_row_reset_glyph_text_keeps_fixed_button_line_box --no-fail-fast`.
 - 2026-05-16: tightened `UiWriterImUiFacadeExt::text(...)` to match Dear ImGui's default
   `Text()` posture: single-line, shrinkable, `min-width: 0`, and ellipsis-truncated under resize.
   Added `UiWriterImUiFacadeExt::text_wrapped(...)` as the explicit wrapping path for explanatory

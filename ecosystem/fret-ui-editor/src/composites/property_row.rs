@@ -1,20 +1,19 @@
 //! Inspector-style property row composite (label + value + actions).
 use std::sync::Arc;
 
-use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Color, Corners, Edges, FontWeight, Px, TextAlign, TextStyle};
+use fret_core::{Axis, Color, Corners, Edges, Px};
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexItemStyle, FlexProps, LayoutStyle, Length,
-    MainAlign, Overflow, PressableA11y, PressableProps, SizeStyle, SpacingLength, TextProps,
+    MainAlign, Overflow, PressableA11y, PressableProps, SizeStyle, SpacingLength,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::typography;
 
 use crate::primitives::colors::{
     editor_border, editor_foreground, editor_muted_foreground, editor_subtle_bg,
 };
 use crate::primitives::inspector_layout::InspectorLayoutMetrics;
+use crate::primitives::readout::editor_property_row_reset_glyph_text_props;
 use crate::primitives::visuals::{editor_icon_button_bg, editor_icon_button_border};
 
 pub type OnPropertyRowReset = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx) + 'static>;
@@ -730,28 +729,11 @@ fn property_row_reset_pressable<H: UiHost>(
                     ..Default::default()
                 },
                 move |cx| {
-                    vec![cx.text_props(TextProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Fill,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        text: glyph.clone(),
-                        style: Some(typography::as_control_text(TextStyle {
-                            size: Px(11.0),
-                            weight: FontWeight::SEMIBOLD,
-                            line_height: Some(affordance_extent),
-                            ..Default::default()
-                        })),
-                        color: Some(fg),
-                        wrap: TextWrap::None,
-                        overflow: TextOverflow::Clip,
-                        align: TextAlign::Center,
-                        ink_overflow: Default::default(),
-                    })]
+                    vec![cx.text_props(editor_property_row_reset_glyph_text_props(
+                        glyph.clone(),
+                        fg,
+                        affordance_extent,
+                    ))]
                 },
             )]
         },

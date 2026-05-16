@@ -2,16 +2,14 @@
 
 use std::sync::Arc;
 
-use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Corners, Edges, Px, TextAlign, TextStyle};
+use fret_core::{Axis, Corners, Edges, Px};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableA11y, PressableProps, SizeStyle, SpacerProps, SpacingLength, TextProps,
+    PressableA11y, PressableProps, SizeStyle, SpacerProps, SpacingLength,
 };
 use fret_ui::{ElementContext, ElementContextAccess, Invalidation, Theme, UiHost};
-use fret_ui_kit::typography;
 
 use crate::primitives::EditorTokenKeys;
 use crate::primitives::colors::{
@@ -20,6 +18,7 @@ use crate::primitives::colors::{
 };
 use crate::primitives::icons::editor_icon;
 use crate::primitives::inspector_layout::InspectorLayoutMetrics;
+use crate::primitives::readout::editor_property_group_header_text_props;
 use crate::primitives::visuals::hover_overlay_bg;
 
 pub type OnPropertyGroupToggle = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, bool) + 'static>;
@@ -253,13 +252,6 @@ impl PropertyGroup {
                                     },
                                     move |cx| {
                                         let mut out = Vec::new();
-                                        let header_text_style =
-                                            typography::as_control_text(TextStyle {
-                                                size: Px(12.0),
-                                                weight: fret_core::FontWeight::SEMIBOLD,
-                                                line_height: Some(header_height),
-                                                ..Default::default()
-                                            });
                                         if let Some(icon) = disclosure_icon.clone() {
                                             out.push(editor_icon(
                                                 cx,
@@ -268,23 +260,13 @@ impl PropertyGroup {
                                                 Some(Px(12.0)),
                                             ));
                                         }
-                                        out.push(cx.text_props(TextProps {
-                                            layout: LayoutStyle {
-                                                size: SizeStyle {
-                                                    width: Length::Fill,
-                                                    height: Length::Auto,
-                                                    ..Default::default()
-                                                },
-                                                ..Default::default()
-                                            },
-                                            text: label.clone(),
-                                            style: Some(header_text_style),
-                                            color: Some(header_fg),
-                                            wrap: TextWrap::None,
-                                            overflow: TextOverflow::Ellipsis,
-                                            align: TextAlign::Start,
-                                            ink_overflow: Default::default(),
-                                        }));
+                                        out.push(cx.text_props(
+                                            editor_property_group_header_text_props(
+                                                label.clone(),
+                                                header_fg,
+                                                header_height,
+                                            ),
+                                        ));
                                         out.push(cx.spacer(SpacerProps::default()));
                                         if let Some(actions) = actions {
                                             out.push(actions);

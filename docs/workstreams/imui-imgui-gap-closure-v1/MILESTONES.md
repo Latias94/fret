@@ -258,6 +258,10 @@ Exit criteria:
   2026-05-17 color preview/tooltip text result: color side-preview captions and tooltip numeric
   lines now use dedicated editor readout helpers. This keeps readout/caption semantics out of
   popup-list rows while eliminating the remaining local `TextProps` in those color surfaces.
+  2026-05-17 property chrome text result: property-group header labels and property-row reset
+  glyphs now reuse editor readout helpers. Fixed inspector chrome text no longer hand-rolls local
+  `TextProps`, so header and reset glyph behavior remains single-line and line-box constrained
+  under resize.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.
