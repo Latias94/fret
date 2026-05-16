@@ -365,6 +365,13 @@ Run evidence:
   `cargo nextest run -p fret-ui-editor
   editor_property_row_label_text_is_single_line_and_shrinkable
   row_label_slot_keeps_fixed_line_box_when_label_text_wraps_under_narrow_layout --no-fail-fast`.
+- 2026-05-17: migrated the `imui_editor_proof_demo` property-grid labels to
+  `row_cx.label_text(...)` so the selected editor-grade proof teaches the fixed-label role instead
+  of relying on `PropertyRow`'s container fallback for bare `cx.text(...)`. The source gate now
+  requires representative proof labels (`Name`, `Typed numeric`, `Blend slider`, `Transform`) to
+  use `label_text(...)` and forbids those labels from returning to `|cx| cx.text(...)` in property
+  label slots. Gates: `python tools/gate_imui_workstream_source.py` and
+  `cargo check -p fret-demo --bin imui_editor_proof_demo`.
 - 2026-05-17: removed clipping from `PropertyRow` value slots while keeping fixed label/reset/action
   chrome clipped. This is the layout-container side of the text-role contract: wrapping validation
   prose such as `NumericInput` inline errors may grow to multiple lines, so the parent value slot
