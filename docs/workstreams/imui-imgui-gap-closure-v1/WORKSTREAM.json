@@ -186,6 +186,10 @@
       "command": "cargo nextest run -p fret-ui-editor editor_inline_error_text_is_single_line_and_shrinkable editor_preview_caption_text_is_single_line_and_shrinkable editor_tooltip_readout_text_is_single_line_and_shrinkable numeric_readout_formats_rgb_hsv_and_optional_alpha color_tooltip_lines_match_imgui_hex_rgb_hsv_preview_text --no-fail-fast"
     },
     {
+      "name": "editor validation message text semantics",
+      "command": "cargo nextest run -p fret-ui-editor editor_validation_message_text_wraps_and_shrinks --no-fail-fast"
+    },
+    {
       "name": "editor transform label text semantics",
       "command": "cargo nextest run -p fret-ui-editor editor_section_badge_text_is_single_line_centered_badge_label editor_section_heading_text_is_single_line_and_shrinkable editor_inline_control_label_text_is_single_line_and_shrinkable transform_edit_axis_outcome_exposes_read_only_signals --no-fail-fast"
     },

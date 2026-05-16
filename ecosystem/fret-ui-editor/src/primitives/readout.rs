@@ -126,6 +126,31 @@ pub(crate) fn editor_inline_error_text_props(
     }
 }
 
+pub(crate) fn editor_validation_message_text_props(
+    text: Arc<str>,
+    color: Color,
+    text_style: TextStyle,
+) -> TextProps {
+    TextProps {
+        layout: LayoutStyle {
+            size: SizeStyle {
+                width: Length::Fill,
+                height: Length::Auto,
+                min_width: Some(Length::Px(Px(0.0))),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        text,
+        style: Some(typography::as_content_text(text_style)),
+        color: Some(color),
+        wrap: TextWrap::Word,
+        overflow: TextOverflow::Clip,
+        align: TextAlign::Start,
+        ink_overflow: Default::default(),
+    }
+}
+
 pub(crate) fn editor_section_badge_text_props(
     text: Arc<str>,
     color: Color,
@@ -331,8 +356,9 @@ mod tests {
         editor_property_group_header_text_props, editor_property_row_reset_glyph_text_props,
         editor_section_badge_text_props, editor_section_heading_text_props,
         editor_status_badge_text_props, editor_tooltip_readout_text_props,
+        editor_validation_message_text_props,
     };
-    use fret_core::{Color, FontWeight, Px, TextAlign, TextOverflow, TextWrap};
+    use fret_core::{Color, FontWeight, Px, TextAlign, TextOverflow, TextStyle, TextWrap};
     use fret_ui::element::Length;
 
     #[test]
@@ -381,6 +407,34 @@ mod tests {
         let style = props.style.expect("inline error text should set style");
         assert_eq!(style.size, Px(10.0));
         assert_eq!(style.line_height, Some(Px(20.0)));
+    }
+
+    #[test]
+    fn editor_validation_message_text_wraps_and_shrinks() {
+        let color = Color::from_srgb_hex_rgb(0xFF_44_44);
+        let props = editor_validation_message_text_props(
+            Arc::from("Value must be between 0 and 1"),
+            color,
+            TextStyle {
+                size: Px(12.0),
+                line_height: Some(Px(16.0)),
+                ..Default::default()
+            },
+        );
+
+        assert_eq!(props.color, Some(color));
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.height, Length::Auto);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(props.align, TextAlign::Start);
+
+        let style = props
+            .style
+            .expect("validation message text should set style");
+        assert_eq!(style.size, Px(12.0));
+        assert_eq!(style.line_height, Some(Px(16.0)));
     }
 
     #[test]

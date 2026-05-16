@@ -305,6 +305,13 @@ Run evidence:
   editor_tooltip_readout_text_is_single_line_and_shrinkable
   numeric_readout_formats_rgb_hsv_and_optional_alpha
   color_tooltip_lines_match_imgui_hex_rgb_hsv_preview_text --no-fail-fast`.
+- 2026-05-17: introduced `editor_validation_message_text_props(...)` for editor validation prose
+  that is allowed to wrap and grow height. `NumericInput` inline validation messages now use that
+  explicit role instead of local `TextProps`, while `tools/gate_imui_workstream_source.py` freezes
+  direct `TextProps` construction under `fret-ui-editor/src` to the editor primitive owners
+  (`input_group`, `popup_list`, and `readout`). Gates: `cargo nextest run -p fret-ui-editor
+  editor_validation_message_text_wraps_and_shrinks --no-fail-fast` and
+  `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: introduced `editor_preview_caption_text_props(...)` and
   `editor_tooltip_readout_text_props(...)` for color side-preview captions and color tooltip
   numeric lines. These stay in the editor readout primitive layer instead of being folded into

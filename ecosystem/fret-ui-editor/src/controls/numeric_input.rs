@@ -10,13 +10,12 @@
 use std::panic::Location;
 use std::sync::{Arc, Mutex};
 
-use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Edges, KeyCode, Px, SemanticsInvalid, TextAlign, TextStyle};
+use fret_core::{Axis, Edges, KeyCode, Px, SemanticsInvalid, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, UiFocusActionHost};
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, SpacingLength,
-    TextInputProps, TextProps,
+    TextInputProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
@@ -35,6 +34,7 @@ use crate::primitives::numeric_text_entry::{
     clear_numeric_error_when_draft_changes, handle_numeric_text_entry_replace_key,
     numeric_text_entry_focus_state, sync_numeric_text_entry_focus,
 };
+use crate::primitives::readout::editor_validation_message_text_props;
 use crate::primitives::{NumericPresentation, style::EditorStyle};
 
 pub use crate::primitives::NumericInputSelectionBehavior;
@@ -512,27 +512,15 @@ where
 
         let error_el = (show_inline_error).then_some(()).and_then(|_| {
             error_msg.map(|msg| {
-                let mut error = cx.text_props(TextProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Auto,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    text: msg.clone(),
-                    style: Some(typography::as_content_text(TextStyle {
+                let mut error = cx.text_props(editor_validation_message_text_props(
+                    msg.clone(),
+                    error_color,
+                    TextStyle {
                         size: text_style.size,
                         line_height: text_style.line_height,
                         ..Default::default()
-                    })),
-                    color: Some(error_color),
-                    wrap: TextWrap::Word,
-                    overflow: TextOverflow::Clip,
-                    align: TextAlign::Start,
-                    ink_overflow: Default::default(),
-                });
+                    },
+                ));
                 if let Some(test_id) = error_text_test_id.as_ref() {
                     error = error.test_id(test_id.clone()).a11y_label(msg.clone());
                 }

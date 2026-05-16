@@ -51,6 +51,20 @@ IMUI_DIRECT_TEXT_PROPS_ALLOWED = {
     },
 }
 
+EDITOR_DIRECT_TEXT_PROPS_ALLOWED = {
+    Path("ecosystem/fret-ui-editor/src/primitives/input_group.rs"): {
+        "let text_el = cx.text_props(TextProps {": 1,
+        "cx.text_props(TextProps {": 1,
+        "vec![cx.text_props(TextProps {": 1,
+    },
+    Path("ecosystem/fret-ui-editor/src/primitives/popup_list.rs"): {
+        "TextProps {": 2,
+    },
+    Path("ecosystem/fret-ui-editor/src/primitives/readout.rs"): {
+        "TextProps {": 11,
+    },
+}
+
 
 def read_source(path: Path) -> str:
     try:
@@ -215,6 +229,60 @@ def check_imui_direct_text_props_allowlist(failures: list[str]) -> None:
             if count != expected:
                 failures.append(
                     f"{path.as_posix()}: missing allowed direct TextProps constructor {constructor}: expected {expected}, found {count}"
+                )
+
+
+def check_direct_text_props_allowlist(
+    root: Path,
+    allowed_by_path: dict[Path, dict[str, int]],
+    label: str,
+    failures: list[str],
+) -> None:
+    actual: dict[Path, dict[str, int]] = {}
+    scan_root = WORKSPACE_ROOT / root
+    if not scan_root.exists():
+        failures.append(f"{root.as_posix()}: missing {label} text-props scan root")
+        return
+
+    for source_path in sorted(scan_root.rglob("*.rs")):
+        path = source_path.relative_to(WORKSPACE_ROOT)
+        source = read_source(path)
+        for line in source.splitlines():
+            stripped = line.strip()
+            is_text_props_constructor = "TextProps::new(" in stripped or (
+                "TextProps {" in stripped and "-> TextProps {" not in stripped
+            )
+            if not is_text_props_constructor:
+                continue
+            actual.setdefault(path, {})
+            actual[path][stripped] = actual[path].get(stripped, 0) + 1
+
+    for path, constructors in sorted(actual.items()):
+        allowed = allowed_by_path.get(path)
+        if allowed is None:
+            for constructor, count in sorted(constructors.items()):
+                failures.append(
+                    f"{path.as_posix()}: direct TextProps construction is not in the {label} text-role allowlist ({count}x {constructor})"
+                )
+            continue
+        for constructor, count in sorted(constructors.items()):
+            expected = allowed.get(constructor)
+            if expected is None:
+                failures.append(
+                    f"{path.as_posix()}: direct TextProps construction is not allowed by the {label} allowlist: {constructor}"
+                )
+            elif count != expected:
+                failures.append(
+                    f"{path.as_posix()}: direct TextProps construction count changed for {constructor}: expected {expected}, found {count}"
+                )
+
+    for path, constructors in sorted(allowed_by_path.items()):
+        actual_for_path = actual.get(path, {})
+        for constructor, expected in sorted(constructors.items()):
+            count = actual_for_path.get(constructor, 0)
+            if count != expected:
+                failures.append(
+                    f"{path.as_posix()}: missing allowed direct TextProps construction {constructor}: expected {expected}, found {count}"
                 )
 
 
@@ -8488,6 +8556,12 @@ def main() -> None:
         check_opaque_structs(check, failures)
     check_fret_imui_runtime_dependencies(failures)
     check_imui_direct_text_props_allowlist(failures)
+    check_direct_text_props_allowlist(
+        Path("ecosystem/fret-ui-editor/src"),
+        EDITOR_DIRECT_TEXT_PROPS_ALLOWED,
+        "editor",
+        failures,
+    )
     for failure in collect_docking_multiwindow_failures():
         failures.append(f"docking multiwindow source: {failure}")
 

@@ -262,6 +262,11 @@ Exit criteria:
   2026-05-17 editor inline error text result: `ColorEdit` root errors and popup numeric errors now
   share `editor_inline_error_text_props(...)`, so compact destructive readouts are single-line,
   shrinkable, and owned by the editor readout primitive layer instead of duplicated per surface.
+  2026-05-17 editor validation message text result: `NumericInput` inline validation messages now
+  use `editor_validation_message_text_props(...)`, keeping the explicit wrapping validation role in
+  the editor primitive layer. `tools/gate_imui_workstream_source.py` also freezes direct
+  `TextProps` construction under `fret-ui-editor/src` to the named primitive owners, so new editor
+  controls cannot bypass the text-role vocabulary by adding local text literals.
   2026-05-17 transform label text result: `TransformEdit` section badges, section headings, and
   inline link/uniform labels now reuse editor readout text helpers. The control no longer carries
   local compact-label `TextProps`, so future resize fixes happen in the shared editor text role

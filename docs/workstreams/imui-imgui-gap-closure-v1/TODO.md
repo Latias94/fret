@@ -256,6 +256,11 @@ Readiness order for the next locally testable review slices:
    2026-05-17 editor inline error text follow-up: `ColorEdit` and its numeric popup now share
    `editor_inline_error_text_props(...)` for compact single-line destructive readouts, leaving
    wrapping validation prose to controls that explicitly need multi-line errors.
+   2026-05-17 editor validation message text follow-up: `NumericInput` inline validation messages
+   now route through `editor_validation_message_text_props(...)` instead of owning local
+   `TextProps`. The role is the explicit wrapping error/prose path for editor controls, while the
+   IMUI workstream source gate now allowlists direct editor `TextProps` construction only inside
+   editor text primitive owners.
    2026-05-17 transform label text follow-up: `TransformEdit` now routes section badges, section
    headings, and inline link/uniform checkbox labels through shared editor readout helpers instead
    of owning local `TextProps` policy. The helpers keep these compact control labels single-line
