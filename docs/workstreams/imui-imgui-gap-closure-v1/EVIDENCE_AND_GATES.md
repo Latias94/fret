@@ -71,12 +71,15 @@ Last updated: 2026-05-17
   - `ecosystem/fret-ui-editor/src/imui.rs`
   - `ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs`
   - `ecosystem/fret-ui-editor/src/primitives/input_group.rs`
+  - `ecosystem/fret-ui-editor/src/primitives/popup_list.rs`
   - `ecosystem/fret-ui-editor/src/primitives/readout.rs`
   - `ecosystem/fret-ui-editor/src/controls/field_status.rs`
   - `ecosystem/fret-ui-editor/src/controls/color_edit.rs`
   - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/numeric.rs`
   - `ecosystem/fret-ui-editor/src/controls/drag_value.rs`
   - `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs`
+  - `ecosystem/fret-ui-editor/src/controls/enum_select.rs`
+  - `ecosystem/fret-ui-editor/src/controls/text_assist_field.rs`
   - `ecosystem/fret/src/lib.rs`
   - `apps/fret-cookbook/src/lib.rs`
 - Closed image item and child resize follow-ons:
@@ -270,6 +273,14 @@ Run evidence:
   editor_section_heading_text_is_single_line_and_shrinkable
   editor_inline_control_label_text_is_single_line_and_shrinkable
   transform_edit_axis_outcome_exposes_read_only_signals --no-fail-fast`.
+- 2026-05-17: introduced `editor_popup_list_row_text_props(...)` and
+  `editor_popup_empty_text_props(...)` in `ecosystem/fret-ui-editor/src/primitives/popup_list.rs`.
+  `EnumSelect` trigger/row/empty text and `TextAssistField` row/empty text now use shared editor
+  helpers instead of local `TextProps` or `TextProps::new(...)`, closing another default
+  word-wrap path under resize. Gate: `cargo nextest run -p fret-ui-editor
+  popup_list_row_text_is_single_line_and_shrinkable
+  popup_empty_text_is_single_line_and_shrinkable enum_select_item_test_id_segment_is_stable_ascii
+  empty_label_is_inline_only --no-fail-fast`.
 - 2026-05-16: tightened `UiWriterImUiFacadeExt::text(...)` to match Dear ImGui's default
   `Text()` posture: single-line, shrinkable, `min-width: 0`, and ellipsis-truncated under resize.
   Added `UiWriterImUiFacadeExt::text_wrapped(...)` as the explicit wrapping path for explanatory

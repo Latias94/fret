@@ -245,6 +245,10 @@ Readiness order for the next locally testable review slices:
    headings, and inline link/uniform checkbox labels through shared editor readout helpers instead
    of owning local `TextProps` policy. The helpers keep these compact control labels single-line
    and shrinkable under resize without moving editor-specific density policy into `fret-imui`.
+   2026-05-17 popup list text follow-up: enum-select and text-assist popup rows plus empty-state
+   labels now share `editor_popup_list_row_text_props(...)` /
+   `editor_popup_empty_text_props(...)`, replacing `TextProps::new(...)` default word wrapping in
+   popup/editor assist surfaces.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

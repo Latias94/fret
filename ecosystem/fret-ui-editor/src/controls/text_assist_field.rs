@@ -16,13 +16,12 @@ use std::panic::Location;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Corners, Edges, Px, SemanticsRole, Size, TextAlign};
+use fret_core::{Axis, Corners, Edges, Px, SemanticsRole, Size};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost, UiFocusActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    PressableA11y, PressableProps, ScrollAxis, ScrollProps, SizeStyle, TextProps,
+    PressableA11y, PressableProps, ScrollAxis, ScrollProps, SizeStyle,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, GlobalElementId, Invalidation, Theme, UiHost};
@@ -38,9 +37,9 @@ use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 use super::{TextField, TextFieldAssistiveSemantics, TextFieldOptions};
 use crate::primitives::colors::editor_muted_foreground;
 use crate::primitives::popup_list::{
-    EditorPopupListRowState, editor_popup_list_content_height,
+    EditorPopupListRowState, editor_popup_empty_text_props, editor_popup_list_content_height,
     editor_popup_list_default_max_content_height, editor_popup_list_row_gap,
-    editor_popup_list_row_palette, editor_popup_list_row_radius, editor_popup_list_row_text_style,
+    editor_popup_list_row_palette, editor_popup_list_row_radius, editor_popup_list_row_text_props,
     editor_popup_list_surface_padding, editor_popup_side_offset, editor_popup_window_margin,
 };
 use crate::primitives::popup_surface::resolve_editor_popup_surface_chrome;
@@ -317,9 +316,12 @@ impl TextAssistField {
                 if let Some(panel) = inline_panel {
                     children.push(panel);
                 } else if show_inline_empty_label {
-                    let mut props = TextProps::new(empty_label.clone());
-                    props.color = Some(editor_muted_foreground(Theme::global(&*cx.app)));
-                    let empty = cx.text_props(props);
+                    let theme = Theme::global(&*cx.app);
+                    let empty = cx.text_props(editor_popup_empty_text_props(
+                        empty_label.clone(),
+                        editor_muted_foreground(theme),
+                        EditorStyle::resolve(theme).density.row_height,
+                    ));
                     let empty = if let Some(test_id) = empty_test_id.as_ref() {
                         empty.test_id(test_id.clone())
                     } else {
@@ -481,23 +483,11 @@ fn render_text_assist_panel<H: UiHost>(
                             ..Default::default()
                         },
                         move |cx| {
-                            vec![cx.text_props(TextProps {
-                                layout: LayoutStyle {
-                                    size: SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Fill,
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                text: entry.label.clone(),
-                                style: Some(editor_popup_list_row_text_style(density.row_height)),
-                                color: Some(row_palette.fg),
-                                wrap: TextWrap::None,
-                                overflow: TextOverflow::Ellipsis,
-                                align: TextAlign::Start,
-                                ink_overflow: Default::default(),
-                            })]
+                            vec![cx.text_props(editor_popup_list_row_text_props(
+                                entry.label.clone(),
+                                row_palette.fg,
+                                density.row_height,
+                            ))]
                         },
                     )]
                 },

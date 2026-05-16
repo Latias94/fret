@@ -341,6 +341,12 @@ def main() -> None:
                 "apps/fret-examples/src/imui_editor_proof_demo/collection.rs",
                 "apps/fret-examples/src/workspace_shell_demo.rs",
                 "ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs",
+                "ecosystem/fret-ui-editor/src/primitives/input_group.rs",
+                "ecosystem/fret-ui-editor/src/primitives/popup_list.rs",
+                "ecosystem/fret-ui-editor/src/primitives/readout.rs",
+                "ecosystem/fret-ui-editor/src/controls/enum_select.rs",
+                "ecosystem/fret-ui-editor/src/controls/text_assist_field.rs",
+                "ecosystem/fret-ui-editor/src/controls/transform_edit.rs",
                 "ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer",
                 "ecosystem/fret-imui/Cargo.toml",
                 "python tools/gate_imui_workstream_source.py; python tools/audit_crate.py --crate fret-imui; python tools/check_layering.py",
@@ -359,6 +365,7 @@ def main() -> None:
                 "editor_status_badge_text_uses_compact_single_line_readout_role error_badge_palette_keeps_short_visible_label",
                 "editor_inline_error_text_is_single_line_and_shrinkable numeric_readout_formats_rgb_hsv_and_optional_alpha",
                 "editor_section_badge_text_is_single_line_centered_badge_label editor_section_heading_text_is_single_line_and_shrinkable editor_inline_control_label_text_is_single_line_and_shrinkable transform_edit_axis_outcome_exposes_read_only_signals",
+                "popup_list_row_text_is_single_line_and_shrinkable popup_empty_text_is_single_line_and_shrinkable enum_select_item_test_id_segment_is_stable_ascii empty_label_is_inline_only",
                 "cargo check -p fret-examples",
             ],
             forbidden=[],
@@ -3983,6 +3990,21 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/primitives/popup_list.rs"),
+            required=[
+                "pub(crate) fn editor_popup_list_row_text_props",
+                "pub(crate) fn editor_popup_empty_text_props",
+                "min_width: Some(Length::Px(Px(0.0))),",
+                "wrap: TextWrap::None,",
+                "overflow: TextOverflow::Ellipsis,",
+                "popup_list_row_text_is_single_line_and_shrinkable",
+                "popup_empty_text_is_single_line_and_shrinkable",
+            ],
+            forbidden=[
+                "TextProps::new(",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/color_edit.rs"),
             required=[
                 "use crate::primitives::readout::editor_inline_error_text_props;",
@@ -4063,6 +4085,33 @@ def main() -> None:
                 "pressed: resp.dragging || resp.pressed,",
                 "focused: resp.focused || cx.is_focused_element(scrub_id),",
                 "let value_text_el = cx.text_props(TextProps {",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/enum_select.rs"),
+            required=[
+                "editor_input_value_text(",
+                "editor_popup_empty_text_props(",
+                "editor_popup_list_row_text_props(",
+            ],
+            forbidden=[
+                "TextProps::new(",
+                "TextProps {",
+                "TextStyle {",
+                "wrap: TextWrap::None,",
+                "use fret_ui_kit::typography;",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/text_assist_field.rs"),
+            required=[
+                "editor_popup_empty_text_props(",
+                "editor_popup_list_row_text_props(",
+            ],
+            forbidden=[
+                "TextProps::new(",
+                "TextProps {",
+                "wrap: TextWrap::None,",
             ],
         ),
         SourceCheck(

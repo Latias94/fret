@@ -250,6 +250,10 @@ Exit criteria:
   inline link/uniform labels now reuse editor readout text helpers. The control no longer carries
   local compact-label `TextProps`, so future resize fixes happen in the shared editor text role
   layer instead of per-transform branches.
+  2026-05-17 popup list text result: enum-select and text-assist popup/list empty labels now reuse
+  shared popup-list text helpers. This removes the `TextProps::new(...)` default word-wrap path
+  from those editor assist surfaces while keeping the behavior in `fret-ui-editor`, not
+  `fret-imui`.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.
