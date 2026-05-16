@@ -84,6 +84,20 @@ fn script_v2_roundtrip_todo_baseline() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_popover_click_through_outside_press_focus_underlay() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-click-through-outside-press-focus-underlay.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_dropdown_nonmodal_outside_press_focus_underlay() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/overlay/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay.json"
+    ));
+}
+
+#[test]
 fn script_v1_roundtrip_active_item_is_predicate() {
     assert_script_v1_roundtrip(
         r#"{
@@ -539,6 +553,13 @@ fn script_v2_roundtrip_ui_gallery_combobox_responsive_resize_open_placement() {
 fn script_v2_roundtrip_ui_gallery_combobox_placement_ownership_scroll_rtl() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-placement-ownership-scroll-rtl.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_resizable_multi_viewport_combobox_placement() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-multi-viewport-combobox-placement.json"
     ));
 }
 

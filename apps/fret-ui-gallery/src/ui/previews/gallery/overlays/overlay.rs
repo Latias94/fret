@@ -17,6 +17,7 @@ struct OverlayModels {
     context_menu_open: Model<bool>,
     context_menu_edge_open: Model<bool>,
     last_action: Model<Arc<str>>,
+    underlay_activated: Model<bool>,
 }
 
 pub(in crate::ui) fn preview_overlay(
@@ -32,6 +33,8 @@ pub(in crate::ui) fn preview_overlay(
     context_menu_edge_open: Model<bool>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
+    let underlay_activated = cx.local_model_keyed("overlay_underlay_activated", || false);
+
     // Intentional raw boundary: this internal preview still assembles cached overlay roots plus
     // status indicators as a concrete result vector after typed helpers land at the cache/vector
     // seam.
@@ -46,6 +49,7 @@ pub(in crate::ui) fn preview_overlay(
         context_menu_open,
         context_menu_edge_open,
         last_action,
+        underlay_activated,
     };
 
     let last_action_status = flags::last_action_status(cx, &models).into_element(cx);

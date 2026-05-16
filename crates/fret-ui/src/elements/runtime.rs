@@ -804,6 +804,7 @@ pub struct WindowElementState {
     authoring_identities_current_frame: HashSet<GlobalElementId>,
     nodes: HashMap<GlobalElementId, NodeEntry>,
     root_bounds: HashMap<GlobalElementId, Rect>,
+    element_root_bounds: HashMap<GlobalElementId, Rect>,
     prev_bounds: HashMap<GlobalElementId, Rect>,
     cur_bounds: HashMap<GlobalElementId, Rect>,
     prev_visual_bounds: HashMap<GlobalElementId, Rect>,
@@ -2047,6 +2048,18 @@ impl WindowElementState {
 
     pub(crate) fn root_bounds(&self, root: GlobalElementId) -> Option<Rect> {
         self.root_bounds.get(&root).copied()
+    }
+
+    pub(crate) fn replace_element_root_bounds(
+        &mut self,
+        entries: impl IntoIterator<Item = (GlobalElementId, Rect)>,
+    ) {
+        self.element_root_bounds.clear();
+        self.element_root_bounds.extend(entries);
+    }
+
+    pub(crate) fn element_root_bounds(&self, element: GlobalElementId) -> Option<Rect> {
+        self.element_root_bounds.get(&element).copied()
     }
 
     pub(crate) fn record_bounds(&mut self, element: GlobalElementId, bounds: Rect) {

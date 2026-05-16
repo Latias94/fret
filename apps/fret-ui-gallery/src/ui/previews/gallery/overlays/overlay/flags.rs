@@ -61,6 +61,20 @@ pub(super) fn status_flags(cx: &mut AppComponentCx<'_>, models: &OverlayModels) 
         }
     };
 
+    let underlay_activated_flag = {
+        let activated = cx
+            .get_model_copied(&models.underlay_activated, Invalidation::Layout)
+            .unwrap_or(false);
+        if activated {
+            Some(
+                cx.text("Underlay activated")
+                    .test_id("ui-gallery-overlay-underlay-activated"),
+            )
+        } else {
+            None
+        }
+    };
+
     let alert_dialog_open_flag = {
         let open = cx
             .get_model_copied(&models.alert_dialog_open, Invalidation::Layout)
@@ -83,6 +97,9 @@ pub(super) fn status_flags(cx: &mut AppComponentCx<'_>, models: &OverlayModels) 
         out.push(flag);
     }
     if let Some(flag) = dialog_glass_open_flag {
+        out.push(flag);
+    }
+    if let Some(flag) = underlay_activated_flag {
         out.push(flag);
     }
     if let Some(flag) = alert_dialog_open_flag {

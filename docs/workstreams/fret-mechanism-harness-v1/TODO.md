@@ -167,8 +167,21 @@ date: 2026-05-12
   with a focused geometry test.
 - [x] Harden the Combobox trigger screenshot gate so the nav result is scrolled into view before
   `click_stable`.
-- [ ] Add default-compatible non-modal click-through activation-status coverage once public pages
+- [x] Add default-compatible non-modal click-through activation-status coverage once public pages
   expose stable underlay/status probes.
+  - Result: the Overlay preview now exposes an independent
+    `ui-gallery-overlay-underlay-activated` status flag. The existing Popover click-through and
+    DropdownMenu non-modal outside-press gates now assert real underlay activation in addition to
+    dismissal/focus outcomes.
+  - Finding: this slice found a harness weakness, not a component defect. The old gates used
+    focus/dismiss as proxy signals and could miss an overlay policy regression where the underlay
+    received focus but its activation handler did not run.
+  - Evidence: `ui-gallery-popover-click-through-outside-press-focus-underlay.json` passed with run
+    id `1778906489806`; `ui-gallery-dropdown-nonmodal-outside-press-focus-underlay.json` passed
+    with run id `1778906522304`; roundtrip gate
+    `script_v2_roundtrip_ui_gallery_popover_click_through_outside_press_focus_underlay
+    script_v2_roundtrip_ui_gallery_dropdown_nonmodal_outside_press_focus_underlay` passed with
+    Nextest run id `c563620f-80b3-4933-9da6-48d657c68a38`.
 - [x] Promote Combobox visual/style coverage into an explicit fixture-style matrix that tracks
   component state, theme, viewport, screenshot gate, geometry predicates, and current owner/gap.
 - [x] Harden the Button Group size gate with stable icon-only `Add` anchors and geometry predicates.
@@ -443,8 +456,22 @@ date: 2026-05-12
     coordinate-space sub-axis. It proved core `AnchoredProps` is correct for secondary/embedded
     roots, while the owning-layer fix moved `fret-ui-kit` and shadcn anchored overlay recipes to
     root-boundary placement helpers instead of environment viewport boundaries.
-  - Remaining: add a runtime multi-viewport ownership companion with placement/layout sidecar
-    evidence.
+  - Result: `ui-gallery-resizable-multi-viewport-combobox-placement.json` now covers the runtime
+    multi-viewport ownership companion. The first run found a mechanism-layer effective
+    root-boundary cache defect: Combobox placement used the OS window as the collision boundary and
+    chose `bottom`. The owning fix rebuilds per-element nearest-viewport root bounds after final
+    layout, and the gate now passes with a `top` flip against the Resizable panel viewport.
+  - Result: `element_root_bounds_cache_uses_nearest_nested_viewport_root` now covers nested
+    viewport-root precedence for the same cache.
+  - Result: `element_root_bounds_cache_rebuilds_when_element_moves_between_viewport_roots` now
+    covers same-element movement between viewport roots without stale effective root-boundary cache
+    entries.
+  - Result: `element_root_bounds_cache_rebuilds_on_view_cache_hit_after_viewport_move` now covers
+    the same ownership move through retained render reuse when the cached subtree render function is
+    not re-entered.
+  - Remaining: promote a runtime UI Gallery view-cache movement companion only if a real surface can
+    move cached overlay sources across viewport roots; otherwise continue to the next uncovered
+    mechanism axis.
 - [x] Add a diagnostics script lint/registry audit for long-page content clicks that use plain
   `click` without a nearby `scroll_into_view`, `bounds_within_window`, or `click_stable`
   precondition.

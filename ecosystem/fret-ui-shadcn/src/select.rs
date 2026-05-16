@@ -2698,8 +2698,11 @@ fn select_impl<H: UiHost>(
                         .unwrap_or(Px(24.0));
                     let min_list_h = Px(scroll_button_h.0 * 2.0 + item_h.0 * 5.0);
 
-                    let root_bounds =
-                        overlay::root_bounds_for_placement(cx, fret_ui::Invalidation::Layout);
+                    let root_bounds = overlay::root_bounds_for_element_placement(
+                        cx,
+                        trigger_id,
+                        fret_ui::Invalidation::Layout,
+                    );
                     let outer_with_margin =
                         overlay::outer_bounds_with_window_margin(root_bounds, window_margin);
                     // When the viewport is extremely short, applying the full window margin would

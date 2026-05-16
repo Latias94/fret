@@ -2002,6 +2002,104 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `menubar_submenu_opens_on_arrow_right_and_closes_on_arrow_left_restoring_focus`.
   - representative shadcn focused result:
     all passed.
+- Runtime multi-viewport Combobox root-boundary gate:
+  `tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-multi-viewport-combobox-placement.json`
+  - invariant:
+    a Combobox trigger inside a Resizable panel viewport root must derive overlay collision
+    boundaries from the source element's nearest layout viewport root, not from the owner root or
+    OS window. The fixture places the trigger near the bottom of the panel while the OS window still
+    has room below; correct behavior flips the popover to the top.
+  - implementation anchors:
+    `crates/fret-ui/src/elements/runtime.rs`,
+    `crates/fret-ui/src/elements/cx.rs`,
+    `crates/fret-ui/src/elements/queries.rs`,
+    `crates/fret-ui/src/tree/layout/entrypoints.rs`,
+    `crates/fret-ui/src/declarative/tests/layout/viewport_roots.rs`,
+    `ecosystem/fret-ui-kit/src/overlay.rs`,
+    `apps/fret-ui-gallery/src/ui/snippets/resizable/multi_viewport_combobox.rs`,
+    `apps/fret-ui-gallery/src/ui/pages/resizable.rs`,
+    `tools/diag-scripts/suites/fret-mechanism-harness-overlay-focus/suite.json`, and
+    `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+  - before runtime evidence:
+    `.fret/diag/runs/ui-gallery-resizable-multi-viewport-combobox-placement-before/script.result.json`
+  - before result:
+    failed at step 14 with `wait_overlay_placement_trace_timeout`; trace showed
+    `chosen_side=bottom` and `outer_collision=900x1000@0,0`.
+  - before packed evidence:
+    `.fret/diag/runs/ui-gallery-resizable-multi-viewport-combobox-placement-before/share/1778902294871.zip`
+  - focused mechanism gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui element_root_bounds_cache_rebuilds_on_view_cache_hit_after_viewport_move element_root_bounds_cache_rebuilds_when_element_moves_between_viewport_roots element_root_bounds_cache_uses_nearest_nested_viewport_root element_root_bounds_cache_uses_nearest_viewport_when_owner_root_differs viewport_root_bounds_for_descendant_elements_track_the_panel_bounds --no-fail-fast`
+  - focused mechanism result:
+    passed, 5 tests; Nextest run id `045558b5-2637-4b15-a41f-55d7399d5ad2`.
+  - UI kit focused gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit outer_bounds_with_window_margin_for_root_uses_current_context_bounds popper_layout_for_element_returns_arrow_layout_when_configured --no-fail-fast`
+  - UI kit focused result:
+    passed, 2 tests; Nextest run id `819d431c-1316-431e-95b8-58dc6e962904`.
+  - protocol roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_resizable_multi_viewport_combobox_placement --no-fail-fast`
+  - protocol roundtrip result:
+    passed, 1 test; Nextest run id `6f146a5c-1f46-4982-b37d-4722a3909e4d`.
+  - registry gate:
+    `python tools/check_diag_scripts_registry.py`
+  - registry result:
+    passed.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-multi-viewport-combobox-placement.json --dir .fret/diag/runs/ui-gallery-resizable-multi-viewport-combobox-placement-final2 --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1778905890519`.
+  - runtime evidence:
+    `.fret/diag/runs/ui-gallery-resizable-multi-viewport-combobox-placement-final2/script.result.json`
+  - packed evidence:
+    `.fret/diag/runs/ui-gallery-resizable-multi-viewport-combobox-placement-final2/share/1778905890519.zip`
+  - structured trace proof:
+    `chosen_side=top`, `preferred_fits_without_main_clamp=false`, and
+    `outer_collision=336x378@514.67,468.67`.
+- Non-modal overlay underlay activation-status gates:
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-click-through-outside-press-focus-underlay.json`
+  and
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay.json`
+  - invariant:
+    outside press on a default-compatible non-modal overlay must dismiss/close the overlay, move
+    focus to the underlay probe, and deliver the click to the underlay activation handler. Focus and
+    dismiss status are not strong enough proxy signals for click-through correctness.
+  - implementation anchors:
+    `apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/widgets.rs`,
+    `apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/flags.rs`,
+    `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-click-through-outside-press-focus-underlay.json`,
+    `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay.json`,
+    and `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+  - finding:
+    found a harness weakness, not a new mechanism defect. The previous runtime gates only proved
+    focus/dismiss outcomes and could miss an outside-press policy regression where the underlay
+    gained focus but the activation handler did not run.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - Popover runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-click-through-outside-press-focus-underlay.json --dir .fret/diag/runs/ui-gallery-popover-click-through-outside-press-focus-underlay-activation --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - Popover runtime result:
+    passed; run id `1778906489806`.
+  - Popover packed evidence:
+    `.fret/diag/runs/ui-gallery-popover-click-through-outside-press-focus-underlay-activation/share/1778906489806.zip`
+  - DropdownMenu runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/overlay/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay.json --dir .fret/diag/runs/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay-activation --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - DropdownMenu runtime result:
+    passed; run id `1778906522304`.
+  - DropdownMenu packed evidence:
+    `.fret/diag/runs/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay-activation/share/1778906522304.zip`
+  - protocol roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_popover_click_through_outside_press_focus_underlay script_v2_roundtrip_ui_gallery_dropdown_nonmodal_outside_press_focus_underlay --no-fail-fast`
+  - protocol roundtrip result:
+    passed, 2 tests; Nextest run id `c563620f-80b3-4933-9da6-48d657c68a38`.
+  - registry gate:
+    `python tools/check_diag_scripts_registry.py`
+  - registry result:
+    passed.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

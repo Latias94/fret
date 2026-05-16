@@ -989,3 +989,38 @@ Status: complete for synthetic and focused gates
   ContextMenu, and Menubar overlay tests.
 - Remaining follow-up: add a runtime multi-viewport ownership diagnostics gate with placement trace,
   relation edges, hit-tested selection, screenshot, and layout sidecar evidence.
+
+## M62: Runtime Multi-Viewport Combobox Root-Boundary Gate
+
+Status: complete for the Resizable Combobox runtime gate and owning mechanism fix
+
+- Promoted a UI Gallery Resizable fixture where a Combobox trigger lives near the bottom of a
+  Resizable panel viewport root while the OS window still has room below it.
+- The first runtime run found a real mechanism-layer root-boundary cache defect: the overlay
+  placement trace kept choosing `bottom` and used `outer_collision=900x1000@0,0`, meaning the
+  source element boundary was still the window/owner root instead of the panel viewport root.
+- The fix keeps `NodeEntry.root` as the declarative owner-root contract and adds a separate
+  per-element effective root-boundary cache rebuilt after final layout from live element-node
+  mappings and nearest registered `viewport_root` bounds.
+- `ElementContext::root_bounds_for_element` and the free `elements::root_bounds_for_element` query
+  now prefer that effective boundary before falling back to owner root bounds.
+- Focused mechanism and UI kit gates passed, and the runtime gate now passes with
+  `chosen_side=top`, `preferred_fits_without_main_clamp=false`, and
+  `outer_collision=336x378@514.67,468.67`.
+- Added focused nested viewport-root precedence, same-element viewport movement, and
+  view-cache-hit retained-render movement coverage. The remaining follow-up is a runtime UI Gallery
+  companion only if a real surface can move cached overlay sources across viewport roots.
+
+## M63: Non-Modal Overlay Underlay Activation Oracle
+
+Status: complete for Popover and DropdownMenu runtime gates
+
+- Strengthened existing non-modal overlay outside-press gates by adding a real underlay activation
+  oracle instead of relying on focus/dismiss proxy signals.
+- `ui-gallery-overlay-underlay-activated` now proves the underlay button's activation handler ran.
+- Popover click-through and DropdownMenu non-modal outside-press runtime gates both pass with the
+  new activation-status assertion.
+- No new overlay mechanism defect was reproduced; the fix is a harness-quality improvement that
+  makes future outside-press consumption regressions visible.
+- Remaining follow-up: move to semantics/accessibility runtime gates unless fresh Radix parity
+  evidence demands additional click-through families.

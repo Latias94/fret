@@ -24,6 +24,9 @@ pub fn root_bounds_for_element<H: UiHost>(
 ) -> Option<Rect> {
     app.with_global_mut_untracked(ElementRuntime::new, |runtime, _app| {
         let state = runtime.for_window_mut(window);
+        if let Some(bounds) = state.element_root_bounds(element) {
+            return Some(bounds);
+        }
         let root = state.node_entry(element).map(|e| e.root)?;
         state.root_bounds(root)
     })

@@ -37,6 +37,7 @@ impl<H: UiHost> Default for UiTree<H> {
             scratch_node_stack: Vec::new(),
             scratch_element_nodes: Vec::new(),
             scratch_bounds_records: Vec::new(),
+            scratch_element_root_bounds_records: Vec::new(),
             scratch_visual_bounds_records: Vec::new(),
             measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics::default(),
             layout_engine: crate::layout_engine::TaffyLayoutEngine::default(),

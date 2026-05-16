@@ -9779,6 +9779,34 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-resizable-multi-viewport-combobox-placement",
+      "path": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-multi-viewport-combobox-placement.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "fret-mechanism-harness-overlay-focus",
+        "ui-gallery-resizable"
+      ],
+      "tags": [
+        "combobox",
+        "multi_viewport",
+        "overlay",
+        "resizable",
+        "root_boundary",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Resizable Multi-Viewport Combobox fixture.",
+        "Opens a Combobox trigger near the bottom of a Resizable panel viewport root.",
+        "The OS window has room below the trigger, but the panel viewport root does not; correct root-boundary ownership flips the anchored popover to the top."
+      ]
+    },
+    {
       "id": "ui-gallery-scroll-area-expand-at-bottom",
       "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-expand-at-bottom.json",
       "required_capabilities": [

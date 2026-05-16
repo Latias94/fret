@@ -715,6 +715,13 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
             return bounds.size;
         }
         self.tree.register_viewport_root(child, bounds);
+        if let Some(window) = self.window
+            && let Some(element) = self.tree.node_element(child)
+        {
+            crate::elements::with_window_state(self.app, window, |window_state| {
+                window_state.set_root_bounds(element, bounds);
+            });
+        }
         bounds.size
     }
 

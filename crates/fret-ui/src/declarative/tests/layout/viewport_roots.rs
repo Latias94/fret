@@ -346,6 +346,507 @@ fn resizable_panel_group_viewport_roots_match_panel_bounds() {
 }
 
 #[test]
+fn viewport_root_bounds_for_descendant_elements_track_the_panel_bounds() {
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    use crate::GlobalElementId;
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(60.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let model = app.models_mut().insert(vec![0.42, 0.58]);
+    let anchor_cell: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+    let anchor_cell_for_render = anchor_cell.clone();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "viewport-root-bounds-for-descendant-elements",
+        move |cx| {
+            let anchor_cell = anchor_cell_for_render.clone();
+            let props = crate::element::ResizablePanelGroupProps::new(
+                fret_core::Axis::Horizontal,
+                model.clone(),
+            );
+            vec![cx.resizable_panel_group(props, move |cx| {
+                let anchor = cx.text("anchor");
+                anchor_cell.set(Some(anchor.id));
+                vec![anchor]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let anchor = anchor_cell.get().expect("expected anchor element id");
+    let anchor_root_bounds = crate::elements::root_bounds_for_element(&mut app, window, anchor)
+        .expect("expected anchor root bounds");
+
+    let group = ui.children(root)[0];
+    let panel_a = ui.children(group)[0];
+    let panel_a_bounds = ui
+        .debug_node_bounds(panel_a)
+        .expect("expected panel a bounds");
+
+    assert_eq!(anchor_root_bounds, panel_a_bounds);
+}
+
+#[test]
+fn element_root_bounds_cache_uses_nearest_viewport_when_owner_root_differs() {
+    use crate::GlobalElementId;
+    use crate::elements::NodeEntry;
+    use fret_runtime::FrameId;
+
+    struct RegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    struct FillAvailable;
+
+    impl<H: UiHost> Widget<H> for FillAvailable {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let window_bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(900.0), Px(1000.0)),
+    );
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(514.0), Px(468.0)),
+        Size::new(Px(336.0), Px(378.0)),
+    );
+
+    let owner_element = GlobalElementId(0xA11CE);
+    let viewport_element = GlobalElementId(0xB0A7);
+
+    let viewport_node = ui.create_node(FillAvailable);
+    let root_node = ui.create_node(RegistersViewportRoot {
+        viewport,
+        child: viewport_node,
+    });
+    ui.set_node_element(root_node, Some(owner_element));
+    ui.set_node_element(viewport_node, Some(viewport_element));
+    ui.set_children(root_node, vec![viewport_node]);
+    ui.set_root(root_node);
+
+    crate::elements::with_window_state(&mut app, window, |window_state| {
+        window_state.set_node_entry(
+            owner_element,
+            NodeEntry {
+                node: root_node,
+                last_seen_frame: FrameId(1),
+                root: owner_element,
+            },
+        );
+        window_state.set_node_entry(
+            viewport_element,
+            NodeEntry {
+                node: viewport_node,
+                last_seen_frame: FrameId(1),
+                root: owner_element,
+            },
+        );
+        window_state.set_root_bounds(owner_element, window_bounds);
+    });
+
+    let mut text = FakeTextService::default();
+    ui.layout_all(&mut app, &mut text, window_bounds, 1.0);
+
+    let owner = crate::elements::with_window_state(&mut app, window, |window_state| {
+        window_state
+            .node_entry(viewport_element)
+            .map(|entry| entry.root)
+            .expect("expected viewport element node entry")
+    });
+    assert_eq!(owner, owner_element);
+
+    let resolved = crate::elements::root_bounds_for_element(&mut app, window, viewport_element)
+        .expect("expected viewport root bounds for element");
+
+    assert_eq!(resolved, viewport);
+}
+
+#[test]
+fn element_root_bounds_cache_uses_nearest_nested_viewport_root() {
+    use crate::GlobalElementId;
+    use crate::elements::NodeEntry;
+    use fret_runtime::FrameId;
+
+    struct RegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    struct FillAvailable;
+
+    impl<H: UiHost> Widget<H> for FillAvailable {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let window_bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(900.0), Px(1000.0)),
+    );
+    let outer_viewport = Rect::new(
+        fret_core::Point::new(Px(120.0), Px(90.0)),
+        Size::new(Px(600.0), Px(520.0)),
+    );
+    let inner_viewport = Rect::new(
+        fret_core::Point::new(Px(260.0), Px(180.0)),
+        Size::new(Px(220.0), Px(160.0)),
+    );
+
+    let owner_element = GlobalElementId(0xCAFE);
+    let outer_element = GlobalElementId(0xC0DE);
+    let leaf_element = GlobalElementId(0xF00D);
+
+    let leaf_node = ui.create_node(FillAvailable);
+    let outer_node = ui.create_node(RegistersViewportRoot {
+        viewport: inner_viewport,
+        child: leaf_node,
+    });
+    let root_node = ui.create_node(RegistersViewportRoot {
+        viewport: outer_viewport,
+        child: outer_node,
+    });
+
+    ui.set_node_element(root_node, Some(owner_element));
+    ui.set_node_element(outer_node, Some(outer_element));
+    ui.set_node_element(leaf_node, Some(leaf_element));
+    ui.set_children(root_node, vec![outer_node]);
+    ui.set_children(outer_node, vec![leaf_node]);
+    ui.set_root(root_node);
+
+    crate::elements::with_window_state(&mut app, window, |window_state| {
+        for (element, node) in [
+            (owner_element, root_node),
+            (outer_element, outer_node),
+            (leaf_element, leaf_node),
+        ] {
+            window_state.set_node_entry(
+                element,
+                NodeEntry {
+                    node,
+                    last_seen_frame: FrameId(1),
+                    root: owner_element,
+                },
+            );
+        }
+        window_state.set_root_bounds(owner_element, window_bounds);
+    });
+
+    let mut text = FakeTextService::default();
+    ui.layout_all(&mut app, &mut text, window_bounds, 1.0);
+
+    let outer_resolved = crate::elements::root_bounds_for_element(&mut app, window, outer_element)
+        .expect("expected outer viewport root bounds");
+    let leaf_resolved = crate::elements::root_bounds_for_element(&mut app, window, leaf_element)
+        .expect("expected nearest nested viewport root bounds");
+
+    assert_eq!(outer_resolved, outer_viewport);
+    assert_eq!(leaf_resolved, inner_viewport);
+}
+
+#[test]
+fn element_root_bounds_cache_rebuilds_when_element_moves_between_viewport_roots() {
+    use crate::GlobalElementId;
+    use crate::elements::NodeEntry;
+    use fret_runtime::FrameId;
+
+    struct RegistersTwoViewportRoots {
+        left_viewport: Rect,
+        right_viewport: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersTwoViewportRoots {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            if let Some(&left) = cx.children.first() {
+                let _ = cx.layout_viewport_root(left, self.left_viewport);
+            }
+            if let Some(&right) = cx.children.get(1) {
+                let _ = cx.layout_viewport_root(right, self.right_viewport);
+            }
+            cx.available
+        }
+    }
+
+    struct FillAvailable;
+
+    impl<H: UiHost> Widget<H> for FillAvailable {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let window_bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(900.0), Px(1000.0)),
+    );
+    let left_viewport = Rect::new(
+        fret_core::Point::new(Px(40.0), Px(40.0)),
+        Size::new(Px(240.0), Px(200.0)),
+    );
+    let right_viewport = Rect::new(
+        fret_core::Point::new(Px(520.0), Px(320.0)),
+        Size::new(Px(280.0), Px(260.0)),
+    );
+
+    let owner_element = GlobalElementId(0xABCD);
+    let moving_element = GlobalElementId(0xABCE);
+
+    let moving_node = ui.create_node(FillAvailable);
+    let left_node = ui.create_node(FillAvailable);
+    let right_node = ui.create_node(FillAvailable);
+    let root_node = ui.create_node(RegistersTwoViewportRoots {
+        left_viewport,
+        right_viewport,
+    });
+
+    ui.set_node_element(root_node, Some(owner_element));
+    ui.set_node_element(moving_node, Some(moving_element));
+    ui.set_children(left_node, vec![moving_node]);
+    ui.set_children(right_node, Vec::new());
+    ui.set_children(root_node, vec![left_node, right_node]);
+    ui.set_root(root_node);
+
+    crate::elements::with_window_state(&mut app, window, |window_state| {
+        window_state.set_node_entry(
+            owner_element,
+            NodeEntry {
+                node: root_node,
+                last_seen_frame: FrameId(1),
+                root: owner_element,
+            },
+        );
+        window_state.set_node_entry(
+            moving_element,
+            NodeEntry {
+                node: moving_node,
+                last_seen_frame: FrameId(1),
+                root: owner_element,
+            },
+        );
+        window_state.set_root_bounds(owner_element, window_bounds);
+    });
+
+    let mut text = FakeTextService::default();
+    ui.layout_all(&mut app, &mut text, window_bounds, 1.0);
+
+    let initial = crate::elements::root_bounds_for_element(&mut app, window, moving_element)
+        .expect("expected initial viewport root bounds");
+    assert_eq!(initial, left_viewport);
+
+    ui.set_children(left_node, Vec::new());
+    ui.set_children(right_node, vec![moving_node]);
+    crate::elements::with_window_state(&mut app, window, |window_state| {
+        window_state.set_node_entry(
+            moving_element,
+            NodeEntry {
+                node: moving_node,
+                last_seen_frame: FrameId(2),
+                root: owner_element,
+            },
+        );
+    });
+
+    ui.layout_all(&mut app, &mut text, window_bounds, 1.0);
+
+    let moved = crate::elements::root_bounds_for_element(&mut app, window, moving_element)
+        .expect("expected moved viewport root bounds");
+    assert_eq!(moved, right_viewport);
+}
+
+#[test]
+fn element_root_bounds_cache_rebuilds_on_view_cache_hit_after_viewport_move() {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use crate::GlobalElementId;
+
+    struct RegistersTwoViewportRoots {
+        left_viewport: Rect,
+        right_viewport: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersTwoViewportRoots {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            if let Some(&left) = cx.children.first() {
+                let _ = cx.layout_viewport_root(left, self.left_viewport);
+            }
+            if let Some(&right) = cx.children.get(1) {
+                let _ = cx.layout_viewport_root(right, self.right_viewport);
+            }
+            cx.available
+        }
+    }
+
+    #[derive(Default)]
+    struct LayoutChildrenFill;
+
+    impl<H: UiHost> Widget<H> for LayoutChildrenFill {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            for &child in cx.children {
+                let _ = cx.layout(child, cx.available);
+            }
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let window_bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(900.0), Px(1000.0)),
+    );
+    let left_viewport = Rect::new(
+        fret_core::Point::new(Px(32.0), Px(48.0)),
+        Size::new(Px(220.0), Px(180.0)),
+    );
+    let right_viewport = Rect::new(
+        fret_core::Point::new(Px(512.0), Px(360.0)),
+        Size::new(Px(300.0), Px(240.0)),
+    );
+
+    let renders = Arc::new(AtomicUsize::new(0));
+    let leaf_id: Arc<std::sync::Mutex<Option<GlobalElementId>>> =
+        Arc::new(std::sync::Mutex::new(None));
+    let mut services = FakeTextService::default();
+    let mut scene = Scene::default();
+
+    let left_node = ui.create_node(LayoutChildrenFill);
+    let right_node = ui.create_node(LayoutChildrenFill);
+    let parent = ui.create_node(RegistersTwoViewportRoots {
+        left_viewport,
+        right_viewport,
+    });
+    ui.set_children(parent, vec![left_node, right_node]);
+
+    let build_cached =
+        |ui: &mut UiTree<TestHost>,
+         app: &mut TestHost,
+         services: &mut FakeTextService,
+         renders: Arc<AtomicUsize>,
+         leaf_id: Arc<std::sync::Mutex<Option<GlobalElementId>>>| {
+            render_root_for_frame(
+                ui,
+                app,
+                services,
+                window,
+                window_bounds,
+                "view-cache-root-boundary-move",
+                move |cx| {
+                    let cached = cx.view_cache(crate::element::ViewCacheProps::default(), |cx| {
+                        renders.fetch_add(1, Ordering::SeqCst);
+                        let leaf = cx.text("cached leaf");
+                        *leaf_id.lock().expect("leaf id") = Some(leaf.id);
+                        vec![leaf]
+                    });
+                    vec![cached]
+                },
+            )
+        };
+
+    let root_frame_0 = build_cached(
+        &mut ui,
+        &mut app,
+        &mut services,
+        renders.clone(),
+        leaf_id.clone(),
+    );
+    ui.set_children(left_node, vec![root_frame_0]);
+    ui.set_children(right_node, Vec::new());
+    ui.set_root(parent);
+    layout_frame(&mut ui, &mut app, &mut services, window_bounds);
+    paint_frame(&mut ui, &mut app, &mut services, window_bounds, &mut scene);
+
+    let leaf = leaf_id
+        .lock()
+        .expect("leaf id")
+        .expect("expected leaf id from first render");
+    let initial = crate::elements::root_bounds_for_element(&mut app, window, leaf)
+        .expect("expected initial viewport root bounds");
+    assert_eq!(initial, left_viewport);
+
+    app.advance_frame();
+
+    let root_frame_1 = build_cached(
+        &mut ui,
+        &mut app,
+        &mut services,
+        renders.clone(),
+        leaf_id.clone(),
+    );
+    assert_eq!(
+        root_frame_1, root_frame_0,
+        "same declarative root should be reused across frames"
+    );
+    ui.set_children(left_node, Vec::new());
+    ui.set_children(right_node, vec![root_frame_1]);
+    ui.set_root(parent);
+    layout_frame(&mut ui, &mut app, &mut services, window_bounds);
+    paint_frame(&mut ui, &mut app, &mut services, window_bounds, &mut scene);
+
+    assert_eq!(
+        renders.load(Ordering::SeqCst),
+        1,
+        "second frame should reuse the cached subtree"
+    );
+
+    let moved = crate::elements::root_bounds_for_element(&mut app, window, leaf)
+        .expect("expected moved viewport root bounds after cache hit");
+    assert_eq!(moved, right_viewport);
+}
+
+#[test]
 fn viewport_root_registration_is_flushed_when_registered_from_another_viewport_root() {
     use std::sync::Arc;
     use std::sync::atomic::{AtomicBool, Ordering};
