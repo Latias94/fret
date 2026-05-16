@@ -86,10 +86,26 @@ $env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib menubar_submenu_op
 
 ```powershell
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_dirty_invalidation_matches_oracles -- --nocapture
+cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_view_cache_lifecycle_matches_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib view_cache -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib scroll_contained_view_cache_dirty_does_not_force_direct_child_root_invalidation -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib layout_request_build_roots_classify_view_cache_layout_dirty_expansion -- --nocapture
 ```
+
+Current synthetic evidence anchors:
+
+- View-cache lifecycle fixture:
+  `crates/fret-ui/src/declarative/tests/fixtures/view_cache_lifecycle_v1.json`
+  - runner:
+    `crates/fret-ui/src/declarative/tests/view_cache_lifecycle_harness.rs`
+  - proof:
+    asserts clean cache-hit reuse, retained element state, cache-key misses, RAF invalidation,
+    model-observation preservation across cache-hit frames, unrelated model scoping,
+    inspection-mode bypass, and layout-query next-frame invalidation.
+  - current command:
+    `cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_view_cache_lifecycle_matches_oracles -- --nocapture`
+  - current result:
+    passed.
 
 ## Scroll-Handle Window-Update Gates
 

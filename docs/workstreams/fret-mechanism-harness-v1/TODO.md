@@ -606,8 +606,16 @@ date: 2026-05-12
     width, and overflow/scale constraints. No new mechanism defect was reproduced; the harness now
     records text measure/prepare constraint deltas and painted-height layout follow-through as
     scalar fixture metrics.
+- [x] Promote declarative `ViewCache` lifecycle guarantees into a fixture-driven mechanism harness.
+  - Result: `view_cache_lifecycle_v1.json` now covers clean cache-hit reuse, retained element
+    state, cache-key misses, RAF invalidation, model-observation preservation across cache-hit
+    frames, unrelated model scoping, inspection-mode cache bypass, and layout-query next-frame
+    invalidation. No new mechanism defect was reproduced; the slice closed a harness coverage gap.
 - [ ] Add RTL/writing-mode layout primitive cases once the direction/writing-mode contract is
   explicit enough to avoid encoding a recipe policy as a mechanism oracle.
+- [ ] Add a runtime UI Gallery companion for cached model/layout-query dependency mutation only if
+  a real surface exposes a non-synthetic risk; otherwise continue with scroll/click stability or
+  retained/component semantics mutation.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.
