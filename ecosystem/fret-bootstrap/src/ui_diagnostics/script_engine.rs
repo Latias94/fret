@@ -159,6 +159,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::SetWindowInnerSize { .. }
         | UiActionStepV2::SetWindowStyle { .. }
         | UiActionStepV2::SetWindowInsets { .. }
+        | UiActionStepV2::SetWindowPreferences { .. }
         | UiActionStepV2::SetClipboardForceUnavailable { .. }
         | UiActionStepV2::SetClipboardText { .. }
         | UiActionStepV2::WaitClipboardWriteResult { .. }
@@ -458,7 +459,8 @@ pub(super) fn dispatch_drive_script_step(
         | UiActionStepV2::SetCursorInWindowLogical { .. }
         | UiActionStepV2::SetMouseButtons { .. }
         | UiActionStepV2::RaiseWindow { .. }
-        | UiActionStepV2::SetWindowInsets { .. }) => {
+        | UiActionStepV2::SetWindowInsets { .. }
+        | UiActionStepV2::SetWindowPreferences { .. }) => {
             script_steps::handle_window_effect_steps(
                 service,
                 window,
@@ -2333,7 +2335,8 @@ impl UiDiagnosticsService {
             | UiActionStepV2::SetCursorInWindowLogical { .. }
             | UiActionStepV2::SetMouseButtons { .. }
             | UiActionStepV2::RaiseWindow { .. }
-            | UiActionStepV2::SetWindowInsets { .. }) => {
+            | UiActionStepV2::SetWindowInsets { .. }
+            | UiActionStepV2::SetWindowPreferences { .. }) => {
                 script_steps::handle_window_effect_steps(
                     self,
                     window,

@@ -18,7 +18,7 @@ use fret_ui_kit::{
     Radius, Space, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
 };
 
-const ALERT_ACTION_MARKER_TEST_ID: &str = "__fret_shadcn.alert_action";
+const ALERT_ACTION_SLOT: &str = "fret-ui-shadcn.alert.action";
 
 fn alert_padding_x(theme: &ThemeSnapshot) -> Px {
     theme
@@ -149,6 +149,10 @@ fn alert_action_horizontal_anchor(
     }
 }
 
+fn is_alert_action_slot(element: &AnyElement) -> bool {
+    element.component_slot.as_deref() == Some(ALERT_ACTION_SLOT)
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum AlertVariant {
     #[default]
@@ -250,7 +254,7 @@ impl AlertAction {
             },
             move |_cx| self.children,
         )
-        .test_id(ALERT_ACTION_MARKER_TEST_ID)
+        .component_slot(ALERT_ACTION_SLOT)
     }
 }
 
@@ -589,13 +593,7 @@ fn alert_with_patch<H: UiHost>(
     let icon_size = alert_icon_size(&theme);
     let icon_offset_y = alert_icon_offset_y(&theme);
     let action_padding_inline_end = alert_action_padding_right(&theme);
-    let has_action = children.iter().any(|child| {
-        child
-            .semantics_decoration
-            .as_ref()
-            .and_then(|d| d.test_id.as_deref())
-            == Some(ALERT_ACTION_MARKER_TEST_ID)
-    });
+    let has_action = children.iter().any(is_alert_action_slot);
 
     let bg = theme.color_token("card");
     let border = theme.color_token("border");
@@ -621,13 +619,7 @@ fn alert_with_patch<H: UiHost>(
     let has_icon = icon.is_some();
     let mut body_children = children;
 
-    let action_idx = body_children.iter().position(|child| {
-        child
-            .semantics_decoration
-            .as_ref()
-            .and_then(|d| d.test_id.as_deref())
-            == Some(ALERT_ACTION_MARKER_TEST_ID)
-    });
+    let action_idx = body_children.iter().position(is_alert_action_slot);
     let mut action = action_idx.map(|idx| body_children.remove(idx));
     let action_anchor = alert_action_horizontal_anchor(action.as_ref(), dir);
 
@@ -1076,18 +1068,27 @@ mod tests {
         el.children.iter().find_map(find_first_selectable_text)
     }
 
-    fn find_element_by_test_id<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
-        if el
-            .semantics_decoration
-            .as_ref()
-            .and_then(|d| d.test_id.as_deref())
-            == Some(needle)
-        {
+    fn find_element_by_component_slot<'a>(
+        el: &'a AnyElement,
+        slot: &str,
+    ) -> Option<&'a AnyElement> {
+        if el.component_slot.as_deref() == Some(slot) {
             return Some(el);
         }
         el.children
             .iter()
-            .find_map(|child| find_element_by_test_id(child, needle))
+            .find_map(|child| find_element_by_component_slot(child, slot))
+    }
+
+    fn contains_test_id(el: &AnyElement, needle: &str) -> bool {
+        el.semantics_decoration
+            .as_ref()
+            .and_then(|d| d.test_id.as_deref())
+            == Some(needle)
+            || el
+                .children
+                .iter()
+                .any(|child| contains_test_id(child, needle))
     }
 
     fn find_first_grid(el: &AnyElement) -> Option<&AnyElement> {
@@ -1566,8 +1567,8 @@ mod tests {
             .into_element(cx)
         });
 
-        let action = find_element_by_test_id(&element, ALERT_ACTION_MARKER_TEST_ID)
-            .expect("expected Alert to keep the action child under the action marker test id");
+        let action = find_element_by_component_slot(&element, ALERT_ACTION_SLOT)
+            .expect("expected Alert to keep the action child under the action component slot");
         let ElementKind::Container(props) = &action.kind else {
             panic!(
                 "expected Alert action marker to resolve to a Container, got {:?}",
@@ -1601,8 +1602,8 @@ mod tests {
             })
         });
 
-        let action = find_element_by_test_id(&element, ALERT_ACTION_MARKER_TEST_ID)
-            .expect("expected Alert to keep the action child under the action marker test id");
+        let action = find_element_by_component_slot(&element, ALERT_ACTION_SLOT)
+            .expect("expected Alert to keep the action child under the action component slot");
         let ElementKind::Container(props) = &action.kind else {
             panic!(
                 "expected Alert action marker to resolve to a Container, got {:?}",
@@ -1614,6 +1615,30 @@ mod tests {
         assert_eq!(props.layout.inset.top, InsetEdge::Px(Px(-4.0)));
         assert_eq!(props.layout.inset.left, InsetEdge::Px(Px(-64.0)));
         assert_eq!(props.layout.inset.right, InsetEdge::Auto);
+    }
+
+    #[test]
+    fn alert_action_slot_marker_is_not_a_diagnostics_test_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            Alert::new([
+                AlertAction::new([cx.text("Undo")]).into_element(cx),
+                AlertAction::new([cx.text("Retry")]).into_element(cx),
+            ])
+            .into_element(cx)
+        });
+
+        assert!(
+            !contains_test_id(&element, ALERT_ACTION_SLOT),
+            "component slot markers must not leak into global diagnostics test_id space"
+        );
     }
 
     #[test]
@@ -1865,8 +1890,8 @@ mod tests {
             SpacingLength::Px(alert_action_padding_right(&theme))
         );
 
-        let action = find_element_by_test_id(&element, ALERT_ACTION_MARKER_TEST_ID)
-            .expect("expected Alert to keep the action child under the action marker test id");
+        let action = find_element_by_component_slot(&element, ALERT_ACTION_SLOT)
+            .expect("expected Alert to keep the action child under the action component slot");
         let ElementKind::Container(action_props) = &action.kind else {
             panic!(
                 "expected Alert action marker to resolve to a Container, got {:?}",

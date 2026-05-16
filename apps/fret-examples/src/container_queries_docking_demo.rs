@@ -560,6 +560,7 @@ fn render(
             scale_factor,
             &mut state.ui,
             element_runtime,
+            None,
             scene,
         );
         let _ = svc.maybe_dump_if_triggered();

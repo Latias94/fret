@@ -2698,14 +2698,18 @@ fn select_impl<H: UiHost>(
                         .unwrap_or(Px(24.0));
                     let min_list_h = Px(scroll_button_h.0 * 2.0 + item_h.0 * 5.0);
 
-                    let window_bounds = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
+                    let root_bounds = overlay::root_bounds_for_element_placement(
+                        cx,
+                        trigger_id,
+                        fret_ui::Invalidation::Layout,
+                    );
                     let outer_with_margin =
-                        overlay::outer_bounds_with_window_margin(window_bounds, window_margin);
+                        overlay::outer_bounds_with_window_margin(root_bounds, window_margin);
                     // When the viewport is extremely short, applying the full window margin would
                     // reduce the listbox to an unusable height. Prefer allowing overflow so we can
                     // keep a reasonable minimum number of rows visible (Radix behavior under tight
                     // constraints).
-                    let force_no_margin = window_bounds.size.height.0 <= 180.0;
+                    let force_no_margin = root_bounds.size.height.0 <= 180.0;
                     let outer = if position == SelectPosition::Popper {
                         // Radix Select uses `collisionPadding` (10px) on the popper substrate, but
                         // the listbox can still overflow when it is larger than the available
@@ -2713,9 +2717,9 @@ fn select_impl<H: UiHost>(
                         //
                         // Model this by using full window bounds for popper placement while keeping
                         // the window-margin inset available as a sizing hint.
-                        window_bounds
+                        root_bounds
                     } else if force_no_margin || outer_with_margin.size.height.0 < min_list_h.0 {
-                        window_bounds
+                        root_bounds
                     } else {
                         outer_with_margin
                     };
@@ -2805,8 +2809,8 @@ fn select_impl<H: UiHost>(
                             if debug_item_aligned {
                                 eprintln!("select item-aligned theme min_width={}", min_width.0);
                                 eprintln!(
-                                    "select item-aligned window bounds={:?} trigger={:?}",
-                                    window_bounds, anchor
+                                    "select item-aligned root bounds={:?} trigger={:?}",
+                                    root_bounds, anchor
                                 );
                                 let dbg = |label: &str, id: GlobalElementId| {
                                     let b = overlay::anchor_bounds_for_element(cx, id);
@@ -2824,7 +2828,7 @@ fn select_impl<H: UiHost>(
                             }
                             Some(radix_select::SelectItemAlignedElementInputs {
                                 direction,
-                                window: window_bounds,
+                                window: root_bounds,
                                 trigger: anchor,
                                 content_min_width: min_width,
                                 content_border_top: border_width,

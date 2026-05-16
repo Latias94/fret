@@ -47,8 +47,15 @@ Last updated: 2026-05-16
   - `ecosystem/fret-imui/src/tests/models_text_picker/mod.rs`
   - `ecosystem/fret-imui/src/tests/popup_hover/mod.rs`
   - `ecosystem/fret-ui-kit/src/imui.rs`
+  - `ecosystem/fret-ui-kit/src/declarative/text.rs`
+  - `ecosystem/fret-ui-kit/src/imui/control_chrome.rs`
+  - `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs`
+  - `ecosystem/fret-ui-kit/src/imui/menu_controls.rs`
+  - `ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs`
+  - `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs`
   - `ecosystem/fret-ui-kit/src/imui/table_controls.rs`
+  - `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/selection_combo.rs`
@@ -129,7 +136,7 @@ Use these for the current component-surface catalog note:
 ```powershell
 rg --files ecosystem/fret-ui-kit/src/imui ecosystem/fret-ui-kit/tests
 rg -n "pub use debug_draw_controls|pub use options|pub use response|pub use tab_family_controls::ImUiTabBar|pub use table_controls" ecosystem/fret-ui-kit/src/imui.rs
-rg -n "fn (button|small_button|arrow_button|checkbox_model|radio|switch_model|slider_f32_model|combo|combo_model|selectable|multi_selectable|tree_node|collapsing_header|child_region|virtual_list|table|tab_bar|open_popup|begin_popup|tooltip|drag_source|drop_target|debug_draw)" ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer
+rg -n "fn (text|text_wrapped|button|small_button|arrow_button|checkbox_model|radio|switch_model|slider_f32_model|combo|combo_model|selectable|multi_selectable|tree_node|collapsing_header|child_region|virtual_list|table|tab_bar|open_popup|begin_popup|tooltip|drag_source|drop_target|debug_draw)" ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer
 rg -n "pub fn (text_field|checkbox|color_edit|drag_value|numeric_input|slider|enum_select|property_grid|gradient_editor|inspector_panel)" ecosystem/fret-ui-editor/src/imui.rs
 rg -n "Widgets: Text|Widgets: Main|Widgets: Combo Box|Widgets: Trees|Widgets: Selectables|Widgets: List Boxes|Widgets: Data Plotting|Widgets: Menus|Tooltips|Popups, Modals|Tables|Tab Bars|Drag and Drop|Debug Utilities" repo-ref/imgui/imgui.h
 cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test imui_combo_smoke --test imui_table_smoke --test imui_disclosure_smoke --test imui_textarea_smoke --test imui_drag_drop_smoke --test imui_virtual_list_smoke --test imui_debug_draw_smoke --test imui_tooltip_smoke --no-fail-fast
@@ -158,8 +165,73 @@ Run evidence:
   `TableOptions::striped` remains the existing alternating row-background policy, with proof in
   `apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs`,
   `ecosystem/fret-ui-kit/tests/imui_table_smoke.rs`, and
-  `ecosystem/fret-imui/src/tests/composition/layout_collections.rs`. The remaining table
-  background gap is explicit per-row/per-cell override policy, not all row background behavior.
+  `ecosystem/fret-imui/src/tests/composition/layout_collections.rs`.
+- 2026-05-16: landed the explicit table row/cell background override slice. Evidence anchors:
+  `TableRowOptions::background`, `TableCellOptions::background`,
+  `ImUiTableRow::cell_with_options(...)`, `ImUiTableRow::cell_text_with_options(...)`,
+  `ecosystem/fret-ui-kit/tests/imui_table_smoke.rs`, and
+  `ecosystem/fret-imui/src/tests/composition/layout_collections.rs`.
+  `table_helper_applies_explicit_row_and_cell_background_overrides` proves that explicit cell
+  backgrounds paint after explicit row backgrounds.
+- 2026-05-16: introduced `text_table_cell(...)` as the first shared table-cell text role and wired
+  `ImUiTableRow::cell_text(...)` through it instead of bare paragraph text. Gate:
+  `cargo nextest run -p fret-ui-kit --features imui --lib
+  table_cell_text_uses_compact_single_line_truncation --no-fail-fast`.
+- 2026-05-16: routed sortable and plain IMUI table header labels through
+  `text_table_cell(...)` too. Header labels now share compact single-line ellipsis semantics with
+  body cells instead of default word wrapping. Gate: `cargo nextest run -p fret-ui-kit --features
+  imui --lib table_header_label_uses_shared_table_cell_text_role --no-fail-fast`.
+- 2026-05-16: added static table column visibility through `TableColumn::hidden()` and
+  `TableColumn::with_visible(bool)`. Hidden columns still consume author-submitted row cells in
+  declared column order, but they do not render header/body cells and do not emit header responses.
+  Gates: `cargo nextest run -p fret-ui-kit --features imui --lib
+  hidden_table_columns_do_not_render_header_body_or_response --no-fail-fast`, `cargo nextest run -p
+  fret-ui-kit --features imui --test imui_table_smoke table_column_visibility_helpers_compile
+  --no-fail-fast`, and `cargo nextest run -p fret-imui
+  table_helper_skips_hidden_columns_in_header_and_body --no-fail-fast`.
+- 2026-05-16: introduced `text_control_readout(...)` as the shared compact control-readout text
+  role. The UI Gallery code-editor toolbar keeps its doc-layout helper, but that helper now
+  delegates to `fret-ui-kit::declarative::text::text_control_readout(...)`, so dense status/readout
+  text no longer carries app-local wrap/overflow policy. Gate: `cargo nextest run -p fret-ui-kit
+  --features imui --lib control_readout_text_uses_muted_compact_single_line_truncation
+  --no-fail-fast`.
+- 2026-05-16: introduced `text_button_label(...)` as the shared compact button-label text role and
+  routed IMUI `control_text(...)` through it. IMUI buttons and pill-style control labels now keep
+  single-line truncation instead of inheriting word-wrap text semantics. Gate: `cargo nextest run -p
+  fret-ui-kit --features imui --lib button_label_text_uses_medium_single_line_truncation
+  imui::control_chrome::tests::imui_control_text_uses_shared_button_label_role --no-fail-fast`.
+- 2026-05-16: introduced `text_code_block(...)` as the shared code-block text role beside the
+  existing inline/wrapping `text_code_wrap(...)`. The UI Gallery docs scaffold now uses the shared
+  role for scrollable code blocks instead of constructing monospace `TextProps` locally. Gate:
+  `cargo nextest run -p fret-ui-kit --features imui --lib
+  prose_variants_and_code_wrap_install_semantic_inherited_overrides --no-fail-fast`.
+- 2026-05-16: introduced `text_paragraph(...)` and `text_paragraph_break_words(...)` as the stable
+  semantic paragraph role names over the existing `text_prose(...)` helpers. This closes the first
+  text-role vocabulary pass without breaking shadcn/Tailwind-oriented naming. Gate: `cargo nextest
+  run -p fret-ui-kit --features imui --lib
+  prose_variants_and_code_wrap_install_semantic_inherited_overrides --no-fail-fast`.
+- 2026-05-16: routed IMUI tab triggers and menubar triggers through the shared
+  `text_button_label(...)` role. This keeps button-like trigger labels single-line and truncating
+  while leaving menu item/selectable row labels out of the button-label role. Gate: `cargo nextest
+  run -p fret-ui-kit --features imui --lib
+  imui::tab_family_controls::tests::tab_trigger_visual_uses_button_label_text_role
+  imui::menu_family_controls::tests::menu_trigger_visual_uses_button_label_text_role
+  --no-fail-fast`.
+- 2026-05-16: introduced `text_list_row_label(...)` as the shared dense list/command-row label
+  role and routed IMUI menu items, selectables, and disclosure/tree rows through it. The role uses
+  regular `text-sm` styling with fill-width, `min-width: 0`, single-line ellipsis semantics so row
+  labels truncate instead of wrapping or increasing row height under resize. Gate: `cargo nextest
+  run -p fret-ui-kit --features imui --lib
+  list_row_label_text_uses_fill_width_single_line_truncation
+  menu_item_label_text_uses_shared_list_row_text_role
+  selectable_row_label_uses_shared_list_row_text_role
+  tree_row_label_uses_shared_list_row_text_role --no-fail-fast`.
+- 2026-05-16: tightened `UiWriterImUiFacadeExt::text(...)` to match Dear ImGui's default
+  `Text()` posture: single-line, shrinkable, `min-width: 0`, and ellipsis-truncated under resize.
+  Added `UiWriterImUiFacadeExt::text_wrapped(...)` as the explicit wrapping path for explanatory
+  prose, and routed first-party editor/workspace proof prose through it. Gates: `cargo nextest run
+  -p fret-ui-kit --features imui --lib imui_text_item_is_single_line_and_shrinkable
+  imui_text_wrapped_is_explicit_wrapping_text --no-fail-fast` and `cargo check -p fret-examples`.
 - 2026-05-14: made `DisclosureResponse` / `ComboResponse` accessor-first for trigger/open/toggle
   state too. Public callers now read trigger details through `response()` and semantic helpers, the
   response types no longer expose external `Default` construction, and
@@ -479,6 +551,7 @@ cargo nextest run -p fret-imui models_controls --no-fail-fast
 cargo nextest run -p fret-imui models_text_area --no-fail-fast
 cargo nextest run -p fret-imui models_text_picker --no-fail-fast
 cargo nextest run -p fret-imui popup_hover --no-fail-fast
+cargo nextest run -p fret-imui table_helper_applies_explicit_row_and_cell_background_overrides --no-fail-fast
 cargo nextest run -p fret-imui table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells --no-fail-fast
 cargo nextest run -p fret-imui --no-fail-fast
 python tools/gate_imui_workstream_source.py
@@ -558,6 +631,11 @@ Run evidence:
   table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells --no-fail-fast` passed
   locally after moving table body-cell test semantics to layout-transparent
   `SemanticsDecoration`.
+- 2026-05-16: `cargo nextest run -p fret-imui
+  table_helper_applies_explicit_row_and_cell_background_overrides
+  table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells --no-fail-fast` passed
+  locally with 2 tests, proving explicit row/cell background paint order and preserving the
+  existing table layout semantics gate.
 - 2026-05-14: `cargo nextest run -p fret-imui --no-fail-fast` passed locally with 163 tests.
 - 2026-05-14: `python tools/gate_imui_workstream_source.py` and `git diff --check` passed locally.
 
@@ -604,6 +682,12 @@ Run evidence:
   passed locally. This is the preferred quick drift check for the first-open discovery surface when
   `target/debug/fretboard-dev.exe` already exists; the non-`--reuse-built` discovery form remains
   the cold-start entry that also proves the maintainer build path.
+- 2026-05-16: DevTools GUI first-open posture now stays summary-first: the header renders
+  `First-open Next Actions`, `Evidence & Results` defaults to `Guide`, and the full first-open /
+  dogfood / demo-metrics-debug / gate-command reference panels remain available from that guide
+  surface. Focused gates passed locally:
+  `cargo nextest run -p fret-devtools devtools_first_open_next_action_lines_prioritize_stateful_workflow devtools_first_open_lines_surface_canonical_paths devtools_dogfood_workflow_lines_surface_ui_gallery_loop devtools_demo_metrics_debug_lines_surface_canonical_routes devtools_gate_command_lines_surface_first_class_gates --no-fail-fast`
+  and `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`.
 - 2026-05-14: tightened the first-open discovery gate so `docs/diagnostics-first-open.md` must link
   maintainers from aggregate `skipped_policy` outcomes to the policy-skip / capability-provenance
   checklist, while preserving the distinction between `capability_source` and

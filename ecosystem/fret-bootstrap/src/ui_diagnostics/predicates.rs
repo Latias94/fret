@@ -913,6 +913,12 @@ fn eval_predicate(
             };
             node.flags.disabled == *disabled
         }
+        UiPredicateV1::ReadOnlyIs { target, read_only } => {
+            let Some(node) = select_node(target) else {
+                return false;
+            };
+            node.flags.read_only == *read_only
+        }
         UiPredicateV1::SemanticsActionIs {
             target,
             action,
@@ -2786,6 +2792,64 @@ mod predicate_tests {
                     root_z_index: None,
                 },
                 disabled: true,
+            },
+        ));
+    }
+
+    #[test]
+    fn read_only_is_matches_semantics_read_only_flag() {
+        let window = window_id(1);
+        let mut root = semantics_node(1, "root", false);
+        root.role = SemanticsRole::Window;
+        let mut switch = semantics_node(2, "readonly-switch", false);
+        switch.parent = Some(root.id);
+        switch.role = SemanticsRole::Switch;
+        switch.flags.read_only = true;
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![root, switch],
+        };
+
+        assert!(eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::ReadOnlyIs {
+                target: UiSelectorV1::TestId {
+                    id: "readonly-switch".to_string(),
+                    root_z_index: None,
+                },
+                read_only: true,
             },
         ));
     }

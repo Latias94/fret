@@ -337,7 +337,7 @@ where
                 },
                 |ui| {
                     ui.text(format!("Shell-mounted pane proof for {pane_id}"));
-                    ui.text(
+                    ui.text_wrapped(
                         "Nested child regions stay app-composed in the workspace shell; no helper widening is required for this slice.",
                     );
 
@@ -448,7 +448,7 @@ where
                             } else {
                                 "Dirty close prompt: closed"
                             });
-                            ui.text("Decision: keep the current `child_region` seam for M3.");
+                            ui.text_wrapped("Decision: keep the current `child_region` seam for M3.");
                         },
                     );
                 },
@@ -1670,6 +1670,7 @@ fn render(
             scale_factor,
             &mut state.ui,
             element_runtime,
+            None,
             scene,
         );
         let _ = svc.maybe_dump_if_triggered();

@@ -42,7 +42,7 @@ pub(super) fn build_header(
                             shadcn::Switch::new(syntax_rust_switch.clone())
                                 .a11y_label("Toggle Rust syntax highlighting")
                                 .into_element(cx),
-                            cx.text(if syntax_enabled {
+                            doc_layout::control_readout_text(cx, if syntax_enabled {
                                 "Syntax: Rust (tree-sitter)"
                             } else {
                                 "Syntax: disabled"
@@ -55,7 +55,7 @@ pub(super) fn build_header(
                                 .a11y_label("Toggle identifier word boundaries")
                                 .test_id("ui-gallery-code-editor-boundary-identifier-switch")
                                 .into_element(cx),
-                            cx.text(if boundary_identifier_enabled {
+                            doc_layout::control_readout_text(cx, if boundary_identifier_enabled {
                                 "Word boundaries: Identifier"
                             } else {
                                 "Word boundaries: UnicodeWord"
@@ -94,7 +94,7 @@ pub(super) fn build_header(
                             .test_id("ui-gallery-code-editor-mvp-soft-wrap")
                             .a11y_label("Toggle soft wrap at 80 columns")
                             .into_element(cx),
-                        cx.text(if soft_wrap_enabled {
+                        doc_layout::control_readout_text(cx, if soft_wrap_enabled {
                             "Soft wrap: 80 cols"
                         } else {
                             "Soft wrap: off"

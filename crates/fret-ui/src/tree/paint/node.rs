@@ -98,6 +98,10 @@ impl<H: UiHost> UiTree<H> {
                 });
                 PaintCacheKey::new(
                     bounds,
+                    self.nodes
+                        .get(node)
+                        .map(|n| n.paint_geometry_fingerprint)
+                        .unwrap_or_default(),
                     sf,
                     theme_revision,
                     paint_style,

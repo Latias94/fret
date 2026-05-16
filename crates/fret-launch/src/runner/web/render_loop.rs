@@ -240,9 +240,30 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .environment_media_queries
             .get_or_insert_with(|| WebEnvironmentMediaQueries::new(&web_window));
         let pref_snapshot = media_queries.take_dirty().then(|| media_queries.snapshot());
+        let pref_snapshot = pref_snapshot.map(|snapshot| {
+            if let Some(override_entry) =
+                self.diag_window_preference_overrides.get(&self.app_window)
+            {
+                WebEnvironmentPreferenceSnapshot {
+                    color_scheme: override_entry.color_scheme.unwrap_or(snapshot.color_scheme),
+                    contrast_preference: snapshot.contrast_preference,
+                    forced_colors_mode: snapshot.forced_colors_mode,
+                    prefers_reduced_motion: override_entry
+                        .prefers_reduced_motion
+                        .unwrap_or(snapshot.prefers_reduced_motion),
+                    prefers_reduced_transparency: snapshot.prefers_reduced_transparency,
+                }
+            } else {
+                snapshot
+            }
+        });
         let safe_area_insets = read_safe_area_insets(&web_window, window);
         let occlusion_insets = read_occlusion_insets(&web_window);
-        let text_scale_factor = read_text_scale_factor(&web_window);
+        let text_scale_factor = self
+            .diag_window_preference_overrides
+            .get(&self.app_window)
+            .and_then(|override_entry| override_entry.text_scale_factor)
+            .unwrap_or_else(|| read_text_scale_factor(&web_window));
 
         let (
             prev_scheme_known,

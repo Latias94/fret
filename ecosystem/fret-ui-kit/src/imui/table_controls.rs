@@ -13,8 +13,8 @@ use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 use super::containers::build_imui_children_with_focus;
 use super::label_identity::parse_label_identity;
 use super::{
-    ImUiFacade, ResponseExt, TableColumn, TableColumnWidth, TableHeaderResponse, TableOptions,
-    TableResponse, TableRowOptions, TableSortDirection, UiWriterImUiFacadeExt,
+    ImUiFacade, ResponseExt, TableCellOptions, TableColumn, TableColumnWidth, TableHeaderResponse,
+    TableOptions, TableResponse, TableRowOptions, TableSortDirection,
 };
 
 use super::TableColumnResizeResponse;
@@ -26,11 +26,14 @@ const TABLE_RESIZE_HANDLE_VISUAL_WIDTH: Px = Px(1.0);
 struct BuiltTableRow {
     key: Arc<str>,
     test_id: Option<Arc<str>>,
+    background: Option<Color>,
     cells: Vec<BuiltTableCell>,
 }
 
 struct BuiltTableCell {
     test_id: Option<Arc<str>>,
+    explicit_test_id: Option<Arc<str>>,
+    background: Option<Color>,
     content: AnyElement,
 }
 
@@ -107,6 +110,7 @@ impl<'cx, 'a, H: UiHost> ImUiTable<'cx, 'a, H> {
         self.rows.push(BuiltTableRow {
             key,
             test_id: row_test_id,
+            background: options.background,
             cells,
         });
     }
@@ -114,6 +118,14 @@ impl<'cx, 'a, H: UiHost> ImUiTable<'cx, 'a, H> {
 
 impl<'cx, 'a, H: UiHost> ImUiTableRow<'cx, 'a, H> {
     pub fn cell(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        self.cell_with_options(TableCellOptions::default(), f);
+    }
+
+    pub fn cell_with_options(
+        &mut self,
+        options: TableCellOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
         let cell_index = self.cells.len();
         let mut out = Vec::new();
         build_imui_children_with_focus(self.cx, &mut out, self.build_focus.clone(), f);
@@ -122,13 +134,23 @@ impl<'cx, 'a, H: UiHost> ImUiTableRow<'cx, 'a, H> {
             .row_test_id
             .as_ref()
             .map(|base| Arc::from(format!("{base}.cell.{cell_index}")));
-        self.cells.push(BuiltTableCell { test_id, content });
+        self.cells.push(BuiltTableCell {
+            test_id,
+            explicit_test_id: options.test_id,
+            background: options.background,
+            content,
+        });
     }
 
     pub fn cell_text(&mut self, text: impl Into<Arc<str>>) {
+        self.cell_text_with_options(text, TableCellOptions::default());
+    }
+
+    pub fn cell_text_with_options(&mut self, text: impl Into<Arc<str>>, options: TableCellOptions) {
         let text = text.into();
-        self.cell(move |ui| {
-            ui.text(text.clone());
+        self.cell_with_options(options, move |ui| {
+            let element = crate::declarative::text::text_table_cell(ui.cx_mut(), text.clone());
+            ui.add(element);
         });
     }
 }
@@ -142,7 +164,15 @@ fn render_table<H: UiHost>(
 ) -> (AnyElement, TableResponse) {
     let palette = resolve_table_palette(Theme::global(&*cx.app));
     let root_test_id = options.test_id.clone();
-    let show_header = options.show_header && columns.iter().any(|column| column.header.is_some());
+    let visible_columns = columns
+        .iter()
+        .enumerate()
+        .filter(|(_, column)| column.visible)
+        .collect::<Vec<_>>();
+    let show_header = options.show_header
+        && visible_columns
+            .iter()
+            .any(|(_, column)| column.header.is_some());
     let column_test_id_suffixes = columns
         .iter()
         .enumerate()
@@ -155,6 +185,7 @@ fn render_table<H: UiHost>(
             let cells = columns
                 .iter()
                 .enumerate()
+                .filter(|(_, column)| column.visible)
                 .map(|(index, column)| {
                     let visible_label = visible_header_label(column);
                     let test_id = root_test_id.as_ref().map(|base| {
@@ -216,6 +247,7 @@ fn render_table<H: UiHost>(
                     .map(|base| Arc::from(format!("{base}.header"))),
                 true,
                 false,
+                None,
                 &palette,
                 &options,
             )
@@ -232,13 +264,18 @@ fn render_table<H: UiHost>(
             let column_test_id_suffixes = column_test_id_suffixes.clone();
             cx.keyed(row.key.clone(), |cx| {
                 let mut iter = row.cells.into_iter();
-                let mut cells = Vec::with_capacity(columns.len());
+                let mut cells = Vec::with_capacity(visible_columns.len());
                 for (column_index, column) in columns.iter().enumerate() {
                     let built = iter.next().unwrap_or_else(|| BuiltTableCell {
                         test_id: None,
+                        explicit_test_id: None,
+                        background: None,
                         content: empty_cell(cx),
                     });
-                    let test_id = row
+                    if !column.visible {
+                        continue;
+                    }
+                    let default_test_id = row
                         .test_id
                         .as_ref()
                         .map(|base| {
@@ -248,13 +285,14 @@ fn render_table<H: UiHost>(
                             ))
                         })
                         .or(built.test_id);
+                    let test_id = built.explicit_test_id.or(default_test_id);
                     cells.push(wrap_table_cell(
                         cx,
                         column,
                         built.content,
                         test_id,
                         false,
-                        striped,
+                        built.background,
                         &options,
                     ));
                 }
@@ -262,7 +300,16 @@ fn render_table<H: UiHost>(
                     iter.next().is_none(),
                     "imui table rows must emit exactly one cell per declared column"
                 );
-                wrap_table_row(cx, cells, row.test_id, false, striped, &palette, &options)
+                wrap_table_row(
+                    cx,
+                    cells,
+                    row.test_id,
+                    false,
+                    striped,
+                    row.background,
+                    &palette,
+                    &options,
+                )
             })
         })
         .collect::<Vec<_>>();
@@ -325,16 +372,19 @@ fn wrap_table_row<H: UiHost>(
     test_id: Option<Arc<str>>,
     header: bool,
     striped: bool,
+    background: Option<Color>,
     palette: &TablePalette,
     options: &TableOptions,
 ) -> AnyElement {
-    let background = if header {
-        Some(palette.header_bg)
-    } else if striped {
-        Some(palette.striped_bg)
-    } else {
-        None
-    };
+    let background = background.or_else(|| {
+        if header {
+            Some(palette.header_bg)
+        } else if striped {
+            Some(palette.striped_bg)
+        } else {
+            None
+        }
+    });
 
     let mut row = ContainerProps::default();
     row.layout.size.width = Length::Fill;
@@ -554,7 +604,7 @@ fn sortable_header_visual<H: UiHost>(
     cx.container(cell, move |cx| {
         let mut children = Vec::new();
         if let Some(label) = visible_label.clone() {
-            children.push(cx.text(label));
+            children.push(table_header_label_text(cx, label));
         }
         if let Some(direction) = sort_direction {
             children.push(cx.text(Arc::<str>::from(sort_direction_indicator(direction))));
@@ -586,7 +636,7 @@ fn wrap_plain_header_cell<H: UiHost>(
     resize_response: &mut TableColumnResizeResponse,
 ) -> AnyElement {
     let content = visible_label
-        .map(|label| cx.text(label))
+        .map(|label| table_header_label_text(cx, label))
         .unwrap_or_else(|| empty_cell(cx));
     let content = table_header_content_box(cx, content);
     wrap_table_header_cell(
@@ -611,6 +661,13 @@ fn table_header_content_box<H: UiHost>(
     props.layout.flex.shrink = 1.0;
     props.padding = table_cell_padding().into();
     cx.container(props, move |_cx| vec![content])
+}
+
+fn table_header_label_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: Arc<str>,
+) -> AnyElement {
+    crate::declarative::text::text_table_cell(cx, label)
 }
 
 fn wrap_table_header_cell<H: UiHost>(
@@ -773,15 +830,13 @@ fn wrap_table_cell<H: UiHost>(
     content: AnyElement,
     test_id: Option<Arc<str>>,
     header: bool,
-    striped: bool,
+    background: Option<Color>,
     options: &TableOptions,
 ) -> AnyElement {
     let mut cell = ContainerProps::default();
     cell.layout = table_cell_layout(column.width, options.clip_cells);
     cell.padding = table_cell_padding().into();
-    if header || striped {
-        cell.background = None;
-    }
+    cell.background = background;
     let cell = cx.container(cell, move |_cx| vec![content]);
     if let Some(test_id) = test_id {
         cell.attach_semantics(
@@ -888,5 +943,104 @@ fn resolve_table_palette(theme: &Theme) -> TablePalette {
         border,
         header_bg,
         striped_bg,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size, TextOverflow, TextWrap};
+    use fret_ui::element::ElementKind;
+    use fret_ui::elements;
+
+    fn test_bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(160.0)),
+        )
+    }
+
+    fn contains_text(root: &AnyElement, expected: &str) -> bool {
+        match &root.kind {
+            ElementKind::Text(props) if props.text.as_ref() == expected => true,
+            _ => root
+                .children
+                .iter()
+                .any(|child| contains_text(child, expected)),
+        }
+    }
+
+    #[test]
+    fn table_header_label_uses_shared_table_cell_text_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+            table_header_label_text(cx, Arc::from("Very long table header"))
+        });
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected table header label to be text");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(el.inherited_text_style.is_some());
+    }
+
+    #[test]
+    fn hidden_table_columns_do_not_render_header_body_or_response() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let columns = vec![
+            TableColumn::fill("Name###name"),
+            TableColumn::px("Hidden###hidden", Px(96.0)).hidden(),
+            TableColumn::px("Owner###owner", Px(88.0)),
+        ];
+        let (el, response) =
+            elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+                let rows = vec![BuiltTableRow {
+                    key: Arc::from("row-0"),
+                    test_id: None,
+                    background: None,
+                    cells: vec![
+                        BuiltTableCell {
+                            test_id: None,
+                            explicit_test_id: None,
+                            background: None,
+                            content: cx.text("Name Body"),
+                        },
+                        BuiltTableCell {
+                            test_id: None,
+                            explicit_test_id: None,
+                            background: None,
+                            content: cx.text("Hidden Body"),
+                        },
+                        BuiltTableCell {
+                            test_id: None,
+                            explicit_test_id: None,
+                            background: None,
+                            content: cx.text("Owner Body"),
+                        },
+                    ],
+                }];
+                render_table(cx, "hidden-columns", columns, rows, TableOptions::default())
+            });
+
+        assert_eq!(response.headers().len(), 2);
+        assert!(response.header("name").is_some());
+        assert!(response.header("hidden").is_none());
+        assert!(response.header("owner").is_some());
+        assert!(!contains_text(&el, "Hidden"));
+        assert!(contains_text(&el, "Name Body"));
+        assert!(!contains_text(&el, "Hidden Body"));
+        assert!(contains_text(&el, "Owner Body"));
     }
 }

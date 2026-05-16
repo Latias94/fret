@@ -3101,7 +3101,9 @@ fn render_authoring_parity_imui_group(
 
         ui.separator();
         ui.text("Typed drag/drop helpers");
-        ui.text("Drag an asset chip onto the material slot. Payload and preview stay app-defined.");
+        ui.text_wrapped(
+            "Drag an asset chip onto the material slot. Payload and preview stay app-defined.",
+        );
 
         let asset_slot_model = authoring_parity_asset_slot_model(ui.cx_mut());
         let asset_chips = authoring_parity_drag_assets();
@@ -3183,7 +3185,7 @@ fn render_authoring_parity_imui_group(
 
         ui.separator();
         ui.text("Reorderable outliner proof");
-        ui.text(
+        ui.text_wrapped(
             "Sortable math stays app-owned. `imui` only provides typed payloads + drop positions.",
         );
 
@@ -3967,7 +3969,7 @@ impl DockPanelFactory<KernelApp> for ImUiEditorProofControlsPanelFactory {
                                 ui.id(&panel_key, |ui| {
                                     ui.text("Controls panel (declarative root inside docking)");
                                     ui.text(format!("embedded viewport target: {target:?}"));
-                                    ui.text(
+                                    ui.text_wrapped(
                                         "Wasm/mobile note: multi-window should degrade to in-window floatings.",
                                     );
                                 });

@@ -64,6 +64,10 @@ impl<H: UiHost> UiTree<H> {
             .unwrap_or(Transform2D::IDENTITY);
         let key = PaintCacheKey::new(
             bounds,
+            self.nodes
+                .get(node)
+                .map(|n| n.paint_geometry_fingerprint)
+                .unwrap_or_default(),
             scale_factor,
             inputs.theme_revision,
             crate::tree::paint_style::PaintStyleState::default(),

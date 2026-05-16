@@ -1,3 +1,4 @@
+pub mod environment_probe;
 pub mod fluid_tabs_demo;
 pub mod overlay_demo;
 pub mod preset_selector;

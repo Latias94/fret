@@ -2245,8 +2245,13 @@ pub fn render<H: UiHost + 'static>(
                     .unwrap_or_default();
 
                 let mut toasts = toasts;
-                if let Some(toaster_id) = toaster_id.as_ref() {
-                    toasts.retain(|t| t.toaster_id.as_ref() == Some(toaster_id));
+                match toaster_id.as_ref() {
+                    Some(toaster_id) => {
+                        toasts.retain(|t| t.toaster_id.as_ref() == Some(toaster_id));
+                    }
+                    None => {
+                        toasts.retain(|t| t.toaster_id.is_none());
+                    }
                 }
 
                 if toasts.is_empty() {
@@ -2876,7 +2881,11 @@ pub fn render<H: UiHost + 'static>(
                                                                 focus_ring_always_paint: false,
                                                                 focus_ring_bounds: None,
                                                                 key_activation: Default::default(),
-                                                                a11y: Default::default(),
+                                                                a11y: fret_ui::element::PressableA11y {
+                                                                    role: Some(SemanticsRole::Button),
+                                                                    label: Some(label.clone()),
+                                                                    ..Default::default()
+                                                                },
                                                             },
                                                             move |cx, st| {
                                                                 cx.pressable_add_on_activate(crate::on_activate(
@@ -2963,7 +2972,11 @@ pub fn render<H: UiHost + 'static>(
                                                                 focus_ring_always_paint: false,
                                                                 focus_ring_bounds: None,
                                                                 key_activation: Default::default(),
-                                                                a11y: Default::default(),
+                                                                a11y: fret_ui::element::PressableA11y {
+                                                                    role: Some(SemanticsRole::Button),
+                                                                    label: Some(label.clone()),
+                                                                    ..Default::default()
+                                                                },
                                                             },
                                                             move |cx, st| {
                                                                 cx.pressable_add_on_activate(crate::on_activate(

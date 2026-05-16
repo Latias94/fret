@@ -15,7 +15,7 @@ class EditorPaintContractValidateTests(unittest.TestCase):
         plan = validate.build_plan(
             python_bin="python",
             fretboard_bin="target/release/fretboard-dev.exe",
-            launch_bin="target/release/fret-ui-gallery.exe",
+            launch_cmd=validate._default_launch_cmd(),
             out_dir="target/fret-diag/editor-paint-contract-validate-test",
             resize_attempts=3,
             resize_repeat=7,
@@ -37,7 +37,8 @@ class EditorPaintContractValidateTests(unittest.TestCase):
         self.assertIn(validate.TYPICAL_BASELINE, joined)
         self.assertIn(validate.COMPLEX_WHEEL_BASELINE, joined)
         self.assertIn("FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0", joined)
-        self.assertIn("target/release/fret-ui-gallery.exe", joined)
+        self.assertIn("--launch-cmd cargo run -p fret-ui-gallery --release --features gallery-full", joined)
+        self.assertIn("--launch -- cargo run -p fret-ui-gallery --release --features gallery-full", joined)
         self.assertNotIn("FRET_CODE_EDITOR_DIAG_PAINT_PERF=1", " ".join(plan[2]["cmd"]))
         self.assertNotIn("FRET_CODE_EDITOR_DIAG_PAINT_PERF=1", " ".join(plan[3]["cmd"]))
 
@@ -45,7 +46,7 @@ class EditorPaintContractValidateTests(unittest.TestCase):
         plan = validate.build_plan(
             python_bin="python",
             fretboard_bin="target/release/fretboard-dev.exe",
-            launch_bin="target/release/fret-ui-gallery.exe",
+            launch_cmd=validate._default_launch_cmd(),
             out_dir="target/fret-diag/editor-paint-contract-validate-test",
             resize_attempts=3,
             resize_repeat=7,
@@ -76,7 +77,6 @@ class EditorPaintContractValidateTests(unittest.TestCase):
         plan = validate.build_plan(
             python_bin="python",
             fretboard_bin="target/release/fretboard-dev",
-            launch_bin="target/release/fret-ui-gallery",
             launch_cmd=launch_cmd,
             out_dir="target/fret-diag/editor-paint-contract-validate-test",
             resize_attempts=3,
@@ -95,6 +95,24 @@ class EditorPaintContractValidateTests(unittest.TestCase):
         typical_cmd = plan[1]["cmd"]
         launch_idx = typical_cmd.index("--launch")
         self.assertEqual(["--", *launch_cmd], typical_cmd[launch_idx + 1 :])
+
+    def test_launch_cmd_from_args_defaults_to_inspectable_gallery_full(self) -> None:
+        launch_cmd, launch_bin_path = validate._launch_cmd_from_args(
+            Path("F:/repo"),
+            type("Args", (), {"launch_cmd": "", "launch_bin": ""})(),
+        )
+
+        self.assertEqual(validate._default_launch_cmd(), launch_cmd)
+        self.assertIsNone(launch_bin_path)
+
+    def test_launch_cmd_from_args_preserves_legacy_launch_bin(self) -> None:
+        launch_cmd, launch_bin_path = validate._launch_cmd_from_args(
+            Path("F:/repo"),
+            type("Args", (), {"launch_cmd": "", "launch_bin": "target/release/fret-ui-gallery.exe"})(),
+        )
+
+        self.assertEqual(["F:/repo/target/release/fret-ui-gallery.exe"], [token.replace("\\", "/") for token in launch_cmd])
+        self.assertEqual("F:/repo/target/release/fret-ui-gallery.exe", str(launch_bin_path).replace("\\", "/"))
 
     def test_artifact_summary_prefers_threshold_bundle(self) -> None:
         with TemporaryDirectory() as td:
@@ -198,6 +216,87 @@ class EditorPaintContractValidateTests(unittest.TestCase):
         self.assertTrue(coverage["code_editor_paint_perf"])
         self.assertFalse(coverage["code_editor_torture_overlay_zero"])
 
+    def test_concurrent_process_filter_flags_fret_perf_processes(self) -> None:
+        rows = [
+            {
+                "ProcessId": 10,
+                "ParentProcessId": 1,
+                "Name": "python.exe",
+                "CommandLine": "python tools/perf/diag_editor_paint_contract_validate.py --date-tag other",
+            },
+            {
+                "ProcessId": 11,
+                "ParentProcessId": 1,
+                "Name": "fretboard-dev.exe",
+                "CommandLine": "target/release/fretboard-dev.exe diag perf ui-code-editor-resize-probes",
+            },
+            {
+                "ProcessId": 12,
+                "ParentProcessId": 11,
+                "Name": "cargo.exe",
+                "CommandLine": "cargo run -p fret-ui-gallery --release --features gallery-full",
+            },
+            {
+                "ProcessId": 13,
+                "ParentProcessId": 12,
+                "Name": "rustc.exe",
+                "CommandLine": "rustc --crate-name fret_ui_gallery apps/fret-ui-gallery/src/lib.rs",
+            },
+            {
+                "ProcessId": 14,
+                "ParentProcessId": 1,
+                "Name": "notepad.exe",
+                "CommandLine": "notepad.exe",
+            },
+            {
+                "ProcessId": 99,
+                "ParentProcessId": 1,
+                "Name": "python.exe",
+                "CommandLine": "python tools/perf/diag_editor_paint_contract_validate.py --date-tag current",
+            },
+        ]
+
+        flagged = validate.find_concurrent_validation_processes(rows, current_pid=99)
+
+        self.assertEqual([10, 11, 12, 13], [row["ProcessId"] for row in flagged])
+
+    def test_non_dry_run_rejects_concurrent_fret_processes(self) -> None:
+        with TemporaryDirectory() as td:
+            out_dir = Path(td) / "validation"
+            stderr = io.StringIO()
+            concurrent = {
+                "ok": False,
+                "skipped": False,
+                "reason": None,
+                "error": None,
+                "processes": [
+                    {
+                        "ProcessId": 77,
+                        "ParentProcessId": 1,
+                        "Name": "fret-ui-gallery.exe",
+                        "CommandLine": "target/dev-fast/fret-ui-gallery.exe",
+                    }
+                ],
+            }
+            with patch.object(
+                sys,
+                "argv",
+                [
+                    "diag_editor_paint_contract_validate.py",
+                    "--allow-non-windows",
+                    "--out-dir",
+                    str(out_dir),
+                ],
+            ):
+                with patch.object(validate, "_validate_inputs", return_value=[]):
+                    with patch.object(validate, "concurrent_validation_processes", return_value=concurrent):
+                        with redirect_stderr(stderr):
+                            rc = validate.main()
+
+        self.assertEqual(2, rc)
+        self.assertIn("concurrent Fret/Gallery processes", stderr.getvalue())
+        self.assertIn("fret-ui-gallery.exe", stderr.getvalue())
+
     def test_dry_run_summary_records_date_tag(self) -> None:
         with TemporaryDirectory() as td:
             out_dir = Path(td) / "validation"
@@ -220,6 +319,8 @@ class EditorPaintContractValidateTests(unittest.TestCase):
 
         self.assertEqual(0, rc)
         self.assertEqual("unit-date", summary["date_tag"])
+        self.assertEqual(validate._default_launch_cmd(), summary["launch_cmd"])
+        self.assertIsNone(summary["launch_bin"])
 
     def test_non_dry_run_rejects_non_empty_out_dir_by_default(self) -> None:
         with TemporaryDirectory() as td:

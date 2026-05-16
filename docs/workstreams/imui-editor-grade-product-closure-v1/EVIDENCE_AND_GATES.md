@@ -551,7 +551,8 @@ DevTools GUI product-workflow projection follow-up (2026-05-15):
 - `apps/fret-devtools/src/native.rs` now projects the shared `imui-product-chain` route in the
   GUI first-open evidence panel: default command, focused discovery command, launched
   `perf-docking` command, `perf-docking-arbitration-steady` suite, product-closure docs, and
-  `perf-docking/regression.summary.json` plus `perf-docking/check.perf_thresholds.json`.
+  `perf-docking/regression.summary.json`, `perf-docking/check.perf_thresholds.json`, plus
+  `perf-docking/*/trace.chrome.json`.
 - The default product-chain discovery gate now source-checks that GUI projection, so
   `fretboard-dev list tool-apps`, `fretboard-dev list tool-apps --json`, and the DevTools GUI
   first-open panel cannot silently diverge on the product workflow route.
@@ -666,8 +667,8 @@ DevTools MCP product-workflow projection follow-up (2026-05-15):
   text resource and points MCP server instructions at that resource.
 - The MCP first-open resource mirrors the shared `imui-product-chain` route: default command,
   focused discovery command, launched `perf-docking` command, `perf-docking-arbitration-steady`
-  suite, product-closure docs, and `perf-docking/regression.summary.json` plus
-  `perf-docking/check.perf_thresholds.json`.
+  suite, product-closure docs, and `perf-docking/regression.summary.json`,
+  `perf-docking/check.perf_thresholds.json`, plus `perf-docking/*/trace.chrome.json`.
 - `fret_diag_regression_dashboard` now consumes the shared `fret-diag` regression drill-down and
   follow-up command projection, returning bundle dirs, capability provenance, perf evidence, and
   follow-up command lines instead of maintaining a MCP-private regression evidence parser.
@@ -716,6 +717,10 @@ This package currently proves:
   `perf_case` items with readable bundle artifacts and a readable shared `layout.perf.summary.v1.json`
   artifact, a readable shared `check.perf_thresholds.json` artifact, empty threshold failures, and
   curated `evidence.extra.metrics` rather than trusting process exit alone,
+- the same product-chain perf entrypoint now passes `--trace-real-spans` and requires each
+  perf-case bundle to expose a readable `trace.chrome.json` with `kind=perf_trace_chrome`,
+  `trace_source=bundle_synthetic_phases_with_extension_spans`, `real_spans_included=true`, a
+  positive `real_span_event_count`, and the `fret.perf.spans.v1` extension key,
 - and `diag-hardening-smoke-docking` remains the small generic docking smoke entry rather than the
   IMUI lane's new umbrella package.
 
@@ -792,6 +797,70 @@ cargo nextest run -p fret-diag contract_help_mentions_the_migrated_command_surfa
 python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release --out-dir target/imui-product-chain-perf-docking-renderer-threshold-gate-2026-05-15
 ```
 
+Trace attribution gate refresh (2026-05-16):
+
+- Command:
+  `python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release --out-dir target/imui-product-chain-perf-docking-trace-gate-2026-05-16`
+- The product-chain gate now invokes `diag perf perf-docking-arbitration-steady` with
+  `--trace-real-spans`, which requires `--launch` and injects `FRET_DIAG_REAL_SPANS=1` into the
+  launched `docking_arbitration_demo` process unless the caller explicitly overrides it.
+- The gate requires each regression item bundle to have a sibling `trace.chrome.json` and validates
+  `kind=perf_trace_chrome`, `trace_source=bundle_synthetic_phases_with_extension_spans`,
+  `real_spans_included=true`, positive `real_span_event_count`, non-empty `traceEvents`, and the
+  `fret.perf.spans.v1` extension key.
+- Runtime capture repair: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` now owns
+  `UiRealPerfSpanCaptureV1`, including the `FRET_DIAG_REAL_SPANS` env gate, sub-microsecond
+  rounding, and the service flush into `fret.perf.spans.v1`. Both the shared
+  `ecosystem/fret-bootstrap/src/ui_app_driver.rs` path and the custom
+  `apps/fret-examples/src/docking_arbitration_demo.rs` render path use that helper, so launched
+  perf-docking bundles do not lose real spans by bypassing the golden-path driver.
+- Service coverage:
+  `record_snapshot_includes_recorded_real_perf_spans_extension` verifies that recorded spans land
+  in the next diagnostics snapshot extension before trace export reads it.
+- Trace exporter repair: `crates/fret-diag/src/trace.rs` now keeps consuming
+  `fret.perf.spans.v1` even when the synthetic `total_time_us`/phase counters are zero; the
+  regression test is `chrome_trace_keeps_real_span_extension_when_synthetic_stats_are_zero`.
+- This is still a bounded `perf-docking` product-chain attribution gate. It does not close broad
+  smoothness attribution across every editor workload.
+
+Focused source gates:
+
+```text
+cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics perf_span_capture_preserves_sub_microsecond_phase perf_span_capture_ignores_zero_duration_phase record_snapshot_includes_recorded_real_perf_spans_extension --no-fail-fast
+cargo nextest run -p fret-diag chrome_trace_keeps_real_span_extension_when_synthetic_stats_are_zero --no-fail-fast
+python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --out-dir target/imui-product-chain-perf-docking-trace-gate-2026-05-16-debug
+```
+
+Debug trace probe evidence (2026-05-16):
+
+- Direct command, intentionally without release threshold flags:
+  `target/debug/fretboard-dev.exe diag perf perf-docking-arbitration-steady --dir target/imui-product-chain-perf-docking-trace-probe-2026-05-16-debug-after-trace-fix/perf-docking --repeat 1 --warmup-frames 5 --trace-real-spans --reuse-launch --env FRET_DOCK_ARB_PRESET=large --env FRET_DOCK_ARB_NO_PERSIST=1 --env FRET_DOCK_ARB_DISALLOW_DROP_TARGETS=1 --launch -- target/debug/docking_arbitration_demo.exe`
+- Output traces:
+  `target/imui-product-chain-perf-docking-trace-probe-2026-05-16-debug-after-trace-fix/perf-docking/1778897554296/trace.chrome.json`
+  (`real_span_event_count=40`) and
+  `target/imui-product-chain-perf-docking-trace-probe-2026-05-16-debug-after-trace-fix/perf-docking/1778897571346/trace.chrome.json`
+  (`real_span_event_count=45`).
+- Both traces validate with `_validate_docking_perf_trace` and report
+  `trace_source=bundle_synthetic_phases_with_extension_spans`,
+  `real_spans_included=true`, and first real events from `docking_arbitration_demo`.
+
+Canonical release gate evidence (2026-05-16):
+
+- Command:
+  `python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release --out-dir target/imui-product-chain-perf-docking-trace-gate-2026-05-16-release-after-fix`
+- Output:
+  `target/imui-product-chain-perf-docking-trace-gate-2026-05-16-release-after-fix/1778898757233/perf-docking/regression.summary.json`
+  reports `items_total=2`, `passed=2`, and `failed_tooling=0`.
+- Threshold artifact:
+  `target/imui-product-chain-perf-docking-trace-gate-2026-05-16-release-after-fix/1778898757233/perf-docking/check.perf_thresholds.json`
+  reports `failures=[]`.
+- Trace artifacts:
+  `target/imui-product-chain-perf-docking-trace-gate-2026-05-16-release-after-fix/1778898757233/perf-docking/1778898759498/trace.chrome.json`
+  (`real_span_event_count=40`) and
+  `target/imui-product-chain-perf-docking-trace-gate-2026-05-16-release-after-fix/1778898757233/perf-docking/1778898765184/trace.chrome.json`
+  (`real_span_event_count=45`) both report
+  `trace_source=bundle_synthetic_phases_with_extension_spans` and `real_spans_included=true`.
+
 DevTools GUI perf-threshold preset closure (2026-05-16):
 
 - `crates/fret-diag/src/devtools_gate_profiles.rs` now owns the product-chain docking perf preset
@@ -836,9 +905,9 @@ same route under `product_workflows`. The default discovery gate validates the d
 `python tools/diag_gate_imui_product_chain.py --only discovery` command, the launched
 `python tools/diag_gate_imui_product_chain.py --reuse-built --launched --only perf-docking --release`
 command, `tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json`, and the expected
-`perf-docking/regression.summary.json` plus `perf-docking/check.perf_thresholds.json` artifacts so
-DevTools-style consumers can surface the product-chain evidence path without hard-coding GUI-only
-knowledge.
+`perf-docking/regression.summary.json`, `perf-docking/check.perf_thresholds.json`, and
+`perf-docking/*/trace.chrome.json` artifacts so DevTools-style consumers can surface the
+product-chain evidence path without hard-coding GUI-only knowledge.
 
 Goal completion audit refresh (2026-05-15):
 `GOAL_COMPLETION_AUDIT_2026-05-15.md` keeps the umbrella in maintenance and explicitly not
@@ -966,8 +1035,8 @@ Latest local default product-chain evidence (2026-05-14):
   `imui-product-chain`, including the default product-chain command, the focused discovery-only
   command, the launched `perf-docking` command, the promoted
   `perf-docking-arbitration-steady` suite, and the expected
-  `perf-docking/regression.summary.json` plus `perf-docking/check.perf_thresholds.json`
-  evidence artifacts.
+  `perf-docking/regression.summary.json`, `perf-docking/check.perf_thresholds.json`, and
+  `perf-docking/*/trace.chrome.json` evidence artifacts.
 - Added coverage: the same discovery step now validates `fretboard-dev --help` and
   `fretboard-dev list --help`, so the tool-app index itself stays discoverable from the first CLI
   help screens.
@@ -1539,3 +1608,29 @@ python tools/gate_imui_workstream_source.py
 ```
 
 Result: passed. This is a gate-anchor repair only; it does not claim new DevTools GUI maturity.
+
+## DevTools first-open guide posture - 2026-05-16 follow-up
+
+Scope: reduce first-open cognitive load in `apps/fret-devtools` without changing diagnostics
+contracts or moving policy into `fret-imui`.
+
+- `apps/fret-devtools/src/native.rs` now defaults `Evidence & Results` to a `Guide` tab instead of
+  an empty raw `Pick` payload tab.
+- The header now renders a stateful `First-open Next Actions` summary for target/session status,
+  script inventory, regression aggregate state, and artifacts root.
+- The full first-open evidence path, UI-gallery dogfood workflow, demo/metrics/debug route, and
+  gate-command reference panels still exist in `apps/fret-devtools/src/native.rs`, but they render
+  inside the `Guide` tab so the first viewport stays summary-first.
+- `tools/diag_gate_imui_p2_devtools_first_open.py` source-checks this posture alongside the older
+  first-open discovery, gate-command, live-inspect, and secondary-tree source anchors.
+
+Focused gates:
+
+```text
+cargo nextest run -p fret-devtools devtools_first_open_next_action_lines_prioritize_stateful_workflow devtools_first_open_lines_surface_canonical_paths devtools_dogfood_workflow_lines_surface_ui_gallery_loop devtools_demo_metrics_debug_lines_surface_canonical_routes devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built
+```
+
+Result: passed locally. This is a DevTools GUI productization slice only; it keeps the editor-grade
+goal open for broader always-available tooling maturity, real-host Wayland hand-feel, and full
+perf/smoothness attribution.

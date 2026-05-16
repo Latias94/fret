@@ -305,6 +305,7 @@ pub struct UiTree<H: UiHost> {
     scratch_paint_observed_deps_presence: HashSet<GlobalElementId>,
     scratch_paint_observed_deps_presence_active: bool,
     scratch_bounds_records: Vec<(GlobalElementId, Rect)>,
+    scratch_element_root_bounds_records: Vec<(GlobalElementId, Rect)>,
     scratch_visual_bounds_records: Vec<(GlobalElementId, Rect)>,
     measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics,
     layout_engine: crate::layout_engine::TaffyLayoutEngine,

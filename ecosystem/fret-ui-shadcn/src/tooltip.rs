@@ -952,8 +952,9 @@ impl Tooltip {
                 let estimated_size = Size::new(Px(240.0), Px(44.0));
                 let content_size = last_content_size.unwrap_or(estimated_size);
 
-                let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                let outer = overlay::outer_bounds_with_window_margin_for_element_root(
                     cx,
+                    anchor_id,
                     fret_ui::Invalidation::Layout,
                     window_margin,
                 );
@@ -1231,8 +1232,9 @@ impl Tooltip {
                     let estimated_size = Size::new(Px(240.0), Px(44.0));
                     let content_size = last_content_size.unwrap_or(estimated_size);
 
-                    let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                    let outer = overlay::outer_bounds_with_window_margin_for_element_root(
                         cx,
+                        anchor_id,
                         fret_ui::Invalidation::Layout,
                         window_margin,
                     );

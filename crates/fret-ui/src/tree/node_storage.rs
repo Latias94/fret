@@ -102,6 +102,7 @@ pub(super) struct Node<H: UiHost> {
     pub(super) bounds: Rect,
     pub(super) bounds_written_paint_pass: u64,
     pub(super) measured_size: Size,
+    pub(super) paint_geometry_fingerprint: u64,
     pub(super) measure_cache: Option<NodeMeasureCache>,
     pub(super) text_wrap_none_measure_cache: Option<TextWrapNoneMeasureCache>,
     pub(super) invalidation: InvalidationFlags,
@@ -144,6 +145,7 @@ impl<H: UiHost> Node<H> {
             bounds: Rect::default(),
             bounds_written_paint_pass: 0,
             measured_size: Size::default(),
+            paint_geometry_fingerprint: 0,
             measure_cache: None,
             text_wrap_none_measure_cache: None,
             invalidation: InvalidationFlags {

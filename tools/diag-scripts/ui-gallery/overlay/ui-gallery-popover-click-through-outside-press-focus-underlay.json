@@ -63,6 +63,17 @@
       "predicate": {
         "kind": "exists",
         "target": {
+          "id": "ui-gallery-overlay-underlay-activated",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 120,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
           "id": "ui-gallery-popover-dismissed",
           "kind": "test_id"
         }

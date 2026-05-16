@@ -1587,7 +1587,7 @@ mod tests {
     }
 
     #[test]
-    fn command_gating_checkbox_is_disabled_when_widget_action_is_unavailable() {
+    fn command_gating_checkbox_ignores_derived_widget_action_availability_snapshot() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
@@ -1643,11 +1643,14 @@ mod tests {
             .iter()
             .find(|n| n.test_id.as_deref() == Some("disabled-checkbox"))
             .expect("expected a semantics node for the checkbox test_id");
-        assert!(node.flags.disabled);
+        assert!(
+            !node.flags.disabled,
+            "component render-time gating must not consume the previous frame's derived widget action availability"
+        );
     }
 
     #[test]
-    fn command_gating_checkbox_prefers_window_command_gating_snapshot_when_present() {
+    fn command_gating_checkbox_respects_window_command_gating_enabled_override_when_present() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
@@ -1673,9 +1676,10 @@ mod tests {
         app.set_global(WindowCommandGatingService::default());
         app.with_global_mut(WindowCommandGatingService::default, |svc, app| {
             let input_ctx = crate::command_gating::default_input_context(app);
-            let enabled_overrides: HashMap<CommandId, bool> = HashMap::new();
+            let mut enabled_overrides: HashMap<CommandId, bool> = HashMap::new();
+            enabled_overrides.insert(cmd.clone(), false);
             let mut availability: HashMap<CommandId, bool> = HashMap::new();
-            availability.insert(cmd.clone(), false);
+            availability.insert(cmd.clone(), true);
             let _token = svc.push_snapshot(
                 window,
                 WindowCommandGatingSnapshot::new(input_ctx, enabled_overrides)

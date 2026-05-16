@@ -9316,6 +9316,28 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-motion-preset-runtime-token-mutation",
+      "path": "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-preset-runtime-token-mutation.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-motion-pilot"
+      ],
+      "tags": [
+        "app-snapshot",
+        "motion",
+        "mutation",
+        "runtime",
+        "theme",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Verifies that UI Gallery preset selections update both the shell models and the effective global Theme motion tokens exposed through the app snapshot."
+      ]
+    },
+    {
       "id": "ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta",
       "path": "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json",
       "required_capabilities": [
@@ -9605,6 +9627,30 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-platform-preferences-runtime-environment-mutation",
+      "path": "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-motion-pilot"
+      ],
+      "tags": [
+        "app-snapshot",
+        "environment",
+        "mechanism_harness",
+        "mutation",
+        "runtime",
+        "ui-gallery",
+        "window_metrics"
+      ],
+      "target_hints": [
+        "Injects diagnostics-only platform preference changes through the runner WindowMetricsService path.",
+        "Asserts both the UI Gallery app snapshot and an ElementContext environment-query probe observe the same color scheme, reduced-motion, and text-scale values."
+      ]
+    },
+    {
       "id": "ui-gallery-pointer-kind-pen-click-smoke",
       "path": "tools/diag-scripts/ui-gallery/diag/ui-gallery-pointer-kind-pen-click-smoke.json",
       "required_capabilities": [
@@ -9777,6 +9823,34 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-resizable-multi-viewport-combobox-placement",
+      "path": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-multi-viewport-combobox-placement.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "fret-mechanism-harness-overlay-focus",
+        "ui-gallery-resizable"
+      ],
+      "tags": [
+        "combobox",
+        "multi_viewport",
+        "overlay",
+        "resizable",
+        "root_boundary",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Resizable Multi-Viewport Combobox fixture.",
+        "Opens a Combobox trigger near the bottom of a Resizable panel viewport root.",
+        "The OS window has room below the trigger, but the panel viewport root does not; correct root-boundary ownership flips the anchored popover to the top."
+      ]
     },
     {
       "id": "ui-gallery-scroll-area-expand-at-bottom",
@@ -10675,6 +10749,31 @@
       ]
     },
     {
+      "id": "ui-gallery-switch-command-gated-action-state",
+      "path": "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-command-gated-action-state.json",
+      "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "action-state",
+        "command-gating",
+        "mutation",
+        "semantics",
+        "shadcn",
+        "switch",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Verifies that an external WindowCommandEnabledService override can disable and re-enable a Switch action without stale derived action-availability feedback keeping the control disabled."
+      ]
+    },
+    {
       "id": "ui-gallery-switch-docs-label-clicks",
       "path": "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-docs-label-clicks.json",
       "required_capabilities": [
@@ -10716,6 +10815,53 @@
       "target_hints": [
         "Sets theme preset to zinc/light, navigates to Switch, captures a screenshot and bundle.",
         "Sets theme preset to zinc/dark, re-captures the Switch Sizes section to validate dark-mode thumb/track parity."
+      ]
+    },
+    {
+      "id": "ui-gallery-switch-read-only-action-state",
+      "path": "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-read-only-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "action-state",
+        "read-only",
+        "semantics",
+        "shadcn",
+        "switch",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Verifies that a read-only Switch exposes read_only=true, focus=true, invoke=false, and stays checked after pointer, label, Space, and Enter activation attempts."
+      ]
+    },
+    {
+      "id": "ui-gallery-switch-read-only-dynamic-action-state",
+      "path": "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-read-only-dynamic-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "action-state",
+        "mutation",
+        "read-only",
+        "semantics",
+        "shadcn",
+        "switch",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Verifies that toggling a Switch from read-only to editable and back refreshes read_only/invoke semantics without remounting the docs surface."
       ]
     },
     {

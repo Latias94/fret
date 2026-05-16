@@ -3,7 +3,7 @@ use std::sync::Arc;
 use fret_core::{
     FontId, FontWeight, Px, TextAlign, TextOverflow, TextStyle, TextStyleRefinement, TextWrap,
 };
-use fret_ui::element::{AnyElement, LayoutStyle, TextInkOverflow, TextProps};
+use fret_ui::element::{AnyElement, LayoutStyle, Length, TextInkOverflow, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::typography as ui_typography;
@@ -41,6 +41,12 @@ pub(crate) fn text_prose_refinement(theme: &Theme) -> TextStyleRefinement {
     ui_typography::composable_refinement_from_style(&text_prose_style(theme))
 }
 
+pub(crate) fn text_button_label_refinement(theme: &Theme) -> TextStyleRefinement {
+    let mut refinement = text_sm_refinement(theme);
+    refinement.weight = Some(FontWeight::MEDIUM);
+    refinement
+}
+
 fn scoped_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
@@ -61,6 +67,19 @@ fn scoped_text<H: UiHost>(
         }),
         refinement,
     )
+}
+
+fn shrinkable_single_line_layout() -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    layout.flex.shrink = 1.0;
+    layout.size.min_width = Some(Length::Px(Px(0.0)));
+    layout
+}
+
+fn fill_shrinkable_single_line_layout() -> LayoutStyle {
+    let mut layout = shrinkable_single_line_layout();
+    layout.size.width = Length::Fill;
+    layout
 }
 
 /// Declarative text helper that matches Tailwind's `truncate` semantics:
@@ -114,6 +133,123 @@ pub fn text_sm<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<st
         text_sm_refinement(theme)
     };
     scoped_text(cx, text, refinement, TextWrap::Word, TextOverflow::Clip)
+}
+
+/// Declarative text helper for dense table cells.
+///
+/// This keeps the compact `text-sm` baseline but forces single-line truncation so rows stay
+/// visually stable under resize.
+pub fn text_table_cell<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_sm_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
+/// Declarative text helper for list and command-row labels.
+///
+/// Use this for dense selectable/menu/tree rows. These labels fill the row's available inline
+/// space, can shrink to zero in flex layouts, and truncate instead of increasing row height.
+pub fn text_list_row_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_sm_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: fill_shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
+/// Declarative text helper for compact control readouts.
+///
+/// Use this for status/value text that sits next to dense controls in toolbars or editor panels.
+/// It uses muted `text-xs` styling and single-line truncation so controls keep their row height
+/// stable under resize.
+pub fn text_control_readout<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let (refinement, foreground) = {
+        let theme = Theme::global(&*cx.app);
+        (
+            text_xs_refinement(theme),
+            ui_typography::muted_foreground_color(theme),
+        )
+    };
+
+    ui_typography::scope_text_style_with_color(
+        cx.text_props(TextProps {
+            layout: shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+        foreground,
+    )
+}
+
+/// Declarative text helper for compact button labels.
+///
+/// Button labels are intentionally single-line. In constrained toolbars/editor panels they should
+/// truncate instead of increasing the button row height.
+pub fn text_button_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_button_label_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
 }
 
 /// Declarative text helper that matches Tailwind's `text-xs` default usage in shadcn recipes.
@@ -170,6 +306,17 @@ pub fn text_prose<H: UiHost>(
     scoped_text(cx, text, refinement, TextWrap::Word, TextOverflow::Clip)
 }
 
+/// Semantic alias for paragraph body copy.
+///
+/// `text_prose(...)` remains available for shadcn/Tailwind-style naming; new app/framework
+/// surfaces should prefer this role name when they mean ordinary paragraph text.
+pub fn text_paragraph<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    text_prose(cx, text)
+}
+
 /// `text_prose` variant that matches Tailwind's `break-words` intent:
 /// prefer wrapping at word boundaries, but allow breaking long tokens when needed.
 pub fn text_prose_break_words<H: UiHost>(
@@ -187,6 +334,14 @@ pub fn text_prose_break_words<H: UiHost>(
         TextWrap::WordBreak,
         TextOverflow::Clip,
     )
+}
+
+/// Paragraph variant that prefers word boundaries but can break long tokens when needed.
+pub fn text_paragraph_break_words<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    text_prose_break_words(cx, text)
 }
 
 /// Bold variant of [`text_prose`], intended for typography table headers (`<th className="... font-bold">`).
@@ -226,6 +381,14 @@ pub(crate) fn label_text_refinement(theme: &Theme) -> (TextStyleRefinement, Px) 
     (refinement, line_height)
 }
 
+fn text_code_refinement(theme: &Theme) -> TextStyleRefinement {
+    ui_typography::composable_refinement_from_style(&ui_typography::fixed_line_box_style(
+        FontId::monospace(),
+        theme.metric_token("metric.font.mono_size"),
+        theme.metric_token("metric.font.mono_line_height"),
+    ))
+}
+
 /// Declarative helper intended for code-like inline text.
 ///
 /// Defaults:
@@ -237,14 +400,41 @@ pub fn text_code_wrap<H: UiHost>(
 ) -> AnyElement {
     let refinement = {
         let theme = Theme::global(&*cx.app);
-        ui_typography::composable_refinement_from_style(&ui_typography::fixed_line_box_style(
-            FontId::monospace(),
-            theme.metric_token("metric.font.mono_size"),
-            theme.metric_token("metric.font.mono_line_height"),
-        ))
+        text_code_refinement(theme)
     };
 
     scoped_text(cx, text, refinement, TextWrap::Grapheme, TextOverflow::Clip)
+}
+
+/// Declarative helper for block code rendered inside a scrollable/code surface.
+///
+/// This keeps code single-line per source line. The caller should provide horizontal scrolling or a
+/// constrained container when long lines are possible.
+pub fn text_code_block<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_code_refinement(theme)
+    };
+
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout,
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
 }
 
 /// `text_prose` variant that forces single-line layout (`whitespace-nowrap`-like behavior).
@@ -396,6 +586,161 @@ mod tests {
                 .as_ref()
                 .and_then(|style| style.font.clone()),
             Some(FontId::monospace())
+        );
+
+        let paragraph = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_paragraph(cx, "Paragraph body copy")
+        });
+        let ElementKind::Text(props) = &paragraph.kind else {
+            panic!("expected text_paragraph(...) to build a Text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        let expected_paragraph = {
+            let theme = Theme::global(&app);
+            text_prose_refinement(theme)
+        };
+        assert_eq!(
+            paragraph.inherited_text_style,
+            Some(expected_paragraph.clone())
+        );
+
+        let paragraph_break = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_paragraph_break_words(cx, "https://example.invalid/very/long/path")
+        });
+        let ElementKind::Text(props) = &paragraph_break.kind else {
+            panic!("expected text_paragraph_break_words(...) to build a Text element");
+        };
+        assert_eq!(props.wrap, TextWrap::WordBreak);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(
+            paragraph_break.inherited_text_style,
+            Some(expected_paragraph)
+        );
+
+        let code_block = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_code_block(cx, "fn main() {}")
+        });
+        let ElementKind::Text(props) = &code_block.kind else {
+            panic!("expected text_code_block(...) to build a Text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(
+            code_block
+                .inherited_text_style
+                .as_ref()
+                .and_then(|style| style.font.clone()),
+            Some(FontId::monospace())
+        );
+    }
+
+    #[test]
+    fn table_cell_text_uses_compact_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_table_cell(cx, "Compact table cell")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_table_cell(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
+    }
+
+    #[test]
+    fn list_row_label_text_uses_fill_width_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_list_row_label(cx, "Open recent project")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_list_row_label(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
+    }
+
+    #[test]
+    fn control_readout_text_uses_muted_compact_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_control_readout(cx, "Soft wrap: 80 cols")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_control_readout(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(el.inherited_text_style, Some(text_xs_refinement(&theme)));
+        assert_eq!(
+            el.inherited_foreground,
+            Some(ui_typography::muted_foreground_color(theme))
+        );
+    }
+
+    #[test]
+    fn button_label_text_uses_medium_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_button_label(cx, "Apply selected changes")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_button_label(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(
+            el.inherited_text_style,
+            Some(text_button_label_refinement(&theme))
         );
     }
 }

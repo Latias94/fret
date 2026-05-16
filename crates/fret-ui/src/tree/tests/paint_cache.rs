@@ -278,6 +278,136 @@ fn previous_frame_paint_recording_replay_preserves_text_blob_side_index() {
 }
 
 #[test]
+fn paint_cache_key_tracks_child_geometry_changes_when_parent_size_is_stable() {
+    let mut app = crate::test_host::TestHost::new();
+
+    let parent_paints = Arc::new(AtomicUsize::new(0));
+    let child_paints = Arc::new(AtomicUsize::new(0));
+
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_debug_enabled(true);
+    ui.set_paint_cache_enabled(true);
+
+    struct ParentWidget {
+        paints: Arc<AtomicUsize>,
+    }
+
+    impl<H: UiHost> Widget<H> for ParentWidget {
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+            self.paints.fetch_add(1, Ordering::SeqCst);
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(0),
+                rect: cx.bounds,
+                background: fret_core::Paint::Solid(Color::TRANSPARENT).into(),
+                border: Edges::default(),
+                border_paint: fret_core::Paint::Solid(Color::TRANSPARENT).into(),
+                corner_radii: Corners::default(),
+            });
+            for &child in cx.children {
+                if let Some(bounds) = cx.child_bounds(child) {
+                    cx.paint(child, bounds);
+                }
+            }
+        }
+    }
+
+    struct ChildWidget {
+        paints: Arc<AtomicUsize>,
+    }
+
+    impl<H: UiHost> Widget<H> for ChildWidget {
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+            self.paints.fetch_add(1, Ordering::SeqCst);
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(0),
+                rect: cx.bounds,
+                background: fret_core::Paint::Solid(Color::TRANSPARENT).into(),
+                border: Edges::default(),
+                border_paint: fret_core::Paint::Solid(Color::TRANSPARENT).into(),
+                corner_radii: Corners::default(),
+            });
+        }
+    }
+
+    let parent = ui.create_node(ParentWidget {
+        paints: parent_paints.clone(),
+    });
+    let child = ui.create_node(ChildWidget {
+        paints: child_paints.clone(),
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    let parent_bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    let child_bounds_a = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(80.0), Px(10.0)));
+    let child_bounds_b = Rect::new(Point::new(Px(0.0), Px(14.0)), Size::new(Px(60.0), Px(24.0)));
+
+    ui.nodes.get_mut(parent).expect("parent").bounds = parent_bounds;
+    ui.nodes.get_mut(parent).expect("parent").measured_size = parent_bounds.size;
+    ui.nodes.get_mut(child).expect("child").bounds = child_bounds_a;
+    ui.nodes.get_mut(child).expect("child").measured_size = child_bounds_a.size;
+    ui.test_recompute_paint_geometry_fingerprint_subtree(parent);
+    let parent_geometry_before = ui
+        .nodes
+        .get(parent)
+        .expect("parent")
+        .paint_geometry_fingerprint;
+    let child_geometry_before = ui
+        .nodes
+        .get(child)
+        .expect("child")
+        .paint_geometry_fingerprint;
+
+    let mut services = FakeUiServices;
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, parent_bounds, &mut scene, 1.0);
+    assert_eq!(parent_paints.load(Ordering::SeqCst), 1);
+    assert_eq!(child_paints.load(Ordering::SeqCst), 1);
+    ui.test_clear_node_invalidations(parent);
+    ui.test_clear_node_invalidations(child);
+
+    ui.ingest_paint_cache_source(&mut scene);
+    scene.clear();
+
+    ui.nodes.get_mut(child).expect("child").bounds = child_bounds_b;
+    ui.nodes.get_mut(child).expect("child").measured_size = child_bounds_b.size;
+    ui.test_recompute_paint_geometry_fingerprint_subtree(parent);
+    ui.test_clear_node_invalidations(parent);
+    ui.test_clear_node_invalidations(child);
+    let parent_geometry_after = ui
+        .nodes
+        .get(parent)
+        .expect("parent")
+        .paint_geometry_fingerprint;
+    let child_geometry_after = ui
+        .nodes
+        .get(child)
+        .expect("child")
+        .paint_geometry_fingerprint;
+    assert_ne!(
+        child_geometry_before, child_geometry_after,
+        "child geometry fingerprint should change when the child layout changes"
+    );
+    assert_ne!(
+        parent_geometry_before, parent_geometry_after,
+        "parent geometry fingerprint should change when a descendant layout changes"
+    );
+
+    ui.paint_all(&mut app, &mut services, parent_bounds, &mut scene, 1.0);
+    assert_eq!(
+        parent_paints.load(Ordering::SeqCst),
+        2,
+        "stable parent bounds must not replay stale child geometry after a layout change"
+    );
+    assert_eq!(child_paints.load(Ordering::SeqCst), 2);
+    assert!(
+        ui.debug_stats().paint_cache_replayed_ops == 0,
+        "child geometry fingerprint should force repaint rather than replay stale cached ops"
+    );
+}
+
+#[test]
 fn paint_cache_replay_translates_descendant_bounds_for_descendants() {
     let mut app = crate::test_host::TestHost::new();
 

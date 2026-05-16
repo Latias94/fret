@@ -2,6 +2,7 @@ use super::*;
 use crate::spec::ENV_UI_GALLERY_START_SECTION;
 use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::facade as shadcn;
 
 pub(in crate::ui) struct DocSection {
@@ -486,6 +487,13 @@ where
     })
 }
 
+pub(in crate::ui) fn control_readout_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
+where
+    T: Into<Arc<str>>,
+{
+    decl_text::text_control_readout(cx, text)
+}
+
 pub(in crate::ui) fn notes_block<I, T>(lines: I) -> impl IntoUiElement<fret_app::App> + use<I, T>
 where
     I: IntoIterator<Item = T>,
@@ -755,6 +763,9 @@ fn slugify_for_test_id(input: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_core::{AppWindowId, Point, Rect, Size, TextOverflow, TextWrap};
+    use fret_ui::element::ElementKind;
+    use fret_ui::elements;
 
     #[test]
     fn doc_section_focus_matches_title_and_stable_ids() {
@@ -788,6 +799,40 @@ mod tests {
             Some("ui-gallery-combobox-usage"),
             &filters
         ));
+    }
+
+    #[test]
+    fn control_readout_text_is_single_line_and_can_shrink_in_dense_rows() {
+        let window = AppWindowId::default();
+        let mut app = fret_app::App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(160.0)),
+        );
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            control_readout_text(cx, "Soft wrap: 80 cols")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected control_readout_text(...) to build a Text element");
+        };
+
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(
+            props.layout.size.min_width,
+            Some(fret_ui::element::Length::Px(Px(0.0)))
+        );
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert!(el.inherited_text_style.is_some());
+        assert_eq!(
+            el.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(theme))
+        );
     }
 }
 
@@ -877,31 +922,7 @@ fn code_block_shell(
     .gap(Space::N2)
     .into_element(cx);
 
-    let theme = Theme::global(&*cx.app);
-    let monospace = fret_core::TextStyle {
-        font: fret_core::FontId::monospace(),
-        size: Px(12.0),
-        weight: fret_core::FontWeight::NORMAL,
-        slant: fret_core::TextSlant::Normal,
-        line_height: theme.metric_by_key("font.line_height"),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-        letter_spacing_em: None,
-        ..Default::default()
-    };
-    let code_text = cx.text_props(TextProps {
-        layout: {
-            let mut layout = fret_ui::element::LayoutStyle::default();
-            layout.size.width = fret_ui::element::Length::Fill;
-            layout
-        },
-        text: code.clone(),
-        style: Some(monospace),
-        color: Some(theme.color_token("foreground")),
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Clip,
-        align: fret_core::TextAlign::Start,
-        ink_overflow: fret_ui::element::TextInkOverflow::None,
-    });
+    let code_text = decl_text::text_code_block(cx, code.clone());
 
     let mut scroll = shadcn::ScrollArea::new([code_text])
         .axis(fret_ui::element::ScrollAxis::Both)

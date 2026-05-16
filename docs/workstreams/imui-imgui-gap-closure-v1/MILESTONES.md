@@ -186,9 +186,45 @@ Exit criteria:
   bring-to-front hit-test order, focus-on-click vs activation, no-inputs / pointer-pass-through,
   close, resize, and collapse. Multi-window / viewport parity remains outside this helper.
   2026-05-16 table gap wording result: the component catalog now treats alternating row backgrounds
-  as covered through `TableOptions::striped` and leaves only explicit per-row/per-cell background
-  overrides, freeze panes, column visibility, and old columns API as advanced-table follow-on
-  candidates.
+  as covered through `TableOptions::striped` and narrowed the remaining table gap read before the
+  row/cell override proof landed.
+  2026-05-16 table override/text role result: explicit row/cell background override policy landed
+  in `TableRowOptions::background` and `TableCellOptions::background`, with scene-paint proof that
+  cell overrides paint after row overrides. `ImUiTableRow::cell_text(...)` now uses the shared
+  `text_table_cell(...)` role helper, so default table text no longer inherits paragraph wrapping
+  semantics. Freeze panes, runtime hideable-column policy, and old columns API remain
+  advanced-table candidates.
+  2026-05-16 table header text result: sortable and plain table header labels also use
+  `text_table_cell(...)`, preserving the same compact single-line ellipsis semantics as body cells.
+  2026-05-16 static table column visibility result: `TableColumn::hidden()` and
+  `TableColumn::with_visible(bool)` now cover author-declared hidden columns without copying Dear
+  ImGui's mutable table runtime. Hidden columns still consume submitted row cells in declared order
+  but skip header/body rendering and header responses; runtime hideable columns, persistence, and
+  header-menu policy stay candidate-only.
+  2026-05-16 control readout text role result: `text_control_readout(...)` now sits in
+  `fret-ui-kit::declarative::text` beside `text_table_cell(...)`. The UI Gallery code-editor
+  readouts still use the doc-layout app helper, but that helper delegates to the shared role, so
+  toolbar/status readouts get muted compact single-line truncation without app-local text policy.
+  2026-05-16 button label text role result: `text_button_label(...)` now gives IMUI button/pill
+  labels a shared compact single-line truncation role instead of the previous word-wrapping
+  `control_text(...)` behavior.
+  2026-05-16 code block text role result: `text_code_block(...)` now shares the monospace
+  single-line code-block text contract, and UI Gallery docs code blocks no longer hand-roll their
+  own `TextProps`.
+  2026-05-16 paragraph text role result: `text_paragraph(...)` and
+  `text_paragraph_break_words(...)` now close the first shared text-role vocabulary pass while
+  keeping `text_prose(...)` as the shadcn/Tailwind-compatible name.
+  2026-05-16 trigger label reuse result: IMUI tab triggers and menubar triggers now reuse
+  `text_button_label(...)`; selectable/menu item row labels stayed out of that role because they
+  are command/list rows, not button labels.
+  2026-05-16 list row text role result: `text_list_row_label(...)` is now the shared dense row
+  label role for menu items, selectables, and tree/disclosure rows. It preserves regular `text-sm`
+  styling with fill-width, min-width-zero, single-line ellipsis behavior, so row labels do not wrap
+  or grow row height under resize.
+  2026-05-16 IMUI text item resize result: `UiWriterImUiFacadeExt::text(...)` now mirrors Dear
+  ImGui's default `Text()` semantics by staying single-line and shrinkable with ellipsis under
+  resize. `text_wrapped(...)` is the explicit wrapping escape hatch, and the editor/workspace proof
+  prose that should wrap now opts into it.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

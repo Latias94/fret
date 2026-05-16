@@ -239,11 +239,13 @@ Baseline fact (quick reference):
      - This is still a FIFO, process-global cache; a more GPUI-like end state likely involves a length-bucketed
        or LRU policy and/or “visible window aware” caching so long-lived steady suites don't accumulate
        low-value entries.
-   - Fret stopgap (default-on for jitter-class interactive resize):
-     - `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX` (default: `32`; set `0`/`1` to disable).
+   - Fret stopgap (opt-in for jitter-class interactive resize):
+     - `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX` (default: `0` / off; set above `1` to enable).
      - `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_MAX_DW_PX` (default: `64`; widens the “small-step” class so bucketing
        applies under common per-frame drag deltas; commit `53aa6534a`).
      - Applies only for small-step resizes (e.g. `drag-jitter`), and only while interactive resize is active.
+     - 2026-05-16 correction: default-on bucketing was disabled because snapped text wrap widths can visibly drift
+       from the final flex item width during resize. Keep this as an explicit perf experiment, not the default UX.
      - Small-step detection is symmetric (back-and-forth drags keep the same policy/caches enabled).
        - Implementation: `perf(fret-ui): treat small-step resize symmetrically` (commit `0de40863f`).
        - Evidence: perf log entry `2026-02-09 16:37:00` (jitter probe p95 total improves by ~0.3ms).

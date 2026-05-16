@@ -1343,18 +1343,55 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
-        let nodes = &self.nodes;
-        let scratch_element_nodes = &mut self.scratch_element_nodes;
+        let mut element_nodes = std::mem::take(&mut self.scratch_element_nodes);
+        let mut bounds_records = std::mem::take(&mut self.scratch_bounds_records);
+        let mut element_root_bounds_records =
+            std::mem::take(&mut self.scratch_element_root_bounds_records);
 
         crate::elements::with_window_state(app, window, |st| {
-            st.element_nodes_copy_into(scratch_element_nodes);
-            for &(element, node) in scratch_element_nodes.iter() {
-                let Some(rect) = nodes.get(node).map(|n| n.bounds) else {
-                    continue;
-                };
+            st.element_nodes_copy_into(&mut element_nodes);
+        });
+
+        bounds_records.clear();
+        element_root_bounds_records.clear();
+        for &(element, node) in element_nodes.iter() {
+            if let Some(rect) = self.nodes.get(node).map(|n| n.bounds) {
+                bounds_records.push((element, rect));
+            }
+            if let Some(root_bounds) = self.viewport_root_bounds_for_node(node) {
+                element_root_bounds_records.push((element, root_bounds));
+            }
+        }
+
+        crate::elements::with_window_state(app, window, |st| {
+            for (element, rect) in bounds_records.iter().copied() {
                 st.record_bounds(element, rect);
             }
+            st.replace_element_root_bounds(element_root_bounds_records.iter().copied());
         });
+
+        element_nodes.clear();
+        bounds_records.clear();
+        element_root_bounds_records.clear();
+        self.scratch_element_nodes = element_nodes;
+        self.scratch_bounds_records = bounds_records;
+        self.scratch_element_root_bounds_records = element_root_bounds_records;
+    }
+
+    fn viewport_root_bounds_for_node(&self, mut node: NodeId) -> Option<Rect> {
+        loop {
+            if let Some((_, bounds)) = self
+                .viewport_roots()
+                .iter()
+                .rev()
+                .find(|(root, _)| *root == node)
+            {
+                return Some(*bounds);
+            }
+
+            let parent = self.nodes.get(node).and_then(|n| n.parent)?;
+            node = parent;
+        }
     }
 
     fn finish_final_layout_frame(&mut self, app: &mut H) {

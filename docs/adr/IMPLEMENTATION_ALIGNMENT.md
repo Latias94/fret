@@ -23,13 +23,13 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 
 ## Summary
 
-- Last updated: 2026-05-14
+- Last updated: 2026-05-16
 - ADR count (numbered): 325
 
-- Aligned: 117
+- Aligned: 118
 - Aligned (with known gaps): 111
 - N/A (superseded): 2
-- Not audited: 52
+- Not audited: 51
 - Not implemented: 6
 - Partially aligned: 37
 
@@ -65,7 +65,7 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 | [`0254-delinea-dataset-transform-cache-keys-and-invalidation-v1.md`](0254-delinea-dataset-transform-cache-keys-and-invalidation-v1.md) | Proposed | Not audited |  |
 | [`0253-delinea-minimal-dataset-transform-node-set-v1.md`](0253-delinea-minimal-dataset-transform-node-set-v1.md) | Proposed | Not audited |  |
 | [`0252-delinea-transform-lineage-and-raw-index-identity-v1.md`](0252-delinea-transform-lineage-and-raw-index-identity-v1.md) | Proposed | Not audited |  |
-| [`0251-text-intrinsic-sizing-min-max-content-v1.md`](0251-text-intrinsic-sizing-min-max-content-v1.md) | Accepted | Not audited |  |
+| [`0251-text-intrinsic-sizing-min-max-content-v1.md`](0251-text-intrinsic-sizing-min-max-content-v1.md) | Accepted | Aligned | Text intrinsic sizing keeps definite-width measurement and paint preparation aligned for wrapped text, and the flow engine now lets `TextWrap::Word`/`Balance` receive real min-content probes instead of treating min-content as max-content during flex shrink. Evidence: `crates/fret-ui/src/layout/engine/flow.rs`, `crates/fret-ui/src/declarative/host_widget/measure.rs`, `crates/fret-ui/src/declarative/tests/layout/text.rs`, `crates/fret-ui/src/declarative/tests/text_cache.rs`, and resize regression coverage in `crates/fret-ui/src/tree/tests/interactive_resize_flow_rebuild.rs`. |
 | [`0250-delinea-link-events-for-domain-window.md`](0250-delinea-link-events-for-domain-window.md) | Proposed | Not audited |  |
 | [`0249-delinea-link-events-for-axis-pointer-and-cursor.md`](0249-delinea-link-events-for-axis-pointer-and-cursor.md) | Proposed | Not audited |  |
 | [`0248-delinea-multi-grid-viewport-layout-contract.md`](0248-delinea-multi-grid-viewport-layout-contract.md) | Proposed | Not audited |  |
@@ -175,7 +175,7 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 | [`0003-platform-boundary.md`](0003-platform-boundary.md) | Superseded | N/A (superseded) | Superseded ADR; do not implement new work against this contract. |
 | [`0004-resource-handles.md`](0004-resource-handles.md) | Accepted | Aligned | Stable IDs: `crates/fret-core/src/ids.rs`; effect-driven registration: `crates/fret-runtime/src/effect.rs` (`ImageRegisterRgba8`, `ImageUnregister`); runner/renderer handles at flush point: `crates/fret-launch/src/runner/desktop/mod.rs`. |
 | [`0005-retained-ui-tree.md`](0005-retained-ui-tree.md) | Accepted | Aligned | Retained tree + bounds/hit-test routing: `crates/fret-ui/src/tree/mod.rs`, `crates/fret-ui/src/tree/dispatch.rs` (hit-test, capture, focus fallback). A prepaint-built hit-test bounds-tree index exists for large layers (axis-aligned transforms only; explicit fallbacks): `crates/fret-ui/src/tree/bounds_tree.rs`, `crates/fret-ui/src/tree/prepaint.rs`, `crates/fret-ui/src/tree/hit_test.rs`. |
-| [`0006-text-system.md`](0006-text-system.md) | Accepted | Aligned | Text boundary trait: `crates/fret-core/src/text.rs` (`TextService`); renderer implementation: `crates/fret-render/src/text.rs` + `crates/fret-render/src/renderer/services.rs`; UI emits `SceneOp::Text`: `crates/fret-ui/src/declarative/host_widget/paint.rs`. |
+| [`0006-text-system.md`](0006-text-system.md) | Accepted | Aligned | Text boundary trait: `crates/fret-core/src/text.rs` (`TextService`); renderer implementation: `crates/fret-render/src/text.rs` + `crates/fret-render/src/renderer/services.rs`; UI emits `SceneOp::Text`: `crates/fret-ui/src/declarative/host_widget/paint.rs`; live-resize wrapped text defaults to exact final box widths, with opt-in bucketing guarded by `crates/fret-ui/src/runtime_config.rs` and `crates/fret-ui/src/tree/tests/interactive_resize_flow_rebuild.rs` (`interactive_resize_wrapped_text_uses_exact_width_by_default`, `interactive_resize_wrapped_text_width_bucketing_is_opt_in`). |
 | [`0007-viewport-surfaces.md`](0007-viewport-surfaces.md) | Accepted | Aligned | `RenderTargetId` + `SceneOp::ViewportSurface`: `crates/fret-core/src/ids.rs`, `crates/fret-core/src/scene.rs`; registry: `crates/fret-render/src/targets.rs`. Declarative embedding: `ViewportSurfaceProps` + `cx.viewport_surface(...)` (`crates/fret-ui/src/element.rs`, `crates/fret-ui/src/elements/cx.rs`). Input forwarding helpers: core mapping (`crates/fret-core/src/input.rs`), declarative `viewport_surface_panel` (`ecosystem/fret-ui-kit/src/declarative/viewport_surface.rs`), and retained helper `handle_viewport_surface_input` (`crates/fret-ui/src/retained_bridge.rs`). |
 | [`0008-threading-logging-errors.md`](0008-threading-logging-errors.md) | Accepted | Aligned | Main-thread runner loop + `pollster` init: `crates/fret-launch/src/runner/desktop/app_handler.rs`; structured logging via `tracing` across crates (e.g. `crates/fret-launch/src/runner/desktop/mod.rs`). |
 | [`0009-renderer-ordering-and-batching.md`](0009-renderer-ordering-and-batching.md) | Accepted | Aligned | Renderer encodes ops in order: `crates/fret-render/src/renderer/render_scene/encode/mod.rs`; adjacency batching without reordering via `ordered_draws` + quad batch flush: `crates/fret-render/src/renderer/render_scene/encode/state.rs`. |

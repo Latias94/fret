@@ -969,3 +969,193 @@ Status: complete
   predicate gates, and Select test-id focused gates passed.
 - Remaining follow-up: use the same runtime path to stress overlay/listbox placement ownership
   under scroll-container clipping, RTL, and viewport resize rather than only relation correctness.
+
+## M61: Cross-root Anchored Coordinate and Root-Boundary Policy Gate
+
+Status: complete for synthetic and focused gates
+
+- Added `anchored_cross_root_coordinate_v1.json` and a thin `fret-ui` harness covering secondary
+  viewport anchors, non-zero overlay/root boundaries, preferred-side flip, and cross-axis clamping
+  against the owning root instead of the OS window origin.
+- The synthetic fixture proved core `AnchoredProps` resolves cross-root anchors correctly; no core
+  placement mechanism defect was reproduced in this slice.
+- The slice found a policy-layer root-boundary gap: `fret-ui-kit` anchored placement helpers and
+  shadcn anchored overlay recipes were using the environment viewport as their collision/clamp
+  outer. That is wrong for embedded or secondary render roots.
+- Added root-boundary placement helpers in `fret-ui-kit` and migrated shadcn Popover, Select,
+  Tooltip, HoverCard, DropdownMenu, ContextMenu, and Menubar placement paths to them.
+- Focused gates passed for the synthetic fixture, `fret-ui-kit` root-boundary helpers, shadcn
+  Popover compile/placement smoke, and representative HoverCard, Tooltip, DropdownMenu,
+  ContextMenu, and Menubar overlay tests.
+- Remaining follow-up: add a runtime multi-viewport ownership diagnostics gate with placement trace,
+  relation edges, hit-tested selection, screenshot, and layout sidecar evidence.
+
+## M62: Runtime Multi-Viewport Combobox Root-Boundary Gate
+
+Status: complete for the Resizable Combobox runtime gate and owning mechanism fix
+
+- Promoted a UI Gallery Resizable fixture where a Combobox trigger lives near the bottom of a
+  Resizable panel viewport root while the OS window still has room below it.
+- The first runtime run found a real mechanism-layer root-boundary cache defect: the overlay
+  placement trace kept choosing `bottom` and used `outer_collision=900x1000@0,0`, meaning the
+  source element boundary was still the window/owner root instead of the panel viewport root.
+- The fix keeps `NodeEntry.root` as the declarative owner-root contract and adds a separate
+  per-element effective root-boundary cache rebuilt after final layout from live element-node
+  mappings and nearest registered `viewport_root` bounds.
+- `ElementContext::root_bounds_for_element` and the free `elements::root_bounds_for_element` query
+  now prefer that effective boundary before falling back to owner root bounds.
+- Focused mechanism and UI kit gates passed, and the runtime gate now passes with
+  `chosen_side=top`, `preferred_fits_without_main_clamp=false`, and
+  `outer_collision=336x378@514.67,468.67`.
+- Added focused nested viewport-root precedence, same-element viewport movement, and
+  view-cache-hit retained-render movement coverage. The remaining follow-up is a runtime UI Gallery
+  companion only if a real surface can move cached overlay sources across viewport roots.
+
+## M63: Non-Modal Overlay Underlay Activation Oracle
+
+Status: complete for Popover and DropdownMenu runtime gates
+
+- Strengthened existing non-modal overlay outside-press gates by adding a real underlay activation
+  oracle instead of relying on focus/dismiss proxy signals.
+- `ui-gallery-overlay-underlay-activated` now proves the underlay button's activation handler ran.
+- Popover click-through and DropdownMenu non-modal outside-press runtime gates both pass with the
+  new activation-status assertion.
+- No new overlay mechanism defect was reproduced; the fix is a harness-quality improvement that
+  makes future outside-press consumption regressions visible.
+- Remaining follow-up: move to semantics/accessibility runtime gates unless fresh Radix parity
+  evidence demands additional click-through families.
+
+## M64: Read-Only Switch Semantics Action-State Gate
+
+Status: complete for the Switch read-only runtime gate and owning recipe fix
+
+- Added diagnostics protocol support for `read_only_is`, including typed builder support,
+  bootstrap predicate evaluation, wait trace selector recording, serialization tests, and predicate
+  evaluator tests.
+- Strengthened the existing focused `Switch::read_only(true)` test with focus/invoke action-state
+  assertions. The first run found a real recipe defect: read-only Switch blocked pointer mutation
+  but still exposed `actions.invoke=true`.
+- Fixed `ecosystem/fret-ui-shadcn` Switch so read-only attaches `read_only=true` and
+  `invokable=false` semantics while preserving focusability.
+- Added a UI Gallery read-only Switch teaching surface and promoted
+  `ui-gallery-switch-read-only-action-state.json` into `ui-gallery-shadcn-conformance`.
+- Focused recipe, diagnostics protocol, bootstrap predicate, registry, build, and runtime gates all
+  pass. Runtime evidence is packed at
+  `.fret/diag/runs/ui-gallery-switch-read-only-action-state-f112/share/1778909364811.zip`.
+- Remaining follow-up: add dynamic non-list action-state mutation coverage where read-only or
+  command-gated availability changes across frames without remounting the control.
+
+## M65: Dynamic Read-Only Switch Action-State Gate
+
+Status: complete for the UI Gallery dynamic read-only companion
+
+- Extended the read-only Switch UI Gallery snippet with a policy toggle that flips read-only state
+  in place.
+- Added focused recipe coverage for `read_only=true -> false -> true` semantics mutation. The first
+  draft exposed a harness modeling issue: component props do not change unless the declarative root
+  is rerendered after the model update. The corrected focused gate rerenders and passes.
+- Added and promoted `ui-gallery-switch-read-only-dynamic-action-state.json`.
+- The runtime gate proves the same control transitions from `read_only=true/invoke=false` to
+  `read_only=false/invoke=true`, allows one checked-state mutation while editable, then returns to
+  `read_only=true/invoke=false` and suppresses further mutation.
+- No new runtime mechanism or recipe defect was reproduced after the F112 Switch fix.
+- Follow-up completed in M66: command-gated non-list action-state mutation, where command
+  availability snapshots can change independently from the widget-local model.
+
+## M66: Command-Gated Switch Action-State Gate
+
+Status: complete for the UI Gallery command-gated companion
+
+- Extended the Switch UI Gallery teaching surface with a command-gated control whose enabled
+  state is driven externally through `WindowCommandEnabledService`.
+- The first runtime pass did not find a recipe defect. It found a harness observability gap: the
+  Gallery driver handled the command after `UiTree` had already recorded an unhandled dispatch, but
+  it did not emit a second `handled_by_driver=true` command-dispatch decision. The runtime script
+  therefore could not distinguish "bubble-through only" from "driver handled".
+- Added driver-handled dispatch recording for the owned Switch command-gate toggle path in
+  `apps/fret-ui-gallery/src/driver/runtime_driver.rs`.
+- The strict runtime gate now passes and proves enabled `disabled=false/invoke=true`, disabled
+  `disabled=true/invoke=false`, suppressed checked-state mutation while disabled, and re-enabled
+  mutation after the command-gated service is cleared again.
+- The slice closes the command-gated non-list action-state companion started by M65.
+
+## M67: Shell Theme/Motion Runtime Token Gate
+
+Status: complete for shell-level UI Gallery theme/motion preference changes
+
+- Extended the UI Gallery diagnostics app snapshot with `theme_preset`, `motion_preset`, open
+  states, Theme revision/color scheme, and effective motion token values.
+- Added `ui-gallery-motion-preset-runtime-token-mutation.json` and promoted it into
+  `ui-gallery-motion-pilot`.
+- The gate drives the always-visible Theme/Motion preset selectors, proving model state,
+  select-close state, color scheme, reduced motion zero-duration/easing tokens, and snappy duration
+  tokens through `app_snapshot_field_equals`.
+- The first runtime draft exposed a diagnostics oracle weakness, not a component defect: raw `f32`
+  easing/bounce values are unsuitable for strict JSON equality. The snapshot now exposes rounded
+  readable values plus milli-scaled integer fields, and the script asserts the integer fields.
+- Follow-up completed by M68: runner/platform-injected environment preference changes now have a
+  separate runtime gate. This slice covers the Gallery shell selectors; M68 covers the platform
+  event path.
+
+## M68: Platform Preference Runtime Environment Gate
+
+Status: complete for runner-injected platform preference changes
+
+- Added `set_window_preferences` to diagnostics script v2 and mapped it through runtime effects,
+  desktop/web runner handling, and the same `WindowMetricsService` path used by real platform
+  environment changes.
+- Added a Motion Presets `environment_probe` that reads color scheme, reduced motion, and text
+  scale through `ElementContext` environment queries, plus a matching UI Gallery app snapshot under
+  `/shell/window_metrics_preferences`.
+- Added `ui-gallery-platform-preferences-runtime-environment-mutation.json` and promoted it into
+  `ui-gallery-motion-pilot`.
+- The first real runtime run exposed a harness script defect, not a mechanism defect: the script
+  waited for the Motion Presets page probe while still on the default page. It now navigates to the
+  page explicitly before waiting for the probe.
+- The passing gate proves the full chain:
+  `diag script -> runtime Effect -> runner -> WindowMetricsService -> global change notification -> ElementRuntime environment query -> UI Gallery snapshot/probe`.
+
+## M69: UI Gallery Page-Entry Authoring Lint
+
+Status: complete for promoted Motion Presets scripts
+
+- Added a scoped registry lint for `ui-gallery-motion-pilot`: page-local
+  `ui-gallery-motion-presets-*` selectors require a prior page-root proof for
+  `ui-gallery-page-motion-presets`.
+- The first strict pass found and fixed an existing script authoring issue:
+  `ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json` navigated to Motion
+  Presets but did not assert the page root before waiting for a page-local trigger.
+- Added `tools/test_check_diag_scripts_registry.py` so the lint proves three cases directly: a bad
+  page-local selector before page entry fails, a selector after page entry passes, and the global
+  shell motion preset trigger remains allowed.
+- The lint turns the F116 false-timeout lesson into a reusable harness guard instead of relying on
+  individual agents to remember the page-entry convention.
+- Follow-up audit extended the same rule to promoted Select scripts, where the current audit
+  showed zero page-entry violations. Combobox became strict after the lint learned to treat
+  explicit `FRET_UI_GALLERY_START_PAGE=combobox` defaults as valid entry evidence. DataTable is not
+  yet a strict page-entry family; it needs cleanup before the same rule can be enabled there without
+  introducing historical noise.
+
+## M70: Motion-Pilot Alert/Drawer Defect Discovery
+
+Status: complete for AlertAction slot metadata and Drawer snap-point gates; Sidebar remains the
+next open diagnostics-timeout slice.
+
+- Reran `ui-gallery-motion-pilot` after the page-entry lint work and confirmed the suite continued
+  to find real issues rather than only validating new harness code.
+- The first blocker was a recipe/diagnostics boundary defect: `AlertAction` used a fixed internal
+  diagnostics `test_id` as a slot marker, producing duplicate exported test ids in UI Gallery.
+- Added layout-transparent `AnyElement::component_slot(...)` and migrated `AlertAction` to use it,
+  keeping internal recipe classification out of semantics, layout, hit testing, and a11y.
+- The next blocker was Drawer snap-point clickability: the trigger existed but was far below the
+  visible window, proving that UI Gallery long-page scripts must assert visibility before
+  `click_stable`.
+- `click_stable` timeout diagnostics now report target/window geometry and classify fully offscreen
+  targets as `click_stable.target_outside_window`.
+- All promoted Drawer snap-point scripts now scroll the trigger into view and assert window bounds
+  before clicking.
+- The spring-retarget Drawer script now encodes the correct Vaul-style policy: a sufficiently large
+  downward drag may dismiss the drawer, and the gate verifies content removal plus focus restore.
+- Rerunning the motion-pilot suite advanced past Drawer, Motion Presets, and Overlay Dialog before
+  exposing the next open harness gap: Sidebar `click_stable` can run until external tooling timeout
+  without producing a forced triage bundle.

@@ -9,7 +9,7 @@
 >
 > This project is an experiment in AI-driven software development. The vast majority of the code, tests, and documentation were written by AI (Codex). Humans direct architecture, priorities, and design decisions, but have not reviewed most of the code line-by-line. Treat this accordingly — there will be bugs, rough edges, and things that don't work. Use at your own risk.
 
-Fret is a GPU-first Rust UI framework for desktop apps, editor-grade tools, and WebGPU/wasm demos.
+Fret is a GPU-first Rust application UI framework for desktop-first apps, editor-grade UI, and WebGPU/wasm demos.
 
 Modular by design, ecosystem included: start with small app surfaces today and grow into docking,
 overlays, multi-window workflows, and embedded viewports without swapping foundations.
@@ -17,6 +17,8 @@ overlays, multi-window workflows, and embedded viewports without swapping founda
 This repo focuses on the **core framework** (`crates/`) and incubates components + tooling
 in-tree (`ecosystem/`, `apps/`). Long-term, some ecosystem crates may move to a separate
 components repository.
+The Golden Path uses the shadcn-aligned default Component Surface, while other official surfaces
+and Domain UI Packages can mature independently.
 
 ## What Fret looks like
 
@@ -24,11 +26,11 @@ components repository.
   <tr>
     <td width="50%" valign="top">
       <img src="screenshots/todo_demo.png" alt="Fret todo demo screenshot" />
-      <p><strong>Todo demo</strong><br />Starter-scale app surface built on the default shadcn-based path.</p>
+      <p><strong>Todo demo</strong><br />Starter-scale app surface built on the shadcn-aligned Golden Path.</p>
     </td>
     <td width="50%" valign="top">
       <img src="screenshots/table.png" alt="Fret UI Gallery table screenshot" />
-      <p><strong>UI Gallery / Table</strong><br />Component catalog and conformance surface for the shadcn-aligned layer.</p>
+      <p><strong>UI Gallery / Table</strong><br />Component catalog and conformance surface for the shadcn-aligned Component Surface.</p>
     </td>
   </tr>
   <tr>
@@ -45,12 +47,12 @@ components repository.
 
 ## What Fret focuses on
 
-- **Small apps to editor shells**: start with ordinary desktop/productivity UIs, then scale into
-  docking, panels, tear-off windows, overlays, and richer interaction models.
+- **Small apps to editor-grade UI**: start with ordinary desktop/productivity UIs, then scale into
+  docking, panels, tear-off windows, overlays, embedded viewports, and richer interaction models.
 - **GPU-first UI + embedded viewports**: treat GPU-backed surfaces as first-class UI citizens
   rather than special-case integrations.
-- **Declarative app authoring in Rust**: the default path centers on `View`, `AppUi`,
-  `LocalState`, typed actions, and shadcn-based components.
+- **Declarative app authoring in Rust**: the Golden Path centers on `View`, `AppUi`,
+  `LocalState`, typed actions, and the default shadcn-aligned Component Surface.
 - **Mechanism/policy separation**: kernel/runtime crates stay policy-light; higher-level
   interaction defaults live in ecosystem crates.
 - **Diagnostics and perf tooling**: `fretboard diag` gives app authors a shipped diagnostics core,
@@ -71,7 +73,7 @@ Upstream/reference links live closer to the code that uses them:
 - [`ecosystem/fret-ui-headless/README.md`](ecosystem/fret-ui-headless/README.md) (behavioral ports like cmdk score + Embla)
 - [`docs/reference-stack-ui-behavior.md`](./docs/reference-stack-ui-behavior.md) (APG + Radix + Floating UI + cmdk)
 
-The goal is to provide a smooth, general-purpose application framework that scales from app UIs to editor-class products.
+The goal is to provide a smooth, general-purpose application framework that scales from app UIs to editor-grade UI without owning editor product domains.
 
 ## Quick Start
 
@@ -93,7 +95,7 @@ Repo CLI split:
 Use the onboarding ladder on purpose:
 
 - **Default**: `hello` → `simple-todo` → `todo`
-- **Comparison**: `simple_todo_v2_target` only when you want to compare local-state/list ergonomics against the default path
+- **Comparison**: `simple_todo_v2_target` only when you want to compare local-state/list ergonomics against the Golden Path
 - **Advanced**: gallery, interop, docking, renderer, and maintainer demos
 
 Keep the default app-authoring model intentionally small: start with `LocalState` for view-owned
@@ -157,8 +159,8 @@ If you are new to it, start with the cookbook walkthrough:
 
 ## Todo View Example
 
-This is the interface shape the default path aims for: typed actions, `LocalState`, and
-shadcn-based components.
+This is the interface shape the Golden Path aims for: typed actions, `LocalState`, and
+the default shadcn-aligned Component Surface.
 
 ```rust
 use fret::app::prelude::*;
@@ -225,7 +227,7 @@ Reference implementation:
 
 Fret keeps stable boundaries in `crates/` and incubates faster-moving pieces in `ecosystem/`.
 
-- Component systems:
+- Component and Policy Surfaces:
   - [`fret-ui-kit`](./ecosystem/fret-ui-kit)
   - [`fret-ui-shadcn`](./ecosystem/fret-ui-shadcn)
   - [`fret-ui-material3`](./ecosystem/fret-ui-material3) (in progress)
@@ -233,7 +235,7 @@ Fret keeps stable boundaries in `crates/` and incubates faster-moving pieces in 
   - [`fret-router`](./ecosystem/fret-router)
   - [`fret-query`](./ecosystem/fret-query)
   - [`fret-selector`](./ecosystem/fret-selector)
-- Editor modules:
+- Specialized UI and tooling packages:
   - [`fret-node`](./ecosystem/fret-node)
   - [`fret-docking`](./ecosystem/fret-docking)
   - [`fret-viewport-tooling`](./ecosystem/fret-viewport-tooling)

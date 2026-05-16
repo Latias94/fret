@@ -33,6 +33,25 @@
       },
       "timeout_frames": 240
     },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-sidebar-demo-toggle" },
+      "delta_y": -280.0,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 1800
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-sidebar-demo-toggle" },
+        "padding_px": 2.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 600
+    },
 
     {
       "type": "click_stable",
@@ -48,4 +67,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-sidebar-toggle-fixed-frame-delta" }
   ]
 }
-

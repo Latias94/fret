@@ -143,7 +143,7 @@
     },
     {
       "name": "imui component surface facade anchors",
-      "command": "rg -n \"fn (button|small_button|arrow_button|checkbox_model|radio|switch_model|slider_f32_model|combo|combo_model|selectable|multi_selectable|tree_node|collapsing_header|child_region|virtual_list|table|tab_bar|open_popup|begin_popup|tooltip|drag_source|drop_target|debug_draw)\" ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer"
+      "command": "rg -n \"fn (text|text_wrapped|button|small_button|arrow_button|checkbox_model|radio|switch_model|slider_f32_model|combo|combo_model|selectable|multi_selectable|tree_node|collapsing_header|child_region|virtual_list|table|tab_bar|open_popup|begin_popup|tooltip|drag_source|drop_target|debug_draw)\" ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer"
     },
     {
       "name": "imui component surface editor anchors",
@@ -156,6 +156,14 @@
     {
       "name": "imui component surface kit smoke",
       "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test imui_combo_smoke --test imui_table_smoke --test imui_disclosure_smoke --test imui_textarea_smoke --test imui_drag_drop_smoke --test imui_virtual_list_smoke --test imui_debug_draw_smoke --test imui_tooltip_smoke --no-fail-fast"
+    },
+    {
+      "name": "imui text item resize semantics",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --lib imui_text_item_is_single_line_and_shrinkable imui_text_wrapped_is_explicit_wrapping_text --no-fail-fast"
+    },
+    {
+      "name": "fret-examples imui proof check",
+      "command": "cargo check -p fret-examples"
     },
     {
       "name": "imui design surface editor anchors",
@@ -266,6 +274,10 @@
       "command": "cargo nextest run -p fret-imui table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells --no-fail-fast"
     },
     {
+      "name": "fret-imui table hidden column semantics test",
+      "command": "cargo nextest run -p fret-imui table_helper_skips_hidden_columns_in_header_and_body --no-fail-fast"
+    },
+    {
       "name": "diff check",
       "command": "git diff --check"
     }
@@ -301,8 +313,15 @@
     "ecosystem/fret-ui-kit/src/imui/facade_writer/value_models.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs",
+    "ecosystem/fret-ui-kit/src/declarative/text.rs",
+    "ecosystem/fret-ui-kit/src/imui/control_chrome.rs",
+    "ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/multi_select.rs",
+    "ecosystem/fret-ui-kit/src/imui/selectable_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/response/widgets.rs",
+    "ecosystem/fret-ui-kit/src/imui/options/collections.rs",
     "ecosystem/fret-ui-editor/src/imui.rs",
     "ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs",
     "ecosystem/fret-ui-editor/src/controls/drag_value.rs",
@@ -336,7 +355,11 @@
     "apps/fret-examples/tests/imui_editor_collection_box_select_surface.rs",
     "apps/fret-examples/tests/imui_editor_collection_zoom_surface.rs",
     "apps/fret-examples/src/imui_editor_proof_demo.rs",
+    "apps/fret-examples/src/imui_editor_proof_demo/collection.rs",
+    "apps/fret-examples/src/workspace_shell_demo.rs",
     "apps/fret-examples/src/editor_notes_demo.rs",
+    "apps/fret-ui-gallery/src/ui/doc_layout.rs",
+    "apps/fret-ui-gallery/tests/code_editor_control_readout_surface.rs",
     "tools/gate_imui_workstream_source.py",
     "repo-ref/imgui/imgui.h",
     "repo-ref/imgui/imgui.cpp",
@@ -357,9 +380,12 @@
     "ecosystem/fret-imui/src/tests/interaction_shortcuts/mod.rs",
     "ecosystem/fret-imui/src/tests/label_identity/mod.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls.rs",
+    "ecosystem/fret-ui-kit/tests/imui_table_smoke.rs",
+    "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
     "ecosystem/fret-imui/src/tests/floating/mod.rs",
     "ecosystem/fret-imui/src/tests/popup_hover/mod.rs",
     "ecosystem/fret-imui/src/tests/composition/mod.rs",
+    "ecosystem/fret-imui/src/tests/composition/layout_collections.rs",
     "ecosystem/fret-imui/src/tests/models_combo/mod.rs",
     "ecosystem/fret-imui/src/tests/models_controls/mod.rs",
     "ecosystem/fret-imui/src/tests/models_text_area/mod.rs",

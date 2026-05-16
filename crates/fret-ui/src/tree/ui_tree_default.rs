@@ -39,6 +39,7 @@ impl<H: UiHost> Default for UiTree<H> {
             scratch_paint_observed_deps_presence: HashSet::new(),
             scratch_paint_observed_deps_presence_active: false,
             scratch_bounds_records: Vec::new(),
+            scratch_element_root_bounds_records: Vec::new(),
             scratch_visual_bounds_records: Vec::new(),
             measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics::default(),
             layout_engine: crate::layout_engine::TaffyLayoutEngine::default(),

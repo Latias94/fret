@@ -1,7 +1,7 @@
 use anyhow::Context as _;
 use fret_app::CreateWindowKind;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
-use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
+use fret_bootstrap::ui_diagnostics::{UiDiagnosticsService, UiRealPerfSpanCaptureV1};
 use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, Modifiers, MouseButton, MouseButtons,
     Point, Rect, RenderTargetId, Scene, SceneOp, Size, UiServices, ViewportInputEvent,
@@ -3043,7 +3043,17 @@ fn render(
         scale_factor,
         scene,
     } = context;
-    driver.render_dock(app, services, window, state, bounds);
+    let mut perf_span_capture = UiRealPerfSpanCaptureV1::new_if_enabled();
+
+    UiRealPerfSpanCaptureV1::measure_phase(
+        &mut perf_span_capture,
+        "fret.ui.view",
+        "view",
+        "docking_arbitration_demo",
+        |_| {
+            driver.render_dock(app, services, window, state, bounds);
+        },
+    );
 
     state.ui.request_semantics_snapshot();
     state.ui.ingest_paint_cache_source(scene);
@@ -3064,51 +3074,91 @@ fn render(
     }
 
     scene.clear();
-    let mut frame =
-        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-    frame.layout_all();
+    UiRealPerfSpanCaptureV1::measure_phase(
+        &mut perf_span_capture,
+        "fret.ui.layout",
+        "layout",
+        "docking_arbitration_demo",
+        |_| {
+            let mut frame =
+                fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+            frame.layout_all();
+        },
+    );
 
-    let semantics_snapshot = state.ui.semantics_snapshot_arc();
-    let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-        svc.drive_script_for_window(
-            app,
-            services,
-            window,
-            bounds,
-            scale_factor,
-            Some(&mut state.ui),
-            semantics_snapshot.as_deref(),
-        )
-    });
+    let injected_any = UiRealPerfSpanCaptureV1::measure_phase(
+        &mut perf_span_capture,
+        "fret.ui.diagnostics.drive_script",
+        "diagnostics_drive_script",
+        "docking_arbitration_demo",
+        |_| {
+            let semantics_snapshot = state.ui.semantics_snapshot_arc();
+            let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+                svc.drive_script_for_window(
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    scale_factor,
+                    Some(&mut state.ui),
+                    semantics_snapshot.as_deref(),
+                )
+            });
 
-    for effect in drive.effects {
-        app.push_effect(effect);
-    }
+            for effect in drive.effects {
+                app.push_effect(effect);
+            }
 
-    if drive.request_redraw {
-        app.request_redraw(window);
-        app.push_effect(Effect::RequestAnimationFrame(window));
-    }
+            if drive.request_redraw {
+                app.request_redraw(window);
+                app.push_effect(Effect::RequestAnimationFrame(window));
+            }
 
-    let mut injected_any = false;
-    for event in drive.events {
-        injected_any = true;
-        state.ui.dispatch_event(app, services, &event);
-    }
+            let mut injected_any = false;
+            for event in drive.events {
+                injected_any = true;
+                state.ui.dispatch_event(app, services, &event);
+            }
+            injected_any
+        },
+    )
+    .0;
 
     if injected_any {
         // Let the runner apply effects (including commands) through the normal effect pipeline.
         // Synchronous command flushing can stall pointer-heavy scripted drags and cause
         // `fretboard-dev diag run` to time out waiting for script progress.
         state.ui.request_semantics_snapshot();
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
+        UiRealPerfSpanCaptureV1::measure_phase(
+            &mut perf_span_capture,
+            "fret.ui.layout.script_injected",
+            "layout_script_injected",
+            "docking_arbitration_demo",
+            |_| {
+                let mut frame = fret_ui::UiFrameCx::new(
+                    &mut state.ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    scale_factor,
+                );
+                frame.layout_all();
+            },
+        );
     }
 
-    let mut frame =
-        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-    frame.paint_all(scene);
+    UiRealPerfSpanCaptureV1::measure_phase(
+        &mut perf_span_capture,
+        "fret.ui.paint",
+        "paint",
+        "docking_arbitration_demo",
+        |_| {
+            let mut frame =
+                fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+            frame.paint_all(scene);
+        },
+    );
 
     if let Some(synth) = driver.synth_pointers.get(&window)
         && synth.enabled
@@ -3142,6 +3192,12 @@ fn render(
 
     app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
         let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+        let real_perf_span_start_us = perf_span_capture
+            .as_ref()
+            .map(UiRealPerfSpanCaptureV1::frame_elapsed_us);
+        if let Some(capture) = perf_span_capture.as_mut() {
+            capture.record_for_window(svc, window);
+        }
         svc.record_snapshot(
             app,
             window,
@@ -3149,6 +3205,7 @@ fn render(
             scale_factor,
             &mut state.ui,
             element_runtime,
+            real_perf_span_start_us,
             scene,
         );
         let _ = svc.maybe_dump_if_triggered();

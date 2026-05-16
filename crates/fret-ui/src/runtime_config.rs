@@ -4,6 +4,8 @@ use std::ffi::OsStr;
 use std::sync::OnceLock;
 use std::time::Duration;
 
+pub(crate) const DEFAULT_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX: u8 = 0;
+
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct RuntimeNodeProfileConfig {
     pub(crate) top_n: usize,
@@ -284,7 +286,7 @@ impl UiRuntimeEnvConfig {
             std::env::var("FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX")
                 .ok()
                 .and_then(|v| v.parse::<u8>().ok())
-                .unwrap_or(32)
+                .unwrap_or(DEFAULT_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX)
                 .min(64);
 
         let text_wrap_width_small_step_max_dw_px =

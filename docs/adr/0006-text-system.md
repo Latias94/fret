@@ -82,10 +82,12 @@ perf workstreams (non-normative):
   turn into repeated `prepare()` work unless the UI layer holds onto multiple widths.
 - The UI layer has an interactive-resize concept (`UiTree::interactive_resize_active`) that allows guarded
   “live-resize” policies:
-  - wrap-width bucketing during resize: `UiTree::maybe_bucket_text_wrap_width` (knobs:
+  - opt-in wrap-width bucketing during resize: `UiTree::maybe_bucket_text_wrap_width` (knobs:
     `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX`, `FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX`),
   - optional per-widget multi-width prepared blob caching for wrapped text during resize (knob:
     `FRET_UI_INTERACTIVE_RESIZE_TEXT_WIDTH_CACHE_ENTRIES`, default off).
+  Default live-resize text layout keeps exact wrap widths; bucketing is experimental because it can
+  make line breaks visually disagree with the final flex item width during resize.
 
 For the current “Zed smoothness” effort, the workstream log is the canonical evidence trail for these experiments:
 `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md`.

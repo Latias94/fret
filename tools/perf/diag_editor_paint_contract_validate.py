@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shlex
 import subprocess
 import sys
@@ -92,11 +93,46 @@ def _default_launch_bin() -> str:
     return "target/release/fret-ui-gallery.exe"
 
 
+def _default_launch_cmd() -> list[str]:
+    return [
+        "cargo",
+        "run",
+        "-p",
+        "fret-ui-gallery",
+        "--release",
+        "--features",
+        "gallery-full",
+    ]
+
+
+def _launch_cmd_from_args(workspace_root: Path, args: argparse.Namespace) -> tuple[list[str], Path | None]:
+    launch_cmd_arg = getattr(args, "launch_cmd", None)
+    if isinstance(launch_cmd_arg, list):
+        launch_cmd = [str(token) for token in launch_cmd_arg if str(token)]
+        if not launch_cmd:
+            raise ValueError("--launch-cmd requires at least one token")
+        return launch_cmd, None
+    if isinstance(launch_cmd_arg, str) and launch_cmd_arg.strip():
+        try:
+            launch_cmd = shlex.split(launch_cmd_arg)
+        except ValueError as exc:
+            raise ValueError(f"invalid --launch-cmd: {exc}") from exc
+        if not launch_cmd:
+            raise ValueError("--launch-cmd requires at least one token")
+        return launch_cmd, None
+
+    launch_bin_raw = str(getattr(args, "launch_bin", "")).strip()
+    if launch_bin_raw:
+        launch_bin_path = _resolve_workspace_path(workspace_root, launch_bin_raw)
+        return [str(launch_bin_path)], launch_bin_path
+
+    return _default_launch_cmd(), None
+
+
 def _diag_perf_command(
     *,
     fretboard_bin: str,
-    launch_bin: str,
-    launch_cmd: list[str] | None,
+    launch_cmd: list[str],
     script: str,
     out_dir: str,
     repeat: int,
@@ -133,8 +169,7 @@ def _diag_perf_command(
         envs.append("FRET_CODE_EDITOR_DIAG_PAINT_PERF=1")
     for env in envs:
         cmd += ["--env", env]
-    cmd += ["--launch", "--"]
-    cmd.extend(launch_cmd or [launch_bin])
+    cmd += ["--launch", "--", *launch_cmd]
     return cmd
 
 
@@ -142,7 +177,7 @@ def build_plan(
     *,
     python_bin: str,
     fretboard_bin: str,
-    launch_bin: str,
+    launch_cmd: list[str],
     out_dir: str,
     resize_attempts: int,
     resize_repeat: int,
@@ -151,10 +186,8 @@ def build_plan(
     warmup_frames: int,
     skip_preflight: bool,
     with_paint_perf: bool,
-    launch_cmd: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     steps: list[dict[str, Any]] = []
-    resolved_launch_cmd = launch_cmd or [launch_bin]
     if not skip_preflight:
         steps.append(
             {
@@ -170,35 +203,31 @@ def build_plan(
             }
         )
 
-    resize_cmd = [
-        python_bin,
-        "tools/perf/diag_resize_probes_gate.py",
-        "--suite",
-        RESIZE_SUITE,
-        "--out-dir",
-        f"{out_dir}/resize-jitter",
-        "--baseline",
-        RESIZE_BASELINE,
-        "--fretboard-bin",
-        fretboard_bin,
-        "--attempts",
-        str(resize_attempts),
-        "--repeat",
-        str(resize_repeat),
-        "--warmup-frames",
-        str(warmup_frames),
-    ]
-    if launch_cmd is None:
-        resize_cmd += ["--launch-bin", launch_bin]
-    else:
-        resize_cmd += ["--launch-cmd", shlex.join(resolved_launch_cmd)]
-
     steps.append(
         {
             "name": "resize-jitter",
             "out_dir": f"{out_dir}/resize-jitter",
             "wants_stats": True,
-            "cmd": resize_cmd,
+            "cmd": [
+                python_bin,
+                "tools/perf/diag_resize_probes_gate.py",
+                "--suite",
+                RESIZE_SUITE,
+                "--out-dir",
+                f"{out_dir}/resize-jitter",
+                "--baseline",
+                RESIZE_BASELINE,
+                "--fretboard-bin",
+                fretboard_bin,
+                "--attempts",
+                str(resize_attempts),
+                "--repeat",
+                str(resize_repeat),
+                "--warmup-frames",
+                str(warmup_frames),
+                "--launch-cmd",
+                shlex.join(launch_cmd),
+            ],
         }
     )
     steps.append(
@@ -208,8 +237,7 @@ def build_plan(
             "wants_stats": True,
             "cmd": _diag_perf_command(
                 fretboard_bin=fretboard_bin,
-                launch_bin=launch_bin,
-                launch_cmd=resolved_launch_cmd,
+                launch_cmd=launch_cmd,
                 script=TYPICAL_SCRIPT,
                 out_dir=f"{out_dir}/typical-autoscroll",
                 repeat=typical_repeat,
@@ -226,8 +254,7 @@ def build_plan(
             "wants_stats": True,
             "cmd": _diag_perf_command(
                 fretboard_bin=fretboard_bin,
-                launch_bin=launch_bin,
-                launch_cmd=resolved_launch_cmd,
+                launch_cmd=launch_cmd,
                 script=COMPLEX_WHEEL_SCRIPT,
                 out_dir=f"{out_dir}/complex-wheel",
                 repeat=complex_repeat,
@@ -248,6 +275,130 @@ def _run_step(cmd: list[str], cwd: Path, stdout_path: Path, stderr_path: Path) -
         return int(p.returncode)
 
 
+def _process_int(row: dict[str, Any], key: str) -> int | None:
+    value = row.get(key)
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _process_command(row: dict[str, Any]) -> str:
+    value = row.get("CommandLine")
+    return str(value) if value is not None else ""
+
+
+def _process_name(row: dict[str, Any]) -> str:
+    value = row.get("Name")
+    return str(value).lower() if value is not None else ""
+
+
+def process_contaminates_editor_paint_validation(row: dict[str, Any], *, current_pid: int) -> bool:
+    pid = _process_int(row, "ProcessId")
+    if pid is None or pid == current_pid:
+        return False
+
+    name = _process_name(row)
+    cmd = _process_command(row).lower()
+
+    if name in {"fretboard-dev.exe", "fret-ui-gallery.exe"}:
+        return True
+    if name in {"cargo.exe", "cargo"} and "fret-ui-gallery" in cmd:
+        return True
+    if name in {"rustc.exe", "rustc"} and ("fret_ui_gallery" in cmd or "fret-ui-gallery" in cmd):
+        return True
+    if name in {"python.exe", "python", "python3.exe", "python3"} and "diag_editor_paint_contract_validate.py" in cmd:
+        return True
+    return False
+
+
+def find_concurrent_validation_processes(
+    rows: list[dict[str, Any]],
+    *,
+    current_pid: int,
+) -> list[dict[str, Any]]:
+    return [
+        row
+        for row in rows
+        if process_contaminates_editor_paint_validation(row, current_pid=current_pid)
+    ]
+
+
+def _process_snapshot_windows() -> tuple[list[dict[str, Any]], str | None]:
+    script = (
+        "$ErrorActionPreference = 'Stop'; "
+        "Get-CimInstance Win32_Process | "
+        "Select-Object ProcessId,ParentProcessId,Name,CommandLine | "
+        "ConvertTo-Json -Compress"
+    )
+    errors: list[str] = []
+    for exe in ["powershell", "pwsh"]:
+        try:
+            p = subprocess.run(
+                [exe, "-NoProfile", "-Command", script],
+                text=True,
+                capture_output=True,
+                timeout=10,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            errors.append(f"{exe}: {exc}")
+            continue
+        if p.returncode != 0:
+            errors.append(f"{exe}: {p.stderr.strip()}")
+            continue
+        stdout = p.stdout.strip()
+        if not stdout:
+            return [], None
+        try:
+            doc = json.loads(stdout)
+        except json.JSONDecodeError as exc:
+            return [], f"{exe}: cannot parse process snapshot JSON: {exc}"
+        if isinstance(doc, dict):
+            return [doc], None
+        if isinstance(doc, list):
+            return [row for row in doc if isinstance(row, dict)], None
+        return [], f"{exe}: process snapshot JSON must be an object or array"
+    return [], "; ".join(errors) if errors else "no process snapshot command available"
+
+
+def concurrent_validation_processes(*, current_pid: int) -> dict[str, Any]:
+    if not sys.platform.startswith("win"):
+        return {
+            "ok": True,
+            "skipped": True,
+            "reason": "non-windows host",
+            "processes": [],
+            "error": None,
+        }
+    rows, error = _process_snapshot_windows()
+    if error is not None:
+        return {
+            "ok": False,
+            "skipped": False,
+            "reason": "process snapshot failed",
+            "processes": [],
+            "error": error,
+        }
+    processes = find_concurrent_validation_processes(rows, current_pid=current_pid)
+    return {
+        "ok": not processes,
+        "skipped": False,
+        "reason": None,
+        "processes": processes,
+        "error": None,
+    }
+
+
+def _format_process_for_error(row: dict[str, Any]) -> str:
+    pid = _process_int(row, "ProcessId")
+    ppid = _process_int(row, "ParentProcessId")
+    name = row.get("Name")
+    cmd = _process_command(row).replace("\r", " ").replace("\n", " ")
+    if len(cmd) > 260:
+        cmd = cmd[:257] + "..."
+    return f"pid={pid} ppid={ppid} name={name} cmd={cmd}"
+
+
 def _validate_inputs(workspace_root: Path, args: argparse.Namespace) -> list[str]:
     missing: list[str] = []
     for rel in [
@@ -262,13 +413,12 @@ def _validate_inputs(workspace_root: Path, args: argparse.Namespace) -> list[str
         if not _resolve_workspace_path(workspace_root, rel).is_file():
             missing.append(rel)
     if not bool(args.dry_run):
-        launch_cmd_raw = str(args.launch_cmd).strip()
-        launch_refs = [str(args.fretboard_bin)]
-        if not launch_cmd_raw:
-            launch_refs.append(str(args.launch_bin))
-        for rel in launch_refs:
+        for rel in [str(args.fretboard_bin)]:
             if not _resolve_workspace_path(workspace_root, rel).is_file():
                 missing.append(rel)
+        launch_bin_raw = str(getattr(args, "launch_bin", "")).strip()
+        if launch_bin_raw and not _resolve_workspace_path(workspace_root, launch_bin_raw).is_file():
+            missing.append(launch_bin_raw)
     return missing
 
 
@@ -384,15 +534,21 @@ def main() -> int:
     ap.add_argument("--out-dir", default="")
     ap.add_argument("--python-bin", default=sys.executable)
     ap.add_argument("--fretboard-bin", default=_default_fretboard_bin())
-    ap.add_argument("--launch-bin", default=_default_launch_bin())
+    ap.add_argument(
+        "--launch-bin",
+        default="",
+        help=(
+            "Legacy direct binary launch. Prefer the default cargo launch, or pass --launch-cmd as "
+            "the final option, so fret-diag can prove required_launch_features."
+        ),
+    )
     ap.add_argument(
         "--launch-cmd",
         default="",
         help=(
-            "Full launch command to pass after `diag perf --launch --`. Use this when the "
-            "launch feature preflight must inspect a `cargo run ... --features ...` command. "
-            "When set, the launch command is split with shlex and --launch-bin is only used "
-            "for logging/fallback."
+            "Shell-like launch command forwarded after `diag perf --launch --`. Quote the whole "
+            "value when passing spaces. Defaults to `cargo run -p fret-ui-gallery --release "
+            "--features gallery-full`."
         ),
     )
     ap.add_argument("--resize-attempts", type=int, default=3)
@@ -434,6 +590,16 @@ def main() -> int:
             "evidence from stale dry-run or failed-run artifacts."
         ),
     )
+    ap.add_argument(
+        "--allow-concurrent-fret-processes",
+        action="store_true",
+        default=False,
+        help=(
+            "Allow the formal validation run to proceed even when other Fret/Gallery/Cargo "
+            "processes are already running. Use only for debugging; closeout evidence should "
+            "come from a clean machine."
+        ),
+    )
     ap.add_argument("--keep-going", action="store_true", default=False)
     args = ap.parse_args()
 
@@ -447,6 +613,11 @@ def main() -> int:
     workspace_root = _workspace_root()
     out_dir = str(args.out_dir).strip() or _default_out_dir(str(args.date_tag))
     out_dir_path = _resolve_workspace_path(workspace_root, out_dir)
+    try:
+        launch_cmd, launch_bin_path = _launch_cmd_from_args(workspace_root, args)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     if (
         str(args.target_profile) == TARGET_PROFILE
@@ -460,9 +631,6 @@ def main() -> int:
             file=sys.stderr,
         )
         return 2
-
-    launch_cmd_raw = str(args.launch_cmd).strip()
-    launch_cmd = shlex.split(launch_cmd_raw) if launch_cmd_raw else None
 
     missing = _validate_inputs(workspace_root, args)
     if missing:
@@ -484,10 +652,33 @@ def main() -> int:
         )
         return 2
 
+    if not bool(args.dry_run) and not bool(args.allow_concurrent_fret_processes):
+        concurrent = concurrent_validation_processes(current_pid=os.getpid())
+        if concurrent.get("error"):
+            print(
+                "error: cannot verify that the target machine is clean for editor paint validation:",
+                file=sys.stderr,
+            )
+            print(f"  {concurrent['error']}", file=sys.stderr)
+            print("  pass --allow-concurrent-fret-processes only for non-closeout debugging", file=sys.stderr)
+            return 2
+        processes = concurrent.get("processes")
+        if isinstance(processes, list) and processes:
+            print(
+                "error: concurrent Fret/Gallery processes would contaminate editor paint validation:",
+                file=sys.stderr,
+            )
+            for row in processes[:12]:
+                if isinstance(row, dict):
+                    print(f"  - {_format_process_for_error(row)}", file=sys.stderr)
+            if len(processes) > 12:
+                print(f"  - ... {len(processes) - 12} more", file=sys.stderr)
+            print("  stop the other run, or pass --allow-concurrent-fret-processes for debugging only", file=sys.stderr)
+            return 2
+
     plan = build_plan(
         python_bin=str(args.python_bin),
         fretboard_bin=str(args.fretboard_bin),
-        launch_bin=str(args.launch_bin),
         launch_cmd=launch_cmd,
         out_dir=out_dir,
         resize_attempts=int(args.resize_attempts),
@@ -510,7 +701,8 @@ def main() -> int:
             "target_profile": str(args.target_profile),
             "date_tag": str(args.date_tag),
             "out_dir": out_dir,
-            "launch_cmd": launch_cmd if launch_cmd is not None else [str(args.launch_bin)],
+            "launch_bin": str(launch_bin_path) if launch_bin_path is not None else None,
+            "launch_cmd": launch_cmd,
             "with_paint_perf": bool(args.with_paint_perf),
             "stats_enabled": not bool(args.skip_stats),
             "steps": plan,
@@ -618,7 +810,8 @@ def main() -> int:
         "target_profile": str(args.target_profile),
         "date_tag": str(args.date_tag),
         "out_dir": str(out_dir_path),
-        "launch_cmd": launch_cmd if launch_cmd is not None else [str(args.launch_bin)],
+        "launch_bin": str(launch_bin_path) if launch_bin_path is not None else None,
+        "launch_cmd": launch_cmd,
         "with_paint_perf": bool(args.with_paint_perf),
         "stats_enabled": not bool(args.skip_stats),
         "steps": step_results,

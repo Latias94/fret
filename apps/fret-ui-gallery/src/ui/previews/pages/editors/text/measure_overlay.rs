@@ -60,16 +60,6 @@ pub(in crate::ui) fn preview_text_measure_overlay(
         },
     ];
 
-    #[derive(Default)]
-    struct MeasureOverlayState {
-        last_metrics: Vec<Option<fret_core::TextMetrics>>,
-    }
-
-    let state = cx.slot_state(
-        || std::rc::Rc::new(std::cell::RefCell::new(MeasureOverlayState::default())),
-        |st| st.clone(),
-    );
-
     let header = ui::v_flex(|cx| {
         vec![
             cx.text("Goal: visualize measured text bounds vs allocated container bounds."),
@@ -100,8 +90,6 @@ pub(in crate::ui) fn preview_text_measure_overlay(
             canvas.layout.overflow = fret_ui::element::Overflow::Clip;
             canvas.cache_policy = fret_ui::element::CanvasCachePolicy::smooth_default();
 
-            let paint_state = state.clone();
-
             let canvas = cx.canvas(canvas, move |p| {
                 let bounds = p.bounds();
                 let pad = Px(14.0);
@@ -130,11 +118,6 @@ pub(in crate::ui) fn preview_text_measure_overlay(
                 let scale = p.scale_factor();
                 let mut y = outer.origin.y;
                 let scope = p.key_scope(&"text_measure_overlay");
-
-                let mut st = paint_state.borrow_mut();
-                if st.last_metrics.len() < CASES.len() {
-                    st.last_metrics.resize(CASES.len(), None);
-                }
 
                 for (i, case) in CASES.iter().enumerate() {
                     let case_rect = Rect::new(
@@ -205,27 +188,28 @@ pub(in crate::ui) fn preview_text_measure_overlay(
                         size: Px(16.0),
                         ..Default::default()
                     };
-
-                    let baseline_y = match st.last_metrics[i] {
-                        Some(m) => text_box.origin.y + m.baseline,
-                        None => text_box.origin.y + Px(text_style.size.0 * 0.8),
+                    let constraints = fret_ui::canvas::CanvasTextConstraints {
+                        max_width: Some(text_box.size.width),
+                        wrap: case.wrap,
+                        overflow: case.overflow,
                     };
-
-                    let metrics = p.text(
-                        p.child_key(scope, &format!("text_{i}")).0,
-                        DrawOrder(2),
-                        Point::new(text_box.origin.x, baseline_y),
+                    let text_key = p.child_key(scope, &format!("text_{i}")).0;
+                    let (blob, metrics) = p.prepare_text_with_blob(
+                        text_key,
                         case.text,
                         text_style,
-                        fg,
-                        fret_ui::canvas::CanvasTextConstraints {
-                            max_width: Some(text_box.size.width),
-                            wrap: case.wrap,
-                            overflow: case.overflow,
-                        },
+                        constraints,
                         scale,
                     );
-                    st.last_metrics[i] = Some(metrics);
+                    let baseline_y = text_box.origin.y + metrics.baseline;
+                    p.scene().push(SceneOp::Text {
+                        order: DrawOrder(2),
+                        origin: Point::new(text_box.origin.x, baseline_y),
+                        text: blob,
+                        paint: fret_core::Paint::Solid(fg).into(),
+                        outline: None,
+                        shadow: None,
+                    });
 
                     // Baseline.
                     p.scene().push(SceneOp::Quad {

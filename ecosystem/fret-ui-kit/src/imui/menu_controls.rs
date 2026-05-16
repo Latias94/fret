@@ -4,7 +4,6 @@ use std::sync::Arc;
 
 use fret_core::{Edges, KeyCode, Modifiers, Px, SemanticsRole};
 use fret_runtime::ActionId;
-use fret_ui::UiHost;
 use fret_ui::action::ActivateReason;
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::{
@@ -13,6 +12,7 @@ use fret_ui::element::{
     TextProps,
 };
 use fret_ui::elements::GlobalElementId;
+use fret_ui::{ElementContext, UiHost};
 
 use super::label_identity::parse_label_identity;
 use super::{MenuItemOptions, ResponseExt, UiWriterImUiFacadeExt};
@@ -132,6 +132,10 @@ fn noop_menu_item_pressable_hook<H: UiHost>(
 ) {
 }
 
+fn menu_item_label_text<H: UiHost>(cx: &mut ElementContext<'_, H>, label: Arc<str>) -> AnyElement {
+    crate::declarative::text::text_list_row_label(cx, label)
+}
+
 fn menu_item_impl_with_pressable_hook<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized, F>(
     ui: &mut W,
     label: Arc<str>,
@@ -235,12 +239,7 @@ where
                     if let Some(indicator) = indicator.clone() {
                         out.push(cx.text(indicator));
                     }
-                    let mut label_props = TextProps::new(label_for_visuals.clone());
-                    label_props.layout.size.width = Length::Fill;
-                    label_props.layout.flex.shrink = 1.0;
-                    label_props.wrap = fret_core::TextWrap::None;
-                    label_props.overflow = fret_core::TextOverflow::Ellipsis;
-                    out.push(cx.text_props(label_props));
+                    out.push(menu_item_label_text(cx, label_for_visuals.clone()));
 
                     if let Some(shortcut) = shortcut.clone() {
                         out.push(cx.spacer(SpacerProps::default()));
@@ -458,4 +457,44 @@ where
 
     ui.add(element);
     response
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size, TextOverflow, TextWrap};
+    use fret_ui::element::ElementKind;
+    use fret_ui::elements;
+
+    fn test_bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(160.0)),
+        )
+    }
+
+    #[test]
+    fn menu_item_label_text_uses_shared_list_row_text_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+            menu_item_label_text(cx, Arc::from("Open very long recent project path"))
+        });
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected menu item label to be text");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(el.inherited_text_style.is_some());
+    }
 }

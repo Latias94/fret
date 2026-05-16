@@ -242,6 +242,158 @@ fn toast_layer_close_button_has_a11y_label() {
 }
 
 #[test]
+fn toast_action_and_cancel_labels_are_exposed_in_semantics_snapshot() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices::default();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(400.0), Px(240.0)),
+    );
+
+    begin_frame(&mut app, window);
+    let base = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "base",
+        |_cx| Vec::new(),
+    );
+    ui.set_root(base);
+
+    let store = toast_store(&mut app);
+    let _ = toast_action(
+        &mut UiActionHostAdapter { app: &mut app },
+        store.clone(),
+        window,
+        ToastRequest::new("Hello")
+            .close_button(false)
+            .action(ToastAction::new("Undo", "toast.undo"))
+            .cancel(ToastAction::new("Cancel", "toast.cancel")),
+    );
+
+    begin_frame(&mut app, window);
+    let viewport_id = GlobalElementId(0xbeef);
+    request_toast_layer_for_window(
+        &mut app,
+        window,
+        ToastLayerRequest::new(viewport_id, store.clone()).style({
+            let mut style = ToastLayerStyle::default();
+            style.open_ticks = 0;
+            style.close_ticks = 0;
+            style.slide_distance = Px(0.0);
+            style
+        }),
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+    let button_labels: Vec<_> = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == fret_core::SemanticsRole::Button)
+        .filter_map(|n| n.label.as_deref())
+        .collect();
+    assert!(
+        button_labels.contains(&"Undo"),
+        "expected toast action button semantics label=Undo, got {button_labels:?}",
+    );
+    assert!(
+        button_labels.contains(&"Cancel"),
+        "expected toast cancel button semantics label=Cancel, got {button_labels:?}",
+    );
+}
+
+#[test]
+fn toast_layers_scope_named_toasts_to_matching_toaster_id() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices::default();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(800.0), Px(600.0)),
+    );
+
+    begin_frame(&mut app, window);
+    let base = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "base",
+        |_cx| Vec::new(),
+    );
+    ui.set_root(base);
+
+    let store = toast_store(&mut app);
+    let mut host = UiActionHostAdapter { app: &mut app };
+    let _ = toast_action(
+        &mut host,
+        store.clone(),
+        window,
+        ToastRequest::new("Global")
+            .duration(None)
+            .test_id("toast-global"),
+    );
+    let _ = toast_action(
+        &mut host,
+        store.clone(),
+        window,
+        ToastRequest::new("Local")
+            .duration(None)
+            .toaster_id("local")
+            .test_id("toast-local"),
+    );
+
+    begin_frame(&mut app, window);
+    let mut style = ToastLayerStyle::default();
+    style.open_ticks = 0;
+    style.close_ticks = 0;
+    style.slide_distance = Px(0.0);
+    request_toast_layer_for_window(
+        &mut app,
+        window,
+        ToastLayerRequest::new(GlobalElementId(0x100), store.clone())
+            .position(ToastPosition::TopCenter)
+            .style(style.clone()),
+    );
+    request_toast_layer_for_window(
+        &mut app,
+        window,
+        ToastLayerRequest::new(GlobalElementId(0x200), store.clone())
+            .position(ToastPosition::TopCenter)
+            .toaster_id_opt(Some(Arc::from("local")))
+            .style(style),
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+    let count_test_id = |test_id: &str| {
+        snap.nodes
+            .iter()
+            .filter(|n| n.test_id.as_deref() == Some(test_id))
+            .count()
+    };
+    assert_eq!(count_test_id("toast-global"), 1);
+    assert_eq!(count_test_id("toast-local"), 1);
+}
+
+#[test]
 fn toast_request_can_disable_close_button() {
     let window = AppWindowId::default();
     let mut app = App::new();

@@ -246,3 +246,10 @@ Conventions:
       Evidence: the same gate validates the DevTools authoring-loop guidance, the GUI default
       selector kind, the `test_id` selector option, the UI-gallery preferred selector, and the
       gated `devtools.gate.test_id` input.
+- [x] Keep the first-open shell summary-first instead of a raw command wall.
+      Maintenance: `apps/fret-devtools/src/native.rs` now renders a `First-open Next Actions`
+      summary in the shell header, defaults `Evidence & Results` to `Guide`, and keeps the full
+      first-open, dogfood, demo/metrics/debug, and gate-command references inside that Guide tab.
+      Source and discovery gates now cover that posture through
+      `devtools_first_open_next_action_lines_prioritize_stateful_workflow` and
+      `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`.

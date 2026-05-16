@@ -112,6 +112,8 @@ thread_local! {
 
 const DIAG_CLIPBOARD_TOKEN_NAMESPACE: u64 = 1u64 << 63;
 const REAL_PERF_SPANS_EXTENSION_KEY_V1: &str = "fret.perf.spans.v1";
+const REAL_PERF_SPAN_DIAGNOSTICS_SNAPSHOT: &str = "fret.ui.diagnostics.snapshot";
+const REAL_PERF_SPAN_SOURCE_DIAGNOSTICS_SERVICE: &str = "ui_diagnostics_service";
 
 fn infer_pointer_source_test_id_from_semantics(
     window: AppWindowId,
@@ -140,6 +142,31 @@ fn real_perf_spans_extension_value_v1(
             "frame_id": frame_id,
             "spans": spans,
         })
+    })
+}
+
+fn real_perf_span_v1(
+    name: &str,
+    phase: &str,
+    source: &str,
+    start_us: u64,
+    duration: Duration,
+) -> Option<UiPerfSpanV1> {
+    let mut dur_us = duration_micros_u64(duration);
+    if dur_us == 0 && duration == Duration::ZERO {
+        return None;
+    }
+    dur_us = dur_us.max(1);
+    Some(UiPerfSpanV1 {
+        name: name.to_string(),
+        cat: "ui.driver".to_string(),
+        start_us,
+        dur_us,
+        tid: None,
+        args: Some(serde_json::json!({
+            "phase": phase,
+            "source": source,
+        })),
     })
 }
 
@@ -816,6 +843,8 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::SetWindowInnerSize { window, .. }
                 | UiActionStepV2::SetWindowStyle { window, .. }
                 | UiActionStepV2::SetWindowOuterPosition { window, .. }
+                | UiActionStepV2::SetWindowInsets { window, .. }
+                | UiActionStepV2::SetWindowPreferences { window, .. }
                 | UiActionStepV2::SetCursorInWindow { window, .. }
                 | UiActionStepV2::SetCursorInWindowLogical { window, .. }
                 | UiActionStepV2::SetMouseButtons { window, .. }
@@ -1266,11 +1295,13 @@ impl UiDiagnosticsService {
         scale_factor: f32,
         ui: &mut UiTree<App>,
         element_runtime: Option<&ElementRuntime>,
+        real_perf_span_start_us: Option<u64>,
         scene: &Scene,
     ) {
         if !self.is_enabled() {
             return;
         }
+        let snapshot_start = real_perf_span_start_us.map(|start_us| (start_us, Instant::now()));
         self.sync_runner_monitor_topology_from_app(app);
         self.refresh_environment_source_files();
         if self.cfg.simulate_no_frames {
@@ -1396,7 +1427,7 @@ impl UiDiagnosticsService {
             ring.test_id_bounds_fingerprint = None;
         }
         let viewport_input = std::mem::take(&mut ring.viewport_input_this_frame);
-        let real_perf_spans = std::mem::take(&mut ring.real_perf_spans_this_frame);
+        let mut real_perf_spans = std::mem::take(&mut ring.real_perf_spans_this_frame);
 
         let changed_models = std::mem::take(&mut ring.last_changed_models);
         let changed_model_sources_top =
@@ -1447,6 +1478,17 @@ impl UiDiagnosticsService {
             );
             debug
         };
+        if let Some((start_us, snapshot_started)) = snapshot_start
+            && let Some(span) = real_perf_span_v1(
+                REAL_PERF_SPAN_DIAGNOSTICS_SNAPSHOT,
+                "diagnostics_snapshot",
+                REAL_PERF_SPAN_SOURCE_DIAGNOSTICS_SERVICE,
+                start_us,
+                snapshot_started.elapsed(),
+            )
+        {
+            real_perf_spans.push(span);
+        }
         if let Some(value) = real_perf_spans_extension_value_v1(app.frame_id().0, real_perf_spans) {
             extensions
                 .get_or_insert_with(Default::default)
@@ -1994,6 +2036,112 @@ mod service_tests {
         assert_eq!(
             span.pointer("/args/phase").and_then(|v| v.as_str()),
             Some("view")
+        );
+    }
+
+    #[test]
+    fn record_snapshot_includes_recorded_real_perf_spans_extension() {
+        let window = app_window(1);
+        let app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let scene = Scene::default();
+        let mut svc = UiDiagnosticsService::default();
+        svc.cfg.enabled = true;
+
+        let mut capture = UiRealPerfSpanCaptureV1::new_for_test(Instant::now());
+        capture.push_phase(
+            "fret.ui.view",
+            "view",
+            "service_test",
+            0,
+            Duration::from_micros(12),
+        );
+        capture.record_for_window(&mut svc, window);
+
+        svc.record_snapshot(
+            &app,
+            window,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                fret_core::Size::new(Px(100.0), Px(100.0)),
+            ),
+            1.0,
+            &mut ui,
+            None,
+            None,
+            &scene,
+        );
+
+        let extension = svc
+            .per_window
+            .get(&window)
+            .and_then(|ring| ring.snapshots.back())
+            .and_then(|snapshot| snapshot.debug.extensions.as_ref())
+            .and_then(|extensions| extensions.get(REAL_PERF_SPANS_EXTENSION_KEY_V1))
+            .expect("real perf spans extension");
+        assert_eq!(
+            extension.pointer("/spans/0/name").and_then(|v| v.as_str()),
+            Some("fret.ui.view")
+        );
+        assert_eq!(
+            extension.pointer("/spans/0/args/source").and_then(|v| v.as_str()),
+            Some("service_test")
+        );
+    }
+
+    #[test]
+    fn record_snapshot_includes_diagnostics_snapshot_span_at_frame_relative_start() {
+        let window = app_window(1);
+        let app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let scene = Scene::default();
+        let mut svc = UiDiagnosticsService::default();
+        svc.cfg.enabled = true;
+
+        svc.record_snapshot(
+            &app,
+            window,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                fret_core::Size::new(Px(100.0), Px(100.0)),
+            ),
+            1.0,
+            &mut ui,
+            None,
+            Some(321),
+            &scene,
+        );
+
+        let extension = svc
+            .per_window
+            .get(&window)
+            .and_then(|ring| ring.snapshots.back())
+            .and_then(|snapshot| snapshot.debug.extensions.as_ref())
+            .and_then(|extensions| extensions.get(REAL_PERF_SPANS_EXTENSION_KEY_V1))
+            .expect("real perf spans extension");
+        assert_eq!(
+            extension.pointer("/spans/0/name").and_then(|v| v.as_str()),
+            Some(REAL_PERF_SPAN_DIAGNOSTICS_SNAPSHOT)
+        );
+        assert_eq!(
+            extension.pointer("/spans/0/start_us").and_then(|v| v.as_u64()),
+            Some(321)
+        );
+        assert!(
+            extension
+                .pointer("/spans/0/dur_us")
+                .and_then(|v| v.as_u64())
+                .is_some_and(|dur| dur > 0)
+        );
+        assert_eq!(
+            extension.pointer("/spans/0/args/source").and_then(|v| v.as_str()),
+            Some(REAL_PERF_SPAN_SOURCE_DIAGNOSTICS_SERVICE)
+        );
+        assert_eq!(
+            extension.pointer("/spans/0/args/phase").and_then(|v| v.as_str()),
+            Some("diagnostics_snapshot")
         );
     }
 

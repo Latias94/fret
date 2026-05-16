@@ -1,10 +1,10 @@
 #![cfg(feature = "imui")]
 
-use fret_core::Px;
+use fret_core::{Color, Px};
 use fret_ui::UiHost;
 use fret_ui_kit::imui::{
-    TableColumn, TableColumnWidth, TableOptions, TableRowOptions, TableSortDirection,
-    UiWriterImUiFacadeExt,
+    TableCellOptions, TableColumn, TableColumnWidth, TableOptions, TableRowOptions,
+    TableSortDirection, UiWriterImUiFacadeExt,
 };
 
 #[allow(dead_code)]
@@ -19,9 +19,15 @@ fn table_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
         table.row("alpha", |row| {
             row.cell_text("Alpha");
             row.cell_text("Folder");
-            row.cell(|ui| {
-                let _ = ui.button("Open");
-            });
+            row.cell_with_options(
+                TableCellOptions {
+                    background: Some(Color::from_srgb_hex_rgb(0x101820)),
+                    ..Default::default()
+                },
+                |ui| {
+                    let _ = ui.button("Open");
+                },
+            );
         });
     });
     let _ = response.headers();
@@ -39,10 +45,17 @@ fn table_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
                 "beta",
                 TableRowOptions {
                     test_id: Some("table.row.beta".into()),
+                    background: Some(Color::from_srgb_hex_rgb(0x201010)),
                 },
                 |row| {
                     row.cell_text("Beta");
-                    row.cell_text("Queue");
+                    row.cell_text_with_options(
+                        "Queue",
+                        TableCellOptions {
+                            test_id: Some("table.cell.kind".into()),
+                            background: Some(Color::from_srgb_hex_rgb(0x102020)),
+                        },
+                    );
                     row.cell_text("42");
                 },
             );
@@ -58,6 +71,14 @@ fn table_option_defaults_compile() {
     assert!(!options.striped);
     assert!(options.clip_cells);
     assert!(options.test_id.is_none());
+
+    let row_options = TableRowOptions::default();
+    assert!(row_options.test_id.is_none());
+    assert!(row_options.background.is_none());
+
+    let cell_options = TableCellOptions::default();
+    assert!(cell_options.test_id.is_none());
+    assert!(cell_options.background.is_none());
 }
 
 #[test]
@@ -66,6 +87,7 @@ fn table_column_helpers_compile() {
     assert_eq!(fill.header.as_deref(), Some("Name"));
     assert_eq!(fill.id.as_deref(), Some("Name"));
     assert_eq!(fill.width, TableColumnWidth::Fill(1.0));
+    assert!(fill.visible);
     assert!(!fill.sortable);
     assert_eq!(fill.sort_direction, None);
     assert!(fill.resize.is_none());
@@ -74,6 +96,7 @@ fn table_column_helpers_compile() {
     assert_eq!(weighted.header.as_deref(), Some("Kind"));
     assert_eq!(weighted.id.as_deref(), Some("Kind"));
     assert_eq!(weighted.width, TableColumnWidth::Fill(2.5));
+    assert!(weighted.visible);
     assert!(!weighted.sortable);
     assert_eq!(weighted.sort_direction, None);
     assert!(weighted.resize.is_none());
@@ -82,6 +105,7 @@ fn table_column_helpers_compile() {
     assert_eq!(px.header.as_deref(), Some("State"));
     assert_eq!(px.id.as_deref(), Some("State"));
     assert_eq!(px.width, TableColumnWidth::Px(Px(96.0)));
+    assert!(px.visible);
     assert!(!px.sortable);
     assert_eq!(px.sort_direction, None);
     assert!(px.resize.is_none());
@@ -100,6 +124,16 @@ fn table_column_helpers_compile() {
     let unlabeled = TableColumn::unlabeled(TableColumnWidth::px(Px(72.0))).with_id("actions");
     assert_eq!(unlabeled.header, None);
     assert_eq!(unlabeled.id.as_deref(), Some("actions"));
+}
+
+#[test]
+fn table_column_visibility_helpers_compile() {
+    let hidden = TableColumn::px("Internal###internal", Px(64.0)).hidden();
+    assert_eq!(hidden.id.as_deref(), Some("internal"));
+    assert!(!hidden.visible);
+
+    let visible_again = hidden.with_visible(true);
+    assert!(visible_again.visible);
 }
 
 #[test]

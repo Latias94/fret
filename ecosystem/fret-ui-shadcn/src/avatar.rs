@@ -16,32 +16,10 @@ use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui,
 };
 
-use crate::test_id::attach_test_id;
-
-const AVATAR_BADGE_MARKER_PREFIX: &str = "fret-ui-shadcn.avatar-badge";
-
-fn matches_marker(test_id: &str, prefix: &str) -> bool {
-    test_id == prefix
-        || (test_id.starts_with(prefix)
-            && test_id
-                .as_bytes()
-                .get(prefix.len())
-                .is_some_and(|b| *b == b':'))
-}
+const AVATAR_BADGE_SLOT: &str = "fret-ui-shadcn.avatar-badge";
 
 fn is_avatar_badge_marker(element: &AnyElement) -> bool {
-    element
-        .semantics_decoration
-        .as_ref()
-        .and_then(|d| d.test_id.as_deref())
-        .is_some_and(|id| matches_marker(id, AVATAR_BADGE_MARKER_PREFIX))
-        || match &element.kind {
-            ElementKind::Semantics(props) => props
-                .test_id
-                .as_deref()
-                .is_some_and(|id| matches_marker(id, AVATAR_BADGE_MARKER_PREFIX)),
-            _ => false,
-        }
+    element.component_slot.as_deref() == Some(AVATAR_BADGE_SLOT)
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -323,8 +301,7 @@ impl AvatarBadge {
             )]
         });
 
-        let marker: Arc<str> = Arc::from(format!("{}:{}", AVATAR_BADGE_MARKER_PREFIX, el.id.0));
-        attach_test_id(el, marker)
+        el.component_slot(AVATAR_BADGE_SLOT)
     }
 }
 
@@ -982,6 +959,14 @@ mod tests {
 
             let default_el = AvatarBadge::new().into_element(cx);
             assert_eq!(badge_box_px(&default_el), Px(10.0));
+            assert!(is_avatar_badge_marker(&default_el));
+            assert!(
+                default_el
+                    .semantics_decoration
+                    .as_ref()
+                    .is_none_or(|d| d.test_id.is_none()),
+                "AvatarBadge structural slot must not be exported as a diagnostics test_id",
+            );
 
             let inherited_sm_el = with_avatar_size_provider(cx, AvatarSize::Sm, |cx| {
                 AvatarBadge::new().into_element(cx)

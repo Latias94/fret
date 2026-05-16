@@ -28,7 +28,7 @@ use std::sync::{Mutex, OnceLock};
 use fret_core::time::{Duration, Instant};
 
 #[cfg(feature = "diagnostics")]
-use crate::ui_diagnostics::{UiDiagnosticsService, UiPerfSpanV1};
+use crate::ui_diagnostics::{UiDiagnosticsService, UiRealPerfSpanCaptureV1};
 
 pub type ViewElements = Elements;
 
@@ -1995,63 +1995,7 @@ impl UiDriverPhase {
 }
 
 #[cfg(feature = "diagnostics")]
-#[derive(Debug)]
-struct UiDriverPerfSpanCapture {
-    frame_start: Instant,
-    spans: Vec<UiPerfSpanV1>,
-}
-
-#[cfg(feature = "diagnostics")]
-impl UiDriverPerfSpanCapture {
-    fn new_if_enabled() -> Option<Self> {
-        diag_real_perf_spans_enabled().then(|| Self {
-            frame_start: Instant::now(),
-            spans: Vec::with_capacity(7),
-        })
-    }
-
-    fn take_spans(&mut self) -> Vec<UiPerfSpanV1> {
-        std::mem::take(&mut self.spans)
-    }
-
-    fn push_phase(&mut self, phase: UiDriverPhase, start_us: u64, duration: Duration) {
-        let dur_us = duration_micros_u64(duration);
-        if dur_us == 0 {
-            return;
-        }
-        self.spans.push(UiPerfSpanV1 {
-            name: phase.perf_span_name().to_string(),
-            cat: "ui.driver".to_string(),
-            start_us,
-            dur_us,
-            tid: None,
-            args: Some(serde_json::json!({
-                "phase": phase.perf_span_phase(),
-                "source": "ui_app_driver",
-            })),
-        });
-    }
-}
-
-#[cfg(feature = "diagnostics")]
-fn diag_real_perf_spans_enabled() -> bool {
-    std::env::var_os("FRET_DIAG_REAL_SPANS").is_some_and(|value| {
-        let value = value.to_string_lossy();
-        let value = value.trim();
-        if value.is_empty() {
-            return false;
-        }
-        !matches!(
-            value.to_ascii_lowercase().as_str(),
-            "0" | "false" | "off" | "no"
-        )
-    })
-}
-
-#[cfg(feature = "diagnostics")]
-fn duration_micros_u64(duration: Duration) -> u64 {
-    duration.as_micros().min(u64::MAX as u128) as u64
-}
+type UiDriverPerfSpanCapture = UiRealPerfSpanCaptureV1;
 
 fn measure_ui_driver_phase<T>(
     phase: UiDriverPhase,
@@ -2084,13 +2028,19 @@ fn measure_ui_driver_phase_for_frame_with_capture<T>(
 ) -> (T, Option<Duration>) {
     let capture_start_us = capture
         .as_ref()
-        .map(|capture| duration_micros_u64(capture.frame_start.elapsed()));
+        .map(UiDriverPerfSpanCapture::frame_elapsed_us);
     let (out, elapsed) =
         measure_ui_driver_phase(phase, time_enabled || capture.is_some(), || f(capture));
     if let (Some(capture), Some(start_us), Some(elapsed)) =
         (capture.as_mut(), capture_start_us, elapsed)
     {
-        capture.push_phase(phase, start_us, elapsed);
+        capture.push_phase(
+            phase.perf_span_name(),
+            phase.perf_span_phase(),
+            "ui_app_driver",
+            start_us,
+            elapsed,
+        );
     }
     (out, elapsed)
 }
@@ -2603,12 +2553,13 @@ fn ui_app_render<S>(
             },
         );
 
-        let mut real_perf_spans = perf_span_capture
-            .as_mut()
-            .map(UiDriverPerfSpanCapture::take_spans)
-            .unwrap_or_default();
         app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            svc.record_perf_spans_v1(window, std::mem::take(&mut real_perf_spans));
+            let real_perf_span_start_us = perf_span_capture
+                .as_ref()
+                .map(UiDriverPerfSpanCapture::frame_elapsed_us);
+            if let Some(capture) = perf_span_capture.as_mut() {
+                capture.record_for_window(svc, window);
+            }
             let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
             svc.record_snapshot(
                 app,
@@ -2617,6 +2568,7 @@ fn ui_app_render<S>(
                 scale_factor,
                 &mut state.ui,
                 element_runtime,
+                real_perf_span_start_us,
                 scene,
             );
             let defer_dump_until_renderer_perf =
@@ -3151,12 +3103,15 @@ mod tests {
     #[cfg(feature = "diagnostics")]
     #[test]
     fn perf_span_capture_records_frame_relative_driver_phase() {
-        let mut capture = UiDriverPerfSpanCapture {
-            frame_start: Instant::now(),
-            spans: Vec::new(),
-        };
+        let mut capture = UiDriverPerfSpanCapture::new_for_test(Instant::now());
 
-        capture.push_phase(UiDriverPhase::View, 12, Duration::from_micros(34));
+        capture.push_phase(
+            UiDriverPhase::View.perf_span_name(),
+            UiDriverPhase::View.perf_span_phase(),
+            "ui_app_driver",
+            12,
+            Duration::from_micros(34),
+        );
 
         let spans = capture.take_spans();
         assert_eq!(spans.len(), 1);
@@ -3176,14 +3131,49 @@ mod tests {
 
     #[cfg(feature = "diagnostics")]
     #[test]
-    fn perf_span_capture_records_diagnostics_drive_script_phase() {
-        let mut capture = UiDriverPerfSpanCapture {
-            frame_start: Instant::now(),
-            spans: Vec::new(),
-        };
+    fn perf_span_capture_preserves_sub_microsecond_phase() {
+        let mut capture = UiDriverPerfSpanCapture::new_for_test(Instant::now());
 
         capture.push_phase(
-            UiDriverPhase::DiagnosticsDriveScript,
+            UiDriverPhase::View.perf_span_name(),
+            UiDriverPhase::View.perf_span_phase(),
+            "ui_app_driver",
+            0,
+            Duration::from_nanos(1),
+        );
+
+        let spans = capture.take_spans();
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0].name, "fret.ui.view");
+        assert_eq!(spans[0].dur_us, 1);
+    }
+
+    #[cfg(feature = "diagnostics")]
+    #[test]
+    fn perf_span_capture_ignores_zero_duration_phase() {
+        let mut capture = UiDriverPerfSpanCapture::new_for_test(Instant::now());
+
+        capture.push_phase(
+            UiDriverPhase::View.perf_span_name(),
+            UiDriverPhase::View.perf_span_phase(),
+            "ui_app_driver",
+            0,
+            Duration::ZERO,
+        );
+
+        let spans = capture.take_spans();
+        assert!(spans.is_empty());
+    }
+
+    #[cfg(feature = "diagnostics")]
+    #[test]
+    fn perf_span_capture_records_diagnostics_drive_script_phase() {
+        let mut capture = UiDriverPerfSpanCapture::new_for_test(Instant::now());
+
+        capture.push_phase(
+            UiDriverPhase::DiagnosticsDriveScript.perf_span_name(),
+            UiDriverPhase::DiagnosticsDriveScript.perf_span_phase(),
+            "ui_app_driver",
             56,
             Duration::from_micros(78),
         );
@@ -3207,13 +3197,12 @@ mod tests {
     #[cfg(feature = "diagnostics")]
     #[test]
     fn perf_span_capture_records_view_preferences_overlay_phase() {
-        let mut capture = UiDriverPerfSpanCapture {
-            frame_start: Instant::now(),
-            spans: Vec::new(),
-        };
+        let mut capture = UiDriverPerfSpanCapture::new_for_test(Instant::now());
 
         capture.push_phase(
-            UiDriverPhase::ViewPreferencesOverlay,
+            UiDriverPhase::ViewPreferencesOverlay.perf_span_name(),
+            UiDriverPhase::ViewPreferencesOverlay.perf_span_phase(),
+            "ui_app_driver",
             89,
             Duration::from_micros(123),
         );
@@ -3237,13 +3226,12 @@ mod tests {
     #[cfg(all(feature = "diagnostics", feature = "ui-app-command-palette"))]
     #[test]
     fn perf_span_capture_records_view_command_palette_overlay_phase() {
-        let mut capture = UiDriverPerfSpanCapture {
-            frame_start: Instant::now(),
-            spans: Vec::new(),
-        };
+        let mut capture = UiDriverPerfSpanCapture::new_for_test(Instant::now());
 
         capture.push_phase(
-            UiDriverPhase::ViewCommandPaletteOverlay,
+            UiDriverPhase::ViewCommandPaletteOverlay.perf_span_name(),
+            UiDriverPhase::ViewCommandPaletteOverlay.perf_span_phase(),
+            "ui_app_driver",
             177,
             Duration::from_micros(211),
         );
@@ -3267,10 +3255,7 @@ mod tests {
     #[cfg(feature = "diagnostics")]
     #[test]
     fn perf_span_capture_allows_nested_phase_recording() {
-        let mut capture = Some(UiDriverPerfSpanCapture {
-            frame_start: Instant::now(),
-            spans: Vec::new(),
-        });
+        let mut capture = Some(UiDriverPerfSpanCapture::new_for_test(Instant::now()));
 
         let (value, _) = measure_ui_driver_phase_for_frame_with_capture(
             &mut capture,
@@ -3278,7 +3263,9 @@ mod tests {
             false,
             |capture| {
                 capture.as_mut().expect("active capture").push_phase(
-                    UiDriverPhase::ViewPreferencesOverlay,
+                    UiDriverPhase::ViewPreferencesOverlay.perf_span_name(),
+                    UiDriverPhase::ViewPreferencesOverlay.perf_span_phase(),
+                    "ui_app_driver",
                     144,
                     Duration::from_micros(55),
                 );

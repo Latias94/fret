@@ -524,16 +524,20 @@ fn header_row<H: UiHost>(
                     },
                 ));
 
-                let mut text_props = TextProps::new(label);
-                text_props.layout.size.width = Length::Fill;
-                text_props.layout.flex.shrink = 1.0;
-                text_props.color = Some(palette.foreground);
-                out.push(cx.text_props(text_props));
+                out.push(disclosure_label_text(cx, label, palette.foreground));
                 out.push(cx.spacer(SpacerProps::default()));
                 out
             },
         )]
     })
+}
+
+fn disclosure_label_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: Arc<str>,
+    foreground: Color,
+) -> AnyElement {
+    crate::declarative::text::text_list_row_label(cx, label).inherit_foreground(foreground)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -609,8 +613,10 @@ mod tests {
 
     use fret_app::App;
     use fret_authoring::UiWriter;
+    use fret_core::{AppWindowId, Point, Rect, Size, TextOverflow, TextWrap};
     use fret_ui::ThemeConfig;
     use fret_ui::element::{ElementKind, PressableProps, PressableState};
+    use fret_ui::elements;
 
     struct TestWriter<'cx, 'a, H: UiHost> {
         cx: &'cx mut ElementContext<'a, H>,
@@ -642,6 +648,23 @@ mod tests {
             ElementKind::Pressable(props) => Some(props),
             _ => root.children.iter().find_map(first_pressable),
         }
+    }
+
+    fn first_text<'a>(root: &'a AnyElement, expected: &str) -> Option<&'a AnyElement> {
+        match &root.kind {
+            ElementKind::Text(props) if props.text.as_ref() == expected => Some(root),
+            _ => root
+                .children
+                .iter()
+                .find_map(|child| first_text(child, expected)),
+        }
+    }
+
+    fn test_bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(160.0)),
+        )
     }
 
     #[test]
@@ -755,5 +778,54 @@ mod tests {
         let idle = resolve_disclosure_palette(theme, &spec, PressableState::default());
         assert_eq!(idle.background, None);
         assert_eq!(idle.foreground, Color::from_srgb_hex_rgb(0xf5_f6_f7));
+    }
+
+    #[test]
+    fn tree_row_label_uses_shared_list_row_text_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+            let spec = DisclosureSpec::tree_node(
+                Arc::from("Very long tree node"),
+                TreeNodeOptions {
+                    leaf: true,
+                    ..Default::default()
+                },
+            );
+            header_row(
+                cx,
+                &spec,
+                spec.label.clone(),
+                false,
+                PressableState::default(),
+            )
+        });
+        let expected_palette = resolve_disclosure_palette(
+            Theme::global(&app),
+            &DisclosureSpec::tree_node(
+                Arc::from("Very long tree node"),
+                TreeNodeOptions {
+                    leaf: true,
+                    ..Default::default()
+                },
+            ),
+            PressableState::default(),
+        );
+
+        let text = first_text(&el, "Very long tree node").expect("expected tree row label text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected tree row label to be text");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(text.inherited_text_style.is_some());
+        assert_eq!(text.inherited_foreground, Some(expected_palette.foreground));
     }
 }

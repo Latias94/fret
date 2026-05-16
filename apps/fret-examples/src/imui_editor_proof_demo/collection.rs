@@ -1338,10 +1338,10 @@ fn authoring_parity_collection_drop_status_model<H: UiHost>(
 
 pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, KernelApp>) {
     ui.text("Collection-first asset browser proof");
-    ui.text(
+    ui.text_wrapped(
         "Stable keys keep browser selection pinned while visible order flips and selected-set drag/drop stays app-defined.",
     );
-    ui.text(
+    ui.text_wrapped(
         "Background drag now draws a marquee and updates grid selection app-locally while shared helper widening stays deferred until another first-party proof surface exists.",
     );
 

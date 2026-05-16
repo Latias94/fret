@@ -1,0 +1,261 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: motion preset runtime token mutation",
+    "tags": [
+      "ui-gallery",
+      "theme",
+      "motion",
+      "runtime",
+      "app-snapshot",
+      "mutation"
+    ],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Verifies that UI Gallery preset selections update both the shell models and the effective global Theme motion tokens exposed through the app snapshot."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-motion-preset-trigger" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/theme_preset",
+        "value": "zinc/light"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/motion_preset",
+        "value": "theme"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/theme_runtime/color_scheme",
+        "value": "light"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/theme_runtime/motion_tokens/duration_stack_shift_ms",
+        "value": 160
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/theme_runtime/motion_tokens/duration_stack_shift_stagger_ms",
+        "value": 20
+      }
+    },
+
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-motion-preset-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-motion-preset-item-reduced" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-motion-preset-item-reduced" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/motion_preset",
+        "value": "reduced"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/motion_preset_open",
+        "value": false
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/theme_runtime/motion_tokens/duration_presence_enter_ms",
+        "value": 0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/theme_runtime/motion_tokens/duration_stack_shift_ms",
+        "value": 0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/theme_runtime/motion_tokens/duration_stack_shift_stagger_ms",
+        "value": 0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/theme_runtime/motion_tokens/easing_standard_milli",
+        "value": { "x1": 0, "y1": 0, "x2": 1000, "y2": 1000 }
+      }
+    },
+
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-motion-preset-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-motion-preset-item-snappy" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-motion-preset-item-snappy" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/motion_preset",
+        "value": "snappy"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/theme_runtime/motion_tokens/duration_presence_enter_ms",
+        "value": 160
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/theme_runtime/motion_tokens/duration_stack_shift_ms",
+        "value": 140
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/theme_runtime/motion_tokens/duration_stack_shift_stagger_ms",
+        "value": 16
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/theme_runtime/motion_tokens/duration_drag_release_settle_ms",
+        "value": 210
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/theme_runtime/motion_tokens/drag_release_settle_bounce_milli",
+        "value": 200
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/theme_runtime/motion_tokens/easing_standard_milli",
+        "value": { "x1": 220, "y1": 1000, "x2": 360, "y2": 1000 }
+      }
+    },
+
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-item-zinc-dark" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-item-zinc-dark" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/theme_preset",
+        "value": "zinc/dark"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/theme_preset_open",
+        "value": false
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/theme_runtime/color_scheme",
+        "value": "dark"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/motion_preset",
+        "value": "snappy"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/theme_runtime/motion_tokens/duration_stack_shift_ms",
+        "value": 140
+      }
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-motion-preset-runtime-token-mutation" }
+  ]
+}

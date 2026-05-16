@@ -165,6 +165,24 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         winit_window: &dyn Window,
     ) -> bool {
         let snapshot = read_desktop_environment_snapshot(winit_window);
+        let snapshot =
+            if let Some(override_entry) = self.diag_window_preference_overrides.get(&window) {
+                DesktopEnvironmentSnapshot {
+                    color_scheme: override_entry.color_scheme.unwrap_or(snapshot.color_scheme),
+                    prefers_reduced_motion: override_entry
+                        .prefers_reduced_motion
+                        .unwrap_or(snapshot.prefers_reduced_motion),
+                    text_scale_factor: override_entry
+                        .text_scale_factor
+                        .unwrap_or(snapshot.text_scale_factor),
+                    prefers_reduced_transparency: snapshot.prefers_reduced_transparency,
+                    accent_color: snapshot.accent_color,
+                    contrast_preference: snapshot.contrast_preference,
+                    forced_colors_mode: snapshot.forced_colors_mode,
+                }
+            } else {
+                snapshot
+            };
         let metrics = self.app.global::<WindowMetricsService>();
 
         let needs_scheme = !metrics.is_some_and(|svc| svc.color_scheme_is_known(window))

@@ -11,7 +11,11 @@ image-item and child-region manual-resize candidates below have since landed in 
 refreshed: current source/tests already cover z-order hit-testing, focus-on-click vs activation,
 no-inputs / pointer-pass-through policy, close, resize, and collapse behavior. The table
 advanced-gap wording has also been narrowed: `TableOptions::striped` already covers alternating row
-backgrounds, while per-row/per-cell background overrides remain candidate-only.
+backgrounds, and explicit per-row/per-cell background overrides now have a narrow proof through
+`TableRowOptions::background` and `TableCellOptions::background`. Static author-declared column
+visibility now has a narrow proof through `TableColumn::hidden()` /
+`TableColumn::with_visible(bool)`; runtime hideable columns, persistence, and header-menu policy
+remain candidate-only.
 
 ## Decision
 
@@ -33,7 +37,7 @@ Keep the owner split:
 
 | Dear ImGui area | Current Fret surface | Verdict |
 | --- | --- | --- |
-| Text / separators / bullets | `text`, `bullet_text`, `separator`, `separator_text` in `UiWriterImUiFacadeExt` | Covered enough for current teaching and proof surfaces |
+| Text / separators / bullets | `text`, `text_wrapped`, `bullet_text`, `separator`, `separator_text` in `UiWriterImUiFacadeExt` | Covered for default single-line text items, explicit wrapped text, and current teaching/proof surfaces |
 | Main controls | `button`, `small_button`, `arrow_button`, `invisible_button`, command/action buttons | Covered; command/action variants are Fret-native additions |
 | Boolean controls | `checkbox_model`, `radio`, `switch_model` | Covered; switch is a Fret policy addition, not Dear ImGui parity debt |
 | Input text / textarea | `input_text_model`, picker/history/completion helpers, `textarea_model`, input filters, undo command policy | Covered for current needs; mutable-buffer callback grammar remains intentionally absent |
@@ -45,7 +49,7 @@ Keep the owner split:
 | Menus / menu bars / popups / modals | `menu_bar`, `begin_menu`, `begin_submenu`, menu items, `open_popup`, `begin_popup_menu`, context menu helpers, modal helpers | Covered at policy layer; dismissal/focus policy stays in ecosystem |
 | Tooltips | `tooltip_text`, `tooltip`, `TooltipOptions` | Covered enough for current response-driven usage |
 | Tabs | `tab_bar`, `ImUiTabBar`, `tab_item`, response reporting | Covered for current shell/editor proofs |
-| Tables | `table`, `ImUiTable`, `TableColumn`, `TableOptions::striped`, sort/resize/header responses, virtual-list support | Covered for basic/sort/resize/striped-row proof paths; advanced table flags should be split by proof |
+| Tables | `table`, `ImUiTable`, `TableColumn`, `TableColumn::hidden`, `TableColumn::with_visible`, `TableOptions::striped`, `TableRowOptions::background`, `TableCellOptions::background`, sort/resize/header responses, virtual-list support | Covered for basic/sort/resize/striped-row, static column visibility, and explicit row/cell background proof paths; remaining advanced table flags should be split by proof |
 | Drag and drop | response-driven `drag_source` / `drop_target` with typed payloads | Covered with Fret-native response style; do not copy begin/end mutable payload grammar |
 | Draw list / images | `debug_draw`, `ImUiDebugDrawList`, paths, channels, mesh, image/SVG variants | Strong local coverage; keep feature growth in debug-draw follow-ons |
 | Color edit / picker | `fret-ui-editor::ColorEdit` through `fret::imui::editor::color_edit` | Covered as editor-control policy, not generic kit vocabulary |
@@ -69,9 +73,11 @@ public helper widening:
    - Fret should use theme/editor tooling and diagnostics/devtools lanes; do not freeze a generic
      style editor API from this audit.
 4. **Advanced table flags**
-   - Sorting, resize handles, and alternating row backgrounds already have proof.
-   - Per-row/per-cell background override targets, freeze panes, column visibility policies, and
-     old columns API should stay narrow follow-ons.
+   - Sorting, resize handles, alternating row backgrounds, and explicit per-row/per-cell
+     background override targets already have proof.
+   - Static author-declared column visibility already has proof.
+   - Freeze panes, runtime hideable-column policy, persistence, header-menu policy, and old columns
+     API should stay narrow follow-ons.
 5. **Child-region flag mirrors beyond manual resize**
    - `ResizeY` and `ResizeX` now have closed proof lanes.
    - Auto-resize, nav flattening, and clipping-return behavior still need behavior-specific proof
@@ -91,9 +97,12 @@ public helper widening:
 - `window(...)` is no longer a v1 posture with z-order/focus arbitration deferred: current
   `fret-imui` floating tests cover bring-to-front hit-test order, focus-on-click independent from
   activation, no-inputs / pointer-pass-through behavior, close, resize, and collapse.
-- `TableOptions::striped` is already the current alternating row-background policy. Do not treat
-  Dear ImGui `RowBg` parity as wholly missing; the unresolved axis is explicit per-row/per-cell
-  background override policy, which still needs a narrow proof.
+- `TableOptions::striped` is already the current alternating row-background policy, while
+  `TableRowOptions::background` / `TableCellOptions::background` cover explicit per-row/per-cell
+  override targets. `TableColumn::hidden()` / `TableColumn::with_visible(bool)` cover static
+  author-declared visibility. Do not treat Dear ImGui `RowBg` or static visibility parity as wholly
+  missing; the remaining table axes are freeze panes, runtime hideable-column policy, persistence,
+  header-menu policy, and old columns API shape, which still need narrow proofs.
 - `ecosystem/fret-ui-editor/src/imui.rs` is only a thin adapter layer that forwards editor controls
   and composites through `into_element(...)`.
 - `repo-ref/imgui/imgui.h` still groups the upstream surface by Windows, Child Windows, Widgets,
@@ -127,7 +136,7 @@ Suggested audit/gate commands:
 ```powershell
 rg --files ecosystem/fret-ui-kit/src/imui ecosystem/fret-ui-kit/tests
 rg -n "pub use debug_draw_controls|pub use options|pub use response|pub use tab_family_controls::ImUiTabBar|pub use table_controls" ecosystem/fret-ui-kit/src/imui.rs
-rg -n "fn (button|small_button|arrow_button|checkbox_model|radio|switch_model|slider_f32_model|combo|combo_model|selectable|multi_selectable|tree_node|collapsing_header|child_region|virtual_list|table|tab_bar|open_popup|begin_popup|tooltip|drag_source|drop_target|debug_draw)" ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer
+rg -n "fn (text|text_wrapped|button|small_button|arrow_button|checkbox_model|radio|switch_model|slider_f32_model|combo|combo_model|selectable|multi_selectable|tree_node|collapsing_header|child_region|virtual_list|table|tab_bar|open_popup|begin_popup|tooltip|drag_source|drop_target|debug_draw)" ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer
 rg -n "pub fn (text_field|checkbox|color_edit|drag_value|numeric_input|slider|enum_select|property_grid|gradient_editor|inspector_panel)" ecosystem/fret-ui-editor/src/imui.rs
 rg -n "Widgets: Text|Widgets: Main|Widgets: Combo Box|Widgets: Trees|Widgets: Selectables|Widgets: List Boxes|Widgets: Data Plotting|Widgets: Menus|Tooltips|Popups, Modals|Tables|Tab Bars|Drag and Drop|Debug Utilities" repo-ref/imgui/imgui.h
 cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test imui_combo_smoke --test imui_table_smoke --test imui_disclosure_smoke --test imui_textarea_smoke --test imui_drag_drop_smoke --test imui_virtual_list_smoke --test imui_debug_draw_smoke --test imui_tooltip_smoke --no-fail-fast
@@ -142,7 +151,7 @@ cargo nextest run -p fret-ui-editor --features imui --test imui_adapter_smoke --
   current IMUI source/test module set.
 - `rg -n "pub use debug_draw_controls|pub use options|pub use response|pub use tab_family_controls::ImUiTabBar|pub use table_controls" ecosystem/fret-ui-kit/src/imui.rs`
   passed and found the kit-level re-export anchors.
-- `rg -n "fn (button|small_button|arrow_button|checkbox_model|radio|switch_model|slider_f32_model|combo|combo_model|selectable|multi_selectable|tree_node|collapsing_header|child_region|virtual_list|table|tab_bar|open_popup|begin_popup|tooltip|drag_source|drop_target|debug_draw)" ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer`
+- `rg -n "fn (text|text_wrapped|button|small_button|arrow_button|checkbox_model|radio|switch_model|slider_f32_model|combo|combo_model|selectable|multi_selectable|tree_node|collapsing_header|child_region|virtual_list|table|tab_bar|open_popup|begin_popup|tooltip|drag_source|drop_target|debug_draw)" ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer`
   passed and found the current facade method anchors across the root file and split owner modules.
 - `rg -n "pub fn (text_field|checkbox|color_edit|drag_value|numeric_input|slider|enum_select|property_grid|gradient_editor|inspector_panel)" ecosystem/fret-ui-editor/src/imui.rs`
   passed and found the editor adapter anchors.

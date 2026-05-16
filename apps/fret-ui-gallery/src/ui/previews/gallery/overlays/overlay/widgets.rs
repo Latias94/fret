@@ -24,6 +24,7 @@ pub(super) fn overlay_reset(
     let sheet_open = models.sheet_open.clone();
     let portal_geometry_popover_open = models.portal_geometry_popover_open.clone();
     let last_action = models.last_action.clone();
+    let underlay_activated = models.underlay_activated.clone();
 
     let on_activate: OnActivate = Arc::new(move |host, _cx, _reason| {
         let _ = host.models_mut().update(&dropdown_open, |v| *v = false);
@@ -42,6 +43,9 @@ pub(super) fn overlay_reset(
         let _ = host.models_mut().update(&last_action, |v| {
             *v = Arc::<str>::from("overlay:reset");
         });
+        let _ = host
+            .models_mut()
+            .update(&underlay_activated, |activated| *activated = false);
     });
 
     shadcn::Button::new("Reset overlays")
@@ -163,10 +167,23 @@ pub(super) fn context_menu_edge(
         })
 }
 
-pub(super) fn underlay(_cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
+pub(super) fn underlay(
+    _cx: &mut AppComponentCx<'_>,
+    models: &OverlayModels,
+) -> impl UiChild + use<> {
+    use fret_ui::action::OnActivate;
+
+    let underlay_activated = models.underlay_activated.clone();
+    let on_activate: OnActivate = Arc::new(move |host, _cx, _reason| {
+        let _ = host
+            .models_mut()
+            .update(&underlay_activated, |activated| *activated = true);
+    });
+
     shadcn::Button::new("Underlay (outside-press target)")
         .variant(shadcn::ButtonVariant::Secondary)
         .test_id("ui-gallery-overlay-underlay")
+        .on_activate(on_activate)
 }
 
 pub(super) fn tooltip(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {

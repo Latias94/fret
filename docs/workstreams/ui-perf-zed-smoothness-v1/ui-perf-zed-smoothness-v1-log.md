@@ -625,6 +625,35 @@ Decision:
   complete or update checked-in baselines until those target artifacts either pass verifier/closeout or shift the owner
   attribution. Local work may continue on independent, evidence-backed optimization slices, but those slices are not
   substitutes for the target-machine closeout artifact.
+## 2026-05-16 19:09:11 +0800 (local head `5905cf6be7`)
+
+Question:
+- Can the Windows RTX4090 editor paint contract runner fail fast before producing closeout-looking artifacts when
+  another Fret/Gallery diagnostic run is already active on the same machine?
+
+Change:
+- Added a non-dry-run guard to `tools/perf/diag_editor_paint_contract_validate.py` that detects existing
+  `fretboard-dev.exe`, `fret-ui-gallery.exe`, `cargo run -p fret-ui-gallery`, `rustc` gallery builds, and sibling
+  validation runners before starting the formal contract plan.
+- The guard is strict by default; `--allow-concurrent-fret-processes` is available only for debugging and is explicitly
+  not closeout evidence.
+- Updated the editor paint stabilization runbook so target validation requires a clean machine before the baseline and
+  attribution artifact directories can be trusted.
+
+Local evidence:
+- A target validation attempt was intentionally stopped before use as evidence after an unrelated
+  `fret-worktrees/improve-shadcn` `ui-gallery-motion-pilot` diag process and `fret-ui-gallery.exe` were observed.
+- Preflight still passed before this guard work:
+  `python tools/perf/diag_editor_paint_contract_preflight.py` ->
+  `target/fret-diag/editor-paint-contract-preflight/summary.json`.
+
+Gates:
+- `python -m unittest test_diag_editor_paint_contract_validate.py` from `tools/perf` passed 14 tests.
+- `python tools/perf/diag_editor_paint_contract_validate.py --dry-run --date-tag codex-guard-plan-2` preserved the
+  expected command plan.
+- `python tools/perf/diag_editor_paint_contract_validate.py --date-tag codex-guard-reject-check-2 --out-dir
+  target/fret-diag/editor-paint-contract-guard-reject-check-2` failed fast before launching validation and reported the
+  unrelated `fret-worktrees/improve-shadcn` `fretboard-dev.exe` / `fret-ui-gallery.exe` processes as contaminants.
 
 ## 2026-05-16 07:27:00 +0800 (local head `efe4979a60`)
 
@@ -15560,3 +15589,77 @@ Decision:
 - Do not reopen renderer text/glyph residency from this evidence.
 - The next local investigation should target semantics refresh / diagnostics-global invalidation, or run the full
   three-probe pass to confirm whether that owner is specific to the complex-wheel script.
+## 2026-05-16 16:30:00 +08:00 (soft-wrap resize layout/paint correctness)
+
+Question:
+- Why can code-editor soft-wrap controls visually overlap after resizing even when semantics/layout bounds appear
+  plausible?
+
+Finding:
+- Two mechanism-layer issues combined:
+  - Flow construction treated `TextWrap::Word` / `TextWrap::Balance` min-content as max-content, so flex rows could
+    keep a single-line height reservation while paint prepared the same text at the new narrow multiline width.
+  - Paint-cache keys did not include subtree geometry, so a stable parent bounds key could replay stale child text
+    geometry after child local rects changed.
+
+Change:
+- `crates/fret-ui/src/layout/engine/flow.rs` now lets word/balance text receive real `MinContent` probes, matching
+  ADR 0251.
+- `PaintCacheKey` now carries a subtree geometry fingerprint derived from node size, measured size, child local rects,
+  and child geometry fingerprints. Layout recomputes this fingerprint after final layout and clean-engine geometry
+  propagation.
+- The UI Gallery soft-wrap editing diagnostic script now captures a final `layout.taffy.v1.json` sidecar.
+- The target-machine perf helpers now default to the inspectable cargo gallery launch command, preserving the legacy
+  `--launch-bin` override for deliberate direct-binary runs.
+
+Validation:
+```bash
+cargo test -p fret-ui tree::tests::paint_cache::paint_cache_key_tracks_child_geometry_changes_when_parent_size_is_stable -- --nocapture
+cargo test -p fret-ui tree::tests::paint_cache:: -- --nocapture
+cargo test -p fret-ui tree::tests::interactive_resize_flow_rebuild::interactive_resize_cached_flow_remeasures_word_wrapped_text_height -- --nocapture
+cargo test -p fret-ui tree::tests::interactive_resize_flow_rebuild::interactive_resize_cached_flow_remeasures_kit_row_wrapped_text_height -- --nocapture
+cargo test -p fret-ui declarative::tests::text_cache:: -- --nocapture
+cargo test -p fret-ui declarative::tests::layout::text:: -- --nocapture
+```
+
+Diag evidence:
+- UI Gallery run: `target/fret-diag/code-editor-soft-wrap-resize-fix-2026-05-16b/sessions/1778917336764-71196`.
+- Final bundle:
+  `target/fret-diag/code-editor-soft-wrap-resize-fix-2026-05-16b/sessions/1778917336764-71196/1778917961806-ui-gallery-code-editor-torture-soft-wrap-editing-after/bundle.schema2.json`.
+- Final layout sidecar:
+  `target/fret-diag/code-editor-soft-wrap-resize-fix-2026-05-16b/sessions/1778917336764-71196/1778917961657-ui-gallery-code-editor-torture-soft-wrap-editing-after/layout.taffy.v1.json`.
+- Final screenshot:
+  `target/fret-diag/code-editor-soft-wrap-resize-fix-2026-05-16b/sessions/1778917336764-71196/screenshots/1778917961806-ui-gallery-code-editor-torture-soft-wrap-editing-after/window-4294967297-tick-132-frame-132.png`.
+
+Decision:
+- Keep this inside the active `ui-perf-zed-smoothness-v1` lane instead of opening a new workstream. The owner is
+  `fret-ui` text measurement plus retained paint-cache correctness, and the closed code-editor resize replay lane
+  should stay closed.
+- Do not update perf baselines from this correctness fix. If later evidence shows fingerprint recomputation cost in a
+  hot resize path, optimize the fingerprint storage/scratch path without relaxing stale-replay safety.
+
+## 2026-05-16 20:10 +08:00 (interactive-resize wrap-width bucketing corrected to opt-in)
+
+Question:
+- Should live-resize wrapped text snap to a bucket by default, or should exact final width remain the default
+  correctness contract and bucketing stay explicit?
+
+Finding:
+- The previous `32px` small-step bucketing policy was a perf experiment, but it could make line breaks disagree with
+  the final flex item width during resize. That is visible as wrap misalignment rather than a benign cache detail.
+- The correct default for editor-grade behavior is exact wrap width. Bucketing remains useful only as an explicit
+  perf knob for A/B work.
+
+Change:
+- `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX` now defaults to `0` / off.
+- `docs/adr/0006-text-system.md` now describes wrap-width bucketing as opt-in instead of default live-resize policy.
+- `interactive_resize_wrapped_text_uses_exact_width_by_default` and
+  `interactive_resize_wrapped_text_width_bucketing_is_opt_in` lock the contract in `crates/fret-ui`.
+
+Validation:
+```bash
+cargo test -p fret-ui interactive_resize_wrapped_text_ -- --nocapture
+```
+
+Decision:
+- Keep the default UX exact. Treat width bucketing as a deliberate experiment, not a correctness path.

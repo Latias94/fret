@@ -501,6 +501,46 @@ pub enum UiInsetsOverrideV1 {
     },
 }
 
+#[derive(Default, Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum UiBoolOverrideV1 {
+    #[default]
+    NoChange,
+    Clear,
+    Set {
+        value: bool,
+    },
+}
+
+#[derive(Default, Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum UiF32OverrideV1 {
+    #[default]
+    NoChange,
+    Clear,
+    Set {
+        value: f32,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiColorSchemeV1 {
+    Light,
+    Dark,
+}
+
+#[derive(Default, Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum UiColorSchemeOverrideV1 {
+    #[default]
+    NoChange,
+    Clear,
+    Set {
+        value: UiColorSchemeV1,
+    },
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum UiIncomingOpenInjectItemV1 {
@@ -1186,10 +1226,27 @@ pub enum UiActionStepV2 {
         style: UiWindowStylePatchV1,
     },
     SetWindowInsets {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         #[serde(default)]
         safe_area_insets: UiInsetsOverrideV1,
         #[serde(default)]
         occlusion_insets: UiInsetsOverrideV1,
+    },
+    /// Override window environment preferences in `WindowMetricsService`.
+    ///
+    /// This is diagnostics-only and exercises the same runtime path used by runner/platform
+    /// preference updates without depending on the host OS to change color scheme or accessibility
+    /// preferences during a test run.
+    SetWindowPreferences {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        #[serde(default)]
+        color_scheme: UiColorSchemeOverrideV1,
+        #[serde(default)]
+        prefers_reduced_motion: UiBoolOverrideV1,
+        #[serde(default)]
+        text_scale_factor: UiF32OverrideV1,
     },
     /// Diagnostics-only clipboard override to simulate clipboard read denial/unavailability.
     ///
@@ -2042,6 +2099,10 @@ pub enum UiPredicateV1 {
     DisabledIs {
         target: UiSelectorV1,
         disabled: bool,
+    },
+    ReadOnlyIs {
+        target: UiSelectorV1,
+        read_only: bool,
     },
     /// True when the target exists and its structured accessibility action surface matches.
     ///
@@ -4498,6 +4559,30 @@ mod tests {
 
         let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
         assert!(matches!(roundtrip, UiPredicateV1::DisabledIs { .. }));
+    }
+
+    #[test]
+    fn predicate_read_only_is_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::ReadOnlyIs {
+            target: UiSelectorV1::TestId {
+                id: "readonly-switch".to_string(),
+                root_z_index: None,
+            },
+            read_only: true,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "read_only_is",
+                "target": { "kind": "test_id", "id": "readonly-switch" },
+                "read_only": true,
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(roundtrip, UiPredicateV1::ReadOnlyIs { .. }));
     }
 
     #[test]

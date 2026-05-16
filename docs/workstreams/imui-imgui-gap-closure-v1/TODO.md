@@ -180,9 +180,46 @@ Readiness order for the next locally testable review slices:
    focus-on-click vs activation, no-inputs / pointer-pass-through policy, close, resize, and
    collapse; OS-window tear-out and multi-viewport parity stay in docking/runner lanes.
    2026-05-16 table gap wording refresh: the component catalog now distinguishes existing
-   `TableOptions::striped` alternating row backgrounds from the still-candidate per-row/per-cell
+   `TableOptions::striped` alternating row backgrounds from the explicit per-row/per-cell
    background override axis. Do not open a broad `imui-table-advanced-flags-v1` lane just because
    the old wording said "row background targets."
+   2026-05-16 table background/text role follow-up: explicit per-row/per-cell background overrides
+   now live in `TableRowOptions::background` / `TableCellOptions::background`, and
+   `ImUiTableRow::cell_text(...)` routes through the shared `text_table_cell(...)` helper instead
+   of bare paragraph text. Remaining advanced-table candidates are freeze panes, runtime hideable
+   column policy, and old columns API shape.
+   2026-05-16 table header text follow-up: sortable/plain table header labels now reuse
+   `text_table_cell(...)` too, so header text follows the same single-line ellipsis role as body
+   cells instead of falling back to default word wrapping.
+   2026-05-16 static table column visibility follow-up: `TableColumn::hidden()` and
+   `TableColumn::with_visible(bool)` now provide a narrow author-declared visibility API. Hidden
+   columns keep row cell submission in declared column order but skip header/body rendering and do
+   not emit header responses. Runtime hideable columns, persistence, and header-menu policy remain
+   separate follow-ons.
+   2026-05-16 control readout text role follow-up: `text_control_readout(...)` now lives beside
+   `text_table_cell(...)` in `fret-ui-kit::declarative::text`, and the UI Gallery code-editor
+   toolbar readouts route through that shared role instead of carrying app-local text layout policy.
+   Continue converging text into a small stable role set before adding more per-surface helpers.
+   2026-05-16 button label text role follow-up: `text_button_label(...)` now owns compact
+   single-line button-label text in `fret-ui-kit::declarative::text`, and IMUI control chrome uses
+   it for button/pill labels instead of word-wrapping control text.
+   2026-05-16 code block text role follow-up: `text_code_block(...)` now owns the shared
+   monospace, horizontal-scroll-friendly code text role, and the UI Gallery docs scaffold no longer
+   hand-rolls code-block `TextProps`.
+   2026-05-16 paragraph text role follow-up: `text_paragraph(...)` and
+   `text_paragraph_break_words(...)` now provide semantic aliases over the existing prose helpers,
+   leaving `text_prose(...)` available for shadcn/Tailwind naming while giving Fret apps a stable
+   paragraph role name.
+   2026-05-16 trigger label reuse follow-up: IMUI tab triggers and menubar triggers now reuse
+   `text_button_label(...)` because they are button-like trigger labels.
+   2026-05-16 list row text role follow-up: `text_list_row_label(...)` now owns dense
+   selectable/menu/tree row label text. IMUI menu items, selectables, and disclosure/tree rows use
+   the shared role, giving them fill-width, min-width-zero, single-line ellipsis semantics without
+   recasting them as button labels.
+   2026-05-16 IMUI text item resize follow-up: `UiWriterImUiFacadeExt::text(...)` now follows Dear
+   ImGui's default `Text()` posture by staying single-line, shrinkable, and ellipsis-truncated
+   under narrow resize. `text_wrapped(...)` is the explicit opt-in path for explanatory copy that
+   should wrap, and first-party proof prose now uses that API.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

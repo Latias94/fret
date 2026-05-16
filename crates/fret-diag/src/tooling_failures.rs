@@ -24,6 +24,51 @@ fn script_result_is_stable(script_result_path: &Path) -> bool {
     v.get("reason_code").and_then(|v| v.as_str()).is_some()
 }
 
+pub(crate) fn build_tooling_failure_script_result(
+    prior_result: Option<&UiScriptResultV1>,
+    reason_code: &str,
+    reason: &str,
+    kind: &str,
+    note: Option<String>,
+) -> UiScriptResultV1 {
+    let now = now_unix_ms();
+    let mut result = prior_result.cloned().unwrap_or_else(|| UiScriptResultV1 {
+        schema_version: 1,
+        run_id: 0,
+        updated_unix_ms: now,
+        window: None,
+        stage: UiScriptStageV1::Running,
+        step_index: None,
+        reason_code: None,
+        reason: None,
+        evidence: None,
+        last_bundle_dir: None,
+        last_bundle_artifact: None,
+    });
+
+    result.updated_unix_ms = now;
+    result.stage = UiScriptStageV1::Failed;
+    result.reason_code = Some(reason_code.to_string());
+    result.reason = Some(reason.to_string());
+
+    let evidence = result
+        .evidence
+        .get_or_insert_with(UiScriptEvidenceV1::default);
+    evidence.event_log.push(UiScriptEventLogEntryV1 {
+        unix_ms: now,
+        kind: kind.to_string(),
+        step_index: result.step_index,
+        note,
+        bundle_dir: result.last_bundle_dir.clone(),
+        window: result.window,
+        tick_id: None,
+        frame_id: None,
+        window_snapshot_seq: None,
+    });
+
+    result
+}
+
 pub(crate) fn write_tooling_failure_script_result(
     script_result_path: &Path,
     reason_code: &str,
@@ -31,34 +76,7 @@ pub(crate) fn write_tooling_failure_script_result(
     kind: &str,
     note: Option<String>,
 ) {
-    let now = now_unix_ms();
-    let evidence = UiScriptEvidenceV1 {
-        event_log: vec![UiScriptEventLogEntryV1 {
-            unix_ms: now,
-            kind: kind.to_string(),
-            step_index: None,
-            note,
-            bundle_dir: None,
-            window: None,
-            tick_id: None,
-            frame_id: None,
-            window_snapshot_seq: None,
-        }],
-        ..UiScriptEvidenceV1::default()
-    };
-    let result = UiScriptResultV1 {
-        schema_version: 1,
-        run_id: 0,
-        updated_unix_ms: now,
-        window: None,
-        stage: UiScriptStageV1::Failed,
-        step_index: None,
-        reason_code: Some(reason_code.to_string()),
-        reason: Some(reason.to_string()),
-        evidence: Some(evidence),
-        last_bundle_dir: None,
-        last_bundle_artifact: None,
-    };
+    let result = build_tooling_failure_script_result(None, reason_code, reason, kind, note);
 
     let _ = write_json_value(
         script_result_path,

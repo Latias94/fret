@@ -105,8 +105,22 @@ date: 2026-05-12
   - Result: `ui-gallery-data-table-rtl-idle-stability.json` scrolls the public DataTable page to the
     RTL section, waits for root/footer bounds stability, samples the Gallery content viewport for 60
     no-input frames, and passes. This did not reproduce a scroll-jitter mechanism defect.
-- [ ] Add UI Gallery diagnostics for runtime platform preference/environment changes once a stable
-  demo page exists.
+- [x] Add UI Gallery diagnostics for shell-level runtime theme/motion preference changes.
+  - Result: `ui-gallery-motion-preset-runtime-token-mutation.json` now drives the always-visible
+    Gallery Theme/Motion preset selectors and asserts both shell model state and effective global
+    Theme runtime tokens through `app_snapshot_field_equals`. The first runtime draft exposed a
+    diagnostics oracle issue: strict JSON equality on raw `f32` token values produced false
+    failures, so the Gallery app snapshot now publishes rounded readable values plus milli-scaled
+    integer fields for stable token assertions.
+- [x] Add runner/platform-injected UI Gallery diagnostics for runtime platform
+  preference/environment changes once a stable demo page exists.
+  - Result: `ui-gallery-platform-preferences-runtime-environment-mutation.json` now drives
+    diagnostics-only platform preference updates through the runner `WindowMetricsService` path and
+    asserts both the UI Gallery app snapshot and an `ElementContext` environment-query probe see
+    the same color scheme, reduced-motion, and text-scale values. The first real run exposed a
+    harness script defect rather than a mechanism defect: the script waited for the Motion Presets
+    page probe without first navigating to that page. The script now enters the page explicitly and
+    the runtime gate passes.
 - [x] Add a UI Gallery pointer occlusion diagnostics gate once a stable overlay demo exposes test
   ids for underlay and overlay state.
   - Result: `ui-gallery-context-menu-occlusion-wheel-pass-through.json` now asserts the content
@@ -167,8 +181,45 @@ date: 2026-05-12
   with a focused geometry test.
 - [x] Harden the Combobox trigger screenshot gate so the nav result is scrolled into view before
   `click_stable`.
-- [ ] Add default-compatible non-modal click-through activation-status coverage once public pages
+- [x] Add default-compatible non-modal click-through activation-status coverage once public pages
   expose stable underlay/status probes.
+  - Result: the Overlay preview now exposes an independent
+    `ui-gallery-overlay-underlay-activated` status flag. The existing Popover click-through and
+    DropdownMenu non-modal outside-press gates now assert real underlay activation in addition to
+    dismissal/focus outcomes.
+  - Finding: this slice found a harness weakness, not a component defect. The old gates used
+    focus/dismiss as proxy signals and could miss an overlay policy regression where the underlay
+    received focus but its activation handler did not run.
+  - Evidence: `ui-gallery-popover-click-through-outside-press-focus-underlay.json` passed with run
+    id `1778906489806`; `ui-gallery-dropdown-nonmodal-outside-press-focus-underlay.json` passed
+    with run id `1778906522304`; roundtrip gate
+    `script_v2_roundtrip_ui_gallery_popover_click_through_outside_press_focus_underlay
+    script_v2_roundtrip_ui_gallery_dropdown_nonmodal_outside_press_focus_underlay` passed with
+    Nextest run id `c563620f-80b3-4933-9da6-48d657c68a38`.
+- [x] Add a non-list semantics/action-state runtime gate where visual behavior can pass while
+  accessibility action metadata is stale.
+  - Result: `ui-gallery-switch-read-only-action-state.json` now gates a read-only Switch through
+    real UI Gallery runtime. The first focused oracle found a real shadcn recipe defect:
+    `Switch::read_only(true)` blocked pointer mutation but still exposed `actions.invoke=true`.
+    The fix attaches `read_only=true` and `invokable=false` semantics while preserving focusability.
+    Diagnostics now has a `read_only_is` predicate and the runtime gate asserts `read_only=true`,
+    `disabled=false`, `focus=true`, `invoke=false`, and no checked-state mutation after pointer,
+    associated-label, Space, or Enter activation attempts.
+- [x] Add a dynamic companion for non-list read-only action-state mutation.
+  - Result: `ui-gallery-switch-read-only-dynamic-action-state.json` now toggles the same Switch
+    from read-only to editable and back, proving `read_only` and `invoke` semantics refresh across
+    frames and that checked-state mutation is allowed only while editable. No new runtime defect was
+    reproduced after the F112 Switch fix. The first focused test draft caught a harness modeling
+    issue: changing a model without rerendering the declarative root cannot prove component props
+    changed.
+- [x] Add a command-gated non-list action-state mutation companion.
+  - Result: `ui-gallery-switch-command-gated-action-state.json` now drives a Switch whose invoke
+    action is externally disabled and re-enabled through `WindowCommandEnabledService`. The first
+    runtime pass found a diagnostics harness gap: the Gallery driver handled the command after the
+    UI tree reported it unhandled, but did not record a `handled_by_driver=true` dispatch trace.
+    The driver now records handled command decisions for owned gallery command paths, and the
+    strict runtime gate passes with command dispatch, `disabled`, `invoke`, and checked-state
+    mutation assertions.
 - [x] Promote Combobox visual/style coverage into an explicit fixture-style matrix that tracks
   component state, theme, viewport, screenshot gate, geometry predicates, and current owner/gap.
 - [x] Harden the Button Group size gate with stable icon-only `Add` anchors and geometry predicates.
@@ -439,7 +490,26 @@ date: 2026-05-12
     boundary ownership sub-axis: a Combobox opened inside a modal Dialog remains selectable while
     the modal/focus barrier is active, records placement and relation evidence, and verifies final
     barrier cleanup.
-  - Remaining: add a multi-viewport ownership companion with placement/layout sidecar evidence.
+  - Progress: `anchored_cross_root_coordinate_v1.json` now covers the synthetic cross-root
+    coordinate-space sub-axis. It proved core `AnchoredProps` is correct for secondary/embedded
+    roots, while the owning-layer fix moved `fret-ui-kit` and shadcn anchored overlay recipes to
+    root-boundary placement helpers instead of environment viewport boundaries.
+  - Result: `ui-gallery-resizable-multi-viewport-combobox-placement.json` now covers the runtime
+    multi-viewport ownership companion. The first run found a mechanism-layer effective
+    root-boundary cache defect: Combobox placement used the OS window as the collision boundary and
+    chose `bottom`. The owning fix rebuilds per-element nearest-viewport root bounds after final
+    layout, and the gate now passes with a `top` flip against the Resizable panel viewport.
+  - Result: `element_root_bounds_cache_uses_nearest_nested_viewport_root` now covers nested
+    viewport-root precedence for the same cache.
+  - Result: `element_root_bounds_cache_rebuilds_when_element_moves_between_viewport_roots` now
+    covers same-element movement between viewport roots without stale effective root-boundary cache
+    entries.
+  - Result: `element_root_bounds_cache_rebuilds_on_view_cache_hit_after_viewport_move` now covers
+    the same ownership move through retained render reuse when the cached subtree render function is
+    not re-entered.
+  - Remaining: promote a runtime UI Gallery view-cache movement companion only if a real surface can
+    move cached overlay sources across viewport roots; otherwise continue to the next uncovered
+    mechanism axis.
 - [x] Add a diagnostics script lint/registry audit for long-page content clicks that use plain
   `click` without a nearby `scroll_into_view`, `bounds_within_window`, or `click_stable`
   precondition.
@@ -452,6 +522,80 @@ date: 2026-05-12
     `click_stable` on `ui-gallery-combobox-*` or `ui-gallery-select-*` targets. The full
     `ui-gallery-combobox` and `ui-gallery-select` suites pass after rebuilding the diagnostics
     runner.
+- [x] Add a diagnostics script lint for page-local UI Gallery selectors that rely on the default
+  page instead of proving or navigating to the owning page.
+  - Result: `tools/check_diag_scripts_registry.py` now enforces a scoped page-entry rule for
+    `ui-gallery-motion-pilot`: scripts that use `ui-gallery-motion-presets-*` page-local selectors
+    must first wait for `ui-gallery-page-motion-presets`, while the always-visible shell motion
+    preset trigger remains allowlisted. The first strict audit found and fixed an existing
+    Motion Presets script debt: `ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json`
+    entered the page but did not assert the page root before waiting for a page-local trigger.
+    The follow-up candidate audit found promoted `ui-gallery-select` already at 0 page-entry
+    violations, so Select is now included in the strict page-entry gate. Combobox initially showed
+    36 violations under a page-root-only rule, but those scripts use explicit
+    `FRET_UI_GALLERY_START_PAGE=combobox` defaults; the lint now treats those defaults as valid
+    entry evidence and Combobox is strict too. DataTable still has 166 promoted-suite page-entry
+    violations and remains a deliberate follow-on cleanup lane. `tools/test_check_diag_scripts_registry.py`
+    locks the lint with bad-script, good-script, shell-trigger, Select page-entry, and Combobox
+    start-page cases.
+- [x] Continue `ui-gallery-motion-pilot` until it finds a real component/mechanism or harness
+  boundary issue beyond the existing Motion Presets gates.
+  - Result: the suite found and fixed `AlertAction` internal slot marker pollution by moving slot
+    classification from exported diagnostics `test_id`s to `AnyElement::component_slot(...)`.
+    It then found Drawer snap-point scripts that confused existence with hittability; those scripts
+    now scroll long-page triggers into view and assert window bounds before `click_stable`, and the
+    spring-retarget gate now verifies the actual dismiss/focus-restore contract. The next Sidebar
+    gate exposed a tooling timeout evidence gap and an unguarded offscreen long-page trigger; both
+    are now covered by the timeout-bundle regression and strict Sidebar visibility lint.
+- [x] Fix diagnostics timeout handling so a long-running intent step leaves a forced bundle.
+  - Result: `fret-diag` now preserves the prior running script result on external
+    `timeout.tooling.script_result`, carries through `run_id`/`step_index`, records the last bundle
+    metadata, and writes a run-id artifact alias. The focused Sidebar repro then produced enough
+    evidence to classify the failure as an offscreen long-page target rather than a Sidebar recipe
+    or hit-test mechanism defect.
+- [x] Add Sidebar to the strict long-page click visibility authoring gate.
+  - Result: `ui-gallery-sidebar-toggle-fixed-frame-delta.json` now scrolls
+    `ui-gallery-sidebar-demo-toggle` into `ui-gallery-content-scroll`, asserts
+    `bounds_within_window`, and only then uses `click_stable`. `tools/check_diag_scripts_registry.py`
+    now treats `ui-gallery-motion-pilot` as a strict click-visibility suite for
+    `ui-gallery-sidebar-*` targets, with a registry lint unit test covering the bad pattern.
+- [x] Migrate non-user-facing recipe structural marker `test_id`s to `component_slot`.
+  - Result: no fixed `__fret_shadcn.*` markers remain. CardAction, CardFooter, and AvatarBadge no
+    longer use generated diagnostics `test_id`s for recipe-internal child classification. The same
+    audit found a related mechanism-boundary issue in Item: ItemMedia and ItemDescription used
+    `key_context` for internal classification, so they now use `component_slot` too. Focused tests
+    prove the slots still drive layout/classification while staying out of diagnostics selectors
+    and shortcut key contexts.
+- [x] Add a lightweight source-hygiene gate for future recipe-internal marker misuse.
+  - Result: `tools/check_shadcn_internal_slots.py` enforces that `fret-ui-shadcn.*` internal marker
+    strings are declared as `*_SLOT` constants and are not passed to diagnostics `test_id`,
+    `attach_test_id`, or shortcut `key_context`. `tools/test_check_shadcn_internal_slots.py`
+    covers the allowed `component_slot` path plus bad constant naming, bad test-id use, and bad
+    key-context use.
+- [x] Continue `ui-gallery-motion-pilot` to find the next runtime-visible harness or component
+  boundary issue.
+  - Progress: the next Sonner gate found a real overlay policy defect. A local named Sonner
+    Toaster and the shell's unnamed Toaster both rendered the same named toast, creating duplicate
+    `toast-entry-1`/`toast-entry-2` semantics `test_id`s. `fret-ui-kit` now scopes unnamed toast
+    layers to unnamed toasts and named layers to matching `toaster_id`s; the focused Sonner runtime
+    gate passes and `diag test-ids` reports zero duplicates. The full `ui-gallery-motion-pilot`
+    suite now passes 14/14 after the fix, with only non-blocking lint warnings remaining.
+  - Progress: the residual Sonner `semantics.missing_label` warning was also a real policy defect,
+    not lint noise. Toast action/cancel buttons rendered visible text but did not export that text
+    as the button accessible name. `fret-ui-kit` now labels those pressables from `ToastAction`, a
+    focused semantics snapshot test covers action/cancel labels, the Sonner focused gate lint is
+    clean, and the full `ui-gallery-motion-pilot` suite still passes 14/14.
+  - Progress: the three Carousel `semantics.missing_label` warnings all pointed at the same
+    UI Gallery nested demo button. The demo intentionally created `Button::new("")` for a small
+    inner control but forgot `.a11y_label(...)`; this was a first-party fixture/demo quality gap,
+    not a Button mechanism defect. The focused Carousel gates now pass and lint clean after adding
+    the accessible name.
+  - Result: the remaining Motion Presets `layout.zero_size` warning exposed a shadcn Tabs recipe
+    layout bug. The shared indicator's non-hit-test wrapper and absolute canvas both relied on
+    CSS-like inset fill behavior without explicit Fill sizing, so the diagnostics node could be
+    0px wide. Tabs now sizes the shared indicator gate and canvas explicitly, focused unit/runtime
+    gates pass, and the full `ui-gallery-motion-pilot` suite is 14/14 with zero lint warnings.
+- [ ] Pick the next harness slice outside the now-clean `ui-gallery-motion-pilot` suite.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.

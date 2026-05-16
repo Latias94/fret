@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::Px;
+use fret_core::{Color, Px};
 
 use super::super::label_identity::parse_label_identity;
 
@@ -37,6 +37,7 @@ pub struct TableColumn {
     pub header: Option<Arc<str>>,
     pub id: Option<Arc<str>>,
     pub width: TableColumnWidth,
+    pub visible: bool,
     pub sortable: bool,
     pub sort_direction: Option<TableSortDirection>,
     pub resize: Option<TableColumnResizeOptions>,
@@ -49,6 +50,7 @@ impl TableColumn {
             id: inferred_column_id(header.as_ref()),
             header: Some(header),
             width: TableColumnWidth::Px(width),
+            visible: true,
             sortable: false,
             sort_direction: None,
             resize: None,
@@ -61,6 +63,7 @@ impl TableColumn {
             id: inferred_column_id(header.as_ref()),
             header: Some(header),
             width: TableColumnWidth::Fill(1.0),
+            visible: true,
             sortable: false,
             sort_direction: None,
             resize: None,
@@ -73,6 +76,7 @@ impl TableColumn {
             id: inferred_column_id(header.as_ref()),
             header: Some(header),
             width: TableColumnWidth::Fill(weight),
+            visible: true,
             sortable: false,
             sort_direction: None,
             resize: None,
@@ -84,6 +88,7 @@ impl TableColumn {
             header: None,
             id: None,
             width,
+            visible: true,
             sortable: false,
             sort_direction: None,
             resize: None,
@@ -92,6 +97,16 @@ impl TableColumn {
 
     pub fn with_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.id = Some(id.into());
+        self
+    }
+
+    pub fn hidden(mut self) -> Self {
+        self.visible = false;
+        self
+    }
+
+    pub fn with_visible(mut self, visible: bool) -> Self {
+        self.visible = visible;
         self
     }
 
@@ -168,6 +183,13 @@ impl Default for TableOptions {
 #[derive(Debug, Clone, Default)]
 pub struct TableRowOptions {
     pub test_id: Option<Arc<str>>,
+    pub background: Option<Color>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct TableCellOptions {
+    pub test_id: Option<Arc<str>>,
+    pub background: Option<Color>,
 }
 
 #[derive(Clone)]

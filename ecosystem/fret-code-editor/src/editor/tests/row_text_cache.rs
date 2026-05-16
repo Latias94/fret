@@ -291,8 +291,10 @@ fn paint_perf_records_windowed_surface_diagnostics() {
 #[test]
 fn prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint() {
     let text = "fn main() {\n    let x = 1;\n}\n".repeat(64);
+    let offscreen_caret = text.len();
     let handle = CodeEditorHandle::new(text);
     handle.set_language(Some(Arc::<str>::from("rust")));
+    handle.set_caret(offscreen_caret);
     handle.state.borrow_mut().paint_perf_enabled = true;
 
     let mut app = App::new();

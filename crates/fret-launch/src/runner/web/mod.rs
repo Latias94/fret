@@ -49,6 +49,20 @@ struct GfxState {
     diag_keepalive_redraw: bool,
 }
 
+#[derive(Debug, Default, Clone)]
+struct DiagWindowPreferenceOverride {
+    /// `None` means "no override".
+    ///
+    /// `Some(None)` means "known-but-none" (cleared).
+    ///
+    /// `Some(Some(v))` means "override to v".
+    color_scheme: Option<Option<fret_core::ColorScheme>>,
+    /// See `color_scheme`.
+    prefers_reduced_motion: Option<Option<bool>>,
+    /// See `color_scheme`.
+    text_scale_factor: Option<Option<f32>>,
+}
+
 pub struct WinitRunner<D: WinitAppDriver> {
     pub config: WinitRunnerConfig,
     pub app: App,
@@ -88,6 +102,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     diag_clipboard_force_unavailable: bool,
     diag_incoming_open_next_token: u64,
     diag_incoming_open_payloads: HashMap<fret_core::IncomingOpenToken, DiagIncomingOpenPayload>,
+    diag_window_preference_overrides: HashMap<fret_core::AppWindowId, DiagWindowPreferenceOverride>,
 
     environment_media_queries: Option<render_loop::WebEnvironmentMediaQueries>,
     devtools_ws_inbox_waker: Option<Closure<dyn FnMut(web_sys::Event)>>,
@@ -206,6 +221,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             diag_clipboard_force_unavailable: false,
             diag_incoming_open_next_token: 1,
             diag_incoming_open_payloads: HashMap::new(),
+            diag_window_preference_overrides: HashMap::new(),
             environment_media_queries: None,
             devtools_ws_inbox_waker: None,
         }

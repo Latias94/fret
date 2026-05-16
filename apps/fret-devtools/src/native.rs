@@ -128,6 +128,7 @@ const IMUI_PRODUCT_WORKFLOW_SUITE: &str =
 const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[
     "perf-docking/regression.summary.json",
     "perf-docking/check.perf_thresholds.json",
+    "perf-docking/*/trace.chrome.json",
 ];
 const DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID: &str = "demo-metrics-debug";
 const DEVTOOLS_DEMO_EDITOR_PROOF_COMMAND: &str =
@@ -370,7 +371,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
 
     let panel_fractions = app.models_mut().insert(vec![0.22f32, 0.50f32, 0.28f32]);
     let left_tab = app.models_mut().insert(Some(Arc::<str>::from("semantics")));
-    let details_tab = app.models_mut().insert(Some(Arc::<str>::from("pick")));
+    let details_tab = app.models_mut().insert(Some(Arc::<str>::from("guide")));
     let sessions = app
         .models_mut()
         .insert(Vec::<DevtoolsSessionDescriptorV1>::new());
@@ -1061,6 +1062,23 @@ fn header_bar(
         .models()
         .read(&st.sessions, |sessions| sessions.len())
         .unwrap_or(0);
+    let scripts_count = cx
+        .app
+        .models()
+        .read(&st.script_library, |scripts| scripts.len())
+        .unwrap_or(0);
+    let regression_loaded = cx
+        .app
+        .models()
+        .read(&st.regression_loaded_dir, |dir| dir.is_some())
+        .unwrap_or(false);
+    let regression_failing_count = cx
+        .app
+        .models()
+        .read(&st.regression_index_json, |index_json| {
+            regression_failing_summary_rows(index_json, 10).len()
+        })
+        .unwrap_or(0);
     let session_items = cx
         .app
         .models()
@@ -1126,47 +1144,22 @@ fn header_bar(
         st.cfg.fs_out_dir, st.cfg.token, st.cfg.ws_port
     ));
 
-    let mut first_open_rows = Vec::new();
-    for line in devtools_first_open_lines(st.cfg.fs_out_dir.as_ref()) {
-        first_open_rows.push(cx.text(line));
+    let mut next_action_rows = Vec::new();
+    for line in devtools_first_open_next_action_lines(
+        has_session,
+        session_count,
+        scripts_count,
+        regression_loaded,
+        regression_failing_count,
+        st.cfg.fs_out_dir.as_ref(),
+    ) {
+        next_action_rows.push(cx.text(line));
     }
-    let first_open_panel = diag_section(
+    let next_actions_panel = diag_section(
         cx,
-        "First-open Evidence Path",
-        "Canonical docs, repo preflight, artifact roots, product-chain evidence, and smoke gate stay visible in the GUI shell.",
-        first_open_rows,
-    );
-    let mut dogfood_workflow_rows = Vec::new();
-    for line in devtools_dogfood_workflow_lines(st.cfg.fs_out_dir.as_ref()) {
-        dogfood_workflow_rows.push(cx.text(line));
-    }
-    let dogfood_workflow_panel = diag_section(
-        cx,
-        "Dogfood Workflow",
-        "UI gallery selector capture, script patching, run/pack, and offline viewer handoff stay visible from the GUI shell.",
-        dogfood_workflow_rows,
-    );
-    let mut demo_metrics_debug_rows = Vec::new();
-    for line in devtools_demo_metrics_debug_lines(st.cfg.fs_out_dir.as_ref()) {
-        demo_metrics_debug_rows.push(cx.text(line));
-    }
-    let demo_metrics_debug_panel = diag_section(
-        cx,
-        "Demo / Metrics / Debug Routes",
-        "Always-available editor demos, metrics commands, and debug drill-down entrypoints stay visible in the GUI shell.",
-        demo_metrics_debug_rows,
-    );
-    let mut gate_command_rows = Vec::new();
-    for line in devtools_gate_command_lines(st.cfg.fs_out_dir.as_ref()) {
-        gate_command_rows.push(cx.text(line));
-    }
-    gate_command_rows.push(devtools_gate_profile_command_builder(cx, st));
-    gate_command_rows.extend(devtools_gate_profile_action_rows(cx));
-    let gate_commands_panel = diag_section(
-        cx,
-        "Gate Commands",
-        "First-class stale, pixels, perf-threshold, and resource-footprint gate entrypoints stay visible from the GUI shell.",
-        gate_command_rows,
+        "First-open Next Actions",
+        "Stateful next-step summary stays in the header; full command references live in the Guide tab.",
+        next_action_rows,
     );
 
     let connection_actions = ui::h_row(|cx| {
@@ -1239,10 +1232,7 @@ fn header_bar(
             shell_badges,
             endpoint_line,
             workspace_line,
-            first_open_panel,
-            dogfood_workflow_panel,
-            demo_metrics_debug_panel,
-            gate_commands_panel,
+            next_actions_panel,
             connection_actions,
             quick_actions,
         ])
@@ -2794,6 +2784,7 @@ fn right_panel(
         .models()
         .read(&st.last_screenshot_json, |v| v.clone())
         .unwrap_or_default();
+    let guide = devtools_guide_panel(cx, st);
     let regression = regression_panel(cx, st);
     let semantics_node = sem_node_panel(cx, st);
 
@@ -2802,6 +2793,7 @@ fn right_panel(
     let tabs = shadcn::Tabs::new(st.details_tab.clone())
         .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
         .items([
+            shadcn::TabsItem::new("guide", "Guide", [guide]),
             shadcn::TabsItem::new("inspect", "Inspect", [inspect]),
             shadcn::TabsItem::new("pick", "Pick", [text_blob(cx, pick)]),
             shadcn::TabsItem::new("script", "Script", [text_blob(cx, script)]),
@@ -2818,6 +2810,63 @@ fn right_panel(
         "Latest inspect, script, bundle, screenshot, and regression payloads.",
         vec![tabs],
     )
+}
+
+fn devtools_guide_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
+    let mut first_open_rows = Vec::new();
+    for line in devtools_first_open_lines(st.cfg.fs_out_dir.as_ref()) {
+        first_open_rows.push(cx.text(line));
+    }
+    let first_open_panel = diag_section(
+        cx,
+        "First-open Evidence Path",
+        "Canonical docs, repo preflight, artifact roots, product-chain evidence, and smoke gate stay visible in the GUI shell.",
+        first_open_rows,
+    );
+    let mut dogfood_workflow_rows = Vec::new();
+    for line in devtools_dogfood_workflow_lines(st.cfg.fs_out_dir.as_ref()) {
+        dogfood_workflow_rows.push(cx.text(line));
+    }
+    let dogfood_workflow_panel = diag_section(
+        cx,
+        "Dogfood Workflow",
+        "UI gallery selector capture, script patching, run/pack, and offline viewer handoff stay visible from the GUI shell.",
+        dogfood_workflow_rows,
+    );
+    let mut demo_metrics_debug_rows = Vec::new();
+    for line in devtools_demo_metrics_debug_lines(st.cfg.fs_out_dir.as_ref()) {
+        demo_metrics_debug_rows.push(cx.text(line));
+    }
+    let demo_metrics_debug_panel = diag_section(
+        cx,
+        "Demo / Metrics / Debug Routes",
+        "Always-available editor demos, metrics commands, and debug drill-down entrypoints stay visible in the GUI shell.",
+        demo_metrics_debug_rows,
+    );
+    let mut gate_command_rows = Vec::new();
+    for line in devtools_gate_command_lines(st.cfg.fs_out_dir.as_ref()) {
+        gate_command_rows.push(cx.text(line));
+    }
+    gate_command_rows.push(devtools_gate_profile_command_builder(cx, st));
+    gate_command_rows.extend(devtools_gate_profile_action_rows(cx));
+    let gate_commands_panel = diag_section(
+        cx,
+        "Gate Commands",
+        "First-class stale, pixels, perf-threshold, and resource-footprint gate entrypoints stay visible from the GUI shell.",
+        gate_command_rows,
+    );
+
+    ui::v_stack(|_cx| {
+        [
+            first_open_panel,
+            dogfood_workflow_panel,
+            demo_metrics_debug_panel,
+            gate_commands_panel,
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx)
 }
 
 fn inspect_panel(
@@ -4540,6 +4589,7 @@ fn followup_history_list(
     .into_element(cx)
 }
 
+#[cfg(test)]
 fn runnable_followup_command_action_lines(
     commands: &[RegressionBundleFollowupCommandV1],
 ) -> Vec<String> {
@@ -7060,6 +7110,41 @@ fn build_regression_dashboard_human(
     dashboard_human_lines_from_projection(index_path, &projection).join("\n")
 }
 
+fn devtools_first_open_next_action_lines(
+    has_session: bool,
+    session_count: usize,
+    scripts_count: usize,
+    regression_loaded: bool,
+    failing_count: usize,
+    artifacts_root: &str,
+) -> Vec<String> {
+    let artifacts_root = artifacts_root.trim();
+    let artifacts_root = if artifacts_root.is_empty() {
+        "<unset>"
+    } else {
+        artifacts_root
+    };
+    let target = if has_session {
+        "target: session selected; inspect, pick, dump, and screenshot actions are ready".to_string()
+    } else if session_count > 0 {
+        format!("target: {session_count} session(s) available; select one before inspecting")
+    } else {
+        "target: no session yet; launch a Fret app with diagnostics enabled".to_string()
+    };
+    let regression = if regression_loaded {
+        format!("regression: aggregate loaded with {failing_count} non-passing summary row(s)")
+    } else {
+        "regression: no aggregate loaded; run a script, then Refresh or Summarize".to_string()
+    };
+    vec![
+        target,
+        format!("scripts: {scripts_count} available in Script Studio"),
+        regression,
+        format!("artifacts root: {artifacts_root}"),
+        "guide: open Evidence & Results -> Guide for docs, dogfood, demo/metrics, and gate commands".to_string(),
+    ]
+}
+
 fn devtools_first_open_lines(artifacts_root: &str) -> Vec<String> {
     let artifacts_root = artifacts_root.trim();
     let artifacts_root = if artifacts_root.is_empty() {
@@ -7958,8 +8043,25 @@ mod tests {
             "product workflow docs: docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md"
         ));
         assert!(text.contains(
-            "product workflow artifacts: perf-docking/regression.summary.json, perf-docking/check.perf_thresholds.json"
+            "product workflow artifacts: perf-docking/regression.summary.json, perf-docking/check.perf_thresholds.json, perf-docking/*/trace.chrome.json"
         ));
+    }
+
+    #[test]
+    fn devtools_first_open_next_action_lines_prioritize_stateful_workflow() {
+        let empty = devtools_first_open_next_action_lines(false, 0, 12, false, 0, "target/fret-diag")
+            .join("\n");
+        assert!(empty.contains("target: no session yet"));
+        assert!(empty.contains("scripts: 12 available"));
+        assert!(empty.contains("regression: no aggregate loaded"));
+        assert!(empty.contains("artifacts root: target/fret-diag"));
+        assert!(empty.contains("Evidence & Results -> Guide"));
+
+        let ready =
+            devtools_first_open_next_action_lines(true, 2, 8, true, 3, "target/fret-diag")
+                .join("\n");
+        assert!(ready.contains("target: session selected"));
+        assert!(ready.contains("regression: aggregate loaded with 3 non-passing"));
     }
 
     #[test]

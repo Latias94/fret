@@ -40,6 +40,8 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use fret_core::time::{Duration, Instant};
+
 #[cfg(feature = "diagnostics-ws")]
 use crate::ui_diagnostics_ws_bridge::UiDiagnosticsWsBridge;
 
@@ -146,6 +148,112 @@ pub use snapshot_types::*;
 /// debug-oriented JSON values into the exported diagnostics snapshots.
 pub type UiDebugExtensionWriterV1 =
     Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>;
+
+/// Frame-local real perf span capture for diagnostics trace attribution.
+///
+/// Custom app drivers can use this helper to publish their render phases into
+/// `debug.extensions["fret.perf.spans.v1"]`. The capture is gated by `FRET_DIAG_REAL_SPANS`,
+/// so normal app runs do not pay timing overhead.
+#[derive(Debug)]
+pub struct UiRealPerfSpanCaptureV1 {
+    frame_start: Instant,
+    spans: Vec<UiPerfSpanV1>,
+}
+
+impl UiRealPerfSpanCaptureV1 {
+    pub fn new_if_enabled() -> Option<Self> {
+        diag_real_perf_spans_enabled().then(|| Self {
+            frame_start: Instant::now(),
+            spans: Vec::with_capacity(8),
+        })
+    }
+
+    #[cfg(test)]
+    pub(crate) fn new_for_test(frame_start: Instant) -> Self {
+        Self {
+            frame_start,
+            spans: Vec::new(),
+        }
+    }
+
+    pub fn frame_elapsed_us(&self) -> u64 {
+        duration_micros_u64(self.frame_start.elapsed())
+    }
+
+    pub(crate) fn take_spans(&mut self) -> Vec<UiPerfSpanV1> {
+        std::mem::take(&mut self.spans)
+    }
+
+    pub fn record_for_window(&mut self, svc: &mut UiDiagnosticsService, window: AppWindowId) {
+        let spans = self.take_spans();
+        svc.record_perf_spans_v1(window, spans);
+    }
+
+    pub fn push_phase(
+        &mut self,
+        name: &'static str,
+        phase: &'static str,
+        source: &'static str,
+        start_us: u64,
+        duration: Duration,
+    ) {
+        let mut dur_us = duration_micros_u64(duration);
+        if dur_us == 0 && duration == Duration::ZERO {
+            return;
+        }
+        dur_us = dur_us.max(1);
+        self.spans.push(UiPerfSpanV1 {
+            name: name.to_string(),
+            cat: "ui.driver".to_string(),
+            start_us,
+            dur_us,
+            tid: None,
+            args: Some(serde_json::json!({
+                "phase": phase,
+                "source": source,
+            })),
+        });
+    }
+
+    pub fn measure_phase<T>(
+        capture: &mut Option<Self>,
+        name: &'static str,
+        phase: &'static str,
+        source: &'static str,
+        f: impl FnOnce(&mut Option<Self>) -> T,
+    ) -> (T, Option<Duration>) {
+        let capture_start_us = capture
+            .as_ref()
+            .map(|capture| duration_micros_u64(capture.frame_start.elapsed()));
+        let started = capture.is_some().then(Instant::now);
+        let out = f(capture);
+        let elapsed = started.map(|started| started.elapsed());
+        if let (Some(capture), Some(start_us), Some(elapsed)) =
+            (capture.as_mut(), capture_start_us, elapsed)
+        {
+            capture.push_phase(name, phase, source, start_us, elapsed);
+        }
+        (out, elapsed)
+    }
+}
+
+pub fn diag_real_perf_spans_enabled() -> bool {
+    std::env::var_os("FRET_DIAG_REAL_SPANS").is_some_and(|value| {
+        let value = value.to_string_lossy();
+        let value = value.trim();
+        if value.is_empty() {
+            return false;
+        }
+        !matches!(
+            value.to_ascii_lowercase().as_str(),
+            "0" | "false" | "off" | "no"
+        )
+    })
+}
+
+fn duration_micros_u64(duration: Duration) -> u64 {
+    duration.as_micros().min(u64::MAX as u128) as u64
+}
 
 #[cfg(feature = "diagnostics")]
 pub(crate) use inspect_overlay::render_diag_inspect_overlay;

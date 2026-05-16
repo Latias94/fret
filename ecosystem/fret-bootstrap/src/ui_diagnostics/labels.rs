@@ -135,6 +135,7 @@ fn reason_code_for_script_failure(reason: &str) -> Option<&'static str> {
         "click_stable_impossible_stable_frames_gt_timeout_frames" => {
             Some("click_stable.impossible_stable_frames_gt_timeout_frames")
         }
+        "click_stable_timeout_target_outside_window" => Some("click_stable.target_outside_window"),
         "click_selectable_text_span_stable_impossible_stable_frames_gt_timeout_frames" => {
             Some("click_selectable_text_span_stable.impossible_stable_frames_gt_timeout_frames")
         }
@@ -168,6 +169,10 @@ mod labels_reason_code_tests {
 
     #[test]
     fn selectable_text_span_timeout_reason_codes_preserve_runtime_detail() {
+        assert_eq!(
+            reason_code_for_script_failure("click_stable_timeout_target_outside_window"),
+            Some("click_stable.target_outside_window")
+        );
         assert_eq!(
             reason_code_for_script_failure("click_selectable_text_span_stable_no_semantics_match"),
             Some("click_selectable_text_span_stable.no_semantics_match")
