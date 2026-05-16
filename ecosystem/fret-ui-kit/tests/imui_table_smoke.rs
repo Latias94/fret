@@ -87,6 +87,7 @@ fn table_column_helpers_compile() {
     assert_eq!(fill.header.as_deref(), Some("Name"));
     assert_eq!(fill.id.as_deref(), Some("Name"));
     assert_eq!(fill.width, TableColumnWidth::Fill(1.0));
+    assert!(fill.visible);
     assert!(!fill.sortable);
     assert_eq!(fill.sort_direction, None);
     assert!(fill.resize.is_none());
@@ -95,6 +96,7 @@ fn table_column_helpers_compile() {
     assert_eq!(weighted.header.as_deref(), Some("Kind"));
     assert_eq!(weighted.id.as_deref(), Some("Kind"));
     assert_eq!(weighted.width, TableColumnWidth::Fill(2.5));
+    assert!(weighted.visible);
     assert!(!weighted.sortable);
     assert_eq!(weighted.sort_direction, None);
     assert!(weighted.resize.is_none());
@@ -103,6 +105,7 @@ fn table_column_helpers_compile() {
     assert_eq!(px.header.as_deref(), Some("State"));
     assert_eq!(px.id.as_deref(), Some("State"));
     assert_eq!(px.width, TableColumnWidth::Px(Px(96.0)));
+    assert!(px.visible);
     assert!(!px.sortable);
     assert_eq!(px.sort_direction, None);
     assert!(px.resize.is_none());
@@ -121,6 +124,16 @@ fn table_column_helpers_compile() {
     let unlabeled = TableColumn::unlabeled(TableColumnWidth::px(Px(72.0))).with_id("actions");
     assert_eq!(unlabeled.header, None);
     assert_eq!(unlabeled.id.as_deref(), Some("actions"));
+}
+
+#[test]
+fn table_column_visibility_helpers_compile() {
+    let hidden = TableColumn::px("Internal###internal", Px(64.0)).hidden();
+    assert_eq!(hidden.id.as_deref(), Some("internal"));
+    assert!(!hidden.visible);
+
+    let visible_again = hidden.with_visible(true);
+    assert!(visible_again.visible);
 }
 
 #[test]

@@ -164,7 +164,15 @@ fn render_table<H: UiHost>(
 ) -> (AnyElement, TableResponse) {
     let palette = resolve_table_palette(Theme::global(&*cx.app));
     let root_test_id = options.test_id.clone();
-    let show_header = options.show_header && columns.iter().any(|column| column.header.is_some());
+    let visible_columns = columns
+        .iter()
+        .enumerate()
+        .filter(|(_, column)| column.visible)
+        .collect::<Vec<_>>();
+    let show_header = options.show_header
+        && visible_columns
+            .iter()
+            .any(|(_, column)| column.header.is_some());
     let column_test_id_suffixes = columns
         .iter()
         .enumerate()
@@ -177,6 +185,7 @@ fn render_table<H: UiHost>(
             let cells = columns
                 .iter()
                 .enumerate()
+                .filter(|(_, column)| column.visible)
                 .map(|(index, column)| {
                     let visible_label = visible_header_label(column);
                     let test_id = root_test_id.as_ref().map(|base| {
@@ -255,7 +264,7 @@ fn render_table<H: UiHost>(
             let column_test_id_suffixes = column_test_id_suffixes.clone();
             cx.keyed(row.key.clone(), |cx| {
                 let mut iter = row.cells.into_iter();
-                let mut cells = Vec::with_capacity(columns.len());
+                let mut cells = Vec::with_capacity(visible_columns.len());
                 for (column_index, column) in columns.iter().enumerate() {
                     let built = iter.next().unwrap_or_else(|| BuiltTableCell {
                         test_id: None,
@@ -263,6 +272,9 @@ fn render_table<H: UiHost>(
                         background: None,
                         content: empty_cell(cx),
                     });
+                    if !column.visible {
+                        continue;
+                    }
                     let default_test_id = row
                         .test_id
                         .as_ref()
@@ -950,6 +962,16 @@ mod tests {
         )
     }
 
+    fn contains_text(root: &AnyElement, expected: &str) -> bool {
+        match &root.kind {
+            ElementKind::Text(props) if props.text.as_ref() == expected => true,
+            _ => root
+                .children
+                .iter()
+                .any(|child| contains_text(child, expected)),
+        }
+    }
+
     #[test]
     fn table_header_label_uses_shared_table_cell_text_role() {
         let window = AppWindowId::default();
@@ -970,5 +992,55 @@ mod tests {
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
         assert!(el.inherited_text_style.is_some());
+    }
+
+    #[test]
+    fn hidden_table_columns_do_not_render_header_body_or_response() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let columns = vec![
+            TableColumn::fill("Name###name"),
+            TableColumn::px("Hidden###hidden", Px(96.0)).hidden(),
+            TableColumn::px("Owner###owner", Px(88.0)),
+        ];
+        let (el, response) =
+            elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+                let rows = vec![BuiltTableRow {
+                    key: Arc::from("row-0"),
+                    test_id: None,
+                    background: None,
+                    cells: vec![
+                        BuiltTableCell {
+                            test_id: None,
+                            explicit_test_id: None,
+                            background: None,
+                            content: cx.text("Name Body"),
+                        },
+                        BuiltTableCell {
+                            test_id: None,
+                            explicit_test_id: None,
+                            background: None,
+                            content: cx.text("Hidden Body"),
+                        },
+                        BuiltTableCell {
+                            test_id: None,
+                            explicit_test_id: None,
+                            background: None,
+                            content: cx.text("Owner Body"),
+                        },
+                    ],
+                }];
+                render_table(cx, "hidden-columns", columns, rows, TableOptions::default())
+            });
+
+        assert_eq!(response.headers().len(), 2);
+        assert!(response.header("name").is_some());
+        assert!(response.header("hidden").is_none());
+        assert!(response.header("owner").is_some());
+        assert!(!contains_text(&el, "Hidden"));
+        assert!(contains_text(&el, "Name Body"));
+        assert!(!contains_text(&el, "Hidden Body"));
+        assert!(contains_text(&el, "Owner Body"));
     }
 }

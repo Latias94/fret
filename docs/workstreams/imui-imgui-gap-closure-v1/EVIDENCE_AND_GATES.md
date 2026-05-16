@@ -181,6 +181,14 @@ Run evidence:
   `text_table_cell(...)` too. Header labels now share compact single-line ellipsis semantics with
   body cells instead of default word wrapping. Gate: `cargo nextest run -p fret-ui-kit --features
   imui --lib table_header_label_uses_shared_table_cell_text_role --no-fail-fast`.
+- 2026-05-16: added static table column visibility through `TableColumn::hidden()` and
+  `TableColumn::with_visible(bool)`. Hidden columns still consume author-submitted row cells in
+  declared column order, but they do not render header/body cells and do not emit header responses.
+  Gates: `cargo nextest run -p fret-ui-kit --features imui --lib
+  hidden_table_columns_do_not_render_header_body_or_response --no-fail-fast`, `cargo nextest run -p
+  fret-ui-kit --features imui --test imui_table_smoke table_column_visibility_helpers_compile
+  --no-fail-fast`, and `cargo nextest run -p fret-imui
+  table_helper_skips_hidden_columns_in_header_and_body --no-fail-fast`.
 - 2026-05-16: introduced `text_control_readout(...)` as the shared compact control-readout text
   role. The UI Gallery code-editor toolbar keeps its doc-layout helper, but that helper now
   delegates to `fret-ui-kit::declarative::text::text_control_readout(...)`, so dense status/readout

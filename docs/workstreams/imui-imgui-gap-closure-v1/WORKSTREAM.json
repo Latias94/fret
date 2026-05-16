@@ -266,6 +266,10 @@
       "command": "cargo nextest run -p fret-imui table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells --no-fail-fast"
     },
     {
+      "name": "fret-imui table hidden column semantics test",
+      "command": "cargo nextest run -p fret-imui table_helper_skips_hidden_columns_in_header_and_body --no-fail-fast"
+    },
+    {
       "name": "diff check",
       "command": "git diff --check"
     }
@@ -309,6 +313,7 @@
     "ecosystem/fret-ui-kit/src/imui/multi_select.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/response/widgets.rs",
+    "ecosystem/fret-ui-kit/src/imui/options/collections.rs",
     "ecosystem/fret-ui-editor/src/imui.rs",
     "ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs",
     "ecosystem/fret-ui-editor/src/controls/drag_value.rs",
@@ -365,10 +370,12 @@
     "ecosystem/fret-imui/src/tests/interaction_shortcuts/mod.rs",
     "ecosystem/fret-imui/src/tests/label_identity/mod.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls.rs",
+    "ecosystem/fret-ui-kit/tests/imui_table_smoke.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
     "ecosystem/fret-imui/src/tests/floating/mod.rs",
     "ecosystem/fret-imui/src/tests/popup_hover/mod.rs",
     "ecosystem/fret-imui/src/tests/composition/mod.rs",
+    "ecosystem/fret-imui/src/tests/composition/layout_collections.rs",
     "ecosystem/fret-imui/src/tests/models_combo/mod.rs",
     "ecosystem/fret-imui/src/tests/models_controls/mod.rs",
     "ecosystem/fret-imui/src/tests/models_text_area/mod.rs",
