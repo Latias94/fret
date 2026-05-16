@@ -604,6 +604,12 @@ Run evidence:
   passed locally. This is the preferred quick drift check for the first-open discovery surface when
   `target/debug/fretboard-dev.exe` already exists; the non-`--reuse-built` discovery form remains
   the cold-start entry that also proves the maintainer build path.
+- 2026-05-16: DevTools GUI first-open posture now stays summary-first: the header renders
+  `First-open Next Actions`, `Evidence & Results` defaults to `Guide`, and the full first-open /
+  dogfood / demo-metrics-debug / gate-command reference panels remain available from that guide
+  surface. Focused gates passed locally:
+  `cargo nextest run -p fret-devtools devtools_first_open_next_action_lines_prioritize_stateful_workflow devtools_first_open_lines_surface_canonical_paths devtools_dogfood_workflow_lines_surface_ui_gallery_loop devtools_demo_metrics_debug_lines_surface_canonical_routes devtools_gate_command_lines_surface_first_class_gates --no-fail-fast`
+  and `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`.
 - 2026-05-14: tightened the first-open discovery gate so `docs/diagnostics-first-open.md` must link
   maintainers from aggregate `skipped_policy` outcomes to the policy-skip / capability-provenance
   checklist, while preserving the distinction between `capability_source` and

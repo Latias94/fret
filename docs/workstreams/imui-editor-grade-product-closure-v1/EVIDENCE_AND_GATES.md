@@ -1608,3 +1608,29 @@ python tools/gate_imui_workstream_source.py
 ```
 
 Result: passed. This is a gate-anchor repair only; it does not claim new DevTools GUI maturity.
+
+## DevTools first-open guide posture - 2026-05-16 follow-up
+
+Scope: reduce first-open cognitive load in `apps/fret-devtools` without changing diagnostics
+contracts or moving policy into `fret-imui`.
+
+- `apps/fret-devtools/src/native.rs` now defaults `Evidence & Results` to a `Guide` tab instead of
+  an empty raw `Pick` payload tab.
+- The header now renders a stateful `First-open Next Actions` summary for target/session status,
+  script inventory, regression aggregate state, and artifacts root.
+- The full first-open evidence path, UI-gallery dogfood workflow, demo/metrics/debug route, and
+  gate-command reference panels still exist in `apps/fret-devtools/src/native.rs`, but they render
+  inside the `Guide` tab so the first viewport stays summary-first.
+- `tools/diag_gate_imui_p2_devtools_first_open.py` source-checks this posture alongside the older
+  first-open discovery, gate-command, live-inspect, and secondary-tree source anchors.
+
+Focused gates:
+
+```text
+cargo nextest run -p fret-devtools devtools_first_open_next_action_lines_prioritize_stateful_workflow devtools_first_open_lines_surface_canonical_paths devtools_dogfood_workflow_lines_surface_ui_gallery_loop devtools_demo_metrics_debug_lines_surface_canonical_routes devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built
+```
+
+Result: passed locally. This is a DevTools GUI productization slice only; it keeps the editor-grade
+goal open for broader always-available tooling maturity, real-host Wayland hand-feel, and full
+perf/smoothness attribution.

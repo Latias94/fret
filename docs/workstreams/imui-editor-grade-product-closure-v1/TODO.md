@@ -239,6 +239,11 @@ reopen.
       its server instructions/resource text, so the MCP adapter does not invent a parallel
       first-open schema. The default product-chain discovery gate now also source-checks that MCP
       projection.
+      Maintenance: `apps/fret-devtools/src/native.rs` now keeps the DevTools first-open header
+      summary-first with `First-open Next Actions`, defaults `Evidence & Results` to the `Guide`
+      tab, and moves the full first-open / dogfood / demo-metrics-debug / gate-command reference
+      panels into that guide surface. The source gate now checks this posture so GUI
+      discoverability stays productized without turning the first viewport into a raw command wall.
 
 ## P3 - Multi-window hand-feel closure
 

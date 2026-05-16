@@ -10,6 +10,12 @@ cards, the `Regression` master-detail surface, and the local `diag_card` / `diag
 set. This note now tracks the remaining maintenance-phase polish only, not a new diagnostics
 model or a major layout rewrite.
 
+Status note (2026-05-16): the first-open shell now keeps the header summary-first. The header shows
+stateful `First-open Next Actions`, while the full first-open evidence path, dogfood workflow,
+demo/metrics/debug route, and gate-command reference live under the default `Evidence & Results ->
+Guide` tab. This keeps the GUI source-backed and discoverable without making the first viewport a
+raw command wall.
+
 # Diagnostics DevTools GUI Refresh v1
 
 This workstream defines a focused product/UX refresh for `apps/fret-devtools`.
@@ -420,10 +426,14 @@ Assumptions-first resume:
 
 Current source-backed readiness:
 
+- `Diagnostics Workspace` now starts with `First-open Next Actions`, a stateful summary over
+  session availability, script inventory, regression aggregate state, and artifacts root.
+- `Evidence & Results` now defaults to the `Guide` tab, which preserves the full first-open
+  command references without putting all details in the header.
 - `Script Studio` already stages the workflow as `Workflow Controls`, `Outputs & Bundles`,
   `Script Source`, `Editor`, and `Helpers`.
 - `Evidence & Results` keeps inspect, pick, script, bundle, screenshot, regression, and selected
-  semantics payloads in one details surface.
+  semantics payloads in one details surface, with `Guide` as the first-open orientation tab.
 - `Regression Workspace` is already summary-first: aggregate status, primary actions, dashboard
   preview, non-passing summaries, selected-summary actions, bundle dirs, capability sources, and
   capability checks are separated before raw payloads.
@@ -434,6 +444,8 @@ Current source-backed readiness:
 Maintenance gates:
 
 - `cargo check -p fret-devtools`
+- `cargo nextest run -p fret-devtools devtools_first_open_next_action_lines_prioritize_stateful_workflow devtools_first_open_lines_surface_canonical_paths devtools_dogfood_workflow_lines_surface_ui_gallery_loop devtools_demo_metrics_debug_lines_surface_canonical_routes devtools_gate_command_lines_surface_first_class_gates --no-fail-fast`
+- `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`
 - `python tools/check_workstream_catalog.py`
 - `git diff --check`
 
