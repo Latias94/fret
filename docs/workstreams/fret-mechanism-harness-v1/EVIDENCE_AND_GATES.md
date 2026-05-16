@@ -107,6 +107,43 @@ Current synthetic evidence anchors:
   - current result:
     passed.
 
+## Timer Dispatch Lifecycle Gates
+
+```powershell
+cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_timer_dispatch_matches_oracles -- --nocapture
+cargo test --profile dev-fast -p fret-ui --lib timer_dispatch -- --nocapture
+cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev
+target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-typeahead-commit-banana.json --dir target/fret-diag-select-typeahead-input-snapshot-after-hidden-timer-target-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe
+target/dev-fast/fretboard-dev.exe diag suite ui-gallery-select --dir target/fret-diag-select-suite-after-hidden-timer-target-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe
+```
+
+Current evidence anchors:
+
+- Timer lifecycle fixture:
+  `crates/fret-ui/src/tree/tests/fixtures/timer_dispatch_v1.json`
+  - runner:
+    `crates/fret-ui/src/tree/tests/timer_dispatch_harness.rs`
+  - proof:
+    covers visible base targets, visible hit-test-inert transition overlay targets, hidden overlay
+    targets, and removed overlay targets.
+  - current command:
+    `cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_timer_dispatch_matches_oracles -- --nocapture`
+  - current result:
+    passed.
+- Focused timer family gate:
+  `cargo test --profile dev-fast -p fret-ui --lib timer_dispatch -- --nocapture`
+  - current result:
+    passed, 7 tests.
+- Runtime Select typeahead regression:
+  `target/fret-diag-select-typeahead-input-snapshot-after-hidden-timer-target-v2/sessions/1778963942817-47376/1778963951450/ai.packet`
+  - current result:
+    passed; `tooling_warnings=[]`; no `dispatch/chain`, `node missing from input snapshot`,
+    `layout.zero_size`, or underflow text found in the packet.
+- Runtime Select suite follow-up:
+  `target/fret-diag-select-suite-after-hidden-timer-target-v1/sessions/1778964075071-40956/suite.summary.json`
+  - current result:
+    passed.
+
 ## Scroll-Handle Window-Update Gates
 
 ```powershell
