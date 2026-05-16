@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-16
+Last updated: 2026-05-17
 
 ## M0 - Current Source Baseline
 
@@ -235,6 +235,11 @@ Exit criteria:
   2026-05-16 control chrome fill-text result: shared checkbox/radio/switch labels, combo preview
   text, and slider captions now use single-line shrink/ellipsis layout through
   `control_chrome::fill_text(...)`, removing another fixed-height control wrapping path.
+  2026-05-17 editor input value text result: `editor_input_value_text(...)` now owns the shared
+  numeric scrub-readout text role for drag-value and axis-drag-value controls. The role stays in
+  `fret-ui-editor` because it depends on editor density/chrome policy, but it now has the same
+  resize-safe fill, `min-width: 0`, shrink, single-line, and ellipsis behavior expected by IMUI
+  editor panels.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

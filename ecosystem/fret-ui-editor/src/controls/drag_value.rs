@@ -16,7 +16,7 @@ use crate::primitives::colors::editor_muted_foreground;
 use crate::primitives::drag_value_core::DragValueScalar;
 use crate::primitives::input_group::{
     derived_test_id, editor_input_group_divider, editor_input_group_inset, editor_input_group_row,
-    editor_text_segment,
+    editor_input_value_text, editor_text_segment,
 };
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::{
@@ -29,16 +29,14 @@ use crate::primitives::{
     DragValueCore, DragValueCoreOptions, EditSessionOutcome, NumericPresentation,
     NumericValueConstraints, constrain_numeric_value,
 };
-use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Corners, Edges, Px, TextAlign, TextStyle};
+use fret_core::{Corners, Edges, Px};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerDownCx, PressablePointerDownResult, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexItemStyle, InsetStyle, LayoutStyle, Length, Overflow,
-    PositionStyle, SizeStyle, TextProps,
+    PositionStyle, SizeStyle,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::typography;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DragValueMode {
@@ -332,27 +330,14 @@ where
                                 let theme = Theme::global(&*cx.app);
                                 let affix_color = editor_muted_foreground(theme);
                                 let divider = visuals.border;
-                                let value_text_el = cx.text_props(TextProps {
-                                    layout: LayoutStyle {
-                                        size: SizeStyle {
-                                            width: Length::Fill,
-                                            height: Length::Auto,
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    },
-                                    text: value_text.clone(),
-                                    style: Some(typography::as_control_text(TextStyle {
-                                        size: scrub_chrome.text_px,
-                                        line_height: Some(density.row_height),
-                                        ..Default::default()
-                                    })),
-                                    color: Some(visuals.fg),
-                                    wrap: TextWrap::None,
-                                    overflow: TextOverflow::Ellipsis,
-                                    align: TextAlign::Start,
-                                    ink_overflow: Default::default(),
-                                });
+                                let value_text_el = editor_input_value_text(
+                                    cx,
+                                    density,
+                                    scrub_chrome.text_px,
+                                    value_text.clone(),
+                                    visuals.fg,
+                                    Length::Auto,
+                                );
                                 let mut value = editor_input_group_inset(
                                     cx,
                                     scrub_chrome.padding,

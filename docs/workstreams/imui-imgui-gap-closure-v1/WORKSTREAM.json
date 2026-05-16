@@ -3,7 +3,7 @@
   "slug": "imui-imgui-gap-closure-v1",
   "title": "ImUi Dear ImGui Gap Closure v1",
   "status": "active",
-  "updated": "2026-05-16",
+  "updated": "2026-05-17",
   "scope_kind": "execution",
   "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "Refresh the Dear ImGui gap read from current Fret sources and repo-ref/imgui before further fearless refactors: identify stale parity conclusions, rank the remaining gaps, name delete/refactor candidates, and keep each follow-on tied to repro, gate, and evidence.",
@@ -170,6 +170,10 @@
       "command": "cargo nextest run -p fret-ui-kit --features imui --lib menu_item_shortcut_text_uses_shared_control_readout_role menu_item_label_text_uses_shared_list_row_text_role --no-fail-fast"
     },
     {
+      "name": "editor input value text semantics",
+      "command": "cargo nextest run -p fret-ui-editor editor_input_value_text_is_single_line_and_shrinkable drag_value axis_drag_value --no-fail-fast"
+    },
+    {
       "name": "fret-examples imui proof check",
       "command": "cargo check -p fret-examples"
     },
@@ -332,6 +336,7 @@
     "ecosystem/fret-ui-kit/src/imui/options/collections.rs",
     "ecosystem/fret-ui-editor/src/imui.rs",
     "ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs",
+    "ecosystem/fret-ui-editor/src/primitives/input_group.rs",
     "ecosystem/fret-ui-editor/src/controls/drag_value.rs",
     "ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs",
     "ecosystem/fret-ui-editor/src/controls/vec_edit.rs",

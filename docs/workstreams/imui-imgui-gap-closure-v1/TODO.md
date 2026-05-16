@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-05-16
+Last updated: 2026-05-17
 
 ## P0 - Source Baseline
 
@@ -231,6 +231,10 @@ Readiness order for the next locally testable review slices:
    captions now inherit the same compact single-line shrink/ellipsis posture through
    `control_chrome::fill_text(...)`, so fixed-height control chrome cannot grow rows by word
    wrapping under resize.
+   2026-05-17 editor input value text follow-up: `fret-ui-editor` now shares
+   `editor_input_value_text(...)` for drag-value and axis-drag-value scrub readouts. The helper
+   keeps numeric value text fill-width, `min-width: 0`, shrinkable, single-line, and ellipsis
+   clipped without moving editor-specific density/chrome policy into `fret-imui`.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

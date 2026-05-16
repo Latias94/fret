@@ -441,6 +441,45 @@ pub(crate) fn editor_text_segment<H: UiHost>(
     )
 }
 
+pub(crate) fn editor_input_value_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    density: EditorDensity,
+    text_px: Px,
+    text: Arc<str>,
+    color: Color,
+    height: Length,
+) -> AnyElement {
+    cx.text_props(TextProps {
+        layout: LayoutStyle {
+            size: SizeStyle {
+                width: Length::Fill,
+                height,
+                min_width: Some(Length::Px(Px(0.0))),
+                ..Default::default()
+            },
+            flex: FlexItemStyle {
+                order: 0,
+                grow: 1.0,
+                shrink: 1.0,
+                basis: Length::Px(Px(0.0)),
+                align_self: None,
+            },
+            ..Default::default()
+        },
+        text,
+        style: Some(typography::as_control_text(TextStyle {
+            size: text_px,
+            line_height: Some(density.row_height),
+            ..Default::default()
+        })),
+        color: Some(color),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Ellipsis,
+        align: TextAlign::Start,
+        ink_overflow: Default::default(),
+    })
+}
+
 pub(crate) fn derived_test_id(base: Option<&Arc<str>>, suffix: &str) -> Option<Arc<str>> {
     base.map(|id| Arc::<str>::from(format!("{}.{}", id.as_ref(), suffix)))
 }
@@ -726,5 +765,56 @@ fn mix(a: Color, b: Color, t: f32) -> Color {
         g: lerp(a.g, b.g, t),
         b: lerp(a.b, b.b, t),
         a: lerp(a.a, b.a, t),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size, TextOverflow, TextWrap};
+    use fret_ui::element::{ElementKind, Length};
+    use fret_ui::elements;
+
+    use super::*;
+
+    fn test_bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(160.0)),
+        )
+    }
+
+    #[test]
+    fn editor_input_value_text_is_single_line_and_shrinkable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let color = fret_core::Color::from_srgb_hex_rgb(0xDD_EE_FF);
+
+        let el = elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+            editor_input_value_text(
+                cx,
+                EditorDensity::default(),
+                Px(12.0),
+                Arc::from("123456789.123456789"),
+                color,
+                Length::Fill,
+            )
+        });
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected editor_input_value_text(...) to build a Text element");
+        };
+
+        assert_eq!(props.color, Some(color));
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.height, Length::Fill);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
     }
 }

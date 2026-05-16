@@ -6,8 +6,7 @@
 use std::panic::Location;
 use std::sync::{Arc, Mutex};
 
-use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Color, Edges, KeyCode, Px, SemanticsInvalid, TextAlign, TextStyle};
+use fret_core::{Color, Edges, KeyCode, Px, SemanticsInvalid, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::{
     ActionCx, OnActivate, PointerDownCx, PressablePointerDownResult, UiActionHost,
@@ -15,7 +14,7 @@ use fret_ui::action::{
 };
 use fret_ui::element::{
     AnyElement, FlexItemStyle, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle, SizeStyle,
-    TextInputProps, TextProps,
+    TextInputProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
@@ -31,7 +30,7 @@ use crate::primitives::input_group::{
     EditorInputGroupFrameOverrides, derived_test_id, editor_axis_segment,
     editor_icon_button_segment, editor_icon_segment, editor_input_group_divider,
     editor_input_group_frame, editor_input_group_frame_with_overrides, editor_input_group_inset,
-    editor_input_group_row, editor_text_segment,
+    editor_input_group_row, editor_input_value_text, editor_text_segment,
 };
 use crate::primitives::numeric_format::suppress_duplicate_chrome_affixes;
 use crate::primitives::numeric_text_entry::{
@@ -425,27 +424,14 @@ where
                                         .a11y_label(axis_label.clone());
                                 }
                                 let sep = editor_input_group_divider(cx, divider);
-                                let value_text_el = cx.text_props(TextProps {
-                                    layout: LayoutStyle {
-                                        size: SizeStyle {
-                                            width: Length::Fill,
-                                            height: Length::Fill,
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    },
-                                    text: value_text_for_scrub.clone(),
-                                    style: Some(typography::as_control_text(TextStyle {
-                                        size: frame_chrome.text_px,
-                                        line_height: Some(density.row_height),
-                                        ..Default::default()
-                                    })),
-                                    color: Some(visuals.fg),
-                                    wrap: TextWrap::None,
-                                    overflow: TextOverflow::Ellipsis,
-                                    align: TextAlign::Start,
-                                    ink_overflow: Default::default(),
-                                });
+                                let value_text_el = editor_input_value_text(
+                                    cx,
+                                    density,
+                                    frame_chrome.text_px,
+                                    value_text_for_scrub.clone(),
+                                    visuals.fg,
+                                    Length::Fill,
+                                );
                                 let mut value = editor_input_group_inset(
                                     cx,
                                     frame_chrome.padding,

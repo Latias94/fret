@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-05-16
+Last updated: 2026-05-17
 
 ## Evidence Anchors
 
@@ -70,6 +70,7 @@ Last updated: 2026-05-16
   - `ecosystem/fret-ui-kit/tests/imui_image_item_smoke.rs`
   - `ecosystem/fret-ui-editor/src/imui.rs`
   - `ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs`
+  - `ecosystem/fret-ui-editor/src/primitives/input_group.rs`
   - `ecosystem/fret-ui-editor/src/controls/drag_value.rs`
   - `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs`
   - `ecosystem/fret/src/lib.rs`
@@ -236,6 +237,12 @@ Run evidence:
   control chrome, disclosure indicator, facade `text`/`text_wrapped`, floating title, and separator
   label. New direct constructors now fail the source gate unless they are routed through the shared
   text roles or intentionally added to the allowlist. Gate: `python tools/gate_imui_workstream_source.py`.
+- 2026-05-17: introduced `editor_input_value_text(...)` in `fret-ui-editor` input-group primitives
+  and routed drag-value plus axis-drag-value scrub readouts through it. The helper keeps editor
+  numeric value text fill-width, `min-width: 0`, shrinkable, single-line, and ellipsis-truncated
+  while preserving editor-specific density and chrome policy outside `fret-imui`. Gates: `cargo
+  nextest run -p fret-ui-editor editor_input_value_text_is_single_line_and_shrinkable --no-fail-fast`
+  and `cargo nextest run -p fret-ui-editor drag_value axis_drag_value --no-fail-fast`.
 - 2026-05-16: tightened `UiWriterImUiFacadeExt::text(...)` to match Dear ImGui's default
   `Text()` posture: single-line, shrinkable, `min-width: 0`, and ellipsis-truncated under resize.
   Added `UiWriterImUiFacadeExt::text_wrapped(...)` as the explicit wrapping path for explanatory
