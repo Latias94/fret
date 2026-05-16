@@ -2303,6 +2303,7 @@ impl WinitAppDriver for UiGalleryDriver {
                     scale_factor,
                     &mut state.ui,
                     element_runtime,
+                    None,
                     scene,
                 );
                 let defer_dump_until_renderer_perf = std::env::var_os("FRET_DIAG_RENDERER_PERF")

@@ -488,6 +488,33 @@ impl<'a> CanvasPrepaintPainter<'a> {
         (draw.blob, draw.metrics)
     }
 
+    /// Prepare a cached text blob without emitting a `SceneOp::Text`.
+    ///
+    /// Use this when the final draw origin depends on the prepared metrics for the current frame.
+    #[allow(clippy::too_many_arguments)]
+    pub fn prepare_text_with_blob(
+        &mut self,
+        key: u64,
+        text: impl Into<Arc<str>>,
+        style: TextStyle,
+        constraints: CanvasTextConstraints,
+        raster_scale_factor: f32,
+    ) -> (fret_core::TextBlobId, TextMetrics) {
+        let text = text.into();
+        let font_stack_key = self.host.text_font_stack_key();
+        let services = self.host.services();
+        let draw = self.cache.text_prepare(
+            services,
+            key,
+            HostedTextContent::Plain(text),
+            style,
+            constraints,
+            raster_scale_factor,
+            font_stack_key,
+        );
+        (draw.blob, draw.metrics)
+    }
+
     /// Draw cached rich text into the scratch scene and return its hosted `TextBlobId`.
     #[allow(clippy::too_many_arguments)]
     pub fn rich_text_with_blob(
@@ -1011,6 +1038,33 @@ impl<'a> CanvasPainter<'a> {
             raster_scale_factor,
             font_stack_key,
             scene,
+        );
+        (draw.blob, draw.metrics)
+    }
+
+    /// Prepare a cached text blob without emitting a `SceneOp::Text`.
+    ///
+    /// Use this when the final draw origin depends on the prepared metrics for the current frame.
+    #[allow(clippy::too_many_arguments)]
+    pub fn prepare_text_with_blob(
+        &mut self,
+        key: u64,
+        text: impl Into<Arc<str>>,
+        style: TextStyle,
+        constraints: CanvasTextConstraints,
+        raster_scale_factor: f32,
+    ) -> (fret_core::TextBlobId, TextMetrics) {
+        let text = text.into();
+        let font_stack_key = self.host.text_font_stack_key();
+        let (services, _) = self.host.services_and_scene();
+        let draw = self.cache.text_prepare(
+            services,
+            key,
+            HostedTextContent::Plain(text),
+            style,
+            constraints,
+            raster_scale_factor,
+            font_stack_key,
         );
         (draw.blob, draw.metrics)
     }
@@ -1743,19 +1797,15 @@ impl CanvasCache {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn text_draw(
+    fn text_prepare(
         &mut self,
         services: &mut dyn fret_core::UiServices,
         key: u64,
-        order: DrawOrder,
-        origin: Point,
         content: HostedTextContent,
         style: TextStyle,
-        color: Color,
         constraints: CanvasTextConstraints,
         raster_scale_factor: f32,
         font_stack_key: u64,
-        scene: &mut Scene,
     ) -> TextDraw {
         let raster_scale_factor = normalize_scale_factor(raster_scale_factor);
         let scale_bits = raster_scale_factor.to_bits();
@@ -1828,16 +1878,43 @@ impl CanvasCache {
             size: fret_core::Size::new(Px(0.0), Px(0.0)),
             baseline: Px(0.0),
         });
+        TextDraw { blob, metrics }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn text_draw(
+        &mut self,
+        services: &mut dyn fret_core::UiServices,
+        key: u64,
+        order: DrawOrder,
+        origin: Point,
+        content: HostedTextContent,
+        style: TextStyle,
+        color: Color,
+        constraints: CanvasTextConstraints,
+        raster_scale_factor: f32,
+        font_stack_key: u64,
+        scene: &mut Scene,
+    ) -> TextDraw {
+        let draw = self.text_prepare(
+            services,
+            key,
+            content,
+            style,
+            constraints,
+            raster_scale_factor,
+            font_stack_key,
+        );
 
         scene.push(SceneOp::Text {
             order,
             origin,
-            text: blob,
+            text: draw.blob,
             paint: Paint::Solid(color).into(),
             outline: None,
             shadow: None,
         });
-        TextDraw { blob, metrics }
+        draw
     }
 
     #[allow(clippy::too_many_arguments)]

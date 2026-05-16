@@ -3192,6 +3192,9 @@ fn render(
 
     app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
         let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+        let real_perf_span_start_us = perf_span_capture
+            .as_ref()
+            .map(UiRealPerfSpanCaptureV1::frame_elapsed_us);
         if let Some(capture) = perf_span_capture.as_mut() {
             capture.record_for_window(svc, window);
         }
@@ -3202,6 +3205,7 @@ fn render(
             scale_factor,
             &mut state.ui,
             element_runtime,
+            real_perf_span_start_us,
             scene,
         );
         let _ = svc.maybe_dump_if_triggered();

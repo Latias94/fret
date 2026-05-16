@@ -567,6 +567,88 @@ fn canvas_hosts_text_and_releases_on_cleanup() {
 }
 
 #[test]
+fn canvas_can_prepare_text_before_emitting_scene_text() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let paint = |p: &mut crate::canvas::CanvasPainter<'_>| {
+        let key = p.child_key(p.key_scope(&"text"), &1u64).0;
+        let style = TextStyle::default();
+        let color = Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0,
+        };
+        let constraints = crate::canvas::CanvasTextConstraints::default();
+        let (blob, metrics) =
+            p.prepare_text_with_blob(key, "hello", style.clone(), constraints, p.scale_factor());
+        assert_eq!(
+            p.scene()
+                .ops()
+                .iter()
+                .filter(|op| matches!(op, SceneOp::Text { .. }))
+                .count(),
+            0,
+            "prepare_text_with_blob must not emit text scene ops"
+        );
+
+        p.scene().push(SceneOp::Text {
+            order: fret_core::DrawOrder(0),
+            origin: Point::new(Px(10.0), Px(10.0) + metrics.baseline),
+            text: blob,
+            paint: fret_core::Paint::Solid(color).into(),
+            outline: None,
+            shadow: None,
+        });
+
+        let _ = p.text(
+            key,
+            fret_core::DrawOrder(1),
+            Point::new(Px(10.0), Px(30.0)),
+            "hello",
+            style,
+            color,
+            constraints,
+            p.scale_factor(),
+        );
+    };
+
+    let node = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "canvas-prepare-text-before-draw",
+        |cx| vec![cx.canvas(crate::element::CanvasProps::default(), paint)],
+    );
+    ui.set_root(node);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    assert_eq!(services.prepare_calls, 1);
+    assert_eq!(
+        scene
+            .ops()
+            .iter()
+            .filter(|op| matches!(op, SceneOp::Text { .. }))
+            .count(),
+        2
+    );
+}
+
+#[test]
 fn canvas_hosts_path_and_releases_on_cleanup() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
