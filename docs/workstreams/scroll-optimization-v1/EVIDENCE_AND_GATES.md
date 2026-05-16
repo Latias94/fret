@@ -70,6 +70,31 @@ Decision:
   under a `needs_rerender` content view-cache root can use a cheaper resize apply path without
   weakening scroll extent correctness.
 
+Follow-up local no-4090 attribution (2026-05-16):
+
+- Baseline same-command resize-jitter sample:
+  `target/fret-diag/local-next-no4090-resize-jitter-20260516-r3/worst.stats.json`
+- Paint-only RAF experiment sample:
+  `target/fret-diag/local-next-no4090-resize-jitter-paint-only-raf-20260516-r3/worst.stats.json`
+- Focused gates:
+  - `cargo nextest run -p fret-ui canvas_paint_only_animation_frame_keeps_view_cache_root_reusable --no-fail-fast`
+  - `cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast`
+  - `cargo fmt --check`
+- Result:
+  - `CodeEditor` torture autoscroll now requests paint-only RAF from its paint hook.
+  - The resize-jitter worst-bundle p95 moved total/layout/solve/prepaint/paint from
+    `1494/903/408/221/632us` to `1479/865/386/183/613us`.
+  - The row replay guardrails stayed stable: `rows_scene_replayed=289`, `rows_scene_stored=0`,
+    and row-scene replay hit rate `100%`.
+  - The view-cache root still reports `reuse_reason=needs_rerender`, but the dirty source moved
+    from `notify/animation_frame_request` to `other/scroll_handle_window_update`.
+- Decision:
+  - Keep the paint-only RAF cleanup as a baseline-neutral correction.
+  - Do not classify this as a shadcn `ScrollArea` recipe issue.
+  - The remaining owner is the windowed-paint scroll update contract: avoid parent cache-root
+    rerender only when a retained/windowed surface can prove the current visible row window is
+    already covered by retained row fragments.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:

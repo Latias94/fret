@@ -105,6 +105,49 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 23:16:27 +0800 (code-editor torture autoscroll paint-only RAF)
+
+Question:
+- With Windows RTX4090 closeout deferred, can the local resize-jitter `needs_rerender` owner be
+  narrowed without changing checked-in baselines?
+
+Change:
+- `CodeEditor` torture autoscroll now calls `CanvasPainter::request_animation_frame_paint_only()`
+  after updating the scroll handle from the `WindowedRowsSurface` paint hook.
+- This keeps the runner RAF request, but avoids marking the nearest content view-cache root dirty
+  through the generic `notify/animation_frame_request` path.
+
+Evidence:
+- Focused gates:
+  - `cargo nextest run -p fret-ui canvas_paint_only_animation_frame_keeps_view_cache_root_reusable --no-fail-fast`
+  - `cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast`
+  - `cargo fmt --check`
+- Local no-4090 bundles:
+  - typical autoscroll:
+    `target/fret-diag/local-next-no4090-paint-only-raf-typical-20260516-r3/worst.stats.json`
+  - complex wheel:
+    `target/fret-diag/local-next-no4090-paint-only-raf-complex-wheel-20260516-r3/worst.stats.json`
+  - resize jitter:
+    `target/fret-diag/local-next-no4090-resize-jitter-paint-only-raf-20260516-r3/worst.stats.json`
+
+Results:
+| script | p95 total | layout | prepaint | paint | renderer text | code-editor total | rows replayed/stored |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| autoscroll typical | 582 | 33 | 186 | 372 | 33 | 94 | 289/0 |
+| complex wheel | 722 | 169 | 198 | 355 | 46 | 78 | 286/1 |
+| resize jitter | 1479 | 865 | 183 | 613 | 68 | 118 | 289/0 |
+
+Decision:
+- Keep this as a baseline-neutral local cleanup.
+- The content view-cache root still reports `reuse_reason=needs_rerender`; after this change its
+  dirty source is the legitimate `other/scroll_handle_window_update`, not
+  `notify/animation_frame_request`.
+- The next owner is not renderer text, row-fragment replay, or shadcn `ScrollArea` policy. It is a
+  retained-windowed-paint scroll update contract: only avoid parent cache-root rerender when the
+  retained row-fragment cache proves the current visible row window is already covered.
+- Do not update baselines or close the Windows RTX4090 editor-paint contract from this macOS M4
+  evidence.
+
 ## 2026-05-16 22:10:00 +0800 (retained row-fragment post-probe attribution)
 
 Question:

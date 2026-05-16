@@ -907,6 +907,18 @@ not update checked-in baselines.
           moves `paint_host_widget_observed_models_time_us` / `paint_host_widget_observed_globals_time_us`
           p95 from `24/23us` to `4/4us`. This is a baseline-neutral host-widget traversal cleanup,
           not Windows RTX4090 closeout evidence.
+        - Local slice: code-editor torture autoscroll now requests paint-only RAF from the
+          `WindowedRowsSurface` paint hook. This removes the generic `notify/animation_frame_request`
+          cache-root dirty source while preserving the real scroll-handle window update signal.
+          Local no-4090 evidence:
+          `target/fret-diag/local-next-no4090-paint-only-raf-typical-20260516-r3/worst.stats.json`,
+          `target/fret-diag/local-next-no4090-paint-only-raf-complex-wheel-20260516-r3/worst.stats.json`,
+          and
+          `target/fret-diag/local-next-no4090-resize-jitter-paint-only-raf-20260516-r3/worst.stats.json`.
+          The three probes keep row replay healthy (`rows_scene_stored` p95 `0/1/0`, replay hit rate
+          `100%`) and reduce the resize-jitter p95 total/layout/prepaint/paint from
+          `1494/903/221/632us` to `1479/865/183/613us`. This is still baseline-neutral local
+          evidence only.
         - Formal owner decision from the three-probe editor contract remains unchanged: the
           dominant residual is still `paint.widget` / Canvas aggregate work, with renderer text
           prepare visible but not yet the primary limiter. The next implementation slice should
@@ -922,7 +934,11 @@ not update checked-in baselines.
           3. Audit policy/component focus-visible lookups in ecosystem crates and only short-circuit
              the obvious `focused && focus_visible` cases with targeted tests; this is a small
              traversal cleanup, not a core contract change.
-          4. Refresh or close the older `ui-perf-paint-pass-breakdown-v1` notes before using them as
+          4. Investigate a retained-windowed-paint scroll update path that does not mark the parent
+             content view-cache root `needs_rerender` when retained row fragments already cover the
+             visible row window. Keep `Scroll.windowed_paint=true` as the conservative default for
+             non-retained surfaces.
+          5. Refresh or close the older `ui-perf-paint-pass-breakdown-v1` notes before using them as
              a current execution source; the active editor-paint evidence now lives in this lane.
         - Do not split a new workstream for the above. Split a narrow follow-on only when the next
           slice becomes a hard contract or structural rewrite, such as true FrameArena/bump allocation,

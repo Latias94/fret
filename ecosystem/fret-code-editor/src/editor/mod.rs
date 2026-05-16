@@ -1162,7 +1162,7 @@ impl CodeEditor {
                         }
 
                         scroll_handle.set_offset(fret_core::Point::new(offset.x, Px(next_y)));
-                        painter.request_animation_frame();
+                        painter.request_animation_frame_paint_only();
 
                         if let Some(started) = autoscroll_started {
                             editor_state
