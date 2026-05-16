@@ -187,7 +187,7 @@
     },
     {
       "name": "editor popup list text semantics",
-      "command": "cargo nextest run -p fret-ui-editor popup_list_row_text_is_single_line_and_shrinkable popup_empty_text_is_single_line_and_shrinkable enum_select_item_test_id_segment_is_stable_ascii empty_label_is_inline_only --no-fail-fast"
+      "command": "cargo nextest run -p fret-ui-editor popup_list_row_text_is_single_line_and_shrinkable popup_empty_text_is_single_line_and_shrinkable popup_list_centered_row_text_keeps_row_fill_and_center_alignment popup_list_option_caption_text_keeps_fixed_caption_line_box enum_select_item_test_id_segment_is_stable_ascii empty_label_is_inline_only color_copy_entries_match_imgui_copy_as_payloads popup_options_default_to_imgui_like_hue_bar_surface --no-fail-fast"
     },
     {
       "name": "fret-examples imui proof check",
@@ -357,7 +357,9 @@
     "ecosystem/fret-ui-editor/src/primitives/readout.rs",
     "ecosystem/fret-ui-editor/src/controls/field_status.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/popup/copy.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/numeric.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/popup/options.rs",
     "ecosystem/fret-ui-editor/src/controls/drag_value.rs",
     "ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs",
     "ecosystem/fret-ui-editor/src/controls/enum_select.rs",

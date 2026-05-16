@@ -72,11 +72,43 @@ pub(crate) fn editor_popup_list_row_text_props(
     color: Color,
     row_height: Px,
 ) -> TextProps {
+    editor_popup_list_text_props(text, color, row_height, Length::Fill, TextAlign::Start)
+}
+
+pub(crate) fn editor_popup_list_centered_row_text_props(
+    text: Arc<str>,
+    color: Color,
+    row_height: Px,
+) -> TextProps {
+    editor_popup_list_text_props(text, color, row_height, Length::Fill, TextAlign::Center)
+}
+
+pub(crate) fn editor_popup_list_option_caption_text_props(
+    text: Arc<str>,
+    color: Color,
+    row_height: Px,
+) -> TextProps {
+    editor_popup_list_text_props(
+        text,
+        color,
+        row_height,
+        Length::Px(row_height),
+        TextAlign::Center,
+    )
+}
+
+fn editor_popup_list_text_props(
+    text: Arc<str>,
+    color: Color,
+    row_height: Px,
+    height: Length,
+    align: TextAlign,
+) -> TextProps {
     TextProps {
         layout: LayoutStyle {
             size: SizeStyle {
                 width: Length::Fill,
-                height: Length::Fill,
+                height,
                 min_width: Some(Length::Px(Px(0.0))),
                 ..Default::default()
             },
@@ -87,7 +119,7 @@ pub(crate) fn editor_popup_list_row_text_props(
         color: Some(color),
         wrap: TextWrap::None,
         overflow: TextOverflow::Ellipsis,
-        align: TextAlign::Start,
+        align,
         ink_overflow: Default::default(),
     }
 }
@@ -147,9 +179,10 @@ mod tests {
     use fret_ui::{Theme, ThemeConfig};
 
     use super::{
-        EditorPopupListRowState, editor_popup_empty_text_props, editor_popup_list_content_height,
-        editor_popup_list_default_max_content_height, editor_popup_list_row_gap,
-        editor_popup_list_row_palette, editor_popup_list_row_text_props,
+        EditorPopupListRowState, editor_popup_empty_text_props,
+        editor_popup_list_centered_row_text_props, editor_popup_list_content_height,
+        editor_popup_list_default_max_content_height, editor_popup_list_option_caption_text_props,
+        editor_popup_list_row_gap, editor_popup_list_row_palette, editor_popup_list_row_text_props,
     };
     use crate::primitives::EditorTokenKeys;
 
@@ -244,5 +277,35 @@ mod tests {
         let style = props.style.expect("popup empty text should set style");
         assert_eq!(style.size, Px(12.0));
         assert_eq!(style.line_height, Some(Px(28.0)));
+    }
+
+    #[test]
+    fn popup_list_centered_row_text_keeps_row_fill_and_center_alignment() {
+        let color = Color::from_srgb_hex_rgb(0xAA_BB_CC);
+        let props =
+            editor_popup_list_centered_row_text_props(Arc::from("Hue Bar"), color, Px(28.0));
+
+        assert_eq!(props.color, Some(color));
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.height, Length::Fill);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(props.align, TextAlign::Center);
+    }
+
+    #[test]
+    fn popup_list_option_caption_text_keeps_fixed_caption_line_box() {
+        let color = Color::from_srgb_hex_rgb(0xAA_BB_CC);
+        let props =
+            editor_popup_list_option_caption_text_props(Arc::from("Hue Wheel"), color, Px(28.0));
+
+        assert_eq!(props.color, Some(color));
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.height, Length::Px(Px(28.0)));
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(props.align, TextAlign::Center);
     }
 }

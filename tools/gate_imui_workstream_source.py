@@ -346,6 +346,8 @@ def main() -> None:
                 "ecosystem/fret-ui-editor/src/primitives/readout.rs",
                 "ecosystem/fret-ui-editor/src/controls/enum_select.rs",
                 "ecosystem/fret-ui-editor/src/controls/text_assist_field.rs",
+                "ecosystem/fret-ui-editor/src/controls/color_edit/popup/copy.rs",
+                "ecosystem/fret-ui-editor/src/controls/color_edit/popup/options.rs",
                 "ecosystem/fret-ui-editor/src/controls/transform_edit.rs",
                 "ecosystem/fret-ui-kit/src/imui/facade_writer.rs ecosystem/fret-ui-kit/src/imui/facade_writer",
                 "ecosystem/fret-imui/Cargo.toml",
@@ -365,7 +367,7 @@ def main() -> None:
                 "editor_status_badge_text_uses_compact_single_line_readout_role error_badge_palette_keeps_short_visible_label",
                 "editor_inline_error_text_is_single_line_and_shrinkable numeric_readout_formats_rgb_hsv_and_optional_alpha",
                 "editor_section_badge_text_is_single_line_centered_badge_label editor_section_heading_text_is_single_line_and_shrinkable editor_inline_control_label_text_is_single_line_and_shrinkable transform_edit_axis_outcome_exposes_read_only_signals",
-                "popup_list_row_text_is_single_line_and_shrinkable popup_empty_text_is_single_line_and_shrinkable enum_select_item_test_id_segment_is_stable_ascii empty_label_is_inline_only",
+                "popup_list_row_text_is_single_line_and_shrinkable popup_empty_text_is_single_line_and_shrinkable popup_list_centered_row_text_keeps_row_fill_and_center_alignment popup_list_option_caption_text_keeps_fixed_caption_line_box enum_select_item_test_id_segment_is_stable_ascii empty_label_is_inline_only color_copy_entries_match_imgui_copy_as_payloads popup_options_default_to_imgui_like_hue_bar_surface",
                 "cargo check -p fret-examples",
             ],
             forbidden=[],
@@ -3993,12 +3995,16 @@ def main() -> None:
             Path("ecosystem/fret-ui-editor/src/primitives/popup_list.rs"),
             required=[
                 "pub(crate) fn editor_popup_list_row_text_props",
+                "pub(crate) fn editor_popup_list_centered_row_text_props",
+                "pub(crate) fn editor_popup_list_option_caption_text_props",
                 "pub(crate) fn editor_popup_empty_text_props",
                 "min_width: Some(Length::Px(Px(0.0))),",
                 "wrap: TextWrap::None,",
                 "overflow: TextOverflow::Ellipsis,",
                 "popup_list_row_text_is_single_line_and_shrinkable",
                 "popup_empty_text_is_single_line_and_shrinkable",
+                "popup_list_centered_row_text_keeps_row_fill_and_center_alignment",
+                "popup_list_option_caption_text_keeps_fixed_caption_line_box",
             ],
             forbidden=[
                 "TextProps::new(",
@@ -4028,6 +4034,33 @@ def main() -> None:
                 "TextProps {",
                 "wrap: TextWrap::None,",
                 "overflow: TextOverflow::Ellipsis,",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/color_edit/popup/copy.rs"),
+            required=[
+                "editor_popup_list_row_text_props(",
+            ],
+            forbidden=[
+                "TextProps::new(",
+                "TextProps {",
+                "TextStyle {",
+                "wrap: TextWrap::None,",
+                "editor_popup_list_row_text_style",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/controls/color_edit/popup/options.rs"),
+            required=[
+                "editor_popup_list_centered_row_text_props(",
+                "editor_popup_list_option_caption_text_props(",
+            ],
+            forbidden=[
+                "TextProps::new(",
+                "TextProps {",
+                "TextStyle {",
+                "wrap: TextWrap::None,",
+                "editor_popup_list_row_text_style",
             ],
         ),
         SourceCheck(

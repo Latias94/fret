@@ -1,13 +1,12 @@
 use std::sync::Arc;
 
-use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Color, Corners, Edges, Px, SemanticsRole, TextAlign};
+use fret_core::{Axis, Color, Corners, Edges, Px, SemanticsRole};
 use fret_runtime::{Effect, Model};
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, OnCloseAutoFocus};
 use fret_ui::element::{
     AnchoredProps, AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length,
     MainAlign, PointerRegionProps, PressableA11y, PressableProps, SemanticsDecoration, SizeStyle,
-    SpacingLength, TextProps,
+    SpacingLength,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
@@ -18,7 +17,7 @@ use crate::primitives::EditorDensity;
 use crate::primitives::input_group::derived_test_id;
 use crate::primitives::popup_list::{
     EditorPopupListRowState, editor_popup_list_row_gap, editor_popup_list_row_palette,
-    editor_popup_list_row_radius, editor_popup_list_row_text_style,
+    editor_popup_list_row_radius, editor_popup_list_row_text_props,
 };
 use crate::primitives::popup_surface::resolve_editor_popup_surface_chrome;
 
@@ -362,23 +361,11 @@ fn color_copy_menu_row<H: UiHost>(
                 {
                     let label = label.clone();
                     move |cx| {
-                        vec![cx.text_props(TextProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Fill,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            text: label.clone(),
-                            style: Some(editor_popup_list_row_text_style(row_height)),
-                            color: Some(fg),
-                            wrap: TextWrap::None,
-                            overflow: TextOverflow::Ellipsis,
-                            align: TextAlign::Start,
-                            ink_overflow: Default::default(),
-                        })]
+                        vec![cx.text_props(editor_popup_list_row_text_props(
+                            label.clone(),
+                            fg,
+                            row_height,
+                        ))]
                     }
                 },
             )]

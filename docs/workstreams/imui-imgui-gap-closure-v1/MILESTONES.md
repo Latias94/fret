@@ -253,7 +253,8 @@ Exit criteria:
   2026-05-17 popup list text result: enum-select and text-assist popup/list empty labels now reuse
   shared popup-list text helpers. This removes the `TextProps::new(...)` default word-wrap path
   from those editor assist surfaces while keeping the behavior in `fret-ui-editor`, not
-  `fret-imui`.
+  `fret-imui`. Color-edit copy menu rows and popup option captions now use the same popup-list text
+  family through explicit aligned variants, while preview/tooltip text stays separate.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

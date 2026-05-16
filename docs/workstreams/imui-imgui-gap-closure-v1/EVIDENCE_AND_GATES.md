@@ -75,7 +75,9 @@ Last updated: 2026-05-17
   - `ecosystem/fret-ui-editor/src/primitives/readout.rs`
   - `ecosystem/fret-ui-editor/src/controls/field_status.rs`
   - `ecosystem/fret-ui-editor/src/controls/color_edit.rs`
+  - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/copy.rs`
   - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/numeric.rs`
+  - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/options.rs`
   - `ecosystem/fret-ui-editor/src/controls/drag_value.rs`
   - `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs`
   - `ecosystem/fret-ui-editor/src/controls/enum_select.rs`
@@ -277,10 +279,17 @@ Run evidence:
   `editor_popup_empty_text_props(...)` in `ecosystem/fret-ui-editor/src/primitives/popup_list.rs`.
   `EnumSelect` trigger/row/empty text and `TextAssistField` row/empty text now use shared editor
   helpers instead of local `TextProps` or `TextProps::new(...)`, closing another default
-  word-wrap path under resize. Gate: `cargo nextest run -p fret-ui-editor
+  word-wrap path under resize. Color-edit copy menu rows and popup option captions now reuse the
+  same popup-list family through start-aligned, centered-row, and fixed-caption variants while
+  leaving preview labels and tooltip lines as separate semantics. Gate: `cargo nextest run -p
+  fret-ui-editor
   popup_list_row_text_is_single_line_and_shrinkable
-  popup_empty_text_is_single_line_and_shrinkable enum_select_item_test_id_segment_is_stable_ascii
-  empty_label_is_inline_only --no-fail-fast`.
+  popup_empty_text_is_single_line_and_shrinkable
+  popup_list_centered_row_text_keeps_row_fill_and_center_alignment
+  popup_list_option_caption_text_keeps_fixed_caption_line_box
+  enum_select_item_test_id_segment_is_stable_ascii empty_label_is_inline_only
+  color_copy_entries_match_imgui_copy_as_payloads
+  popup_options_default_to_imgui_like_hue_bar_surface --no-fail-fast`.
 - 2026-05-16: tightened `UiWriterImUiFacadeExt::text(...)` to match Dear ImGui's default
   `Text()` posture: single-line, shrinkable, `min-width: 0`, and ellipsis-truncated under resize.
   Added `UiWriterImUiFacadeExt::text_wrapped(...)` as the explicit wrapping path for explanatory
