@@ -496,6 +496,27 @@ Tooling regression check (2026-05-16): the closeout helper tests are green local
 `python3 tools/perf/test_diag_editor_paint_contract_closeout.py` (7 tests). This proves the local helper behavior, not
 the missing Windows RTX4090 validation artifacts.
 
+Active goal audit refresh (2026-05-16): the closeout objective remains incomplete on the current macOS host.
+
+- Baseline validation command:
+  `python3 tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260516-active-goal-audit`
+  exits `2` with `windows-rtx4090 validation must run on the target Windows host`.
+- Attribution validation command:
+  `python3 tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260516-active-goal-audit-attrib --with-paint-perf`
+  exits `2` with the same target-host guard.
+- Current target-machine dry-run handoff plan:
+  `target/fret-diag/editor-paint-contract-windows-handoff-20260516-active-goal-audit/handoff-plan.json`.
+- Missing-artifact verifier proof:
+  `target/fret-diag/editor-paint-contract-windows-handoff-20260516-active-goal-audit/verify/artifact-verification.missing-artifacts.summary.json`
+  records missing validation and attribution `summary.json` files.
+- Missing-artifact closeout proof:
+  `target/fret-diag/editor-paint-contract-windows-handoff-20260516-active-goal-audit/closeout/editor-paint-contract-closeout.missing-artifacts.summary.json`
+  records `ok=false` and `owner_decision.status=incomplete`.
+
+This refresh does not change the implementation owner. The next formal closeout action is still to run
+`python tools/perf/diag_editor_paint_contract_windows_handoff.py --date-tag <fresh-date>` on the Windows RTX4090 target
+host, then copy the validation and attribution directories back for verifier/closeout.
+
 ## Open Gaps
 
 1. The broad `ui-gallery-steady` suite remains evidence-only until it is redefined as a suite-of-contracts or its
