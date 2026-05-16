@@ -31,6 +31,17 @@ cargo test --profile dev-fast -p fret-ui-shadcn --test focus_restore_mechanism_h
 cargo test --profile dev-fast -p fret-ui-shadcn --test recipe_typeahead_mechanism_harness mechanism_harness_recipe_typeahead_cases_match_oracles -- --nocapture
 ```
 
+## Suite Lint Policy Gates
+
+```powershell
+cargo test --profile dev-fast -p fret-diag --lib suite_lint_policy -- --nocapture
+cargo test --profile dev-fast -p fret-diag --lib lint_warning_budget -- --nocapture
+cargo test --profile dev-fast -p fret-diag --lib maybe_run_suite_script_lint -- --nocapture
+cargo test --profile dev-fast -p fret-diag --lib finalize_suite_script_success_tail_records_row_when_lint_and_post_run_skip -- --nocapture
+python tools/check_diag_scripts_registry.py
+cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev
+```
+
 ## Core Overlay Placement Gates
 
 ```powershell
