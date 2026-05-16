@@ -393,6 +393,13 @@ Run evidence:
   Gates: `cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface
   --no-fail-fast`, `cargo check -p fret-demo --bin workspace_shell_demo`, and
   `python tools/gate_imui_workstream_source.py`.
+- 2026-05-17: introduced `editor_empty_state_text_props(...)` for compact editor empty-state
+  labels and routed `GradientEditor`'s `No stops` label through
+  `gradient_editor_empty_state_text(...)`. This removes another real component bare-text path while
+  keeping the empty-state role in `fret-ui-editor`, not `fret-imui`. Gates: `cargo nextest run -p
+  fret-ui-editor editor_empty_state_text_is_single_line_and_shrinkable
+  gradient_editor_empty_state_text_is_single_line_and_shrinkable --no-fail-fast` and
+  `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: removed clipping from `PropertyRow` value slots while keeping fixed label/reset/action
   chrome clipped. This is the layout-container side of the text-role contract: wrapping validation
   prose such as `NumericInput` inline errors may grow to multiple lines, so the parent value slot

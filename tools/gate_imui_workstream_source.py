@@ -61,7 +61,7 @@ EDITOR_DIRECT_TEXT_PROPS_ALLOWED = {
         "TextProps {": 2,
     },
     Path("ecosystem/fret-ui-editor/src/primitives/readout.rs"): {
-        "TextProps {": 13,
+        "TextProps {": 14,
     },
 }
 
@@ -4230,6 +4230,7 @@ def main() -> None:
                 "pub(crate) fn editor_property_row_label_text_props",
                 "pub(crate) fn editor_property_row_reset_glyph_text_props",
                 "pub(crate) fn editor_preview_caption_text_props",
+                "pub(crate) fn editor_empty_state_text_props",
                 "pub(crate) fn editor_tooltip_readout_text_props",
                 "weight: FontWeight::MEDIUM,",
                 "weight: FontWeight::SEMIBOLD,",
@@ -4248,9 +4249,25 @@ def main() -> None:
                 "editor_property_row_label_text_is_single_line_and_shrinkable",
                 "editor_property_row_reset_glyph_text_keeps_fixed_button_line_box",
                 "editor_preview_caption_text_is_single_line_and_shrinkable",
+                "editor_empty_state_text_is_single_line_and_shrinkable",
                 "editor_tooltip_readout_text_is_single_line_and_shrinkable",
             ],
             forbidden=[],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-editor/src/composites/gradient_editor.rs"),
+            required=[
+                "use crate::primitives::readout::editor_empty_state_text_props;",
+                "fn gradient_editor_empty_state_text",
+                "editor_empty_state_text_props(",
+                "gradient_editor_empty_state_text(cx, \"No stops\")",
+                "gradient_editor_empty_state_text_is_single_line_and_shrinkable",
+            ],
+            forbidden=[
+                "rows.push(cx.text(\"No stops\"));",
+                "TextProps {",
+                "TextStyle {",
+            ],
         ),
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/composites/property_group.rs"),

@@ -299,6 +299,9 @@ Readiness order for the next locally testable review slices:
    2026-05-17 workspace shell proof text follow-up: `workspace_shell_demo` editor-rail buttons,
    property labels, and compact property values now teach the shared button-label, property-label,
    and control-readout text roles instead of bare `cx.text(...)`.
+   2026-05-17 gradient editor empty-state follow-up: `GradientEditor` now routes its `No stops`
+   empty-state label through an editor readout primitive instead of bare/default text, keeping
+   compact inspector empty states single-line and shrinkable under resize.
    2026-05-17 text role matrix follow-up: `P3_TEXT_ROLE_MATRIX_2026-05-17.md` now freezes the
    stable base role vocabulary for resize triage: control readout, button label, paragraph, code
    text, and table cell text. The matrix also classifies current derived roles, keeps wrapping text
