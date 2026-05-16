@@ -137,6 +137,20 @@ fn file_tree_item_a11y(
     }
 }
 
+fn file_tree_row_icon<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    icon: impl Into<Arc<str>>,
+) -> AnyElement {
+    crate::declarative::text::text_chrome_glyph(cx, icon)
+}
+
+fn file_tree_row_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: impl Into<Arc<str>>,
+) -> AnyElement {
+    crate::declarative::text::text_list_row_label(cx, label)
+}
+
 #[track_caller]
 pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
@@ -289,12 +303,8 @@ pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
                 vec![cx.container(row_props, |cx| {
                     vec![
                         crate::ui::h_row(|cx| {
-                            let icon = crate::ui::text(icon).flex_shrink_0().into_element(cx);
-                            let label = crate::ui::text(entry.label.as_ref())
-                                .flex_1()
-                                .min_w_0()
-                                .truncate()
-                                .into_element(cx);
+                            let icon = file_tree_row_icon(cx, icon);
+                            let label = file_tree_row_label(cx, entry.label.clone());
                             [icon, label]
                         })
                         .layout(LayoutRefinement::default().w_full().h_full())
@@ -341,6 +351,16 @@ pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, TextOverflow, TextWrap};
+    use fret_ui::element::ElementKind;
+
+    fn test_bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(160.0), Px(40.0)),
+        )
+    }
 
     fn entry(has_children: bool, depth: usize) -> TreeEntry {
         TreeEntry {
@@ -370,5 +390,42 @@ mod tests {
 
         assert_eq!(a11y.level, Some(3));
         assert_eq!(a11y.expanded, None);
+    }
+
+    #[test]
+    fn file_tree_row_icon_uses_shared_chrome_glyph_text_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+                file_tree_row_icon(cx, ">")
+            });
+
+        let ElementKind::Text(props) = &element.kind else {
+            panic!("file tree row icon should be text");
+        };
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+    }
+
+    #[test]
+    fn file_tree_row_label_uses_shared_list_row_text_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+                file_tree_row_label(cx, "Very long nested file name that should not wrap")
+            });
+
+        let ElementKind::Text(props) = &element.kind else {
+            panic!("file tree row label should be text");
+        };
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
     }
 }

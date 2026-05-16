@@ -408,6 +408,7 @@ def main() -> None:
                 "ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers.rs",
                 "ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs",
                 "ecosystem/fret-ui-kit/src/declarative/text.rs",
+                "ecosystem/fret-ui-kit/src/declarative/file_tree.rs",
                 "ecosystem/fret-ui-kit/src/imui/control_chrome.rs",
                 "ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs",
                 "ecosystem/fret-ui-kit/src/imui/menu_controls.rs",
@@ -802,6 +803,7 @@ def main() -> None:
                 "`ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers.rs`",
                 "`ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs`",
                 "`ecosystem/fret-ui-kit/src/declarative/text.rs`",
+                "`ecosystem/fret-ui-kit/src/declarative/file_tree.rs`",
                 "`ecosystem/fret-ui-kit/src/imui/control_chrome.rs`",
                 "`ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs`",
                 "`ecosystem/fret-ui-kit/src/imui/menu_controls.rs`",
@@ -884,6 +886,8 @@ def main() -> None:
                 "menu_item_label_text_uses_shared_list_row_text_role",
                 "selectable_row_label_uses_shared_list_row_text_role",
                 "tree_row_label_uses_shared_list_row_text_role",
+                "file_tree_row_label_uses_shared_list_row_text_role",
+                "file_tree_row_icon_uses_shared_chrome_glyph_text_role",
                 "routed IMUI menu shortcut labels through the existing `text_control_readout(...)`",
                 "menu_item_shortcut_text_uses_shared_control_readout_role",
                 "introduced `text_section_chrome_label(...)` as the shared compact section/chrome",
@@ -998,6 +1002,21 @@ def main() -> None:
             forbidden=[
                 "crate::ui::text(entry.label.as_ref())",
                 "vec![cx.text(glyph.as_ref())]",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/declarative/file_tree.rs"),
+            required=[
+                "fn file_tree_row_icon",
+                "fn file_tree_row_label",
+                "crate::declarative::text::text_chrome_glyph(cx, icon)",
+                "crate::declarative::text::text_list_row_label(cx, label)",
+                "file_tree_row_icon_uses_shared_chrome_glyph_text_role",
+                "file_tree_row_label_uses_shared_list_row_text_role",
+            ],
+            forbidden=[
+                "crate::ui::text(icon).flex_shrink_0()",
+                "crate::ui::text(entry.label.as_ref())",
             ],
         ),
         SourceCheck(

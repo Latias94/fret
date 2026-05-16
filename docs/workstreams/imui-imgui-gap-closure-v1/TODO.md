@@ -354,6 +354,9 @@ Readiness order for the next locally testable review slices:
    labels through `text_list_row_label(...)` and toggle glyphs through `text_chrome_glyph(...)`
    instead of keeping a local truncate/text path. Custom tree row renderers still own their own
    content policy.
+   2026-05-17 file tree text follow-up: `file_tree_view_retained_v0(...)`, the retained workspace
+   file-tree surface, now routes fixed row icons through `text_chrome_glyph(...)` and file labels
+   through `text_list_row_label(...)` instead of hand-rolling text truncation inside fixed rows.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

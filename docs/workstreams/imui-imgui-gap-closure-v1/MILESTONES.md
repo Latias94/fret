@@ -328,6 +328,9 @@ Exit criteria:
   2026-05-17 generic tree text result: the default retained tree row renderer now routes row labels
   through `text_list_row_label(...)` and toggle glyphs through `text_chrome_glyph(...)`, while
   leaving custom tree row renderers free to own their own content policy.
+  2026-05-17 file tree text result: `file_tree_view_retained_v0(...)` now routes fixed row icons
+  through `text_chrome_glyph(...)` and file labels through `text_list_row_label(...)` instead of
+  hand-rolling `ui::text(...).truncate()` inside the fixed-height row.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

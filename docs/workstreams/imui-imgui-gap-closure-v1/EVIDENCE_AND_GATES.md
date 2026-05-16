@@ -48,6 +48,7 @@ Last updated: 2026-05-17
   - `ecosystem/fret-imui/src/tests/popup_hover/mod.rs`
   - `ecosystem/fret-ui-kit/src/imui.rs`
   - `ecosystem/fret-ui-kit/src/declarative/text.rs`
+  - `ecosystem/fret-ui-kit/src/declarative/file_tree.rs`
   - `ecosystem/fret-ui-kit/src/imui/control_chrome.rs`
   - `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/menu_controls.rs`
@@ -1092,3 +1093,11 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 
 - `cargo fmt -p fret-ui-kit` passed.
 - `cargo nextest run -p fret-ui-kit --features imui --lib default_tree_row_label_uses_shared_list_row_text_role tree_toggle_glyph_uses_shared_chrome_glyph_text_role --no-fail-fast` passed.
+
+2026-05-17 file tree text-role slice:
+
+- `cargo fmt -p fret-ui-kit` passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib file_tree_row_icon_uses_shared_chrome_glyph_text_role file_tree_row_label_uses_shared_list_row_text_role --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.
