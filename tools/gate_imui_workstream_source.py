@@ -953,8 +953,12 @@ def main() -> None:
             required=[
                 "crate::declarative::text::text_chrome_title(cx, title.clone())",
                 "crate::declarative::text::text_section_chrome_label(",
+                "fn floating_window_close_glyph_text",
+                "crate::declarative::text::text_chrome_glyph(cx, Arc::<str>::from(\"\\u{00D7}\"))",
+                "floating_window_close_glyph_uses_shared_chrome_glyph_text_role",
             ],
             forbidden=[
+                "vec![cx.text(\"\\u{00D7}\")]",
                 "TextProps::new(title.clone())",
                 "props.wrap = fret_core::TextWrap::None;",
                 "props.overflow = fret_core::TextOverflow::Ellipsis;",

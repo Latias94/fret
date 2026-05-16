@@ -281,6 +281,11 @@ Run evidence:
   Gate: `cargo nextest run -p fret-ui-kit --features imui --lib
   chrome_glyph_text_uses_fixed_slot_single_line_clip
   disclosure_indicator_uses_shared_chrome_glyph_text_role --no-fail-fast`.
+- 2026-05-17: routed floating-window close button glyphs through the same
+  `text_chrome_glyph(...)` role via `floating_window_close_glyph_text(...)`. This keeps fixed
+  title-bar action chrome on the shared single-line clip contract instead of bare `cx.text(...)`
+  default wrapping semantics. Gate: `cargo nextest run -p fret-ui-kit --features imui --lib
+  floating_window_close_glyph_uses_shared_chrome_glyph_text_role --no-fail-fast`.
 - 2026-05-17: introduced `text_control_label(...)` as the shared compact control-label text role
   and routed `control_chrome::fill_text(...)` through it. Checkbox/radio/switch labels plus
   combo/slider captions keep their fill, grow, shrink, `min-width: 0`, and ellipsis behavior
