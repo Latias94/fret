@@ -544,12 +544,21 @@ date: 2026-05-12
     classification from exported diagnostics `test_id`s to `AnyElement::component_slot(...)`.
     It then found Drawer snap-point scripts that confused existence with hittability; those scripts
     now scroll long-page triggers into view and assert window bounds before `click_stable`, and the
-    spring-retarget gate now verifies the actual dismiss/focus-restore contract.
-- [ ] Fix diagnostics timeout handling so a long-running intent step leaves a forced bundle.
-  - Current repro: `ui-gallery-sidebar-toggle-fixed-frame-delta.json` stalls at step 8
-    `click_stable` until the external CLI reports `timeout.tooling.script_result`, but no bounded
-    bundle is produced. Fix this first, then rerun the Sidebar script to determine whether the
-    owning defect is Sidebar recipe code, scroll/hit-test mechanism code, or script preconditions.
+    spring-retarget gate now verifies the actual dismiss/focus-restore contract. The next Sidebar
+    gate exposed a tooling timeout evidence gap and an unguarded offscreen long-page trigger; both
+    are now covered by the timeout-bundle regression and strict Sidebar visibility lint.
+- [x] Fix diagnostics timeout handling so a long-running intent step leaves a forced bundle.
+  - Result: `fret-diag` now preserves the prior running script result on external
+    `timeout.tooling.script_result`, carries through `run_id`/`step_index`, records the last bundle
+    metadata, and writes a run-id artifact alias. The focused Sidebar repro then produced enough
+    evidence to classify the failure as an offscreen long-page target rather than a Sidebar recipe
+    or hit-test mechanism defect.
+- [x] Add Sidebar to the strict long-page click visibility authoring gate.
+  - Result: `ui-gallery-sidebar-toggle-fixed-frame-delta.json` now scrolls
+    `ui-gallery-sidebar-demo-toggle` into `ui-gallery-content-scroll`, asserts
+    `bounds_within_window`, and only then uses `click_stable`. `tools/check_diag_scripts_registry.py`
+    now treats `ui-gallery-motion-pilot` as a strict click-visibility suite for
+    `ui-gallery-sidebar-*` targets, with a registry lint unit test covering the bad pattern.
 - [ ] Migrate non-user-facing recipe structural marker `test_id`s to `component_slot`.
   - Candidate families: Card-like internal structure markers and any fixed `__fret_shadcn.*`
     markers that are used only for recipe composition rather than diagnostics selectors.

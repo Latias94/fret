@@ -2394,21 +2394,51 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `.fret/diag/runs/ui-gallery-drawer-snap-points-drag-settle-visible-click-fix/share/1778928579053.zip`,
     and
     `.fret/diag/runs/ui-gallery-drawer-snap-points-spring-dismiss-contract-fix-2/share/1778928911018.zip`.
-- Sidebar tooling-timeout evidence gap:
+- Sidebar tooling-timeout evidence and long-page visibility gate:
   - invariant:
     when a script is stuck in a long-running intent step such as `click_stable`, external
     script-result timeout handling must leave a bounded bundle with selector, hit-test, and
-    click-stable traces.
-  - current status:
-    open. No fix has landed yet.
-  - repro:
+    click-stable traces; long-page Sidebar content targets must be scrolled into view or
+    bounds-checked before `click_stable`.
+  - status:
+    fixed. The confirmed issue was a diagnostics/tooling plus script-authoring gap, not a Sidebar
+    component defect.
+  - original repro:
     `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-toggle-fixed-frame-delta.json --dir .fret/diag/runs/ui-gallery-sidebar-toggle-triage --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
-  - repro result:
+  - original repro result:
     failed with `timeout.tooling.script_result`; run `1778930062035` remained at step 8
     `click_stable` and did not produce a forced bundle.
-  - evidence:
+  - timeout-bundle fix anchors:
+    `crates/fret-diag/src/tooling_failures.rs` and `crates/fret-diag/src/tests.rs`.
+  - timeout-bundle regression gate:
+    `cargo test --profile dev-fast -p fret-diag --lib run_script_over_transport_timeout_captures_last_bundle_when_run_started -- --nocapture`
+  - timeout-bundle regression result:
+    passed.
+  - forced-bundle triage evidence:
+    `.fret/diag/runs/ui-gallery-sidebar-toggle-triage3/script.result.json` reports
+    `timeout.tooling.script_result` at step 8 and records `last_bundle_dir=1778934305640-diag-run`.
+  - root-cause evidence:
+    `.fret/diag/runs/ui-gallery-sidebar-toggle-triage3/sidebar-step8.slice.json` shows
+    `ui-gallery-sidebar-demo-toggle` at `x=549.3333`, `y=1401.3333`, `w=28`, `h=28` in a
+    `1080x720` window.
+  - script/lint fix anchors:
+    `tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-toggle-fixed-frame-delta.json`,
+    `tools/check_diag_scripts_registry.py`, and `tools/test_check_diag_scripts_registry.py`.
+  - registry lint gates:
+    `python tools/test_check_diag_scripts_registry.py` and
+    `python tools/check_diag_scripts_registry.py`
+  - registry lint results:
+    passed; the unit gate covers the Sidebar long-page negative case.
+  - focused runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-toggle-fixed-frame-delta.json --dir .fret/diag/runs/ui-gallery-sidebar-toggle-triage4 --timeout-ms 45000 --poll-ms 20 --launch target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime result:
+    passed, run id `1778936393221`.
+  - current evidence:
     `.fret/diag/runs/ui-gallery-sidebar-toggle-triage/script.result.json` and
-    `.fret/diag/runs/ui-gallery-sidebar-toggle-triage/1778930062035/script.result.json`.
+    `.fret/diag/runs/ui-gallery-sidebar-toggle-triage/1778930062035/script.result.json`,
+    `.fret/diag/runs/ui-gallery-sidebar-toggle-triage3/script.result.json`,
+    `.fret/diag/runs/ui-gallery-sidebar-toggle-triage3/sidebar-step8.slice.json`, and
+    `.fret/diag/runs/ui-gallery-sidebar-toggle-triage4/script.result.json`.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`
