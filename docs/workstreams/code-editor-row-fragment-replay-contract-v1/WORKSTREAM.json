@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "slug": "code-editor-row-fragment-replay-contract-v1",
+  "title": "Code Editor Row Fragment Replay Contract v1",
+  "status": "active",
+  "updated": "2026-05-16",
+  "scope_kind": "execution",
+  "follow_on_of": "ui-perf-zed-smoothness-v1",
+  "problem": "Reduce residual code-editor row-scene prepaint planning cost after local editor-paint attribution proved the remaining owner is per-row cache probing and replay-plan assembly, not renderer text prepare or key comparison.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/code-editor-row-fragment-replay-contract-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/code-editor-row-fragment-replay-contract-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/code-editor-row-fragment-replay-contract-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/code-editor-row-fragment-replay-contract-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-todo.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/M3C_BOUNDARY_SCENE_FRAGMENT_CARRIER_SLICE_2026-05-14.md"
+    }
+  ],
+  "repro": {
+    "summary": "Use the local complex-wheel editor paint probe with FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 to measure code_editor_paint_perf.p95.us_row_scene_prepaint_probe before and after each slice.",
+    "commands": [
+      "cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --repeat 3 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 15 --json --dir target/fret-diag/<dir> --launch -- cargo run -p fret-ui-gallery --release --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness",
+      "cargo run -p fretboard-dev --release -- diag stats target/fret-diag/<dir>/<bundle>/bundle.schema2.json --sort time --top 15 --json > target/fret-diag/<dir>/worst.stats.json"
+    ]
+  },
+  "gates": [
+    {
+      "name": "row-scene-replay-focused-tests",
+      "command": "cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_skips_only_inline_preedit_rows prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast"
+    },
+    {
+      "name": "diag-paint-perf-stats-tests",
+      "command": "cargo nextest run -p fret-diag bundle_stats_extracts_code_editor_paint_perf_from_app_snapshot top_code_editor_row_scene_fields_compute_replay_rate perf_json_row_exports_top_code_editor_row_scene_fields perf_repeat_run_json_row_exports_top_code_editor_row_scene_fields perf_repeat_summary_json_row_summarizes_code_editor_row_scene_fields --no-fail-fast"
+    },
+    {
+      "name": "format",
+      "command": "cargo fmt -p fret-code-editor -p fret-diag -p fret-ui-gallery --check"
+    },
+    {
+      "name": "catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/code-editor-row-fragment-replay-contract-v1/DESIGN.md",
+    "docs/workstreams/code-editor-row-fragment-replay-contract-v1/TODO.md",
+    "docs/workstreams/code-editor-row-fragment-replay-contract-v1/MILESTONES.md",
+    "docs/workstreams/code-editor-row-fragment-replay-contract-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md",
+    "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-todo.md",
+    "ecosystem/fret-code-editor/src/editor/paint/scene.rs",
+    "ecosystem/fret-code-editor/src/editor/paint/mod.rs",
+    "ecosystem/fret-code-editor/src/editor/state.rs",
+    "crates/fret-ui/src/canvas.rs",
+    "crates/fret-ui/src/tree/view_boundary.rs",
+    "ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0161-canvas-cache-policy-and-hosted-resource-caches.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue only with row-fragment replay contract changes that reduce per-row prepaint probe/assembly cost while preserving row overlay, preedit, and boundary scene-fragment semantics. Do not reopen the closed prepaint-planner lane or start renderer text/glyph residency unless fresh formal attribution makes renderer prepare dominant."
+  }
+}

@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 381
+- Dedicated directories: 382
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -1940,6 +1940,7 @@ Rule:
 - `docs/workstreams/code-editor-prepaint-planner-cost-v1/` — first 2026-05-15, latest 2026-05-16, 5 markdown docs (closed narrow follow-on for code-editor replay-plan construction cost after edge-row payload prebuild; includes `WORKSTREAM.json`)
 - `docs/workstreams/code-editor-public-api-and-architecture-v1/` — first n/a, latest n/a, 18 markdown docs (active narrow follow-on for stabilizing the code editor public API, model boundaries, extension points, and perf/diagnostics gates; includes `WORKSTREAM.json`)
 - `docs/workstreams/code-editor-resize-paint-cache-replay-v1/` — first 2026-05-15, latest 2026-05-15, 6 markdown docs (closed narrow follow-on for code-editor resize paint/cache replay short paths; includes `WORKSTREAM.json`)
+- `docs/workstreams/code-editor-row-fragment-replay-contract-v1/` — first 2026-05-16, latest 2026-05-16, 4 markdown docs (active narrow follow-on for code-editor row-fragment replay contract design and perf validation; includes `WORKSTREAM.json`)
 - `docs/workstreams/code-editor-row-content-snapshot-cache-v1/` — first 2026-05-15, latest 2026-05-15, 5 markdown docs (closed narrow follow-on for shared row content snapshot payloads across text, scene cache, replay plan, and paint; includes `WORKSTREAM.json`)
 - `docs/workstreams/component-ecosystem-state-integration-v1/` — first 2026-02-06, latest 2026-02-14, 2 markdown docs
 - `docs/workstreams/container-aware-editor-rail-helper-shape-v1/` — first 2026-04-11, latest 2026-04-11, 6 markdown docs

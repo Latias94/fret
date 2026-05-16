@@ -202,6 +202,8 @@ not update checked-in baselines.
       HashMap lookup micro-change.
   - [ ] Prototype a row-fragment replay contract that lets prepaint hand paint a contiguous retained fragment plan
     without per-row HashMap probe/bookkeeping in the hot callback.
+    - Follow-on lane:
+      `docs/workstreams/code-editor-row-fragment-replay-contract-v1/WORKSTREAM.json`.
   - [ ] Re-run the three local editor paint probes after any row-fragment planning change; require the complex-wheel
     p95 `us_row_scene_prepaint_probe` to move materially below the current `~77us` before claiming progress.
   - Do not widen this into a renderer rewrite unless renderer prepare/encode becomes dominant in the local and
