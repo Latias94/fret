@@ -244,6 +244,49 @@ class EditorPaintContractCloseoutTests(unittest.TestCase):
         self.assertEqual(4, len(summary["steps"]))
         self.assertEqual(4, run_gate.call_count)
 
+    def test_non_windows_flag_is_passed_to_verifier(self) -> None:
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            report = root / "closeout-summary.json"
+            verifier = {
+                "ok": True,
+                "validation": {"date_tag": "run-a"},
+                "attribution": {"date_tag": "run-a-attrib"},
+            }
+            gate_result = {
+                "cmd": ["python", "--version"],
+                "rc": 0,
+                "elapsed_ms": 1,
+                "stdout": str(root / "stdout.log"),
+                "stderr": str(root / "stderr.log"),
+            }
+            with patch.object(
+                sys,
+                "argv",
+                [
+                    "diag_editor_paint_contract_closeout.py",
+                    str(root / "validation-dir"),
+                    "--attribution-dir",
+                    str(root / "attribution-dir"),
+                    "--allow-non-windows",
+                    "--out-report",
+                    str(report),
+                ],
+            ):
+                with patch.object(closeout.verify, "verify_artifact_dirs", return_value=verifier) as verify_dirs:
+                    with patch.object(closeout, "_run", return_value=gate_result):
+                        with redirect_stdout(io.StringIO()):
+                            rc = closeout.main()
+            summary = json.loads(report.read_text(encoding="utf-8"))
+
+        self.assertEqual(0, rc)
+        self.assertTrue(summary["allow_non_windows"])
+        verify_dirs.assert_called_once_with(
+            root / "validation-dir",
+            root / "attribution-dir",
+            allow_non_windows=True,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

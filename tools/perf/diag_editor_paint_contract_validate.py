@@ -96,6 +96,7 @@ def _diag_perf_command(
     *,
     fretboard_bin: str,
     launch_bin: str,
+    launch_cmd: list[str] | None,
     script: str,
     out_dir: str,
     repeat: int,
@@ -132,7 +133,8 @@ def _diag_perf_command(
         envs.append("FRET_CODE_EDITOR_DIAG_PAINT_PERF=1")
     for env in envs:
         cmd += ["--env", env]
-    cmd += ["--launch", "--", launch_bin]
+    cmd += ["--launch", "--"]
+    cmd.extend(launch_cmd or [launch_bin])
     return cmd
 
 
@@ -149,8 +151,10 @@ def build_plan(
     warmup_frames: int,
     skip_preflight: bool,
     with_paint_perf: bool,
+    launch_cmd: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     steps: list[dict[str, Any]] = []
+    resolved_launch_cmd = launch_cmd or [launch_bin]
     if not skip_preflight:
         steps.append(
             {
@@ -166,31 +170,35 @@ def build_plan(
             }
         )
 
+    resize_cmd = [
+        python_bin,
+        "tools/perf/diag_resize_probes_gate.py",
+        "--suite",
+        RESIZE_SUITE,
+        "--out-dir",
+        f"{out_dir}/resize-jitter",
+        "--baseline",
+        RESIZE_BASELINE,
+        "--fretboard-bin",
+        fretboard_bin,
+        "--attempts",
+        str(resize_attempts),
+        "--repeat",
+        str(resize_repeat),
+        "--warmup-frames",
+        str(warmup_frames),
+    ]
+    if launch_cmd is None:
+        resize_cmd += ["--launch-bin", launch_bin]
+    else:
+        resize_cmd += ["--launch-cmd", shlex.join(resolved_launch_cmd)]
+
     steps.append(
         {
             "name": "resize-jitter",
             "out_dir": f"{out_dir}/resize-jitter",
             "wants_stats": True,
-            "cmd": [
-                python_bin,
-                "tools/perf/diag_resize_probes_gate.py",
-                "--suite",
-                RESIZE_SUITE,
-                "--out-dir",
-                f"{out_dir}/resize-jitter",
-                "--baseline",
-                RESIZE_BASELINE,
-                "--fretboard-bin",
-                fretboard_bin,
-                "--attempts",
-                str(resize_attempts),
-                "--repeat",
-                str(resize_repeat),
-                "--warmup-frames",
-                str(warmup_frames),
-                "--launch-bin",
-                launch_bin,
-            ],
+            "cmd": resize_cmd,
         }
     )
     steps.append(
@@ -201,6 +209,7 @@ def build_plan(
             "cmd": _diag_perf_command(
                 fretboard_bin=fretboard_bin,
                 launch_bin=launch_bin,
+                launch_cmd=resolved_launch_cmd,
                 script=TYPICAL_SCRIPT,
                 out_dir=f"{out_dir}/typical-autoscroll",
                 repeat=typical_repeat,
@@ -218,6 +227,7 @@ def build_plan(
             "cmd": _diag_perf_command(
                 fretboard_bin=fretboard_bin,
                 launch_bin=launch_bin,
+                launch_cmd=resolved_launch_cmd,
                 script=COMPLEX_WHEEL_SCRIPT,
                 out_dir=f"{out_dir}/complex-wheel",
                 repeat=complex_repeat,
@@ -252,7 +262,11 @@ def _validate_inputs(workspace_root: Path, args: argparse.Namespace) -> list[str
         if not _resolve_workspace_path(workspace_root, rel).is_file():
             missing.append(rel)
     if not bool(args.dry_run):
-        for rel in [str(args.fretboard_bin), str(args.launch_bin)]:
+        launch_cmd_raw = str(args.launch_cmd).strip()
+        launch_refs = [str(args.fretboard_bin)]
+        if not launch_cmd_raw:
+            launch_refs.append(str(args.launch_bin))
+        for rel in launch_refs:
             if not _resolve_workspace_path(workspace_root, rel).is_file():
                 missing.append(rel)
     return missing
@@ -371,6 +385,16 @@ def main() -> int:
     ap.add_argument("--python-bin", default=sys.executable)
     ap.add_argument("--fretboard-bin", default=_default_fretboard_bin())
     ap.add_argument("--launch-bin", default=_default_launch_bin())
+    ap.add_argument(
+        "--launch-cmd",
+        default="",
+        help=(
+            "Full launch command to pass after `diag perf --launch --`. Use this when the "
+            "launch feature preflight must inspect a `cargo run ... --features ...` command. "
+            "When set, the launch command is split with shlex and --launch-bin is only used "
+            "for logging/fallback."
+        ),
+    )
     ap.add_argument("--resize-attempts", type=int, default=3)
     ap.add_argument("--resize-repeat", type=int, default=7)
     ap.add_argument("--typical-repeat", type=int, default=15)
@@ -437,6 +461,9 @@ def main() -> int:
         )
         return 2
 
+    launch_cmd_raw = str(args.launch_cmd).strip()
+    launch_cmd = shlex.split(launch_cmd_raw) if launch_cmd_raw else None
+
     missing = _validate_inputs(workspace_root, args)
     if missing:
         print("error: required validation inputs are missing:", file=sys.stderr)
@@ -461,6 +488,7 @@ def main() -> int:
         python_bin=str(args.python_bin),
         fretboard_bin=str(args.fretboard_bin),
         launch_bin=str(args.launch_bin),
+        launch_cmd=launch_cmd,
         out_dir=out_dir,
         resize_attempts=int(args.resize_attempts),
         resize_repeat=int(args.resize_repeat),
@@ -482,6 +510,7 @@ def main() -> int:
             "target_profile": str(args.target_profile),
             "date_tag": str(args.date_tag),
             "out_dir": out_dir,
+            "launch_cmd": launch_cmd if launch_cmd is not None else [str(args.launch_bin)],
             "with_paint_perf": bool(args.with_paint_perf),
             "stats_enabled": not bool(args.skip_stats),
             "steps": plan,
@@ -589,6 +618,7 @@ def main() -> int:
         "target_profile": str(args.target_profile),
         "date_tag": str(args.date_tag),
         "out_dir": str(out_dir_path),
+        "launch_cmd": launch_cmd if launch_cmd is not None else [str(args.launch_bin)],
         "with_paint_perf": bool(args.with_paint_perf),
         "stats_enabled": not bool(args.skip_stats),
         "steps": step_results,

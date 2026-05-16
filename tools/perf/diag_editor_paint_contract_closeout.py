@@ -247,6 +247,15 @@ def main() -> int:
         default="",
         help="Path for a JSON report. Defaults to <validation_dir>/editor-paint-contract-closeout.summary.json.",
     )
+    ap.add_argument(
+        "--allow-non-windows",
+        action="store_true",
+        default=False,
+        help=(
+            "Accept local non-Windows cargo-run launch artifacts. This is for local triage only; "
+            "formal Windows RTX4090 closeout should omit it."
+        ),
+    )
     args = ap.parse_args()
 
     workspace_root = _workspace_root()
@@ -276,6 +285,7 @@ def main() -> int:
             "ok": True,
             "validation_dir": str(validation_dir),
             "attribution_dir": str(attribution_dir) if attribution_dir is not None else None,
+            "allow_non_windows": bool(args.allow_non_windows),
             "verifier": {
                 "skipped": True,
                 "reason": "dry-run",
@@ -290,7 +300,11 @@ def main() -> int:
         print(f"[closeout] dry-run report: {out_report}")
         return 0
 
-    verifier = verify.verify_artifact_dirs(validation_dir, attribution_dir)
+    verifier = verify.verify_artifact_dirs(
+        validation_dir,
+        attribution_dir,
+        allow_non_windows=bool(args.allow_non_windows),
+    )
 
     if not bool(verifier.get("ok")):
         owner_decision = decide_next_owner(verifier)
@@ -299,6 +313,7 @@ def main() -> int:
             "ok": False,
             "validation_dir": str(validation_dir),
             "attribution_dir": str(attribution_dir) if attribution_dir is not None else None,
+            "allow_non_windows": bool(args.allow_non_windows),
             "validation_date_tag": verifier_date_tag(verifier, "validation"),
             "attribution_date_tag": verifier_date_tag(verifier, "attribution"),
             "verifier": verifier,
@@ -331,6 +346,7 @@ def main() -> int:
         "ok": pass_all,
         "validation_dir": str(validation_dir),
         "attribution_dir": str(attribution_dir) if attribution_dir is not None else None,
+        "allow_non_windows": bool(args.allow_non_windows),
         "validation_date_tag": verifier_date_tag(verifier, "validation"),
         "attribution_date_tag": verifier_date_tag(verifier, "attribution"),
         "verifier": verifier,

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import shutil
 import subprocess
 import sys
@@ -92,6 +93,13 @@ def _diag_perf_prefix(fretboard_bin_path: Path | None, suite: str) -> list[str]:
     ]
 
 
+def _launch_command(launch_bin_path: Path, launch_cmd_raw: str) -> list[str]:
+    launch_cmd_raw = launch_cmd_raw.strip()
+    if launch_cmd_raw:
+        return shlex.split(launch_cmd_raw)
+    return [str(launch_bin_path)]
+
+
 def _failures_count(check_path: Path) -> int | None:
     if not check_path.is_file():
         return None
@@ -123,6 +131,15 @@ def main() -> int:
         help="Perf baseline JSON path. Defaults to the checked-in Windows RTX4090 or macOS baseline for the host platform.",
     )
     ap.add_argument("--launch-bin", default="target/release/fret-ui-gallery")
+    ap.add_argument(
+        "--launch-cmd",
+        default="",
+        help=(
+            "Full command to pass after `diag perf --launch --`. Use this when the launch "
+            "feature preflight must inspect a `cargo run ... --features ...` command. "
+            "When set, --launch-bin is recorded but not used."
+        ),
+    )
     ap.add_argument(
         "--fretboard-bin",
         default="",
@@ -181,6 +198,7 @@ def main() -> int:
     baseline_path = _resolve_workspace_path(workspace_root, baseline_raw)
 
     launch_bin_path = _resolve_workspace_path(workspace_root, str(args.launch_bin))
+    launch_cmd = _launch_command(launch_bin_path, str(args.launch_cmd))
     fretboard_bin_raw = str(args.fretboard_bin).strip()
     fretboard_bin_path = _resolve_workspace_path(workspace_root, fretboard_bin_raw) if fretboard_bin_raw else None
 
@@ -207,6 +225,7 @@ def main() -> int:
     print(f"[gate] baseline: {baseline_path}")
     print(f"[gate] fretboard-bin: {fretboard_bin_path if fretboard_bin_path is not None else 'cargo run -q -p fretboard-dev --'}")
     print(f"[gate] launch-bin: {launch_bin_path}")
+    print(f"[gate] launch-cmd: {shlex.join(launch_cmd)}")
     print(f"[gate] prewarm: {[str(p) for p in prewarm_script_paths]}")
     print(f"[gate] prelude: {[str(p) for p in prelude_script_paths]}")
 
@@ -260,8 +279,8 @@ def main() -> int:
         cmd += [
             "--launch",
             "--",
-            str(launch_bin_path),
         ]
+        cmd.extend(launch_cmd)
 
         print(f"[gate] attempt {i}/{int(args.attempts)} -> {attempt_dir}")
         print("[gate] cmd:", " ".join(cmd))
@@ -326,6 +345,7 @@ def main() -> int:
         "baseline": str(baseline_path),
         "fretboard_bin": str(fretboard_bin_path) if fretboard_bin_path is not None else None,
         "launch_bin": str(launch_bin_path),
+        "launch_cmd": launch_cmd,
         "suite_hooks": {
             "prewarm": [str(p) for p in prewarm_script_paths],
             "prelude": [str(p) for p in prelude_script_paths],

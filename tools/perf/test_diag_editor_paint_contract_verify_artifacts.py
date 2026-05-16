@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import unittest
 from pathlib import Path
@@ -18,6 +20,7 @@ def _step(
     *,
     with_paint_perf: bool,
     repeat: int,
+    launch_cmd: list[str] | None = None,
     torture_overlay_us: int = 0,
     stale_summary_paths: bool = False,
 ) -> dict[str, object]:
@@ -66,10 +69,16 @@ def _step(
         }
     _write_json(stats_path, stats_doc)
 
+    fretboard_bin = validate._default_fretboard_bin()
+    launch_bin = validate._default_launch_bin()
+    if launch_cmd is not None:
+        fretboard_bin = fretboard_bin.removesuffix(".exe")
+        launch_bin = launch_bin.removesuffix(".exe")
+
     plan = validate.build_plan(
         python_bin="python",
-        fretboard_bin=validate._default_fretboard_bin(),
-        launch_bin=validate._default_launch_bin(),
+        fretboard_bin=fretboard_bin,
+        launch_bin=launch_bin,
         out_dir=str(root),
         resize_attempts=3,
         resize_repeat=repeat if name == "resize-jitter" else 7,
@@ -78,6 +87,7 @@ def _step(
         warmup_frames=5,
         skip_preflight=True,
         with_paint_perf=with_paint_perf,
+        launch_cmd=launch_cmd,
     )
     cmd = {str(step["name"]): list(step["cmd"]) for step in plan}[name]
 
@@ -107,6 +117,7 @@ def _write_summary(
     root: Path,
     *,
     with_paint_perf: bool,
+    launch_cmd: list[str] | None = None,
     resize_repeat: int = 7,
     torture_overlay_us: int = 0,
     stale_summary_paths: bool = False,
@@ -117,6 +128,7 @@ def _write_summary(
             "resize-jitter",
             with_paint_perf=with_paint_perf,
             repeat=resize_repeat,
+            launch_cmd=launch_cmd,
             torture_overlay_us=torture_overlay_us,
             stale_summary_paths=stale_summary_paths,
         ),
@@ -125,6 +137,7 @@ def _write_summary(
             "typical-autoscroll",
             with_paint_perf=with_paint_perf,
             repeat=15,
+            launch_cmd=launch_cmd,
             torture_overlay_us=torture_overlay_us,
             stale_summary_paths=stale_summary_paths,
         ),
@@ -133,6 +146,7 @@ def _write_summary(
             "complex-wheel",
             with_paint_perf=with_paint_perf,
             repeat=7,
+            launch_cmd=launch_cmd,
             torture_overlay_us=torture_overlay_us,
             stale_summary_paths=stale_summary_paths,
         ),
@@ -144,6 +158,7 @@ def _write_summary(
             "ok": True,
             "target_profile": validate.TARGET_PROFILE,
             "date_tag": "test-date",
+            "launch_cmd": launch_cmd if launch_cmd is not None else [validate._default_launch_bin()],
             "with_paint_perf": with_paint_perf,
             "stats_enabled": True,
             "steps": steps,
@@ -252,6 +267,33 @@ class EditorPaintContractVerifyArtifactsTests(unittest.TestCase):
             report = verify.verify_summary_dir(root, expect_with_paint_perf=True)
 
         self.assertTrue(report["ok"], report["errors"])
+
+    def test_non_windows_cargo_launch_requires_explicit_allow_flag(self) -> None:
+        launch_cmd = [
+            "cargo",
+            "run",
+            "-p",
+            "fret-ui-gallery",
+            "--release",
+            "--features",
+            "gallery-dev",
+            "--",
+            "target/release/fret-ui-gallery",
+        ]
+        with TemporaryDirectory() as td:
+            root = Path(td)
+            _write_summary(root, with_paint_perf=True, launch_cmd=launch_cmd)
+
+            strict_report = verify.verify_summary_dir(root, expect_with_paint_perf=True)
+            local_report = verify.verify_summary_dir(
+                root,
+                expect_with_paint_perf=True,
+                allow_non_windows=True,
+            )
+
+        self.assertFalse(strict_report["ok"])
+        self.assertTrue(any("fret-ui-gallery.exe" in error for error in strict_report["errors"]))
+        self.assertTrue(local_report["ok"], local_report["errors"])
 
     def test_repeat_one_smoke_is_rejected(self) -> None:
         with TemporaryDirectory() as td:

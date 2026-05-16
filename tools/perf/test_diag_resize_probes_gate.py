@@ -32,6 +32,33 @@ class ResizeProbesGateTests(unittest.TestCase):
             gate._diag_perf_prefix(Path("target/release/fretboard-dev.exe"), "ui-code-editor-resize-probes"),
         )
 
+    def test_launch_command_accepts_cargo_run_shape(self) -> None:
+        self.assertEqual(
+            [
+                "cargo",
+                "run",
+                "-p",
+                "fret-ui-gallery",
+                "--release",
+                "--features",
+                "gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness",
+                "--",
+                "target/release/fret-ui-gallery",
+            ],
+            gate._launch_command(
+                Path("target/release/fret-ui-gallery"),
+                "cargo run -p fret-ui-gallery --release --features "
+                "gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness -- "
+                "target/release/fret-ui-gallery",
+            ),
+        )
+
+    def test_launch_command_defaults_to_prebuilt_binary(self) -> None:
+        self.assertEqual(
+            ["target/release/fret-ui-gallery.exe"],
+            gate._launch_command(Path("target/release/fret-ui-gallery.exe"), ""),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
