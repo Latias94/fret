@@ -439,7 +439,12 @@ date: 2026-05-12
     boundary ownership sub-axis: a Combobox opened inside a modal Dialog remains selectable while
     the modal/focus barrier is active, records placement and relation evidence, and verifies final
     barrier cleanup.
-  - Remaining: add a multi-viewport ownership companion with placement/layout sidecar evidence.
+  - Progress: `anchored_cross_root_coordinate_v1.json` now covers the synthetic cross-root
+    coordinate-space sub-axis. It proved core `AnchoredProps` is correct for secondary/embedded
+    roots, while the owning-layer fix moved `fret-ui-kit` and shadcn anchored overlay recipes to
+    root-boundary placement helpers instead of environment viewport boundaries.
+  - Remaining: add a runtime multi-viewport ownership companion with placement/layout sidecar
+    evidence.
 - [x] Add a diagnostics script lint/registry audit for long-page content clicks that use plain
   `click` without a nearby `scroll_into_view`, `bounds_within_window`, or `click_stable`
   precondition.

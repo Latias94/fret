@@ -778,7 +778,7 @@ impl HoverCard {
                     .or(last_content_size)
                     .unwrap_or(estimated_size);
 
-                let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                let outer = overlay::outer_bounds_with_window_margin_for_root(
                     cx,
                     fret_ui::Invalidation::Layout,
                     window_margin,

@@ -2116,7 +2116,7 @@ fn render_dropdown_submenu_entries<H: UiHost>(
 
                             let geometry_hint = has_submenu.then(|| {
                                 let outer =
-                                    overlay::outer_bounds_with_window_margin_for_environment(
+                                    overlay::outer_bounds_with_window_margin_for_root(
                                         cx,
                                         fret_ui::Invalidation::Layout,
                                         item_style.window_margin,
@@ -2606,7 +2606,7 @@ fn render_dropdown_submenu_panel_tree<H: UiHost>(
             .cloned()
             .unwrap_or(None);
         if let Some(child_open_value) = child_open_value {
-            let outer = overlay::outer_bounds_with_window_margin_for_environment(
+            let outer = overlay::outer_bounds_with_window_margin_for_root(
                 cx,
                 fret_ui::Invalidation::Layout,
                 style.window_margin,
@@ -3740,7 +3740,7 @@ impl DropdownMenu {
                     let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
                     let disabled_arc: Arc<[bool]> = Arc::from(disabled_flags.into_boxed_slice());
 
-                    let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                    let outer = overlay::outer_bounds_with_window_margin_for_root(
                         cx,
                         fret_ui::Invalidation::Layout,
                         window_margin,
@@ -4593,7 +4593,7 @@ impl DropdownMenu {
                                                                  );
                                                              let mut item_el = cx.pressable_with_id_props(move |cx, st, item_id| {
                                                                  let geometry_hint = has_submenu.then(|| {
-                                                                     let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                                                                     let outer = overlay::outer_bounds_with_window_margin_for_root(
                                                                          cx,
                                                                          fret_ui::Invalidation::Layout,
                                                                          window_margin,

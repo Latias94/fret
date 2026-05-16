@@ -191,6 +191,7 @@ fn paint_frame(
 }
 
 mod anchored;
+mod anchored_cross_root_coordinate_harness;
 mod anchored_layout_invalidation_harness;
 mod canvas;
 mod combobox_active_descendant_interaction_harness;

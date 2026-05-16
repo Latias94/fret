@@ -54,8 +54,11 @@ date: 2026-05-12
   `ui-gallery-combobox-placement-ownership-scroll-rtl.json` closes the explicit
   scroll-container clipping plus RTL ownership gap by proving a clipped-ScrollArea trigger can
   mount an RTL popover on the overlay root and still commit an option that overflows the viewport.
-  The modal/root boundary sub-axis is now covered by the Dialog nested Combobox gate; the remaining
-  high-risk gap is multi-viewport constraints.
+  The modal/root boundary sub-axis is now covered by the Dialog nested Combobox gate.
+  `anchored_cross_root_coordinate_v1.json` now proves synthetic cross-root anchor/overlay
+  coordinate conversion, and shadcn anchored overlay recipes use root-boundary placement helpers
+  instead of environment viewport boundaries. The remaining high-risk gap is a runtime
+  multi-viewport gate.
 - Select active-descendant/view-cache update:
   `ui-gallery-select-roving-skips-disabled-orange.json` now proves that pointer-open followed by
   ArrowDown updates the runtime active descendant through the real UI Gallery Select page, including

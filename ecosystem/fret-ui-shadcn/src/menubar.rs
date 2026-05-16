@@ -2108,7 +2108,7 @@ impl MenubarMenuEntries {
                         let Some(anchor) = overlay::anchor_bounds_for_element(cx, trigger_id) else {
                             return (Vec::new(), None);
                         };
-                        let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                        let outer = overlay::outer_bounds_with_window_margin_for_root(
                             cx,
                             fret_ui::Invalidation::Layout,
                             window_margin,

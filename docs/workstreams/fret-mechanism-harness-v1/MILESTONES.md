@@ -969,3 +969,23 @@ Status: complete
   predicate gates, and Select test-id focused gates passed.
 - Remaining follow-up: use the same runtime path to stress overlay/listbox placement ownership
   under scroll-container clipping, RTL, and viewport resize rather than only relation correctness.
+
+## M61: Cross-root Anchored Coordinate and Root-Boundary Policy Gate
+
+Status: complete for synthetic and focused gates
+
+- Added `anchored_cross_root_coordinate_v1.json` and a thin `fret-ui` harness covering secondary
+  viewport anchors, non-zero overlay/root boundaries, preferred-side flip, and cross-axis clamping
+  against the owning root instead of the OS window origin.
+- The synthetic fixture proved core `AnchoredProps` resolves cross-root anchors correctly; no core
+  placement mechanism defect was reproduced in this slice.
+- The slice found a policy-layer root-boundary gap: `fret-ui-kit` anchored placement helpers and
+  shadcn anchored overlay recipes were using the environment viewport as their collision/clamp
+  outer. That is wrong for embedded or secondary render roots.
+- Added root-boundary placement helpers in `fret-ui-kit` and migrated shadcn Popover, Select,
+  Tooltip, HoverCard, DropdownMenu, ContextMenu, and Menubar placement paths to them.
+- Focused gates passed for the synthetic fixture, `fret-ui-kit` root-boundary helpers, shadcn
+  Popover compile/placement smoke, and representative HoverCard, Tooltip, DropdownMenu,
+  ContextMenu, and Menubar overlay tests.
+- Remaining follow-up: add a runtime multi-viewport ownership diagnostics gate with placement trace,
+  relation edges, hit-tested selection, screenshot, and layout sidecar evidence.

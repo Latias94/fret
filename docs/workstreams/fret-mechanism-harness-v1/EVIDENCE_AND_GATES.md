@@ -48,6 +48,20 @@ cargo nextest run -p fret-ui anchored_anchor_element_uses_scroll_transformed_vis
 cargo nextest run -p fret-ui anchored
 ```
 
+## Anchored Cross-Root Coordinate Gates
+
+```powershell
+python -m json.tool crates/fret-ui/src/declarative/tests/fixtures/anchored_cross_root_coordinate_v1.json
+cargo test -p fret-ui --lib mechanism_harness_anchored_cross_root_coordinate_matches_oracles -- --nocapture
+cargo nextest run -p fret-ui-kit outer_bounds_with_window_margin --no-fail-fast
+$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib popover_first_open_placement_size_prefers_explicit_hint -- --nocapture
+$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib hover_card_anchor_override_uses_anchor_bounds_for_placement -- --nocapture
+$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib tooltip_anchor_override_uses_anchor_bounds_for_placement -- --nocapture
+$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib dropdown_menu_portal_escapes_overflow_clip_ancestor -- --nocapture
+$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib context_menu_submenu_keyboard_open_transfers_focus_and_arrow_left_restores_focus -- --nocapture
+$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib menubar_submenu_opens_on_arrow_right_and_closes_on_arrow_left_restoring_focus -- --nocapture
+```
+
 ## View-Cache and Root-Boundary Gates
 
 ```powershell
@@ -1949,6 +1963,45 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag-dialog-nested-combobox-modal-boundary-v4/sessions/1778885765520-86120/1778885771913-ui-gallery-dialog-nested-combobox-modal-boundary/bundle.schema2.json`
   - packed evidence:
     `target/fret-diag-dialog-nested-combobox-modal-boundary-v4/sessions/1778885765520-86120/share/1778885770482.zip`
+- Cross-root anchored coordinate/root-boundary policy gate:
+  `crates/fret-ui/src/declarative/tests/fixtures/anchored_cross_root_coordinate_v1.json`
+  - invariant:
+    core `AnchoredProps` must resolve anchors across render roots and clamp/flip against the
+    current overlay/root boundary, while shadcn anchored overlay recipes should derive collision
+    boundaries from the owner render root rather than the OS window/environment viewport.
+  - implementation anchors:
+    `crates/fret-ui/src/declarative/tests/anchored_cross_root_coordinate_harness.rs`,
+    `ecosystem/fret-ui-kit/src/overlay.rs`,
+    `ecosystem/fret-ui-shadcn/src/popover.rs`,
+    `ecosystem/fret-ui-shadcn/src/select.rs`,
+    `ecosystem/fret-ui-shadcn/src/tooltip.rs`,
+    `ecosystem/fret-ui-shadcn/src/hover_card.rs`,
+    `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`,
+    `ecosystem/fret-ui-shadcn/src/context_menu.rs`, and
+    `ecosystem/fret-ui-shadcn/src/menubar.rs`.
+  - JSON fixture result:
+    `python -m json.tool crates/fret-ui/src/declarative/tests/fixtures/anchored_cross_root_coordinate_v1.json`
+    passed.
+  - synthetic gate:
+    `cargo test -p fret-ui --lib mechanism_harness_anchored_cross_root_coordinate_matches_oracles -- --nocapture`
+  - synthetic result:
+    passed, 1 test.
+  - UI kit focused gate:
+    `cargo nextest run -p fret-ui-kit outer_bounds_with_window_margin --no-fail-fast`
+  - UI kit focused result:
+    passed, 2 tests; Nextest run id `18deeb53-0fd8-4b25-8df3-af61212780e9`.
+  - shadcn compile/placement smoke:
+    `$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib popover_first_open_placement_size_prefers_explicit_hint -- --nocapture`
+  - shadcn compile/placement smoke result:
+    passed, 1 test.
+  - representative shadcn focused gates:
+    `hover_card_anchor_override_uses_anchor_bounds_for_placement`,
+    `tooltip_anchor_override_uses_anchor_bounds_for_placement`,
+    `dropdown_menu_portal_escapes_overflow_clip_ancestor`,
+    `context_menu_submenu_keyboard_open_transfers_focus_and_arrow_left_restores_focus`, and
+    `menubar_submenu_opens_on_arrow_right_and_closes_on_arrow_left_restoring_focus`.
+  - representative shadcn focused result:
+    all passed.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`
