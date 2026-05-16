@@ -296,6 +296,10 @@ Exit criteria:
   A narrow `PropertyRow` with `editor_validation_message_text_props(...)` runs through
   `UiTree::layout_all(...)`, then public element-bounds queries assert that the wrapped validation
   text is contained by the value slot and row bounds instead of painting past the row bottom.
+  2026-05-17 property-grid wrapping layout result: the container fix is now covered at the
+  inspector composition level too. A narrow `PropertyGrid` with single-line rows before/after a
+  wrapping validation row proves that the wrapping row grows and pushes following rows down instead
+  of preserving a fixed-row-height assumption.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

@@ -362,6 +362,11 @@ Run evidence:
   `UiTree::layout_all(...)` path through public element-bounds queries, and asserts that the
   measured multi-line text bottom stays inside the value slot and row bounds. This closes the
   evidence gap between the structural overflow contract and the visual resize bug report.
+- 2026-05-17: added a composition-level `PropertyGrid` resize regression for the same wrapping
+  validation role. The test renders mixed single-line and wrapping rows in a narrow grid, reuses the
+  same measured wrapping text service, and asserts that the wrapping row grows, pushes the
+  following row down, and remains contained by the grid. Gate:
+  `cargo nextest run -p fret-ui-editor property_grid_keeps_rows_separated_when_value_text_wraps_under_narrow_layout --no-fail-fast`.
 - 2026-05-17: added `P3_TEXT_ROLE_MATRIX_2026-05-17.md` as the resize triage contract for the
   current text-role work. It names the stable base roles (`text_control_readout(...)`,
   `text_button_label(...)`, `text_paragraph(...)` / `text_paragraph_break_words(...)`,
@@ -934,3 +939,7 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 2026-05-17 property-row wrapping value layout gate:
 
 - `cargo nextest run -p fret-ui-editor row_value_slot_grows_to_wrapping_value_text_under_narrow_layout --no-fail-fast` passed.
+
+2026-05-17 property-grid wrapping value layout gate:
+
+- `cargo nextest run -p fret-ui-editor property_grid_keeps_rows_separated_when_value_text_wraps_under_narrow_layout row_value_slot_grows_to_wrapping_value_text_under_narrow_layout row_value_slot_keeps_overflow_visible_for_wrapping_value_children --no-fail-fast` passed.

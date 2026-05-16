@@ -14,6 +14,9 @@ pub mod controls;
 pub mod primitives;
 pub mod theme;
 
+#[cfg(test)]
+mod test_support;
+
 #[cfg(feature = "imui")]
 pub mod imui;
 

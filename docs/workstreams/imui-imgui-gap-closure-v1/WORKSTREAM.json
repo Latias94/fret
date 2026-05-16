@@ -202,8 +202,8 @@
       "command": "cargo nextest run -p fret-ui-editor editor_property_group_header_text_is_single_line_and_shrinkable editor_property_row_reset_glyph_text_keeps_fixed_button_line_box --no-fail-fast"
     },
     {
-      "name": "editor property row wrapping value overflow and layout",
-      "command": "cargo nextest run -p fret-ui-editor row_value_slot_keeps_overflow_visible_for_wrapping_value_children row_value_slot_grows_to_wrapping_value_text_under_narrow_layout --no-fail-fast"
+      "name": "editor property wrapping value overflow and layout",
+      "command": "cargo nextest run -p fret-ui-editor row_value_slot_keeps_overflow_visible_for_wrapping_value_children row_value_slot_grows_to_wrapping_value_text_under_narrow_layout property_grid_keeps_rows_separated_when_value_text_wraps_under_narrow_layout --no-fail-fast"
     },
     {
       "name": "editor popup list text semantics",
@@ -378,7 +378,9 @@
     "ecosystem/fret-ui-editor/src/primitives/popup_list.rs",
     "ecosystem/fret-ui-editor/src/primitives/readout.rs",
     "ecosystem/fret-ui-editor/src/composites/property_group.rs",
+    "ecosystem/fret-ui-editor/src/composites/property_grid.rs",
     "ecosystem/fret-ui-editor/src/composites/property_row.rs",
+    "ecosystem/fret-ui-editor/src/test_support.rs",
     "ecosystem/fret-ui-editor/src/controls/field_status.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit.rs",
     "ecosystem/fret-ui-editor/src/controls/color_edit/popup/copy.rs",

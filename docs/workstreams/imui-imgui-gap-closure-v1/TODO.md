@@ -291,6 +291,10 @@ Readiness order for the next locally testable review slices:
    gate, not only a structural overflow check. A narrow row with the editor validation-message role
    runs through `UiTree::layout_all(...)`, and public element-bounds queries prove the multi-line
    validation text is contained by the value slot and row bounds.
+   2026-05-17 property-grid wrapping layout follow-up: `PropertyGrid` now has a composition-level gate
+   with mixed single-line and wrapping rows. The test proves a multi-line validation
+   value grows its row and pushes the following row down, so the fix is locked at the realistic
+   inspector-grid composition layer instead of only the single-row container layer.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
