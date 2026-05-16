@@ -31,7 +31,9 @@ fn code_editor_header_state_readouts_use_single_line_control_readout() {
     let torture = read("src/ui/previews/pages/editors/code_editor/torture.rs");
 
     assert_contains_compact(&doc_layout, "decl_text::text_control_readout(cx, text)");
+    assert_contains_compact(&doc_layout, "decl_text::text_code_block(cx, code.clone())");
     assert_not_contains_compact(&doc_layout, "fn control_readout_text_props");
+    assert_not_contains_compact(&doc_layout, "let monospace = fret_core::TextStyle");
 
     for expected in [
         "doc_layout::control_readout_text(cx, if syntax_enabled {",

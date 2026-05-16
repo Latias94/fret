@@ -328,6 +328,14 @@ pub(crate) fn label_text_refinement(theme: &Theme) -> (TextStyleRefinement, Px) 
     (refinement, line_height)
 }
 
+fn text_code_refinement(theme: &Theme) -> TextStyleRefinement {
+    ui_typography::composable_refinement_from_style(&ui_typography::fixed_line_box_style(
+        FontId::monospace(),
+        theme.metric_token("metric.font.mono_size"),
+        theme.metric_token("metric.font.mono_line_height"),
+    ))
+}
+
 /// Declarative helper intended for code-like inline text.
 ///
 /// Defaults:
@@ -339,14 +347,41 @@ pub fn text_code_wrap<H: UiHost>(
 ) -> AnyElement {
     let refinement = {
         let theme = Theme::global(&*cx.app);
-        ui_typography::composable_refinement_from_style(&ui_typography::fixed_line_box_style(
-            FontId::monospace(),
-            theme.metric_token("metric.font.mono_size"),
-            theme.metric_token("metric.font.mono_line_height"),
-        ))
+        text_code_refinement(theme)
     };
 
     scoped_text(cx, text, refinement, TextWrap::Grapheme, TextOverflow::Clip)
+}
+
+/// Declarative helper for block code rendered inside a scrollable/code surface.
+///
+/// This keeps code single-line per source line. The caller should provide horizontal scrolling or a
+/// constrained container when long lines are possible.
+pub fn text_code_block<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_code_refinement(theme)
+    };
+
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout,
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
 }
 
 /// `text_prose` variant that forces single-line layout (`whitespace-nowrap`-like behavior).
@@ -495,6 +530,25 @@ mod tests {
         assert_eq!(props.overflow, TextOverflow::Clip);
         assert_eq!(
             code.inherited_text_style
+                .as_ref()
+                .and_then(|style| style.font.clone()),
+            Some(FontId::monospace())
+        );
+
+        let code_block = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_code_block(cx, "fn main() {}")
+        });
+        let ElementKind::Text(props) = &code_block.kind else {
+            panic!("expected text_code_block(...) to build a Text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(
+            code_block
+                .inherited_text_style
                 .as_ref()
                 .and_then(|style| style.font.clone()),
             Some(FontId::monospace())

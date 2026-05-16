@@ -183,6 +183,11 @@ Run evidence:
   single-line truncation instead of inheriting word-wrap text semantics. Gate: `cargo nextest run -p
   fret-ui-kit --features imui --lib button_label_text_uses_medium_single_line_truncation
   imui::control_chrome::tests::imui_control_text_uses_shared_button_label_role --no-fail-fast`.
+- 2026-05-16: introduced `text_code_block(...)` as the shared code-block text role beside the
+  existing inline/wrapping `text_code_wrap(...)`. The UI Gallery docs scaffold now uses the shared
+  role for scrollable code blocks instead of constructing monospace `TextProps` locally. Gate:
+  `cargo nextest run -p fret-ui-kit --features imui --lib
+  prose_variants_and_code_wrap_install_semantic_inherited_overrides --no-fail-fast`.
 - 2026-05-14: made `DisclosureResponse` / `ComboResponse` accessor-first for trigger/open/toggle
   state too. Public callers now read trigger details through `response()` and semantic helpers, the
   response types no longer expose external `Default` construction, and

@@ -922,31 +922,7 @@ fn code_block_shell(
     .gap(Space::N2)
     .into_element(cx);
 
-    let theme = Theme::global(&*cx.app);
-    let monospace = fret_core::TextStyle {
-        font: fret_core::FontId::monospace(),
-        size: Px(12.0),
-        weight: fret_core::FontWeight::NORMAL,
-        slant: fret_core::TextSlant::Normal,
-        line_height: theme.metric_by_key("font.line_height"),
-        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
-        letter_spacing_em: None,
-        ..Default::default()
-    };
-    let code_text = cx.text_props(TextProps {
-        layout: {
-            let mut layout = fret_ui::element::LayoutStyle::default();
-            layout.size.width = fret_ui::element::Length::Fill;
-            layout
-        },
-        text: code.clone(),
-        style: Some(monospace),
-        color: Some(theme.color_token("foreground")),
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Clip,
-        align: fret_core::TextAlign::Start,
-        ink_overflow: fret_ui::element::TextInkOverflow::None,
-    });
+    let code_text = decl_text::text_code_block(cx, code.clone());
 
     let mut scroll = shadcn::ScrollArea::new([code_text])
         .axis(fret_ui::element::ScrollAxis::Both)

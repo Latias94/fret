@@ -200,6 +200,9 @@ Exit criteria:
   2026-05-16 button label text role result: `text_button_label(...)` now gives IMUI button/pill
   labels a shared compact single-line truncation role instead of the previous word-wrapping
   `control_text(...)` behavior.
+  2026-05-16 code block text role result: `text_code_block(...)` now shares the monospace
+  single-line code-block text contract, and UI Gallery docs code blocks no longer hand-roll their
+  own `TextProps`.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.
