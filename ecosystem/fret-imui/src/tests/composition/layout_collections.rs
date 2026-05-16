@@ -918,6 +918,118 @@ fn table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells() {
 }
 
 #[test]
+fn table_helper_applies_explicit_row_and_cell_background_overrides() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(360.0), Px(160.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let row_bg = fret_core::Color::from_srgb_hex_rgb(0x201010);
+    let cell_bg = fret_core::Color::from_srgb_hex_rgb(0x102020);
+    let columns = [
+        TableColumn::fill("Name"),
+        TableColumn::px("Status", Px(96.0)),
+    ];
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-background-overrides",
+        |cx| {
+            crate::imui_raw(cx, |ui| {
+                ui.table_with_options(
+                    "imui-table-background-overrides",
+                    &columns,
+                    TableOptions {
+                        striped: true,
+                        test_id: Some(Arc::from("imui-table-background-overrides")),
+                        ..Default::default()
+                    },
+                    |table| {
+                        table.row_with_options(
+                            "alpha",
+                            fret_ui_kit::imui::TableRowOptions {
+                                test_id: Some(Arc::from("imui-table-background-overrides.row")),
+                                background: Some(row_bg),
+                            },
+                            |row| {
+                                row.cell_text("Alpha");
+                                row.cell_text_with_options(
+                                    "Ready",
+                                    fret_ui_kit::imui::TableCellOptions {
+                                        test_id: Some(Arc::from(
+                                            "imui-table-background-overrides.cell",
+                                        )),
+                                        background: Some(cell_bg),
+                                    },
+                                );
+                            },
+                        );
+                    },
+                );
+            })
+        },
+    );
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-background-overrides.row"
+    ));
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-background-overrides.cell"
+    ));
+
+    services.prepared.clear();
+    let mut scene = fret_core::Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    let ops = scene.ops();
+
+    let row_bg_index = first_solid_quad_index(ops, row_bg).expect("row background quad");
+    let cell_bg_index = first_solid_quad_index(ops, cell_bg).expect("cell background quad");
+    assert!(
+        row_bg_index < cell_bg_index,
+        "expected cell background to paint after row background, got scene ops: {ops:?}"
+    );
+}
+
+fn first_solid_quad_index(ops: &[fret_core::SceneOp], color: fret_core::Color) -> Option<usize> {
+    ops.iter().position(|op| {
+        matches!(
+            op,
+            fret_core::SceneOp::Quad {
+                background:
+                    fret_core::scene::PaintBindingV1 {
+                        paint: fret_core::scene::Paint::Solid(actual),
+                        ..
+                    },
+                ..
+            } if *actual == color
+        )
+    })
+}
+
+#[test]
 fn virtual_list_helper_mounts_small_render_window_and_scrolls_to_target_row() {
     let window = AppWindowId::default();
     let bounds = Rect::new(

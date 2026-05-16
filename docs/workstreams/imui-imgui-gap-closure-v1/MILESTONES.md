@@ -186,9 +186,13 @@ Exit criteria:
   bring-to-front hit-test order, focus-on-click vs activation, no-inputs / pointer-pass-through,
   close, resize, and collapse. Multi-window / viewport parity remains outside this helper.
   2026-05-16 table gap wording result: the component catalog now treats alternating row backgrounds
-  as covered through `TableOptions::striped` and leaves only explicit per-row/per-cell background
-  overrides, freeze panes, column visibility, and old columns API as advanced-table follow-on
-  candidates.
+  as covered through `TableOptions::striped` and narrowed the remaining table gap read before the
+  row/cell override proof landed.
+  2026-05-16 table override/text role result: explicit row/cell background override policy landed
+  in `TableRowOptions::background` and `TableCellOptions::background`, with scene-paint proof that
+  cell overrides paint after row overrides. `ImUiTableRow::cell_text(...)` now uses the shared
+  `text_table_cell(...)` role helper, so default table text no longer inherits paragraph wrapping
+  semantics. Freeze panes, column visibility, and old columns API remain advanced-table candidates.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

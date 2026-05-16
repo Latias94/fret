@@ -1,10 +1,10 @@
 #![cfg(feature = "imui")]
 
-use fret_core::Px;
+use fret_core::{Color, Px};
 use fret_ui::UiHost;
 use fret_ui_kit::imui::{
-    TableColumn, TableColumnWidth, TableOptions, TableRowOptions, TableSortDirection,
-    UiWriterImUiFacadeExt,
+    TableCellOptions, TableColumn, TableColumnWidth, TableOptions, TableRowOptions,
+    TableSortDirection, UiWriterImUiFacadeExt,
 };
 
 #[allow(dead_code)]
@@ -19,9 +19,15 @@ fn table_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
         table.row("alpha", |row| {
             row.cell_text("Alpha");
             row.cell_text("Folder");
-            row.cell(|ui| {
-                let _ = ui.button("Open");
-            });
+            row.cell_with_options(
+                TableCellOptions {
+                    background: Some(Color::from_srgb_hex_rgb(0x101820)),
+                    ..Default::default()
+                },
+                |ui| {
+                    let _ = ui.button("Open");
+                },
+            );
         });
     });
     let _ = response.headers();
@@ -39,10 +45,17 @@ fn table_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
                 "beta",
                 TableRowOptions {
                     test_id: Some("table.row.beta".into()),
+                    background: Some(Color::from_srgb_hex_rgb(0x201010)),
                 },
                 |row| {
                     row.cell_text("Beta");
-                    row.cell_text("Queue");
+                    row.cell_text_with_options(
+                        "Queue",
+                        TableCellOptions {
+                            test_id: Some("table.cell.kind".into()),
+                            background: Some(Color::from_srgb_hex_rgb(0x102020)),
+                        },
+                    );
                     row.cell_text("42");
                 },
             );
@@ -58,6 +71,14 @@ fn table_option_defaults_compile() {
     assert!(!options.striped);
     assert!(options.clip_cells);
     assert!(options.test_id.is_none());
+
+    let row_options = TableRowOptions::default();
+    assert!(row_options.test_id.is_none());
+    assert!(row_options.background.is_none());
+
+    let cell_options = TableCellOptions::default();
+    assert!(cell_options.test_id.is_none());
+    assert!(cell_options.background.is_none());
 }
 
 #[test]

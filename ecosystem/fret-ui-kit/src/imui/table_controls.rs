@@ -13,8 +13,8 @@ use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 use super::containers::build_imui_children_with_focus;
 use super::label_identity::parse_label_identity;
 use super::{
-    ImUiFacade, ResponseExt, TableColumn, TableColumnWidth, TableHeaderResponse, TableOptions,
-    TableResponse, TableRowOptions, TableSortDirection, UiWriterImUiFacadeExt,
+    ImUiFacade, ResponseExt, TableCellOptions, TableColumn, TableColumnWidth, TableHeaderResponse,
+    TableOptions, TableResponse, TableRowOptions, TableSortDirection,
 };
 
 use super::TableColumnResizeResponse;
@@ -26,11 +26,14 @@ const TABLE_RESIZE_HANDLE_VISUAL_WIDTH: Px = Px(1.0);
 struct BuiltTableRow {
     key: Arc<str>,
     test_id: Option<Arc<str>>,
+    background: Option<Color>,
     cells: Vec<BuiltTableCell>,
 }
 
 struct BuiltTableCell {
     test_id: Option<Arc<str>>,
+    explicit_test_id: Option<Arc<str>>,
+    background: Option<Color>,
     content: AnyElement,
 }
 
@@ -107,6 +110,7 @@ impl<'cx, 'a, H: UiHost> ImUiTable<'cx, 'a, H> {
         self.rows.push(BuiltTableRow {
             key,
             test_id: row_test_id,
+            background: options.background,
             cells,
         });
     }
@@ -114,6 +118,14 @@ impl<'cx, 'a, H: UiHost> ImUiTable<'cx, 'a, H> {
 
 impl<'cx, 'a, H: UiHost> ImUiTableRow<'cx, 'a, H> {
     pub fn cell(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        self.cell_with_options(TableCellOptions::default(), f);
+    }
+
+    pub fn cell_with_options(
+        &mut self,
+        options: TableCellOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
         let cell_index = self.cells.len();
         let mut out = Vec::new();
         build_imui_children_with_focus(self.cx, &mut out, self.build_focus.clone(), f);
@@ -122,13 +134,23 @@ impl<'cx, 'a, H: UiHost> ImUiTableRow<'cx, 'a, H> {
             .row_test_id
             .as_ref()
             .map(|base| Arc::from(format!("{base}.cell.{cell_index}")));
-        self.cells.push(BuiltTableCell { test_id, content });
+        self.cells.push(BuiltTableCell {
+            test_id,
+            explicit_test_id: options.test_id,
+            background: options.background,
+            content,
+        });
     }
 
     pub fn cell_text(&mut self, text: impl Into<Arc<str>>) {
+        self.cell_text_with_options(text, TableCellOptions::default());
+    }
+
+    pub fn cell_text_with_options(&mut self, text: impl Into<Arc<str>>, options: TableCellOptions) {
         let text = text.into();
-        self.cell(move |ui| {
-            ui.text(text.clone());
+        self.cell_with_options(options, move |ui| {
+            let element = crate::declarative::text::text_table_cell(ui.cx_mut(), text.clone());
+            ui.add(element);
         });
     }
 }
@@ -216,6 +238,7 @@ fn render_table<H: UiHost>(
                     .map(|base| Arc::from(format!("{base}.header"))),
                 true,
                 false,
+                None,
                 &palette,
                 &options,
             )
@@ -236,9 +259,11 @@ fn render_table<H: UiHost>(
                 for (column_index, column) in columns.iter().enumerate() {
                     let built = iter.next().unwrap_or_else(|| BuiltTableCell {
                         test_id: None,
+                        explicit_test_id: None,
+                        background: None,
                         content: empty_cell(cx),
                     });
-                    let test_id = row
+                    let default_test_id = row
                         .test_id
                         .as_ref()
                         .map(|base| {
@@ -248,13 +273,14 @@ fn render_table<H: UiHost>(
                             ))
                         })
                         .or(built.test_id);
+                    let test_id = built.explicit_test_id.or(default_test_id);
                     cells.push(wrap_table_cell(
                         cx,
                         column,
                         built.content,
                         test_id,
                         false,
-                        striped,
+                        built.background,
                         &options,
                     ));
                 }
@@ -262,7 +288,16 @@ fn render_table<H: UiHost>(
                     iter.next().is_none(),
                     "imui table rows must emit exactly one cell per declared column"
                 );
-                wrap_table_row(cx, cells, row.test_id, false, striped, &palette, &options)
+                wrap_table_row(
+                    cx,
+                    cells,
+                    row.test_id,
+                    false,
+                    striped,
+                    row.background,
+                    &palette,
+                    &options,
+                )
             })
         })
         .collect::<Vec<_>>();
@@ -325,16 +360,19 @@ fn wrap_table_row<H: UiHost>(
     test_id: Option<Arc<str>>,
     header: bool,
     striped: bool,
+    background: Option<Color>,
     palette: &TablePalette,
     options: &TableOptions,
 ) -> AnyElement {
-    let background = if header {
-        Some(palette.header_bg)
-    } else if striped {
-        Some(palette.striped_bg)
-    } else {
-        None
-    };
+    let background = background.or_else(|| {
+        if header {
+            Some(palette.header_bg)
+        } else if striped {
+            Some(palette.striped_bg)
+        } else {
+            None
+        }
+    });
 
     let mut row = ContainerProps::default();
     row.layout.size.width = Length::Fill;
@@ -773,15 +811,13 @@ fn wrap_table_cell<H: UiHost>(
     content: AnyElement,
     test_id: Option<Arc<str>>,
     header: bool,
-    striped: bool,
+    background: Option<Color>,
     options: &TableOptions,
 ) -> AnyElement {
     let mut cell = ContainerProps::default();
     cell.layout = table_cell_layout(column.width, options.clip_cells);
     cell.padding = table_cell_padding().into();
-    if header || striped {
-        cell.background = None;
-    }
+    cell.background = background;
     let cell = cx.container(cell, move |_cx| vec![content]);
     if let Some(test_id) = test_id {
         cell.attach_semantics(

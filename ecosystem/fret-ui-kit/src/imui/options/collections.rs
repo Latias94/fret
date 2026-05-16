@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::Px;
+use fret_core::{Color, Px};
 
 use super::super::label_identity::parse_label_identity;
 
@@ -168,6 +168,13 @@ impl Default for TableOptions {
 #[derive(Debug, Clone, Default)]
 pub struct TableRowOptions {
     pub test_id: Option<Arc<str>>,
+    pub background: Option<Color>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct TableCellOptions {
+    pub test_id: Option<Arc<str>>,
+    pub background: Option<Color>,
 }
 
 #[derive(Clone)]

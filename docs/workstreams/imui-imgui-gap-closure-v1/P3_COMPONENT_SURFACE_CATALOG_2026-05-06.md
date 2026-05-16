@@ -11,7 +11,8 @@ image-item and child-region manual-resize candidates below have since landed in 
 refreshed: current source/tests already cover z-order hit-testing, focus-on-click vs activation,
 no-inputs / pointer-pass-through policy, close, resize, and collapse behavior. The table
 advanced-gap wording has also been narrowed: `TableOptions::striped` already covers alternating row
-backgrounds, while per-row/per-cell background overrides remain candidate-only.
+backgrounds, and explicit per-row/per-cell background overrides now have a narrow proof through
+`TableRowOptions::background` and `TableCellOptions::background`.
 
 ## Decision
 
@@ -45,7 +46,7 @@ Keep the owner split:
 | Menus / menu bars / popups / modals | `menu_bar`, `begin_menu`, `begin_submenu`, menu items, `open_popup`, `begin_popup_menu`, context menu helpers, modal helpers | Covered at policy layer; dismissal/focus policy stays in ecosystem |
 | Tooltips | `tooltip_text`, `tooltip`, `TooltipOptions` | Covered enough for current response-driven usage |
 | Tabs | `tab_bar`, `ImUiTabBar`, `tab_item`, response reporting | Covered for current shell/editor proofs |
-| Tables | `table`, `ImUiTable`, `TableColumn`, `TableOptions::striped`, sort/resize/header responses, virtual-list support | Covered for basic/sort/resize/striped-row proof paths; advanced table flags should be split by proof |
+| Tables | `table`, `ImUiTable`, `TableColumn`, `TableOptions::striped`, `TableRowOptions::background`, `TableCellOptions::background`, sort/resize/header responses, virtual-list support | Covered for basic/sort/resize/striped-row and explicit row/cell background proof paths; remaining advanced table flags should be split by proof |
 | Drag and drop | response-driven `drag_source` / `drop_target` with typed payloads | Covered with Fret-native response style; do not copy begin/end mutable payload grammar |
 | Draw list / images | `debug_draw`, `ImUiDebugDrawList`, paths, channels, mesh, image/SVG variants | Strong local coverage; keep feature growth in debug-draw follow-ons |
 | Color edit / picker | `fret-ui-editor::ColorEdit` through `fret::imui::editor::color_edit` | Covered as editor-control policy, not generic kit vocabulary |
@@ -69,9 +70,9 @@ public helper widening:
    - Fret should use theme/editor tooling and diagnostics/devtools lanes; do not freeze a generic
      style editor API from this audit.
 4. **Advanced table flags**
-   - Sorting, resize handles, and alternating row backgrounds already have proof.
-   - Per-row/per-cell background override targets, freeze panes, column visibility policies, and
-     old columns API should stay narrow follow-ons.
+   - Sorting, resize handles, alternating row backgrounds, and explicit per-row/per-cell
+     background override targets already have proof.
+   - Freeze panes, column visibility policies, and old columns API should stay narrow follow-ons.
 5. **Child-region flag mirrors beyond manual resize**
    - `ResizeY` and `ResizeX` now have closed proof lanes.
    - Auto-resize, nav flattening, and clipping-return behavior still need behavior-specific proof
@@ -91,9 +92,11 @@ public helper widening:
 - `window(...)` is no longer a v1 posture with z-order/focus arbitration deferred: current
   `fret-imui` floating tests cover bring-to-front hit-test order, focus-on-click independent from
   activation, no-inputs / pointer-pass-through behavior, close, resize, and collapse.
-- `TableOptions::striped` is already the current alternating row-background policy. Do not treat
-  Dear ImGui `RowBg` parity as wholly missing; the unresolved axis is explicit per-row/per-cell
-  background override policy, which still needs a narrow proof.
+- `TableOptions::striped` is already the current alternating row-background policy, while
+  `TableRowOptions::background` / `TableCellOptions::background` cover explicit per-row/per-cell
+  override targets. Do not treat Dear ImGui `RowBg` parity as wholly missing; the remaining table
+  axes are freeze panes, column visibility, and old columns API shape, which still need narrow
+  proofs.
 - `ecosystem/fret-ui-editor/src/imui.rs` is only a thin adapter layer that forwards editor controls
   and composites through `into_element(...)`.
 - `repo-ref/imgui/imgui.h` still groups the upstream surface by Windows, Child Windows, Widgets,

@@ -158,8 +158,18 @@ Run evidence:
   `TableOptions::striped` remains the existing alternating row-background policy, with proof in
   `apps/fret-examples-imui/src/imui_shadcn_adapter_demo.rs`,
   `ecosystem/fret-ui-kit/tests/imui_table_smoke.rs`, and
-  `ecosystem/fret-imui/src/tests/composition/layout_collections.rs`. The remaining table
-  background gap is explicit per-row/per-cell override policy, not all row background behavior.
+  `ecosystem/fret-imui/src/tests/composition/layout_collections.rs`.
+- 2026-05-16: landed the explicit table row/cell background override slice. Evidence anchors:
+  `TableRowOptions::background`, `TableCellOptions::background`,
+  `ImUiTableRow::cell_with_options(...)`, `ImUiTableRow::cell_text_with_options(...)`,
+  `ecosystem/fret-ui-kit/tests/imui_table_smoke.rs`, and
+  `ecosystem/fret-imui/src/tests/composition/layout_collections.rs`.
+  `table_helper_applies_explicit_row_and_cell_background_overrides` proves that explicit cell
+  backgrounds paint after explicit row backgrounds.
+- 2026-05-16: introduced `text_table_cell(...)` as the first shared table-cell text role and wired
+  `ImUiTableRow::cell_text(...)` through it instead of bare paragraph text. Gate:
+  `cargo nextest run -p fret-ui-kit --features imui --lib
+  table_cell_text_uses_compact_single_line_truncation --no-fail-fast`.
 - 2026-05-14: made `DisclosureResponse` / `ComboResponse` accessor-first for trigger/open/toggle
   state too. Public callers now read trigger details through `response()` and semantic helpers, the
   response types no longer expose external `Default` construction, and
@@ -479,6 +489,7 @@ cargo nextest run -p fret-imui models_controls --no-fail-fast
 cargo nextest run -p fret-imui models_text_area --no-fail-fast
 cargo nextest run -p fret-imui models_text_picker --no-fail-fast
 cargo nextest run -p fret-imui popup_hover --no-fail-fast
+cargo nextest run -p fret-imui table_helper_applies_explicit_row_and_cell_background_overrides --no-fail-fast
 cargo nextest run -p fret-imui table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells --no-fail-fast
 cargo nextest run -p fret-imui --no-fail-fast
 python tools/gate_imui_workstream_source.py
@@ -558,6 +569,11 @@ Run evidence:
   table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells --no-fail-fast` passed
   locally after moving table body-cell test semantics to layout-transparent
   `SemanticsDecoration`.
+- 2026-05-16: `cargo nextest run -p fret-imui
+  table_helper_applies_explicit_row_and_cell_background_overrides
+  table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells --no-fail-fast` passed
+  locally with 2 tests, proving explicit row/cell background paint order and preserving the
+  existing table layout semantics gate.
 - 2026-05-14: `cargo nextest run -p fret-imui --no-fail-fast` passed locally with 163 tests.
 - 2026-05-14: `python tools/gate_imui_workstream_source.py` and `git diff --check` passed locally.
 

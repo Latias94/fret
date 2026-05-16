@@ -180,9 +180,14 @@ Readiness order for the next locally testable review slices:
    focus-on-click vs activation, no-inputs / pointer-pass-through policy, close, resize, and
    collapse; OS-window tear-out and multi-viewport parity stay in docking/runner lanes.
    2026-05-16 table gap wording refresh: the component catalog now distinguishes existing
-   `TableOptions::striped` alternating row backgrounds from the still-candidate per-row/per-cell
+   `TableOptions::striped` alternating row backgrounds from the explicit per-row/per-cell
    background override axis. Do not open a broad `imui-table-advanced-flags-v1` lane just because
    the old wording said "row background targets."
+   2026-05-16 table background/text role follow-up: explicit per-row/per-cell background overrides
+   now live in `TableRowOptions::background` / `TableCellOptions::background`, and
+   `ImUiTableRow::cell_text(...)` routes through the shared `text_table_cell(...)` helper instead
+   of bare paragraph text. Remaining advanced-table candidates are freeze panes, column visibility,
+   and old columns API shape.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

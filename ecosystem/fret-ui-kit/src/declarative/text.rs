@@ -3,7 +3,7 @@ use std::sync::Arc;
 use fret_core::{
     FontId, FontWeight, Px, TextAlign, TextOverflow, TextStyle, TextStyleRefinement, TextWrap,
 };
-use fret_ui::element::{AnyElement, LayoutStyle, TextInkOverflow, TextProps};
+use fret_ui::element::{AnyElement, LayoutStyle, Length, TextInkOverflow, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::typography as ui_typography;
@@ -114,6 +114,38 @@ pub fn text_sm<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<st
         text_sm_refinement(theme)
     };
     scoped_text(cx, text, refinement, TextWrap::Word, TextOverflow::Clip)
+}
+
+/// Declarative text helper for dense table cells.
+///
+/// This keeps the compact `text-sm` baseline but forces single-line truncation so rows stay
+/// visually stable under resize.
+pub fn text_table_cell<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_sm_refinement(theme)
+    };
+
+    let mut layout = LayoutStyle::default();
+    layout.flex.shrink = 1.0;
+    layout.size.min_width = Some(Length::Px(Px(0.0)));
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout,
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
 }
 
 /// Declarative text helper that matches Tailwind's `text-xs` default usage in shadcn recipes.
@@ -397,5 +429,29 @@ mod tests {
                 .and_then(|style| style.font.clone()),
             Some(FontId::monospace())
         );
+    }
+
+    #[test]
+    fn table_cell_text_uses_compact_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_table_cell(cx, "Compact table cell")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_table_cell(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
     }
 }
