@@ -161,6 +161,7 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
             }
             continue;
         }
+        let probe_started = st.paint_perf_enabled.then(Instant::now);
         let probe = match st.row_scene_cache.get(&row) {
             Some((cached, _)) => {
                 let content = cached.content.clone();
@@ -171,6 +172,7 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
                 } else if content.preedit_range.is_some() {
                     ReplayCandidateProbe::Preedit
                 } else {
+                    let key_compare_started = st.paint_perf_enabled.then(Instant::now);
                     let matches = if let Some(key) = cached.syntax_replay_key.as_ref() {
                         key.matches_cached_replay_context(
                             &content,
@@ -186,6 +188,13 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
                         let expected = RowSceneKey::plain(cached.key.row_geom_key.clone(), fg);
                         cached.key == expected
                     };
+                    if let Some(started) = key_compare_started {
+                        add_paint_perf_elapsed(
+                            &mut st.paint_perf_frame.us_row_scene_prepaint_key_compare,
+                            &mut st.paint_perf_frame.ns_row_scene_prepaint_key_compare,
+                            started,
+                        );
+                    }
 
                     if matches {
                         ReplayCandidateProbe::Hit(ReplayCandidate {
@@ -203,6 +212,13 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
             }
             None => ReplayCandidateProbe::NoCache,
         };
+        if let Some(started) = probe_started {
+            add_paint_perf_elapsed(
+                &mut st.paint_perf_frame.us_row_scene_prepaint_probe,
+                &mut st.paint_perf_frame.ns_row_scene_prepaint_probe,
+                started,
+            );
+        }
 
         let ReplayCandidate {
             content,

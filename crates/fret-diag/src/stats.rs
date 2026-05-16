@@ -1237,6 +1237,8 @@ mod tests {
                                     "us_row_scene_replay_touch": 5,
                                     "us_row_scene_replay_ops": 25,
                                     "us_row_scene_prepaint_plan": 7,
+                                    "us_row_scene_prepaint_probe": 4,
+                                    "ns_row_scene_prepaint_key_compare": 6100,
                                     "us_row_scene_capture_ops": 70,
                                     "us_row_scene_store": 20,
                                     "us_row_scene_prepaint_edge_store": 4,
@@ -1305,6 +1307,8 @@ mod tests {
         assert_eq!(perf.quads_caret, 1);
         assert_eq!(perf.us_row_scene_replay_ops, 25);
         assert_eq!(perf.us_row_scene_prepaint_plan, 7);
+        assert_eq!(perf.us_row_scene_prepaint_probe, 4);
+        assert_eq!(perf.us_row_scene_prepaint_key_compare, 6);
         assert_eq!(perf.us_row_scene_prepaint_edge_store, 4);
         assert_eq!(perf.us_row_scene_capture_ops, 70);
         assert_eq!(perf.us_row_scene_store, 20);
@@ -1357,6 +1361,16 @@ mod tests {
             Some(7)
         );
         assert_eq!(
+            json.pointer("/code_editor_paint_perf/sum/us_row_scene_prepaint_probe")
+                .and_then(|v| v.as_u64()),
+            Some(4)
+        );
+        assert_eq!(
+            json.pointer("/code_editor_paint_perf/sum/us_row_scene_prepaint_key_compare")
+                .and_then(|v| v.as_u64()),
+            Some(6)
+        );
+        assert_eq!(
             json.pointer("/code_editor_paint_perf/sum/us_row_content_resolve")
                 .and_then(|v| v.as_u64()),
             Some(45)
@@ -1400,6 +1414,16 @@ mod tests {
             json.pointer("/top/0/code_editor_paint_perf/rows_scene_prepaint_plan_used")
                 .and_then(|v| v.as_u64()),
             Some(5)
+        );
+        assert_eq!(
+            json.pointer("/top/0/code_editor_paint_perf/us_row_scene_prepaint_probe")
+                .and_then(|v| v.as_u64()),
+            Some(4)
+        );
+        assert_eq!(
+            json.pointer("/top/0/code_editor_paint_perf/us_row_scene_prepaint_key_compare")
+                .and_then(|v| v.as_u64()),
+            Some(6)
         );
         assert_eq!(
             json.pointer("/top/0/code_editor_paint_perf/row_scene_ops_stored")

@@ -99,6 +99,14 @@ fn snapshot_code_editor_paint_perf(
             "us_row_scene_prepaint_plan",
             "ns_row_scene_prepaint_plan"
         ),
+        us_row_scene_prepaint_probe: us_field!(
+            "us_row_scene_prepaint_probe",
+            "ns_row_scene_prepaint_probe"
+        ),
+        us_row_scene_prepaint_key_compare: us_field!(
+            "us_row_scene_prepaint_key_compare",
+            "ns_row_scene_prepaint_key_compare"
+        ),
         us_row_scene_capture_ops: us_field!(
             "us_row_scene_capture_ops",
             "ns_row_scene_capture_ops"
@@ -2496,6 +2504,8 @@ pub(super) fn bundle_stats_from_json_with_options(
             us_row_scene_replay_touch: metric!(us_row_scene_replay_touch),
             us_row_scene_replay_ops: metric!(us_row_scene_replay_ops),
             us_row_scene_prepaint_plan: metric!(us_row_scene_prepaint_plan),
+            us_row_scene_prepaint_probe: metric!(us_row_scene_prepaint_probe),
+            us_row_scene_prepaint_key_compare: metric!(us_row_scene_prepaint_key_compare),
             us_row_scene_capture_ops: metric!(us_row_scene_capture_ops),
             us_row_scene_store: metric!(us_row_scene_store),
             us_row_scene_prepaint_edge_store: metric!(us_row_scene_prepaint_edge_store),

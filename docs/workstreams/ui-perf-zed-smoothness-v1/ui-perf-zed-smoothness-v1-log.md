@@ -105,6 +105,48 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 21:30:29 +0800 (prepaint row-scene probe attribution)
+
+Question:
+- After inline preedit row-scene replay recovery, is the residual prepaint cost caused by key comparison or by
+  per-row cache probe/replay-plan assembly?
+
+Change:
+- Added code-editor paint perf fields for `us_row_scene_prepaint_probe` and
+  `us_row_scene_prepaint_key_compare`, with nanosecond-source fallback through `diag stats`.
+- Exposed the fields in UI-gallery paint snapshots, `diag stats` p50/p95/max JSON and human summaries, and
+  `diag perf` top-code-editor repeat rows.
+
+Validation:
+```bash
+cargo fmt -p fret-diag -p fret-code-editor -p fret-ui-gallery --check
+cargo nextest run -p fret-diag bundle_stats_extracts_code_editor_paint_perf_from_app_snapshot top_code_editor_row_scene_fields_compute_replay_rate perf_json_row_exports_top_code_editor_row_scene_fields perf_repeat_run_json_row_exports_top_code_editor_row_scene_fields perf_repeat_summary_json_row_summarizes_code_editor_row_scene_fields --no-fail-fast
+cargo check -p fret-code-editor --features syntax-rust
+cargo check -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+cargo run -p fretboard-dev --release -- diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --repeat 3 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 15 --json --dir target/fret-diag/local-next-editor-paint-20260516-prepaint-probe-attrib-complex-wheel-r3 --launch -- cargo run -p fret-ui-gallery --release --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+cargo run -p fretboard-dev --release -- diag stats target/fret-diag/local-next-editor-paint-20260516-prepaint-probe-attrib-complex-wheel-r3/1778937971499/bundle.schema2.json --sort time --top 15 --json > target/fret-diag/local-next-editor-paint-20260516-prepaint-probe-attrib-complex-wheel-r3/worst.stats.json
+```
+
+Results:
+- Evidence:
+  `target/fret-diag/local-next-editor-paint-20260516-prepaint-probe-attrib-complex-wheel-r3/worst.stats.json`
+- Worst-bundle frame p95: total/paint/prepaint/layout `808/433/275/184us`.
+- Code-editor paint p95: total/prepaint-plan/prepaint-probe/prepaint-key-compare/surface-callback
+  `113/95/77/7/153us`.
+- The top repeat rows reported prepaint plan/probe/key-compare as `65/53/4us`, `84/64/7us`, and `86/69/7us`.
+- Renderer text prepare stays low on this run: frame p95 `56us`, top rows `36..40us`.
+
+Decision:
+- Do not optimize key comparison or renderer text from this evidence. The residual local owner is per-row cache
+  probing plus replay-plan entry assembly across the visible row set.
+- A smaller reversible prepaint-plan cleanup was tested and not kept: single mutable cache lookup plus plan
+  preallocation produced
+  `target/fret-diag/local-next-editor-paint-20260516-prepaint-plan-small-opt-complex-wheel-r3/worst.stats.json`,
+  with code-editor paint p95 prepaint-plan effectively flat `95 -> 94us`, prepaint-probe worse `77 -> 85us`, and
+  frame total p95 worse `808 -> 829us`.
+- The next implementation option is a row-fragment replay contract, not another HashMap lookup micro-change.
+- This is local macOS evidence only; it does not replace the deferred Windows RTX4090 closeout.
+
 ## 2026-05-16 20:57:43 +0800 (inline preedit row-scene replay recovery)
 
 Question:

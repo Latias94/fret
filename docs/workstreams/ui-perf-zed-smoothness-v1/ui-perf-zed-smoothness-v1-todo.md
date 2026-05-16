@@ -179,10 +179,31 @@ not update checked-in baselines.
     introduce a coarser row-fragment replay contract.
   - Keep this as a measured slice; do not change baselines from local macOS evidence.
 - [ ] Reduce the residual prepaint row-scene planning cost after the inline-preedit replay recovery.
-  - First target: split `us_row_scene_prepaint_plan` into cache probe/key-compare/resource touch/replay-fragment
-    preparation so the next change is attributable.
-  - Candidate structural direction: a row-fragment replay contract that lets prepaint hand paint a contiguous retained
-    fragment plan without per-row cache/probe bookkeeping in the hot paint callback.
+  - [x] Split `us_row_scene_prepaint_plan` into cache-probe and key-compare attribution so the next change is
+    attributable.
+    - Surface: code-editor paint perf schema version `13`, `diag stats` p50/p95/max JSON, human stats output, and
+      `diag perf` repeat-summary rows now include `us_row_scene_prepaint_probe` and
+      `us_row_scene_prepaint_key_compare`.
+    - Local no-4090 evidence:
+      `target/fret-diag/local-next-editor-paint-20260516-prepaint-probe-attrib-complex-wheel-r3/worst.stats.json`.
+    - Result: complex-wheel worst-bundle frame p95 is total/paint/prepaint `808/433/275us`; code-editor paint p95 is
+      total/prepaint-plan/prepaint-probe/prepaint-key-compare/surface-callback
+      `113/95/77/7/153us`, with `288` rows prepaint-planned and `288` rows replayed.
+    - Decision: key comparison is not the local owner. The residual is cache probing plus replay-plan entry assembly
+      across the visible row set, so optimize row-fragment planning before touching renderer text/glyph residency.
+  - [x] Test the small reversible cleanup before a structural prototype.
+    - Experiment: use a single mutable cache lookup for prepaint hits and preallocate plan entries for the visible
+      row count.
+    - Local no-4090 evidence:
+      `target/fret-diag/local-next-editor-paint-20260516-prepaint-plan-small-opt-complex-wheel-r3/worst.stats.json`.
+    - Result versus the attribution run: code-editor paint p95 prepaint-plan was effectively flat `95 -> 94us`,
+      prepaint-probe regressed `77 -> 85us`, and frame total p95 moved `808 -> 829us`.
+    - Decision: do not keep this cleanup; the next real optimization is a row-fragment replay contract, not another
+      HashMap lookup micro-change.
+  - [ ] Prototype a row-fragment replay contract that lets prepaint hand paint a contiguous retained fragment plan
+    without per-row HashMap probe/bookkeeping in the hot callback.
+  - [ ] Re-run the three local editor paint probes after any row-fragment planning change; require the complex-wheel
+    p95 `us_row_scene_prepaint_probe` to move materially below the current `~77us` before claiming progress.
   - Do not widen this into a renderer rewrite unless renderer prepare/encode becomes dominant in the local and
     Windows RTX4090 evidence.
 

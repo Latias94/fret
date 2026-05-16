@@ -135,6 +135,10 @@ pub(super) fn push_perf_json_repeat_summary_row(
     let mut top_code_editor_rows_scene_stored: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_code_editor_row_scene_ops_stored: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_code_editor_row_scene_replay_hit_rate_pct: Vec<u64> = Vec::with_capacity(repeat);
+    let mut top_code_editor_row_scene_prepaint_plan_us: Vec<u64> = Vec::with_capacity(repeat);
+    let mut top_code_editor_row_scene_prepaint_probe_us: Vec<u64> = Vec::with_capacity(repeat);
+    let mut top_code_editor_row_scene_prepaint_key_compare_us: Vec<u64> =
+        Vec::with_capacity(repeat);
     let mut top_renderer_encode_scene_us: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_renderer_prepare_text_us: Vec<u64> = Vec::with_capacity(repeat);
     let mut top_renderer_draw_calls: Vec<u64> = Vec::with_capacity(repeat);
@@ -208,6 +212,14 @@ pub(super) fn push_perf_json_repeat_summary_row(
         top_code_editor_row_scene_replay_hit_rate_pct.push(json_u64(
             run,
             "top_code_editor_row_scene_replay_hit_rate_pct",
+        ));
+        top_code_editor_row_scene_prepaint_plan_us
+            .push(json_u64(run, "top_code_editor_row_scene_prepaint_plan_us"));
+        top_code_editor_row_scene_prepaint_probe_us
+            .push(json_u64(run, "top_code_editor_row_scene_prepaint_probe_us"));
+        top_code_editor_row_scene_prepaint_key_compare_us.push(json_u64(
+            run,
+            "top_code_editor_row_scene_prepaint_key_compare_us",
         ));
         top_renderer_encode_scene_us.push(json_u64(run, "top_renderer_encode_scene_us"));
         top_renderer_prepare_text_us.push(json_u64(run, "top_renderer_prepare_text_us"));
@@ -307,6 +319,9 @@ pub(super) fn push_perf_json_repeat_summary_row(
             "top_code_editor_rows_scene_stored": summarize_times_us(&top_code_editor_rows_scene_stored),
             "top_code_editor_row_scene_ops_stored": summarize_times_us(&top_code_editor_row_scene_ops_stored),
             "top_code_editor_row_scene_replay_hit_rate_pct": summarize_times_us(&top_code_editor_row_scene_replay_hit_rate_pct),
+            "top_code_editor_row_scene_prepaint_plan_us": summarize_times_us(&top_code_editor_row_scene_prepaint_plan_us),
+            "top_code_editor_row_scene_prepaint_probe_us": summarize_times_us(&top_code_editor_row_scene_prepaint_probe_us),
+            "top_code_editor_row_scene_prepaint_key_compare_us": summarize_times_us(&top_code_editor_row_scene_prepaint_key_compare_us),
             "top_renderer_encode_scene_us": summarize_times_us(&top_renderer_encode_scene_us),
             "top_renderer_prepare_text_us": summarize_times_us(&top_renderer_prepare_text_us),
             "top_renderer_draw_calls": summarize_times_us(&top_renderer_draw_calls),
@@ -364,14 +379,20 @@ mod tests {
                 "top_code_editor_rows_scene_replayed": 6,
                 "top_code_editor_rows_scene_stored": 4,
                 "top_code_editor_row_scene_ops_stored": 40,
-                "top_code_editor_row_scene_replay_hit_rate_pct": 60
+                "top_code_editor_row_scene_replay_hit_rate_pct": 60,
+                "top_code_editor_row_scene_prepaint_plan_us": 30,
+                "top_code_editor_row_scene_prepaint_probe_us": 20,
+                "top_code_editor_row_scene_prepaint_key_compare_us": 5
             }),
             serde_json::json!({
                 "top_code_editor_rows_painted": 20,
                 "top_code_editor_rows_scene_replayed": 18,
                 "top_code_editor_rows_scene_stored": 2,
                 "top_code_editor_row_scene_ops_stored": 12,
-                "top_code_editor_row_scene_replay_hit_rate_pct": 90
+                "top_code_editor_row_scene_replay_hit_rate_pct": 90,
+                "top_code_editor_row_scene_prepaint_plan_us": 70,
+                "top_code_editor_row_scene_prepaint_probe_us": 50,
+                "top_code_editor_row_scene_prepaint_key_compare_us": 11
             }),
         ];
 
@@ -402,6 +423,18 @@ mod tests {
         assert_eq!(
             stats["top_code_editor_row_scene_replay_hit_rate_pct"]["p95"],
             90
+        );
+        assert_eq!(
+            stats["top_code_editor_row_scene_prepaint_plan_us"]["p95"],
+            70
+        );
+        assert_eq!(
+            stats["top_code_editor_row_scene_prepaint_probe_us"]["p50"],
+            20
+        );
+        assert_eq!(
+            stats["top_code_editor_row_scene_prepaint_key_compare_us"]["max"],
+            11
         );
     }
 }
