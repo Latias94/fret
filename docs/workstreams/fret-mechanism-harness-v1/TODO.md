@@ -595,7 +595,13 @@ date: 2026-05-12
     CSS-like inset fill behavior without explicit Fill sizing, so the diagnostics node could be
     0px wide. Tabs now sizes the shared indicator gate and canvas explicitly, focused unit/runtime
     gates pass, and the full `ui-gallery-motion-pilot` suite is 14/14 with zero lint warnings.
-- [ ] Pick the next harness slice outside the now-clean `ui-gallery-motion-pilot` suite.
+- [x] Pick the next harness slice outside the now-clean `ui-gallery-motion-pilot` suite.
+  - Result: moved back to the synthetic mechanism layer and expanded the Layout Primitives fixture
+    suite across percent sizing, min/max constraints, percent min/max intrinsic measurement,
+    wrapped text height propagation, scroll-root child layout bounds, and absolute percent inset
+    placement. No new mechanism defect was reproduced; the slice closed a harness coverage gap.
+- [ ] Add the next layout primitive companion for text measurement/paint agreement or
+  RTL/writing-mode behavior once the mechanism owner and public direction model are clear.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.

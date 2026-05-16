@@ -31,6 +31,12 @@ cargo test --profile dev-fast -p fret-ui-shadcn --test focus_restore_mechanism_h
 cargo test --profile dev-fast -p fret-ui-shadcn --test recipe_typeahead_mechanism_harness mechanism_harness_recipe_typeahead_cases_match_oracles -- --nocapture
 ```
 
+## Layout Primitives Expansion Gates
+
+```powershell
+cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_primitives_match_oracles -- --nocapture
+```
+
 ## Suite Lint Policy Gates
 
 ```powershell

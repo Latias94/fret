@@ -46,6 +46,174 @@
       }
     },
     {
+      "id": "percent-size-resolves-under-definite-container",
+      "scenario": { "kind": "percent_size_resolves_under_definite_container" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "percent-box" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 100.0, "height": 20.0 }
+            },
+            "eps_px": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "min-max-clamps-fill-child",
+      "scenario": { "kind": "min_max_clamps_fill_child" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "min-max-clamped" },
+            "metric": "width",
+            "comparison": "eq",
+            "value_px": 120.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "min-max-clamped" },
+            "metric": "height",
+            "comparison": "eq",
+            "value_px": 48.0,
+            "eps_px": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "percent-min-max-behaves-like-auto-under-indefinite-measure",
+      "scenario": { "kind": "percent_min_max_behaves_like_auto_under_indefinite_measure" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "percent_min_max.max.min_content_width",
+            "comparison": "eq",
+            "value": 150.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "percent_min_max.min.min_content_width",
+            "comparison": "eq",
+            "value": 10.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "percent_min_max.max.max_content_width",
+            "comparison": "eq",
+            "value": 150.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "percent_min_max.min.max_content_width",
+            "comparison": "eq",
+            "value": 10.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "percent_min_max.max.definite_width",
+            "comparison": "eq",
+            "value": 100.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "percent_min_max.min.definite_width",
+            "comparison": "eq",
+            "value": 100.0,
+            "eps": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "text-wrap-height-contributes-to-row",
+      "scenario": { "kind": "text_wrap_height_contributes_to_row" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "wrapped-text" },
+            "metric": "height",
+            "comparison": "ge",
+            "value_px": 20.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_metric_delta",
+            "a": { "kind": "test_id", "id": "wrap-row" },
+            "b": { "kind": "test_id", "id": "wrapped-text" },
+            "metric": "height",
+            "comparison": "eq",
+            "value_px": 0.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_metric_delta",
+            "a": { "kind": "test_id", "id": "wrapped-text" },
+            "b": { "kind": "test_id", "id": "wrap-bullet" },
+            "metric": "height",
+            "comparison": "ge",
+            "value_px": 10.0,
+            "eps_px": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "scroll-root-preserves-child-layout-bounds",
+      "scenario": { "kind": "scroll_root_preserves_child_layout_bounds" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "scroll-root" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 120.0, "height": 40.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "scroll-content" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 120.0, "height": 80.0 }
+            },
+            "eps_px": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "absolute-inset-fraction-resolves-against-containing-block",
+      "scenario": { "kind": "absolute_inset_fraction_resolves_against_containing_block" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "absolute-percent-child" },
+            "expected": {
+              "origin": { "x": 50.0, "y": 10.0 },
+              "size": { "width": 20.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          }
+        ]
+      }
+    },
+    {
       "id": "flex-cross-axis-stretch-matches-control-height",
       "scenario": { "kind": "flex_cross_axis_stretch" },
       "oracle": {
