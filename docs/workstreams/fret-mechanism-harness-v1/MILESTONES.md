@@ -1078,3 +1078,21 @@ Status: complete for the UI Gallery command-gated companion
   `disabled=true/invoke=false`, suppressed checked-state mutation while disabled, and re-enabled
   mutation after the command-gated service is cleared again.
 - The slice closes the command-gated non-list action-state companion started by M65.
+
+## M67: Shell Theme/Motion Runtime Token Gate
+
+Status: complete for shell-level UI Gallery theme/motion preference changes
+
+- Extended the UI Gallery diagnostics app snapshot with `theme_preset`, `motion_preset`, open
+  states, Theme revision/color scheme, and effective motion token values.
+- Added `ui-gallery-motion-preset-runtime-token-mutation.json` and promoted it into
+  `ui-gallery-motion-pilot`.
+- The gate drives the always-visible Theme/Motion preset selectors, proving model state,
+  select-close state, color scheme, reduced motion zero-duration/easing tokens, and snappy duration
+  tokens through `app_snapshot_field_equals`.
+- The first runtime draft exposed a diagnostics oracle weakness, not a component defect: raw `f32`
+  easing/bounce values are unsuitable for strict JSON equality. The snapshot now exposes rounded
+  readable values plus milli-scaled integer fields, and the script asserts the integer fields.
+- Remaining follow-up: add runner/platform-injected environment preference gates for OS-level
+  reduced-motion/color-scheme changes. This slice covers the Gallery shell selectors, not the
+  platform event path.

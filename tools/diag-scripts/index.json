@@ -9316,6 +9316,28 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-motion-preset-runtime-token-mutation",
+      "path": "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-preset-runtime-token-mutation.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-motion-pilot"
+      ],
+      "tags": [
+        "app-snapshot",
+        "motion",
+        "mutation",
+        "runtime",
+        "theme",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Verifies that UI Gallery preset selections update both the shell models and the effective global Theme motion tokens exposed through the app snapshot."
+      ]
+    },
+    {
       "id": "ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta",
       "path": "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json",
       "required_capabilities": [

@@ -98,6 +98,13 @@ fn script_v2_roundtrip_ui_gallery_dropdown_nonmodal_outside_press_focus_underlay
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_motion_preset_runtime_token_mutation() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-preset-runtime-token-mutation.json"
+    ));
+}
+
+#[test]
 fn script_v1_roundtrip_active_item_is_predicate() {
     assert_script_v1_roundtrip(
         r#"{

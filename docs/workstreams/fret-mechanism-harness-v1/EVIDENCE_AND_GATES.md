@@ -2228,6 +2228,44 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `.fret/diag/runs/ui-gallery-switch-command-gated-action-state-f114-final2/script.result.json`
   - packed evidence:
     `.fret/diag/runs/ui-gallery-switch-command-gated-action-state-f114-final2/share/1778914891818.zip`
+- Shell theme/motion runtime token mutation gate:
+  `tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-preset-runtime-token-mutation.json`
+  - invariant:
+    Gallery shell Theme/Motion preset selections must update both the observable shell models and
+    effective global Theme runtime tokens. Numeric motion-token assertions should use stable
+    integer-scaled snapshot fields instead of strict equality on raw `f32` JSON values.
+  - implementation anchors:
+    `apps/fret-ui-gallery/src/driver/diag_snapshot.rs`,
+    `apps/fret-ui-gallery/src/driver/runtime_driver.rs`,
+    `apps/fret-ui-gallery/src/driver/window_bootstrap.rs`,
+    `tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-preset-runtime-token-mutation.json`,
+    `tools/diag-scripts/suites/ui-gallery-motion-pilot/suite.json`, and
+    `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+  - finding:
+    found a diagnostics oracle gap. The first script draft could see the model/token transition, but
+    strict JSON equality on raw `f32` easing/bounce values produced a false failure. The app
+    snapshot now publishes rounded readable values plus milli-scaled integer fields for durable
+    token gates.
+  - protocol roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_motion_preset_runtime_token_mutation --no-fail-fast`
+  - protocol roundtrip result:
+    passed, 1 test; Nextest run id `8fc82fd2-4c72-49cb-883d-b6993fbaa4fd`.
+  - registry gate:
+    `python tools/check_diag_scripts_registry.py`
+  - registry result:
+    passed.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-preset-runtime-token-mutation.json --dir .fret/diag/runs/ui-gallery-motion-preset-runtime-token-mutation-f115c --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1778919283142`.
+  - runtime evidence:
+    `.fret/diag/runs/ui-gallery-motion-preset-runtime-token-mutation-f115c/script.result.json`
+  - packed evidence:
+    `.fret/diag/runs/ui-gallery-motion-preset-runtime-token-mutation-f115c/share/1778919283142.zip`
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

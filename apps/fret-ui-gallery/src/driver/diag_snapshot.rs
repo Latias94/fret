@@ -33,6 +33,72 @@ fn vec_arc_str_len(values: &[Arc<str>]) -> u64 {
     values.iter().map(arc_str_len).sum()
 }
 
+fn opt_arc_str_json(value: Option<&Arc<str>>) -> serde_json::Value {
+    value
+        .map(|value| serde_json::Value::String(value.to_string()))
+        .unwrap_or(serde_json::Value::Null)
+}
+
+fn theme_color_scheme_json(scheme: Option<fret_core::window::ColorScheme>) -> serde_json::Value {
+    match scheme {
+        Some(fret_core::window::ColorScheme::Light) => serde_json::json!("light"),
+        Some(fret_core::window::ColorScheme::Dark) => serde_json::json!("dark"),
+        None => serde_json::Value::Null,
+    }
+}
+
+fn scaled_f32(value: f32, scale: f32) -> i64 {
+    (value * scale).round() as i64
+}
+
+fn rounded_f32(value: f32) -> f64 {
+    (value as f64 * 1_000_000.0).round() / 1_000_000.0
+}
+
+fn cubic_bezier_json(value: fret_ui::theme::CubicBezier) -> serde_json::Value {
+    serde_json::json!({
+        "x1": rounded_f32(value.x1),
+        "y1": rounded_f32(value.y1),
+        "x2": rounded_f32(value.x2),
+        "y2": rounded_f32(value.y2),
+    })
+}
+
+fn cubic_bezier_milli_json(value: fret_ui::theme::CubicBezier) -> serde_json::Value {
+    serde_json::json!({
+        "x1": scaled_f32(value.x1, 1000.0),
+        "y1": scaled_f32(value.y1, 1000.0),
+        "x2": scaled_f32(value.x2, 1000.0),
+        "y2": scaled_f32(value.y2, 1000.0),
+    })
+}
+
+fn theme_runtime_snapshot_json(app: &App) -> serde_json::Value {
+    let theme = fret_ui::Theme::global(app);
+    let drag_release_settle_bounce =
+        theme.number_token("number.motion.spring.drag_release_settle.bounce");
+    let easing_standard = theme.easing_token("easing.motion.standard");
+    let easing_stack_shift = theme.easing_token("easing.motion.stack.shift");
+    serde_json::json!({
+        "schema_version": 1,
+        "revision": theme.revision(),
+        "color_scheme": theme_color_scheme_json(theme.color_scheme),
+        "motion_tokens": {
+            "duration_presence_enter_ms": theme.duration_ms_token("duration.motion.presence.enter"),
+            "duration_presence_exit_ms": theme.duration_ms_token("duration.motion.presence.exit"),
+            "duration_stack_shift_ms": theme.duration_ms_token("duration.motion.stack.shift"),
+            "duration_stack_shift_stagger_ms": theme.duration_ms_token("duration.motion.stack.shift.stagger"),
+            "duration_drag_release_settle_ms": theme.duration_ms_token("duration.motion.spring.drag_release_settle"),
+            "drag_release_settle_bounce": rounded_f32(drag_release_settle_bounce),
+            "drag_release_settle_bounce_milli": scaled_f32(drag_release_settle_bounce, 1000.0),
+            "easing_standard": cubic_bezier_json(easing_standard),
+            "easing_standard_milli": cubic_bezier_milli_json(easing_standard),
+            "easing_stack_shift": cubic_bezier_json(easing_stack_shift),
+            "easing_stack_shift_milli": cubic_bezier_milli_json(easing_stack_shift),
+        },
+    })
+}
+
 fn command_registry_string_bytes_estimate(app: &App) -> serde_json::Value {
     let mut entries = 0u64;
     let mut keywords = 0u64;
@@ -426,6 +492,10 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                 let workspace_tabs = app.models().get_cloned(&ids.workspace_tabs)?;
                 let workspace_dirty_tabs = app.models().get_cloned(&ids.workspace_dirty_tabs)?;
                 let nav_query = app.models().get_cloned(&ids.nav_query)?;
+                let theme_preset = app.models().get_cloned(&ids.theme_preset)?;
+                let theme_preset_open = app.models().get_cloned(&ids.theme_preset_open)?;
+                let motion_preset = app.models().get_cloned(&ids.motion_preset)?;
+                let motion_preset_open = app.models().get_cloned(&ids.motion_preset_open)?;
                 let settings_open = app.models().get_cloned(&ids.settings_open)?;
                 let settings_menu_bar_os = app.models().get_cloned(&ids.settings_menu_bar_os)?;
                 let settings_menu_bar_in_window = app.models().get_cloned(&ids.settings_menu_bar_in_window)?;
@@ -706,6 +776,20 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                 shell.insert("nav_visible_tags_count".to_string(), serde_json::json!(nav_visibility.visible_tags_count));
                 shell.insert("nav_max_group_items_count".to_string(), serde_json::json!(nav_visibility.max_group_items_count));
                 shell.insert("nav_visible_string_bytes_estimate_total".to_string(), serde_json::json!(nav_visibility.visible_string_bytes_estimate_total));
+                shell.insert(
+                    "theme_preset".to_string(),
+                    opt_arc_str_json(theme_preset.as_ref()),
+                );
+                shell.insert("theme_preset_open".to_string(), serde_json::json!(theme_preset_open));
+                shell.insert(
+                    "motion_preset".to_string(),
+                    opt_arc_str_json(motion_preset.as_ref()),
+                );
+                shell.insert(
+                    "motion_preset_open".to_string(),
+                    serde_json::json!(motion_preset_open),
+                );
+                shell.insert("theme_runtime".to_string(), theme_runtime_snapshot_json(app));
                 shell.insert("cmdk_query_len_bytes".to_string(), serde_json::json!(cmdk_query.len() as u64));
                 shell.insert("last_action_len_bytes".to_string(), serde_json::json!(last_action.len() as u64));
                 shell.insert("last_action".to_string(), serde_json::json!(last_action.to_string()));

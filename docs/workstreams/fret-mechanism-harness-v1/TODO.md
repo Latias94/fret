@@ -105,8 +105,15 @@ date: 2026-05-12
   - Result: `ui-gallery-data-table-rtl-idle-stability.json` scrolls the public DataTable page to the
     RTL section, waits for root/footer bounds stability, samples the Gallery content viewport for 60
     no-input frames, and passes. This did not reproduce a scroll-jitter mechanism defect.
-- [ ] Add UI Gallery diagnostics for runtime platform preference/environment changes once a stable
-  demo page exists.
+- [x] Add UI Gallery diagnostics for shell-level runtime theme/motion preference changes.
+  - Result: `ui-gallery-motion-preset-runtime-token-mutation.json` now drives the always-visible
+    Gallery Theme/Motion preset selectors and asserts both shell model state and effective global
+    Theme runtime tokens through `app_snapshot_field_equals`. The first runtime draft exposed a
+    diagnostics oracle issue: strict JSON equality on raw `f32` token values produced false
+    failures, so the Gallery app snapshot now publishes rounded readable values plus milli-scaled
+    integer fields for stable token assertions.
+- [ ] Add runner/platform-injected UI Gallery diagnostics for runtime platform
+  preference/environment changes once a stable demo page exists.
 - [x] Add a UI Gallery pointer occlusion diagnostics gate once a stable overlay demo exposes test
   ids for underlay and overlay state.
   - Result: `ui-gallery-context-menu-occlusion-wheel-pass-through.json` now asserts the content
