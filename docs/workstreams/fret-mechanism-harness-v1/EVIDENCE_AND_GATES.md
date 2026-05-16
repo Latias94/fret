@@ -2439,6 +2439,33 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `.fret/diag/runs/ui-gallery-sidebar-toggle-triage3/script.result.json`,
     `.fret/diag/runs/ui-gallery-sidebar-toggle-triage3/sidebar-step8.slice.json`, and
     `.fret/diag/runs/ui-gallery-sidebar-toggle-triage4/script.result.json`.
+- Shadcn structural slot hygiene:
+  - invariant:
+    recipe-internal child classification must use `AnyElement::component_slot`, not diagnostics
+    `test_id` and not shortcut `key_context`.
+  - finding:
+    CardAction/CardFooter/AvatarBadge used generated diagnostics `test_id` markers; ItemMedia and
+    ItemDescription used `key_context` for internal recipe classification.
+  - implementation anchors:
+    `ecosystem/fret-ui-shadcn/src/card.rs`,
+    `ecosystem/fret-ui-shadcn/src/avatar.rs`, and
+    `ecosystem/fret-ui-shadcn/src/item.rs`.
+  - source audit:
+    `rg -n "fret-ui-shadcn\\." ecosystem/fret-ui-shadcn/src -g "*.rs"` now reports only
+    `component_slot` constants/usages in Alert, Avatar, Card, and Item.
+  - negative source audit:
+    `rg -n "key_context\\([^\\)]*fret-ui-shadcn|attach_test_id\\([^\\n]*fret-ui-shadcn|test_id\\([^\\n]*fret-ui-shadcn" ecosystem/fret-ui-shadcn/src -g "*.rs"`
+    returns no matches.
+  - focused gates:
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib card_action_marker -- --nocapture`,
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib card_header_with_action_uses_explicit_grid_slot_placement -- --nocapture`,
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib card_sections_can_inherit_or_override_size -- --nocapture`,
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib avatar_badge_can_inherit_or_override_size -- --nocapture`,
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib item_structural_slots_do_not_use_key_context_or_diagnostics_test_id -- --nocapture`,
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib item_sized_provides_size_defaults_to_parts -- --nocapture`, and
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib item_media_with_description_self_starts_and_offsets_from_top -- --nocapture`.
+  - focused gate results:
+    all passed.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

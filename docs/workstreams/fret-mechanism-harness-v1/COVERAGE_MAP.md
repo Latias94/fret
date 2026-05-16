@@ -107,6 +107,11 @@ date: 2026-05-12
   window containment, listbox size bounds, relation wiring, screenshot, bundle, and layout sidecar
   evidence. The follow-up Combobox ownership gate now closes the explicit scroll-container
   clipping-boundary plus RTL sub-axis; Select remains a useful baseline for item-aligned policy.
+- Structural slot hygiene update:
+  Recipe-internal child classification now uses `AnyElement::component_slot` for the discovered
+  shadcn structural markers: AlertAction, CardAction, CardFooter, AvatarBadge, ItemMedia, and
+  ItemDescription. This removes diagnostics `test_id` pollution from Card/Avatar internals and
+  removes Item's misuse of shortcut `key_context` for recipe slot detection.
 
 A mechanism invariant is covered only when it has at least one of these:
 

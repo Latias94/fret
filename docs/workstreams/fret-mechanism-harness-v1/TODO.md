@@ -559,9 +559,15 @@ date: 2026-05-12
     `bounds_within_window`, and only then uses `click_stable`. `tools/check_diag_scripts_registry.py`
     now treats `ui-gallery-motion-pilot` as a strict click-visibility suite for
     `ui-gallery-sidebar-*` targets, with a registry lint unit test covering the bad pattern.
-- [ ] Migrate non-user-facing recipe structural marker `test_id`s to `component_slot`.
-  - Candidate families: Card-like internal structure markers and any fixed `__fret_shadcn.*`
-    markers that are used only for recipe composition rather than diagnostics selectors.
+- [x] Migrate non-user-facing recipe structural marker `test_id`s to `component_slot`.
+  - Result: no fixed `__fret_shadcn.*` markers remain. CardAction, CardFooter, and AvatarBadge no
+    longer use generated diagnostics `test_id`s for recipe-internal child classification. The same
+    audit found a related mechanism-boundary issue in Item: ItemMedia and ItemDescription used
+    `key_context` for internal classification, so they now use `component_slot` too. Focused tests
+    prove the slots still drive layout/classification while staying out of diagnostics selectors
+    and shortcut key contexts.
+- [ ] Continue `ui-gallery-motion-pilot` or add a lightweight source-hygiene gate for future
+  recipe-internal marker misuse.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.
