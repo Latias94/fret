@@ -78,6 +78,11 @@ pub(super) struct BundleStatsReport {
     max_layout_observation_record_globals_items: u32,
     pub(super) max_prepaint_time_us: u64,
     pub(super) max_paint_time_us: u64,
+    max_paint_record_visual_bounds_time_us: u64,
+    max_paint_record_visual_bounds_calls: u32,
+    max_paint_cache_key_time_us: u64,
+    max_paint_cache_hit_check_time_us: u64,
+    max_paint_observation_record_time_us: u64,
     max_paint_host_widget_observed_models_time_us: u64,
     max_paint_host_widget_observed_models_items: u32,
     max_paint_host_widget_observed_globals_time_us: u64,
@@ -138,6 +143,16 @@ pub(super) struct BundleStatsReport {
     pub(super) p95_prepaint_time_us: u64,
     pub(super) p50_paint_time_us: u64,
     pub(super) p95_paint_time_us: u64,
+    p50_paint_record_visual_bounds_time_us: u64,
+    p95_paint_record_visual_bounds_time_us: u64,
+    p50_paint_record_visual_bounds_calls: u64,
+    p95_paint_record_visual_bounds_calls: u64,
+    p50_paint_cache_key_time_us: u64,
+    p95_paint_cache_key_time_us: u64,
+    p50_paint_cache_hit_check_time_us: u64,
+    p95_paint_cache_hit_check_time_us: u64,
+    p50_paint_observation_record_time_us: u64,
+    p95_paint_observation_record_time_us: u64,
     pub(super) p50_paint_input_context_time_us: u64,
     pub(super) p95_paint_input_context_time_us: u64,
     pub(super) p50_paint_scroll_handle_invalidation_time_us: u64,
@@ -4535,6 +4550,26 @@ impl BundleStatsReport {
             Value::from(self.max_paint_time_us),
         );
         max.insert(
+            "paint_record_visual_bounds_time_us".to_string(),
+            Value::from(self.max_paint_record_visual_bounds_time_us),
+        );
+        max.insert(
+            "paint_record_visual_bounds_calls".to_string(),
+            Value::from(self.max_paint_record_visual_bounds_calls),
+        );
+        max.insert(
+            "paint_cache_key_time_us".to_string(),
+            Value::from(self.max_paint_cache_key_time_us),
+        );
+        max.insert(
+            "paint_cache_hit_check_time_us".to_string(),
+            Value::from(self.max_paint_cache_hit_check_time_us),
+        );
+        max.insert(
+            "paint_observation_record_time_us".to_string(),
+            Value::from(self.max_paint_observation_record_time_us),
+        );
+        max.insert(
             "paint_host_widget_observed_models_time_us".to_string(),
             Value::from(self.max_paint_host_widget_observed_models_time_us),
         );
@@ -4879,6 +4914,26 @@ impl BundleStatsReport {
             Value::from(self.p50_paint_time_us),
         );
         p50.insert(
+            "paint_record_visual_bounds_time_us".to_string(),
+            Value::from(self.p50_paint_record_visual_bounds_time_us),
+        );
+        p50.insert(
+            "paint_record_visual_bounds_calls".to_string(),
+            Value::from(self.p50_paint_record_visual_bounds_calls),
+        );
+        p50.insert(
+            "paint_cache_key_time_us".to_string(),
+            Value::from(self.p50_paint_cache_key_time_us),
+        );
+        p50.insert(
+            "paint_cache_hit_check_time_us".to_string(),
+            Value::from(self.p50_paint_cache_hit_check_time_us),
+        );
+        p50.insert(
+            "paint_observation_record_time_us".to_string(),
+            Value::from(self.p50_paint_observation_record_time_us),
+        );
+        p50.insert(
             "paint_input_context_time_us".to_string(),
             Value::from(self.p50_paint_input_context_time_us),
         );
@@ -5076,6 +5131,26 @@ impl BundleStatsReport {
         p95.insert(
             "paint_time_us".to_string(),
             Value::from(self.p95_paint_time_us),
+        );
+        p95.insert(
+            "paint_record_visual_bounds_time_us".to_string(),
+            Value::from(self.p95_paint_record_visual_bounds_time_us),
+        );
+        p95.insert(
+            "paint_record_visual_bounds_calls".to_string(),
+            Value::from(self.p95_paint_record_visual_bounds_calls),
+        );
+        p95.insert(
+            "paint_cache_key_time_us".to_string(),
+            Value::from(self.p95_paint_cache_key_time_us),
+        );
+        p95.insert(
+            "paint_cache_hit_check_time_us".to_string(),
+            Value::from(self.p95_paint_cache_hit_check_time_us),
+        );
+        p95.insert(
+            "paint_observation_record_time_us".to_string(),
+            Value::from(self.p95_paint_observation_record_time_us),
         );
         p95.insert(
             "paint_input_context_time_us".to_string(),

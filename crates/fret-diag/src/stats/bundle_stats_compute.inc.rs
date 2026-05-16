@@ -1934,6 +1934,21 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .max(layout_observation_record_globals_items);
             out.max_prepaint_time_us = out.max_prepaint_time_us.max(prepaint_time_us);
             out.max_paint_time_us = out.max_paint_time_us.max(paint_time_us);
+            out.max_paint_record_visual_bounds_time_us = out
+                .max_paint_record_visual_bounds_time_us
+                .max(paint_record_visual_bounds_time_us);
+            out.max_paint_record_visual_bounds_calls = out
+                .max_paint_record_visual_bounds_calls
+                .max(paint_record_visual_bounds_calls);
+            out.max_paint_cache_key_time_us = out
+                .max_paint_cache_key_time_us
+                .max(paint_cache_key_time_us);
+            out.max_paint_cache_hit_check_time_us = out
+                .max_paint_cache_hit_check_time_us
+                .max(paint_cache_hit_check_time_us);
+            out.max_paint_observation_record_time_us = out
+                .max_paint_observation_record_time_us
+                .max(paint_observation_record_time_us);
             out.max_paint_host_widget_observed_models_time_us = out
                 .max_paint_host_widget_observed_models_time_us
                 .max(paint_host_widget_observed_models_time_us);
@@ -2553,6 +2568,26 @@ pub(super) fn bundle_stats_from_json_with_options(
     (out.p50_prepaint_time_us, out.p95_prepaint_time_us) =
         p50_p95(rows.iter().map(|r| r.prepaint_time_us));
     (out.p50_paint_time_us, out.p95_paint_time_us) = p50_p95(rows.iter().map(|r| r.paint_time_us));
+    (
+        out.p50_paint_record_visual_bounds_time_us,
+        out.p95_paint_record_visual_bounds_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.paint_record_visual_bounds_time_us));
+    (
+        out.p50_paint_record_visual_bounds_calls,
+        out.p95_paint_record_visual_bounds_calls,
+    ) = p50_p95(rows.iter().map(|r| r.paint_record_visual_bounds_calls as u64));
+    (
+        out.p50_paint_cache_key_time_us,
+        out.p95_paint_cache_key_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.paint_cache_key_time_us));
+    (
+        out.p50_paint_cache_hit_check_time_us,
+        out.p95_paint_cache_hit_check_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.paint_cache_hit_check_time_us));
+    (
+        out.p50_paint_observation_record_time_us,
+        out.p95_paint_observation_record_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.paint_observation_record_time_us));
     (
         out.p50_paint_input_context_time_us,
         out.p95_paint_input_context_time_us,

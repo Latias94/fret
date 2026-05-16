@@ -1438,7 +1438,12 @@ mod tests {
                                 "layout_time_us": 50,
                                 "prepaint_time_us": 10,
                                 "paint_time_us": 900,
+                                "paint_record_visual_bounds_time_us": 5,
+                                "paint_record_visual_bounds_calls": 2,
+                                "paint_cache_key_time_us": 15,
+                                "paint_cache_hit_check_time_us": 1,
                                 "paint_widget_time_us": 400,
+                                "paint_observation_record_time_us": 7,
                                 "paint_host_widget_observed_models_time_us": 10,
                                 "paint_host_widget_observed_models_items": 1,
                                 "paint_host_widget_observed_globals_time_us": 11,
@@ -1499,7 +1504,12 @@ mod tests {
                                 "layout_time_us": 50,
                                 "prepaint_time_us": 10,
                                 "paint_time_us": 1900,
+                                "paint_record_visual_bounds_time_us": 6,
+                                "paint_record_visual_bounds_calls": 3,
+                                "paint_cache_key_time_us": 25,
+                                "paint_cache_hit_check_time_us": 2,
                                 "paint_widget_time_us": 700,
+                                "paint_observation_record_time_us": 8,
                                 "paint_host_widget_observed_models_time_us": 20,
                                 "paint_host_widget_observed_models_items": 2,
                                 "paint_host_widget_observed_globals_time_us": 21,
@@ -1560,7 +1570,12 @@ mod tests {
                                 "layout_time_us": 50,
                                 "prepaint_time_us": 10,
                                 "paint_time_us": 2900,
+                                "paint_record_visual_bounds_time_us": 7,
+                                "paint_record_visual_bounds_calls": 4,
+                                "paint_cache_key_time_us": 35,
+                                "paint_cache_hit_check_time_us": 3,
                                 "paint_widget_time_us": 2600,
+                                "paint_observation_record_time_us": 9,
                                 "paint_host_widget_observed_models_time_us": 30,
                                 "paint_host_widget_observed_models_items": 3,
                                 "paint_host_widget_observed_globals_time_us": 31,
@@ -1778,6 +1793,36 @@ mod tests {
             Some(6)
         );
         assert_eq!(
+            json.pointer("/p50/paint_cache_key_time_us")
+                .and_then(|v| v.as_u64()),
+            Some(25)
+        );
+        assert_eq!(
+            json.pointer("/p95/paint_cache_key_time_us")
+                .and_then(|v| v.as_u64()),
+            Some(35)
+        );
+        assert_eq!(
+            json.pointer("/p95/paint_record_visual_bounds_time_us")
+                .and_then(|v| v.as_u64()),
+            Some(7)
+        );
+        assert_eq!(
+            json.pointer("/p95/paint_record_visual_bounds_calls")
+                .and_then(|v| v.as_u64()),
+            Some(4)
+        );
+        assert_eq!(
+            json.pointer("/p95/paint_cache_hit_check_time_us")
+                .and_then(|v| v.as_u64()),
+            Some(3)
+        );
+        assert_eq!(
+            json.pointer("/p95/paint_observation_record_time_us")
+                .and_then(|v| v.as_u64()),
+            Some(9)
+        );
+        assert_eq!(
             json.pointer("/p50/paint_host_widget_observed_deps_calls")
                 .and_then(|v| v.as_u64()),
             Some(5)
@@ -1796,6 +1841,16 @@ mod tests {
             json.pointer("/max/paint_host_widget_instance_lookup_time_us")
                 .and_then(|v| v.as_u64()),
             Some(32)
+        );
+        assert_eq!(
+            json.pointer("/max/paint_cache_key_time_us")
+                .and_then(|v| v.as_u64()),
+            Some(35)
+        );
+        assert_eq!(
+            json.pointer("/max/paint_record_visual_bounds_calls")
+                .and_then(|v| v.as_u64()),
+            Some(4)
         );
     }
 

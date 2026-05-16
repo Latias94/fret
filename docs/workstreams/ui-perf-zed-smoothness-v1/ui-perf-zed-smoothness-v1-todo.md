@@ -113,6 +113,13 @@ not update checked-in baselines.
     per-node text-style fingerprint lookups when the node kind cannot carry inherited text style.
   - Avoid replacing `WindowFrame.instances` or cloning semantics in this slice unless the instance lookup p95 grows
     materially above the current `~42us` aggregate.
+  - [x] Make the residual measurable from root-level `diag stats --json` summaries before changing behavior.
+    - Surface: p50/p95/max now include `paint_cache_key_time_us`, `paint_cache_hit_check_time_us`,
+      `paint_record_visual_bounds_time_us`, `paint_record_visual_bounds_calls`, and
+      `paint_observation_record_time_us`.
+    - Local read: the latest no-4090 editor probes keep paint-cache key construction around `25..29us` in the top
+      frames and visual-bounds recording around `8..15us`; this is useful attribution, but not yet evidence for a
+      broad paint-cache or visual-bounds rewrite.
 - [ ] Keep structural refactors as separate follow-ons rather than reopening P1.5.
   - Split a new narrow workstream only for hard structural changes such as true FrameArena/bump allocation,
     `WindowFrame.children` arena/slab storage, explicit view-cache paint-skip semantics, or an editor row-fragment

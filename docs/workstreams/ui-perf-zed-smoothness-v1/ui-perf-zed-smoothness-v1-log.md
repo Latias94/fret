@@ -105,6 +105,32 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 19:32:50 +0800 (paint bookkeeping stats summary)
+
+Question:
+- With Windows RTX4090 closeout deferred, what local evidence should guide the next paint traversal optimization?
+
+Change:
+- Promoted existing per-frame paint bookkeeping counters into root-level `diag stats --json` p50/p95/max summaries:
+  `paint_cache_key_time_us`, `paint_cache_hit_check_time_us`, `paint_record_visual_bounds_time_us`,
+  `paint_record_visual_bounds_calls`, and `paint_observation_record_time_us`.
+
+Validation:
+```bash
+cargo fmt -p fret-diag --check
+cargo nextest run -p fret-diag bundle_stats_summarizes_canvas_paint_widget_hotspots --no-fail-fast
+```
+
+Results:
+- Focused `fret-diag` stats test passed.
+- Local no-4090 editor probes show renderer text prepare is no longer the dominant owner; top-frame paint-cache key
+  construction is around `25..29us`, visual-bounds recording around `8..15us`, and host-widget instance lookup remains
+  around `41..45us` p95.
+
+Decision:
+- Keep the next local optimization evidence-led. The current numbers justify better attribution and possibly a small
+  paint traversal cleanup, but not a broad paint-cache, visual-bounds, or display-list rewrite.
+
 ## 2026-05-16 19:23:49 +0800 (handoff fatal prerequisites)
 
 Question:

@@ -608,6 +608,48 @@ pub(crate) const RENDERER_PREPARE_SVG_US: PerfKey =
     timing_key("renderer_prepare_svg_us", PerfKeyAggregate::P95);
 pub(crate) const RENDERER_PREPARE_TEXT_US: PerfKey =
     timing_key("renderer_prepare_text_us", PerfKeyAggregate::P95);
+pub(crate) const RENDERER_PREPARE_TEXT_COLLECT_PIN_KEYS_US: PerfKey = timing_key(
+    "renderer_prepare_text_collect_pin_keys_us",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const RENDERER_PREPARE_TEXT_BUCKET_DELTA_US: PerfKey = timing_key(
+    "renderer_prepare_text_bucket_delta_us",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const RENDERER_PREPARE_TEXT_PREWARM_US: PerfKey =
+    timing_key("renderer_prepare_text_prewarm_us", PerfKeyAggregate::P95);
+pub(crate) const RENDERER_PREPARE_TEXT_PIN_BUCKET_UPDATE_US: PerfKey = timing_key(
+    "renderer_prepare_text_pin_bucket_update_us",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const RENDERER_PREPARE_TEXT_FLUSH_UPLOADS_US: PerfKey = timing_key(
+    "renderer_prepare_text_flush_uploads_us",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const RENDERER_PREPARE_TEXT_SCENE_TEXT_BLOBS: PerfKey = count_key(
+    "renderer_prepare_text_scene_text_blobs",
+    PerfKeyAggregate::Max,
+);
+pub(crate) const RENDERER_PREPARE_TEXT_PINNED_GLYPH_KEYS: PerfKey = count_key(
+    "renderer_prepare_text_pinned_glyph_keys",
+    PerfKeyAggregate::Max,
+);
+pub(crate) const RENDERER_PREPARE_TEXT_RETAINED_GLYPH_KEYS: PerfKey = count_key(
+    "renderer_prepare_text_retained_glyph_keys",
+    PerfKeyAggregate::Max,
+);
+pub(crate) const RENDERER_PREPARE_TEXT_ADDED_GLYPH_KEYS: PerfKey = count_key(
+    "renderer_prepare_text_added_glyph_keys",
+    PerfKeyAggregate::Max,
+);
+pub(crate) const RENDERER_PREPARE_TEXT_REMOVED_GLYPH_KEYS: PerfKey = count_key(
+    "renderer_prepare_text_removed_glyph_keys",
+    PerfKeyAggregate::Max,
+);
+pub(crate) const RENDERER_PREPARE_TEXT_PREWARM_GLYPH_KEYS: PerfKey = count_key(
+    "renderer_prepare_text_prewarm_glyph_keys",
+    PerfKeyAggregate::Max,
+);
 pub(crate) const RENDERER_ENCODE_SCENE_STACK_US: PerfKey =
     timing_key("renderer_encode_scene_stack_us", PerfKeyAggregate::P95);
 pub(crate) const RENDERER_ENCODE_SCENE_CLIP_US: PerfKey =
@@ -954,6 +996,17 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     RENDERER_ENCODER_FINISH_US,
     RENDERER_PREPARE_SVG_US,
     RENDERER_PREPARE_TEXT_US,
+    RENDERER_PREPARE_TEXT_COLLECT_PIN_KEYS_US,
+    RENDERER_PREPARE_TEXT_BUCKET_DELTA_US,
+    RENDERER_PREPARE_TEXT_PREWARM_US,
+    RENDERER_PREPARE_TEXT_PIN_BUCKET_UPDATE_US,
+    RENDERER_PREPARE_TEXT_FLUSH_UPLOADS_US,
+    RENDERER_PREPARE_TEXT_SCENE_TEXT_BLOBS,
+    RENDERER_PREPARE_TEXT_PINNED_GLYPH_KEYS,
+    RENDERER_PREPARE_TEXT_RETAINED_GLYPH_KEYS,
+    RENDERER_PREPARE_TEXT_ADDED_GLYPH_KEYS,
+    RENDERER_PREPARE_TEXT_REMOVED_GLYPH_KEYS,
+    RENDERER_PREPARE_TEXT_PREWARM_GLYPH_KEYS,
     RENDERER_ENCODE_SCENE_STACK_US,
     RENDERER_ENCODE_SCENE_CLIP_US,
     RENDERER_ENCODE_SCENE_MASK_US,
