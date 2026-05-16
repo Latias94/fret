@@ -393,6 +393,13 @@ Run evidence:
   Gates: `cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface
   --no-fail-fast`, `cargo check -p fret-demo --bin workspace_shell_demo`, and
   `python tools/gate_imui_workstream_source.py`.
+- 2026-05-17: migrated selected `imui_editor_proof_demo` proof text to shared roles without
+  widening framework API. Material/advanced/global `No matches` labels now use
+  `proof_empty_state_text(...)`, authoring shared-state lines use `proof_compact_readout_element(...)`
+  backed by `text_control_readout(...)`, and the declarative gradient section label uses
+  `proof_section_chrome_label(...)` backed by `text_section_chrome_label(...)`. Gates:
+  `python tools/gate_imui_workstream_source.py` and
+  `cargo check -p fret-demo --bin imui_editor_proof_demo`.
 - 2026-05-17: introduced `editor_empty_state_text_props(...)` for compact editor empty-state
   labels and routed `GradientEditor`'s `No stops` label through
   `gradient_editor_empty_state_text(...)`. This removes another real component bare-text path while

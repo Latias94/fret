@@ -45,6 +45,7 @@ use fret_ui_editor::controls::{
 use fret_ui_editor::imui as editor_imui;
 use fret_ui_editor::primitives::{EditSessionOutcome, EditorCompactReadoutStyle, EditorTokenKeys};
 use fret_ui_editor::theme::EditorThemePresetV1;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::headless::text_assist::{
     TextAssistItem, TextAssistMatch, TextAssistMatchMode, controller_with_active_item_id,
     input_owned_text_assist_expanded,
@@ -266,6 +267,33 @@ fn proof_compact_readout<H: UiHost>(
     }
 
     el.a11y_label(readout)
+}
+
+fn proof_compact_readout_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    readout: impl Into<Arc<str>>,
+    test_id: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    let readout = readout.into();
+    let mut el = decl_text::text_control_readout(cx, readout.clone()).test_id(test_id.into());
+    el = el.a11y_label(readout);
+    el
+}
+
+fn proof_empty_state_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: &'static str,
+    test_id: &'static str,
+) -> fret_ui::element::AnyElement {
+    proof_compact_readout_element(cx, Arc::<str>::from(text), Arc::<str>::from(test_id))
+}
+
+fn proof_section_chrome_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: &'static str,
+    test_id: &'static str,
+) -> fret_ui::element::AnyElement {
+    decl_text::text_section_chrome_label(cx, text).test_id(test_id)
 }
 
 fn color_hex_readout(color: Option<Color>) -> String {
@@ -1861,11 +1889,11 @@ where
                                                     }
 
                                                     if rows.is_empty() {
-                                                        rows.push(
-                                                            cx.text("No matches").test_id(
-                                                                "imui-editor-proof.editor.material.no-matches",
-                                                            ),
-                                                        );
+                                                        rows.push(proof_empty_state_text(
+                                                            cx,
+                                                            "No matches",
+                                                            "imui-editor-proof.editor.material.no-matches",
+                                                        ));
                                                     }
 
                                                     rows
@@ -2325,11 +2353,11 @@ where
                                                     }
 
                                                     if rows.is_empty() {
-                                                        rows.push(
-                                                            cx.text("No matches").test_id(
-                                                                "imui-editor-proof.editor.advanced.no-matches",
-                                                            ),
-                                                        );
+                                                        rows.push(proof_empty_state_text(
+                                                            cx,
+                                                            "No matches",
+                                                            "imui-editor-proof.editor.advanced.no-matches",
+                                                        ));
                                                     }
 
                                                     rows
@@ -2340,10 +2368,11 @@ where
                             );
 
                             if !panel_cx.is_query_empty() && !any_match {
-                                out.push(
-                                    cx.text("No matches")
-                                        .test_id("imui-editor-proof.editor.no-matches"),
-                                );
+                                out.push(proof_empty_state_text(
+                                    cx,
+                                    "No matches",
+                                    "imui-editor-proof.editor.no-matches",
+                                ));
                             }
 
                             out
@@ -2546,44 +2575,51 @@ fn render_authoring_parity_shared_state(
         let numeric_line_row = numeric_line.clone();
         out.push(
             fret_ui_kit::ui::h_flex_build(move |cx, out| {
-                out.push(
-                    cx.text(name_line_row)
-                        .test_id("imui-editor-proof.authoring.shared.name"),
-                );
-                out.push(
-                    cx.text(value_line_row)
-                        .test_id("imui-editor-proof.authoring.shared.value"),
-                );
-                out.push(
-                    cx.text(numeric_line_row)
-                        .test_id("imui-editor-proof.authoring.shared.numeric"),
-                );
+                out.push(proof_compact_readout_element(
+                    cx,
+                    name_line_row,
+                    "imui-editor-proof.authoring.shared.name",
+                ));
+                out.push(proof_compact_readout_element(
+                    cx,
+                    value_line_row,
+                    "imui-editor-proof.authoring.shared.value",
+                ));
+                out.push(proof_compact_readout_element(
+                    cx,
+                    numeric_line_row,
+                    "imui-editor-proof.authoring.shared.numeric",
+                ));
             })
             .gap(fret_ui_kit::Space::N3)
             .into_element(cx),
         );
         out.push(
             fret_ui_kit::ui::h_flex_build(move |cx, out| {
-                out.push(
-                    cx.text(blend_line)
-                        .test_id("imui-editor-proof.authoring.shared.blend"),
-                );
-                out.push(
-                    cx.text(enabled_line)
-                        .test_id("imui-editor-proof.authoring.shared.enabled"),
-                );
-                out.push(
-                    cx.text(shading_line)
-                        .test_id("imui-editor-proof.authoring.shared.mode"),
-                );
+                out.push(proof_compact_readout_element(
+                    cx,
+                    blend_line,
+                    "imui-editor-proof.authoring.shared.blend",
+                ));
+                out.push(proof_compact_readout_element(
+                    cx,
+                    enabled_line,
+                    "imui-editor-proof.authoring.shared.enabled",
+                ));
+                out.push(proof_compact_readout_element(
+                    cx,
+                    shading_line,
+                    "imui-editor-proof.authoring.shared.mode",
+                ));
             })
             .gap(fret_ui_kit::Space::N3)
             .into_element(cx),
         );
-        out.push(
-            cx.text(gradient_line)
-                .test_id("imui-editor-proof.authoring.shared.gradient"),
-        );
+        out.push(proof_compact_readout_element(
+            cx,
+            gradient_line,
+            "imui-editor-proof.authoring.shared.gradient",
+        ));
     })
     .gap(fret_ui_kit::Space::N1)
     .into_element(cx)
@@ -2758,8 +2794,11 @@ fn render_authoring_parity_declarative_group(
 
                         rows
                     }),
-                    cx.text("Gradient editor")
-                        .test_id("imui-editor-proof.authoring.declarative.gradient.label"),
+                    proof_section_chrome_label(
+                        cx,
+                        "Gradient editor",
+                        "imui-editor-proof.authoring.declarative.gradient.label",
+                    ),
                     build_authoring_parity_gradient_editor(
                         cx,
                         gradient_angle_model.clone(),
