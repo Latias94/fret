@@ -2931,6 +2931,28 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag-dropdown-menu-suite-v2/sessions/1778975019728-11100/suite.summary.json`
     reports `status=passed`, 3/3 rows, `scripts_with_evidence=3`,
     `focus_mismatch_total=0`, and zero lint errors/warnings for all rows.
+- ContextMenu focused suite:
+  - invariant:
+    ContextMenu runtime evidence should prove safe-corridor pointer movement and branch/corridor
+    submenu routing as a small independently runnable pointer-policy gate.
+  - findings:
+    the two ContextMenu corridor scripts were already useful, but only broad suites reached them.
+    This was a harness packaging gap rather than a ContextMenu recipe or hit-test mechanism defect.
+  - implementation anchors:
+    `tools/diag-scripts/suites/ui-gallery-context-menu/suite.json`,
+    `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-safe-corridor-sweep.json`,
+    and
+    `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-branch-corridor-routing.json`.
+  - lint gates:
+    `python tools/test_check_diag_scripts_registry.py`,
+    `python tools/check_diag_scripts_registry.py`
+  - lint results:
+    passed; registry self-tests ran 21 tests.
+  - full-suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-context-menu --dir target/fret-diag-context-menu-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - full-suite result:
+    `target/fret-diag-context-menu-suite-v1/sessions/1778975671673-115352/suite.summary.json`
+    reports `status=passed`, 2/2 rows, and zero lint errors/warnings for both rows.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

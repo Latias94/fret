@@ -689,3 +689,9 @@ date: 2026-05-12
     focused runs found harness defects rather than recipe defects: the typeahead script allowed a
     trigger to remain at the window edge before `click_stable`, and it used an optional status-bar
     semantics node as its result oracle. The suite now passes 3/3 with zero lint errors/warnings.
+- [x] Promote ContextMenu submenu corridor evidence into a focused suite.
+  - Result: `ui-gallery-context-menu` now gates both safe-corridor sweep and branch/corridor
+    routing as a small independently runnable pointer-policy suite. This did not reproduce a new
+    ContextMenu or hit-test mechanism defect; it closed a harness packaging gap where the scripts
+    existed but were only reachable through broad conformance/overlay suites. The suite passes 2/2
+    with zero lint errors/warnings.

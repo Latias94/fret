@@ -7051,6 +7051,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "fret-mechanism-harness-overlay-focus",
+        "ui-gallery-context-menu",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -7076,6 +7077,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
+        "ui-gallery-context-menu",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [],
