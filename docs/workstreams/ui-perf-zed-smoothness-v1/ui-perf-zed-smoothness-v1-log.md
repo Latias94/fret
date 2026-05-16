@@ -105,6 +105,53 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 22:10:00 +0800 (retained row-fragment post-probe attribution)
+
+Question:
+- After the retained row-fragment replay prototype, is editor paint still the next local owner, or has the bottleneck
+  moved elsewhere?
+
+Change:
+- No code change. Recorded the post-prototype three-probe local attribution and updated the next-owner TODO.
+
+Evidence:
+- typical autoscroll:
+  `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-typical-r3/worst.stats.json`
+- complex wheel:
+  `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-r2/worst.stats.json`
+- resize jitter:
+  `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-resize-jitter-r3/worst.stats.json`
+
+Results:
+| script | worst total | layout | prepaint | paint | renderer text | code-editor p95 total | row prepaint plan | row prepaint probe |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| autoscroll typical | 724 | 34 | 249 | 441 | 37 | 114 | 50 | 37 |
+| complex wheel | 935 | 439 | 114 | 382 | 36 | 75 | 44 | 27 |
+| resize jitter | 1464 | 796 | 218 | 450 | 74 | 140 | 72 | 54 |
+
+Decision:
+- Keep the retained row-fragment replay prototype.
+- Do not start another renderer text/glyph residency slice from this evidence.
+- Treat resize-jitter layout roots / solve as the next local optimization owner. The resize worst frame reports
+  `layout_roots=538us`, `layout_engine_solve=395us`, and a top gallery content `ScrollArea` layout hotspot
+  (`263us` exclusive, `388us` inclusive) under a `needs_rerender` view-cache root.
+- This is local macOS M4 evidence only. It does not replace the deferred Windows RTX4090 closeout.
+
+Follow-up scroll/layout profiling seed:
+- Evidence:
+  `target/fret-diag/local-next-scroll-layout-resize-jitter-20260516-r1/worst.stats.json`
+- Triage:
+  `target/fret-diag/local-next-scroll-layout-resize-jitter-20260516-r1/triage.json`
+- Worst frame: `total=1362us`, `layout=805us`, `layout_roots=574us`,
+  `layout_engine_solve=373us`, `paint=397us`.
+- `ui-gallery-content-viewport` scroll profile: `total=405us`, `solve_barrier=244us`,
+  `layout_children_first_pass=156us`, `measure_children=0us`,
+  `direct_children_layout_invalidated=false`, `descendant_subtree_layout_dirty=false`,
+  `interactive_resize=true`.
+- Decision refinement: the next slice should classify the `needs_rerender` content cache root and
+  investigate a cheaper changing-bounds scroll apply/solve path. It should not be a broad renderer,
+  row-fragment, or glyph-cache rewrite.
+
 ## 2026-05-16 21:30:29 +0800 (prepaint row-scene probe attribution)
 
 Question:

@@ -213,8 +213,27 @@ not update checked-in baselines.
       `top_code_editor_windowed_surface_paint_callback_us` moved `153 -> 120us`.
     - Fresh next-owner read: worst r2 total frame was dominated by `layout_semantics_refresh_time_us=399us`
       while renderer prepare text stayed at `37us` p95. Do not start renderer text/glyph residency from this result.
-  - [ ] Re-run the three local editor paint probes after any row-fragment planning change; require the complex-wheel
+  - [x] Re-run the three local editor paint probes after the row-fragment planning change; require the complex-wheel
     p95 `us_row_scene_prepaint_probe` to move materially below the current `~77us` before claiming progress.
+    - Local no-4090 evidence:
+      - typical autoscroll:
+        `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-typical-r3/worst.stats.json`
+      - complex wheel:
+        `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-r2/worst.stats.json`
+      - resize jitter:
+        `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-resize-jitter-r3/worst.stats.json`
+    - Result: complex-wheel code-editor p95 `us_row_scene_prepaint_probe` is now `27us` in the worst-bundle stats,
+      down from the `77us` attribution baseline; typical autoscroll is `37us`; resize jitter is `54us`.
+    - Decision: row-fragment planning is no longer the local dominant owner. The next measurable owner is
+      resize-jitter layout roots / solve work, with the top layout hotspot in the gallery content `ScrollArea`.
+  - [ ] Attribute resize-jitter `ScrollArea` / view-cache-root layout churn before starting another editor paint slice.
+    - First question: why does the gallery content cache root report `reuse_reason=needs_rerender` during resize when
+      the row-fragment path is stable?
+    - Second question: whether the top `Scroll` layout hotspot is expected scroll extent observation under resize or
+      avoidable shadcn `ScrollArea` chrome/viewport subtree churn.
+    - Candidate owner: continue `scroll-optimization-v1` if this is mechanism-level scroll extent / deferred probe
+      behavior; keep it in `ui-perf-zed-smoothness-v1` if it is a resize solve batching contract; keep it in
+      `fret-ui-shadcn` only if the fix is recipe policy.
   - Do not widen this into a renderer rewrite unless renderer prepare/encode becomes dominant in the local and
     Windows RTX4090 evidence.
 

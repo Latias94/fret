@@ -9,10 +9,18 @@ Date: 2026-05-16
   `target/fret-diag/local-next-editor-paint-20260516-prepaint-probe-attrib-complex-wheel-r3/worst.stats.json`
 - Non-landed micro-cleanup:
   `target/fret-diag/local-next-editor-paint-20260516-prepaint-plan-small-opt-complex-wheel-r3/worst.stats.json`
+- Post-prototype three-probe local attribution:
+  - typical autoscroll:
+    `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-typical-r3/worst.stats.json`
+  - complex wheel:
+    `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-r2/worst.stats.json`
+  - resize jitter:
+    `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-resize-jitter-r3/worst.stats.json`
 - Current decision:
   - do not optimize renderer text/glyph residency from current evidence,
   - do not continue HashMap lookup micro-changes,
-  - prototype a row-fragment replay contract.
+  - keep the retained row-fragment replay prototype,
+  - move the next local optimization discussion to resize layout roots / ScrollArea layout churn.
 
 ## Checklist
 
@@ -45,6 +53,19 @@ Date: 2026-05-16
 - [x] Update `ui-perf-zed-smoothness-v1` with the result.
   - If the prototype wins, keep the lane active for cleanup.
   - If it does not win, record closeout and choose the next owner from fresh attribution.
+- [x] Re-run the three local editor paint probes after the row-fragment planning change.
+  - typical autoscroll worst frame: `total=724us`, `paint=441us`, `prepaint=249us`,
+    `layout=34us`; code-editor p95 `us_total=114us`, `us_row_scene_prepaint_plan=50us`,
+    `us_row_scene_prepaint_probe=37us`.
+  - complex wheel worst frame: `total=935us`, `layout=439us`,
+    `layout_semantics_refresh_time_us=399us`, `paint=382us`; code-editor p95
+    `us_total=75us`, `us_row_scene_prepaint_plan=44us`, `us_row_scene_prepaint_probe=27us`.
+  - resize jitter worst frame: `total=1464us`, `layout=796us`, `layout_roots=538us`,
+    `layout_engine_solve=395us`, `paint=450us`; code-editor p95 `us_total=140us`,
+    `us_row_scene_prepaint_plan=72us`, `us_row_scene_prepaint_probe=54us`.
+  - Decision: row-fragment planning is no longer the dominant local owner. Resize-jitter's
+    remaining owner is layout roots / solve around the gallery content `ScrollArea`, not renderer
+    text or row-fragment plan assembly.
 
 ## Latest Local Result
 
@@ -64,9 +85,12 @@ Date: 2026-05-16
 
 - Investigate why `RunnerMonitorTopologyDiagnosticsStore` global changes and semantics refresh can
   keep the gallery shell root in `needs_rerender` during the complex-wheel script.
-- If row-fragment prepaint remains material after that, prototype an exact visible-window plan cache
-  over retained fragments. Do not jump to a precomposed visible-window scene until overlay/preedit
-  diagnostics are stronger.
+- Treat resize-jitter as the next real hot path: attribute why the gallery content `ScrollArea`
+  rebuilds as a `needs_rerender` view-cache root during resize, then decide whether the fix belongs
+  in `scroll-optimization-v1`, `ui-perf-zed-smoothness-v1`, or shadcn recipe policy.
+- If row-fragment prepaint becomes material again after layout/scroll churn is reduced, prototype an
+  exact visible-window plan cache over retained fragments. Do not jump to a precomposed
+  visible-window scene until overlay/preedit diagnostics are stronger.
 
 ## Guardrails
 

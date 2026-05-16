@@ -1,7 +1,38 @@
 # Scroll Optimization Workstream (v1) — TODO
 
-Date: 2026-05-08
+Date: 2026-05-16
 Status: Active
+
+## Candidate perf slice — Resize-jitter ScrollArea layout root attribution
+
+- [x] Reproduce the local resize-jitter post-row-fragment attribution with scroll/layout profiling enabled.
+  - Seed evidence:
+    `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-resize-jitter-r3/worst.stats.json`
+  - Current worst-frame shape: `total=1464us`, `layout=796us`, `layout_roots=538us`,
+    `layout_engine_solve=395us`, `paint=450us`.
+  - Top layout hotspot: gallery content `ScrollArea` / `Scroll` with `263us` exclusive and `388us`
+    inclusive layout time.
+  - Profiled rerun:
+    `target/fret-diag/local-next-scroll-layout-resize-jitter-20260516-r1/worst.stats.json`
+  - Triage:
+    `target/fret-diag/local-next-scroll-layout-resize-jitter-20260516-r1/triage.json`
+  - Profiled worst-frame shape: `total=1362us`, `layout=805us`, `layout_roots=574us`,
+    `layout_engine_solve=373us`, `paint=397us`.
+- [ ] Explain why the gallery content view-cache root is `reuse_reason=needs_rerender` during the resize-jitter
+  probe even though the editor row-fragment path is stable.
+- [ ] Classify the `ScrollArea` cost more narrowly.
+  - Current profile rules out child measure as the dominant owner (`measure_children_us=0` on the
+    worst content viewport profile).
+  - Current profile rules out dirty-descendant escalation in that worst frame
+    (`direct_children_layout_invalidated=false`, `descendant_subtree_layout_dirty=false`).
+  - Remaining candidate: changing-bounds `solve_barrier` plus a small child layout pass under
+    `post_layout_extents_mode=true`.
+- [ ] Only after classification, choose the implementation owner:
+  - `crates/fret-ui` for scroll mechanism or layout-root scheduling,
+  - `ecosystem/fret-ui-shadcn` for recipe/chrome policy,
+  - or `ui-perf-zed-smoothness-v1` for a broader resize solve batching contract.
+- [ ] Add one focused gate before changing behavior, preferably a single resize-jitter diag script plus
+  `diag stats --sort time --top 15 --json` evidence.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

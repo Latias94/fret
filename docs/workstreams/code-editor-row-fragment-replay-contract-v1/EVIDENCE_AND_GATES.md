@@ -46,6 +46,45 @@ and `layout_semantics_refresh_time_us=399us`. It also reports a changed
 `RunnerMonitorTopologyDiagnosticsStore` global and a gallery shell view-cache root with
 `reuse_reason=needs_rerender`.
 
+## Post-Prototype Three-Probe Attribution
+
+Local no-4090 reruns after the retained-fragment prototype:
+
+- typical autoscroll:
+  `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-typical-r3/worst.stats.json`
+- complex wheel:
+  `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-r2/worst.stats.json`
+- resize jitter:
+  `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-resize-jitter-r3/worst.stats.json`
+
+Worst-frame attribution:
+
+- typical autoscroll: `total=724us`, `layout=34us`, `prepaint=249us`, `paint=441us`,
+  `renderer_prepare_text=37us`, `renderer_encode_scene=151us`.
+- complex wheel: `total=935us`, `layout=439us`, `layout_semantics_refresh_time_us=399us`,
+  `prepaint=114us`, `paint=382us`, `renderer_prepare_text=36us`.
+- resize jitter: `total=1464us`, `layout=796us`, `layout_roots=538us`,
+  `layout_request_build_roots=178us`, `layout_engine_solve=395us`, `prepaint=218us`,
+  `paint=450us`, `renderer_prepare_text=74us`, `renderer_encode_scene=178us`.
+
+Code-editor p95 after the prototype:
+
+- typical autoscroll: `us_total=114us`, `us_row_scene_prepaint_plan=50us`,
+  `us_row_scene_prepaint_probe=37us`, `us_windowed_surface_paint_callback=147us`.
+- complex wheel: `us_total=75us`, `us_row_scene_prepaint_plan=44us`,
+  `us_row_scene_prepaint_probe=27us`, `us_windowed_surface_paint_callback=101us`.
+- resize jitter: `us_total=140us`, `us_row_scene_prepaint_plan=72us`,
+  `us_row_scene_prepaint_probe=54us`, `us_windowed_surface_paint_callback=177us`.
+
+Decision:
+
+- The retained-fragment prototype should stay. It materially reduced the original row-scene
+  planning owner without making renderer text prepare dominant.
+- Do not start another renderer text/glyph residency slice from these artifacts.
+- The next local optimization owner is resize layout roots / solve work. The resize-jitter worst
+  frame points at gallery content `ScrollArea` layout (`263us` exclusive, `388us` inclusive) under a
+  `needs_rerender` view-cache root, not row-fragment replay itself.
+
 ## Correctness Gates
 
 ```bash

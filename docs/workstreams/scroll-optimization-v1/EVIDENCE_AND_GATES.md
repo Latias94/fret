@@ -1,7 +1,74 @@
 # Scroll Optimization Workstream (v1) — Evidence And Gates
 
-Date: 2026-05-08
+Date: 2026-05-16
 Status: Active
+
+## Candidate perf slice — Resize-jitter ScrollArea layout root attribution
+
+Seed evidence after the code-editor retained row-fragment prototype:
+
+- Baseline local resize-jitter stats:
+  `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-resize-jitter-r3/worst.stats.json`
+- Profiled local resize-jitter stats:
+  `target/fret-diag/local-next-scroll-layout-resize-jitter-20260516-r1/worst.stats.json`
+- Profiled triage:
+  `target/fret-diag/local-next-scroll-layout-resize-jitter-20260516-r1/triage.json`
+
+Profiled command shape:
+
+```bash
+target/release/fretboard-dev diag perf \
+  tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json \
+  --repeat 1 \
+  --warmup-frames 5 \
+  --reuse-launch \
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_A11Y_DISABLE=1 \
+  --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0 \
+  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
+  --env FRET_SCROLL_LAYOUT_PROFILE=1 \
+  --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 \
+  --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 \
+  --env FRET_LAYOUT_NODE_PROFILE=1 \
+  --env FRET_LAYOUT_NODE_PROFILE_TOP=20 \
+  --env FRET_LAYOUT_NODE_PROFILE_MIN_US=100 \
+  --env FRET_DIAG_MAX_SNAPSHOTS=180 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --sort time \
+  --top 15 \
+  --json \
+  --dir target/fret-diag/local-next-scroll-layout-resize-jitter-20260516-r1 \
+  --launch -- cargo run -p fret-ui-gallery --release \
+    --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+```
+
+Result:
+
+- Worst frame: `total=1362us`, `layout=805us`, `layout_roots=574us`,
+  `layout_request_build_roots=157us`, `layout_engine_solve=373us`, `prepaint=160us`,
+  `paint=397us`.
+- View-cache: one content root, `reuse_reason=needs_rerender`, `layout_dependency=contained_when_bounds_known`,
+  `layout_outcome=contained_clean`.
+- Top layout hotspot: gallery content `ScrollArea` / `Scroll`, `267us` exclusive and `413us`
+  inclusive.
+- Scroll profile for `ui-gallery-content-viewport`: `total=405us`, `solve_barrier=244us`,
+  `layout_children_first_pass=156us`, `measure_children=0us`.
+- Dirty state on that profile: `interactive_resize=true`, `direct_children_layout_invalidated=false`,
+  `descendant_subtree_layout_dirty=false`, `post_layout_extents_mode=true`.
+
+Decision:
+
+- Do not spend the next slice on renderer text, glyph atlas, or row-fragment replay from this evidence.
+- Do not start a broad scroll layout skip: `Scroll` still writes authoritative viewport/content
+  state during layout.
+- The next narrow question is whether changing-bounds `solve_barrier` and the small child layout pass
+  under a `needs_rerender` content view-cache root can use a cheaper resize apply path without
+  weakening scroll extent correctness.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

@@ -65,7 +65,7 @@ Evidence:
 
 ## M4 - Close Or Promote
 
-Status: In progress
+Status: Complete for local row-fragment scope
 
 If the prototype wins, promote it as the default path and update `ui-perf-zed-smoothness-v1`. If it
 does not win, close this lane with a no-ship audit and choose the next owner from fresh attribution.
@@ -73,3 +73,12 @@ does not win, close this lane with a no-ship audit and choose the next owner fro
 Current decision: keep the retained-fragment prototype. The next owner in the same local repro is
 not renderer text prepare; the worst r2 frame is dominated by semantics refresh/layout bookkeeping
 outside row-fragment planning.
+
+Post-prototype three-probe decision:
+
+- typical autoscroll and complex wheel are no longer dominated by row-scene planning or renderer text
+  prepare;
+- resize jitter is dominated by layout roots / engine solve, with the top layout hotspot in the
+  gallery content `ScrollArea`;
+- any further row-fragment broadening should wait until resize/layout churn is reduced or fresh
+  attribution makes row-fragment prepaint material again.
