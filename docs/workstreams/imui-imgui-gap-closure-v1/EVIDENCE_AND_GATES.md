@@ -257,6 +257,12 @@ Run evidence:
   `text_section_chrome_label(...)` instead of local `TextProps`. Gate: `cargo nextest run -p
   fret-ui-kit --features imui --lib chrome_title_text_uses_fill_width_single_line_truncation
   section_chrome_label_text_uses_single_line_truncation --no-fail-fast`.
+- 2026-05-17: introduced `text_chrome_glyph(...)` as the shared compact fixed-slot chrome glyph
+  role and routed disclosure/tree indicators through it. Indicator glyphs now stay single-line and
+  clipped inside fixed chrome slots without owning local `TextProps` policy in disclosure controls.
+  Gate: `cargo nextest run -p fret-ui-kit --features imui --lib
+  chrome_glyph_text_uses_fixed_slot_single_line_clip
+  disclosure_indicator_uses_shared_chrome_glyph_text_role --no-fail-fast`.
 - 2026-05-17: introduced `text_control_label(...)` as the shared compact control-label text role
   and routed `control_chrome::fill_text(...)` through it. Checkbox/radio/switch labels plus
   combo/slider captions keep their fill, grow, shrink, `min-width: 0`, and ellipsis behavior
@@ -265,8 +271,8 @@ Run evidence:
   imui_fill_text_is_single_line_and_shrinkable imui_control_text_uses_shared_button_label_role
   --no-fail-fast`.
 - 2026-05-16: hardened `tools/gate_imui_workstream_source.py` with an explicit allowlist for the
-  remaining direct `TextProps::new(...)` constructors under `fret-ui-kit::imui`: bullet prose,
-  disclosure indicator, and facade `text`/`text_wrapped`. New direct constructors now fail the
+  remaining direct `TextProps::new(...)` constructors under `fret-ui-kit::imui`: bullet prose and
+  facade `text`/`text_wrapped`. New direct constructors now fail the
   source gate unless they are routed through the shared text roles or intentionally added to the
   allowlist. Gate: `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: introduced `editor_input_value_text(...)` in `fret-ui-editor` input-group primitives

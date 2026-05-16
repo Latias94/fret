@@ -231,6 +231,9 @@ Exit criteria:
   2026-05-17 chrome title text result: `text_chrome_title(...)` now owns fill-width floating
   window title-bar text. Resizable floating titles keep fill/grow/min-width-zero behavior, while
   non-resizable titles reuse the section/chrome label role instead of local `TextProps`.
+  2026-05-17 chrome glyph text result: `text_chrome_glyph(...)` now owns compact fixed-slot
+  chrome glyph text in `fret-ui-kit::declarative::text`. Disclosure/tree indicators use that
+  shared role, so glyph-only chrome stays single-line and clipped without local `TextProps`.
   2026-05-16 text role source-gate result: `tools/gate_imui_workstream_source.py` now freezes the
   remaining direct `TextProps::new(...)` constructors under `fret-ui-kit::imui` behind an explicit
   allowlist, forcing future compact text policy additions through the shared role vocabulary or an

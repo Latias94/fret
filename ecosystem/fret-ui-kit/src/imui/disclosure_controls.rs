@@ -5,7 +5,7 @@ use fret_ui::action::UiActionHostExt as _;
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    Overflow, PressableA11y, PressableProps, SizeStyle, SpacerProps, SpacingLength, TextProps,
+    Overflow, PressableA11y, PressableProps, SizeStyle, SpacerProps, SpacingLength,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
@@ -516,9 +516,13 @@ fn header_row<H: UiHost>(
                         indicator
                             .as_ref()
                             .map(|indicator| {
-                                let mut props = TextProps::new(indicator.clone());
-                                props.color = Some(palette.foreground);
-                                vec![cx.text_props(props)]
+                                vec![
+                                    crate::declarative::text::text_chrome_glyph(
+                                        cx,
+                                        indicator.clone(),
+                                    )
+                                    .inherit_foreground(palette.foreground),
+                                ]
                             })
                             .unwrap_or_default()
                     },
@@ -825,6 +829,48 @@ mod tests {
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(text.inherited_text_style.is_some());
+        assert_eq!(text.inherited_foreground, Some(expected_palette.foreground));
+    }
+
+    #[test]
+    fn disclosure_indicator_uses_shared_chrome_glyph_text_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+            let spec = DisclosureSpec::tree_node(
+                Arc::from("Expandable tree node"),
+                TreeNodeOptions::default(),
+            );
+            header_row(
+                cx,
+                &spec,
+                spec.label.clone(),
+                false,
+                PressableState::default(),
+            )
+        });
+        let expected_palette = resolve_disclosure_palette(
+            Theme::global(&app),
+            &DisclosureSpec::tree_node(
+                Arc::from("Expandable tree node"),
+                TreeNodeOptions::default(),
+            ),
+            PressableState::default(),
+        );
+
+        let text = first_text(&el, ">").expect("expected disclosure indicator text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected disclosure indicator to be text");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Clip);
         assert!(text.inherited_text_style.is_some());
         assert_eq!(text.inherited_foreground, Some(expected_palette.foreground));
     }
