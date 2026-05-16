@@ -325,6 +325,9 @@ Exit criteria:
   `text_chrome_glyph(...)`, labels use `text_list_row_label(...)`, and trailing shortcut text uses
   `text_control_readout(...)`, with a focused structure test and source-gate marker preventing the
   old bare `cx.text(...)` row path from returning.
+  2026-05-17 generic tree text result: the default retained tree row renderer now routes row labels
+  through `text_list_row_label(...)` and toggle glyphs through `text_chrome_glyph(...)`, while
+  leaving custom tree row renderers free to own their own content policy.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

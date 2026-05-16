@@ -316,6 +316,12 @@ Run evidence:
   adding an IMUI ListBox API or moving policy into `fret-imui`. Gates: `cargo nextest run -p
   fret-ui-kit --features imui --lib list_from_strings_uses_shared_single_line_text_roles
   --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-17: routed the default retained tree row renderer through the shared text-role
+  vocabulary too. Tree labels now use `text_list_row_label(...)` and toggle glyphs use
+  `text_chrome_glyph(...)` instead of the local `crate::ui::text(...).truncate()` / bare
+  `cx.text(...)` path. Gates: `cargo nextest run -p fret-ui-kit --features imui --lib
+  default_tree_row_label_uses_shared_list_row_text_role tree_toggle_glyph_uses_shared_chrome_glyph_text_role
+  --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: routed floating-window close button glyphs through the same
   `text_chrome_glyph(...)` role via `floating_window_close_glyph_text(...)`. This keeps fixed
   title-bar action chrome on the shared single-line clip contract instead of bare `cx.text(...)`
@@ -1081,3 +1087,8 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.
+
+2026-05-17 generic tree text-role slice:
+
+- `cargo fmt -p fret-ui-kit` passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib default_tree_row_label_uses_shared_list_row_text_role tree_toggle_glyph_uses_shared_chrome_glyph_text_role --no-fail-fast` passed.

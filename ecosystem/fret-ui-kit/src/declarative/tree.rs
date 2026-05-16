@@ -64,6 +64,20 @@ fn resolve_indent(theme: &Theme) -> Px {
 
 struct DefaultTreeRowRenderer;
 
+fn default_tree_row_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: impl Into<Arc<str>>,
+) -> AnyElement {
+    crate::declarative::text::text_list_row_label(cx, label)
+}
+
+fn tree_toggle_glyph<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    glyph: impl Into<Arc<str>>,
+) -> AnyElement {
+    crate::declarative::text::text_chrome_glyph(cx, glyph)
+}
+
 impl<H: UiHost> TreeRowRenderer<H> for DefaultTreeRowRenderer {
     fn render_row(
         &mut self,
@@ -71,14 +85,7 @@ impl<H: UiHost> TreeRowRenderer<H> for DefaultTreeRowRenderer {
         entry: &TreeEntry,
         _state: TreeRowState,
     ) -> Elements {
-        vec![
-            crate::ui::text(entry.label.as_ref())
-                .flex_shrink(1.0)
-                .min_w_0()
-                .truncate()
-                .into_element(cx),
-        ]
-        .into()
+        vec![default_tree_row_label(cx, entry.label.clone())].into()
     }
 }
 
@@ -174,6 +181,16 @@ pub fn tree_view_retained<H: UiHost + 'static>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, TextOverflow, TextWrap};
+    use fret_ui::element::ElementKind;
+
+    fn test_bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(160.0), Px(40.0)),
+        )
+    }
 
     fn entry(has_children: bool, depth: usize) -> TreeEntry {
         TreeEntry {
@@ -223,6 +240,43 @@ mod tests {
 
         toggle_tree_item_expanded(&mut state, 42);
         assert!(!state.expanded.contains(&42));
+    }
+
+    #[test]
+    fn default_tree_row_label_uses_shared_list_row_text_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+                default_tree_row_label(cx, "Long tree row label that should not wrap")
+            });
+
+        let ElementKind::Text(props) = &element.kind else {
+            panic!("default tree row label should be text");
+        };
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+    }
+
+    #[test]
+    fn tree_toggle_glyph_uses_shared_chrome_glyph_text_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+                tree_toggle_glyph(cx, ">")
+            });
+
+        let ElementKind::Text(props) = &element.kind else {
+            panic!("tree toggle glyph should be text");
+        };
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Clip);
     }
 }
 
@@ -415,7 +469,10 @@ pub fn tree_view_with_renderer<H: UiHost>(
                                                                     );
                                                                 },
                                                             );
-                                                            vec![cx.text(glyph.as_ref())]
+                                                            vec![tree_toggle_glyph(
+                                                                cx,
+                                                                glyph.clone(),
+                                                            )]
                                                         },
                                                     ));
                                                 } else {
@@ -639,7 +696,10 @@ fn tree_view_retained_impl<H: UiHost + 'static>(
                                                                     );
                                                                 },
                                                             );
-                                                            vec![cx.text(glyph.as_ref())]
+                                                            vec![tree_toggle_glyph(
+                                                                cx,
+                                                                glyph.clone(),
+                                                            )]
                                                         },
                                                     ));
                                                 } else {

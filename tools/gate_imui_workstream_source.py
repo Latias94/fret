@@ -986,6 +986,21 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/declarative/tree.rs"),
+            required=[
+                "fn default_tree_row_label",
+                "fn tree_toggle_glyph",
+                "crate::declarative::text::text_list_row_label(cx, label)",
+                "crate::declarative::text::text_chrome_glyph(cx, glyph)",
+                "default_tree_row_label_uses_shared_list_row_text_role",
+                "tree_toggle_glyph_uses_shared_chrome_glyph_text_role",
+            ],
+            forbidden=[
+                "crate::ui::text(entry.label.as_ref())",
+                "vec![cx.text(glyph.as_ref())]",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs"),
             required=[
                 "crate::declarative::text::text_chrome_title(cx, title.clone())",

@@ -350,6 +350,10 @@ Readiness order for the next locally testable review slices:
    through `text_chrome_glyph(...)`, `text_list_row_label(...)`, and
    `text_control_readout(...)` instead of bare `cx.text(...)`. The helper remains a generic
    declarative kit convenience, not an IMUI runtime/list-box widening.
+   2026-05-17 generic tree text follow-up: the default retained tree row renderer now routes row
+   labels through `text_list_row_label(...)` and toggle glyphs through `text_chrome_glyph(...)`
+   instead of keeping a local truncate/text path. Custom tree row renderers still own their own
+   content policy.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
