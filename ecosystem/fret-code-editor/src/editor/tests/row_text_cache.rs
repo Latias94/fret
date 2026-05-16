@@ -146,6 +146,58 @@ fn begin_paint_frame_sets_cache_floor_from_actual_visible_rows() {
     assert_eq!(perf_frame.cache_frame_min_entries, 299);
 }
 
+#[test]
+fn paint_perf_records_windowed_surface_diagnostics() {
+    let handle = CodeEditorHandle::new("hello\nworld");
+
+    let perf_frame = {
+        let mut st = handle.state.borrow_mut();
+        st.paint_perf_enabled = true;
+        st.begin_paint_frame(WindowedRowsPaintFrame {
+            viewport_height: Px(64.0),
+            offset_y: Px(0.0),
+            row_height: Px(16.0),
+            row_stride: Px(16.0),
+            gap: Px(0.0),
+            scroll_margin: Px(0.0),
+            visible_start: 0,
+            visible_end: 3,
+        });
+        st.paint_perf_frame.us_total = 80;
+        st.paint_perf_frame.ns_total = 80_000;
+        st.record_windowed_rows_paint_diagnostics(WindowedRowsPaintDiagnostics {
+            visible_start: 0,
+            visible_end: 3,
+            visible_rows: 4,
+            rows_iterated: 4,
+            rows_with_rect: 4,
+            us_paint_callback: 130,
+            us_frame_lookup: 2,
+            us_on_paint_frame: 7,
+            us_row_loop: 110,
+            us_row_rect: 3,
+            us_row_paint: 95,
+            us_non_row: 35,
+            ns_paint_callback: 130_000,
+            ns_frame_lookup: 2_000,
+            ns_on_paint_frame: 7_000,
+            ns_row_loop: 110_000,
+            ns_row_rect: 3_000,
+            ns_row_paint: 95_000,
+            ns_non_row: 35_000,
+        });
+        st.paint_perf_frame
+    };
+
+    assert_eq!(perf_frame.surface_rows_iterated, 4);
+    assert_eq!(perf_frame.surface_rows_with_rect, 4);
+    assert_eq!(perf_frame.us_windowed_surface_paint_callback, 130);
+    assert_eq!(perf_frame.us_windowed_surface_row_paint, 95);
+    assert_eq!(perf_frame.us_windowed_surface_non_row, 35);
+    assert_eq!(perf_frame.us_windowed_surface_row_callback_gap, 15);
+    assert_eq!(perf_frame.ns_windowed_surface_row_callback_gap, 15_000);
+}
+
 #[cfg(feature = "syntax-rust")]
 #[test]
 fn prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint() {

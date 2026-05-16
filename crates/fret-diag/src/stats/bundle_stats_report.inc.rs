@@ -1,5 +1,8 @@
 use serde_json::{Map, Value};
 
+const PAINT_WIDGET_HOTSPOT_ROW_TOP_N: usize = 3;
+const PAINT_WIDGET_HOTSPOT_SUMMARY_TOP_N: usize = 16;
+
 #[derive(Debug, Default, Clone)]
 pub(super) struct BundleStatsReport {
     sort: BundleStatsSort,
@@ -75,6 +78,16 @@ pub(super) struct BundleStatsReport {
     max_layout_observation_record_globals_items: u32,
     pub(super) max_prepaint_time_us: u64,
     pub(super) max_paint_time_us: u64,
+    max_paint_host_widget_observed_models_time_us: u64,
+    max_paint_host_widget_observed_models_items: u32,
+    max_paint_host_widget_observed_globals_time_us: u64,
+    max_paint_host_widget_observed_globals_items: u32,
+    max_paint_host_widget_observed_deps_calls: u32,
+    max_paint_host_widget_observed_deps_empty_calls: u32,
+    max_paint_host_widget_observed_models_non_empty_calls: u32,
+    max_paint_host_widget_observed_globals_non_empty_calls: u32,
+    max_paint_host_widget_instance_lookup_time_us: u64,
+    max_paint_host_widget_instance_lookup_calls: u32,
     pub(super) max_total_time_us: u64,
     pub(super) max_ui_thread_cpu_time_us: u64,
     pub(super) max_ui_thread_cpu_cycle_time_delta_cycles: u64,
@@ -146,6 +159,26 @@ pub(super) struct BundleStatsReport {
     pub(super) p95_hit_test_time_us: u64,
     pub(super) p50_paint_widget_time_us: u64,
     pub(super) p95_paint_widget_time_us: u64,
+    p50_paint_host_widget_observed_models_time_us: u64,
+    p95_paint_host_widget_observed_models_time_us: u64,
+    p50_paint_host_widget_observed_models_items: u64,
+    p95_paint_host_widget_observed_models_items: u64,
+    p50_paint_host_widget_observed_globals_time_us: u64,
+    p95_paint_host_widget_observed_globals_time_us: u64,
+    p50_paint_host_widget_observed_globals_items: u64,
+    p95_paint_host_widget_observed_globals_items: u64,
+    p50_paint_host_widget_observed_deps_calls: u64,
+    p95_paint_host_widget_observed_deps_calls: u64,
+    p50_paint_host_widget_observed_deps_empty_calls: u64,
+    p95_paint_host_widget_observed_deps_empty_calls: u64,
+    p50_paint_host_widget_observed_models_non_empty_calls: u64,
+    p95_paint_host_widget_observed_models_non_empty_calls: u64,
+    p50_paint_host_widget_observed_globals_non_empty_calls: u64,
+    p95_paint_host_widget_observed_globals_non_empty_calls: u64,
+    p50_paint_host_widget_instance_lookup_time_us: u64,
+    p95_paint_host_widget_instance_lookup_time_us: u64,
+    p50_paint_host_widget_instance_lookup_calls: u64,
+    p95_paint_host_widget_instance_lookup_calls: u64,
     pub(super) p50_paint_text_prepare_time_us: u64,
     pub(super) p95_paint_text_prepare_time_us: u64,
     pub(super) p50_renderer_encode_scene_us: u64,
@@ -164,6 +197,7 @@ pub(super) struct BundleStatsReport {
     pub(super) p95_renderer_prepare_svg_us: u64,
     pub(super) p50_renderer_prepare_text_us: u64,
     pub(super) p95_renderer_prepare_text_us: u64,
+    paint_widget_hotspot_summary: BundleStatsPaintWidgetHotspotSummary,
     code_editor_paint_perf: BundleStatsCodeEditorPaintPerfSummary,
     worst_hover_layout: Option<BundleStatsWorstHoverLayout>,
     global_type_hotspots: Vec<BundleStatsGlobalTypeHotspot>,
@@ -219,6 +253,10 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) paint_host_widget_observed_models_items: u32,
     pub(super) paint_host_widget_observed_globals_time_us: u64,
     pub(super) paint_host_widget_observed_globals_items: u32,
+    pub(super) paint_host_widget_observed_deps_calls: u32,
+    pub(super) paint_host_widget_observed_deps_empty_calls: u32,
+    pub(super) paint_host_widget_observed_models_non_empty_calls: u32,
+    pub(super) paint_host_widget_observed_globals_non_empty_calls: u32,
     pub(super) paint_host_widget_instance_lookup_time_us: u64,
     pub(super) paint_host_widget_instance_lookup_calls: u32,
     pub(super) paint_text_prepare_time_us: u64,
@@ -577,6 +615,18 @@ pub(super) struct BundleStatsCodeEditorPaintPerf {
     pub(super) us_row_geom_resolve: u64,
     pub(super) us_row_overlay: u64,
     pub(super) us_frame_overlay_prepare: u64,
+    pub(super) surface_rows_iterated: u64,
+    pub(super) surface_rows_with_rect: u64,
+    pub(super) us_windowed_surface_paint_callback: u64,
+    pub(super) us_windowed_surface_frame_lookup: u64,
+    pub(super) us_windowed_surface_hook: u64,
+    pub(super) us_windowed_surface_row_loop: u64,
+    pub(super) us_windowed_surface_row_rect: u64,
+    pub(super) us_windowed_surface_row_paint: u64,
+    pub(super) us_windowed_surface_non_row: u64,
+    pub(super) us_windowed_surface_row_callback_gap: u64,
+    pub(super) us_torture_autoscroll: u64,
+    pub(super) us_torture_overlay: u64,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -648,6 +698,18 @@ struct BundleStatsCodeEditorPaintPerfTotals {
     us_row_geom_resolve: u64,
     us_row_overlay: u64,
     us_frame_overlay_prepare: u64,
+    surface_rows_iterated: u64,
+    surface_rows_with_rect: u64,
+    us_windowed_surface_paint_callback: u64,
+    us_windowed_surface_frame_lookup: u64,
+    us_windowed_surface_hook: u64,
+    us_windowed_surface_row_loop: u64,
+    us_windowed_surface_row_rect: u64,
+    us_windowed_surface_row_paint: u64,
+    us_windowed_surface_non_row: u64,
+    us_windowed_surface_row_callback_gap: u64,
+    us_torture_autoscroll: u64,
+    us_torture_overlay: u64,
 }
 
 impl BundleStatsCodeEditorPaintPerfTotals {
@@ -792,6 +854,42 @@ impl BundleStatsCodeEditorPaintPerfTotals {
         self.us_frame_overlay_prepare = self
             .us_frame_overlay_prepare
             .saturating_add(p.us_frame_overlay_prepare);
+        self.surface_rows_iterated = self
+            .surface_rows_iterated
+            .saturating_add(p.surface_rows_iterated);
+        self.surface_rows_with_rect = self
+            .surface_rows_with_rect
+            .saturating_add(p.surface_rows_with_rect);
+        self.us_windowed_surface_paint_callback = self
+            .us_windowed_surface_paint_callback
+            .saturating_add(p.us_windowed_surface_paint_callback);
+        self.us_windowed_surface_frame_lookup = self
+            .us_windowed_surface_frame_lookup
+            .saturating_add(p.us_windowed_surface_frame_lookup);
+        self.us_windowed_surface_hook = self
+            .us_windowed_surface_hook
+            .saturating_add(p.us_windowed_surface_hook);
+        self.us_windowed_surface_row_loop = self
+            .us_windowed_surface_row_loop
+            .saturating_add(p.us_windowed_surface_row_loop);
+        self.us_windowed_surface_row_rect = self
+            .us_windowed_surface_row_rect
+            .saturating_add(p.us_windowed_surface_row_rect);
+        self.us_windowed_surface_row_paint = self
+            .us_windowed_surface_row_paint
+            .saturating_add(p.us_windowed_surface_row_paint);
+        self.us_windowed_surface_non_row = self
+            .us_windowed_surface_non_row
+            .saturating_add(p.us_windowed_surface_non_row);
+        self.us_windowed_surface_row_callback_gap = self
+            .us_windowed_surface_row_callback_gap
+            .saturating_add(p.us_windowed_surface_row_callback_gap);
+        self.us_torture_autoscroll = self
+            .us_torture_autoscroll
+            .saturating_add(p.us_torture_autoscroll);
+        self.us_torture_overlay = self
+            .us_torture_overlay
+            .saturating_add(p.us_torture_overlay);
     }
 
     fn max_frame(&mut self, p: &BundleStatsCodeEditorPaintPerf) {
@@ -907,6 +1005,34 @@ impl BundleStatsCodeEditorPaintPerfTotals {
         self.us_frame_overlay_prepare = self
             .us_frame_overlay_prepare
             .max(p.us_frame_overlay_prepare);
+        self.surface_rows_iterated = self.surface_rows_iterated.max(p.surface_rows_iterated);
+        self.surface_rows_with_rect = self.surface_rows_with_rect.max(p.surface_rows_with_rect);
+        self.us_windowed_surface_paint_callback = self
+            .us_windowed_surface_paint_callback
+            .max(p.us_windowed_surface_paint_callback);
+        self.us_windowed_surface_frame_lookup = self
+            .us_windowed_surface_frame_lookup
+            .max(p.us_windowed_surface_frame_lookup);
+        self.us_windowed_surface_hook = self
+            .us_windowed_surface_hook
+            .max(p.us_windowed_surface_hook);
+        self.us_windowed_surface_row_loop = self
+            .us_windowed_surface_row_loop
+            .max(p.us_windowed_surface_row_loop);
+        self.us_windowed_surface_row_rect = self
+            .us_windowed_surface_row_rect
+            .max(p.us_windowed_surface_row_rect);
+        self.us_windowed_surface_row_paint = self
+            .us_windowed_surface_row_paint
+            .max(p.us_windowed_surface_row_paint);
+        self.us_windowed_surface_non_row = self
+            .us_windowed_surface_non_row
+            .max(p.us_windowed_surface_non_row);
+        self.us_windowed_surface_row_callback_gap = self
+            .us_windowed_surface_row_callback_gap
+            .max(p.us_windowed_surface_row_callback_gap);
+        self.us_torture_autoscroll = self.us_torture_autoscroll.max(p.us_torture_autoscroll);
+        self.us_torture_overlay = self.us_torture_overlay.max(p.us_torture_overlay);
     }
 
     fn to_json(&self) -> serde_json::Value {
@@ -969,6 +1095,18 @@ impl BundleStatsCodeEditorPaintPerfTotals {
             "us_row_geom_resolve": self.us_row_geom_resolve,
             "us_row_overlay": self.us_row_overlay,
             "us_frame_overlay_prepare": self.us_frame_overlay_prepare,
+            "surface_rows_iterated": self.surface_rows_iterated,
+            "surface_rows_with_rect": self.surface_rows_with_rect,
+            "us_windowed_surface_paint_callback": self.us_windowed_surface_paint_callback,
+            "us_windowed_surface_frame_lookup": self.us_windowed_surface_frame_lookup,
+            "us_windowed_surface_hook": self.us_windowed_surface_hook,
+            "us_windowed_surface_row_loop": self.us_windowed_surface_row_loop,
+            "us_windowed_surface_row_rect": self.us_windowed_surface_row_rect,
+            "us_windowed_surface_row_paint": self.us_windowed_surface_row_paint,
+            "us_windowed_surface_non_row": self.us_windowed_surface_non_row,
+            "us_windowed_surface_row_callback_gap": self.us_windowed_surface_row_callback_gap,
+            "us_torture_autoscroll": self.us_torture_autoscroll,
+            "us_torture_overlay": self.us_torture_overlay,
         })
     }
 }
@@ -1059,6 +1197,18 @@ impl BundleStatsCodeEditorPaintPerf {
             "us_row_geom_resolve": self.us_row_geom_resolve,
             "us_row_overlay": self.us_row_overlay,
             "us_frame_overlay_prepare": self.us_frame_overlay_prepare,
+            "surface_rows_iterated": self.surface_rows_iterated,
+            "surface_rows_with_rect": self.surface_rows_with_rect,
+            "us_windowed_surface_paint_callback": self.us_windowed_surface_paint_callback,
+            "us_windowed_surface_frame_lookup": self.us_windowed_surface_frame_lookup,
+            "us_windowed_surface_hook": self.us_windowed_surface_hook,
+            "us_windowed_surface_row_loop": self.us_windowed_surface_row_loop,
+            "us_windowed_surface_row_rect": self.us_windowed_surface_row_rect,
+            "us_windowed_surface_row_paint": self.us_windowed_surface_row_paint,
+            "us_windowed_surface_non_row": self.us_windowed_surface_non_row,
+            "us_windowed_surface_row_callback_gap": self.us_windowed_surface_row_callback_gap,
+            "us_torture_autoscroll": self.us_torture_autoscroll,
+            "us_torture_overlay": self.us_torture_overlay,
         })
     }
 }
@@ -1209,6 +1359,370 @@ pub(super) struct BundleStatsPaintWidgetHotspot {
     pub(super) exclusive_scene_ops_delta: u32,
     pub(super) role: Option<String>,
     pub(super) test_id: Option<String>,
+}
+
+impl BundleStatsPaintWidgetHotspot {
+    fn is_canvas(&self) -> bool {
+        self.element_kind.as_deref() == Some("Canvas")
+    }
+
+    fn to_json(&self) -> Value {
+        let mut h_obj = Map::new();
+        h_obj.insert("node".to_string(), Value::from(self.node));
+        h_obj.insert(
+            "element".to_string(),
+            self.element.map(Value::from).unwrap_or(Value::Null),
+        );
+        h_obj.insert(
+            "element_kind".to_string(),
+            self.element_kind
+                .clone()
+                .map(Value::from)
+                .unwrap_or(Value::Null),
+        );
+        h_obj.insert(
+            "widget_type".to_string(),
+            self.widget_type
+                .clone()
+                .map(Value::from)
+                .unwrap_or(Value::Null),
+        );
+        h_obj.insert("paint_time_us".to_string(), Value::from(self.paint_time_us));
+        h_obj.insert(
+            "inclusive_time_us".to_string(),
+            Value::from(self.inclusive_time_us),
+        );
+        h_obj.insert(
+            "inclusive_scene_ops_delta".to_string(),
+            Value::from(self.inclusive_scene_ops_delta),
+        );
+        h_obj.insert(
+            "exclusive_scene_ops_delta".to_string(),
+            Value::from(self.exclusive_scene_ops_delta),
+        );
+        h_obj.insert(
+            "role".to_string(),
+            self.role.clone().map(Value::from).unwrap_or(Value::Null),
+        );
+        h_obj.insert(
+            "test_id".to_string(),
+            self.test_id.clone().map(Value::from).unwrap_or(Value::Null),
+        );
+        Value::Object(h_obj)
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+struct BundleStatsPaintWidgetHotspotSummary {
+    sampled_top_n_per_frame: usize,
+    frames_with_hotspots: u32,
+    canvas: BundleStatsPaintWidgetHotspotClassSummary,
+    non_canvas: BundleStatsPaintWidgetHotspotClassSummary,
+}
+
+#[derive(Debug, Default, Clone)]
+struct BundleStatsPaintWidgetHotspotClassSummary {
+    frames: u32,
+    exclusive_us: Vec<u64>,
+    inclusive_us: Vec<u64>,
+    exclusive_scene_ops: Vec<u64>,
+    inclusive_scene_ops: Vec<u64>,
+    sampled_sum_exclusive_us: Vec<u64>,
+    sampled_sum_inclusive_us: Vec<u64>,
+    sampled_sum_exclusive_scene_ops: Vec<u64>,
+    sampled_sum_inclusive_scene_ops: Vec<u64>,
+    top: Option<BundleStatsPaintWidgetHotspot>,
+}
+
+impl BundleStatsPaintWidgetHotspotClassSummary {
+    fn observe(
+        &mut self,
+        hotspot: &BundleStatsPaintWidgetHotspot,
+        sampled_sum_exclusive_us: u64,
+        sampled_sum_inclusive_us: u64,
+        sampled_sum_exclusive_scene_ops: u64,
+        sampled_sum_inclusive_scene_ops: u64,
+    ) {
+        self.frames = self.frames.saturating_add(1);
+        self.exclusive_us.push(hotspot.paint_time_us);
+        self.inclusive_us.push(hotspot.inclusive_time_us);
+        self.exclusive_scene_ops
+            .push(hotspot.exclusive_scene_ops_delta as u64);
+        self.inclusive_scene_ops
+            .push(hotspot.inclusive_scene_ops_delta as u64);
+        self.sampled_sum_exclusive_us
+            .push(sampled_sum_exclusive_us);
+        self.sampled_sum_inclusive_us
+            .push(sampled_sum_inclusive_us);
+        self.sampled_sum_exclusive_scene_ops
+            .push(sampled_sum_exclusive_scene_ops);
+        self.sampled_sum_inclusive_scene_ops
+            .push(sampled_sum_inclusive_scene_ops);
+
+        let replace_top = self.top.as_ref().is_none_or(|top| {
+            hotspot
+                .paint_time_us
+                .cmp(&top.paint_time_us)
+                .then_with(|| hotspot.inclusive_time_us.cmp(&top.inclusive_time_us))
+                .is_gt()
+        });
+        if replace_top {
+            self.top = Some(hotspot.clone());
+        }
+    }
+
+    fn p50_exclusive_us(&self) -> u64 {
+        hotspot_percentile(&self.exclusive_us, 0.50)
+    }
+
+    fn p95_exclusive_us(&self) -> u64 {
+        hotspot_percentile(&self.exclusive_us, 0.95)
+    }
+
+    fn max_exclusive_us(&self) -> u64 {
+        self.exclusive_us.iter().copied().max().unwrap_or(0)
+    }
+
+    fn to_json(&self) -> Value {
+        serde_json::json!({
+            "frames": self.frames,
+            "exclusive_us": crate::summarize_times_us(&self.exclusive_us),
+            "inclusive_us": crate::summarize_times_us(&self.inclusive_us),
+            "exclusive_scene_ops_delta": hotspot_summary_json(&self.exclusive_scene_ops),
+            "inclusive_scene_ops_delta": hotspot_summary_json(&self.inclusive_scene_ops),
+            "sampled_sum_exclusive_us": crate::summarize_times_us(&self.sampled_sum_exclusive_us),
+            "sampled_sum_inclusive_us": crate::summarize_times_us(&self.sampled_sum_inclusive_us),
+            "sampled_sum_exclusive_scene_ops_delta": hotspot_summary_json(&self.sampled_sum_exclusive_scene_ops),
+            "sampled_sum_inclusive_scene_ops_delta": hotspot_summary_json(&self.sampled_sum_inclusive_scene_ops),
+            "top": self.top.as_ref().map(BundleStatsPaintWidgetHotspot::to_json),
+        })
+    }
+}
+
+impl BundleStatsPaintWidgetHotspotSummary {
+    fn observe_frame(&mut self, hotspots: &[BundleStatsPaintWidgetHotspot], sampled_top_n: usize) {
+        self.sampled_top_n_per_frame = self.sampled_top_n_per_frame.max(sampled_top_n);
+        if hotspots.is_empty() {
+            return;
+        }
+
+        self.frames_with_hotspots = self.frames_with_hotspots.saturating_add(1);
+
+        let mut top_canvas: Option<&BundleStatsPaintWidgetHotspot> = None;
+        let mut top_non_canvas: Option<&BundleStatsPaintWidgetHotspot> = None;
+        let mut canvas_sum_exclusive_us = 0u64;
+        let mut canvas_sum_inclusive_us = 0u64;
+        let mut canvas_sum_exclusive_scene_ops = 0u64;
+        let mut canvas_sum_inclusive_scene_ops = 0u64;
+        let mut non_canvas_sum_exclusive_us = 0u64;
+        let mut non_canvas_sum_inclusive_us = 0u64;
+        let mut non_canvas_sum_exclusive_scene_ops = 0u64;
+        let mut non_canvas_sum_inclusive_scene_ops = 0u64;
+
+        for hotspot in hotspots {
+            let is_canvas = hotspot.is_canvas();
+            if is_canvas {
+                canvas_sum_exclusive_us =
+                    canvas_sum_exclusive_us.saturating_add(hotspot.paint_time_us);
+                canvas_sum_inclusive_us =
+                    canvas_sum_inclusive_us.saturating_add(hotspot.inclusive_time_us);
+                canvas_sum_exclusive_scene_ops = canvas_sum_exclusive_scene_ops
+                    .saturating_add(hotspot.exclusive_scene_ops_delta as u64);
+                canvas_sum_inclusive_scene_ops = canvas_sum_inclusive_scene_ops
+                    .saturating_add(hotspot.inclusive_scene_ops_delta as u64);
+            } else {
+                non_canvas_sum_exclusive_us =
+                    non_canvas_sum_exclusive_us.saturating_add(hotspot.paint_time_us);
+                non_canvas_sum_inclusive_us =
+                    non_canvas_sum_inclusive_us.saturating_add(hotspot.inclusive_time_us);
+                non_canvas_sum_exclusive_scene_ops = non_canvas_sum_exclusive_scene_ops
+                    .saturating_add(hotspot.exclusive_scene_ops_delta as u64);
+                non_canvas_sum_inclusive_scene_ops = non_canvas_sum_inclusive_scene_ops
+                    .saturating_add(hotspot.inclusive_scene_ops_delta as u64);
+            }
+
+            let top = if is_canvas { &mut top_canvas } else { &mut top_non_canvas };
+            let replace = top.as_ref().is_none_or(|current| {
+                hotspot
+                    .paint_time_us
+                    .cmp(&current.paint_time_us)
+                    .then_with(|| hotspot.inclusive_time_us.cmp(&current.inclusive_time_us))
+                    .is_gt()
+            });
+            if replace {
+                *top = Some(hotspot);
+            }
+        }
+
+        if let Some(hotspot) = top_canvas {
+            self.canvas.observe(
+                hotspot,
+                canvas_sum_exclusive_us,
+                canvas_sum_inclusive_us,
+                canvas_sum_exclusive_scene_ops,
+                canvas_sum_inclusive_scene_ops,
+            );
+        }
+        if let Some(hotspot) = top_non_canvas {
+            self.non_canvas.observe(
+                hotspot,
+                non_canvas_sum_exclusive_us,
+                non_canvas_sum_inclusive_us,
+                non_canvas_sum_exclusive_scene_ops,
+                non_canvas_sum_inclusive_scene_ops,
+            );
+        }
+    }
+
+    fn has_samples(&self) -> bool {
+        self.frames_with_hotspots > 0
+    }
+
+    fn canvas_minus_code_editor_p95_us_total(
+        &self,
+        code_editor: &BundleStatsCodeEditorPaintPerfSummary,
+    ) -> Option<i64> {
+        (self.canvas.frames > 0 && code_editor.frames > 0).then(|| {
+            self.canvas.p95_exclusive_us() as i64 - code_editor.p95.us_total as i64
+        })
+    }
+
+    fn canvas_minus_windowed_surface_callback_p95(
+        &self,
+        code_editor: &BundleStatsCodeEditorPaintPerfSummary,
+    ) -> Option<i64> {
+        (self.canvas.frames > 0 && code_editor.frames > 0).then(|| {
+            self.canvas.p95_exclusive_us() as i64
+                - code_editor.p95.us_windowed_surface_paint_callback as i64
+        })
+    }
+
+    fn windowed_surface_callback_minus_code_editor_p95_us_total(
+        &self,
+        code_editor: &BundleStatsCodeEditorPaintPerfSummary,
+    ) -> Option<i64> {
+        (self.canvas.frames > 0 && code_editor.frames > 0).then(|| {
+            code_editor.p95.us_windowed_surface_paint_callback as i64
+                - code_editor.p95.us_total as i64
+        })
+    }
+
+    fn windowed_surface_row_paint_minus_code_editor_p95_us_total(
+        &self,
+        code_editor: &BundleStatsCodeEditorPaintPerfSummary,
+    ) -> Option<i64> {
+        (self.canvas.frames > 0 && code_editor.frames > 0).then(|| {
+            code_editor.p95.us_windowed_surface_row_paint as i64
+                - code_editor.p95.us_total as i64
+        })
+    }
+
+    fn windowed_surface_callback_minus_row_paint_p95(
+        &self,
+        code_editor: &BundleStatsCodeEditorPaintPerfSummary,
+    ) -> Option<i64> {
+        (self.canvas.frames > 0 && code_editor.frames > 0).then(|| {
+            code_editor.p95.us_windowed_surface_paint_callback as i64
+                - code_editor.p95.us_windowed_surface_row_paint as i64
+        })
+    }
+
+    fn gap_per_row_ns(gap_us: i64, rows: u64) -> Option<i64> {
+        if rows == 0 {
+            return None;
+        }
+
+        let rows = i64::try_from(rows).unwrap_or(i64::MAX);
+        Some(gap_us.saturating_mul(1_000) / rows)
+    }
+
+    fn windowed_surface_callback_minus_row_paint_p95_per_row_ns(
+        &self,
+        code_editor: &BundleStatsCodeEditorPaintPerfSummary,
+    ) -> Option<i64> {
+        let gap = self.windowed_surface_callback_minus_row_paint_p95(code_editor)?;
+        Self::gap_per_row_ns(gap, code_editor.p95.surface_rows_with_rect)
+    }
+
+    fn windowed_surface_row_callback_gap_p95_per_row_ns(
+        code_editor: &BundleStatsCodeEditorPaintPerfSummary,
+    ) -> Option<i64> {
+        if code_editor.frames == 0 {
+            return None;
+        }
+
+        Self::gap_per_row_ns(
+            code_editor.p95.us_windowed_surface_row_callback_gap as i64,
+            code_editor.p95.surface_rows_with_rect,
+        )
+    }
+
+    fn code_editor_windowed_surface_p95_json(
+        code_editor: &BundleStatsCodeEditorPaintPerfSummary,
+    ) -> Value {
+        if code_editor.frames == 0 {
+            return Value::Null;
+        }
+
+        serde_json::json!({
+            "paint_callback": code_editor.p95.us_windowed_surface_paint_callback,
+            "frame_lookup": code_editor.p95.us_windowed_surface_frame_lookup,
+            "hook": code_editor.p95.us_windowed_surface_hook,
+            "row_loop": code_editor.p95.us_windowed_surface_row_loop,
+            "row_rect": code_editor.p95.us_windowed_surface_row_rect,
+            "row_paint": code_editor.p95.us_windowed_surface_row_paint,
+            "non_row": code_editor.p95.us_windowed_surface_non_row,
+            "row_callback_gap": code_editor.p95.us_windowed_surface_row_callback_gap,
+            "rows_with_rect": code_editor.p95.surface_rows_with_rect,
+        })
+    }
+
+    fn to_json(&self, code_editor: &BundleStatsCodeEditorPaintPerfSummary) -> Value {
+        serde_json::json!({
+            "sampled_top_n_per_frame": self.sampled_top_n_per_frame as u64,
+            "frames_with_hotspots": self.frames_with_hotspots,
+            "canvas": self.canvas.to_json(),
+            "non_canvas": self.non_canvas.to_json(),
+            "gap_to_code_editor_p95": {
+                "canvas_exclusive_minus_us_total": self.canvas_minus_code_editor_p95_us_total(code_editor),
+                "canvas_exclusive_minus_windowed_surface_paint_callback": self.canvas_minus_windowed_surface_callback_p95(code_editor),
+                "windowed_surface_paint_callback_minus_us_total": self.windowed_surface_callback_minus_code_editor_p95_us_total(code_editor),
+                "windowed_surface_row_paint_minus_us_total": self.windowed_surface_row_paint_minus_code_editor_p95_us_total(code_editor),
+                "windowed_surface_paint_callback_minus_row_paint": self.windowed_surface_callback_minus_row_paint_p95(code_editor),
+                "windowed_surface_paint_callback_minus_row_paint_per_row_ns": self.windowed_surface_callback_minus_row_paint_p95_per_row_ns(code_editor),
+                "windowed_surface_row_callback_gap_per_row_ns": Self::windowed_surface_row_callback_gap_p95_per_row_ns(code_editor),
+            },
+            "code_editor_windowed_surface_p95": Self::code_editor_windowed_surface_p95_json(code_editor),
+        })
+    }
+}
+
+fn hotspot_percentile(values: &[u64], percentile: f64) -> u64 {
+    if values.is_empty() {
+        return 0;
+    }
+    let mut sorted = values.to_vec();
+    sorted.sort_unstable();
+    crate::percentile_nearest_rank_sorted(&sorted, percentile)
+}
+
+fn hotspot_summary_json(values: &[u64]) -> Value {
+    if values.is_empty() {
+        return serde_json::json!({
+            "min": 0,
+            "p50": 0,
+            "p95": 0,
+            "max": 0,
+        });
+    }
+    let mut sorted = values.to_vec();
+    sorted.sort_unstable();
+    serde_json::json!({
+        "min": sorted.first().copied().unwrap_or(0),
+        "p50": crate::percentile_nearest_rank_sorted(&sorted, 0.50),
+        "p95": crate::percentile_nearest_rank_sorted(&sorted, 0.95),
+        "max": sorted.last().copied().unwrap_or(0),
+    })
 }
 
 #[derive(Debug, Default, Clone)]
@@ -1644,6 +2158,24 @@ impl BundleStatsReport {
             p.sum.us_frame_overlay_prepare,
         );
         println!(
+            "code_editor.paint_perf sum.surface(rows_iterated/rows_with_rect)={}/{} sum.us(surface_total/frame_lookup/hook/row_loop/row_rect/row_paint/non_row/row_callback_gap)={}/{}/{}/{}/{}/{}/{}/{}",
+            p.sum.surface_rows_iterated,
+            p.sum.surface_rows_with_rect,
+            p.sum.us_windowed_surface_paint_callback,
+            p.sum.us_windowed_surface_frame_lookup,
+            p.sum.us_windowed_surface_hook,
+            p.sum.us_windowed_surface_row_loop,
+            p.sum.us_windowed_surface_row_rect,
+            p.sum.us_windowed_surface_row_paint,
+            p.sum.us_windowed_surface_non_row,
+            p.sum.us_windowed_surface_row_callback_gap,
+        );
+        println!(
+            "code_editor.paint_perf sum.us(torture_autoscroll/torture_overlay)={}/{}",
+            p.sum.us_torture_autoscroll,
+            p.sum.us_torture_overlay,
+        );
+        println!(
             "code_editor.paint_perf sum.rows(scene_store_start/end,prepaint_candidates/no_cache/unsupported/preedit/syntax_empty/key_mismatch,fast_miss_no_entry/key_mismatch,full_miss_no_entry/key_mismatch)={}/{}, {}/{}/{}/{}/{}/{}, {}/{}, {}/{}",
             p.sum.rows_scene_stored_at_visible_start,
             p.sum.rows_scene_stored_at_visible_end,
@@ -1659,7 +2191,7 @@ impl BundleStatsReport {
             p.sum.rows_scene_full_miss_key_mismatch,
         );
         println!(
-            "code_editor.paint_perf p50/p95.us(total/prepaint_plan/content/row_text/geom_key/scene_key/rich_cmp/fast_key_cmp/text/fast_path)={}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}",
+            "code_editor.paint_perf p50/p95.us(total/prepaint_plan/content/row_text/geom_key/scene_key/rich_cmp/fast_key_cmp/text/fast_path/surface_total/surface_non_row/surface_row_callback_gap/torture_autoscroll/torture_overlay)={}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}",
             p.p50.us_total,
             p.p95.us_total,
             p.p50.us_row_scene_prepaint_plan,
@@ -1680,7 +2212,102 @@ impl BundleStatsReport {
             p.p95.us_text_draw,
             p.p50.us_row_scene_fast_path,
             p.p95.us_row_scene_fast_path,
+            p.p50.us_windowed_surface_paint_callback,
+            p.p95.us_windowed_surface_paint_callback,
+            p.p50.us_windowed_surface_non_row,
+            p.p95.us_windowed_surface_non_row,
+            p.p50.us_windowed_surface_row_callback_gap,
+            p.p95.us_windowed_surface_row_callback_gap,
+            p.p50.us_torture_autoscroll,
+            p.p95.us_torture_autoscroll,
+            p.p50.us_torture_overlay,
+            p.p95.us_torture_overlay,
         );
+    }
+
+    fn print_paint_widget_hotspot_summary(&self) {
+        let p = &self.paint_widget_hotspot_summary;
+        if !p.has_samples() {
+            return;
+        }
+
+        let canvas_gap_total = p
+            .canvas_minus_code_editor_p95_us_total(&self.code_editor_paint_perf)
+            .map_or_else(|| "n/a".to_string(), |v| v.to_string());
+        let canvas_gap_surface = p
+            .canvas_minus_windowed_surface_callback_p95(&self.code_editor_paint_perf)
+            .map_or_else(|| "n/a".to_string(), |v| v.to_string());
+        let surface_gap_total = p
+            .windowed_surface_callback_minus_code_editor_p95_us_total(
+                &self.code_editor_paint_perf,
+            )
+            .map_or_else(|| "n/a".to_string(), |v| v.to_string());
+        let surface_row_gap_total = p
+            .windowed_surface_row_paint_minus_code_editor_p95_us_total(
+                &self.code_editor_paint_perf,
+            )
+            .map_or_else(|| "n/a".to_string(), |v| v.to_string());
+        let surface_callback_gap_row = p
+            .windowed_surface_callback_minus_row_paint_p95(&self.code_editor_paint_perf)
+            .map_or_else(|| "n/a".to_string(), |v| v.to_string());
+        let surface_callback_gap_row_per_row = p
+            .windowed_surface_callback_minus_row_paint_p95_per_row_ns(
+                &self.code_editor_paint_perf,
+            )
+            .map_or_else(|| "n/a".to_string(), |v| v.to_string());
+        let surface_row_callback_gap_per_row =
+            BundleStatsPaintWidgetHotspotSummary::windowed_surface_row_callback_gap_p95_per_row_ns(
+                &self.code_editor_paint_perf,
+            )
+            .map_or_else(|| "n/a".to_string(), |v| v.to_string());
+
+        println!(
+            "paint_widget.hotspots sample_top_n={} frames={} canvas_frames={} non_canvas_frames={} canvas.top_exclusive_us(p50/p95/max)={}/{}/{} canvas.sampled_sum_exclusive_us(p50/p95/max)={}/{}/{} non_canvas.top_exclusive_us(p50/p95/max)={}/{}/{} non_canvas.sampled_sum_exclusive_us(p50/p95/max)={}/{}/{} canvas.gap_p95_us(code_editor_total/surface_callback)={}/{}",
+            p.sampled_top_n_per_frame,
+            p.frames_with_hotspots,
+            p.canvas.frames,
+            p.non_canvas.frames,
+            p.canvas.p50_exclusive_us(),
+            p.canvas.p95_exclusive_us(),
+            p.canvas.max_exclusive_us(),
+            hotspot_percentile(&p.canvas.sampled_sum_exclusive_us, 0.50),
+            hotspot_percentile(&p.canvas.sampled_sum_exclusive_us, 0.95),
+            p.canvas
+                .sampled_sum_exclusive_us
+                .iter()
+                .copied()
+                .max()
+                .unwrap_or(0),
+            p.non_canvas.p50_exclusive_us(),
+            p.non_canvas.p95_exclusive_us(),
+            p.non_canvas.max_exclusive_us(),
+            hotspot_percentile(&p.non_canvas.sampled_sum_exclusive_us, 0.50),
+            hotspot_percentile(&p.non_canvas.sampled_sum_exclusive_us, 0.95),
+            p.non_canvas
+                .sampled_sum_exclusive_us
+                .iter()
+                .copied()
+                .max()
+                .unwrap_or(0),
+            canvas_gap_total,
+            canvas_gap_surface,
+        );
+        if self.code_editor_paint_perf.frames > 0 {
+            let code_editor = &self.code_editor_paint_perf.p95;
+            println!(
+                "paint_widget.hotspots code_editor.surface_p95_us(callback/row_paint/non_row/row_callback_gap/hook)={}/{}/{}/{}/{} surface.gap_p95_us(callback_minus_total/row_paint_minus_total/callback_minus_row_paint)={}/{}/{} surface.gap_p95_per_row_ns(callback_minus_row_paint/row_callback_gap)={}/{}",
+                code_editor.us_windowed_surface_paint_callback,
+                code_editor.us_windowed_surface_row_paint,
+                code_editor.us_windowed_surface_non_row,
+                code_editor.us_windowed_surface_row_callback_gap,
+                code_editor.us_windowed_surface_hook,
+                surface_gap_total,
+                surface_row_gap_total,
+                surface_callback_gap_row,
+                surface_callback_gap_row_per_row,
+                surface_row_callback_gap_per_row,
+            );
+        }
     }
 
     fn print_code_editor_paint_perf_row(row: &BundleStatsSnapshotRow) {
@@ -1711,7 +2338,7 @@ impl BundleStatsReport {
             p.quads_caret,
         );
         println!(
-            "    code_editor.paint_perf.us(total/prepaint_plan/content/row_text/text/rich/geom_key/scene_key/rich_cmp/fast_key_cmp/full_key_cmp/replay_touch/replay_ops/capture_ops/store/prepaint_edge_store/fast_probe/full_probe/fast_path/full_path/syntax_spans/geom_cache/geom_resolve/overlay/frame_overlay)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+            "    code_editor.paint_perf.us(total/prepaint_plan/content/row_text/text/rich/geom_key/scene_key/rich_cmp/fast_key_cmp/full_key_cmp/replay_touch/replay_ops/capture_ops/store/prepaint_edge_store/fast_probe/full_probe/fast_path/full_path/syntax_spans/geom_cache/geom_resolve/overlay/frame_overlay/torture_autoscroll/torture_overlay)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
             p.us_total,
             p.us_row_scene_prepaint_plan,
             p.us_row_content_resolve,
@@ -1737,6 +2364,21 @@ impl BundleStatsReport {
             p.us_row_geom_resolve,
             p.us_row_overlay,
             p.us_frame_overlay_prepare,
+            p.us_torture_autoscroll,
+            p.us_torture_overlay,
+        );
+        println!(
+            "    code_editor.paint_perf.surface rows(iterated/with_rect)={}/{} us(total/frame_lookup/hook/row_loop/row_rect/row_paint/non_row/row_callback_gap)={}/{}/{}/{}/{}/{}/{}/{}",
+            p.surface_rows_iterated,
+            p.surface_rows_with_rect,
+            p.us_windowed_surface_paint_callback,
+            p.us_windowed_surface_frame_lookup,
+            p.us_windowed_surface_hook,
+            p.us_windowed_surface_row_loop,
+            p.us_windowed_surface_row_rect,
+            p.us_windowed_surface_row_paint,
+            p.us_windowed_surface_non_row,
+            p.us_windowed_surface_row_callback_gap,
         );
     }
 
@@ -1858,6 +2500,7 @@ impl BundleStatsReport {
             );
         }
         self.print_code_editor_paint_perf_summary();
+        self.print_paint_widget_hotspot_summary();
         if self.pointer_move_frames_present || self.pointer_move_frames_considered > 0 {
             let mode = if self.pointer_move_frames_present {
                 "pointer_move"
@@ -2280,6 +2923,7 @@ impl BundleStatsReport {
             );
         }
         self.print_code_editor_paint_perf_summary();
+        self.print_paint_widget_hotspot_summary();
         println!(
             "cache roots sum: roots={} reused={} replayed_ops={}",
             self.sum_cache_roots, self.sum_cache_roots_reused, self.sum_cache_replayed_ops
@@ -2594,15 +3238,20 @@ impl BundleStatsReport {
             if row.paint_host_widget_observed_models_time_us > 0
                 || row.paint_host_widget_observed_globals_time_us > 0
                 || row.paint_host_widget_instance_lookup_time_us > 0
+                || row.paint_host_widget_observed_deps_calls > 0
             {
                 println!(
-                    "    paint_host_widget.us(models/globals/instance)={}/{}/{} items={}/{} calls={}",
+                    "    paint_host_widget.us(models/globals/instance)={}/{}/{} items={}/{} calls(instance/deps/empty/model_non_empty/global_non_empty)={}/{}/{}/{}/{}",
                     row.paint_host_widget_observed_models_time_us,
                     row.paint_host_widget_observed_globals_time_us,
                     row.paint_host_widget_instance_lookup_time_us,
                     row.paint_host_widget_observed_models_items,
                     row.paint_host_widget_observed_globals_items,
                     row.paint_host_widget_instance_lookup_calls,
+                    row.paint_host_widget_observed_deps_calls,
+                    row.paint_host_widget_observed_deps_empty_calls,
+                    row.paint_host_widget_observed_models_non_empty_calls,
+                    row.paint_host_widget_observed_globals_non_empty_calls,
                 );
             }
             if row.paint_text_prepare_time_us > 0 || row.paint_text_prepare_calls > 0 {
@@ -3498,6 +4147,11 @@ impl BundleStatsReport {
             "code_editor_paint_perf".to_string(),
             self.code_editor_paint_perf.to_json(),
         );
+        root.insert(
+            "paint_widget_hotspot_summary".to_string(),
+            self.paint_widget_hotspot_summary
+                .to_json(&self.code_editor_paint_perf),
+        );
 
         let mut sum = Map::new();
         sum.insert(
@@ -3659,6 +4313,46 @@ impl BundleStatsReport {
         max.insert(
             "paint_time_us".to_string(),
             Value::from(self.max_paint_time_us),
+        );
+        max.insert(
+            "paint_host_widget_observed_models_time_us".to_string(),
+            Value::from(self.max_paint_host_widget_observed_models_time_us),
+        );
+        max.insert(
+            "paint_host_widget_observed_models_items".to_string(),
+            Value::from(self.max_paint_host_widget_observed_models_items),
+        );
+        max.insert(
+            "paint_host_widget_observed_globals_time_us".to_string(),
+            Value::from(self.max_paint_host_widget_observed_globals_time_us),
+        );
+        max.insert(
+            "paint_host_widget_observed_globals_items".to_string(),
+            Value::from(self.max_paint_host_widget_observed_globals_items),
+        );
+        max.insert(
+            "paint_host_widget_observed_deps_calls".to_string(),
+            Value::from(self.max_paint_host_widget_observed_deps_calls),
+        );
+        max.insert(
+            "paint_host_widget_observed_deps_empty_calls".to_string(),
+            Value::from(self.max_paint_host_widget_observed_deps_empty_calls),
+        );
+        max.insert(
+            "paint_host_widget_observed_models_non_empty_calls".to_string(),
+            Value::from(self.max_paint_host_widget_observed_models_non_empty_calls),
+        );
+        max.insert(
+            "paint_host_widget_observed_globals_non_empty_calls".to_string(),
+            Value::from(self.max_paint_host_widget_observed_globals_non_empty_calls),
+        );
+        max.insert(
+            "paint_host_widget_instance_lookup_time_us".to_string(),
+            Value::from(self.max_paint_host_widget_instance_lookup_time_us),
+        );
+        max.insert(
+            "paint_host_widget_instance_lookup_calls".to_string(),
+            Value::from(self.max_paint_host_widget_instance_lookup_calls),
         );
         max.insert(
             "total_time_us".to_string(),
@@ -3997,6 +4691,46 @@ impl BundleStatsReport {
             Value::from(self.p50_paint_widget_time_us),
         );
         p50.insert(
+            "paint_host_widget_observed_models_time_us".to_string(),
+            Value::from(self.p50_paint_host_widget_observed_models_time_us),
+        );
+        p50.insert(
+            "paint_host_widget_observed_models_items".to_string(),
+            Value::from(self.p50_paint_host_widget_observed_models_items),
+        );
+        p50.insert(
+            "paint_host_widget_observed_globals_time_us".to_string(),
+            Value::from(self.p50_paint_host_widget_observed_globals_time_us),
+        );
+        p50.insert(
+            "paint_host_widget_observed_globals_items".to_string(),
+            Value::from(self.p50_paint_host_widget_observed_globals_items),
+        );
+        p50.insert(
+            "paint_host_widget_observed_deps_calls".to_string(),
+            Value::from(self.p50_paint_host_widget_observed_deps_calls),
+        );
+        p50.insert(
+            "paint_host_widget_observed_deps_empty_calls".to_string(),
+            Value::from(self.p50_paint_host_widget_observed_deps_empty_calls),
+        );
+        p50.insert(
+            "paint_host_widget_observed_models_non_empty_calls".to_string(),
+            Value::from(self.p50_paint_host_widget_observed_models_non_empty_calls),
+        );
+        p50.insert(
+            "paint_host_widget_observed_globals_non_empty_calls".to_string(),
+            Value::from(self.p50_paint_host_widget_observed_globals_non_empty_calls),
+        );
+        p50.insert(
+            "paint_host_widget_instance_lookup_time_us".to_string(),
+            Value::from(self.p50_paint_host_widget_instance_lookup_time_us),
+        );
+        p50.insert(
+            "paint_host_widget_instance_lookup_calls".to_string(),
+            Value::from(self.p50_paint_host_widget_instance_lookup_calls),
+        );
+        p50.insert(
             "paint_text_prepare_time_us".to_string(),
             Value::from(self.p50_paint_text_prepare_time_us),
         );
@@ -4134,6 +4868,46 @@ impl BundleStatsReport {
         p95.insert(
             "paint_widget_time_us".to_string(),
             Value::from(self.p95_paint_widget_time_us),
+        );
+        p95.insert(
+            "paint_host_widget_observed_models_time_us".to_string(),
+            Value::from(self.p95_paint_host_widget_observed_models_time_us),
+        );
+        p95.insert(
+            "paint_host_widget_observed_models_items".to_string(),
+            Value::from(self.p95_paint_host_widget_observed_models_items),
+        );
+        p95.insert(
+            "paint_host_widget_observed_globals_time_us".to_string(),
+            Value::from(self.p95_paint_host_widget_observed_globals_time_us),
+        );
+        p95.insert(
+            "paint_host_widget_observed_globals_items".to_string(),
+            Value::from(self.p95_paint_host_widget_observed_globals_items),
+        );
+        p95.insert(
+            "paint_host_widget_observed_deps_calls".to_string(),
+            Value::from(self.p95_paint_host_widget_observed_deps_calls),
+        );
+        p95.insert(
+            "paint_host_widget_observed_deps_empty_calls".to_string(),
+            Value::from(self.p95_paint_host_widget_observed_deps_empty_calls),
+        );
+        p95.insert(
+            "paint_host_widget_observed_models_non_empty_calls".to_string(),
+            Value::from(self.p95_paint_host_widget_observed_models_non_empty_calls),
+        );
+        p95.insert(
+            "paint_host_widget_observed_globals_non_empty_calls".to_string(),
+            Value::from(self.p95_paint_host_widget_observed_globals_non_empty_calls),
+        );
+        p95.insert(
+            "paint_host_widget_instance_lookup_time_us".to_string(),
+            Value::from(self.p95_paint_host_widget_instance_lookup_time_us),
+        );
+        p95.insert(
+            "paint_host_widget_instance_lookup_calls".to_string(),
+            Value::from(self.p95_paint_host_widget_instance_lookup_calls),
         );
         p95.insert(
             "paint_text_prepare_time_us".to_string(),
@@ -4824,6 +5598,22 @@ impl BundleStatsReport {
                 obj.insert(
                     "paint_host_widget_observed_globals_items".to_string(),
                     Value::from(row.paint_host_widget_observed_globals_items),
+                );
+                obj.insert(
+                    "paint_host_widget_observed_deps_calls".to_string(),
+                    Value::from(row.paint_host_widget_observed_deps_calls),
+                );
+                obj.insert(
+                    "paint_host_widget_observed_deps_empty_calls".to_string(),
+                    Value::from(row.paint_host_widget_observed_deps_empty_calls),
+                );
+                obj.insert(
+                    "paint_host_widget_observed_models_non_empty_calls".to_string(),
+                    Value::from(row.paint_host_widget_observed_models_non_empty_calls),
+                );
+                obj.insert(
+                    "paint_host_widget_observed_globals_non_empty_calls".to_string(),
+                    Value::from(row.paint_host_widget_observed_globals_non_empty_calls),
                 );
                 obj.insert(
                     "paint_host_widget_instance_lookup_time_us".to_string(),
@@ -5981,50 +6771,7 @@ impl BundleStatsReport {
                 let paint_widget_hotspots = row
                     .paint_widget_hotspots
                     .iter()
-                    .map(|h| {
-                        let mut h_obj = Map::new();
-                        h_obj.insert("node".to_string(), Value::from(h.node));
-                        h_obj.insert(
-                            "element".to_string(),
-                            h.element.map(Value::from).unwrap_or(Value::Null),
-                        );
-                        h_obj.insert(
-                            "element_kind".to_string(),
-                            h.element_kind
-                                .clone()
-                                .map(Value::from)
-                                .unwrap_or(Value::Null),
-                        );
-                        h_obj.insert(
-                            "widget_type".to_string(),
-                            h.widget_type
-                                .clone()
-                                .map(Value::from)
-                                .unwrap_or(Value::Null),
-                        );
-                        h_obj.insert("paint_time_us".to_string(), Value::from(h.paint_time_us));
-                        h_obj.insert(
-                            "inclusive_time_us".to_string(),
-                            Value::from(h.inclusive_time_us),
-                        );
-                        h_obj.insert(
-                            "inclusive_scene_ops_delta".to_string(),
-                            Value::from(h.inclusive_scene_ops_delta),
-                        );
-                        h_obj.insert(
-                            "exclusive_scene_ops_delta".to_string(),
-                            Value::from(h.exclusive_scene_ops_delta),
-                        );
-                        h_obj.insert(
-                            "role".to_string(),
-                            h.role.clone().map(Value::from).unwrap_or(Value::Null),
-                        );
-                        h_obj.insert(
-                            "test_id".to_string(),
-                            h.test_id.clone().map(Value::from).unwrap_or(Value::Null),
-                        );
-                        Value::Object(h_obj)
-                    })
+                    .map(BundleStatsPaintWidgetHotspot::to_json)
                     .collect::<Vec<_>>();
                 obj.insert(
                     "paint_widget_hotspots".to_string(),

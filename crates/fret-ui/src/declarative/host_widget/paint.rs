@@ -137,20 +137,31 @@ impl ElementHostWidget {
                 globals_loop.saturating_add(overhead_globals),
                 globals_len,
             );
+            cx.tree
+                .debug_record_paint_host_widget_observed_deps_call(models_len, globals_len);
         }
 
         let instance_started = cx.tree.debug_enabled().then(Instant::now);
-        let record = with_element_record_for_node(cx.app, window, cx.node, Clone::clone);
+        let record = with_element_record_for_node(cx.app, window, cx.node, |record| {
+            let inherited_text_style = match &record.instance {
+                ElementInstance::Text(_)
+                | ElementInstance::StyledText(_)
+                | ElementInstance::SelectableText(_) => record.inherited_text_style.clone(),
+                _ => None,
+            };
+            (
+                record.inherited_foreground,
+                inherited_text_style,
+                record.instance.clone(),
+            )
+        });
         if let Some(instance_started) = instance_started {
             cx.tree
                 .debug_record_paint_host_widget_instance_lookup(instance_started.elapsed());
         }
-        let Some(record) = record else {
+        let Some((inherited_foreground, inherited_text_style, instance)) = record else {
             return;
         };
-        let inherited_foreground = record.inherited_foreground;
-        let inherited_text_style = record.inherited_text_style;
-        let instance = record.instance;
 
         with_scoped_foreground(cx, inherited_foreground, |cx| match instance {
             ElementInstance::Container(props) => {

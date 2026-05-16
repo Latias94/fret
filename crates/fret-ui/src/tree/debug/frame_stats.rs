@@ -195,6 +195,14 @@ pub struct UiDebugFrameStats {
     pub paint_host_widget_observed_globals_time: Duration,
     /// Total observed-global edges iterated inside `ElementHostWidget::paint_impl`.
     pub paint_host_widget_observed_globals_items: u32,
+    /// Number of element-runtime observed-dependency lookups in `ElementHostWidget::paint_impl`.
+    pub paint_host_widget_observed_deps_calls: u32,
+    /// Number of observed-dependency lookups where both models and globals were empty.
+    pub paint_host_widget_observed_deps_empty_calls: u32,
+    /// Number of observed-dependency lookups where the model slice was non-empty.
+    pub paint_host_widget_observed_models_non_empty_calls: u32,
+    /// Number of observed-dependency lookups where the global slice was non-empty.
+    pub paint_host_widget_observed_globals_non_empty_calls: u32,
     /// Total wall time spent resolving the element instance (`ElementInstance`) inside `ElementHostWidget::paint_impl`.
     pub paint_host_widget_instance_lookup_time: Duration,
     /// Number of `ElementInstance` lookups performed inside `ElementHostWidget::paint_impl`.

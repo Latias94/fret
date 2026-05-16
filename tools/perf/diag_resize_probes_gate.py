@@ -71,6 +71,27 @@ def _run(cmd: list[str], cwd: Path, stdout_path: Path, stderr_path: Path) -> int
         return int(p.returncode)
 
 
+def _diag_perf_prefix(fretboard_bin_path: Path | None, suite: str) -> list[str]:
+    if fretboard_bin_path is not None:
+        return [
+            str(fretboard_bin_path),
+            "diag",
+            "perf",
+            suite,
+        ]
+    return [
+        "cargo",
+        "run",
+        "-q",
+        "-p",
+        "fretboard-dev",
+        "--",
+        "diag",
+        "perf",
+        suite,
+    ]
+
+
 def _failures_count(check_path: Path) -> int | None:
     if not check_path.is_file():
         return None
@@ -102,6 +123,11 @@ def main() -> int:
         help="Perf baseline JSON path. Defaults to the checked-in Windows RTX4090 or macOS baseline for the host platform.",
     )
     ap.add_argument("--launch-bin", default="target/release/fret-ui-gallery")
+    ap.add_argument(
+        "--fretboard-bin",
+        default="",
+        help="Optional prebuilt fretboard-dev binary. Defaults to `cargo run -q -p fretboard-dev --`.",
+    )
     ap.add_argument("--timeout-ms", type=int, default=300_000)
     ap.add_argument("--attempts", type=int, default=1)
     ap.add_argument("--repeat", type=int, default=7)
@@ -155,6 +181,8 @@ def main() -> int:
     baseline_path = _resolve_workspace_path(workspace_root, baseline_raw)
 
     launch_bin_path = _resolve_workspace_path(workspace_root, str(args.launch_bin))
+    fretboard_bin_raw = str(args.fretboard_bin).strip()
+    fretboard_bin_path = _resolve_workspace_path(workspace_root, fretboard_bin_raw) if fretboard_bin_raw else None
 
     prewarm_scripts = list(args.prewarm_script)
     prelude_scripts = list(args.prelude_script)
@@ -167,6 +195,9 @@ def main() -> int:
     if not baseline_path.is_file():
         print(f"error: baseline not found: {baseline_path}", file=sys.stderr)
         return 2
+    if fretboard_bin_path is not None and not fretboard_bin_path.is_file():
+        print(f"error: fretboard binary not found: {fretboard_bin_path}", file=sys.stderr)
+        return 2
     for hook_path in [*prewarm_script_paths, *prelude_script_paths]:
         if not hook_path.is_file():
             print(f"error: suite hook script not found: {hook_path}", file=sys.stderr)
@@ -174,6 +205,7 @@ def main() -> int:
 
     print(f"[gate] {suite} -> {out_dir_path} (attempts={int(args.attempts)})")
     print(f"[gate] baseline: {baseline_path}")
+    print(f"[gate] fretboard-bin: {fretboard_bin_path if fretboard_bin_path is not None else 'cargo run -q -p fretboard-dev --'}")
     print(f"[gate] launch-bin: {launch_bin_path}")
     print(f"[gate] prewarm: {[str(p) for p in prewarm_script_paths]}")
     print(f"[gate] prelude: {[str(p) for p in prelude_script_paths]}")
@@ -188,15 +220,7 @@ def main() -> int:
         attempt_dir.mkdir(parents=True, exist_ok=True)
 
         cmd = [
-            "cargo",
-            "run",
-            "-q",
-            "-p",
-            "fretboard-dev",
-            "--",
-            "diag",
-            "perf",
-            suite,
+            *_diag_perf_prefix(fretboard_bin_path, suite),
             "--dir",
             str(attempt_dir),
             "--timeout-ms",
@@ -300,6 +324,7 @@ def main() -> int:
         "out_dir": str(out_dir_path),
         "suite": suite,
         "baseline": str(baseline_path),
+        "fretboard_bin": str(fretboard_bin_path) if fretboard_bin_path is not None else None,
         "launch_bin": str(launch_bin_path),
         "suite_hooks": {
             "prewarm": [str(p) for p in prewarm_script_paths],

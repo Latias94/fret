@@ -10,7 +10,8 @@
     ],
     "env_defaults": {
       "FRET_A11Y_DISABLE": "1",
-      "FRET_UI_GALLERY_BOOTSTRAP_FONTS": "1"
+      "FRET_UI_GALLERY_BOOTSTRAP_FONTS": "1",
+      "FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY": "0"
     }
   },
   "steps": [
@@ -25,23 +26,23 @@
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
     {
-      "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
+      "text": "code_editor_torture",
+      "clear_before_type": true,
+      "timeout_frames": 600
     },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "code_editor_torture" },
-    { "type": "wait_frames", "n": 2 },
+    { "type": "wait_frames", "n": 5 },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-nav-code-editor-torture" }
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
     {
       "type": "scroll_into_view",
@@ -51,7 +52,7 @@
       "require_fully_within_container": true,
       "require_fully_within_window": true,
       "padding_px": 8.0,
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-code-editor-torture" } },
     {

@@ -2,8 +2,8 @@
   "schema_version": 1,
   "slug": "code-editor-prepaint-planner-cost-v1",
   "title": "Code Editor Prepaint Planner Cost v1",
-  "status": "active",
-  "updated": "2026-05-15",
+  "status": "closed",
+  "updated": "2026-05-16",
   "scope_kind": "execution",
   "follow_on_of": "code-editor-edge-row-full-path-prefetch-v1",
   "problem": "After edge-row payload prebuild, the remaining resize tail cost is concentrated in replay-plan construction. The code editor still scans all visible rows and validates replay context in prepaint, which keeps us_row_scene_prepaint_plan visible in the worst bundle.",
@@ -23,6 +23,10 @@
     {
       "role": "execution",
       "path": "docs/workstreams/code-editor-prepaint-planner-cost-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/code-editor-prepaint-planner-cost-v1/CLOSEOUT_AUDIT_2026-05-16.md"
     },
     {
       "role": "reference",
@@ -70,6 +74,7 @@
     "docs/workstreams/code-editor-prepaint-planner-cost-v1/TODO.md",
     "docs/workstreams/code-editor-prepaint-planner-cost-v1/MILESTONES.md",
     "docs/workstreams/code-editor-prepaint-planner-cost-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/code-editor-prepaint-planner-cost-v1/CLOSEOUT_AUDIT_2026-05-16.md",
     "ecosystem/fret-code-editor/src/editor/mod.rs",
     "ecosystem/fret-code-editor/src/editor/paint/scene.rs",
     "ecosystem/fret-code-editor/src/editor/tests/row_text_cache.rs",
@@ -82,7 +87,7 @@
     "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
   ],
   "continue_policy": {
-    "default_action": "continue_here",
-    "notes": "Keep the lane narrow. If future evidence points away from code-editor replay planning and toward renderer/display-list or VirtualList architecture, split a new follow-on instead of widening this one."
+    "default_action": "stay_closed",
+    "notes": "This lane closed after the cached replay-context fast path reduced prepaint planner cost while preserving paint miss invariants. Fresh evidence now points away from prepaint planning and toward Editor Canvas paint/cache replay attribution, so continue in ui-perf-zed-smoothness-v1 P1.5 or split a narrower owner lane instead of reopening this folder."
   }
 }

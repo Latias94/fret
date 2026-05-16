@@ -427,6 +427,280 @@ Conventions:
     - `tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
     - `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
   - Work items (fearless refactor allowed; log every perf-affecting change):
+    - [x] Close the stale prepaint-planner follow-on before widening the editor paint lane.
+      - Decision: `code-editor-prepaint-planner-cost-v1` is closed by
+        `docs/workstreams/code-editor-prepaint-planner-cost-v1/CLOSEOUT_AUDIT_2026-05-16.md`.
+        The lane reduced `us_row_scene_prepaint_plan` p95 from `91us` to `67us` and preserved
+        `rows_scene_fast_miss_no_entry == 0` / `rows_scene_full_miss_no_entry == 0`, but fresh
+        post-merge evidence moved the dominant hotspot to paint/widget and Canvas replay/cache
+        attribution.
+    - [x] Short-circuit planned row replay paint when no selection/preedit/overlay work remains.
+      - Implementation: `perf(code-editor): short-circuit planned row replay paint` (`3086481679`).
+      - Evidence:
+        `ecosystem/fret-code-editor/src/editor/paint/mod.rs`,
+        `ecosystem/fret-code-editor/src/editor/state.rs`, and
+        `ecosystem/fret-code-editor/src/editor/tests/row_text_cache.rs`.
+      - Gate:
+        `cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast`.
+      - Smoke evidence:
+        `target/fret-diag/paint-widget-canvas-replay-fast-return-smoke-20260515/1778856015202-ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady/bundle.schema2.json`
+        and
+        `target/fret-diag/code-editor-resize-replay-fast-return-smoke-20260515/1778856345501-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.schema2.json`.
+        These show low code-editor paint p95 (`229us` complex wheel, `113us` resize replay) while
+        frame-level `paint.widget` and renderer text/encode/upload remain the attribution surfaces
+        to watch.
+      - Next formal evidence requirement: re-run the editor paint probes with repeat/warmup policy
+        on the target machine profile and compare Canvas `paint.widget`, row content resolve,
+        row-scene replay/cache replay, and renderer encode/upload payload before tightening any
+        baseline or starting a broader display-list rewrite.
+    - [x] Run the formal repeat=3 editor Canvas replay evidence pass after the planned row replay
+      short-circuit.
+      - Evidence: perf log entry `2026-05-16 01:03:00 +08:00` (`editor canvas replay formal
+        evidence pass`).
+      - Result:
+        - typical autoscroll: total p50/p95=`777/887us`, `paint.widget` p50/p95=`384/439us`,
+          code-editor paint p50/p95=`105/131us`, row replay hit rate `100%`, stores `0`.
+        - complex wheel: total p50/p95=`894/1037us`, `paint.widget` p50/p95=`539/634us`,
+          code-editor paint p50/p95=`255/330us`, row replay hit rate `99%`, stored-row p95 `1`.
+        - resize jitter: total p50/p95=`883/1145us`, `paint.widget` p50/p95=`432/446us`,
+          code-editor paint p50/p95=`123/138us`, row replay hit rate `100%`, stores `0`.
+      - Decision: row replay/cache and prepaint planning are not the next mainline bottlenecks.
+        Keep the display-list rewrite gated on a future near-threshold/failing stressor where row
+        replay/capture itself is measured as the limiter.
+    - [x] Split the next owner lane between Canvas wrapper overhead and renderer text/encode payload.
+      - Target: explain why `paint.widget` remains roughly `439..634us` p95 while
+        `code_editor.paint_perf` is only `131..330us` p95, and why renderer text prepare remains
+        roughly `419..435us` p95/max with atlas upload/eviction at `0`.
+      - Result: renderer text prepare was the first safe owner slice. `TextSystem::collect_scene_pinned_keys(...)`
+        now pre-sizes glyph pin buckets from per-shape pin-key counts before merging scene text blobs.
+      - Evidence: perf log entry `2026-05-16 01:20:00 +08:00` (`renderer glyph pin bucket capacity`).
+        Renderer text p95/max changed:
+        typical `392/422us -> 360/376us`, complex wheel `412/435us -> 381/412us`, and resize
+        jitter `419/419us -> 379/379us`.
+      - Contract decision: keep checked-in payload baselines unchanged; strict baseline audit still passes.
+    - [x] Exclude the diagnostic torture overlay from the formal editor perf probes.
+      - Change: `FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0` is now the default env for the
+        three formal editor torture scripts that drive the contract matrix.
+      - Validation:
+        `cargo nextest run -p fret-ui-gallery code_editor_perf_contract_scripts_disable_torture_overlay_by_default --no-fail-fast`
+        and
+        `cargo nextest run -p fret-ui-gallery --features gallery-dev code_editor_torture_overlay_env --no-fail-fast`.
+      - Evidence: perf log entry `2026-05-16 04:54:35 +08:00`
+        (`formal editor probes exclude torture overlay`).
+      - Result: overlay-disabled repeat=3 evidence now covers typical autoscroll, complex wheel, and resize
+        jitter:
+        `target/fret-diag/editor-paint-overlay-disabled-20260516-typical-r3/1778878430806/bundle.schema2.json`,
+        `target/fret-diag/editor-paint-overlay-disabled-20260516-complex-wheel-r3/1778878778260/bundle.schema2.json`,
+        and `target/fret-diag/editor-paint-overlay-disabled-20260516-resize-jitter-r3/1778878807245/bundle.schema2.json`.
+        All three report `top_code_editor_torture_overlay_us=0`; row replay remains healthy (`289/0`,
+        `287/2`, and `289/0` replay/store p95).
+    - [ ] Close the remaining Canvas wrapper / `paint.widget` attribution gap.
+      - Current evidence after the renderer slice: `paint.widget` p95 is still `414us` typical,
+        `633us` complex wheel, and `421us` resize jitter, while `code_editor.paint_perf` p95 is
+        `123us`, `318us`, and `119us` respectively.
+      - Target: split the gap between `WindowedRowsSurface` frame/row-loop overhead, per-row closure
+        dispatch/state access, Canvas host wrapper work, and any generic ElementHostWidget paint
+        bookkeeping before proposing a broader Canvas or display-list refactor.
+      - [x] Add machine-readable `WindowedRowsSurface` paint diagnostics to support that split.
+        - Fields now include `us_windowed_surface_paint_callback`, `us_windowed_surface_hook`,
+          `us_windowed_surface_row_loop`, `us_windowed_surface_row_paint`,
+          `us_windowed_surface_non_row`, and `us_windowed_surface_row_callback_gap` in
+          `code_editor.paint_perf`.
+        - Evidence: perf log entry `2026-05-16 01:30:00 +08:00`
+          (`windowed surface paint attribution fields`).
+      - [x] Re-run the formal repeat=3 Editor Canvas replay probes with these new fields before
+        deciding whether the next reversible optimization belongs to generic Canvas wrapper work,
+        code-editor row callback overhead, or another renderer slice.
+        - Evidence: perf log entry `2026-05-16 01:45:00 +08:00`
+          (`editor canvas wrapper attribution formal evidence`).
+        - Result:
+          - typical autoscroll worst bundle `target/fret-diag/editor-canvas-wrapper-attribution-20260516-typical-r3/1778865865185/bundle.schema2.json`:
+            total p50/p95/max `765/862/1022us`, `paint.widget` p50/p95 `393/431us`,
+            `code_editor.paint_perf` p50/p95 `93/106us`, surface callback p50/p95 `238/268us`,
+            surface non-row p50/p95 `127/145us`, row callback gap p50/p95 `18/21us`, row replay
+            hit rate `100%`, stores `0`.
+          - complex wheel worst bundle `target/fret-diag/editor-canvas-wrapper-attribution-20260516-complex-wheel-r3/1778865994148/bundle.schema2.json`:
+            total p50/p95/max `881/1156/1170us`, `paint.widget` p50/p95 `553/653us`,
+            `code_editor.paint_perf` p50/p95 `253/321us`, surface callback p50/p95 `405/489us`,
+            surface non-row p50/p95 `138/154us`, row callback gap p50/p95 `12/14us`, row replay
+            hit rate `99.65%`, stored p95 `3`.
+          - resize jitter worst bundle `target/fret-diag/editor-canvas-wrapper-attribution-20260516-resize-jitter-r3/1778866025069/bundle.schema2.json`:
+            total p50/p95/max `842/1287/1287us`, `paint.widget` p50/p95 `421/465us`,
+            `code_editor.paint_perf` p50/p95 `111/133us`, surface callback p50/p95 `258/288us`,
+            surface non-row p50/p95 `131/137us`, row callback gap p50/p95 `20/23us`, row replay
+            hit rate `100%`, stores `0`.
+        - Decision: the new fields split the inner surface cost cleanly, but the remaining outer
+          `paint.widget - surface_callback` gap is still about `155..177us` p95. The next owner
+          surface is generic Canvas / `ElementHostWidget` paint bookkeeping, not a broad
+          `WindowedRowsSurface` display-list rewrite.
+      - [x] Add `paint_widget_hotspot_summary` so `fretboard diag stats --json` can split the
+        sampled top-N paint-widget hotspots into Canvas and non-Canvas classes before naming the
+        next owner.
+        - Implementation: `diag stats` now exports top-level
+          `paint_widget_hotspot_summary`, with `sampled_top_n_per_frame=16`, per-frame top
+          Canvas and non-Canvas hotspot p50/p95/max, sampled top-N class sums, top hotspot
+          identity, and p95 gaps versus `code_editor.paint_perf.us_total` /
+          `us_windowed_surface_paint_callback`.
+        - Gate:
+          `cargo nextest run -p fret-diag bundle_stats_summarizes_canvas_paint_widget_hotspots --no-fail-fast`.
+        - Evidence on the same formal 2026-05-16 bundles:
+          - typical autoscroll: `paint.widget` p95 `431us`, Canvas hotspot p95 `270us`,
+            sampled non-Canvas top-N sum p95 `71us`, surface callback p95 `268us`, Canvas
+            minus surface callback p95 gap `2us`.
+          - complex wheel: `paint.widget` p95 `653us`, Canvas hotspot p95 `491us`,
+            sampled non-Canvas top-N sum p95 `67us`, surface callback p95 `489us`, Canvas
+            minus surface callback p95 gap `2us`.
+          - resize jitter: `paint.widget` p95 `465us`, Canvas hotspot p95 `292us`,
+            sampled non-Canvas top-N sum p95 `71us`, surface callback p95 `288us`, Canvas
+            minus surface callback p95 gap `4us`.
+        - Decision: the single Canvas hotspot is effectively the `WindowedRowsSurface` callback,
+          not an additional outer Canvas-wrapper tax. The residual `paint.widget` cost after
+          Canvas plus sampled top-N non-Canvas work is roughly `90..102us` p95, so the next
+          reversible owner lane should focus on generic `ElementHostWidget` / paint traversal
+          aggregate overhead, not code-editor row replay or a broad windowed-surface display-list
+          rewrite.
+      - [x] Promote existing host-widget paint subphase timers to root-level `diag stats`
+        p50/p95/max output before changing `ElementHostWidget`.
+        - Fields: `paint_host_widget_observed_models_time_us`,
+          `paint_host_widget_observed_globals_time_us`,
+          `paint_host_widget_instance_lookup_time_us`, plus the matching item/call counts in
+          `p50`, `p95`, and `max`.
+        - Gate:
+          `cargo nextest run -p fret-diag bundle_stats_summarizes_canvas_paint_widget_hotspots --no-fail-fast`.
+        - Evidence on the same formal 2026-05-16 bundles:
+          - typical autoscroll p95 host models/globals/lookup `29/28/47us`.
+          - complex wheel p95 host models/globals/lookup `29/29/47us`.
+          - resize jitter p95 host models/globals/lookup `28/27/45us`.
+        - Decision: these existing subphase timers account for roughly the same scale as the
+          remaining `paint.widget` residual after Canvas plus sampled non-Canvas top-N work.
+          The next optimization should be a narrow `ElementHostWidget::paint_impl` owner slice
+          around observed-dependency replay and instance-record lookup, with the same three editor
+          probes as formal evidence.
+      - [x] Slim `ElementHostWidget::paint_impl` instance-record lookup to avoid cloning the full
+        retained element record.
+        - Implementation: `crates/fret-ui/src/declarative/host_widget/paint.rs` now extracts only
+          inherited foreground, inherited text style, and element instance from the record before
+          dispatching paint.
+        - Gate:
+          `cargo fmt -p fret-ui --check`;
+          `cargo check -p fret-ui`;
+          `cargo nextest run -p fret-ui -E 'test(~paint)' --no-fail-fast`.
+        - Exploratory evidence: perf log entry `2026-05-16 02:23:09 +08:00`. No-reuse repeat=3
+          samples report host lookup p95 around `39..43us` versus the earlier same-mouth formal
+          `45..47us` range.
+        - Contract decision: do not update baselines from this evidence. The no-reuse command
+          completed, but the same-command `--reuse-launch` repeat=3 formal run timed out after
+          navigation state drift. Treat the slice as a small reversible lookup optimization and
+          keep formal contract closure blocked on stable same-mouth evidence.
+      - [x] Fix or replace the editor paint `--reuse-launch` formal evidence path before the next
+        baseline decision.
+        - Failure: `target/fret-diag/editor-host-record-slim-20260516-typical-r3` and
+          `target/fret-diag/editor-host-record-slim-20260516-typical-r3-reuse-prelude-each`
+          timed out at the nav-item wait because the reused process retained stale nav search
+          state (`nav_query_len_bytes=37`, no visible nav items).
+        - Fix: `ui-gallery-code-editor-torture-autoscroll-steady` and
+          `ui-gallery-code-editor-window-resize-drag-jitter-steady` now use `type_text_into`
+          with `clear_before_type=true` for the gallery nav search, matching the already-stable
+          complex wheel probe.
+        - Gate:
+          `python3 -m json.tool ...autoscroll-steady.json`;
+          `python3 -m json.tool ...window-resize-drag-jitter-steady.json`;
+          `python3 tools/check_diag_scripts_registry.py`;
+          `cargo nextest run -p fret-diag-protocol --no-fail-fast`.
+        - Evidence: perf log entry `2026-05-16 02:31:15 +08:00`. The three editor paint probes
+          now pass same-mouth `--reuse-launch --repeat 3 --warmup-frames 5` evidence again:
+          typical `target/fret-diag/editor-paint-contract-formal-20260516-typical-r3`,
+          complex wheel `target/fret-diag/editor-paint-contract-formal-20260516-complex-wheel-r3`,
+          and resize jitter `target/fret-diag/editor-paint-contract-formal-20260516-resize-jitter-r3`.
+      - [x] Continue host-widget paint aggregate attribution only after the formal evidence path is
+        stable.
+        - Current formal evidence path status: stable enough to continue this lane. The next slice
+          should use the same three editor paint probes before and after the change.
+        - Candidate owners: observed model/global dependency replay, collapse observation cost,
+          generic paint traversal aggregation, and the remaining sampled non-Canvas top-N hotspots.
+        - Avoid: broad `WindowedRowsSurface` display-list rewrite, row replay rewrite, or renderer
+          payload threshold changes unless new evidence makes one of those surfaces the limiter.
+        - Evidence: the typical autoscroll formal bundle now reports
+          `paint_host_widget_observed_deps_calls=252`, `paint_host_widget_observed_deps_empty_calls=244`,
+          `paint_host_widget_observed_models_non_empty_calls=8`, and
+          `paint_host_widget_observed_globals_non_empty_calls=2`, so empty dependency lookups are the
+          dominant candidate. The presence-set fast path now short-circuits the empty case before the
+          model/global map lookups.
+        - Gates:
+          `cargo nextest run -p fret-ui observed_deps_presence_tracks_rendered_and_touched_observations --no-fail-fast`;
+          `cargo nextest run -p fret-ui -E 'test(~paint)' --no-fail-fast`.
+        - Post-fast-path formal evidence: perf log entry `2026-05-16 03:51:42 +08:00`.
+          Same-mouth `--reuse-launch --repeat 3 --warmup-frames 5` runs now pass for typical,
+          complex wheel, and resize jitter:
+          `target/fret-diag/editor-paint-contract-post-observed-deps-fastpath-20260516-typical-r3-cargo`,
+          `target/fret-diag/editor-paint-contract-post-observed-deps-fastpath-20260516-complex-wheel-r3-cargo`,
+          and
+          `target/fret-diag/editor-paint-contract-post-observed-deps-fastpath-20260516-resize-jitter-r3-cargo`.
+          Treat this as macOS M4 evidence only; keep baselines unchanged.
+      - [ ] Attribute the remaining post-fast-path generic paint-widget aggregate cost before the
+        next reversible optimization.
+        - Current evidence: typical p95 paint/widget/Canvas/code-editor is `624/428/283/134us`;
+          complex wheel is `838/627/481/317us`; resize jitter is `631/613/269/126us`.
+        - Current host-widget residuals: observed model/global replay p95 stays around
+          `24..25us` / `23..24us`, instance lookup p95 `41..46us`, collapse observations p95
+          `51..56us`, with observed-deps empty calls still dominating count shape
+          (`244..245` empty of `252..253` calls).
+        - Next owner decision should be evidence-first: code-editor row work if the callback
+          internals dominate, generic Canvas paint/cache if Canvas callback and wrapper diverge,
+          or renderer text/encode/upload if renderer payload becomes the limiter. Do not start a
+          broad row replay rewrite from the current passing row replay/cache evidence.
+        - Added attribution summary in perf log entry `2026-05-16 03:59:52 +08:00`:
+          `paint_widget_hotspot_summary.gap_to_code_editor_p95` now includes
+          `windowed_surface_paint_callback_minus_us_total`,
+          `windowed_surface_row_paint_minus_us_total`, and
+          `windowed_surface_paint_callback_minus_row_paint`, plus
+          `code_editor_windowed_surface_p95`.
+        - Current decision: Canvas wrapper is not the owner (`2..4us` Canvas-minus-callback p95).
+          `WindowedRowsSurface` callback internals remain the next owner candidate:
+          callback-minus-row-paint is `118..149us` p95, while row-paint-minus-code-editor-total
+          is only `13..21us` p95.
+      - [x] Inspect `WindowedRowsSurface` callback overhead before changing behavior.
+        - Start from `ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs`.
+        - Preserve the existing code-editor row replay/cache evidence as a guardrail; do not
+          optimize by invalidating row replay semantics or weakening renderer payload thresholds.
+        - Follow-up evidence: `fret-diag` now reports
+          `windowed_surface_paint_callback_minus_row_paint_per_row_ns` and
+          `windowed_surface_row_callback_gap_per_row_ns`. On the overlay-disabled typical autoscroll,
+          complex wheel, and resize jitter bundles, the p95 values are `65/62/62ns` per row and
+          `79/48/72ns` per row respectively. That keeps the remaining gap in aggregate loop overhead
+          territory rather than a separate row hot loop.
+      - [ ] Stabilize the target-machine editor paint contract before closing P1.5.
+        - Required artifact: Windows RTX4090 overlay-disabled validation for typical autoscroll, complex wheel, and
+          code-editor resize jitter; use a deliberate re-seed path only if the validation evidence justifies it.
+        - Target-machine runner:
+          `python tools/perf/diag_editor_paint_contract_validate.py --date-tag <date>`.
+          Use `--dry-run` on non-target hosts to inspect the command plan. Use a fresh `--date-tag` / `--out-dir` for
+          non-dry-run validation; the runner rejects an existing non-empty output directory by default to avoid stale
+          dry-run or failed-run artifacts. Run once without
+          `--with-paint-perf` for the baseline-validation `failures=[]` artifact, then run
+          `--with-paint-perf` only for the follow-up attribution pass. The runner collects the
+          worst-bundle `diag stats --sort cpu_cycles --top 15 --json` output for each validation probe and
+          checks that the required paint-widget, renderer, and paint-perf field groups are present.
+          Non-empty `check.perf_thresholds.json.failures` is treated as a failed validation run.
+        - After copying both validation directories back into the workspace, prefer the local closeout gate:
+          `python tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-<date> --attribution-dir target/fret-diag/editor-paint-contract-validate-<date>-attrib`.
+          Use `tools/perf/diag_editor_paint_contract_verify_artifacts.py` only when the artifact-only check is needed
+          without the repo-level closeout gates.
+        - Post-sync verifier hard requirements:
+          - both validation summaries must carry a non-empty `date_tag`;
+          - stored commands must match the Windows validation shape: release `fretboard-dev.exe` /
+            `fret-ui-gallery.exe`, standard prewarm/prelude hooks, `--reuse-launch` on direct `diag perf`, and the
+            overlay-disabled env set;
+          - baseline-validation direct `diag perf` commands must not include `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`;
+          - the attribution directory must include paint-perf coverage, `code_editor_paint_perf`, and overlay-zero
+            stats (`top_code_editor_torture_overlay_us=0` / `code_editor_paint_perf.max.us_torture_overlay=0`).
+        - Required evidence: ordinary validation must provide `check.perf_thresholds.json` with
+          `failures=[]`, worst-bundle `diag stats` summaries for paint/widget, code-editor paint perf, and
+          renderer text/encode/upload. A deliberate re-seed path must additionally provide
+          `selection-summary.json` plus no-threshold-loosening evidence unless a policy note intentionally
+          justifies the reset.
+        - Guardrail: do not update checked-in baselines from macOS M4 evidence and do not mark P1.5
+          closed until the contract matrix and this TODO point at the target-machine artifacts.
     - [x] Add a stable “row op count” signal to diag snapshots (or reuse an existing one) so we can gate
       “we are rebuilding 500+ ops/frame” vs “we are replaying”.
       - Field: `code_editor.paint_perf.row_scene_ops_stored` in UI Gallery app snapshots and

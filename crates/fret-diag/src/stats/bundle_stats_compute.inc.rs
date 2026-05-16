@@ -126,6 +126,42 @@ fn snapshot_code_editor_paint_perf(
             "us_frame_overlay_prepare",
             "ns_frame_overlay_prepare"
         ),
+        surface_rows_iterated: u64_field!("surface_rows_iterated"),
+        surface_rows_with_rect: u64_field!("surface_rows_with_rect"),
+        us_windowed_surface_paint_callback: us_field!(
+            "us_windowed_surface_paint_callback",
+            "ns_windowed_surface_paint_callback"
+        ),
+        us_windowed_surface_frame_lookup: us_field!(
+            "us_windowed_surface_frame_lookup",
+            "ns_windowed_surface_frame_lookup"
+        ),
+        us_windowed_surface_hook: us_field!(
+            "us_windowed_surface_hook",
+            "ns_windowed_surface_hook"
+        ),
+        us_windowed_surface_row_loop: us_field!(
+            "us_windowed_surface_row_loop",
+            "ns_windowed_surface_row_loop"
+        ),
+        us_windowed_surface_row_rect: us_field!(
+            "us_windowed_surface_row_rect",
+            "ns_windowed_surface_row_rect"
+        ),
+        us_windowed_surface_row_paint: us_field!(
+            "us_windowed_surface_row_paint",
+            "ns_windowed_surface_row_paint"
+        ),
+        us_windowed_surface_non_row: us_field!(
+            "us_windowed_surface_non_row",
+            "ns_windowed_surface_non_row"
+        ),
+        us_windowed_surface_row_callback_gap: us_field!(
+            "us_windowed_surface_row_callback_gap",
+            "ns_windowed_surface_row_callback_gap"
+        ),
+        us_torture_autoscroll: us_field!("us_torture_autoscroll", "ns_torture_autoscroll"),
+        us_torture_overlay: us_field!("us_torture_overlay", "ns_torture_overlay"),
     })
 }
 
@@ -333,6 +369,30 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .unwrap_or(0);
             let paint_host_widget_observed_globals_items = stats
                 .and_then(|m| m.get("paint_host_widget_observed_globals_items"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let paint_host_widget_observed_deps_calls = stats
+                .and_then(|m| m.get("paint_host_widget_observed_deps_calls"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let paint_host_widget_observed_deps_empty_calls = stats
+                .and_then(|m| m.get("paint_host_widget_observed_deps_empty_calls"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let paint_host_widget_observed_models_non_empty_calls = stats
+                .and_then(|m| m.get("paint_host_widget_observed_models_non_empty_calls"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let paint_host_widget_observed_globals_non_empty_calls = stats
+                .and_then(|m| m.get("paint_host_widget_observed_globals_non_empty_calls"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0)
                 .min(u32::MAX as u64)
@@ -1677,7 +1737,17 @@ pub(super) fn bundle_stats_from_json_with_options(
             let top_layout_engine_solves = snapshot_layout_engine_solves(&semantics, s, 3);
             let layout_hotspots = snapshot_layout_hotspots(&semantics, s, 3);
             let widget_measure_hotspots = snapshot_widget_measure_hotspots(&semantics, s, 3);
-            let paint_widget_hotspots = snapshot_paint_widget_hotspots(&semantics, s, 3);
+            let paint_widget_hotspots_all =
+                snapshot_paint_widget_hotspots(&semantics, s, PAINT_WIDGET_HOTSPOT_SUMMARY_TOP_N);
+            out.paint_widget_hotspot_summary.observe_frame(
+                &paint_widget_hotspots_all,
+                PAINT_WIDGET_HOTSPOT_SUMMARY_TOP_N,
+            );
+            let paint_widget_hotspots = paint_widget_hotspots_all
+                .iter()
+                .take(PAINT_WIDGET_HOTSPOT_ROW_TOP_N)
+                .cloned()
+                .collect::<Vec<_>>();
             let paint_text_prepare_hotspots =
                 snapshot_paint_text_prepare_hotspots(&semantics, s, 3);
             let model_change_hotspots = snapshot_model_change_hotspots(s, 3);
@@ -1819,6 +1889,36 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .max(layout_observation_record_globals_items);
             out.max_prepaint_time_us = out.max_prepaint_time_us.max(prepaint_time_us);
             out.max_paint_time_us = out.max_paint_time_us.max(paint_time_us);
+            out.max_paint_host_widget_observed_models_time_us = out
+                .max_paint_host_widget_observed_models_time_us
+                .max(paint_host_widget_observed_models_time_us);
+            out.max_paint_host_widget_observed_models_items = out
+                .max_paint_host_widget_observed_models_items
+                .max(paint_host_widget_observed_models_items);
+            out.max_paint_host_widget_observed_globals_time_us = out
+                .max_paint_host_widget_observed_globals_time_us
+                .max(paint_host_widget_observed_globals_time_us);
+            out.max_paint_host_widget_observed_globals_items = out
+                .max_paint_host_widget_observed_globals_items
+                .max(paint_host_widget_observed_globals_items);
+            out.max_paint_host_widget_observed_deps_calls = out
+                .max_paint_host_widget_observed_deps_calls
+                .max(paint_host_widget_observed_deps_calls);
+            out.max_paint_host_widget_observed_deps_empty_calls = out
+                .max_paint_host_widget_observed_deps_empty_calls
+                .max(paint_host_widget_observed_deps_empty_calls);
+            out.max_paint_host_widget_observed_models_non_empty_calls = out
+                .max_paint_host_widget_observed_models_non_empty_calls
+                .max(paint_host_widget_observed_models_non_empty_calls);
+            out.max_paint_host_widget_observed_globals_non_empty_calls = out
+                .max_paint_host_widget_observed_globals_non_empty_calls
+                .max(paint_host_widget_observed_globals_non_empty_calls);
+            out.max_paint_host_widget_instance_lookup_time_us = out
+                .max_paint_host_widget_instance_lookup_time_us
+                .max(paint_host_widget_instance_lookup_time_us);
+            out.max_paint_host_widget_instance_lookup_calls = out
+                .max_paint_host_widget_instance_lookup_calls
+                .max(paint_host_widget_instance_lookup_calls);
             out.max_total_time_us = out.max_total_time_us.max(total_time_us);
             out.max_ui_thread_cpu_time_us =
                 out.max_ui_thread_cpu_time_us.max(ui_thread_cpu_time_us);
@@ -1938,6 +2038,10 @@ pub(super) fn bundle_stats_from_json_with_options(
                 paint_host_widget_observed_models_items,
                 paint_host_widget_observed_globals_time_us,
                 paint_host_widget_observed_globals_items,
+                paint_host_widget_observed_deps_calls,
+                paint_host_widget_observed_deps_empty_calls,
+                paint_host_widget_observed_models_non_empty_calls,
+                paint_host_widget_observed_globals_non_empty_calls,
                 paint_host_widget_instance_lookup_time_us,
                 paint_host_widget_instance_lookup_calls,
                 paint_text_prepare_time_us,
@@ -2323,6 +2427,20 @@ pub(super) fn bundle_stats_from_json_with_options(
             us_row_geom_resolve: metric!(us_row_geom_resolve),
             us_row_overlay: metric!(us_row_overlay),
             us_frame_overlay_prepare: metric!(us_frame_overlay_prepare),
+            surface_rows_iterated: metric!(surface_rows_iterated),
+            surface_rows_with_rect: metric!(surface_rows_with_rect),
+            us_windowed_surface_paint_callback: metric!(us_windowed_surface_paint_callback),
+            us_windowed_surface_frame_lookup: metric!(us_windowed_surface_frame_lookup),
+            us_windowed_surface_hook: metric!(us_windowed_surface_hook),
+            us_windowed_surface_row_loop: metric!(us_windowed_surface_row_loop),
+            us_windowed_surface_row_rect: metric!(us_windowed_surface_row_rect),
+            us_windowed_surface_row_paint: metric!(us_windowed_surface_row_paint),
+            us_windowed_surface_non_row: metric!(us_windowed_surface_non_row),
+            us_windowed_surface_row_callback_gap: metric!(
+                us_windowed_surface_row_callback_gap
+            ),
+            us_torture_autoscroll: metric!(us_torture_autoscroll),
+            us_torture_overlay: metric!(us_torture_overlay),
         }
     }
 
@@ -2427,6 +2545,76 @@ pub(super) fn bundle_stats_from_json_with_options(
         p50_p95(rows.iter().map(|r| r.hit_test_time_us));
     (out.p50_paint_widget_time_us, out.p95_paint_widget_time_us) =
         p50_p95(rows.iter().map(|r| r.paint_widget_time_us));
+    (
+        out.p50_paint_host_widget_observed_models_time_us,
+        out.p95_paint_host_widget_observed_models_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_host_widget_observed_models_time_us),
+    );
+    (
+        out.p50_paint_host_widget_observed_models_items,
+        out.p95_paint_host_widget_observed_models_items,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_host_widget_observed_models_items as u64),
+    );
+    (
+        out.p50_paint_host_widget_observed_globals_time_us,
+        out.p95_paint_host_widget_observed_globals_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_host_widget_observed_globals_time_us),
+    );
+    (
+        out.p50_paint_host_widget_observed_globals_items,
+        out.p95_paint_host_widget_observed_globals_items,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_host_widget_observed_globals_items as u64),
+    );
+    (
+        out.p50_paint_host_widget_observed_deps_calls,
+        out.p95_paint_host_widget_observed_deps_calls,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_host_widget_observed_deps_calls as u64),
+    );
+    (
+        out.p50_paint_host_widget_observed_deps_empty_calls,
+        out.p95_paint_host_widget_observed_deps_empty_calls,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_host_widget_observed_deps_empty_calls as u64),
+    );
+    (
+        out.p50_paint_host_widget_observed_models_non_empty_calls,
+        out.p95_paint_host_widget_observed_models_non_empty_calls,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_host_widget_observed_models_non_empty_calls as u64),
+    );
+    (
+        out.p50_paint_host_widget_observed_globals_non_empty_calls,
+        out.p95_paint_host_widget_observed_globals_non_empty_calls,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_host_widget_observed_globals_non_empty_calls as u64),
+    );
+    (
+        out.p50_paint_host_widget_instance_lookup_time_us,
+        out.p95_paint_host_widget_instance_lookup_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_host_widget_instance_lookup_time_us),
+    );
+    (
+        out.p50_paint_host_widget_instance_lookup_calls,
+        out.p95_paint_host_widget_instance_lookup_calls,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.paint_host_widget_instance_lookup_calls as u64),
+    );
     (
         out.p50_paint_text_prepare_time_us,
         out.p95_paint_text_prepare_time_us,

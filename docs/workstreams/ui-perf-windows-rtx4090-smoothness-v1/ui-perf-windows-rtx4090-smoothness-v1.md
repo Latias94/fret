@@ -59,8 +59,8 @@ Recommended env (avoid extra I/O + keep cached rendering on):
 P0 commands:
 
 - `target/release/fretboard.exe diag perf ui-gallery-steady --repeat 3 --warmup-frames 5 --reuse-launch --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.windows-rtx4090.v1.json --env ... --launch -- target/release/fret-ui-gallery.exe`
-- `python tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --attempts 3 --repeat 7 --baseline docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v2.json --launch-bin target/release/fret-ui-gallery.exe`
-- `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 3 --repeat 7 --baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v2.json --launch-bin target/release/fret-ui-gallery.exe`
+- `python tools/perf/diag_resize_probes_gate.py --suite ui-resize-probes --attempts 3 --repeat 7 --baseline docs/workstreams/perf-baselines/ui-resize-probes.windows-rtx4090.v2.json --fretboard-bin target/release/fretboard-dev.exe --launch-bin target/release/fret-ui-gallery.exe`
+- `python tools/perf/diag_resize_probes_gate.py --suite ui-code-editor-resize-probes --attempts 3 --repeat 7 --baseline docs/workstreams/perf-baselines/ui-code-editor-resize-probes.windows-rtx4090.v2.json --fretboard-bin target/release/fretboard-dev.exe --launch-bin target/release/fret-ui-gallery.exe`
 - `target/release/fretboard.exe diag perf ui-gallery-code-editor-torture-autoscroll-typical --repeat 15 --warmup-frames 5 --reuse-launch --perf-threshold-agg p90 --perf-baseline docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-autoscroll-typical.windows-rtx4090.v1.json --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 --launch target/release/fret-ui-gallery.exe`
 
 ## Stress/jitter runs (tail hunting, not P0)

@@ -92,3 +92,18 @@ Current lane bundle:
 Interpretation: the replay planner is now cheaper while preserving the paint miss invariants. If the
 planner is still the dominant tail after the next slice, keep reducing it inside this lane; if the
 dominant hotspot moves elsewhere, split a new owner lane instead of widening this one.
+
+## Closeout Evidence
+
+Closeout note:
+
+- `docs/workstreams/code-editor-prepaint-planner-cost-v1/CLOSEOUT_AUDIT_2026-05-16.md`
+
+Additional cross-lane evidence:
+
+- `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md` entry
+  `2026-05-15 20:21:29 +08:00` records that the current macOS typical autoscroll sample is
+  paint/widget dominated, with row-scene replay already hot-cache (`100%` hit rate) and code-editor
+  paint p50/p95 total at `126/149us`.
+- `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-todo.md` P1.5 is now the
+  mainline follow-on for Editor Canvas paint/cache replay evidence.

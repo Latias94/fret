@@ -7,6 +7,11 @@ pub(super) struct TopCodeEditorRowSceneFields {
     pub(super) rows_scene_stored: u64,
     pub(super) row_scene_ops_stored: u64,
     pub(super) row_scene_replay_hit_rate_pct: u64,
+    pub(super) windowed_surface_paint_callback_us: u64,
+    pub(super) windowed_surface_non_row_us: u64,
+    pub(super) windowed_surface_row_callback_gap_us: u64,
+    pub(super) torture_autoscroll_us: u64,
+    pub(super) torture_overlay_us: u64,
 }
 
 impl TopCodeEditorRowSceneFields {
@@ -24,6 +29,11 @@ impl TopCodeEditorRowSceneFields {
                 perf.rows_scene_replayed,
                 perf.rows_painted,
             ),
+            windowed_surface_paint_callback_us: perf.us_windowed_surface_paint_callback,
+            windowed_surface_non_row_us: perf.us_windowed_surface_non_row,
+            windowed_surface_row_callback_gap_us: perf.us_windowed_surface_row_callback_gap,
+            torture_autoscroll_us: perf.us_torture_autoscroll,
+            torture_overlay_us: perf.us_torture_overlay,
         }
     }
 }
@@ -58,6 +68,11 @@ mod tests {
                 rows_scene_replayed: 9,
                 rows_scene_stored: 3,
                 row_scene_ops_stored: 42,
+                us_windowed_surface_paint_callback: 120,
+                us_windowed_surface_non_row: 30,
+                us_windowed_surface_row_callback_gap: 7,
+                us_torture_autoscroll: 4,
+                us_torture_overlay: 21,
                 ..Default::default()
             }),
             ..Default::default()
@@ -71,6 +86,11 @@ mod tests {
                 rows_scene_stored: 3,
                 row_scene_ops_stored: 42,
                 row_scene_replay_hit_rate_pct: 75,
+                windowed_surface_paint_callback_us: 120,
+                windowed_surface_non_row_us: 30,
+                windowed_surface_row_callback_gap_us: 7,
+                torture_autoscroll_us: 4,
+                torture_overlay_us: 21,
             }
         );
     }

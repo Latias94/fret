@@ -64,6 +64,12 @@ impl<H: UiHost> UiTree<H> {
                     self.debug_stats.paint_host_widget_observed_models_items = 0;
                     self.debug_stats.paint_host_widget_observed_globals_time = Duration::default();
                     self.debug_stats.paint_host_widget_observed_globals_items = 0;
+                    self.debug_stats.paint_host_widget_observed_deps_calls = 0;
+                    self.debug_stats.paint_host_widget_observed_deps_empty_calls = 0;
+                    self.debug_stats
+                        .paint_host_widget_observed_models_non_empty_calls = 0;
+                    self.debug_stats
+                        .paint_host_widget_observed_globals_non_empty_calls = 0;
                     self.debug_stats.paint_host_widget_instance_lookup_time = Duration::default();
                     self.debug_stats.paint_host_widget_instance_lookup_calls = 0;
                     self.debug_stats.paint_text_prepare_time = Duration::default();

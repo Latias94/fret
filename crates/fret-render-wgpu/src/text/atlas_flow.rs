@@ -114,7 +114,22 @@ impl TextSystem {
     }
 
     fn collect_scene_pinned_keys(&self, scene: &Scene) -> GlyphKeyBuckets {
-        let mut pinned_keys = GlyphKeyBuckets::default();
+        let mut mask_capacity = 0usize;
+        let mut color_capacity = 0usize;
+        let mut subpixel_capacity = 0usize;
+
+        for &text in scene.text_blob_ids() {
+            let Some(blob) = self.blob_state.blobs.get(text) else {
+                continue;
+            };
+            let (mask, color, subpixel) = blob.shape().pin_keys().bucket_lens();
+            mask_capacity = mask_capacity.saturating_add(mask);
+            color_capacity = color_capacity.saturating_add(color);
+            subpixel_capacity = subpixel_capacity.saturating_add(subpixel);
+        }
+
+        let mut pinned_keys =
+            GlyphKeyBuckets::with_capacities(mask_capacity, color_capacity, subpixel_capacity);
         for &text in scene.text_blob_ids() {
             let Some(blob) = self.blob_state.blobs.get(text) else {
                 continue;

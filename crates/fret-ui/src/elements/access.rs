@@ -45,6 +45,12 @@ pub(crate) fn with_observed_deps_for_element<H: UiHost, R>(
         runtime.prepare_window_for_frame(window, frame_id);
         let window_state = runtime.for_window_mut(window);
 
+        if !window_state.observed_deps_next.contains(&element)
+            && !window_state.observed_deps_rendered.contains(&element)
+        {
+            return f(&[], &[]);
+        }
+
         let models = window_state
             .observed_models_next
             .get(&element)

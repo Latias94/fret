@@ -21,6 +21,7 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::panic::Location;
 
+use fret_core::time::Instant;
 use fret_core::{Point, Px, Rect, Size};
 use fret_runtime::FrameId;
 use fret_ui::action::{ActionCx, OnTimer, PointerDownCx, PointerMoveCx, UiPointerActionHost};
@@ -73,6 +74,47 @@ pub type OnWindowedRowsPaintFrame =
     std::sync::Arc<dyn for<'p> Fn(&mut CanvasPainter<'p>, WindowedRowsPaintFrame) + 'static>;
 pub type OnWindowedRowsPrepaintFrame =
     std::sync::Arc<dyn for<'p> Fn(&mut CanvasPrepaintCx<'p>, WindowedRowsPaintFrame) + 'static>;
+pub type OnWindowedRowsPaintDiagnostics =
+    std::sync::Arc<dyn Fn(WindowedRowsPaintDiagnostics) + 'static>;
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct WindowedRowsPaintDiagnostics {
+    pub visible_start: u64,
+    pub visible_end: u64,
+    pub visible_rows: u64,
+    pub rows_iterated: u64,
+    pub rows_with_rect: u64,
+
+    pub us_paint_callback: u64,
+    pub us_frame_lookup: u64,
+    pub us_on_paint_frame: u64,
+    pub us_row_loop: u64,
+    pub us_row_rect: u64,
+    pub us_row_paint: u64,
+    pub us_non_row: u64,
+
+    pub ns_paint_callback: u64,
+    pub ns_frame_lookup: u64,
+    pub ns_on_paint_frame: u64,
+    pub ns_row_loop: u64,
+    pub ns_row_rect: u64,
+    pub ns_row_paint: u64,
+    pub ns_non_row: u64,
+}
+
+impl WindowedRowsPaintDiagnostics {
+    fn for_frame(frame: WindowedRowsPaintFrame) -> Self {
+        Self {
+            visible_start: frame.visible_start as u64,
+            visible_end: frame.visible_end as u64,
+            visible_rows: frame
+                .visible_end
+                .saturating_sub(frame.visible_start)
+                .saturating_add(1) as u64,
+            ..Self::default()
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct WindowedRowsSurfaceWindowTelemetry {
@@ -154,6 +196,7 @@ pub struct WindowedRowsSurfaceProps {
     pub scroll_handle: ScrollHandle,
     pub on_prepaint_frame: Option<OnWindowedRowsPrepaintFrame>,
     pub on_paint_frame: Option<OnWindowedRowsPaintFrame>,
+    pub on_paint_diagnostics: Option<OnWindowedRowsPaintDiagnostics>,
 }
 
 impl Default for WindowedRowsSurfaceProps {
@@ -188,8 +231,17 @@ impl Default for WindowedRowsSurfaceProps {
             scroll_handle: ScrollHandle::default(),
             on_prepaint_frame: None,
             on_paint_frame: None,
+            on_paint_diagnostics: None,
         }
     }
+}
+
+fn elapsed_us_ns(started: Instant) -> (u64, u64) {
+    let elapsed = started.elapsed();
+    (
+        elapsed.as_micros().min(u128::from(u64::MAX)) as u64,
+        elapsed.as_nanos().min(u128::from(u64::MAX)) as u64,
+    )
 }
 
 fn current_windowed_rows_frame(
@@ -227,6 +279,91 @@ fn current_windowed_rows_frame(
     })
 }
 
+fn paint_windowed_rows<P>(
+    metrics: &VirtualListMetrics,
+    scroll_handle: &ScrollHandle,
+    overscan: usize,
+    painter: &mut CanvasPainter<'_>,
+    on_paint_frame: Option<&OnWindowedRowsPaintFrame>,
+    on_paint_diagnostics: Option<&OnWindowedRowsPaintDiagnostics>,
+    paint_row: &P,
+) where
+    P: for<'p> Fn(&mut CanvasPainter<'p>, usize, Rect) + ?Sized,
+{
+    let Some(on_paint_diagnostics) = on_paint_diagnostics else {
+        let Some(frame) = current_windowed_rows_frame(metrics, scroll_handle, overscan) else {
+            return;
+        };
+
+        let bounds = painter.bounds();
+
+        if let Some(on_paint_frame) = on_paint_frame {
+            on_paint_frame(painter, frame);
+        }
+
+        for index in frame.visible_start..=frame.visible_end {
+            if let Some(rect) = frame.row_rect(bounds, index) {
+                paint_row(painter, index, rect);
+            }
+        }
+        return;
+    };
+
+    let paint_callback_started = Instant::now();
+    let frame_lookup_started = Instant::now();
+    let Some(frame) = current_windowed_rows_frame(metrics, scroll_handle, overscan) else {
+        return;
+    };
+    let (us_frame_lookup, ns_frame_lookup) = elapsed_us_ns(frame_lookup_started);
+    let mut diagnostics = WindowedRowsPaintDiagnostics::for_frame(frame);
+    diagnostics.us_frame_lookup = us_frame_lookup;
+    diagnostics.ns_frame_lookup = ns_frame_lookup;
+
+    let bounds = painter.bounds();
+
+    if let Some(on_paint_frame) = on_paint_frame {
+        let started = Instant::now();
+        on_paint_frame(painter, frame);
+        let (us, ns) = elapsed_us_ns(started);
+        diagnostics.us_on_paint_frame = us;
+        diagnostics.ns_on_paint_frame = ns;
+    }
+
+    let row_loop_started = Instant::now();
+    for index in frame.visible_start..=frame.visible_end {
+        diagnostics.rows_iterated = diagnostics.rows_iterated.saturating_add(1);
+        let row_rect_started = Instant::now();
+        let rect = frame.row_rect(bounds, index);
+        let (us, ns) = elapsed_us_ns(row_rect_started);
+        diagnostics.us_row_rect = diagnostics.us_row_rect.saturating_add(us);
+        diagnostics.ns_row_rect = diagnostics.ns_row_rect.saturating_add(ns);
+
+        if let Some(rect) = rect {
+            diagnostics.rows_with_rect = diagnostics.rows_with_rect.saturating_add(1);
+            let row_paint_started = Instant::now();
+            paint_row(painter, index, rect);
+            let (us, ns) = elapsed_us_ns(row_paint_started);
+            diagnostics.us_row_paint = diagnostics.us_row_paint.saturating_add(us);
+            diagnostics.ns_row_paint = diagnostics.ns_row_paint.saturating_add(ns);
+        }
+    }
+    let (us_row_loop, ns_row_loop) = elapsed_us_ns(row_loop_started);
+    diagnostics.us_row_loop = us_row_loop;
+    diagnostics.ns_row_loop = ns_row_loop;
+
+    let (us_paint_callback, ns_paint_callback) = elapsed_us_ns(paint_callback_started);
+    diagnostics.us_paint_callback = us_paint_callback;
+    diagnostics.ns_paint_callback = ns_paint_callback;
+    diagnostics.us_non_row = diagnostics
+        .us_paint_callback
+        .saturating_sub(diagnostics.us_row_paint);
+    diagnostics.ns_non_row = diagnostics
+        .ns_paint_callback
+        .saturating_sub(diagnostics.ns_row_paint);
+
+    on_paint_diagnostics(diagnostics);
+}
+
 /// Build a fixed-row-height scroll surface that paints only the visible row window.
 ///
 /// `paint_row` is called for each visible row (including overscan).
@@ -255,6 +392,7 @@ pub fn windowed_rows_surface<H: UiHost>(
         scroll_handle,
         on_prepaint_frame,
         on_paint_frame,
+        on_paint_diagnostics,
     } = props;
 
     let mut metrics = VirtualListMetrics::default();
@@ -335,26 +473,20 @@ pub fn windowed_rows_surface<H: UiHost>(
         let paint_row = std::sync::Arc::new(paint_row);
         let on_prepaint_frame = on_prepaint_frame.clone();
         let on_paint_frame = on_paint_frame.clone();
+        let on_paint_diagnostics = on_paint_diagnostics.clone();
         let prepaint_scroll_handle = scroll_handle.clone();
         let prepaint_metrics = metrics.clone();
 
         let paint = move |painter: &mut CanvasPainter<'_>| {
-            let Some(frame) = current_windowed_rows_frame(&metrics, &scroll_handle, overscan)
-            else {
-                return;
-            };
-
-            let bounds = painter.bounds();
-
-            if let Some(on_paint_frame) = &on_paint_frame {
-                on_paint_frame(painter, frame);
-            }
-
-            for index in frame.visible_start..=frame.visible_end {
-                if let Some(rect) = frame.row_rect(bounds, index) {
-                    paint_row(painter, index, rect);
-                }
-            }
+            paint_windowed_rows(
+                &metrics,
+                &scroll_handle,
+                overscan,
+                painter,
+                on_paint_frame.as_ref(),
+                on_paint_diagnostics.as_ref(),
+                paint_row.as_ref(),
+            );
         };
 
         let canvas = if let Some(on_prepaint_frame) = on_prepaint_frame {
@@ -498,6 +630,7 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
         scroll_handle,
         on_prepaint_frame,
         on_paint_frame,
+        on_paint_diagnostics,
     } = props;
 
     let mut metrics = VirtualListMetrics::default();
@@ -583,6 +716,7 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
         let content_semantics = content_semantics.clone();
         let on_prepaint_frame = on_prepaint_frame.clone();
         let on_paint_frame = on_paint_frame.clone();
+        let on_paint_diagnostics = on_paint_diagnostics.clone();
 
         vec![cx.pointer_region(pointer, move |cx| {
             if let Some(on_timer) = on_timer.clone() {
@@ -648,22 +782,15 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
             let prepaint_scroll_handle = scroll_handle.clone();
             let prepaint_metrics = metrics.clone();
             let paint = move |painter: &mut CanvasPainter<'_>| {
-                let Some(frame) = current_windowed_rows_frame(&metrics, &scroll_handle, overscan)
-                else {
-                    return;
-                };
-
-                let bounds = painter.bounds();
-
-                if let Some(on_paint_frame) = &on_paint_frame {
-                    on_paint_frame(painter, frame);
-                }
-
-                for index in frame.visible_start..=frame.visible_end {
-                    if let Some(rect) = frame.row_rect(bounds, index) {
-                        paint_row(painter, index, rect);
-                    }
-                }
+                paint_windowed_rows(
+                    &metrics,
+                    &scroll_handle,
+                    overscan,
+                    painter,
+                    on_paint_frame.as_ref(),
+                    on_paint_diagnostics.as_ref(),
+                    paint_row.as_ref(),
+                );
             };
 
             let canvas = if let Some(on_prepaint_frame) = on_prepaint_frame.clone() {
@@ -701,8 +828,8 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Rect, Scene, Size};
     use fret_ui::{UiTree, declarative::render_root};
-    use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::{Arc, Mutex};
 
     #[derive(Default)]
     struct FakeServices;
@@ -769,6 +896,7 @@ mod tests {
         let props = WindowedRowsSurfaceProps::default();
         assert_eq!(props.scroll.axis, ScrollAxis::Y);
         assert!(props.scroll.windowed_paint);
+        assert!(props.on_paint_diagnostics.is_none());
     }
 
     #[test]
@@ -813,6 +941,7 @@ mod tests {
 
         let prepaint_calls = Arc::new(AtomicUsize::new(0));
         let paint_calls = Arc::new(AtomicUsize::new(0));
+        let paint_diagnostics = Arc::new(Mutex::new(None));
 
         let root = render_root(
             &mut ui,
@@ -825,6 +954,7 @@ mod tests {
                 let prepaint_calls = Arc::clone(&prepaint_calls);
                 let prepaint_calls_for_paint = Arc::clone(&prepaint_calls);
                 let paint_calls = Arc::clone(&paint_calls);
+                let paint_diagnostics = Arc::clone(&paint_diagnostics);
 
                 let mut props = WindowedRowsSurfaceProps::default();
                 props.len = 4;
@@ -840,6 +970,9 @@ mod tests {
                 props.on_paint_frame = Some(Arc::new(move |_painter, _frame| {
                     assert_eq!(prepaint_calls_for_paint.load(Ordering::SeqCst), 1);
                     paint_calls.fetch_add(1, Ordering::SeqCst);
+                }));
+                props.on_paint_diagnostics = Some(Arc::new(move |diagnostics| {
+                    *paint_diagnostics.lock().expect("paint diagnostics lock") = Some(diagnostics);
                 }));
 
                 vec![windowed_rows_surface(
@@ -857,5 +990,13 @@ mod tests {
 
         assert_eq!(prepaint_calls.load(Ordering::SeqCst), 1);
         assert_eq!(paint_calls.load(Ordering::SeqCst), 1);
+        let diagnostics = paint_diagnostics
+            .lock()
+            .expect("paint diagnostics lock")
+            .expect("paint diagnostics");
+        assert_eq!(diagnostics.visible_start, 0);
+        assert!(diagnostics.visible_rows > 0);
+        assert_eq!(diagnostics.rows_iterated, diagnostics.visible_rows);
+        assert_eq!(diagnostics.rows_with_rect, diagnostics.visible_rows);
     }
 }

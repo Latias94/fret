@@ -778,6 +778,8 @@ pub struct WindowElementState {
     pub(super) observed_models_next: HashMap<GlobalElementId, Vec<(ModelId, Invalidation)>>,
     pub(super) observed_globals_rendered: HashMap<GlobalElementId, Vec<(TypeId, Invalidation)>>,
     pub(super) observed_globals_next: HashMap<GlobalElementId, Vec<(TypeId, Invalidation)>>,
+    pub(super) observed_deps_rendered: HashSet<GlobalElementId>,
+    pub(super) observed_deps_next: HashSet<GlobalElementId>,
     pub(super) observed_layout_queries_rendered:
         HashMap<GlobalElementId, Vec<(GlobalElementId, Invalidation)>>,
     pub(super) observed_layout_queries_next:
@@ -1042,6 +1044,11 @@ impl WindowElementState {
             &mut self.observed_globals_next,
         );
         self.observed_globals_next.clear();
+        std::mem::swap(
+            &mut self.observed_deps_rendered,
+            &mut self.observed_deps_next,
+        );
+        self.observed_deps_next.clear();
         std::mem::swap(
             &mut self.observed_layout_queries_rendered,
             &mut self.observed_layout_queries_next,
@@ -1504,7 +1511,9 @@ impl WindowElementState {
         let Some(list) = self.observed_models_rendered.get(&element) else {
             return;
         };
-        self.observed_models_next.insert(element, list.clone());
+        let list = list.clone();
+        self.observed_models_next.insert(element, list);
+        self.record_observed_deps_presence(element);
     }
 
     pub(crate) fn touch_observed_globals_for_element_if_recorded(
@@ -1517,7 +1526,13 @@ impl WindowElementState {
         let Some(list) = self.observed_globals_rendered.get(&element) else {
             return;
         };
-        self.observed_globals_next.insert(element, list.clone());
+        let list = list.clone();
+        self.observed_globals_next.insert(element, list);
+        self.record_observed_deps_presence(element);
+    }
+
+    pub(super) fn record_observed_deps_presence(&mut self, element: GlobalElementId) {
+        self.observed_deps_next.insert(element);
     }
 
     pub(crate) fn touch_observed_layout_queries_for_element_if_recorded(
@@ -3089,6 +3104,29 @@ mod tests {
         state.prepare_for_frame(FrameId(13), 0);
         state.prepare_for_frame(FrameId(14), 0);
         assert!(!state.take_transient_event(element, key));
+    }
+
+    #[test]
+    fn observed_deps_presence_tracks_rendered_and_touched_observations() {
+        let mut state = WindowElementState::default();
+        let element = GlobalElementId(123);
+
+        state.prepare_for_frame(FrameId(1), 0);
+        state
+            .observed_globals_next
+            .insert(element, vec![(TypeId::of::<u32>(), Invalidation::Paint)]);
+        state.record_observed_deps_presence(element);
+
+        state.prepare_for_frame(FrameId(2), 0);
+        assert!(state.observed_deps_rendered.contains(&element));
+        assert!(!state.observed_deps_next.contains(&element));
+
+        state.touch_observed_globals_for_element_if_recorded(element);
+        assert!(state.observed_deps_next.contains(&element));
+
+        state.prepare_for_frame(FrameId(3), 0);
+        assert!(state.observed_deps_rendered.contains(&element));
+        assert!(state.observed_globals_rendered.contains_key(&element));
     }
 
     #[test]
