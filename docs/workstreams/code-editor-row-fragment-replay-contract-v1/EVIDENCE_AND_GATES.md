@@ -20,11 +20,37 @@ Rejected micro-cleanup:
 - frame total p95: `808 -> 829us`
 - result: not kept
 
+## Retained Fragment Prototype Evidence
+
+Local no-4090 complex-wheel rerun:
+
+- `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-r2/worst.stats.json`
+- worst bundle:
+  `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-r2/1778941023307/bundle.schema2.json`
+- retained-fragment shape:
+  `RowSceneReplayPlanEntry` now carries row/local-bounds plus `Arc<RowSceneRetainedFragment>`.
+- focused tests:
+  `cargo nextest run -p fret-code-editor row_scene_replay_plan_rejects_stale_frame_and_skipped_rows prepaint_row_scene_replay_plan_uses_cached_syntax_replay_context prepaint_row_scene_replay_plan_skips_only_inline_preedit_rows prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast`
+
+Result versus the attribution baseline:
+
+- `top_code_editor_row_scene_prepaint_probe_us` p95: `77 -> 40us`
+- `top_code_editor_row_scene_prepaint_plan_us` p95: `95 -> 49us`
+- `top_code_editor_windowed_surface_paint_callback_us` p95: `153 -> 120us`
+- worst-bundle code-editor p95 `us_total`: `113 -> 75us`
+- worst-bundle code-editor p95 `us_windowed_surface_row_paint`: `134 -> 86us`
+- renderer text prepare stayed below the row-fragment owner: repeat p95 `37us`
+
+The worst total frame in the r2 run is not a row-fragment failure: `total=935us`, `layout=439us`,
+and `layout_semantics_refresh_time_us=399us`. It also reports a changed
+`RunnerMonitorTopologyDiagnosticsStore` global and a gallery shell view-cache root with
+`reuse_reason=needs_rerender`.
+
 ## Correctness Gates
 
 ```bash
 cargo fmt -p fret-code-editor -p fret-diag -p fret-ui-gallery --check
-cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_skips_only_inline_preedit_rows prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast
+cargo nextest run -p fret-code-editor row_scene_replay_plan_rejects_stale_frame_and_skipped_rows prepaint_row_scene_replay_plan_uses_cached_syntax_replay_context prepaint_row_scene_replay_plan_skips_only_inline_preedit_rows prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast
 cargo nextest run -p fret-diag bundle_stats_extracts_code_editor_paint_perf_from_app_snapshot top_code_editor_row_scene_fields_compute_replay_rate perf_json_row_exports_top_code_editor_row_scene_fields perf_repeat_run_json_row_exports_top_code_editor_row_scene_fields perf_repeat_summary_json_row_summarizes_code_editor_row_scene_fields --no-fail-fast
 python3 tools/check_workstream_catalog.py
 git diff --check

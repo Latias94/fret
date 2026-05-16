@@ -200,10 +200,19 @@ not update checked-in baselines.
       prepaint-probe regressed `77 -> 85us`, and frame total p95 moved `808 -> 829us`.
     - Decision: do not keep this cleanup; the next real optimization is a row-fragment replay contract, not another
       HashMap lookup micro-change.
-  - [ ] Prototype a row-fragment replay contract that lets prepaint hand paint a contiguous retained fragment plan
-    without per-row HashMap probe/bookkeeping in the hot callback.
+  - [x] Prototype a row-fragment replay contract that lets prepaint hand paint retained row fragments with less
+    per-row assembly cost in the hot callback.
     - Follow-on lane:
       `docs/workstreams/code-editor-row-fragment-replay-contract-v1/WORKSTREAM.json`.
+    - Implemented shape: `RowSceneReplayPlanEntry` points at `Arc<RowSceneRetainedFragment>` and carries only row
+      plus local-bounds metadata; no-overlay planned rows delay geometry cloning until the row-geom cache needs it.
+    - Local no-4090 complex-wheel evidence:
+      `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-r2/worst.stats.json`.
+    - Result: repeat-summary p95 `top_code_editor_row_scene_prepaint_probe_us` moved `77 -> 40us`,
+      `top_code_editor_row_scene_prepaint_plan_us` moved `95 -> 49us`, and
+      `top_code_editor_windowed_surface_paint_callback_us` moved `153 -> 120us`.
+    - Fresh next-owner read: worst r2 total frame was dominated by `layout_semantics_refresh_time_us=399us`
+      while renderer prepare text stayed at `37us` p95. Do not start renderer text/glyph residency from this result.
   - [ ] Re-run the three local editor paint probes after any row-fragment planning change; require the complex-wheel
     p95 `us_row_scene_prepaint_probe` to move materially below the current `~77us` before claiming progress.
   - Do not widen this into a renderer rewrite unless renderer prepare/encode becomes dominant in the local and

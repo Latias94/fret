@@ -267,28 +267,29 @@ impl RowSceneKey {
 }
 
 #[derive(Debug, Clone)]
-pub(super) struct RowSceneCacheEntry {
-    pub(super) key: RowSceneKey,
+pub(super) struct RowSceneRetainedFragment {
     pub(super) content: Arc<RowContentSnapshot>,
     pub(super) origin: Point,
     pub(super) geom: geom::RowGeom,
     pub(super) is_rich: bool,
     pub(super) ops: Arc<[SceneOp]>,
     pub(super) hosted_resources: fret_ui::canvas::CanvasHostedResources,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct RowSceneCacheEntry {
+    pub(super) key: RowSceneKey,
+    pub(super) retained: Arc<RowSceneRetainedFragment>,
     #[cfg(feature = "syntax")]
     pub(super) syntax_replay_key: Option<RowSceneSyntaxReplayKey>,
 }
 
 #[derive(Debug, Clone)]
-pub(super) struct RowSceneFragmentPayload {
+pub(super) struct RowSceneReplayPlanEntry {
     pub(super) row: usize,
-    pub(super) content: Arc<RowContentSnapshot>,
-    pub(super) geom: geom::RowGeom,
-    pub(super) is_rich: bool,
+    pub(super) retained: Arc<RowSceneRetainedFragment>,
+    pub(super) local_bounds: Rect,
 }
-
-pub(super) type RowSceneReplayPlanEntry =
-    fret_ui::canvas::CanvasSceneFragment<RowSceneFragmentPayload>;
 
 #[derive(Debug, Default, Clone)]
 pub(super) struct RowSceneReplayPlan {

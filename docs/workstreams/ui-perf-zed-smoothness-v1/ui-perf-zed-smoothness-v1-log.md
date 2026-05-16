@@ -15430,3 +15430,43 @@ Decision:
 - Do not call P1.5 closed, do not update checked-in baselines, and do not mark the goal complete until a Windows
   RTX4090 baseline validation directory and a matching `--with-paint-perf` attribution directory both pass the local
   verifier/closeout gate.
+
+## 2026-05-16 22:25:00 +0800 (retained row-fragment replay prototype)
+
+Question:
+- Can the residual row-scene prepaint planning owner be reduced without a broad Canvas display-list rewrite?
+
+Implemented slice:
+- `RowSceneReplayPlanEntry` now stores row/local-bounds metadata plus an `Arc<RowSceneRetainedFragment>`.
+- `RowSceneCacheEntry` owns the retained fragment shared by row-level replay and prepaint replay plans.
+- Planned no-overlay rows delay geometry cloning until the row-geom cache actually needs a fill.
+- Existing row-level fallback, overlay continuation, inline-preedit skip behavior, and hosted-resource touch
+  semantics are preserved.
+
+Evidence:
+- Workstream:
+  `docs/workstreams/code-editor-row-fragment-replay-contract-v1/WORKSTREAM.json`
+- Local no-4090 complex-wheel run:
+  `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-r2/worst.stats.json`
+- Worst bundle:
+  `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-r2/1778941023307/bundle.schema2.json`
+
+Result:
+- Repeat-summary p95 `top_code_editor_row_scene_prepaint_probe_us`: `77 -> 40us`.
+- Repeat-summary p95 `top_code_editor_row_scene_prepaint_plan_us`: `95 -> 49us`.
+- Repeat-summary p95 `top_code_editor_windowed_surface_paint_callback_us`: `153 -> 120us`.
+- Worst-bundle code-editor p95 `us_total`: `113 -> 75us`.
+- Renderer prepare text stayed below this owner at p95 `37us`.
+
+Next-owner read:
+- The worst r2 total frame was dominated by `layout=439us`, including
+  `layout_semantics_refresh_time_us=399us`, while the code-editor Canvas frame was only `92us`.
+- The same frame reports a changed `RunnerMonitorTopologyDiagnosticsStore` global and the gallery shell view-cache
+  root at `reuse_reason=needs_rerender`.
+
+Decision:
+- Keep the retained row-fragment prototype; it is a measured local win and does not require checked-in baseline
+  changes.
+- Do not reopen renderer text/glyph residency from this evidence.
+- The next local investigation should target semantics refresh / diagnostics-global invalidation, or run the full
+  three-probe pass to confirm whether that owner is specific to the complex-wheel script.

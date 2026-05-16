@@ -62,6 +62,28 @@ The first implementation should preserve the existing row-level fallback. A bad 
 must degrade to the current per-row paint path without changing selection, caret, preedit, hit-test,
 or hosted-resource lifetime behavior.
 
+## M1 Decision
+
+The first shipped shape is Candidate A in a conservative form: a replay-plan entry points at a
+retained per-row scene fragment via `Arc<RowSceneRetainedFragment>` and carries only the current
+frame's row/local-bounds metadata. This keeps the existing row-level fallback and avoids cloning the
+full row content, geometry, scene ops, and hosted-resource list during prepaint plan assembly.
+
+Candidate B, a precomposed visible-window scene fragment, remains a later optimization. It would
+need a stronger overlay/preedit representation and coarser invalidation diagnostics before it is
+worth the additional contract surface.
+
+Overlay and preedit behavior:
+
+- inline preedit keeps the caret/preedit row on the paint-time path;
+- planned base row replay can still be used for selected rows, but paint continues past base replay
+  to draw overlays;
+- no-overlay planned rows return immediately after replay and only clone geometry if the row-geom
+  cache needs a fill.
+
+Hosted-resource behavior stays unchanged: retained text blobs, paths, and SVGs are touched before
+replaying retained scene ops.
+
 ## Assumptions
 
 - Confident: Renderer text prepare is not the current local owner. Evidence:

@@ -5,7 +5,7 @@ Date: 2026-05-16
 
 ## M0 - Lane Scaffold And Baseline Evidence
 
-Status: In progress
+Status: Complete
 
 Exit criteria:
 
@@ -15,7 +15,7 @@ Exit criteria:
 
 ## M1 - Target Shape Decision
 
-Status: Pending
+Status: Complete
 
 Decide between:
 
@@ -29,25 +29,47 @@ The decision must name:
 - hosted-resource touch semantics,
 - boundary diagnostics fields.
 
+Decision: use a retained per-row fragment reference first. Each `RowSceneReplayPlanEntry` carries
+the row, local bounds, and an `Arc<RowSceneRetainedFragment>`. Precomposed visible-window replay is
+deferred until overlay/preedit diagnostics need that broader contract.
+
 ## M2 - Prototype With Row-Level Fallback
 
-Status: Pending
+Status: Complete
 
 Implement the chosen shape without deleting the current row-level plan path. The prototype must
 fall back on stale frame sequence, rect mismatch, missing row cache entry, overlay/preedit conflict,
 or unsupported replay key.
 
+Evidence:
+
+- `row_scene_replay_plan_rejects_stale_frame_and_skipped_rows`
+- `prepaint_row_scene_replay_plan_uses_cached_syntax_replay_context`
+- `prepaint_row_scene_replay_plan_skips_only_inline_preedit_rows`
+- `planned_replay_rows_with_selection_still_paint_overlay`
+
 ## M3 - Perf Validation
 
-Status: Pending
+Status: Complete
 
 Run the complex-wheel local repro and generate `worst.stats.json`. A useful win should move p95
 `us_row_scene_prepaint_probe` materially below the current `77us` without increasing frame paint or
 renderer prepare enough to erase the gain.
 
+Evidence:
+
+- `target/fret-diag/local-next-editor-paint-20260516-retained-row-fragment-r2/worst.stats.json`
+- repeat summary p95 `top_code_editor_row_scene_prepaint_probe_us`: `77 -> 40us`
+- repeat summary p95 `top_code_editor_row_scene_prepaint_plan_us`: `95 -> 49us`
+- repeat summary p95 `top_code_editor_windowed_surface_paint_callback_us`: `153 -> 120us`
+
 ## M4 - Close Or Promote
 
-Status: Pending
+Status: In progress
 
 If the prototype wins, promote it as the default path and update `ui-perf-zed-smoothness-v1`. If it
 does not win, close this lane with a no-ship audit and choose the next owner from fresh attribution.
+
+Current decision: keep the retained-fragment prototype. The next owner in the same local repro is
+not renderer text prepare; the worst r2 frame is dominated by semantics refresh/layout bookkeeping
+outside row-fragment planning.
