@@ -28,7 +28,7 @@ Conventions:
 - “Perf gate” items should land with a runnable `fretboard-dev diag perf` command and a baseline/threshold update.
 - “Fearless refactor” items should include: (1) perf evidence, (2) correctness evidence, (3) rollback plan.
 
-## Current local checkpoint (updated 2026-05-16; Windows RTX4090 deferred)
+## Current local checkpoint (updated 2026-05-17; Windows RTX4090 deferred)
 
 The target-machine Windows RTX4090 editor-paint closeout remains the formal contract gate, but it is not the
 current local execution blocker. Continue baseline-neutral local work only when it has its own evidence and does
@@ -39,6 +39,11 @@ not update checked-in baselines.
     `--with-paint-perf`, then pass artifact verifier and closeout without `--allow-non-windows`.
   - Preferred runner: `tools/perf/diag_editor_paint_contract_windows_handoff.py`
   - This remains a TODO and must not be replaced by local macOS evidence.
+  - Latest completion audit:
+    `docs/workstreams/ui-perf-zed-smoothness-v1/GOAL_AUDIT_2026-05-17.md`.
+  - 2026-05-17 strict evidence: both formal validation commands are host-guarded on this macOS
+    machine, the formal verifier reports missing baseline/attribution summaries, and closeout
+    reports `owner_decision.status=incomplete`.
 - [x] Keep a one-command target-machine handoff runner for the deferred Windows RTX4090 closeout.
   - Runner: `tools/perf/diag_editor_paint_contract_windows_handoff.py`
   - Sequence: release builds, preflight, baseline validation, `--with-paint-perf` attribution validation, artifact
