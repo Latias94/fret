@@ -166,6 +166,10 @@
       "command": "cargo nextest run -p fret-ui-kit --features imui --lib imui_fill_text_is_single_line_and_shrinkable imui_control_text_uses_shared_button_label_role --no-fail-fast"
     },
     {
+      "name": "imui menu shortcut text role reuse",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --lib menu_item_shortcut_text_uses_shared_control_readout_role menu_item_label_text_uses_shared_list_row_text_role --no-fail-fast"
+    },
+    {
       "name": "fret-examples imui proof check",
       "command": "cargo check -p fret-examples"
     },

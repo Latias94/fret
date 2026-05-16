@@ -9,7 +9,6 @@ use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableA11y,
     PressableProps, PressableState, RowProps, SemanticsDecoration, SpacerProps, SpacingLength,
-    TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
@@ -136,6 +135,13 @@ fn menu_item_label_text<H: UiHost>(cx: &mut ElementContext<'_, H>, label: Arc<st
     crate::declarative::text::text_list_row_label(cx, label)
 }
 
+fn menu_item_shortcut_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    shortcut: Arc<str>,
+) -> AnyElement {
+    crate::declarative::text::text_control_readout(cx, shortcut)
+}
+
 fn menu_item_impl_with_pressable_hook<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized, F>(
     ui: &mut W,
     label: Arc<str>,
@@ -244,10 +250,7 @@ where
                     if let Some(shortcut) = shortcut.clone() {
                         out.push(cx.spacer(SpacerProps::default()));
 
-                        let mut shortcut_props = TextProps::new(shortcut);
-                        shortcut_props.wrap = fret_core::TextWrap::None;
-                        shortcut_props.overflow = fret_core::TextOverflow::Clip;
-                        let mut shortcut = cx.text_props(shortcut_props);
+                        let mut shortcut = menu_item_shortcut_text(cx, shortcut);
                         if let Some(test_id) = shortcut_test_id.clone() {
                             shortcut = shortcut
                                 .attach_semantics(SemanticsDecoration::default().test_id(test_id));
@@ -496,5 +499,28 @@ mod tests {
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
         assert!(el.inherited_text_style.is_some());
+    }
+
+    #[test]
+    fn menu_item_shortcut_text_uses_shared_control_readout_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+            menu_item_shortcut_text(cx, Arc::from("Ctrl+Alt+Shift+P"))
+        });
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected menu item shortcut to be text");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(el.inherited_text_style.is_some());
+        assert!(el.inherited_foreground.is_some());
     }
 }

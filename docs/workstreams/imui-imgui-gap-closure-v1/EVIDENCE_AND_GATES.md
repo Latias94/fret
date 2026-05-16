@@ -226,6 +226,11 @@ Run evidence:
   menu_item_label_text_uses_shared_list_row_text_role
   selectable_row_label_uses_shared_list_row_text_role
   tree_row_label_uses_shared_list_row_text_role --no-fail-fast`.
+- 2026-05-16: routed IMUI menu shortcut labels through the existing `text_control_readout(...)`
+  role as muted compact auxiliary readouts. This keeps shortcut text single-line, shrinkable, and
+  ellipsis-truncated without adding a menu-specific shortcut role. Gate: `cargo nextest run -p
+  fret-ui-kit --features imui --lib menu_item_shortcut_text_uses_shared_control_readout_role
+  menu_item_label_text_uses_shared_list_row_text_role --no-fail-fast`.
 - 2026-05-16: tightened `UiWriterImUiFacadeExt::text(...)` to match Dear ImGui's default
   `Text()` posture: single-line, shrinkable, `min-width: 0`, and ellipsis-truncated under resize.
   Added `UiWriterImUiFacadeExt::text_wrapped(...)` as the explicit wrapping path for explanatory
