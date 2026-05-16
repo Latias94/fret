@@ -96,6 +96,7 @@ def build_plan(
             [
                 {
                     "name": "build-fretboard-dev",
+                    "fatal": True,
                     "out_dir": f"{out_dir}/build-fretboard-dev",
                     "cmd": [
                         "cargo",
@@ -107,6 +108,7 @@ def build_plan(
                 },
                 {
                     "name": "build-fret-ui-gallery",
+                    "fatal": True,
                     "out_dir": f"{out_dir}/build-fret-ui-gallery",
                     "cmd": [
                         "cargo",
@@ -124,6 +126,7 @@ def build_plan(
         plan.append(
             {
                 "name": "preflight",
+                "fatal": True,
                 "out_dir": f"{out_dir}/preflight",
                 "cmd": [
                     python_bin,
@@ -279,14 +282,20 @@ def main() -> int:
     for step in plan:
         name = str(step["name"])
         cmd = list(step["cmd"])
+        fatal = bool(step.get("fatal"))
         step_dir = out_dir_path / "runner-logs" / name
         stdout_path = step_dir / "stdout.log"
         stderr_path = step_dir / "stderr.log"
         _write_json(step_dir / "cmd.json", {"cmd": cmd})
         print(f"[handoff] running {name}: {shlex.join(cmd)}")
         result = _run(cmd, workspace_root, stdout_path, stderr_path)
+        result["name"] = name
+        result["fatal"] = fatal
         step_results.append(result)
         pass_all = pass_all and result["rc"] == 0
+        if result["rc"] != 0 and fatal:
+            print(f"[handoff] stopping after fatal step {name}", file=sys.stderr)
+            break
 
     summary = {
         "kind": "editor_paint_contract_windows_handoff_summary",

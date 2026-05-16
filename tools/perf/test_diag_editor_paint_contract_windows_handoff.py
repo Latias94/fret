@@ -163,6 +163,41 @@ class EditorPaintContractWindowsHandoffTests(unittest.TestCase):
         self.assertEqual(2, rc)
         self.assertIn("target Windows host", stderr.getvalue())
 
+    def test_fatal_build_failure_stops_before_validation(self) -> None:
+        with TemporaryDirectory() as td:
+            out_dir = Path(td) / "handoff"
+            build_result = {
+                "cmd": ["cargo", "build"],
+                "rc": 1,
+                "elapsed_ms": 1,
+                "stdout": str(out_dir / "runner-logs" / "build-fretboard-dev" / "stdout.log"),
+                "stderr": str(out_dir / "runner-logs" / "build-fretboard-dev" / "stderr.log"),
+            }
+            with patch.object(sys, "platform", "win32"):
+                with patch.object(
+                    sys,
+                    "argv",
+                    [
+                        "diag_editor_paint_contract_windows_handoff.py",
+                        "--out-dir",
+                        str(out_dir),
+                        "--date-tag",
+                        "unit-date",
+                        "--allow-non-windows",
+                    ],
+                ):
+                    with patch.object(handoff, "_run", side_effect=[build_result]) as run_step:
+                        with redirect_stderr(io.StringIO()):
+                            with redirect_stdout(io.StringIO()):
+                                rc = handoff.main()
+
+            summary = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(1, rc)
+        self.assertEqual(1, run_step.call_count)
+        self.assertFalse(summary["ok"])
+        self.assertEqual(["build-fretboard-dev"], [step["name"] for step in summary["steps"]])
+
 
 if __name__ == "__main__":
     unittest.main()

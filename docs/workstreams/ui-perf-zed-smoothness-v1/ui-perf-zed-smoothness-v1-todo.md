@@ -38,6 +38,7 @@ not update checked-in baselines.
   - Runner: `tools/perf/diag_editor_paint_contract_windows_handoff.py`
   - Sequence: release builds, preflight, baseline validation, `--with-paint-perf` attribution validation, artifact
     verifier, and closeout gates. Use `--skip-build` only when the Windows target binaries are already current.
+  - Release build and preflight steps are fatal prerequisites; validation does not run if they fail.
   - Dry-run evidence:
     `target/fret-diag/editor-paint-contract-windows-handoff-workstream-gate/handoff-plan.json`
   - Host guard evidence: non-dry-run on this macOS host exits with

@@ -60,6 +60,7 @@ This single command builds the release binaries, runs the fast preflight, runs t
 `--with-paint-perf` attribution pass, verifies artifacts, and runs the local closeout gates. It does not bypass the
 target-machine requirement; use `--dry-run` on non-target hosts to inspect the command plan without producing
 misleading local artifacts. Use `--skip-build` only when the target release binaries are already current.
+Build and preflight steps are fatal prerequisites: if either fails, the handoff stops before running validation.
 
 Use the lower-level validation runner directly only when you need to debug one validation directory at a time:
 

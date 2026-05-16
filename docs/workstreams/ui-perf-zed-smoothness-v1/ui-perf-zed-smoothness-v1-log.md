@@ -105,6 +105,31 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 19:23:49 +0800 (handoff fatal prerequisites)
+
+Question:
+- Should the handoff runner continue into validation if the release build or preflight prerequisites fail?
+
+Change:
+- Marked `build-fretboard-dev`, `build-fret-ui-gallery`, and `preflight` as fatal handoff steps.
+- The actual handoff summary now records each executed step name and stops before validation when a fatal prerequisite
+  fails. Baseline validation remains non-fatal so an attribution pass can still collect evidence when the target
+  machine is already built and preflight-clean.
+
+Validation:
+```bash
+python3 -m unittest discover -s tools/perf -p 'test_diag_editor_paint_contract_*.py'
+python3 tools/perf/diag_editor_paint_contract_windows_handoff.py --dry-run --date-tag workstream-gate
+```
+
+Results:
+- The editor-paint contract tool suite passed: 40 tests.
+- Dry-run plan marks the two build steps and preflight as `fatal=true`.
+
+Decision:
+- Keep build/preflight failure fail-fast; use the attribution pass after baseline validation only when the prerequisite
+  chain is already green.
+
 ## 2026-05-16 19:20:28 +0800 (handoff runner builds release targets)
 
 Question:
