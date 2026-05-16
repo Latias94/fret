@@ -54,7 +54,7 @@ Status: Active
   - Result: repeat=3 p95 total/layout/solve/prepaint/paint is `1697/1048/346/260/408us`;
     `top_view_cache_roots_needs_rerender=0`, `top_view_cache_roots_reused=1`, row replay/store
     stays `289/0`, and row-scene replay hit rate stays `100%`.
-- [ ] Attribute the remaining changing-bounds content `Scroll` layout cost after the view-cache
+- [x] Attribute the remaining changing-bounds content `Scroll` layout cost after the view-cache
   root rerender escape is gone.
   - Current owner: worst-bundle `layout_roots_time_us=812us` and `layout_engine_solve_time_us=346us`;
     the content `Scroll` hotspot is still visible (`214us` exclusive, `533us` inclusive) while
@@ -64,6 +64,29 @@ Status: Active
     or renderer work.
   - Candidate: a narrower contained-root changing-bounds apply/solve path, not a shadcn
     `ScrollArea` recipe rewrite and not another renderer/text slice.
+  - Fresh local no-4090 attribution:
+    `target/fret-diag/local-next-root-solve-attrib-20260517-r1/worst.stats.json`.
+  - Result: p95 total/layout/layout-roots/solve/prepaint/paint is
+    `1242/682/468/321/264/379us`; the worst frame is
+    `1242/618/404/305/251/373us` with `4` layout-engine solves,
+    `top_view_cache_roots_needs_rerender=0`, `top_view_cache_roots_reused=1`,
+    rows replayed/stored `289/0`, and renderer text prepare `64us`.
+  - Top solves remain small-width-delta `new_frame_key_changed` roots with no measured widget/text
+    time: content `Semantics` `172us` (`available_w_delta=-4`, `subtree_nodes=136`), root
+    `Stack` `128us` (`available_w_delta=-4`, `subtree_nodes=102`), and editor
+    `PointerRegion` `3us` (`available_w_delta=-4`, `subtree_nodes=2`).
+- [ ] Design the next root-solve / geometry-propagation slice before changing code.
+  - Do not simply skip `Scroll` child layout or extend the current safe-subset whitelist by name.
+    `Scroll` still owns handle viewport/content updates, deferred probe state, overflow observation,
+    and child transform side effects.
+  - Start from `crates/fret-ui/src/tree/layout/node.rs::try_propagate_clean_engine_layout` and
+    `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs::layout_scroll_impl`.
+  - The design question is whether resize-time bounds deltas can split pure geometry propagation
+    from side-effectful layout nodes more explicitly, while preserving scroll extents, hit-test
+    bounds, semantics/focus/overlay geometry, text input state, virtual-list visible ranges, and
+    layout-query semantics.
+  - Keep this in `scroll-optimization-v1` for now. Split a new workstream only if the next patch
+    changes the layout data model or introduces a durable cross-crate layout-side-effect contract.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

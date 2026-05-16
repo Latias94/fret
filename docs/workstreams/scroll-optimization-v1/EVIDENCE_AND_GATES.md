@@ -128,6 +128,40 @@ Post-merge retained/windowed scroll update proof (2026-05-17):
   - The remaining local owner is now changing-bounds layout/root solve under the content `Scroll`, not
     parent view-cache rerender, renderer text, shadcn `ScrollArea` recipe policy, or editor row replay.
 
+Post-merge root-solve attribution refresh (2026-05-17):
+
+- Evidence:
+  `target/fret-diag/local-next-root-solve-attrib-20260517-r1/worst.stats.json`
+- Bundle:
+  `target/fret-diag/local-next-root-solve-attrib-20260517-r1/1778949437059/bundle.schema2.json`
+- Command shape:
+  - `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
+  - repeat `1`, warmup `5`, standard prewarm/prelude hooks, overlay disabled, view-cache shell enabled,
+    code-editor paint perf enabled, scroll/layout profiling enabled.
+  - Launch command: `cargo run -p fret-ui-gallery --release --features gallery-full`.
+- Verification gates rerun after merge:
+  - `cargo nextest run -p fret-ui scroll --no-fail-fast`
+    - Result: `152/152` passed.
+  - `cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast`
+    - Result: `2/2` passed.
+- Result:
+  - p95 total/layout/layout-roots/solve/prepaint/paint: `1242/682/468/321/264/379us`.
+  - Worst frame total/layout/layout-roots/solve/prepaint/paint: `1242/618/404/305/251/373us`.
+  - View-cache root classification remains fixed: `top_view_cache_roots_needs_rerender=0`,
+    `top_view_cache_roots_reused=1`.
+  - Code-editor row guardrails remain stable: rows replayed/stored `289/0`; row-scene replay hit
+    rate stays `100%`.
+  - Renderer text remains bounded at `64us`.
+  - Top solves are still small-width-delta `new_frame_key_changed` roots with `measure_time_us=0`:
+    content `Semantics` `172us` (`available_w_delta=-4`, `subtree_nodes=136`), root `Stack`
+    `128us` (`available_w_delta=-4`, `subtree_nodes=102`), and editor `PointerRegion` `3us`.
+- Decision:
+  - Keep Windows RTX4090 closeout separate; this local macOS sample is not formal closeout evidence.
+  - The next code slice should not skip `Scroll` layout wholesale. The correct design target is a
+    narrower root-solve / geometry-propagation split that preserves side-effectful layout semantics.
+  - Do not start renderer text, shadcn `ScrollArea` recipe, or row-fragment replay work from this
+    evidence.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:

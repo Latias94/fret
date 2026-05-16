@@ -105,6 +105,42 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-17 00:49:00 +0800 (post-merge root-solve attribution refresh)
+
+Question:
+- After the merge and post-merge retained/windowed scroll evidence, is the next local owner still
+  view-cache rerender, renderer text, row replay, or a narrower resize layout/root-solve problem?
+
+Change:
+- No code change. Ran a baseline-neutral local no-4090 resize-jitter attribution sample and reran
+  the focused scroll / row-scene replay gates.
+
+Evidence:
+- Local stats:
+  `target/fret-diag/local-next-root-solve-attrib-20260517-r1/worst.stats.json`
+- Bundle:
+  `target/fret-diag/local-next-root-solve-attrib-20260517-r1/1778949437059/bundle.schema2.json`
+- Gates:
+  - `cargo nextest run -p fret-ui scroll --no-fail-fast`
+  - `cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast`
+
+Results:
+| sample | p95 total | layout | layout roots | solve | prepaint | paint | view-cache needs_rerender | rows replayed/stored | renderer text |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| resize jitter r1 | 1242 | 682 | 468 | 321 | 264 | 379 | 0 | 289/0 | 64 |
+
+Worst-frame read:
+- total/layout/layout-roots/solve/prepaint/paint is `1242/618/404/305/251/373us`.
+- Top solves remain small-width-delta `new_frame_key_changed` roots with no measured widget/text
+  time: content `Semantics` `172us` (`available_w_delta=-4`, `subtree_nodes=136`), root `Stack`
+  `128us` (`available_w_delta=-4`, `subtree_nodes=102`), and editor `PointerRegion` `3us`.
+
+Decision:
+- The retained/windowed view-cache rerender owner remains resolved after merge.
+- The next local owner is root solve / geometry propagation under changing resize bounds. Do not
+  reopen renderer text, shadcn `ScrollArea` recipe policy, or editor row replay from this evidence.
+- Do not treat this macOS M4/no-4090 sample as Windows RTX4090 editor-paint closeout evidence.
+
 ## 2026-05-17 00:15:00 +0800 (windowed scroll paint-only post-merge proof)
 
 Question:
