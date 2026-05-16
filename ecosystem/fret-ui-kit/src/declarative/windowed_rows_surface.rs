@@ -56,8 +56,26 @@ impl WindowedRowsPaintFrame {
             return None;
         }
 
+        Some(self.row_rect_for_visible_index(content_bounds, index))
+    }
+
+    pub fn row_rects(&self, content_bounds: Rect) -> WindowedRowsRectIter {
+        WindowedRowsRectIter {
+            next_index: self.visible_start,
+            end_index: self.visible_end,
+            next_offset_y: self.row_offset_y(self.visible_start).0,
+            row_stride: self.row_stride.0.max(0.0),
+            origin_x: content_bounds.origin.x,
+            origin_y: content_bounds.origin.y,
+            width: Px(content_bounds.size.width.0.max(0.0)),
+            height: Px(self.row_height.0.max(0.0)),
+            finished: self.visible_start > self.visible_end,
+        }
+    }
+
+    fn row_rect_for_visible_index(&self, content_bounds: Rect, index: usize) -> Rect {
         let offset_y = self.row_offset_y(index);
-        Some(Rect::new(
+        Rect::new(
             Point::new(
                 content_bounds.origin.x,
                 Px(content_bounds.origin.y.0 + offset_y.0),
@@ -66,7 +84,50 @@ impl WindowedRowsPaintFrame {
                 Px(content_bounds.size.width.0.max(0.0)),
                 Px(self.row_height.0.max(0.0)),
             ),
-        ))
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct WindowedRowsRectIter {
+    next_index: usize,
+    end_index: usize,
+    next_offset_y: f32,
+    row_stride: f32,
+    origin_x: Px,
+    origin_y: Px,
+    width: Px,
+    height: Px,
+    finished: bool,
+}
+
+impl Iterator for WindowedRowsRectIter {
+    type Item = (usize, Rect);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.finished {
+            return None;
+        }
+
+        let index = self.next_index;
+        if index > self.end_index {
+            self.finished = true;
+            return None;
+        }
+
+        let rect = Rect::new(
+            Point::new(self.origin_x, Px(self.origin_y.0 + self.next_offset_y)),
+            Size::new(self.width, self.height),
+        );
+
+        if index == self.end_index {
+            self.finished = true;
+        } else {
+            self.next_index = self.next_index.saturating_add(1);
+            self.next_offset_y += self.row_stride;
+        }
+
+        Some((index, rect))
     }
 }
 
@@ -301,10 +362,8 @@ fn paint_windowed_rows<P>(
             on_paint_frame(painter, frame);
         }
 
-        for index in frame.visible_start..=frame.visible_end {
-            if let Some(rect) = frame.row_rect(bounds, index) {
-                paint_row(painter, index, rect);
-            }
+        for (index, rect) in frame.row_rects(bounds) {
+            paint_row(painter, index, rect);
         }
         return;
     };
@@ -330,22 +389,25 @@ fn paint_windowed_rows<P>(
     }
 
     let row_loop_started = Instant::now();
-    for index in frame.visible_start..=frame.visible_end {
-        diagnostics.rows_iterated = diagnostics.rows_iterated.saturating_add(1);
+    let mut row_rects = frame.row_rects(bounds);
+    loop {
         let row_rect_started = Instant::now();
-        let rect = frame.row_rect(bounds, index);
+        let next = row_rects.next();
         let (us, ns) = elapsed_us_ns(row_rect_started);
         diagnostics.us_row_rect = diagnostics.us_row_rect.saturating_add(us);
         diagnostics.ns_row_rect = diagnostics.ns_row_rect.saturating_add(ns);
 
-        if let Some(rect) = rect {
-            diagnostics.rows_with_rect = diagnostics.rows_with_rect.saturating_add(1);
-            let row_paint_started = Instant::now();
-            paint_row(painter, index, rect);
-            let (us, ns) = elapsed_us_ns(row_paint_started);
-            diagnostics.us_row_paint = diagnostics.us_row_paint.saturating_add(us);
-            diagnostics.ns_row_paint = diagnostics.ns_row_paint.saturating_add(ns);
-        }
+        let Some((index, rect)) = next else {
+            break;
+        };
+
+        diagnostics.rows_iterated = diagnostics.rows_iterated.saturating_add(1);
+        diagnostics.rows_with_rect = diagnostics.rows_with_rect.saturating_add(1);
+        let row_paint_started = Instant::now();
+        paint_row(painter, index, rect);
+        let (us, ns) = elapsed_us_ns(row_paint_started);
+        diagnostics.us_row_paint = diagnostics.us_row_paint.saturating_add(us);
+        diagnostics.ns_row_paint = diagnostics.ns_row_paint.saturating_add(ns);
     }
     let (us_row_loop, ns_row_loop) = elapsed_us_ns(row_loop_started);
     diagnostics.us_row_loop = us_row_loop;
@@ -923,6 +985,52 @@ mod tests {
                 Point::new(Px(10.0), Px(108.0)),
                 Size::new(Px(120.0), Px(20.0))
             ))
+        );
+    }
+
+    #[test]
+    fn windowed_rows_frame_row_rects_iterates_visible_rows() {
+        let frame = WindowedRowsPaintFrame {
+            viewport_height: Px(48.0),
+            offset_y: Px(0.0),
+            row_height: Px(20.0),
+            row_stride: Px(24.0),
+            gap: Px(4.0),
+            scroll_margin: Px(6.0),
+            visible_start: 2,
+            visible_end: 4,
+        };
+        let bounds = Rect::new(
+            Point::new(Px(10.0), Px(30.0)),
+            Size::new(Px(120.0), Px(96.0)),
+        );
+
+        let rows = frame.row_rects(bounds).collect::<Vec<_>>();
+        assert_eq!(
+            rows,
+            vec![
+                (
+                    2,
+                    Rect::new(
+                        Point::new(Px(10.0), Px(84.0)),
+                        Size::new(Px(120.0), Px(20.0))
+                    )
+                ),
+                (
+                    3,
+                    Rect::new(
+                        Point::new(Px(10.0), Px(108.0)),
+                        Size::new(Px(120.0), Px(20.0))
+                    )
+                ),
+                (
+                    4,
+                    Rect::new(
+                        Point::new(Px(10.0), Px(132.0)),
+                        Size::new(Px(120.0), Px(20.0))
+                    )
+                ),
+            ]
         );
     }
 

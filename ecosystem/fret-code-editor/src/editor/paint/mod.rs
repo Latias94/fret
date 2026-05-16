@@ -68,6 +68,14 @@ pub(super) fn add_paint_perf_elapsed(us: &mut u64, ns: &mut u64, started: Instan
     *ns = ns.saturating_add(nanos);
 }
 
+pub(super) fn row_requires_paint_time_preedit(st: &CodeEditorState, row: usize) -> bool {
+    st.preedit.is_some()
+        && st
+            .paint_frame_overlay
+            .caret
+            .is_some_and(|caret| caret.row == row)
+}
+
 pub(super) fn frame_cache_max_entries(st: &CodeEditorState, max_entries: usize) -> usize {
     if max_entries == 0 {
         return 0;
@@ -130,10 +138,16 @@ pub(super) fn prepaint_row_scene_replay_plan_for_frame_with_edge_prebuild(
 ) -> RowSceneReplayPlan {
     let row_count = st.display_map.row_count();
     if row_count > 0 {
-        let edge = frame.visible_end.min(row_count.saturating_sub(1));
-        if !st.row_scene_cache.contains_key(&edge)
-            && let Some(rect) = frame.row_rect(content_bounds, edge)
-        {
+        let end = frame.visible_end.min(row_count.saturating_sub(1));
+        let start = frame.visible_start.min(end);
+        let mut last_prebuilt = None::<usize>;
+        for edge in [start, end] {
+            if last_prebuilt == Some(edge) || st.row_scene_cache.contains_key(&edge) {
+                continue;
+            }
+            let Some(rect) = frame.row_rect(content_bounds, edge) else {
+                continue;
+            };
             let _ = cx.with_scene_painter(|painter| {
                 prebuild_edge_row_scene_fragment_for_frame(
                     painter,
@@ -148,6 +162,7 @@ pub(super) fn prepaint_row_scene_replay_plan_for_frame_with_edge_prebuild(
                     theme_revision,
                 )
             });
+            last_prebuilt = Some(edge);
         }
     }
 
@@ -278,7 +293,7 @@ pub(super) fn prebuild_edge_row_scene_fragment_for_frame(
     fg: Color,
     theme_revision: u64,
 ) -> Option<RowSceneReplayPlanEntry> {
-    if st.preedit.is_some() {
+    if row_requires_paint_time_preedit(st, row) {
         return None;
     }
     if st.row_scene_cache.contains_key(&row) {

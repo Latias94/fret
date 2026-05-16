@@ -107,10 +107,6 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
         entries: VecDeque::new(),
     };
 
-    if st.preedit.is_some() {
-        return plan;
-    }
-
     ensure_row_scene_cache_fresh(st);
     ensure_syntax_row_cache_fresh(st);
 
@@ -124,6 +120,9 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
     }
 
     let end = frame.visible_end.min(row_count.saturating_sub(1));
+    if frame.visible_start > end {
+        return plan;
+    }
     struct ReplayCandidate {
         content: Arc<RowContentSnapshot>,
         scene_origin: Point,
@@ -142,12 +141,25 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
     }
 
     let mut planned = 0u64;
-    for row in frame.visible_start..=end {
+    for (row, rect) in frame.row_rects(content_bounds) {
+        if row > end {
+            break;
+        }
+
         if st.paint_perf_enabled {
             st.paint_perf_frame.rows_scene_prepaint_candidates = st
                 .paint_perf_frame
                 .rows_scene_prepaint_candidates
                 .saturating_add(1);
+        }
+        if row_requires_paint_time_preedit(st, row) {
+            if st.paint_perf_enabled {
+                st.paint_perf_frame.rows_scene_prepaint_skip_preedit = st
+                    .paint_perf_frame
+                    .rows_scene_prepaint_skip_preedit
+                    .saturating_add(1);
+            }
+            continue;
         }
         let probe = match st.row_scene_cache.get(&row) {
             Some((cached, _)) => {
@@ -256,9 +268,6 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
         }
         st.row_scene_cache_queue.push_back((row, tick));
 
-        let Some(rect) = frame.row_rect(content_bounds, row) else {
-            continue;
-        };
         plan.entries
             .push_back(fret_ui::canvas::CanvasSceneFragment::new(
                 RowSceneFragmentPayload {

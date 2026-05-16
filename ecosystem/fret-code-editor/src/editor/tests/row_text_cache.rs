@@ -242,19 +242,28 @@ fn prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint() {
     );
 
     let resized_bounds = Rect::new(bounds.origin, Size::new(Px(704.0), bounds.size.height));
-    let resized_visible_end = {
+    let (resized_visible_start, resized_visible_end) = {
         let st = handle.state.borrow();
-        *st.row_scene_cache
+        let start = *st
+            .row_scene_cache
+            .keys()
+            .min()
+            .expect("first frame should seed row scene cache entries");
+        let end = *st
+            .row_scene_cache
             .keys()
             .max()
-            .expect("first frame should seed row scene cache entries")
+            .expect("first frame should seed row scene cache entries");
+        (start, end)
     };
     {
         let mut st = handle.state.borrow_mut();
-        if let Some((old, _)) = st.row_scene_cache.remove(&resized_visible_end) {
-            st.row_scene_cache_scene_ops_len_total = st
-                .row_scene_cache_scene_ops_len_total
-                .saturating_sub(old.ops.len() as u64);
+        for row in [resized_visible_start, resized_visible_end] {
+            if let Some((old, _)) = st.row_scene_cache.remove(&row) {
+                st.row_scene_cache_scene_ops_len_total = st
+                    .row_scene_cache_scene_ops_len_total
+                    .saturating_sub(old.ops.len() as u64);
+            }
         }
     }
     let before = handle.cache_stats();
@@ -328,12 +337,16 @@ fn prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint() {
         "paint should not run the full row scene path because the edge row had no entry"
     );
     assert_eq!(
+        perf.rows_scene_stored_at_visible_start, 0,
+        "paint should not store the newly exposed visible-start row"
+    );
+    assert_eq!(
         perf.rows_scene_stored_at_visible_end, 0,
         "paint should not store the newly exposed visible-end row"
     );
     assert_eq!(
-        perf.rows_scene_prepaint_edge_stored, 1,
-        "prepaint should explicitly prebuild the missing visible-end row"
+        perf.rows_scene_prepaint_edge_stored, 2,
+        "prepaint should explicitly prebuild both missing visible edge rows"
     );
     assert!(
         perf.row_scene_prepaint_edge_ops_stored > 0,
@@ -409,6 +422,80 @@ fn planned_replay_rows_with_selection_still_paint_overlay() {
             .saturating_sub(before.row_text_get_calls),
         0,
         "selection overlay should reuse planned replay content snapshots"
+    );
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
+fn prepaint_row_scene_replay_plan_skips_only_inline_preedit_rows() {
+    let text = "fn main() {\n    let x = 1;\n}\n".repeat(64);
+    let handle = CodeEditorHandle::new(text);
+    handle.set_language(Some(Arc::<str>::from("rust")));
+    handle.debug_set_compose_inline_preedit(true);
+    handle.set_selection(Selection {
+        anchor: "fn main() {\n    let ".len(),
+        focus: "fn main() {\n    let ".len(),
+    });
+    handle.set_preedit_debug("xy", Some((1, 1)));
+    handle.state.borrow_mut().paint_perf_enabled = true;
+
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let bounds = editor_ui_bounds();
+    let mut services = FakeServices::default();
+
+    let _ = render_code_editor_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        handle.clone(),
+        bounds,
+    );
+
+    let before = handle.cache_stats();
+    let _ = render_code_editor_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        handle.clone(),
+        bounds,
+    );
+    let after = handle.cache_stats();
+    let perf = handle
+        .paint_perf_frame()
+        .expect("paint perf frame should be enabled in tests that set the env");
+
+    assert!(
+        perf.rows_scene_prepaint_candidates > perf.rows_scene_prepaint_skip_preedit,
+        "preedit should not suppress planning for unrelated visible rows"
+    );
+    assert!(
+        perf.rows_scene_prepaint_skip_preedit > 0,
+        "the composed preedit row must stay on the paint-time path"
+    );
+    assert!(
+        perf.rows_scene_prepaint_planned > 0,
+        "non-preedit rows should still use the prepaint replay plan"
+    );
+    assert_eq!(
+        perf.rows_scene_prepaint_plan_used, perf.rows_scene_prepaint_planned,
+        "paint should consume each planned non-preedit row"
+    );
+    assert!(
+        after
+            .row_scene_hits
+            .saturating_sub(before.row_scene_hits)
+            .saturating_add(
+                after
+                    .row_scene_fast_hits
+                    .saturating_sub(before.row_scene_fast_hits),
+            )
+            >= perf.rows_scene_prepaint_planned,
+        "prepaint planning should account for retained row-scene hits"
     );
 }
 

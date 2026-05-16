@@ -105,6 +105,112 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 20:57:43 +0800 (inline preedit row-scene replay recovery)
+
+Question:
+- Is the `canvas-paint-replay` owner caused by unavoidable Canvas replay cost, or by a code-editor row-scene planning
+  policy that disables replay too broadly?
+
+Change:
+- Kept the preedit/caret row on the paint-time path, but removed the global `st.preedit.is_some()` guard that suppressed
+  prepaint row-scene replay planning for every visible row.
+- Added `row_requires_paint_time_preedit(...)` and a regression test proving inline preedit skips only the preedit row
+  while unrelated visible rows still use retained row-scene replay.
+
+Validation:
+```bash
+cargo fmt -p fret-code-editor -p fret-ui-kit --check
+cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_skips_only_inline_preedit_rows prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast
+cargo nextest run -p fret-ui-kit windowed_rows_frame_row_rects_iterates_visible_rows --no-fail-fast
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --repeat 3 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 15 --json --dir target/fret-diag/local-next-editor-paint-20260516-preedit-row-plan-complex-wheel-r3 --launch -- cargo run -p fret-ui-gallery --release --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+target/release/fretboard-dev diag stats target/fret-diag/local-next-editor-paint-20260516-preedit-row-plan-complex-wheel-r3/1778936167532/bundle.schema2.json --sort cpu_cycles --top 15 --json > target/fret-diag/local-next-editor-paint-20260516-preedit-row-plan-complex-wheel-r3/worst.stats.json
+```
+
+Results:
+- Evidence:
+  `target/fret-diag/local-next-editor-paint-20260516-preedit-row-plan-complex-wheel-r3/worst.stats.json`
+- Compared with the previous local `prepaint-both-edges` complex-wheel run:
+  - `rows_scene_prepaint_planned`: `0 -> 288`
+  - `rows_scene_prepaint_skip_preedit`: `0 -> 1`
+  - `code_editor_paint_perf.p95.us_total`: `383 -> 111us`
+  - `us_windowed_surface_paint_callback`: `414 -> 151us`
+  - Canvas `exclusive_us.p95`: `419 -> 152us`
+  - Frame `paint_time_us.p95`: `679 -> 427us`
+  - Frame `prepaint_time_us.p95`: `122 -> 268us`
+  - Frame `total_time_us.p95`: `830 -> 787us`
+
+Decision:
+- Keep the fix. The dominant local Canvas cost was partly a code-editor policy bug: one inline preedit row disabled the
+  replay plan for the whole visible surface.
+- The next optimization should target prepaint row-scene planning cost and/or a coarser row-fragment replay contract.
+  Do not broaden this into a renderer rewrite from current evidence.
+
+## 2026-05-16 20:31:15 +0800 (local editor paint contract attribution)
+
+Question:
+- With Windows RTX4090 formal closeout deferred, which local hot path should own the next optimization slice?
+
+Change:
+- Added an explicit local triage path for the editor-paint contract tools without relaxing the formal Windows path:
+  `diag_editor_paint_contract_validate.py` and `diag_resize_probes_gate.py` can pass a full `--launch-cmd`, while
+  verifier and closeout only accept local cargo-launch artifacts when `--allow-non-windows` is supplied.
+
+Validation:
+```bash
+python3 -m unittest test_diag_resize_probes_gate.py test_diag_editor_paint_contract_validate.py test_diag_editor_paint_contract_verify_artifacts.py test_diag_editor_paint_contract_closeout.py
+python3 tools/perf/diag_editor_paint_contract_validate.py --date-tag goal-audit-local-cargo --allow-non-windows --allow-existing-out-dir --fretboard-bin target/release/fretboard-dev --launch-bin target/release/fret-ui-gallery --launch-cmd 'cargo run -p fret-ui-gallery --release --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness -- target/release/fret-ui-gallery'
+python3 tools/perf/diag_editor_paint_contract_validate.py --date-tag goal-audit-local-cargo-attrib --allow-non-windows --allow-existing-out-dir --fretboard-bin target/release/fretboard-dev --launch-bin target/release/fret-ui-gallery --launch-cmd 'cargo run -p fret-ui-gallery --release --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness -- target/release/fret-ui-gallery' --with-paint-perf
+python3 tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-goal-audit-local-cargo --attribution-dir target/fret-diag/editor-paint-contract-validate-goal-audit-local-cargo-attrib --allow-non-windows
+python3 tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-goal-audit-local-cargo --attribution-dir target/fret-diag/editor-paint-contract-validate-goal-audit-local-cargo-attrib --allow-non-windows --out-report target/fret-diag/editor-paint-contract-validate-goal-audit-local-cargo/editor-paint-contract-closeout.summary.json
+```
+
+Results:
+- Local baseline validation PASS:
+  `target/fret-diag/editor-paint-contract-validate-goal-audit-local-cargo/summary.json`
+- Local attribution validation PASS:
+  `target/fret-diag/editor-paint-contract-validate-goal-audit-local-cargo-attrib/summary.json`
+- Local verifier PASS:
+  `target/fret-diag/editor-paint-contract-validate-goal-audit-local-cargo/artifact-verification.summary.json`
+- Local closeout PASS:
+  `target/fret-diag/editor-paint-contract-validate-goal-audit-local-cargo/editor-paint-contract-closeout.summary.json`
+- Owner decision: `canvas-paint-replay`.
+- Scores: complex-wheel `paint_widget_p95_us=509`, complex-wheel `canvas_exclusive_p95_us=407`, and highest
+  `renderer_prepare_text_p95_us=69`.
+
+Decision:
+- Do not start another renderer text/glyph residency slice from this evidence.
+- The next local optimization/refactor investigation should target Canvas/paint replay and related paint-widget
+  accounting. This is local macOS evidence only; the Windows RTX4090 closeout remains a TODO and must still run
+  without `--allow-non-windows`.
+
+## 2026-05-16 19:56:54 +0800 (windowed row rect iterator cleanup)
+
+Question:
+- Can the remaining editor row-surface gap be reduced with a smaller fixed-loop cleanup instead of a broader paint/cache rewrite?
+
+Change:
+- Added `WindowedRowsPaintFrame::row_rects(...)` so visible row rectangles can be generated incrementally.
+- Switched `paint_windowed_rows(...)` and code-editor row-scene prepaint planning to iterate visible rects directly.
+
+Validation:
+```bash
+cargo fmt -p fret-ui-kit -p fret-code-editor --check
+cargo nextest run -p fret-ui-kit windowed_rows_frame_row_rects_iterates_visible_rows --no-fail-fast
+cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-typical.json --repeat 3 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 15 --json --dir target/fret-diag/local-next-editor-paint-20260516-row-rect-iter-typical-r3 --launch -- cargo run -p fret-ui-gallery --release --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+```
+
+Results:
+- New local no-4090 bundle: `target/fret-diag/local-next-editor-paint-20260516-row-rect-iter-typical-r3/1778932552262/bundle.schema2.json`
+- `code_editor_paint_perf.p95.us_total` moved `138 -> 119us`.
+- `us_windowed_surface_paint_callback` moved `176 -> 160us`.
+- `us_windowed_surface_row_paint` moved `158 -> 141us`.
+- `surface_rows_iterated` stayed `289`, `rows_scene_replayed` stayed `289`, and `rows_scene_stored` stayed `0`.
+
+Decision:
+- Keep this as a narrow fixed-loop cleanup only. It is still not evidence for a broad windowed-surface or display-list rewrite.
+- The next meaningful architecture/perf owner remains resize layout roots/solve, while the Windows RTX4090 closeout stays TODO.
+
 ## 2026-05-16 19:32:50 +0800 (paint bookkeeping stats summary)
 
 Question:
