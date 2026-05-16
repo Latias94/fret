@@ -210,6 +210,9 @@ Readiness order for the next locally testable review slices:
    `text_paragraph_break_words(...)` now provide semantic aliases over the existing prose helpers,
    leaving `text_prose(...)` available for shadcn/Tailwind naming while giving Fret apps a stable
    paragraph role name.
+   2026-05-17 compact paragraph text follow-up: `text_compact_paragraph(...)` now owns dense
+   wrapping body copy for editor/IMUI panels, and both `bullet_text(...)` labels and
+   `UiWriterImUiFacadeExt::text_wrapped(...)` route through it instead of local `TextProps`.
    2026-05-16 trigger label reuse follow-up: IMUI tab triggers and menubar triggers now reuse
    `text_button_label(...)` because they are button-like trigger labels.
    2026-05-16 list row text role follow-up: `text_list_row_label(...)` now owns dense

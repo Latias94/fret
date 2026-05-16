@@ -83,6 +83,10 @@ fn fill_shrinkable_single_line_layout() -> LayoutStyle {
 }
 
 fn fill_growing_single_line_layout() -> LayoutStyle {
+    fill_growing_zero_min_layout()
+}
+
+fn fill_growing_zero_min_layout() -> LayoutStyle {
     let mut layout = fill_shrinkable_single_line_layout();
     layout.flex.grow = 1.0;
     layout.flex.basis = Length::Px(Px(0.0));
@@ -464,6 +468,34 @@ pub fn text_paragraph_break_words<H: UiHost>(
     text_prose_break_words(cx, text)
 }
 
+/// Compact paragraph/body copy for dense editor surfaces.
+///
+/// This role is for explanatory copy that should wrap and may grow row height, but still needs
+/// fill-width, `min-width: 0` flex behavior inside dense panels.
+pub fn text_compact_paragraph<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_sm_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: fill_growing_zero_min_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
 /// Bold variant of [`text_prose`], intended for typography table headers (`<th className="... font-bold">`).
 pub fn text_prose_bold<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -758,6 +790,33 @@ mod tests {
                 .and_then(|style| style.font.clone()),
             Some(FontId::monospace())
         );
+    }
+
+    #[test]
+    fn compact_paragraph_text_uses_wrapping_fill_width_layout() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_compact_paragraph(cx, "Dense editor body copy wraps inside the available row")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_compact_paragraph(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
     }
 
     #[test]

@@ -225,6 +225,14 @@ Run evidence:
   text-role vocabulary pass without breaking shadcn/Tailwind-oriented naming. Gate: `cargo nextest
   run -p fret-ui-kit --features imui --lib
   prose_variants_and_code_wrap_install_semantic_inherited_overrides --no-fail-fast`.
+- 2026-05-17: introduced `text_compact_paragraph(...)` as the shared dense wrapping paragraph role
+  for editor/IMUI body copy. IMUI `bullet_text(...)` labels and
+  `UiWriterImUiFacadeExt::text_wrapped(...)` now route through it, preserving explicit wrapping
+  while moving fill-width/min-width-zero layout policy out of local `TextProps`. Gate: `cargo
+  nextest run -p fret-ui-kit --features imui --lib
+  compact_paragraph_text_uses_wrapping_fill_width_layout
+  bullet_text_uses_shared_compact_paragraph_role imui_text_wrapped_is_explicit_wrapping_text
+  --no-fail-fast`.
 - 2026-05-16: routed IMUI tab triggers and menubar triggers through the shared
   `text_button_label(...)` role. This keeps button-like trigger labels single-line and truncating
   while leaving menu item/selectable row labels out of the button-label role. Gate: `cargo nextest
@@ -271,8 +279,8 @@ Run evidence:
   imui_fill_text_is_single_line_and_shrinkable imui_control_text_uses_shared_button_label_role
   --no-fail-fast`.
 - 2026-05-16: hardened `tools/gate_imui_workstream_source.py` with an explicit allowlist for the
-  remaining direct `TextProps::new(...)` constructors under `fret-ui-kit::imui`: bullet prose and
-  facade `text`/`text_wrapped`. New direct constructors now fail the
+  remaining direct `TextProps::new(...)` constructors under `fret-ui-kit::imui`: facade
+  `text(...)` only. New direct constructors now fail the
   source gate unless they are routed through the shared text roles or intentionally added to the
   allowlist. Gate: `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: introduced `editor_input_value_text(...)` in `fret-ui-editor` input-group primitives

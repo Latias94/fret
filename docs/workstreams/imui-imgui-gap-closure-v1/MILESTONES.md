@@ -214,6 +214,9 @@ Exit criteria:
   2026-05-16 paragraph text role result: `text_paragraph(...)` and
   `text_paragraph_break_words(...)` now close the first shared text-role vocabulary pass while
   keeping `text_prose(...)` as the shadcn/Tailwind-compatible name.
+  2026-05-17 compact paragraph text result: `text_compact_paragraph(...)` now owns dense wrapping
+  body copy for editor/IMUI panels. IMUI `bullet_text(...)` labels and `text_wrapped(...)` route
+  through that shared role instead of carrying local fill-width/min-width-zero `TextProps` policy.
   2026-05-16 trigger label reuse result: IMUI tab triggers and menubar triggers now reuse
   `text_button_label(...)`; selectable/menu item row labels stayed out of that role because they
   are command/list rows, not button labels.

@@ -46,11 +46,8 @@ OPAQUE_STRUCT_SUFFIXES = (
 )
 
 IMUI_DIRECT_TEXT_PROPS_ALLOWED = {
-    Path("ecosystem/fret-ui-kit/src/imui/bullet_text_controls.rs"): {
-        "let mut label_props = TextProps::new(text);": 1,
-    },
     Path("ecosystem/fret-ui-kit/src/imui/facade_writer.rs"): {
-        "let mut props = fret_ui::element::TextProps::new(text);": 2,
+        "let mut props = fret_ui::element::TextProps::new(text);": 1,
     },
 }
 
@@ -528,6 +525,9 @@ def main() -> None:
                 "`text_code_block(...)` now owns the shared",
                 "2026-05-16 paragraph text role follow-up",
                 "`text_paragraph(...)` and",
+                "2026-05-17 compact paragraph text follow-up",
+                "`text_compact_paragraph(...)` now owns dense",
+                "`UiWriterImUiFacadeExt::text_wrapped(...)` route through it",
                 "2026-05-16 trigger label reuse follow-up",
                 "IMUI tab triggers and menubar triggers now reuse",
                 "2026-05-16 list row text role follow-up",
@@ -707,6 +707,10 @@ def main() -> None:
                 "prose_variants_and_code_wrap_install_semantic_inherited_overrides",
                 "introduced `text_paragraph(...)` and `text_paragraph_break_words(...)`",
                 "text-role vocabulary pass",
+                "introduced `text_compact_paragraph(...)` as the shared dense wrapping paragraph",
+                "`UiWriterImUiFacadeExt::text_wrapped(...)` now route through it",
+                "compact_paragraph_text_uses_wrapping_fill_width_layout",
+                "bullet_text_uses_shared_compact_paragraph_role",
                 "routed IMUI tab triggers and menubar triggers through the shared",
                 "tab_trigger_visual_uses_button_label_text_role",
                 "menu_trigger_visual_uses_button_label_text_role",
@@ -768,12 +772,15 @@ def main() -> None:
                 "pub fn text_code_block",
                 "pub fn text_paragraph",
                 "pub fn text_paragraph_break_words",
+                "pub fn text_compact_paragraph",
                 "fn shrinkable_single_line_layout",
                 "fn fill_shrinkable_single_line_layout",
+                "fn fill_growing_zero_min_layout",
                 "fn text_code_refinement",
                 "ui_typography::muted_foreground_color(theme)",
                 "list_row_label_text_uses_fill_width_single_line_truncation",
                 "control_readout_text_uses_muted_compact_single_line_truncation",
+                "compact_paragraph_text_uses_wrapping_fill_width_layout",
                 "button_label_text_uses_medium_single_line_truncation",
                 "control_label_text_uses_fill_width_single_line_truncation",
                 "chrome_glyph_text_uses_fixed_slot_single_line_clip",
@@ -813,6 +820,18 @@ def main() -> None:
                 "imui_fill_text_is_single_line_and_shrinkable",
             ],
             forbidden=[],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/bullet_text_controls.rs"),
+            required=[
+                "crate::declarative::text::text_compact_paragraph(cx, text).inherit_foreground(color)",
+                "bullet_text_uses_shared_compact_paragraph_role",
+            ],
+            forbidden=[
+                "TextProps::new(text)",
+                "label_props.layout.size.width",
+                "label_props.color = Some(color)",
+            ],
         ),
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/menu_controls.rs"),
@@ -993,9 +1012,7 @@ def main() -> None:
                 "props.overflow = fret_core::TextOverflow::Ellipsis;",
                 "props.layout.size.min_width =",
                 "fn text_wrapped(&mut self, text: impl Into<Arc<str>>)",
-                "props.layout.size.width = fret_ui::element::Length::Fill;",
-                "props.wrap = fret_core::TextWrap::Word;",
-                "props.overflow = fret_core::TextOverflow::Clip;",
+                "crate::declarative::text::text_compact_paragraph(cx, text)",
                 "imui_text_item_is_single_line_and_shrinkable",
                 "imui_text_wrapped_is_explicit_wrapping_text",
                 "/// Render an in-window floating window.",

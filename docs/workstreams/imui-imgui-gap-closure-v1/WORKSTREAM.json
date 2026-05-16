@@ -159,7 +159,7 @@
     },
     {
       "name": "imui text item resize semantics",
-      "command": "cargo nextest run -p fret-ui-kit --features imui --lib imui_text_item_is_single_line_and_shrinkable imui_text_wrapped_is_explicit_wrapping_text --no-fail-fast"
+      "command": "cargo nextest run -p fret-ui-kit --features imui --lib imui_text_item_is_single_line_and_shrinkable imui_text_wrapped_is_explicit_wrapping_text compact_paragraph_text_uses_wrapping_fill_width_layout bullet_text_uses_shared_compact_paragraph_role --no-fail-fast"
     },
     {
       "name": "imui control chrome fill text semantics",
