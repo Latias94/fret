@@ -799,10 +799,10 @@ not update checked-in baselines.
           target-machine validation and attribution directories.
         - Required artifact: Windows RTX4090 overlay-disabled validation for typical autoscroll, complex wheel, and
           code-editor resize jitter; use a deliberate re-seed path only if the validation evidence justifies it.
-        - Latest local handoff audit: perf log entry `2026-05-16 14:46:00 +0800` confirms the current macOS M4
-          workspace cannot produce the required closeout artifacts. The target-machine runner rejects non-dry-run
-          execution on non-Windows hosts, and the verifier rejects dry-run directories because they lack real
-          validation/attribution `summary.json` files.
+        - Latest local handoff audits: perf log entries `2026-05-16 14:46:00 +0800` and
+          `2026-05-16 18:26:00 +0800` confirm the current macOS M4 workspace cannot produce the required closeout
+          artifacts. The target-machine runner rejects non-dry-run execution on non-Windows hosts, and the verifier /
+          closeout tools reject dry-run directories because they lack real validation/attribution `summary.json` files.
         - Clean Windows handoff plans:
           `target/fret-diag/editor-paint-contract-windows-handoff-validation-plan/validation-plan.json`,
           `target/fret-diag/editor-paint-contract-windows-handoff-attribution-plan/validation-plan.json`, and

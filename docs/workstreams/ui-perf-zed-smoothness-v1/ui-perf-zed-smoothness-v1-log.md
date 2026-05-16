@@ -15092,3 +15092,26 @@ Decision:
   refcounts for the current scene text set or row-scene/recording-level pin-key summaries.
 - Keep this as local macOS M4 negative evidence only. It does not affect Windows baselines or the deferred RTX4090
   closeout.
+
+## 2026-05-16 18:26:00 +0800 (editor paint closeout completion audit)
+
+Question:
+- After the local renderer-text attribution work, is the original Editor Paint contract closeout complete?
+
+Prompt-to-artifact checklist:
+| Requirement | Evidence checked | Status |
+| --- | --- | --- |
+| Run `tools/perf/diag_editor_paint_contract_validate.py` to produce the baseline validation artifact. | Non-dry-run command `python3 tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260516-goal-audit-nondry` returned rc `2` with `windows-rtx4090 validation must run on the target Windows host`. Dry-run plan exists at `target/fret-diag/editor-paint-contract-validate-20260516-goal-audit/validation-plan.json`, but no real `summary.json` exists. | Missing: target-machine artifact required. |
+| Run `--with-paint-perf` to produce the attribution artifact. | Dry-run plan exists at `target/fret-diag/editor-paint-contract-validate-20260516-goal-audit-attrib/validation-plan.json` with `with_paint_perf=true`, but no real attribution `summary.json` exists. | Missing: target-machine artifact required. |
+| Verify artifacts with verifier/closeout tools. | `diag_editor_paint_contract_verify_artifacts.py` wrote `target/fret-diag/editor-paint-contract-validate-20260516-goal-audit/artifact-verification.summary.json` with `ok=false`; both validation and attribution directories are missing `summary.json`. `diag_editor_paint_contract_closeout.py` wrote `target/fret-diag/editor-paint-contract-validate-20260516-goal-audit/editor-paint-contract-closeout.summary.json` with `ok=false`. | Failed by design until real target artifacts arrive. |
+| Decide whether the next implementation slice is Canvas/paint, renderer text, or no-code-change. | Local macOS evidence after the attribution slice points at `renderer_prepare_text_collect_pin_keys_us`, but the closeout decision requires synced Windows RTX4090 `decision_inputs` from the verified attribution artifact. | Not closed; local evidence can guide local TODO only. |
+
+Additional local gate:
+- Preflight passed: `target/fret-diag/editor-paint-contract-goal-audit-preflight/summary.json` (`ok=true`, 8 checks).
+
+Decision:
+- The Editor Paint contract closeout is still not complete. Current macOS-local dry-run plans and local attribution
+  are useful handoff evidence, but they are not accepted closeout substitutes.
+- Do not call P1.5 closed, do not update checked-in baselines, and do not mark the goal complete until a Windows
+  RTX4090 baseline validation directory and a matching `--with-paint-perf` attribution directory both pass the local
+  verifier/closeout gate.
