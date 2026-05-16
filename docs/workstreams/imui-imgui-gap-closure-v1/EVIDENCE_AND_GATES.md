@@ -351,6 +351,13 @@ Run evidence:
   `cargo nextest run -p fret-ui-editor
   editor_property_group_header_text_is_single_line_and_shrinkable
   editor_property_row_reset_glyph_text_keeps_fixed_button_line_box --no-fail-fast`.
+- 2026-05-17: added `P3_TEXT_ROLE_MATRIX_2026-05-17.md` as the resize triage contract for the
+  current text-role work. It names the stable base roles (`text_control_readout(...)`,
+  `text_button_label(...)`, `text_paragraph(...)` / `text_paragraph_break_words(...)`,
+  `text_code_block(...)` / `text_code_wrap(...)`, and `text_table_cell(...)`), maps current derived
+  roles, requires wrapping paragraph/validation copy to have parent layout that accounts for
+  multi-line height, and keeps `fret-imui` policy-light by rejecting a public `TextRole` enum until
+  two consumers need a data-driven role value. Gate: `python tools/gate_imui_workstream_source.py`.
 - 2026-05-16: tightened `UiWriterImUiFacadeExt::text(...)` to match Dear ImGui's default
   `Text()` posture: single-line, shrinkable, `min-width: 0`, and ellipsis-truncated under resize.
   Added `UiWriterImUiFacadeExt::text_wrapped(...)` as the explicit wrapping path for explanatory

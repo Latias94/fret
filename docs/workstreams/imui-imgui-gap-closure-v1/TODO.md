@@ -277,6 +277,11 @@ Readiness order for the next locally testable review slices:
    glyphs now share editor readout helpers instead of local `TextProps`. Fixed inspector chrome
    text stays single-line, min-width-zero where it shrinks, and line-height constrained under
    resize without moving editor-specific policy into `fret-imui`.
+   2026-05-17 text role matrix follow-up: `P3_TEXT_ROLE_MATRIX_2026-05-17.md` now freezes the
+   stable base role vocabulary for resize triage: control readout, button label, paragraph, code
+   text, and table cell text. The matrix also classifies current derived roles, keeps wrapping text
+   out of fixed-height control rows unless parents measure multi-line height, and explicitly
+   rejects adding a public `TextRole` enum until two consumers need a data-driven role value.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

@@ -283,6 +283,11 @@ Exit criteria:
   glyphs now reuse editor readout helpers. Fixed inspector chrome text no longer hand-rolls local
   `TextProps`, so header and reset glyph behavior remains single-line and line-box constrained
   under resize.
+  2026-05-17 text role matrix result: `P3_TEXT_ROLE_MATRIX_2026-05-17.md` now records the stable
+  base role vocabulary for future resize triage: control readout, button label, paragraph, code
+  text, and table cell text. The matrix treats wrapping paragraph/validation copy as an explicit
+  multi-line layout contract, keeps fixed chrome/control text single-line by default, and avoids a
+  public `TextRole` enum until a data-driven role value has at least two consumers.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.
