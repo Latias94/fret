@@ -2683,6 +2683,39 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     reports `status=passed`, 14/14 rows, `scripts_with_evidence=14`,
     `focus_mismatch_total=0`, `lint_error_total=0`, `lint_warning_total=0`, and
     `failed_policy=0`.
+- ScrollArea strict click-visibility and capture-state diagnostics:
+  - invariant:
+    promoted long-page content clicks must prove target visibility before pointer synthesis, and
+    current-state debug predicates must read the latest debug snapshot rather than a historical ring
+    aggregate.
+  - findings:
+    ScrollArea had five promoted long-page content clicks that still used plain `click`; enabling
+    strict lint then exposed a diagnostics harness defect where `input_pointer_capture_active_is`
+    could match stale debug-snapshot ring entries. The multi-pointer ScrollArea script also used
+    immediate `assert` steps for cross-frame capture state and now waits for state convergence.
+  - implementation anchors:
+    `tools/check_diag_scripts_registry.py`,
+    `tools/test_check_diag_scripts_registry.py`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_predicates.rs`,
+    and `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-multipointer-underlay-touch.json`.
+  - lint gates:
+    `python tools/test_check_diag_scripts_registry.py`,
+    `python tools/check_diag_scripts_registry.py`
+  - lint results:
+    passed; registry self-tests ran 13 tests.
+  - focused predicate gate:
+    `cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics current_state_predicates_do_not_match_stale_ring_snapshots input_pointer_capture_active_predicate_reads_debug_snapshot --no-fail-fast`
+  - focused predicate result:
+    passed with Nextest run id `70f41d32-7ce9-4d1d-9ea9-680d61f909d3`.
+  - focused runtime gate:
+    `target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-multipointer-underlay-touch.json --dir target/fret-diag-scrollbar-drag-multipointer-underlay-touch-after-wait-until-v1 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe`
+  - focused runtime result:
+    passed with run id `1778955752839`.
+  - full-suite gate:
+    `target/debug/fretboard-dev.exe diag suite ui-gallery-scroll-area --dir target/fret-diag-scroll-area-suite-strict-click-v2 --session-auto --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe`
+  - full-suite result:
+    `target/fret-diag-scroll-area-suite-strict-click-v2/sessions/1778955771522-90268/suite.summary.json`
+    reports the suite passed.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

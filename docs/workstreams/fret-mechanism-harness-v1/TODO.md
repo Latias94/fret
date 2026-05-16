@@ -626,6 +626,12 @@ date: 2026-05-12
     single-root model. The actual harness gap was rule expressiveness: DataTable has multiple valid
     page/variant roots. `check_diag_scripts_registry.py` now supports `entry_ids`, strict
     page-entry is enabled for the promoted DataTable suites, and the registry/self-test gates pass.
+- [x] Extend strict click-visibility authoring coverage to the promoted ScrollArea suite.
+  - Result: five long-page content clicks were converted to guarded `click_stable` steps and
+    `ui-gallery-scroll-area` is now enforced by the registry lint. Running the full ScrollArea
+    suite exposed and fixed a diagnostics harness defect where current-state debug predicates could
+    match stale ring snapshots, plus a multi-pointer script authoring issue where capture-state
+    assertions needed `wait_until` convergence after pointer events.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.

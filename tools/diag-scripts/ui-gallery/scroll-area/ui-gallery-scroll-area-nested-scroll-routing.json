@@ -56,7 +56,13 @@
       "require_fully_within_window": true,
       "padding_px": 4.0
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-nested-reset" } },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-nested-reset" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 600
+    },
     { "type": "wait_frames", "n": 2 },
     {
       "type": "scroll_into_view",
@@ -123,7 +129,23 @@
       }
     },
 
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-nested-reset" } },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-nested-reset" },
+      "delta_y": -240.0,
+      "timeout_frames": 600,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 4.0
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-nested-reset" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 600
+    },
     { "type": "wait_frames", "n": 2 },
     { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-nested-inner-viewport" }, "delta_x": -240.0 },
     { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-nested-inner-viewport" }, "delta_x": -240.0 },

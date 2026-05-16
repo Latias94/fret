@@ -399,6 +399,82 @@ class DiagScriptRegistryLintTests(unittest.TestCase):
             self.assertIn("ui-gallery-sidebar-demo-toggle", violations[0])
             self.assertIn("scroll_into_view", violations[0])
 
+    def test_scroll_area_long_page_plain_click_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/scroll-area/bad.json"
+            self.write_script(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "scroll_into_view",
+                        "container": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-content-scroll",
+                        },
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-scroll-area-nested-reset",
+                        },
+                        "require_fully_within_window": True,
+                    },
+                    {
+                        "type": "click",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-scroll-area-nested-reset",
+                        },
+                    },
+                ],
+            )
+
+            violations = REGISTRY.lint_strict_click_visibility(
+                root, self.registry_for(rel, ["ui-gallery-scroll-area"])
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertIn("ui-gallery-scroll-area-nested-reset", violations[0])
+            self.assertIn("plain click", violations[0])
+
+    def test_scroll_area_long_page_click_stable_accepts_visibility_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/scroll-area/good.json"
+            self.write_script(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "scroll_into_view",
+                        "container": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-content-scroll",
+                        },
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-scroll-area-drag-baseline-arm-grow",
+                        },
+                        "require_fully_within_window": True,
+                    },
+                    {
+                        "type": "click_stable",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-scroll-area-drag-baseline-arm-grow",
+                        },
+                    },
+                ],
+            )
+
+            violations = REGISTRY.lint_strict_click_visibility(
+                root, self.registry_for(rel, ["ui-gallery-scroll-area"])
+            )
+
+            self.assertEqual([], violations)
+
 
 if __name__ == "__main__":
     unittest.main()

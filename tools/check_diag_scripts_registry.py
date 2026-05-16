@@ -32,11 +32,14 @@ PRELUDE_DIR = SCRIPTS_DIR / "_prelude"
 SUITE_MANIFEST_FILENAMES = ["suite.json", "_suite.json"]
 STRICT_CLICK_VISIBILITY_SUITES = {
     "ui-gallery-combobox",
+    "ui-gallery-scroll-area",
     "ui-gallery-select",
     "ui-gallery-motion-pilot",
 }
 STRICT_UI_GALLERY_CONTENT_TEST_ID_PREFIXES = (
     "ui-gallery-combobox-",
+    "ui-gallery-scroll-area-",
+    "ui-gallery-scrollbar-",
     "ui-gallery-select-",
     "ui-gallery-sidebar-",
 )
