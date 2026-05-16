@@ -14821,3 +14821,29 @@ Decision:
   should stay closed.
 - Do not update perf baselines from this correctness fix. If later evidence shows fingerprint recomputation cost in a
   hot resize path, optimize the fingerprint storage/scratch path without relaxing stale-replay safety.
+
+## 2026-05-16 20:10 +08:00 (interactive-resize wrap-width bucketing corrected to opt-in)
+
+Question:
+- Should live-resize wrapped text snap to a bucket by default, or should exact final width remain the default
+  correctness contract and bucketing stay explicit?
+
+Finding:
+- The previous `32px` small-step bucketing policy was a perf experiment, but it could make line breaks disagree with
+  the final flex item width during resize. That is visible as wrap misalignment rather than a benign cache detail.
+- The correct default for editor-grade behavior is exact wrap width. Bucketing remains useful only as an explicit
+  perf knob for A/B work.
+
+Change:
+- `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX` now defaults to `0` / off.
+- `docs/adr/0006-text-system.md` now describes wrap-width bucketing as opt-in instead of default live-resize policy.
+- `interactive_resize_wrapped_text_uses_exact_width_by_default` and
+  `interactive_resize_wrapped_text_width_bucketing_is_opt_in` lock the contract in `crates/fret-ui`.
+
+Validation:
+```bash
+cargo test -p fret-ui interactive_resize_wrapped_text_ -- --nocapture
+```
+
+Decision:
+- Keep the default UX exact. Treat width bucketing as a deliberate experiment, not a correctness path.

@@ -339,9 +339,12 @@ Conventions:
     - Implementation: `perf(text): shape-once word wrap` (commit `4f2009408`) + default-on for long wraps (commit `10e7d97fc`).
     - Knob: `FRET_TEXT_WORD_WRAP_SHAPE_ONCE` (`1`/`0`) overrides the default threshold behavior.
     - Evidence: perf log entries appended for the A/B run and the default behavior (2026-02-07, `ui-resize-probes`).
-  - [x] Add a default small-step wrap-width bucketing policy during interactive resize to reduce text wrap churn under
+  - [x] Add an opt-in small-step wrap-width bucketing policy during interactive resize to reduce text wrap churn under
     `drag-jitter`-style width jitter.
-    - Default: `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX=32` (set to `0`/`1` to disable).
+    - Default: `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX=0` / off. Set a value above `1` to enable the experimental tradeoff.
+    - 2026-05-16 correction: the previous default-on `32px` policy could make line breaks disagree with the final
+      flex item width during resize. Editor-grade correctness now keeps exact wrap widths by default; bucketing remains
+      available only for explicit perf experiments.
     - Applies only when:
       - interactive resize is active, and
       - the window width delta is small (jitter-class, not stress-class).

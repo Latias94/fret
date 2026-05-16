@@ -259,6 +259,149 @@ impl fret_core::MaterialService for WrapAwareTextService {
     }
 }
 
+#[test]
+fn interactive_resize_wrapped_text_uses_exact_width_by_default() {
+    let mut app = crate::test_host::TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let roomy_bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(160.0)),
+    );
+    let compact_bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(122.0), Px(160.0)),
+    );
+    let mut services = WrapAwareTextService::default();
+
+    let root =
+        render_gallery_like_wrapping_header(&mut ui, &mut app, &mut services, window, roomy_bounds);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, roomy_bounds, 1.0);
+    clear_all_invalidations(&mut ui);
+
+    app.advance_frame();
+    let compact_root = render_gallery_like_wrapping_header(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        compact_bounds,
+    );
+    assert_eq!(compact_root, root, "expected stable root identity");
+    ui.set_root(root);
+    clear_all_invalidations(&mut ui);
+    ui.layout_all(&mut app, &mut services, compact_bounds, 1.0);
+
+    let page = ui.children(root)[0];
+    let first_row = ui.children(page)[0];
+    let first_text = ui.children(first_row)[1];
+    let first_text_bounds = ui.debug_node_bounds(first_text).expect("first text bounds");
+
+    assert!(
+        (first_text_bounds.size.width.0 - 82.0).abs() < 0.01,
+        "default live-resize text layout should use the exact final text box width, not a snapped bucket; bounds={first_text_bounds:?} measured={:?}",
+        services.measured
+    );
+    assert!(
+        services.measured.iter().any(|constraints| {
+            matches!(constraints.wrap, fret_core::TextWrap::Word)
+                && constraints
+                    .max_width
+                    .is_some_and(|width| (width.0 - first_text_bounds.size.width.0).abs() < 0.01)
+        }),
+        "expected wrapped text measurement to receive the exact final text box width by default; text_bounds={first_text_bounds:?} measured={:?}",
+        services.measured
+    );
+
+    assert!(
+        services.prepared.iter().any(|constraints| {
+            matches!(constraints.wrap, fret_core::TextWrap::Word)
+                && constraints
+                    .max_width
+                    .is_some_and(|width| (width.0 - first_text_bounds.size.width.0).abs() < 0.01)
+        }),
+        "expected wrapped text preparation to receive the exact final text box width by default; text_bounds={first_text_bounds:?} prepared={:?}",
+        services.prepared
+    );
+}
+
+#[test]
+fn interactive_resize_wrapped_text_width_bucketing_is_opt_in() {
+    let mut cfg = crate::runtime_config::ui_runtime_config().clone();
+    cfg.text_wrap_width_bucket_px = 0;
+    cfg.text_wrap_width_small_step_bucket_px = 32;
+    cfg.text_wrap_width_small_step_max_dw_px = 64;
+    let _cfg_guard = crate::runtime_config::scoped_ui_runtime_config_test_override(cfg);
+
+    let mut app = crate::test_host::TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let roomy_bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(160.0)),
+    );
+    let compact_bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(122.0), Px(160.0)),
+    );
+    let mut services = WrapAwareTextService::default();
+
+    let root =
+        render_gallery_like_wrapping_header(&mut ui, &mut app, &mut services, window, roomy_bounds);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, roomy_bounds, 1.0);
+    clear_all_invalidations(&mut ui);
+
+    app.advance_frame();
+    let compact_root = render_gallery_like_wrapping_header(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        compact_bounds,
+    );
+    assert_eq!(compact_root, root, "expected stable root identity");
+    ui.set_root(root);
+    clear_all_invalidations(&mut ui);
+    ui.layout_all(&mut app, &mut services, compact_bounds, 1.0);
+
+    let page = ui.children(root)[0];
+    let first_row = ui.children(page)[0];
+    let first_text = ui.children(first_row)[1];
+    let first_text_bounds = ui.debug_node_bounds(first_text).expect("first text bounds");
+
+    assert!(
+        (first_text_bounds.size.width.0 - 82.0).abs() < 0.01,
+        "opt-in wrap-width bucketing must not change the final flex item box; bounds={first_text_bounds:?} measured={:?}",
+        services.measured
+    );
+    assert!(
+        services.measured.iter().any(|constraints| {
+            matches!(constraints.wrap, fret_core::TextWrap::Word)
+                && constraints
+                    .max_width
+                    .is_some_and(|width| (width.0 - 96.0).abs() < 0.01)
+        }),
+        "expected opt-in bucketing to send the snapped wrap width to text measurement; measured={:?}",
+        services.measured
+    );
+    assert!(
+        services.prepared.iter().any(|constraints| {
+            matches!(constraints.wrap, fret_core::TextWrap::Word)
+                && constraints
+                    .max_width
+                    .is_some_and(|width| (width.0 - 96.0).abs() < 0.01)
+        }),
+        "expected opt-in bucketing to send the snapped wrap width to text preparation; prepared={:?}",
+        services.prepared
+    );
+}
+
 fn render_gallery_like_wrapping_header(
     ui: &mut UiTree<crate::test_host::TestHost>,
     app: &mut crate::test_host::TestHost,
