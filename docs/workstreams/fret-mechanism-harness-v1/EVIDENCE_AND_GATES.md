@@ -129,6 +129,8 @@ target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/data-table
 $env:FRET_UI_GALLERY_VIEW_CACHE='1'
 target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json --dir target/fret-diag-datatable-view-cache-filter-shrink-inputs-change --session-auto --pack --ai-packet --launch -- target/debug/fret-ui-gallery.exe
 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json --dir target/fret-diag-rtl-scroll-idle-stability-v2 --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
+cargo nextest run -p fret-diag-protocol script_v2_roundtrip_ui_gallery_scroll_area_expand_at_bottom --no-fail-fast
+target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-expand-at-bottom.json --dir target/fret-diag-scroll-area-expand-at-bottom-v1 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe
 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json --dir target/fret-diag-scroll-area-rtl-idle-stability --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/table/ui-gallery-table-rtl-idle-stability.json --dir target/fret-diag-table-rtl-idle-stability --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
 target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-rtl-idle-stability.json --dir target/fret-diag-data-table-rtl-idle-stability --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe
@@ -234,6 +236,17 @@ Current runtime evidence anchors:
   - trace proof:
     `sample_count=45`, `required_samples=45`, `baseline_value=2495.999755859375`,
     `value=2495.999755859375`, `frame_delta=0.0`, `total_delta=0.0`.
+- ScrollArea content-growth extent gate:
+  `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-expand-at-bottom.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-scroll-area/suite.json`
+  - proof:
+    starts with `y_max=0`, clicks the dynamic content-growth toggle, waits for `y_max` to become
+    non-zero and stable, then wheels the grown viewport and asserts `y != 0`.
+  - evidence:
+    `target/fret-diag-scroll-area-expand-at-bottom-v1/sessions/1778953288892-97788/1778953292783`
+  - share pack:
+    `target/fret-diag-scroll-area-expand-at-bottom-v1/sessions/1778953288892-97788/share/1778953292783.zip`
 - ScrollArea RTL nested-scroll idle-stability gate:
   `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json`
   - suite membership:

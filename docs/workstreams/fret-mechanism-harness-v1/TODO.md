@@ -616,6 +616,11 @@ date: 2026-05-12
 - [ ] Add a runtime UI Gallery companion for cached model/layout-query dependency mutation only if
   a real surface exposes a non-synthetic risk; otherwise continue with scroll/click stability or
   retained/component semantics mutation.
+- [x] Promote the ScrollArea content-growth runtime gate if the focused run proves it is stable.
+  - Result: `ui-gallery-scroll-area-expand-at-bottom.json` passed as a focused runtime gate and is
+    now part of the promoted `ui-gallery-scroll-area` suite. No new mechanism defect was
+    reproduced; the slice fixed a harness promotion gap where dynamic scroll extent growth was
+    checked only by a standalone script.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.

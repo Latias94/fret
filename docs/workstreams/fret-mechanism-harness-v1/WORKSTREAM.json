@@ -152,6 +152,7 @@
       "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-scrollable-placement-boundary.json --dir target/fret-diag-select-scrollable-placement-boundary-v4 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe",
       "target/debug/fretboard-dev.exe diag suite ui-gallery-select --dir target/fret-diag-select-suite-scrollable-placement-boundary-v1 --session-auto --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe",
       "cargo nextest run -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_placement_ownership_scroll_rtl --no-fail-fast",
+      "cargo nextest run -p fret-diag-protocol script_v2_roundtrip_ui_gallery_scroll_area_expand_at_bottom --no-fail-fast",
       "cargo build -p fretboard-dev -p fret-ui-gallery",
       "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-placement-ownership-scroll-rtl.json --dir target/fret-diag-combobox-placement-ownership-scroll-rtl-v3 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe",
       "target/debug/fretboard-dev.exe diag suite ui-gallery-combobox --dir target/fret-diag-combobox-suite-placement-ownership-v1 --session-auto --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe",
@@ -755,6 +756,10 @@
       "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json --dir target/fret-diag-rtl-scroll-idle-stability-v2 --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe"
     },
     {
+      "name": "ui-gallery-scroll-area-expand-at-bottom-diag",
+      "command": "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-expand-at-bottom.json --dir target/fret-diag-scroll-area-expand-at-bottom-v1 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe"
+    },
+    {
       "name": "ui-gallery-scroll-area-rtl-idle-stability-diag",
       "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json --dir target/fret-diag-scroll-area-rtl-idle-stability --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe"
     },
@@ -899,6 +904,7 @@
     "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-collection-metadata-bounce.json",
     "tools/diag-scripts/ui-gallery-virtual-list-retained-collection-metadata-bounce.json",
     "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json",
+    "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-expand-at-bottom.json",
     "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json",
     "tools/diag-scripts/ui-gallery/table/ui-gallery-table-rtl-idle-stability.json",
     "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json",

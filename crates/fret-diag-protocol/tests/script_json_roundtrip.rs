@@ -589,6 +589,13 @@ fn script_v2_roundtrip_ui_gallery_select_demo_open_layout() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_scroll_area_expand_at_bottom() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-expand-at-bottom.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_select_scrollable_placement_boundary() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/select/ui-gallery-select-scrollable-placement-boundary.json"

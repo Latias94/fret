@@ -9860,7 +9860,8 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
-        "diag-hardening-smoke"
+        "diag-hardening-smoke",
+        "ui-gallery-scroll-area"
       ],
       "tags": [
         "extents",
