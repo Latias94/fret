@@ -2190,6 +2190,44 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `.fret/diag/runs/ui-gallery-switch-read-only-dynamic-action-state-f113/script.result.json`
   - packed evidence:
     `.fret/diag/runs/ui-gallery-switch-read-only-dynamic-action-state-f113/share/1778910608918.zip`
+- Switch command-gated action-state runtime gate:
+  `tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-command-gated-action-state.json`
+  - invariant:
+    external `WindowCommandEnabledService` command availability must update a non-list Switch's
+    `disabled` and `invoke` semantics across frames, suppress checked-state mutation while disabled,
+    and restore mutation after re-enabling without stale derived action-availability feedback.
+  - implementation anchors:
+    `ecosystem/fret-ui-kit/src/command.rs`,
+    `ecosystem/fret-ui-shadcn/src/switch.rs`,
+    `apps/fret-ui-gallery/src/driver/runtime_driver.rs`,
+    `apps/fret-ui-gallery/src/ui/snippets/switch/command_gate.rs`,
+    `tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-command-gated-action-state.json`,
+    and `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+  - finding:
+    found a diagnostics harness gap. The Gallery driver handled the command after `UiTree`
+    recorded a bubbling `handled=false` decision, but did not emit a driver-handled trace, so the
+    strict runtime script could not prove command handling.
+  - before runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-command-gated-action-state.json --dir .fret/diag/runs/ui-gallery-switch-command-gated-action-state-f114-final --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - before runtime result:
+    failed at `wait_command_dispatch_trace_timeout`; best candidate was
+    `ui_gallery.switch.command_gate.toggle_enabled` with `handled=false`.
+  - protocol roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_switch_command_gated_action_state --no-fail-fast`
+  - protocol roundtrip result:
+    passed, 1 test; Nextest run id `ff37bc5e-7d16-492e-bf2e-cb1b0381993a`.
+  - build gate:
+    `cargo build --profile dev-fast -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-command-gated-action-state.json --dir .fret/diag/runs/ui-gallery-switch-command-gated-action-state-f114-final2 --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1778914891818`.
+  - runtime evidence:
+    `.fret/diag/runs/ui-gallery-switch-command-gated-action-state-f114-final2/script.result.json`
+  - packed evidence:
+    `.fret/diag/runs/ui-gallery-switch-command-gated-action-state-f114-final2/share/1778914891818.zip`
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

@@ -16,8 +16,10 @@ use fret_launch::{
     WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::{
-    FrameId, MenuItemToggle, MenuItemToggleKind, PlatformCapabilities,
-    WindowCommandAvailabilityService, WindowCommandEnabledService,
+    CommandDispatchDecisionV1, CommandDispatchSourceV1, FrameId, MenuItemToggle,
+    MenuItemToggleKind, PlatformCapabilities, WindowCommandAvailabilityService,
+    WindowCommandDispatchDiagnosticsStore, WindowCommandEnabledService,
+    WindowPendingCommandDispatchSourceService,
 };
 use fret_ui::UiTree;
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
@@ -586,6 +588,68 @@ impl UiGalleryWindowState {
 struct UiGalleryDriver;
 
 impl UiGalleryDriver {
+    fn consume_pending_command_dispatch_source(
+        app: &mut App,
+        window: AppWindowId,
+        command: &CommandId,
+    ) -> CommandDispatchSourceV1 {
+        app.with_global_mut(
+            WindowPendingCommandDispatchSourceService::default,
+            |svc, app| {
+                svc.consume(window, app.tick_id(), command)
+                    .unwrap_or_else(CommandDispatchSourceV1::programmatic)
+            },
+        )
+    }
+
+    fn restore_pending_command_dispatch_source(
+        app: &mut App,
+        window: AppWindowId,
+        command: &CommandId,
+        source: CommandDispatchSourceV1,
+    ) {
+        app.with_global_mut(
+            WindowPendingCommandDispatchSourceService::default,
+            |svc, app| {
+                svc.record(window, app.tick_id(), command.clone(), source);
+            },
+        );
+    }
+
+    fn record_driver_handled_command_dispatch(
+        app: &mut App,
+        window: AppWindowId,
+        command: &CommandId,
+        source: CommandDispatchSourceV1,
+    ) {
+        let handled_by_scope = app
+            .commands()
+            .get(command.clone())
+            .map(|meta| meta.scope)
+            .or(Some(fret_runtime::CommandScope::Window));
+
+        app.with_global_mut(
+            WindowCommandDispatchDiagnosticsStore::default,
+            |store, app| {
+                store.record(CommandDispatchDecisionV1 {
+                    seq: 0,
+                    frame_id: app.frame_id(),
+                    tick_id: app.tick_id(),
+                    window,
+                    command: command.clone(),
+                    source,
+                    handled: true,
+                    handled_by_element: None,
+                    handled_by_scope,
+                    handled_by_driver: true,
+                    stopped: false,
+                    started_from_focus: false,
+                    used_default_root_fallback: false,
+                });
+            },
+        );
+    }
+
     fn sync_undo_availability(app: &mut App, window: AppWindowId, doc: &DocumentId) {
         let mut edit_can_undo = false;
         let mut edit_can_redo = false;
@@ -1413,6 +1477,15 @@ impl WinitAppDriver for UiGalleryDriver {
             return;
         }
 
+        let pending_source =
+            Self::consume_pending_command_dispatch_source(app, window, &command);
+        Self::restore_pending_command_dispatch_source(
+            app,
+            window,
+            &command,
+            pending_source.clone(),
+        );
+
         if state.ui.dispatch_command(app, services, &command) {
             if command.as_str().starts_with("workspace.") {
                 let _ = Self::sync_workspace_models_from_window_layout(app, state, window);
@@ -1488,6 +1561,12 @@ impl WinitAppDriver for UiGalleryDriver {
         let did_nav = Self::handle_nav_command(app, state, window, &command);
         let did_gallery = Self::handle_gallery_command(app, state, window, &command);
         if did_nav || did_gallery {
+            Self::record_driver_handled_command_dispatch(
+                app,
+                window,
+                &command,
+                pending_source.clone(),
+            );
             app.request_redraw(window);
         }
 
@@ -2511,6 +2590,50 @@ mod tests {
                 .filter(|effect| matches!(effect, Effect::Redraw(id) if *id == window))
                 .count(),
             1
+        );
+    }
+
+    #[test]
+    fn driver_handled_command_dispatch_records_source_and_scope() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let command = CommandId::new("ui_gallery.test.driver_handled");
+        app.commands_mut().register(
+            command.clone(),
+            CommandMeta::new("Driver handled").with_scope(fret_runtime::CommandScope::Window),
+        );
+
+        UiGalleryDriver::record_driver_handled_command_dispatch(
+            &mut app,
+            window,
+            &command,
+            CommandDispatchSourceV1 {
+                kind: fret_runtime::CommandDispatchSourceKindV1::Pointer,
+                element: Some(42),
+                test_id: Some(Arc::from("driver-command-source")),
+            },
+        );
+
+        let decisions = app
+            .global::<WindowCommandDispatchDiagnosticsStore>()
+            .expect("driver handled command dispatch should create diagnostics store")
+            .snapshot_since(window, 0, 8);
+
+        let decision = decisions
+            .iter()
+            .find(|decision| decision.command == command)
+            .expect("driver handled command dispatch decision");
+        assert!(decision.handled);
+        assert!(decision.handled_by_driver);
+        assert_eq!(
+            decision.handled_by_scope,
+            Some(fret_runtime::CommandScope::Window)
+        );
+        assert_eq!(decision.handled_by_element, None);
+        assert_eq!(decision.source.element, Some(42));
+        assert_eq!(
+            decision.source.test_id.as_deref(),
+            Some("driver-command-source")
         );
     }
 }

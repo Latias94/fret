@@ -1059,5 +1059,22 @@ Status: complete for the UI Gallery dynamic read-only companion
   `read_only=false/invoke=true`, allows one checked-state mutation while editable, then returns to
   `read_only=true/invoke=false` and suppresses further mutation.
 - No new runtime mechanism or recipe defect was reproduced after the F112 Switch fix.
-- Remaining follow-up: add command-gated non-list action-state mutation, where command availability
-  snapshots can change independently from the widget-local model.
+- Follow-up completed in M66: command-gated non-list action-state mutation, where command
+  availability snapshots can change independently from the widget-local model.
+
+## M66: Command-Gated Switch Action-State Gate
+
+Status: complete for the UI Gallery command-gated companion
+
+- Extended the Switch UI Gallery teaching surface with a command-gated control whose enabled
+  state is driven externally through `WindowCommandEnabledService`.
+- The first runtime pass did not find a recipe defect. It found a harness observability gap: the
+  Gallery driver handled the command after `UiTree` had already recorded an unhandled dispatch, but
+  it did not emit a second `handled_by_driver=true` command-dispatch decision. The runtime script
+  therefore could not distinguish "bubble-through only" from "driver handled".
+- Added driver-handled dispatch recording for the owned Switch command-gate toggle path in
+  `apps/fret-ui-gallery/src/driver/runtime_driver.rs`.
+- The strict runtime gate now passes and proves enabled `disabled=false/invoke=true`, disabled
+  `disabled=true/invoke=false`, suppressed checked-state mutation while disabled, and re-enabled
+  mutation after the command-gated service is cleared again.
+- The slice closes the command-gated non-list action-state companion started by M65.

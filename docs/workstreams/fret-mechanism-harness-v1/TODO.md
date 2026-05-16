@@ -198,6 +198,14 @@ date: 2026-05-12
     reproduced after the F112 Switch fix. The first focused test draft caught a harness modeling
     issue: changing a model without rerendering the declarative root cannot prove component props
     changed.
+- [x] Add a command-gated non-list action-state mutation companion.
+  - Result: `ui-gallery-switch-command-gated-action-state.json` now drives a Switch whose invoke
+    action is externally disabled and re-enabled through `WindowCommandEnabledService`. The first
+    runtime pass found a diagnostics harness gap: the Gallery driver handled the command after the
+    UI tree reported it unhandled, but did not record a `handled_by_driver=true` dispatch trace.
+    The driver now records handled command decisions for owned gallery command paths, and the
+    strict runtime gate passes with command dispatch, `disabled`, `invoke`, and checked-state
+    mutation assertions.
 - [x] Promote Combobox visual/style coverage into an explicit fixture-style matrix that tracks
   component state, theme, viewport, screenshot gate, geometry predicates, and current owner/gap.
 - [x] Harden the Button Group size gate with stable icon-only `Add` anchors and geometry predicates.

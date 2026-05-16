@@ -766,6 +766,10 @@
       "command": "cargo test --profile dev-fast -p fret-bootstrap --features diagnostics,ui-app-driver --lib step_start_retains_semantics_scroll_idle_stable_trace_for_passed_evidence -- --nocapture"
     },
     {
+      "name": "ui-gallery-switch-command-gated-action-state-diag",
+      "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-command-gated-action-state.json --dir .fret/diag/runs/ui-gallery-switch-command-gated-action-state-f114-final2 --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
       "name": "workstream-catalog",
       "command": "python tools/check_workstream_catalog.py"
     },
@@ -938,6 +942,8 @@
     "target/fret-diag-dialog-nested-combobox-modal-boundary-v4/sessions/1778885765520-86120/script.result.json",
     "target/fret-diag-dialog-nested-combobox-modal-boundary-v4/sessions/1778885765520-86120/1778885771913-ui-gallery-dialog-nested-combobox-modal-boundary/bundle.schema2.json",
     "target/fret-diag-dialog-nested-combobox-modal-boundary-v4/sessions/1778885765520-86120/share/1778885770482.zip",
+    ".fret/diag/runs/ui-gallery-switch-command-gated-action-state-f114-final2/script.result.json",
+    ".fret/diag/runs/ui-gallery-switch-command-gated-action-state-f114-final2/share/1778914891818.zip",
     "ecosystem/fret-ui-kit/src/overlay.rs",
     "ecosystem/fret-ui-shadcn/src/popover.rs",
     "ecosystem/fret-ui-shadcn/src/select.rs",
@@ -976,7 +982,8 @@
     "docs/ui-diagnostics-and-scripted-tests.md",
     "tools/diag-scripts/index.json",
     "ecosystem/fret-bootstrap/src/ui_diagnostics/selector.rs",
-    "apps/fret-ui-gallery/src/ui/snippets/select/diag_surface.rs"
+    "apps/fret-ui-gallery/src/ui/snippets/select/diag_surface.rs",
+    "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-command-gated-action-state.json"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",

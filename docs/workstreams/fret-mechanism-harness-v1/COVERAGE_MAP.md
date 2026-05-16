@@ -77,6 +77,15 @@ date: 2026-05-12
   focusable throughout. The focused recipe gate also captured a harness modeling rule: prop-driven
   semantics mutations must rerender the declarative root after model changes before asserting the
   next snapshot.
+- Command-gated non-list action-state update:
+  `ui-gallery-switch-command-gated-action-state.json` now covers a Switch whose action availability
+  is controlled externally by `WindowCommandEnabledService`. The gate proves enabled
+  `disabled=false/invoke=true`, command-driven checked-state mutation, disabled
+  `disabled=true/invoke=false`, suppressed checked-state mutation while disabled, and re-enabled
+  `disabled=false/invoke=true` behavior. The first runtime run found a diagnostics harness gap:
+  UI Gallery driver-handled commands could be visible only as `UiTree` `handled=false` traces, so
+  the driver now records `handled_by_driver=true` command dispatch decisions for owned command
+  paths.
 - Select active-descendant/view-cache update:
   `ui-gallery-select-roving-skips-disabled-orange.json` now proves that pointer-open followed by
   ArrowDown updates the runtime active descendant through the real UI Gallery Select page, including
