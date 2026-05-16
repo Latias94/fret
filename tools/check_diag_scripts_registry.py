@@ -57,6 +57,11 @@ CURRENT_STATE_CONVERGENCE_PREDICATES = {
     "dock_viewport_capture_active_is",
     "input_pointer_capture_active_is",
 }
+FIXED_FRAME_DELTA_ENV = "FRET_DIAG_FIXED_FRAME_DELTA_MS"
+FIXED_FRAME_DELTA_REQUIRED_NAME_PARTS = (
+    "fixed-frame-delta",
+    "trigger-delays",
+)
 STRICT_PAGE_ENTRY_SUITES = {
     "ui-gallery-command",
     "ui-gallery-motion-pilot",
@@ -450,6 +455,42 @@ def start_pages_from_meta(obj: Any) -> set[str]:
     return {start_page.strip()}
 
 
+def script_meta(obj: Any) -> dict[str, Any]:
+    meta = obj.get("meta") if isinstance(obj, dict) else None
+    return meta if isinstance(meta, dict) else {}
+
+
+def script_name_from_entry(entry: dict[str, Any], obj: Any) -> str:
+    meta = script_meta(obj)
+    name = meta.get("name")
+    if isinstance(name, str) and name.strip():
+        return name.strip()
+    rel_path = entry.get("path")
+    if isinstance(rel_path, str) and rel_path.strip():
+        return Path(rel_path).stem
+    return ""
+
+
+def script_env_defaults(obj: Any) -> dict[str, Any]:
+    meta = script_meta(obj)
+    env_defaults = meta.get("env_defaults")
+    return env_defaults if isinstance(env_defaults, dict) else {}
+
+
+def requires_fixed_frame_delta_contract(name: str) -> bool:
+    lowered = name.lower()
+    return any(part in lowered for part in FIXED_FRAME_DELTA_REQUIRED_NAME_PARTS)
+
+
+def has_fixed_frame_delta_env_default(obj: Any) -> bool:
+    value = script_env_defaults(obj).get(FIXED_FRAME_DELTA_ENV)
+    if isinstance(value, str):
+        return value.strip() != ""
+    if isinstance(value, int):
+        return value > 0
+    return False
+
+
 def lint_strict_page_entry(repo_root: Path, registry: dict[str, Any]) -> list[str]:
     """
     Check promoted scripts whose page-local selectors should not rely on the Gallery default page.
@@ -669,6 +710,43 @@ def lint_pointer_current_state_convergence(repo_root: Path, registry: dict[str, 
     return violations
 
 
+def lint_fixed_frame_delta_contract(repo_root: Path, registry: dict[str, Any]) -> list[str]:
+    """
+    Check promoted scripts whose names declare a frame-time-sensitive contract.
+
+    Scripts that assert motion/delay outcomes with frame counts need a deterministic frame clock;
+    otherwise a "short" `wait_frames` step can take hundreds of wall-clock milliseconds under a
+    busy native runner and produce false component failures.
+    """
+    scripts = registry.get("scripts")
+    if not isinstance(scripts, list):
+        return ["registry scripts must be a list"]
+
+    violations: list[str] = []
+
+    for entry in scripts:
+        if not isinstance(entry, dict):
+            continue
+
+        rel_path = entry.get("path")
+        if not isinstance(rel_path, str) or not rel_path.strip():
+            continue
+
+        script_path = repo_root / Path(rel_path)
+        obj = read_json(script_path)
+        name = script_name_from_entry(entry, obj)
+        if not requires_fixed_frame_delta_contract(name):
+            continue
+
+        if not has_fixed_frame_delta_env_default(obj):
+            violations.append(
+                f"{rel_path}: `{name}` declares a frame-time-sensitive contract; "
+                f"add meta.env_defaults.{FIXED_FRAME_DELTA_ENV}"
+            )
+
+    return violations
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Validate the diag script registry (index.json).")
     ap.add_argument(
@@ -728,6 +806,16 @@ def main() -> None:
             file=sys.stderr,
         )
         for violation in pointer_current_state_violations:
+            print(f"- {violation}", file=sys.stderr)
+        raise SystemExit(2)
+
+    fixed_frame_delta_violations = lint_fixed_frame_delta_contract(repo_root, expected)
+    if fixed_frame_delta_violations:
+        print(
+            "error: promoted diag scripts have frame-time-sensitive contracts without fixed frame delta:",
+            file=sys.stderr,
+        )
+        for violation in fixed_frame_delta_violations:
             print(f"- {violation}", file=sys.stderr)
         raise SystemExit(2)
 

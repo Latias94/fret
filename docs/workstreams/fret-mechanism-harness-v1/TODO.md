@@ -664,3 +664,14 @@ date: 2026-05-12
     view-cache scripts target the scoped torture toolbar ids, and virtualized table header
     pressables now export labels in retained and non-retained paths. The suite passes 10/10 after
     rebuilding `fret-ui-gallery`.
+- [x] Add a promoted-script fixed-frame-clock contract for time-sensitive diagnostics scripts.
+  - Result: the HoverCard `trigger-delays` failure was a harness timing false positive. Promoted
+    scripts whose names declare `fixed-frame-delta` or `trigger-delays` now carry
+    `FRET_DIAG_FIXED_FRAME_DELTA_MS=16`, and the registry lint rejects future promoted scripts that
+    forget that clock contract. The focused HoverCard delay gate passes under the fixed frame clock.
+- [ ] Repair the HoverCard `sides-placement` leave-target authoring issue and rerun the
+  `ui-gallery-hover-card` suite.
+  - Progress: after the fixed-frame-clock repair, the HoverCard suite advances past
+    `trigger-delays`; `ui-gallery-hover-card-sides-placement.json` now fails at step 20 with
+    `move_pointer_no_semantics_match` because it uses `ui-gallery-status-last-action` as a leave
+    target and that node is not present on the HoverCard page snapshot.

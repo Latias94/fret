@@ -2828,6 +2828,34 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag-shadcn-runtime-evidence-after-datatable-lint-v1/sessions/1778969813032-104196/suite.summary.json`
     reports `status=passed`, 10/10 rows, `scripts_with_evidence=10`, and
     `focus_mismatch_total=0`.
+- Fixed-frame-clock diagnostics contract:
+  - invariant:
+    promoted scripts that assert motion, transition, or delay outcomes with frame-count waits must
+    pin the diagnostics frame clock, otherwise native runner scheduling can turn a small
+    `wait_frames` interval into a different wall-clock contract.
+  - findings:
+    the HoverCard `trigger-delays` gate produced a false component signal because it relied on an
+    unpinned frame count for a millisecond delay contract.
+  - implementation anchors:
+    `tools/check_diag_scripts_registry.py`,
+    `tools/test_check_diag_scripts_registry.py`,
+    and `tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-trigger-delays.json`.
+  - lint gates:
+    `python tools/test_check_diag_scripts_registry.py`,
+    `python tools/check_diag_scripts_registry.py`
+  - lint results:
+    passed; registry self-tests ran 21 tests.
+  - focused runtime gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-trigger-delays.json --dir target/fret-diag-hover-card-trigger-delays-fixed-delta-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime result:
+    passed with run id `1778971779541`; launch env included
+    `FRET_DIAG_FIXED_FRAME_DELTA_MS`.
+  - suite follow-up:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-hover-card --dir target/fret-diag-hover-card-fixed-delta-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - suite follow-up result:
+    first three HoverCard rows passed, including `trigger-delays`; the remaining failure is a
+    separate `sides-placement` script authoring issue at
+    `target/fret-diag-hover-card-fixed-delta-suite-v1/sessions/1778971816718-107892/suite.summary.json`.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

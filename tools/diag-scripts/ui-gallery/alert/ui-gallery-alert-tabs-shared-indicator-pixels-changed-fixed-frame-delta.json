@@ -2,7 +2,8 @@
   "schema_version": 2,
   "meta": {
     "name": "ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta",
-    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "env_defaults": { "FRET_DIAG_FIXED_FRAME_DELTA_MS": "16" }
   },
   "steps": [
     { "type": "reset_diagnostics" },

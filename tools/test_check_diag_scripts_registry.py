@@ -628,6 +628,57 @@ class DiagScriptRegistryLintTests(unittest.TestCase):
 
             self.assertEqual([], violations)
 
+    def test_fixed_frame_delta_script_requires_fixed_frame_env_default(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/overlay/bad-fixed-frame-delta.json"
+            self.write_script_with_meta(
+                root,
+                rel,
+                [{"type": "wait_frames", "frames": 2}],
+                {"name": "ui-gallery-overlay-open-close-fixed-frame-delta"},
+            )
+
+            violations = REGISTRY.lint_fixed_frame_delta_contract(
+                root, self.registry_for(rel, ["ui-gallery-motion-pilot"])
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertIn("FRET_DIAG_FIXED_FRAME_DELTA_MS", violations[0])
+
+    def test_fixed_frame_delta_script_accepts_fixed_frame_env_default(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/overlay/good-fixed-frame-delta.json"
+            self.write_script_with_meta(
+                root,
+                rel,
+                [{"type": "wait_frames", "frames": 2}],
+                {
+                    "name": "ui-gallery-overlay-open-close-fixed-frame-delta",
+                    "env_defaults": {"FRET_DIAG_FIXED_FRAME_DELTA_MS": "16"},
+                },
+            )
+
+            violations = REGISTRY.lint_fixed_frame_delta_contract(
+                root, self.registry_for(rel, ["ui-gallery-motion-pilot"])
+            )
+
+            self.assertEqual([], violations)
+
+    def test_trigger_delays_script_requires_fixed_frame_env_default(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-trigger-delays.json"
+            self.write_script(root, rel, [{"type": "wait_frames", "frames": 2}])
+
+            violations = REGISTRY.lint_fixed_frame_delta_contract(
+                root, self.registry_for(rel, ["ui-gallery-hover-card"])
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertIn("ui-gallery-hover-card-trigger-delays", violations[0])
+
 
 if __name__ == "__main__":
     unittest.main()
