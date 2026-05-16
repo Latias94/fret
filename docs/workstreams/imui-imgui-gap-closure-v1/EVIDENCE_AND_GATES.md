@@ -351,6 +351,12 @@ Run evidence:
   `cargo nextest run -p fret-ui-editor
   editor_property_group_header_text_is_single_line_and_shrinkable
   editor_property_row_reset_glyph_text_keeps_fixed_button_line_box --no-fail-fast`.
+- 2026-05-17: removed clipping from `PropertyRow` value slots while keeping fixed label/reset/action
+  chrome clipped. This is the layout-container side of the text-role contract: wrapping validation
+  prose such as `NumericInput` inline errors may grow to multiple lines, so the parent value slot
+  must not clip the measured line box under resize. Gates:
+  `cargo nextest run -p fret-ui-editor row_value_slot_keeps_overflow_visible_for_wrapping_value_children --no-fail-fast`
+  and `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: added `P3_TEXT_ROLE_MATRIX_2026-05-17.md` as the resize triage contract for the
   current text-role work. It names the stable base roles (`text_control_readout(...)`,
   `text_button_label(...)`, `text_paragraph(...)` / `text_paragraph_break_words(...)`,

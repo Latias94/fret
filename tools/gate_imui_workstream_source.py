@@ -286,6 +286,30 @@ def check_direct_text_props_allowlist(
                 )
 
 
+def check_property_row_value_slot_overflow(failures: list[str]) -> None:
+    path = Path("ecosystem/fret-ui-editor/src/composites/property_row.rs")
+    source = read_source(path)
+    marker = "let value = mark_property_row_value_slot(cx.container("
+    starts = [match.start() for match in re.finditer(re.escape(marker), source)]
+    if len(starts) != 2:
+        failures.append(
+            f"{path.as_posix()}: expected exactly two marked property-row value slots, found {len(starts)}"
+        )
+
+    for start in starts:
+        end = source.find("|cx| vec![value(cx)]", start)
+        if end == -1:
+            failures.append(
+                f"{path.as_posix()}: property-row value slot marker is missing its value-child closure"
+            )
+            continue
+        block = source[start:end]
+        if "overflow: Overflow::Clip" in block:
+            failures.append(
+                f"{path.as_posix()}: property-row value slot must not clip wrapping value/prose children"
+            )
+
+
 def main() -> None:
     opaque_struct_checks = [
         OpaqueStructCheck(
@@ -429,6 +453,7 @@ def main() -> None:
                 "editor_inline_error_text_is_single_line_and_shrinkable editor_preview_caption_text_is_single_line_and_shrinkable editor_tooltip_readout_text_is_single_line_and_shrinkable numeric_readout_formats_rgb_hsv_and_optional_alpha color_tooltip_lines_match_imgui_hex_rgb_hsv_preview_text",
                 "editor_section_badge_text_is_single_line_centered_badge_label editor_section_heading_text_is_single_line_and_shrinkable editor_inline_control_label_text_is_single_line_and_shrinkable transform_edit_axis_outcome_exposes_read_only_signals",
                 "editor_property_group_header_text_is_single_line_and_shrinkable editor_property_row_reset_glyph_text_keeps_fixed_button_line_box",
+                "row_value_slot_keeps_overflow_visible_for_wrapping_value_children",
                 "popup_list_row_text_is_single_line_and_shrinkable popup_empty_text_is_single_line_and_shrinkable popup_list_centered_row_text_keeps_row_fill_and_center_alignment popup_list_option_caption_text_keeps_fixed_caption_line_box enum_select_item_test_id_segment_is_stable_ascii empty_label_is_inline_only color_copy_entries_match_imgui_copy_as_payloads popup_options_default_to_imgui_like_hue_bar_surface",
                 "cargo check -p fret-examples",
             ],
@@ -635,6 +660,8 @@ def main() -> None:
                 "2026-05-17 text role matrix follow-up",
                 "stable base role vocabulary for resize triage: control readout, button label, paragraph, code",
                 "rejects adding a public `TextRole` enum until two consumers need a data-driven role value",
+                "2026-05-17 property-row value overflow follow-up",
+                "`PropertyRow` value slots no longer force",
             ],
             forbidden=[],
         ),
@@ -663,6 +690,7 @@ def main() -> None:
                 "Do not add a public `TextRole` enum until at least two consumers need a data-driven role value.",
                 "cargo nextest run -p fret-ui-kit --features imui --lib control_readout_text_uses_muted_compact_single_line_truncation",
                 "cargo nextest run -p fret-ui-editor editor_input_value_text_is_single_line_and_shrinkable",
+                "cargo nextest run -p fret-ui-editor row_value_slot_keeps_overflow_visible_for_wrapping_value_children",
                 "python tools/gate_imui_workstream_source.py",
             ],
             forbidden=[
@@ -4198,6 +4226,9 @@ def main() -> None:
             required=[
                 "use crate::primitives::readout::editor_property_row_reset_glyph_text_props;",
                 "editor_property_row_reset_glyph_text_props(",
+                "mark_property_row_value_slot(cx.container(",
+                "row_value_slot_keeps_overflow_visible_for_wrapping_value_children",
+                "editor_validation_message_text_props(",
             ],
             forbidden=[
                 "use fret_ui_kit::typography;",
@@ -8614,6 +8645,7 @@ def main() -> None:
         "editor",
         failures,
     )
+    check_property_row_value_slot_overflow(failures)
     for failure in collect_docking_multiwindow_failures():
         failures.append(f"docking multiwindow source: {failure}")
 

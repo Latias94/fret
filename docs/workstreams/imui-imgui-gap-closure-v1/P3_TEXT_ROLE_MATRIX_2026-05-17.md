@@ -80,9 +80,13 @@ component should construct `TextProps` locally.
   - `cargo nextest run -p fret-ui-editor editor_input_value_text_is_single_line_and_shrinkable editor_inline_error_text_is_single_line_and_shrinkable editor_validation_message_text_wraps_and_shrinks popup_list_row_text_is_single_line_and_shrinkable editor_property_group_header_text_is_single_line_and_shrinkable --no-fail-fast`
 - Source contract:
   - `python tools/gate_imui_workstream_source.py`
+- Layout-container regression:
+  - `cargo nextest run -p fret-ui-editor row_value_slot_keeps_overflow_visible_for_wrapping_value_children --no-fail-fast`
 
 ## Result
 
 This is a contract/guard slice only. It does not claim that every text surface in the repository has
 been migrated. It makes future resize fixes cheaper to classify: either a surface maps to one of the
 stable roles above, or the work must explain why a new derived role is needed and add a focused gate.
+The first follow-up container fix is `PropertyRow`: fixed chrome slots still clip, but value slots
+must not clip explicit wrapping validation/prose children.

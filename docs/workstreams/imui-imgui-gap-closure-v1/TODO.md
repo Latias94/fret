@@ -282,6 +282,11 @@ Readiness order for the next locally testable review slices:
    text, and table cell text. The matrix also classifies current derived roles, keeps wrapping text
    out of fixed-height control rows unless parents measure multi-line height, and explicitly
    rejects adding a public `TextRole` enum until two consumers need a data-driven role value.
+   2026-05-17 property-row value overflow follow-up: `PropertyRow` value slots no longer force
+   `Overflow::Clip`, so explicit wrapping validation/prose children such as `NumericInput` inline
+   validation messages can grow with their measured multi-line height instead of painting past a
+   clipped inspector row. Fixed label/reset/action chrome slots still clip themselves; this is a
+   layout-container contract fix in `fret-ui-editor`, not a `fret-imui` runtime/API widening.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

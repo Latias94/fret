@@ -288,6 +288,10 @@ Exit criteria:
   text, and table cell text. The matrix treats wrapping paragraph/validation copy as an explicit
   multi-line layout contract, keeps fixed chrome/control text single-line by default, and avoids a
   public `TextRole` enum until a data-driven role value has at least two consumers.
+  2026-05-17 property-row value overflow result: `PropertyRow` now keeps its value slot overflow
+  visible so wrapping validation/prose children can contribute and paint multi-line height under
+  resize. The fixed label/reset/action chrome slots remain clipped. This closes the first concrete
+  layout-container fix from the text-role matrix without moving policy into `fret-imui`.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

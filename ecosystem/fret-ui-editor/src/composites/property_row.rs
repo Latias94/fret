@@ -16,6 +16,19 @@ use crate::primitives::inspector_layout::InspectorLayoutMetrics;
 use crate::primitives::readout::editor_property_row_reset_glyph_text_props;
 use crate::primitives::visuals::{editor_icon_button_bg, editor_icon_button_border};
 
+#[cfg(test)]
+const PROPERTY_ROW_VALUE_SLOT: &str = "fret-ui-editor.property-row.value";
+
+#[cfg(test)]
+fn mark_property_row_value_slot(element: AnyElement) -> AnyElement {
+    element.component_slot(PROPERTY_ROW_VALUE_SLOT)
+}
+
+#[cfg(not(test))]
+fn mark_property_row_value_slot(element: AnyElement) -> AnyElement {
+    element
+}
+
 pub type OnPropertyRowReset = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx) + 'static>;
 
 #[derive(Debug, Clone)]
@@ -327,7 +340,7 @@ impl PropertyRow {
                             wrap: false,
                         },
                         move |cx| {
-                            let value = cx.container(
+                            let value = mark_property_row_value_slot(cx.container(
                                 ContainerProps {
                                     layout: LayoutStyle {
                                         size: SizeStyle {
@@ -344,13 +357,12 @@ impl PropertyRow {
                                             basis: Length::Px(Px(0.0)),
                                             align_self: None,
                                         },
-                                        overflow: Overflow::Clip,
                                         ..Default::default()
                                     },
                                     ..Default::default()
                                 },
                                 |cx| vec![value(cx)],
-                            );
+                            ));
 
                             let mut out = vec![value];
 
@@ -573,7 +585,7 @@ impl PropertyRow {
                             },
                         );
 
-                        let value = cx.container(
+                        let value = mark_property_row_value_slot(cx.container(
                             ContainerProps {
                                 layout: LayoutStyle {
                                     size: SizeStyle {
@@ -588,7 +600,7 @@ impl PropertyRow {
                                 ..Default::default()
                             },
                             |cx| vec![value(cx)],
-                        );
+                        ));
 
                         vec![header, value]
                     },
@@ -602,6 +614,82 @@ impl PropertyRow {
         } else {
             row
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use fret_app::App;
+    use fret_core::Px;
+    use fret_core::{AppWindowId, Color, Point, Rect, Size, TextStyle};
+    use fret_ui::element::{AnyElement, ElementKind, Overflow};
+
+    use super::{
+        PROPERTY_ROW_VALUE_SLOT, PropertyRow, PropertyRowLayoutVariant, PropertyRowOptions,
+    };
+    use crate::primitives::readout::editor_validation_message_text_props;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(180.0), Px(120.0)),
+        )
+    }
+
+    fn find_component_slot<'a>(element: &'a AnyElement, slot: &str) -> Option<&'a AnyElement> {
+        if element.component_slot.as_deref() == Some(slot) {
+            return Some(element);
+        }
+        element
+            .children
+            .iter()
+            .find_map(|child| find_component_slot(child, slot))
+    }
+
+    #[test]
+    fn row_value_slot_keeps_overflow_visible_for_wrapping_value_children() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let row =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "property-row", |cx| {
+                PropertyRow::new()
+                    .options(PropertyRowOptions {
+                        variant: PropertyRowLayoutVariant::Row,
+                        test_id: Some(Arc::from("inspector.exposure")),
+                        ..Default::default()
+                    })
+                    .into_element(
+                        cx,
+                        |cx| cx.text("Exposure"),
+                        |cx| {
+                            cx.text_props(editor_validation_message_text_props(
+                                Arc::from(
+                                    "Value must stay between 0.0 and 1.0 for this render target.",
+                                ),
+                                Color::from_srgb_hex_rgb(0xCC_44_44),
+                                TextStyle::default(),
+                            ))
+                        },
+                        |_cx| None,
+                    )
+            });
+
+        let value_slot = find_component_slot(&row, PROPERTY_ROW_VALUE_SLOT)
+            .expect("property row should mark its value slot for contract tests");
+        let ElementKind::Container(props) = &value_slot.kind else {
+            panic!(
+                "property row value slot should be a container, got {:?}",
+                value_slot.kind
+            );
+        };
+
+        assert_eq!(
+            props.layout.overflow,
+            Overflow::Visible,
+            "row value slot must let wrapping value children grow and paint inside their measured line boxes; fixed chrome slots may clip themselves"
+        );
     }
 }
 
