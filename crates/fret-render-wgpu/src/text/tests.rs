@@ -130,6 +130,27 @@ fn scene_with_text(text_blob: fret_core::TextBlobId) -> fret_core::Scene {
     scene
 }
 
+fn scene_with_texts(text_blobs: &[fret_core::TextBlobId]) -> fret_core::Scene {
+    let mut scene = fret_core::Scene::default();
+    for (index, &text_blob) in text_blobs.iter().enumerate() {
+        scene.push(fret_core::SceneOp::Text {
+            order: fret_core::DrawOrder(index as u32),
+            origin: fret_core::Point::new(Px(0.0), Px(index as f32 * 20.0)),
+            text: text_blob,
+            paint: fret_core::Paint::Solid(fret_core::Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 1.0,
+            })
+            .into(),
+            outline: None,
+            shadow: None,
+        });
+    }
+    scene
+}
+
 fn reset_bundled_only_font_runtime(text: &mut super::TextSystem) {
     text.parley_shaper = fret_render_text::ParleyShaper::new_without_system_fonts();
     text.font_runtime.fallback_policy = super::TextFallbackPolicyV1::new(&text.parley_shaper);
@@ -350,6 +371,45 @@ fn prepare_for_scene_retries_retained_keys_missing_from_reset_atlas() {
     assert!(
         text.atlas_runtime.contains_key(key),
         "same-slot prepare should retry retained keys that are no longer present in the atlas"
+    );
+}
+
+#[test]
+fn prepare_for_scene_pin_cache_removes_replaced_or_missing_blobs() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut text = super::TextSystem::new(&ctx.device);
+    let style = TextStyle {
+        size: Px(16.0),
+        ..Default::default()
+    };
+    let (blob_a, _) = text.prepare("aaaa", &style, TextConstraints::default());
+    let (blob_b, _) = text.prepare("zzzz", &style, TextConstraints::default());
+    let key_a = first_glyph_key_for_blob(&text, blob_a);
+    let key_b = first_glyph_key_for_blob(&text, blob_b);
+    assert_ne!(
+        key_a, key_b,
+        "test setup needs distinct glyph keys for add/remove accounting"
+    );
+
+    let scene_ab = scene_with_texts(&[blob_a, blob_b]);
+    let initial = text.prepare_for_scene_with_perf(&scene_ab, 0, true);
+    assert_eq!(initial.scene_text_blobs, 2);
+    assert!(initial.added_glyph_keys > 0);
+    assert!(text.atlas_runtime.contains_key(key_a));
+    assert!(text.atlas_runtime.contains_key(key_b));
+
+    let _ = text.blob_state.blobs.remove(blob_b);
+    let scene_a = scene_with_text(blob_a);
+    let replacement = text.prepare_for_scene_with_perf(&scene_a, 3, true);
+
+    assert_eq!(replacement.scene_text_blobs, 1);
+    assert!(
+        replacement.removed_glyph_keys > 0,
+        "same-ring prepare should remove the old blob's pins even when the blob was evicted"
+    );
+    assert!(
+        replacement.retained_glyph_keys > 0,
+        "same-ring prepare should retain still-visible blob pins"
     );
 }
 

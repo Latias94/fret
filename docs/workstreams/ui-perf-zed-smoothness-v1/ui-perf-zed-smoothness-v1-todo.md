@@ -34,7 +34,7 @@ The target-machine Windows RTX4090 editor-paint closeout remains the formal cont
 current local execution blocker. Continue baseline-neutral local work only when it has its own evidence and does
 not update checked-in baselines.
 
-- [ ] Re-run the three local editor paint probes after any host-widget, renderer-text, or paint-cache cleanup before
+- [x] Re-run the three local editor paint probes after any host-widget, renderer-text, or paint-cache cleanup before
   widening the implementation lane.
   - Probes:
     - `tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-typical.json`
@@ -44,15 +44,20 @@ not update checked-in baselines.
     and `fretboard-dev diag stats --sort time --top 15 --json` for the worst bundle.
   - Do not treat this as Windows closeout or baseline promotion evidence.
   - Latest local pass (2026-05-16, macOS M4; baseline-neutral):
-    - typical autoscroll:
-      `target/fret-diag/local-next-editor-paint-20260516-typical-r3/1778923500049/bundle.schema2.json`
-    - complex wheel:
-      `target/fret-diag/local-next-editor-paint-20260516-complex-wheel-r3/1778923537543/bundle.schema2.json`
-    - resize jitter:
-      `target/fret-diag/local-next-editor-paint-20260516-resize-jitter-r3/1778923574043/bundle.schema2.json`
-    - Decision: do not start a broad `ElementHostWidget`, `WindowFrame.instances`, row replay, or Canvas display-list
-      rewrite from this pass. The shared remaining local paint-side owner is renderer text prepare.
-- [ ] Attribute the remaining local paint/renderer split before another code change.
+    - typical autoscroll: `target/fret-diag/local-next-editor-paint-20260516-after-no4090-typical-r3/1778928598441/bundle.schema2.json`
+    - complex wheel: `target/fret-diag/local-next-editor-paint-20260516-after-no4090-complex-wheel-r3/1778928659800/bundle.schema2.json`
+    - resize jitter: `target/fret-diag/local-next-editor-paint-20260516-after-no4090-resize-jitter-r3/1778928717171/bundle.schema2.json`
+  - Result:
+    - autoscroll p95: total `654 -> 682us`, paint `416 -> 451us`, `renderer_prepare_text_us 338 -> 35us`,
+      `renderer_prepare_text_collect_pin_keys_us 325 -> 22us`
+    - complex wheel p95: total `886 -> 808us`, paint `687 -> 662us`, `renderer_prepare_text_us 341 -> 47us`,
+      `renderer_prepare_text_collect_pin_keys_us 324 -> 29us`
+    - resize jitter p95: total `1501 -> 1689us`, layout `851 -> 862us`, `layout_engine_solve_time_us 399 -> 412us`,
+      `renderer_prepare_text_collect_pin_keys_us 347 -> 62us`
+  - Decision: the renderer text collector is no longer the dominant local owner on these probes. Keep the text
+    collector refactor as the landed local slice and move the next optimization discussion to resize layout roots /
+    solve batching, not another scene-text scan rewrite.
+- [x] Attribute the remaining local paint/renderer split before another code change.
   - Latest typical-only local smoke:
     `target/fret-diag/paint-observed-deps-presence-snapshot-typical-r3/1778921262429/stats.json`.
   - Current p95 total/paint/paint-widget is `673/423/263us`.
@@ -77,20 +82,17 @@ not update checked-in baselines.
   - Candidate follow-up only after attribution: reuse or fingerprint the per-scene text pin set across stable
     row-replay frames, preserving atlas pin lifetime semantics.
   - Do not change renderer payload thresholds from local macOS evidence.
-- [ ] Optimize renderer text prepare only if the pin-key collection finding reproduces after the attribution slice lands.
-  - Candidate owner: `TextSystem::collect_scene_pinned_keys(...)` currently rebuilds a `GlyphKeyBuckets` aggregate from
-    `Scene::text_blob_ids()` each frame even when row replay makes the text blob set mostly stable.
-  - Preferred first prototype: a small scene text pin-set cache or fingerprinted bucket reuse that short-circuits stable
-    frames while preserving atlas pin bucket ring semantics, reset-generation cleanup, and add/remove deltas.
-  - Repro/gate before landing: rerun the three local editor probes above plus a focused `fret-render-wgpu` atlas reset
-    regression test. Keep any checked-in baseline change blocked on the Windows RTX4090 contract pass.
-  - Non-landed experiment result (2026-05-16): exact previous-`text_blob_ids` sequence caching does not help the
-    typical autoscroll probe because the visible text blob sequence changes each frame; a rough-capacity one-pass
-    collector also regressed `collect_pin_keys` p95. Do not land either approach without a new positive measurement.
-  - Next credible design: incremental aggregation with text-blob add/remove accounting, likely by maintaining
-    per-glyph refcounts for the current scene text set or by carrying row-scene/recording-level pin-key summaries.
-    This should be treated as a small design slice before implementation, because it changes the collector model from
-    rebuild-every-frame to diff/reuse.
+- [x] Optimize renderer text prepare only if the pin-key collection finding reproduces after the attribution slice lands.
+  - Candidate owner: `TextSystem::collect_scene_pinned_keys(...)` used to rebuild a `GlyphKeyBuckets` aggregate from
+    `Scene::text_blob_ids()` each frame even when row replay made the text blob set mostly stable.
+  - Implemented slice: a scene blob-id cache now tracks blob presence and per-blob pin-key refcounts, then updates the
+    aggregate incrementally instead of rescanning every blob shape on every frame.
+  - Repro/gate: reran the three local editor probes above plus the focused `fret-render-wgpu` atlas/reset regression
+    test.
+  - Result: the cached collector cut `renderer_prepare_text_collect_pin_keys_us` from `325/324/347us` p95 on the
+    original probes to `22/29/62us` p95 on the rerun probes. The resize probe still stays layout-dominant, so it is a
+    separate follow-on rather than a renderer-text problem.
+  - Keep any checked-in baseline change blocked on the Windows RTX4090 contract pass.
 - [ ] If paint-cache / visual-bounds bookkeeping is the local residual, optimize only the measured subphase.
   - Candidate low-risk paths: avoid redundant visual-bounds writes, reuse small paint-cache key inputs, or reduce
     per-node text-style fingerprint lookups when the node kind cannot carry inherited text style.

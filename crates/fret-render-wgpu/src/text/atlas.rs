@@ -119,11 +119,24 @@ pub(super) struct GlyphKeyBuckets {
 }
 
 impl GlyphKeyBuckets {
+    #[cfg(test)]
     pub(super) fn with_capacities(mask: usize, color: usize, subpixel: usize) -> Self {
         Self {
             mask: HashSet::with_capacity(mask),
             color: HashSet::with_capacity(color),
             subpixel: HashSet::with_capacity(subpixel),
+        }
+    }
+
+    pub(super) fn from_unique_key_iters(
+        mask: impl IntoIterator<Item = GlyphKey>,
+        color: impl IntoIterator<Item = GlyphKey>,
+        subpixel: impl IntoIterator<Item = GlyphKey>,
+    ) -> Self {
+        Self {
+            mask: mask.into_iter().collect(),
+            color: color.into_iter().collect(),
+            subpixel: subpixel.into_iter().collect(),
         }
     }
 
@@ -137,6 +150,7 @@ impl GlyphKeyBuckets {
         }
     }
 
+    #[cfg(test)]
     pub(super) fn extend_pin_keys(&mut self, keys: &GlyphPinKeys) {
         self.mask.extend(keys.mask.iter().copied());
         self.color.extend(keys.color.iter().copied());
@@ -229,8 +243,16 @@ impl GlyphPinKeys {
         bytes.min(u64::MAX as u128) as u64
     }
 
-    pub(super) fn bucket_lens(&self) -> (usize, usize, usize) {
-        (self.mask.len(), self.color.len(), self.subpixel.len())
+    pub(super) fn mask_keys(&self) -> &[GlyphKey] {
+        &self.mask
+    }
+
+    pub(super) fn color_keys(&self) -> &[GlyphKey] {
+        &self.color
+    }
+
+    pub(super) fn subpixel_keys(&self) -> &[GlyphKey] {
+        &self.subpixel
     }
 }
 

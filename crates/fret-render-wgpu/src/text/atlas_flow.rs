@@ -1,4 +1,4 @@
-use super::atlas::{GlyphKey, GlyphKeyBuckets};
+use super::atlas::GlyphKey;
 use super::prepare::{
     build_glyph_scaler_from_face_bytes, glyph_render_at_bins, render_glyph_image,
 };
@@ -49,7 +49,9 @@ impl TextSystem {
             .clear_for_atlas_reset_generation(self.atlas_runtime.reset_generation());
 
         let collect_start = perf_enabled.then(Instant::now);
-        let (pinned_keys, scene_text_blobs) = self.collect_scene_pinned_keys(scene);
+        let (pinned_keys, scene_text_blobs) = self
+            .pin_state
+            .collect_scene_pinned_keys(scene, &self.blob_state);
         perf.scene_text_blobs = usize_to_u64(scene_text_blobs);
         perf.pinned_glyph_keys = usize_to_u64(pinned_keys.total_len());
         if let Some(start) = collect_start {
@@ -172,34 +174,6 @@ impl TextSystem {
             image.data,
             epoch,
         );
-    }
-
-    fn collect_scene_pinned_keys(&self, scene: &Scene) -> (GlyphKeyBuckets, usize) {
-        let mut mask_capacity = 0usize;
-        let mut color_capacity = 0usize;
-        let mut subpixel_capacity = 0usize;
-        let mut scene_text_blobs = 0usize;
-
-        for &text in scene.text_blob_ids() {
-            let Some(blob) = self.blob_state.blobs.get(text) else {
-                continue;
-            };
-            scene_text_blobs = scene_text_blobs.saturating_add(1);
-            let (mask, color, subpixel) = blob.shape().pin_keys().bucket_lens();
-            mask_capacity = mask_capacity.saturating_add(mask);
-            color_capacity = color_capacity.saturating_add(color);
-            subpixel_capacity = subpixel_capacity.saturating_add(subpixel);
-        }
-
-        let mut pinned_keys =
-            GlyphKeyBuckets::with_capacities(mask_capacity, color_capacity, subpixel_capacity);
-        for &text in scene.text_blob_ids() {
-            let Some(blob) = self.blob_state.blobs.get(text) else {
-                continue;
-            };
-            pinned_keys.extend_pin_keys(blob.shape().pin_keys());
-        }
-        (pinned_keys, scene_text_blobs)
     }
 
     fn prewarm_pin_bucket(

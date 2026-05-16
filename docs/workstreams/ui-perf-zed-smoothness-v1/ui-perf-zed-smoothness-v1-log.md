@@ -105,6 +105,36 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 18:52:58 +0800 (scene pin-key incremental cache)
+
+Question:
+- Can renderer text prepare stop rebuilding the scene glyph pin set every frame without disturbing atlas pin
+  lifetime semantics?
+
+Change:
+- Text prepare scene pin-key collection now keeps a scene blob-id cache plus per-blob pin-key refcounts and materializes
+  the aggregate incrementally instead of rescanning every blob shape on every frame.
+
+Validation:
+```bash
+cargo check -p fret-render-wgpu
+cargo nextest run -p fret-render-wgpu prepare_for_scene_retries_retained_keys_missing_from_reset_atlas prepare_for_scene_pin_cache_removes_replaced_or_missing_blobs --no-fail-fast
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-typical.json --repeat 3 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 15 --json --dir target/fret-diag/local-next-editor-paint-20260516-after-no4090-typical-r3 --launch -- cargo run -p fret-ui-gallery --release --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-wheel-steady.json --repeat 3 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 15 --json --dir target/fret-diag/local-next-editor-paint-20260516-after-no4090-complex-wheel-r3 --launch -- cargo run -p fret-ui-gallery --release --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json --repeat 3 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_A11Y_DISABLE=1 --env FRET_UI_GALLERY_BOOTSTRAP_FONTS=1 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_CODE_EDITOR_TORTURE_OVERLAY=0 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --sort time --top 15 --json --dir target/fret-diag/local-next-editor-paint-20260516-after-no4090-resize-jitter-r3 --launch -- cargo run -p fret-ui-gallery --release --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness
+```
+
+Results (p95 us):
+| script | before total | after total | before text collect | after text collect | before paint | after paint | before layout | after layout |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| autoscroll typical | 654 | 682 | 325 | 22 | 416 | 451 | 38 | 37 |
+| complex wheel | 886 | 808 | 324 | 29 | 687 | 662 | 182 | 192 |
+| resize jitter | 1501 | 1689 | 347 | 62 | 667 | 782 | 851 | 862 |
+
+Decision:
+- The renderer text collector is now a much smaller contributor on all three probes. The remaining local next owner
+  is resize layout root / solve batching, not another scene-text scan rewrite.
+
 ## 2026-05-16 14:48:00 +0800 (container focus-visible paint short-circuit)
 
 Question:
