@@ -61,6 +61,8 @@ This single command builds the release binaries, runs the fast preflight, runs t
 target-machine requirement; use `--dry-run` on non-target hosts to inspect the command plan without producing
 misleading local artifacts. Use `--skip-build` only when the target release binaries are already current.
 Build and preflight steps are fatal prerequisites: if either fails, the handoff stops before running validation.
+When producing a dry-run handoff plan from a non-target host for someone else to run on Windows, pass
+`--python-bin python` so the stored plan uses a portable Windows command instead of the local host's Python path.
 
 Use the lower-level validation runner directly only when you need to debug one validation directory at a time:
 
