@@ -105,6 +105,15 @@ binary, and the required overlay-disabled env set. The baseline-validation direc
 `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`; that flag belongs to the attribution directory for direct probes. The resize
 helper may still collect its code-editor paint-perf fields internally.
 
+The closeout summary also emits `owner_decision` after artifact verification. The decision maps verified attribution
+inputs to one of the closeout actions:
+
+- `canvas-paint-replay`: open a Canvas / paint replay implementation slice.
+- `renderer-text-prepare`: open a glyph / text-index / atlas residency slice.
+- `no-code-change`: lock gates and docs without another implementation slice.
+
+If the artifacts are missing or fail verification, `owner_decision.status` is `incomplete` and no owner is selected.
+
 ## Minimal Closeout Sequence
 
 Use this sequence on the Windows RTX4090 target host after building the release binaries. It is the shortest command

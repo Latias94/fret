@@ -42,6 +42,12 @@ not update checked-in baselines.
     `target/fret-diag/editor-paint-contract-windows-handoff-workstream-gate/handoff-plan.json`
   - Host guard evidence: non-dry-run on this macOS host exits with
     `the editor paint contract handoff must run on the target Windows host`.
+- [x] Emit an explicit closeout owner decision from verified attribution artifacts.
+  - Surface: `tools/perf/diag_editor_paint_contract_closeout.py` now writes `owner_decision` into the closeout summary.
+  - Outcomes: `canvas-paint-replay`, `renderer-text-prepare`, or `no-code-change`; failed/missing artifacts produce
+    `status=incomplete` and no owner.
+  - Negative evidence:
+    `target/fret-diag/editor-paint-contract-validate-20260516-goal-audit/editor-paint-contract-closeout.after-owner-decision.summary.json`
 - [x] Re-run the three local editor paint probes after any host-widget, renderer-text, or paint-cache cleanup before
   widening the implementation lane.
   - Probes:

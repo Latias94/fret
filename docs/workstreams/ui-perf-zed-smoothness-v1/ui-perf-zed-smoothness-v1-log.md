@@ -105,6 +105,35 @@ Notes:
 - <anything relevant>
 -->
 
+## 2026-05-16 19:15:39 +0800 (closeout owner decision)
+
+Question:
+- Once verified Windows RTX4090 attribution artifacts arrive, can closeout directly decide whether the next owner is
+  Canvas/paint, renderer text, or no code change?
+
+Change:
+- `diag_editor_paint_contract_closeout.py` now emits an `owner_decision` block after artifact verification.
+- The decision maps verified attribution `decision_inputs` to `canvas-paint-replay`,
+  `renderer-text-prepare`, or `no-code-change`; missing or invalid artifacts produce `status=incomplete`.
+
+Validation:
+```bash
+python3 -m unittest discover -s tools/perf -p 'test_diag_editor_paint_contract_*.py'
+python3 tools/perf/diag_editor_paint_contract_closeout.py \
+  target/fret-diag/editor-paint-contract-validate-20260516-goal-audit \
+  --attribution-dir target/fret-diag/editor-paint-contract-validate-20260516-goal-audit-attrib \
+  --out-report target/fret-diag/editor-paint-contract-validate-20260516-goal-audit/editor-paint-contract-closeout.after-owner-decision.summary.json
+```
+
+Results:
+- The editor-paint contract tool suite passed: 38 tests.
+- The negative closeout proof writes `owner_decision.status=incomplete`, `owner=null`, and
+  `action=wait-for-valid-artifacts`, so missing dry-run artifacts cannot accidentally select an implementation owner.
+
+Decision:
+- Keep the formal closeout blocked on real Windows RTX4090 validation and attribution directories, but make the owner
+  selection deterministic once those verified artifacts exist.
+
 ## 2026-05-16 19:09:25 +0800 (Windows handoff runner)
 
 Question:

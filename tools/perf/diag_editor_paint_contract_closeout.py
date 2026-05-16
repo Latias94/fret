@@ -23,6 +23,8 @@ import diag_editor_paint_contract_verify_artifacts as verify
 
 DEFAULT_MATRIX = "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-contract-matrix.md"
 DEFAULT_WORKSTREAM_JSON = "docs/workstreams/ui-perf-zed-smoothness-v1/WORKSTREAM.json"
+OWNER_DECISION_LOW_P95_US = 150
+OWNER_DECISION_DOMINANCE_RATIO = 1.25
 
 
 def _workspace_root() -> Path:
@@ -106,6 +108,124 @@ def verifier_date_tag(verifier: dict[str, Any], section: str) -> str | None:
     return date_tag if isinstance(date_tag, str) and date_tag else None
 
 
+def _number(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
+def _max_metric(rows: list[dict[str, Any]], key: str) -> tuple[float | None, str | None]:
+    best_value: float | None = None
+    best_probe: str | None = None
+    for row in rows:
+        value = _number(row.get(key))
+        if value is None:
+            continue
+        if best_value is None or value > best_value:
+            best_value = value
+            probe = row.get("probe")
+            best_probe = probe if isinstance(probe, str) else None
+    return best_value, best_probe
+
+
+def _decision_rows_from_verifier(verifier: dict[str, Any]) -> list[dict[str, Any]]:
+    attribution = verifier.get("attribution")
+    if not isinstance(attribution, dict):
+        return []
+    steps = attribution.get("steps")
+    if not isinstance(steps, dict):
+        return []
+
+    rows: list[dict[str, Any]] = []
+    for probe, report in steps.items():
+        if not isinstance(report, dict):
+            continue
+        inputs = report.get("decision_inputs")
+        if not isinstance(inputs, dict):
+            continue
+        hotspots = inputs.get("paint_widget_hotspot_summary")
+        if not isinstance(hotspots, dict):
+            hotspots = {}
+        rows.append(
+            {
+                "probe": probe,
+                "paint_widget_p95_us": inputs.get("paint_widget_p95_us"),
+                "canvas_exclusive_p95_us": hotspots.get("canvas_exclusive_p95_us"),
+                "renderer_prepare_text_p95_us": inputs.get("renderer_prepare_text_p95_us"),
+                "renderer_encode_scene_p95_us": inputs.get("renderer_encode_scene_p95_us"),
+                "renderer_upload_p95_us": inputs.get("renderer_upload_p95_us"),
+                "code_editor_total_p95_us": inputs.get("code_editor_total_p95_us"),
+            }
+        )
+    return rows
+
+
+def decide_next_owner(verifier: dict[str, Any]) -> dict[str, Any]:
+    if not bool(verifier.get("ok")):
+        return {
+            "status": "incomplete",
+            "owner": None,
+            "action": "wait-for-valid-artifacts",
+            "reason": "artifact verifier is not ok",
+            "probes": [],
+        }
+
+    rows = _decision_rows_from_verifier(verifier)
+    if not rows:
+        return {
+            "status": "incomplete",
+            "owner": None,
+            "action": "wait-for-attribution-decision-inputs",
+            "reason": "verified attribution report has no decision_inputs",
+            "probes": [],
+        }
+
+    paint_widget_p95, paint_probe = _max_metric(rows, "paint_widget_p95_us")
+    canvas_p95, canvas_probe = _max_metric(rows, "canvas_exclusive_p95_us")
+    renderer_text_p95, renderer_probe = _max_metric(rows, "renderer_prepare_text_p95_us")
+
+    paint_score = paint_widget_p95 or 0.0
+    renderer_score = renderer_text_p95 or 0.0
+
+    if paint_score < OWNER_DECISION_LOW_P95_US and renderer_score < OWNER_DECISION_LOW_P95_US:
+        owner = "no-code-change"
+        action = "lock-gates-and-docs"
+        reason = (
+            f"paint.widget and renderer text p95 are both below "
+            f"{OWNER_DECISION_LOW_P95_US}us on the verified attribution artifact"
+        )
+    elif renderer_score >= paint_score * OWNER_DECISION_DOMINANCE_RATIO:
+        owner = "renderer-text-prepare"
+        action = "open-glyph-text-index-atlas-residency-slice"
+        reason = "renderer text prepare is the dominant verified attribution owner"
+    else:
+        owner = "canvas-paint-replay"
+        action = "open-canvas-paint-replay-slice"
+        reason = "paint.widget / Canvas remains the dominant verified attribution owner"
+
+    return {
+        "status": "decided",
+        "owner": owner,
+        "action": action,
+        "reason": reason,
+        "thresholds": {
+            "low_owner_p95_us": OWNER_DECISION_LOW_P95_US,
+            "dominance_ratio": OWNER_DECISION_DOMINANCE_RATIO,
+        },
+        "scores": {
+            "paint_widget_p95_us": paint_widget_p95,
+            "paint_widget_probe": paint_probe,
+            "canvas_exclusive_p95_us": canvas_p95,
+            "canvas_probe": canvas_probe,
+            "renderer_prepare_text_p95_us": renderer_text_p95,
+            "renderer_probe": renderer_probe,
+        },
+        "probes": rows,
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Run the local closeout gates for synced editor paint contract artifacts.",
@@ -160,6 +280,10 @@ def main() -> int:
                 "skipped": True,
                 "reason": "dry-run",
             },
+            "owner_decision": {
+                "status": "skipped",
+                "reason": "dry-run",
+            },
             "steps": plan,
         }
         _write_json(out_report, summary)
@@ -169,6 +293,7 @@ def main() -> int:
     verifier = verify.verify_artifact_dirs(validation_dir, attribution_dir)
 
     if not bool(verifier.get("ok")):
+        owner_decision = decide_next_owner(verifier)
         summary = {
             "kind": "editor_paint_contract_closeout_summary",
             "ok": False,
@@ -177,6 +302,7 @@ def main() -> int:
             "validation_date_tag": verifier_date_tag(verifier, "validation"),
             "attribution_date_tag": verifier_date_tag(verifier, "attribution"),
             "verifier": verifier,
+            "owner_decision": owner_decision,
             "steps": [],
         }
         _write_json(out_report, summary)
@@ -184,6 +310,7 @@ def main() -> int:
         return 1
 
     print(f"[closeout] verifier ok. running local gates from {workspace_root}")
+    owner_decision = decide_next_owner(verifier)
     step_results: list[dict[str, Any]] = []
     pass_all = True
     for step in plan:
@@ -207,6 +334,7 @@ def main() -> int:
         "validation_date_tag": verifier_date_tag(verifier, "validation"),
         "attribution_date_tag": verifier_date_tag(verifier, "attribution"),
         "verifier": verifier,
+        "owner_decision": owner_decision,
         "steps": step_results,
     }
     _write_json(out_report, summary)
