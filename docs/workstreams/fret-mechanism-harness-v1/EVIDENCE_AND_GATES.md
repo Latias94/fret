@@ -2506,6 +2506,35 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - full-suite result:
     passed, 14/14 rows; summary
     `.fret/diag/runs/ui-gallery-motion-pilot-after-toast-scope-fix/sessions/1778940056096-94540/suite.summary.json`.
+- Sonner toast action/cancel accessible names:
+  - invariant:
+    toast action and cancel controls are interactive buttons, so the visual `ToastAction.label`
+    must also be exported as the button accessible name.
+  - finding:
+    after the named-toaster scoping fix, `ui-gallery-sonner-interrupt-fixed-frame-delta.json`
+    still produced one `semantics.missing_label` warning. The flagged button was the visible
+    `Undo` toast action: the child text node existed, but the button itself had no label/value.
+  - implementation anchors:
+    `ecosystem/fret-ui-kit/src/window_overlays/render.rs` and
+    `ecosystem/fret-ui-kit/src/window_overlays/tests/toast.rs`.
+  - focused unit gate:
+    `cargo test --profile dev-fast -p fret-ui-kit --lib toast_action_and_cancel_labels_are_exposed_in_semantics_snapshot -- --nocapture`
+  - focused unit result:
+    passed.
+  - focused runtime gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-interrupt-fixed-frame-delta.json --dir .fret/diag/runs/ui-gallery-sonner-interrupt-after-action-label-fix --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime result:
+    passed, run id `1778941669635`, share pack
+    `.fret/diag/runs/ui-gallery-sonner-interrupt-after-action-label-fix/share/1778941669635.zip`.
+  - focused lint:
+    `target/dev-fast/fretboard-dev.exe diag lint .fret/diag/runs/ui-gallery-sonner-interrupt-after-action-label-fix/1778941679023-ui-gallery-sonner-interrupt-fixed-frame-delta/bundle.schema2.json --json --out .fret/diag/runs/ui-gallery-sonner-interrupt-after-action-label-fix/1778941679023-ui-gallery-sonner-interrupt-fixed-frame-delta/check.lint.json`
+  - focused lint result:
+    `error_issues=0`, `warning_issues=0`.
+  - full-suite follow-up:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-motion-pilot --dir .fret/diag/runs/ui-gallery-motion-pilot-after-toast-action-label-fix --timeout-ms 900000 --session-auto --launch target/dev-fast/fret-ui-gallery.exe`
+  - full-suite result:
+    passed, 14/14 rows; summary
+    `.fret/diag/runs/ui-gallery-motion-pilot-after-toast-action-label-fix/sessions/1778941744107-108312/suite.summary.json`.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

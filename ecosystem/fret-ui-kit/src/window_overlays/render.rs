@@ -2881,7 +2881,11 @@ pub fn render<H: UiHost + 'static>(
                                                                 focus_ring_always_paint: false,
                                                                 focus_ring_bounds: None,
                                                                 key_activation: Default::default(),
-                                                                a11y: Default::default(),
+                                                                a11y: fret_ui::element::PressableA11y {
+                                                                    role: Some(SemanticsRole::Button),
+                                                                    label: Some(label.clone()),
+                                                                    ..Default::default()
+                                                                },
                                                             },
                                                             move |cx, st| {
                                                                 cx.pressable_add_on_activate(crate::on_activate(
@@ -2968,7 +2972,11 @@ pub fn render<H: UiHost + 'static>(
                                                                 focus_ring_always_paint: false,
                                                                 focus_ring_bounds: None,
                                                                 key_activation: Default::default(),
-                                                                a11y: Default::default(),
+                                                                a11y: fret_ui::element::PressableA11y {
+                                                                    role: Some(SemanticsRole::Button),
+                                                                    label: Some(label.clone()),
+                                                                    ..Default::default()
+                                                                },
                                                             },
                                                             move |cx, st| {
                                                                 cx.pressable_add_on_activate(crate::on_activate(

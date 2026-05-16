@@ -580,6 +580,11 @@ date: 2026-05-12
     layers to unnamed toasts and named layers to matching `toaster_id`s; the focused Sonner runtime
     gate passes and `diag test-ids` reports zero duplicates. The full `ui-gallery-motion-pilot`
     suite now passes 14/14 after the fix, with only non-blocking lint warnings remaining.
+  - Progress: the residual Sonner `semantics.missing_label` warning was also a real policy defect,
+    not lint noise. Toast action/cancel buttons rendered visible text but did not export that text
+    as the button accessible name. `fret-ui-kit` now labels those pressables from `ToastAction`, a
+    focused semantics snapshot test covers action/cancel labels, the Sonner focused gate lint is
+    clean, and the full `ui-gallery-motion-pilot` suite still passes 14/14.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.
