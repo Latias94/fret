@@ -444,24 +444,37 @@ impl<H: UiHost> UiTree<H> {
             prev_bounds,
         )?;
 
-        let mut child_bounds = Vec::with_capacity(children.len());
-        for &child in &children {
-            let child_style = crate::declarative::frame::layout_style_for_node(app, window, child);
-            if child_style.position != crate::element::PositionStyle::Static {
-                return None;
-            }
-            let local = self.layout_engine_child_local_rect_profiled(node, child)?;
-            child_bounds.push((
-                child,
-                Rect::new(
-                    Point::new(
-                        Px(bounds.origin.x.0 + local.origin.x.0),
-                        Px(bounds.origin.y.0 + local.origin.y.0),
+        let child_bounds = if let Some(child_bounds) = self.clean_manual_geometry_child_bounds(
+            app,
+            window,
+            node,
+            &children,
+            bounds,
+            prev_bounds,
+        ) {
+            child_bounds
+        } else {
+            let mut child_bounds = Vec::with_capacity(children.len());
+            for &child in &children {
+                let child_style =
+                    crate::declarative::frame::layout_style_for_node(app, window, child);
+                if child_style.position != crate::element::PositionStyle::Static {
+                    return None;
+                }
+                let local = self.layout_engine_child_local_rect_profiled(node, child)?;
+                child_bounds.push((
+                    child,
+                    Rect::new(
+                        Point::new(
+                            Px(bounds.origin.x.0 + local.origin.x.0),
+                            Px(bounds.origin.y.0 + local.origin.y.0),
+                        ),
+                        local.size,
                     ),
-                    local.size,
-                ),
-            ));
-        }
+                ));
+            }
+            child_bounds
+        };
 
         self.layout_engine.mark_seen_if_present(node);
         let size = if children.is_empty() && prev_bounds.size == bounds.size {
@@ -516,6 +529,283 @@ impl<H: UiHost> UiTree<H> {
         Some(size)
     }
 
+    pub(crate) fn can_skip_clean_geometry_engine_solve_for_resize(
+        &mut self,
+        app: &mut H,
+        root: NodeId,
+        bounds: Rect,
+        prev_bounds: Rect,
+    ) -> bool {
+        if !self.interactive_resize_is_small_step() {
+            return false;
+        }
+        if prev_bounds == bounds || prev_bounds.size == bounds.size {
+            return false;
+        }
+        if (bounds.size.height.0 - prev_bounds.size.height.0).abs() > 0.01 {
+            return false;
+        }
+        let Some(window) = self.window else {
+            return false;
+        };
+        if !self.clean_geometry_node_is_clean(root) {
+            return false;
+        }
+        self.clean_manual_geometry_subtree_supported(app, window, root, bounds, prev_bounds, true)
+    }
+
+    fn clean_manual_geometry_subtree_supported(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        node: NodeId,
+        bounds: Rect,
+        prev_bounds: Rect,
+        is_root: bool,
+    ) -> bool {
+        if !self.clean_geometry_node_is_clean(node) {
+            return false;
+        }
+        if !is_root && self.clean_geometry_boundary_layout_node(app, window, node) {
+            return true;
+        }
+        let Some(children) = self.nodes.get(node).map(|n| n.children.clone()) else {
+            return false;
+        };
+        let Some(child_bounds) = self.clean_manual_geometry_child_bounds(
+            app,
+            window,
+            node,
+            &children,
+            bounds,
+            prev_bounds,
+        ) else {
+            return false;
+        };
+        for (child, child_bounds) in child_bounds {
+            if self.clean_geometry_boundary_layout_node(app, window, child) {
+                continue;
+            }
+            let Some(child_prev_bounds) = self.nodes.get(child).map(|entry| entry.bounds) else {
+                return false;
+            };
+            if !self.clean_manual_geometry_subtree_supported(
+                app,
+                window,
+                child,
+                child_bounds,
+                child_prev_bounds,
+                false,
+            ) {
+                return false;
+            }
+        }
+        true
+    }
+
+    fn clean_geometry_node_is_clean(&self, node: NodeId) -> bool {
+        let Some(entry) = self.nodes.get(node) else {
+            return false;
+        };
+        !entry.invalidation.layout
+            && !self.node_subtree_layout_dirty(node)
+            && entry.measured_size != Size::default()
+            && !entry.layout_dirty_children_suppressed
+    }
+
+    fn clean_geometry_boundary_layout_node(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        node: NodeId,
+    ) -> bool {
+        crate::declarative::frame::with_element_record_for_node(app, window, node, |record| {
+            matches!(
+                record.instance,
+                crate::declarative::frame::ElementInstance::Scroll(_)
+            )
+        })
+        .unwrap_or(false)
+    }
+
+    fn clean_manual_geometry_child_bounds(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        node: NodeId,
+        children: &[NodeId],
+        bounds: Rect,
+        prev_bounds: Rect,
+    ) -> Option<Vec<(NodeId, Rect)>> {
+        let record = crate::declarative::frame::element_record_for_node(app, window, node)?;
+        match record.instance {
+            crate::declarative::frame::ElementInstance::Stack(_)
+            | crate::declarative::frame::ElementInstance::Pressable(_)
+            | crate::declarative::frame::ElementInstance::Semantics(_)
+            | crate::declarative::frame::ElementInstance::FocusScope(_)
+            | crate::declarative::frame::ElementInstance::ForegroundScope(_)
+            | crate::declarative::frame::ElementInstance::Opacity(_)
+            | crate::declarative::frame::ElementInstance::EffectLayer(_)
+            | crate::declarative::frame::ElementInstance::BackdropSourceGroup(_)
+            | crate::declarative::frame::ElementInstance::MaskLayer(_)
+            | crate::declarative::frame::ElementInstance::CompositeGroup(_)
+            | crate::declarative::frame::ElementInstance::PointerRegion(_)
+            | crate::declarative::frame::ElementInstance::HoverRegion(_)
+            | crate::declarative::frame::ElementInstance::WheelRegion(_)
+            | crate::declarative::frame::ElementInstance::InternalDragRegion(_)
+            | crate::declarative::frame::ElementInstance::ExternalDragRegion(_)
+            | crate::declarative::frame::ElementInstance::InteractivityGate(_)
+            | crate::declarative::frame::ElementInstance::HitTestGate(_)
+            | crate::declarative::frame::ElementInstance::FocusTraversalGate(_)
+            | crate::declarative::frame::ElementInstance::DismissibleLayer(_) => self
+                .clean_passthrough_width_delta_child_bounds(
+                    app,
+                    window,
+                    children,
+                    bounds,
+                    prev_bounds,
+                ),
+            crate::declarative::frame::ElementInstance::Flex(props)
+            | crate::declarative::frame::ElementInstance::SemanticFlex(
+                crate::element::SemanticFlexProps { flex: props, .. },
+            )
+            | crate::declarative::frame::ElementInstance::RovingFlex(
+                crate::element::RovingFlexProps { flex: props, .. },
+            ) => self.clean_vertical_flex_width_delta_child_bounds(
+                app,
+                window,
+                children,
+                bounds,
+                prev_bounds,
+                props,
+            ),
+            crate::declarative::frame::ElementInstance::Spacer(_)
+            | crate::declarative::frame::ElementInstance::Image(_)
+            | crate::declarative::frame::ElementInstance::SvgIcon(_)
+            | crate::declarative::frame::ElementInstance::SvgImage(_)
+            | crate::declarative::frame::ElementInstance::Spinner(_)
+                if children.is_empty() =>
+            {
+                Some(Vec::new())
+            }
+            _ => None,
+        }
+    }
+
+    fn clean_passthrough_width_delta_child_bounds(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        children: &[NodeId],
+        bounds: Rect,
+        prev_bounds: Rect,
+    ) -> Option<Vec<(NodeId, Rect)>> {
+        let mut out = Vec::with_capacity(children.len());
+        for &child in children {
+            let child_style = crate::declarative::frame::layout_style_for_node(app, window, child);
+            if child_style.position != crate::element::PositionStyle::Static
+                || !Self::clean_margin_edges_are_px(child_style.margin)
+            {
+                return None;
+            }
+            let prev_child = self.nodes.get(child)?.bounds;
+            let local_x = prev_child.origin.x.0 - prev_bounds.origin.x.0;
+            let local_y = prev_child.origin.y.0 - prev_bounds.origin.y.0;
+            let width = if (prev_child.size.width.0 - prev_bounds.size.width.0).abs() <= 0.01
+                || matches!(child_style.size.width, crate::element::Length::Fill)
+            {
+                bounds.size.width
+            } else {
+                prev_child.size.width
+            };
+            out.push((
+                child,
+                Rect::new(
+                    Point::new(
+                        Px(bounds.origin.x.0 + local_x),
+                        Px(bounds.origin.y.0 + local_y),
+                    ),
+                    Size::new(width, prev_child.size.height),
+                ),
+            ));
+        }
+        Some(out)
+    }
+
+    fn clean_vertical_flex_width_delta_child_bounds(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        children: &[NodeId],
+        bounds: Rect,
+        prev_bounds: Rect,
+        props: crate::element::FlexProps,
+    ) -> Option<Vec<(NodeId, Rect)>> {
+        if props.wrap
+            || props.direction != fret_core::Axis::Vertical
+            || props.justify != crate::element::MainAlign::Start
+            || props.align != crate::element::CrossAlign::Stretch
+            || (bounds.size.height.0 - prev_bounds.size.height.0).abs() > 0.01
+        {
+            return None;
+        }
+        let pad_left = Self::clean_spacing_px(props.padding.left)?;
+        let pad_right = Self::clean_spacing_px(props.padding.right)?;
+        let _pad_top = Self::clean_spacing_px(props.padding.top)?;
+        let _pad_bottom = Self::clean_spacing_px(props.padding.bottom)?;
+        let _gap = Self::clean_spacing_px(props.gap)?;
+
+        let prev_inner_width = (prev_bounds.size.width.0 - pad_left - pad_right).max(0.0);
+        let next_inner_width = (bounds.size.width.0 - pad_left - pad_right).max(0.0);
+        let mut out = Vec::with_capacity(children.len());
+        for &child in children {
+            let child_style = crate::declarative::frame::layout_style_for_node(app, window, child);
+            if child_style.position != crate::element::PositionStyle::Static
+                || !Self::clean_margin_edges_are_px(child_style.margin)
+                || matches!(child_style.size.height, crate::element::Length::Auto)
+            {
+                return None;
+            }
+            let prev_child = self.nodes.get(child)?.bounds;
+            let local_x = prev_child.origin.x.0 - prev_bounds.origin.x.0;
+            let local_y = prev_child.origin.y.0 - prev_bounds.origin.y.0;
+            let width = if (prev_child.size.width.0 - prev_inner_width).abs() <= 0.01
+                || matches!(child_style.size.width, crate::element::Length::Fill)
+            {
+                Px(next_inner_width)
+            } else {
+                prev_child.size.width
+            };
+            out.push((
+                child,
+                Rect::new(
+                    Point::new(
+                        Px(bounds.origin.x.0 + local_x),
+                        Px(bounds.origin.y.0 + local_y),
+                    ),
+                    Size::new(width, prev_child.size.height),
+                ),
+            ));
+        }
+        Some(out)
+    }
+
+    fn clean_spacing_px(length: crate::element::SpacingLength) -> Option<f32> {
+        match length {
+            crate::element::SpacingLength::Px(px) => Some(px.0.max(0.0)),
+            crate::element::SpacingLength::Fill | crate::element::SpacingLength::Fraction(_) => {
+                None
+            }
+        }
+    }
+
+    fn clean_margin_edges_are_px(margin: crate::element::MarginEdges) -> bool {
+        matches!(margin.left, crate::element::MarginEdge::Px(_))
+            && matches!(margin.right, crate::element::MarginEdge::Px(_))
+            && matches!(margin.top, crate::element::MarginEdge::Px(_))
+            && matches!(margin.bottom, crate::element::MarginEdge::Px(_))
+    }
+
     fn clean_engine_geometry_propagation_supported_element(
         &self,
         app: &mut H,
@@ -531,15 +821,7 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let supported = match record.instance {
-            crate::declarative::frame::ElementInstance::Container(_)
-            | crate::declarative::frame::ElementInstance::Pressable(_)
-            | crate::declarative::frame::ElementInstance::Semantics(_)
-            | crate::declarative::frame::ElementInstance::ViewCache(_)
-            | crate::declarative::frame::ElementInstance::FocusScope(_)
-            | crate::declarative::frame::ElementInstance::ForegroundScope(_)
-            | crate::declarative::frame::ElementInstance::Opacity(_)
-            | crate::declarative::frame::ElementInstance::Stack(_)
-            | crate::declarative::frame::ElementInstance::Grid(_) => true,
+            crate::declarative::frame::ElementInstance::Stack(_) => true,
             crate::declarative::frame::ElementInstance::Flex(_)
             | crate::declarative::frame::ElementInstance::SemanticFlex(_)
             | crate::declarative::frame::ElementInstance::RovingFlex(_) => {

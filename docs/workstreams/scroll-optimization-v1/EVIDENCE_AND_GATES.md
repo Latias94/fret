@@ -162,6 +162,52 @@ Post-merge root-solve attribution refresh (2026-05-17):
   - Do not start renderer text, shadcn `ScrollArea` recipe, or row-fragment replay work from this
     evidence.
 
+Implemented root-solve / clean-geometry propagation slice (2026-05-17):
+
+- Mechanism anchors:
+  - `crates/fret-ui/src/tree/layout/node.rs`
+    (`can_skip_clean_geometry_engine_solve_for_resize`,
+    `clean_manual_geometry_subtree_supported`, and `try_propagate_clean_engine_layout`)
+  - `crates/fret-ui/src/tree/layout/solve.rs`
+    (`solve_barrier_flow_root_if_needed`, `solve_barrier_flow_roots_if_needed`)
+  - `crates/fret-ui/src/tree/layout/entrypoints.rs`
+    (pending viewport/root solve batching)
+- Contract:
+  - The skip applies only to engine-backed, clean roots during small-step interactive width-only
+    resize. Height changes remain on the full solve path because they can affect scroll windows and
+    virtual-list visible ranges.
+  - `Scroll` is treated as a boundary. Ancestors may propagate its resized bounds, but `Scroll`
+    still runs layout and publishes viewport/content handles, deferred-probe state, overflow
+    observation, and child scroll transforms.
+  - `ViewCache` and `VirtualList` are excluded from the fast path. `ViewCache` needs a retained
+    semantics proof before participating; `VirtualList` must keep resize-driven render-window
+    updates authoritative.
+- Focused gates:
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_barrier_root_engine_solve clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve clean_parent_geometry_skip_still_runs_scroll_layout_side_effects virtual_list_render_window_range_tracks_viewport_resize --no-fail-fast`
+    - Result: `4/4` passed.
+  - `cargo nextest run -p fret-ui layout_engine --no-fail-fast`
+    - Result: `17/17` passed.
+  - `cargo nextest run -p fret-ui scroll --no-fail-fast`
+    - Result: `153/153` passed.
+  - `cargo fmt --check`
+    - Result: passed.
+- Local perf evidence:
+  - Bundle:
+    `target/fret-diag/local-next-root-solve-attrib-20260517-r3/1778956535346/bundle.schema2.json`
+  - Stats command:
+    `target/release/fretboard-dev diag stats target/fret-diag/local-next-root-solve-attrib-20260517-r3/1778956535346/bundle.schema2.json --sort time --top 15 --json`
+  - p95/max total/layout/layout-roots/solve/prepaint/paint/text-prepare:
+    `1266/716/492/331/254/385/62us`.
+  - Top frame: `total=1266us`, `layout=650us`, `layout_roots=422us`,
+    `layout_engine_solve=322us`, `layout_engine_solves=4`.
+  - View-cache and editor guardrails remain stable: `cache_roots_reused=1`, row replay/store
+    `289/0`, rows painted `289`, and code-editor p95 total/row-paint `90/105us`.
+  - Remaining top solves are still small-width-delta `new_frame_key_changed` roots with no measured
+    widget/text time: content `Semantics` `177us`, root `Stack` `140us`, and editor
+    `PointerRegion` `3us`. The next optimization should either widen the proof with dedicated
+    side-effect gates or target a different root-solve owner; it should not fold RTX4090 closeout
+    into this local slice.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:

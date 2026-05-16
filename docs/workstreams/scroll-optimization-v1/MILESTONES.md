@@ -51,3 +51,15 @@ Status: Active
     frames are paint-dominant with bounded layout solves and no invalidation walks.
 - Keep representative `diag perf` samples normalized; repair stale prewarm command forms before
   using them as p95 baselines.
+
+## M6 — Clean root-solve / geometry propagation split (1–2 days)
+
+- Skip barrier/root Taffy solves only for engine-backed clean roots during small-step interactive
+  width-only resize when child bounds can be derived from previous clean geometry.
+- Keep `Scroll` as a side-effectful layout boundary: parent geometry can be propagated to it, but
+  `Scroll` layout still publishes viewport/content handles, deferred-probe state, overflow
+  observation, and child transforms.
+- Keep `ViewCache` and `VirtualList` off this fast path until each has a dedicated retained/render
+  or visible-window proof.
+- Record local perf evidence separately from RTX4090 closeout. RTX4090 remains follow-up evidence,
+  not this slice's completion condition.

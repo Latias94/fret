@@ -75,18 +75,29 @@ Status: Active
     time: content `Semantics` `172us` (`available_w_delta=-4`, `subtree_nodes=136`), root
     `Stack` `128us` (`available_w_delta=-4`, `subtree_nodes=102`), and editor
     `PointerRegion` `3us` (`available_w_delta=-4`, `subtree_nodes=2`).
-- [ ] Design the next root-solve / geometry-propagation slice before changing code.
+- [x] Design and implement the next root-solve / geometry-propagation slice.
   - Do not simply skip `Scroll` child layout or extend the current safe-subset whitelist by name.
     `Scroll` still owns handle viewport/content updates, deferred probe state, overflow observation,
     and child transform side effects.
   - Start from `crates/fret-ui/src/tree/layout/node.rs::try_propagate_clean_engine_layout` and
     `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs::layout_scroll_impl`.
-  - The design question is whether resize-time bounds deltas can split pure geometry propagation
-    from side-effectful layout nodes more explicitly, while preserving scroll extents, hit-test
-    bounds, semantics/focus/overlay geometry, text input state, virtual-list visible ranges, and
-    layout-query semantics.
-  - Keep this in `scroll-optimization-v1` for now. Split a new workstream only if the next patch
-    changes the layout data model or introduces a durable cross-crate layout-side-effect contract.
+  - Implemented answer: engine-backed clean roots can skip the barrier/root Taffy solve only during
+    small-step interactive width-only resize when child bounds can be derived from previous clean
+    geometry.
+  - `Scroll` is a boundary, not a skipped node: parent geometry can be propagated to it, but its
+    own layout still runs so viewport/content handles, deferred probes, overflow observation, and
+    child transforms remain authoritative.
+  - The actual no-layout propagation path remains narrow (`Stack`, no-wrap vertical
+    `Flex`/`SemanticFlex`/`RovingFlex`, and already-safe fixed-size leaves/text cases). The
+    root-solve preflight may walk selected pass-through geometry wrappers only to prove child
+    bounds; unsupported/layout-side-effect nodes still run their layout bodies.
+  - `ViewCache` and `VirtualList` stay out of this fast path. `ViewCache` needs retained/render
+    semantics proof before it can participate, and `VirtualList` must keep visible/render-window
+    resize semantics authoritative.
+  - Keep this in `scroll-optimization-v1`. Split a new workstream only if a later patch changes the
+    layout data model or introduces a durable cross-crate layout-side-effect contract.
+  - RTX4090 validation is intentionally deferred as follow-up evidence; it is not a completion gate
+    for this local root-solve slice.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

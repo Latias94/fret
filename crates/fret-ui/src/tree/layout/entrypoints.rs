@@ -2023,20 +2023,38 @@ impl<H: UiHost> UiTree<H> {
         // overhead into tail spikes. Prefer batching via the layout engine's synthetic-root path.
         let mut pending_solves: Vec<(NodeId, LayoutSize<AvailableSpace>)> = Vec::new();
         for &root in roots {
-            let (has_element, needs_layout, is_translation_only) = match self.nodes.get(root) {
-                Some(node) => {
-                    let has_element = node.element.is_some();
-                    let needs_layout = node.invalidation.layout || node.bounds != bounds;
-                    let is_translation_only = !node.invalidation.layout
-                        && node.bounds.size == bounds.size
-                        && node.bounds.origin != bounds.origin
-                        && node.measured_size != Size::default();
-                    (has_element, needs_layout, is_translation_only)
-                }
-                None => continue,
-            };
+            let (has_element, needs_layout, is_translation_only, prev_bounds, layout_invalidated) =
+                match self.nodes.get(root) {
+                    Some(node) => {
+                        let has_element = node.element.is_some();
+                        let needs_layout = node.invalidation.layout || node.bounds != bounds;
+                        let is_translation_only = !node.invalidation.layout
+                            && node.bounds.size == bounds.size
+                            && node.bounds.origin != bounds.origin
+                            && node.measured_size != Size::default();
+                        (
+                            has_element,
+                            needs_layout,
+                            is_translation_only,
+                            node.bounds,
+                            node.invalidation.layout,
+                        )
+                    }
+                    None => continue,
+                };
 
             if !has_element || !needs_layout || is_translation_only {
+                continue;
+            }
+            if !layout_invalidated
+                && engine.layout_id_for_node(root).is_some()
+                && self.can_skip_clean_geometry_engine_solve_for_resize(
+                    app,
+                    root,
+                    bounds,
+                    prev_bounds,
+                )
+            {
                 continue;
             }
 
@@ -2174,6 +2192,7 @@ impl<H: UiHost> UiTree<H> {
             struct ViewportWorkItem {
                 root: NodeId,
                 bounds: Rect,
+                prev_bounds: Rect,
                 has_element: bool,
                 needs_layout: bool,
                 is_translation_only: bool,
@@ -2206,6 +2225,7 @@ impl<H: UiHost> UiTree<H> {
                 batch.push(ViewportWorkItem {
                     root,
                     bounds,
+                    prev_bounds,
                     has_element,
                     needs_layout,
                     is_translation_only,
@@ -2330,6 +2350,17 @@ impl<H: UiHost> UiTree<H> {
                 let mut pending_solves: Vec<(NodeId, LayoutSize<AvailableSpace>)> = Vec::new();
                 for item in &batch {
                     if !item.needs_layout || item.is_translation_only {
+                        continue;
+                    }
+                    if !item.layout_invalidated
+                        && engine.layout_id_for_node(item.root).is_some()
+                        && self.can_skip_clean_geometry_engine_solve_for_resize(
+                            app,
+                            item.root,
+                            item.bounds,
+                            item.prev_bounds,
+                        )
+                    {
                         continue;
                     }
                     pending_solves.push((

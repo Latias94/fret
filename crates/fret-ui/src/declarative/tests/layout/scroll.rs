@@ -1665,6 +1665,113 @@ fn scroll_translation_does_not_force_layout_engine_solves() {
 }
 
 #[test]
+fn clean_parent_geometry_skip_still_runs_scroll_layout_side_effects() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(120.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(324.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-parent-geometry-scroll-side-effects",
+        |cx| {
+            let scroll_handle = scroll_handle.clone();
+            let mut stack_layout = crate::element::LayoutStyle::default();
+            stack_layout.size.width = Length::Fill;
+            stack_layout.size.height = Length::Fill;
+
+            vec![cx.stack_props(
+                crate::element::StackProps {
+                    layout: stack_layout,
+                },
+                |cx| {
+                    let mut scroll_layout = crate::element::LayoutStyle::default();
+                    scroll_layout.size.width = Length::Fill;
+                    scroll_layout.size.height = Length::Fill;
+                    vec![cx.scroll(
+                        crate::element::ScrollProps {
+                            layout: scroll_layout,
+                            scroll_handle: Some(scroll_handle.clone()),
+                            ..Default::default()
+                        },
+                        |_cx| Vec::<AnyElement>::new(),
+                    )]
+                },
+            )]
+        },
+    );
+
+    let rect_a = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(180.0), Px(80.0)));
+    let rect_b = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(184.0), Px(80.0)));
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+    assert_eq!(scroll_handle.viewport_size(), rect_a.size);
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "clean parent geometry should skip the parent root solve"
+    );
+    assert_eq!(
+        scroll_handle.viewport_size(),
+        rect_b.size,
+        "Scroll layout must still run and publish the resized viewport"
+    );
+}
+
+#[test]
 fn scroll_axis_both_probe_unbounded_keeps_content_at_least_viewport_width() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

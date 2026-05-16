@@ -3,7 +3,7 @@
   "slug": "scroll-optimization-v1",
   "title": "Scroll Optimization Workstream v1",
   "status": "active",
-  "updated": "2026-05-15",
+  "updated": "2026-05-17",
   "scope_kind": "execution",
   "problem": "Keep scroll extent probing, deferred unbounded probes, and post-layout overflow observation coherent so scroll surfaces stay correct and smooth under resize, invalidation, view-cache reuse, and edge growth/shrink.",
   "authoritative_docs": [
@@ -141,6 +141,10 @@
     {
       "name": "internal-drag-ignores-detached-stale-frame-region",
       "command": "cargo nextest run -p fret-ui -E 'test(internal_drag_after_raw_rebuild_does_not_route_to_detached_stale_frame_region)'"
+    },
+    {
+      "name": "clean-root-solve-geometry-propagation",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_skips_barrier_root_engine_solve clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve clean_parent_geometry_skip_still_runs_scroll_layout_side_effects virtual_list_render_window_range_tracks_viewport_resize --no-fail-fast"
     }
   ],
   "evidence": [
@@ -152,6 +156,10 @@
     "crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs",
     "crates/fret-ui/src/declarative/host_widget/event/scroll.rs",
     "crates/fret-ui/src/declarative/tests/layout/scroll.rs",
+    "crates/fret-ui/src/declarative/tests/layout/layout_engine.rs",
+    "crates/fret-ui/src/tree/layout/node.rs",
+    "crates/fret-ui/src/tree/layout/solve.rs",
+    "crates/fret-ui/src/tree/layout/entrypoints.rs",
     "crates/fret-ui/src/declarative/tests/virtual_list/caching.rs",
     "crates/fret-ui/src/tree/ui_tree_subtree_layout_dirty.rs",
     "crates/fret-ui/src/declarative/mount.rs",
