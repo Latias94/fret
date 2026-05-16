@@ -5049,6 +5049,96 @@ mod tests {
     }
 
     #[test]
+    fn select_trigger_exposes_accessible_name_and_current_value() {
+        fn render_trigger(
+            model_value: Option<Arc<str>>,
+            a11y_label: Option<&'static str>,
+            trigger_value_as_label: bool,
+        ) -> (Option<String>, Option<String>) {
+            let window = AppWindowId::default();
+            let mut app = App::new();
+            let mut ui: UiTree<App> = UiTree::new();
+            ui.set_window(window);
+
+            let value = app.models_mut().insert(model_value);
+            let open = app.models_mut().insert(false);
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                fret_core::Size::new(Px(400.0), Px(240.0)),
+            );
+            let mut services = FakeServices;
+            let items = vec![
+                SelectItem::new("alpha", "Alpha label"),
+                SelectItem::new("beta", "Beta label"),
+            ];
+
+            let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
+
+            fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+            let root = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "select-trigger-a11y-value",
+                |cx| {
+                    let mut select = Select::new(value.clone(), open.clone())
+                        .items(items)
+                        .value(SelectValue::new().placeholder("Choose fruit"))
+                        .trigger_test_id("select-trigger");
+                    if let Some(label) = a11y_label {
+                        select = select.a11y_label(label);
+                    }
+                    if trigger_value_as_label {
+                        select = select.trigger_value_as_label();
+                    }
+                    vec![select.into_element(cx)]
+                },
+            );
+            ui.set_root(root);
+            fret_ui_kit::OverlayController::render(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+            );
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+            let snap = ui.semantics_snapshot().expect("semantics snapshot");
+            let trigger = snap
+                .nodes
+                .iter()
+                .find(|n| n.test_id.as_deref() == Some("select-trigger"))
+                .expect("select trigger semantics");
+
+            (
+                trigger.label.as_deref().map(ToOwned::to_owned),
+                trigger.value.as_deref().map(ToOwned::to_owned),
+            )
+        }
+
+        let (label, value) = render_trigger(None, None, false);
+        assert_eq!(label.as_deref(), Some("Choose fruit"));
+        assert_eq!(value.as_deref(), Some("Choose fruit"));
+
+        let (label, value) = render_trigger(Some(Arc::from("beta")), None, false);
+        assert_eq!(label.as_deref(), Some("Beta label"));
+        assert_eq!(value.as_deref(), Some("Beta label"));
+
+        let (label, value) = render_trigger(Some(Arc::from("beta")), Some("Favorite fruit"), false);
+        assert_eq!(label.as_deref(), Some("Favorite fruit"));
+        assert_eq!(value.as_deref(), Some("Beta label"));
+
+        let (label, value) = render_trigger(Some(Arc::from("beta")), None, true);
+        assert_eq!(label.as_deref(), Some("beta"));
+        assert_eq!(value.as_deref(), Some("beta"));
+    }
+
+    #[test]
     fn select_scroll_buttons_attach_foreground_to_icon_without_wrapper() {
         let window = AppWindowId::default();
         let mut app = App::new();
