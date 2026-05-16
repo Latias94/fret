@@ -396,11 +396,7 @@ fn max_width_delta(measured: TextConstraints, prepared: TextConstraints) -> f32 
 }
 
 fn bool_metric(value: bool) -> f32 {
-    if value {
-        1.0
-    } else {
-        0.0
-    }
+    if value { 1.0 } else { 0.0 }
 }
 
 fn build_scenario(
@@ -410,11 +406,12 @@ fn build_scenario(
 ) -> Vec<AnyElement> {
     match scenario {
         LayoutPrimitiveScenario::AutoSizeShrinkWrapsText => {
-            vec![cx
-                .container(crate::element::ContainerProps::default(), |cx| {
+            vec![
+                cx.container(crate::element::ContainerProps::default(), |cx| {
                     vec![cx.text("x")]
                 })
-                .test_id("auto-box")]
+                .test_id("auto-box"),
+            ]
         }
         LayoutPrimitiveScenario::FillResolvesUnderDefiniteContainer => {
             let mut outer = crate::element::ContainerProps::default();
@@ -439,9 +436,10 @@ fn build_scenario(
             percent.layout.size.height = Length::Fraction(0.25);
 
             vec![cx.container(outer, |cx| {
-                vec![cx
-                    .container(percent, |_cx| Vec::new())
-                    .test_id("percent-box")]
+                vec![
+                    cx.container(percent, |_cx| Vec::new())
+                        .test_id("percent-box"),
+                ]
             })]
         }
         LayoutPrimitiveScenario::MinMaxClampsFillChild => {
@@ -458,9 +456,10 @@ fn build_scenario(
             clamped.layout.size.max_height = Some(Length::Px(Px(48.0)));
 
             vec![cx.container(outer, |cx| {
-                vec![cx
-                    .container(clamped, |_cx| Vec::new())
-                    .test_id("min-max-clamped")]
+                vec![
+                    cx.container(clamped, |_cx| Vec::new())
+                        .test_id("min-max-clamped"),
+                ]
             })]
         }
         LayoutPrimitiveScenario::PercentMinMaxBehavesLikeAutoUnderIndefiniteMeasure => {
@@ -501,8 +500,8 @@ fn build_scenario(
             wrapped_layout.flex.shrink = 1.0;
             wrapped_layout.size.min_width = Some(Length::Px(Px(0.0)));
 
-            vec![cx
-                .flex(row, |cx| {
+            vec![
+                cx.flex(row, |cx| {
                     vec![
                         cx.text("x").test_id("wrap-bullet"),
                         cx.text_props(crate::element::TextProps {
@@ -518,7 +517,8 @@ fn build_scenario(
                         .test_id("wrapped-text"),
                     ]
                 })
-                .test_id("wrap-row")]
+                .test_id("wrap-row"),
+            ]
         }
         LayoutPrimitiveScenario::TextMeasurePaintWrapWidthColumn => {
             let mut text_props = crate::element::TextProps::new("wrap me");
@@ -529,15 +529,16 @@ fn build_scenario(
             sibling.layout.size.width = Length::Fill;
             sibling.layout.size.height = Length::Px(Px(10.0));
 
-            vec![cx
-                .column(crate::element::ColumnProps::default(), |cx| {
+            vec![
+                cx.column(crate::element::ColumnProps::default(), |cx| {
                     vec![
                         cx.text_props(text_props).test_id("measure-paint-text"),
                         cx.container(sibling, |_cx| Vec::new())
                             .test_id("measure-paint-sibling"),
                     ]
                 })
-                .test_id("measure-paint-column")]
+                .test_id("measure-paint-column"),
+            ]
         }
         LayoutPrimitiveScenario::TextMeasurePaintWrapWidthMaxWidthRow => {
             let mut container_layout = crate::element::LayoutStyle::default();
@@ -556,15 +557,15 @@ fn build_scenario(
             sibling.layout.size.width = Length::Fill;
             sibling.layout.size.height = Length::Px(Px(10.0));
 
-            vec![cx
-                .container(
+            vec![
+                cx.container(
                     crate::element::ContainerProps {
                         layout: container_layout,
                         ..Default::default()
                     },
                     |cx| {
-                        vec![cx
-                            .column(crate::element::ColumnProps::default(), |cx| {
+                        vec![
+                            cx.column(crate::element::ColumnProps::default(), |cx| {
                                 vec![
                                     cx.flex(
                                         crate::element::FlexProps {
@@ -599,10 +600,12 @@ fn build_scenario(
                                         .test_id("measure-paint-row-sibling"),
                                 ]
                             })
-                            .test_id("measure-paint-row-column")]
+                            .test_id("measure-paint-row-column"),
+                        ]
                     },
                 )
-                .test_id("measure-paint-row-container")]
+                .test_id("measure-paint-row-container"),
+            ]
         }
         LayoutPrimitiveScenario::TextMeasurePaintOverflowScale => {
             let mut text_props = crate::element::TextProps::new("ellipsis me");
@@ -610,9 +613,10 @@ fn build_scenario(
             text_props.wrap = fret_core::TextWrap::None;
             text_props.overflow = fret_core::TextOverflow::Ellipsis;
 
-            vec![cx
-                .text_props(text_props)
-                .test_id("measure-paint-overflow-scale-text")]
+            vec![
+                cx.text_props(text_props)
+                    .test_id("measure-paint-overflow-scale-text"),
+            ]
         }
         LayoutPrimitiveScenario::ScrollRootPreservesChildLayoutBounds => {
             let mut scroll = crate::element::ScrollProps::default();
@@ -626,13 +630,15 @@ fn build_scenario(
             child.layout.size.width = Length::Px(Px(120.0));
             child.layout.size.height = Length::Px(Px(80.0));
 
-            vec![cx
-                .scroll(scroll, |cx| {
-                    vec![cx
-                        .container(child, |_cx| Vec::new())
-                        .test_id("scroll-content")]
+            vec![
+                cx.scroll(scroll, |cx| {
+                    vec![
+                        cx.container(child, |_cx| Vec::new())
+                            .test_id("scroll-content"),
+                    ]
                 })
-                .test_id("scroll-root")]
+                .test_id("scroll-root"),
+            ]
         }
         LayoutPrimitiveScenario::AbsoluteInsetFractionResolvesAgainstContainingBlock => {
             let mut outer = crate::element::ContainerProps::default();
@@ -648,9 +654,10 @@ fn build_scenario(
             child.layout.size.height = Length::Px(Px(10.0));
 
             vec![cx.container(outer, |cx| {
-                vec![cx
-                    .container(child, |_cx| Vec::new())
-                    .test_id("absolute-percent-child")]
+                vec![
+                    cx.container(child, |_cx| Vec::new())
+                        .test_id("absolute-percent-child"),
+                ]
             })]
         }
         LayoutPrimitiveScenario::FlexCrossAxisStretch => {
@@ -694,13 +701,15 @@ fn build_scenario(
             fill.layout.size.height = Length::Fill;
 
             vec![cx.container(outer, |cx| {
-                vec![cx
-                    .semantics(semantics, |cx| {
-                        vec![cx
-                            .container(fill, |_cx| Vec::new())
-                            .test_id("transparent-fill")]
+                vec![
+                    cx.semantics(semantics, |cx| {
+                        vec![
+                            cx.container(fill, |_cx| Vec::new())
+                                .test_id("transparent-fill"),
+                        ]
                     })
-                    .test_id("transparent-wrapper")]
+                    .test_id("transparent-wrapper"),
+                ]
             })]
         }
         LayoutPrimitiveScenario::ChromeContainerStretchKeepsOuterBox => {
@@ -743,11 +752,12 @@ fn build_scenario(
                 vec![
                     cx.container(addon, |cx| {
                         vec![cx.flex(content_row, |cx| {
-                            vec![cx
-                                .container(crate::element::ContainerProps::default(), |cx| {
+                            vec![
+                                cx.container(crate::element::ContainerProps::default(), |cx| {
                                     vec![cx.text("https://")]
                                 })
-                                .test_id("chrome-inner")]
+                                .test_id("chrome-inner"),
+                            ]
                         })]
                     })
                     .test_id("chrome-addon"),
@@ -799,12 +809,13 @@ fn build_scenario(
                 let mut props = crate::element::PressableProps::default();
                 props.layout.size.width = Length::Px(Px(20.0));
                 props.layout.size.height = Length::Px(Px(20.0));
-                vec![cx
-                    .pressable_with_id(props, |_cx, _state, id| {
+                vec![
+                    cx.pressable_with_id(props, |_cx, _state, id| {
                         *transformed = Some(id);
                         Vec::new()
                     })
-                    .test_id("transformed-pressable")]
+                    .test_id("transformed-pressable"),
+                ]
             })]
         }
     }
