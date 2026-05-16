@@ -30,7 +30,8 @@ Platform note:
   (2026-05-15 follow-up also guards the Wayland campaign/script admission contract)
 - Latest local Wayland policy-skip matrix:
   `docs/workstreams/docking-multiwindow-imgui-parity/M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md`
-  (proves Windows and Linux/X11 platform-capability sidecars stop at `skipped_policy` before script execution)
+  (proves every non-qualifying Wayland campaign admission predicate stops at `skipped_policy`
+  before script execution)
 - macOS-specific plan: `docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md`
 - Hovered window contract (reduce heuristics): `docs/workstreams/docking-hovered-window-contract-v1/docking-hovered-window-contract-v1.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity-todo.md`

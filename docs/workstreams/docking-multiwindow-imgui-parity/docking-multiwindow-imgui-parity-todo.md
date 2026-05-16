@@ -338,12 +338,15 @@ Each TODO is labeled:
         `platform.capabilities` sidecar, and requires `skipped_policy`,
         `environment.requirement_unsatisfied`, `environment.platform_capabilities.platform_ne`,
         and no script item files under `script-results/` or `suite-results/`.
-    - [x] Local Wayland policy-skip matrix now covers both platform and Linux/X11 capability mismatch:
+    - [x] Local Wayland policy-skip matrix now covers each Wayland campaign admission predicate:
       - `docs/workstreams/docking-multiwindow-imgui-parity/M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md`
       - `tools/diag_gate_docking_wayland_policy_skip.py`
       - The gate now exercises a Windows sidecar that fails on
-        `environment.platform_capabilities.platform_ne` and a Linux/X11-style sidecar that fails on
-        `environment.platform_capabilities.ui_window_tear_off_ne`, while still requiring
+        `environment.platform_capabilities.platform_ne`, plus Linux sidecars that fail on
+        `environment.platform_capabilities.ui_multi_window_ne`,
+        `environment.platform_capabilities.ui_window_tear_off_ne`,
+        `environment.platform_capabilities.ui_window_hover_detection_ne`, and
+        `environment.platform_capabilities.ui_window_z_level_ne`, while still requiring
         `skipped_policy` before any script item files are produced.
     - [x] Workstream gate commands now expose both the cold-start policy-skip path and the
       `--reuse-built` drift check, and the machine-readable gate list uses repo-local `python`

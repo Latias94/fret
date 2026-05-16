@@ -41,6 +41,18 @@ PROBE_CASES = [
         reason_code="environment.platform_capabilities.platform_ne",
     ),
     ProbeCase(
+        name="linux-wayland-multi-window-mismatch",
+        platform="linux",
+        ui={
+            "multi_window": False,
+            "window_tear_off": False,
+            "window_hover_detection": "none",
+            "window_set_outer_position": "none",
+            "window_z_level": "none",
+        },
+        reason_code="environment.platform_capabilities.ui_multi_window_ne",
+    ),
+    ProbeCase(
         name="linux-x11-tear-off-mismatch",
         platform="linux",
         ui={
@@ -51,6 +63,30 @@ PROBE_CASES = [
             "window_z_level": "best_effort",
         },
         reason_code="environment.platform_capabilities.ui_window_tear_off_ne",
+    ),
+    ProbeCase(
+        name="linux-wayland-hover-detection-mismatch",
+        platform="linux",
+        ui={
+            "multi_window": True,
+            "window_tear_off": False,
+            "window_hover_detection": "best_effort",
+            "window_set_outer_position": "none",
+            "window_z_level": "none",
+        },
+        reason_code="environment.platform_capabilities.ui_window_hover_detection_ne",
+    ),
+    ProbeCase(
+        name="linux-wayland-z-level-mismatch",
+        platform="linux",
+        ui={
+            "multi_window": True,
+            "window_tear_off": False,
+            "window_hover_detection": "none",
+            "window_set_outer_position": "none",
+            "window_z_level": "best_effort",
+        },
+        reason_code="environment.platform_capabilities.ui_window_z_level_ne",
     ),
 ]
 
