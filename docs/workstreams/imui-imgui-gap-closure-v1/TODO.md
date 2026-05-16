@@ -198,6 +198,10 @@ Readiness order for the next locally testable review slices:
    2026-05-16 code block text role follow-up: `text_code_block(...)` now owns the shared
    monospace, horizontal-scroll-friendly code text role, and the UI Gallery docs scaffold no longer
    hand-rolls code-block `TextProps`.
+   2026-05-16 paragraph text role follow-up: `text_paragraph(...)` and
+   `text_paragraph_break_words(...)` now provide semantic aliases over the existing prose helpers,
+   leaving `text_prose(...)` available for shadcn/Tailwind naming while giving Fret apps a stable
+   paragraph role name.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

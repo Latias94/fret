@@ -188,6 +188,11 @@ Run evidence:
   role for scrollable code blocks instead of constructing monospace `TextProps` locally. Gate:
   `cargo nextest run -p fret-ui-kit --features imui --lib
   prose_variants_and_code_wrap_install_semantic_inherited_overrides --no-fail-fast`.
+- 2026-05-16: introduced `text_paragraph(...)` and `text_paragraph_break_words(...)` as the stable
+  semantic paragraph role names over the existing `text_prose(...)` helpers. This closes the first
+  text-role vocabulary pass without breaking shadcn/Tailwind-oriented naming. Gate: `cargo nextest
+  run -p fret-ui-kit --features imui --lib
+  prose_variants_and_code_wrap_install_semantic_inherited_overrides --no-fail-fast`.
 - 2026-05-14: made `DisclosureResponse` / `ComboResponse` accessor-first for trigger/open/toggle
   state too. Public callers now read trigger details through `response()` and semantic helpers, the
   response types no longer expose external `Default` construction, and

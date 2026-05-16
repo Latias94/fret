@@ -272,6 +272,17 @@ pub fn text_prose<H: UiHost>(
     scoped_text(cx, text, refinement, TextWrap::Word, TextOverflow::Clip)
 }
 
+/// Semantic alias for paragraph body copy.
+///
+/// `text_prose(...)` remains available for shadcn/Tailwind-style naming; new app/framework
+/// surfaces should prefer this role name when they mean ordinary paragraph text.
+pub fn text_paragraph<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    text_prose(cx, text)
+}
+
 /// `text_prose` variant that matches Tailwind's `break-words` intent:
 /// prefer wrapping at word boundaries, but allow breaking long tokens when needed.
 pub fn text_prose_break_words<H: UiHost>(
@@ -289,6 +300,14 @@ pub fn text_prose_break_words<H: UiHost>(
         TextWrap::WordBreak,
         TextOverflow::Clip,
     )
+}
+
+/// Paragraph variant that prefers word boundaries but can break long tokens when needed.
+pub fn text_paragraph_break_words<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    text_prose_break_words(cx, text)
 }
 
 /// Bold variant of [`text_prose`], intended for typography table headers (`<th className="... font-bold">`).
@@ -533,6 +552,38 @@ mod tests {
                 .as_ref()
                 .and_then(|style| style.font.clone()),
             Some(FontId::monospace())
+        );
+
+        let paragraph = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_paragraph(cx, "Paragraph body copy")
+        });
+        let ElementKind::Text(props) = &paragraph.kind else {
+            panic!("expected text_paragraph(...) to build a Text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        let expected_paragraph = {
+            let theme = Theme::global(&app);
+            text_prose_refinement(theme)
+        };
+        assert_eq!(
+            paragraph.inherited_text_style,
+            Some(expected_paragraph.clone())
+        );
+
+        let paragraph_break = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_paragraph_break_words(cx, "https://example.invalid/very/long/path")
+        });
+        let ElementKind::Text(props) = &paragraph_break.kind else {
+            panic!("expected text_paragraph_break_words(...) to build a Text element");
+        };
+        assert_eq!(props.wrap, TextWrap::WordBreak);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(
+            paragraph_break.inherited_text_style,
+            Some(expected_paragraph)
         );
 
         let code_block = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {

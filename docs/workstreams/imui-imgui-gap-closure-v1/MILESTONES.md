@@ -203,6 +203,9 @@ Exit criteria:
   2026-05-16 code block text role result: `text_code_block(...)` now shares the monospace
   single-line code-block text contract, and UI Gallery docs code blocks no longer hand-roll their
   own `TextProps`.
+  2026-05-16 paragraph text role result: `text_paragraph(...)` and
+  `text_paragraph_break_words(...)` now close the first shared text-role vocabulary pass while
+  keeping `text_prose(...)` as the shadcn/Tailwind-compatible name.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.
