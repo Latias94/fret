@@ -188,6 +188,10 @@ Readiness order for the next locally testable review slices:
    `ImUiTableRow::cell_text(...)` routes through the shared `text_table_cell(...)` helper instead
    of bare paragraph text. Remaining advanced-table candidates are freeze panes, column visibility,
    and old columns API shape.
+   2026-05-16 control readout text role follow-up: `text_control_readout(...)` now lives beside
+   `text_table_cell(...)` in `fret-ui-kit::declarative::text`, and the UI Gallery code-editor
+   toolbar readouts route through that shared role instead of carrying app-local text layout policy.
+   Continue converging text into a small stable role set before adding more per-surface helpers.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

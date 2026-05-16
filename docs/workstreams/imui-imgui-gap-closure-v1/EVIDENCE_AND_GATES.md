@@ -47,6 +47,7 @@ Last updated: 2026-05-16
   - `ecosystem/fret-imui/src/tests/models_text_picker/mod.rs`
   - `ecosystem/fret-imui/src/tests/popup_hover/mod.rs`
   - `ecosystem/fret-ui-kit/src/imui.rs`
+  - `ecosystem/fret-ui-kit/src/declarative/text.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs`
   - `ecosystem/fret-ui-kit/src/imui/table_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs`
@@ -170,6 +171,12 @@ Run evidence:
   `ImUiTableRow::cell_text(...)` through it instead of bare paragraph text. Gate:
   `cargo nextest run -p fret-ui-kit --features imui --lib
   table_cell_text_uses_compact_single_line_truncation --no-fail-fast`.
+- 2026-05-16: introduced `text_control_readout(...)` as the shared compact control-readout text
+  role. The UI Gallery code-editor toolbar keeps its doc-layout helper, but that helper now
+  delegates to `fret-ui-kit::declarative::text::text_control_readout(...)`, so dense status/readout
+  text no longer carries app-local wrap/overflow policy. Gate: `cargo nextest run -p fret-ui-kit
+  --features imui --lib control_readout_text_uses_muted_compact_single_line_truncation
+  --no-fail-fast`.
 - 2026-05-14: made `DisclosureResponse` / `ComboResponse` accessor-first for trigger/open/toggle
   state too. Public callers now read trigger details through `response()` and semantic helpers, the
   response types no longer expose external `Default` construction, and

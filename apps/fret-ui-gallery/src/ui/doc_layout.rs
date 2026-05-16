@@ -2,6 +2,7 @@ use super::*;
 use crate::spec::ENV_UI_GALLERY_START_SECTION;
 use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::facade as shadcn;
 
 pub(in crate::ui) struct DocSection {
@@ -486,39 +487,11 @@ where
     })
 }
 
-fn control_readout_text_props<T>(theme: &Theme, text: T) -> TextProps
-where
-    T: Into<Arc<str>>,
-{
-    let style =
-        fret_ui_kit::typography::control_text_style(theme, fret_ui_kit::typography::UiTextSize::Xs);
-    let color = theme
-        .color_by_key("muted-foreground")
-        .or_else(|| theme.color_by_key("muted_foreground"))
-        .unwrap_or_else(|| theme.color_token("foreground"));
-
-    let mut layout = fret_ui::element::LayoutStyle::default();
-    layout.flex.shrink = 1.0;
-    layout.size.min_width = Some(fret_ui::element::Length::Px(Px(0.0)));
-
-    TextProps {
-        layout,
-        text: text.into(),
-        style: Some(style),
-        color: Some(color),
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Ellipsis,
-        align: fret_core::TextAlign::Start,
-        ink_overflow: fret_ui::element::TextInkOverflow::None,
-    }
-}
-
 pub(in crate::ui) fn control_readout_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
 where
     T: Into<Arc<str>>,
 {
-    let theme = Theme::global(&*cx.app);
-    cx.text_props(control_readout_text_props(theme, text))
+    decl_text::text_control_readout(cx, text)
 }
 
 pub(in crate::ui) fn notes_block<I, T>(lines: I) -> impl IntoUiElement<fret_app::App> + use<I, T>
@@ -790,7 +763,9 @@ fn slugify_for_test_id(input: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fret_core::{TextOverflow, TextWrap};
+    use fret_core::{AppWindowId, Point, Rect, Size, TextOverflow, TextWrap};
+    use fret_ui::element::ElementKind;
+    use fret_ui::elements;
 
     #[test]
     fn doc_section_focus_matches_title_and_stable_ids() {
@@ -828,9 +803,21 @@ mod tests {
 
     #[test]
     fn control_readout_text_is_single_line_and_can_shrink_in_dense_rows() {
-        let app = fret_app::App::new();
+        let window = AppWindowId::default();
+        let mut app = fret_app::App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(160.0)),
+        );
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            control_readout_text(cx, "Soft wrap: 80 cols")
+        });
         let theme = Theme::global(&app);
-        let props = control_readout_text_props(theme, "Soft wrap: 80 cols");
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected control_readout_text(...) to build a Text element");
+        };
 
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
@@ -839,8 +826,13 @@ mod tests {
             Some(fret_ui::element::Length::Px(Px(0.0)))
         );
         assert_eq!(props.layout.flex.shrink, 1.0);
-        assert!(props.style.is_some());
-        assert!(props.color.is_some());
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert!(el.inherited_text_style.is_some());
+        assert_eq!(
+            el.inherited_foreground,
+            Some(fret_ui_kit::typography::muted_foreground_color(theme))
+        );
     }
 }
 

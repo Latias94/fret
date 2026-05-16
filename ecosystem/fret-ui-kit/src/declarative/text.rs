@@ -63,6 +63,13 @@ fn scoped_text<H: UiHost>(
     )
 }
 
+fn shrinkable_single_line_layout() -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    layout.flex.shrink = 1.0;
+    layout.size.min_width = Some(Length::Px(Px(0.0)));
+    layout
+}
+
 /// Declarative text helper that matches Tailwind's `truncate` semantics:
 /// - `whitespace-nowrap`
 /// - `text-overflow: ellipsis`
@@ -129,13 +136,9 @@ pub fn text_table_cell<H: UiHost>(
         text_sm_refinement(theme)
     };
 
-    let mut layout = LayoutStyle::default();
-    layout.flex.shrink = 1.0;
-    layout.size.min_width = Some(Length::Px(Px(0.0)));
-
     ui_typography::scope_text_style(
         cx.text_props(TextProps {
-            layout,
+            layout: shrinkable_single_line_layout(),
             text: text.into(),
             style: None,
             color: None,
@@ -145,6 +148,39 @@ pub fn text_table_cell<H: UiHost>(
             ink_overflow: TextInkOverflow::None,
         }),
         refinement,
+    )
+}
+
+/// Declarative text helper for compact control readouts.
+///
+/// Use this for status/value text that sits next to dense controls in toolbars or editor panels.
+/// It uses muted `text-xs` styling and single-line truncation so controls keep their row height
+/// stable under resize.
+pub fn text_control_readout<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let (refinement, foreground) = {
+        let theme = Theme::global(&*cx.app);
+        (
+            text_xs_refinement(theme),
+            ui_typography::muted_foreground_color(theme),
+        )
+    };
+
+    ui_typography::scope_text_style_with_color(
+        cx.text_props(TextProps {
+            layout: shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+        foreground,
     )
 }
 
@@ -453,5 +489,33 @@ mod tests {
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
         assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
+    }
+
+    #[test]
+    fn control_readout_text_uses_muted_compact_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_control_readout(cx, "Soft wrap: 80 cols")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_control_readout(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(el.inherited_text_style, Some(text_xs_refinement(&theme)));
+        assert_eq!(
+            el.inherited_foreground,
+            Some(ui_typography::muted_foreground_color(theme))
+        );
     }
 }

@@ -26,8 +26,12 @@ fn assert_not_contains_compact(source: &str, forbidden: &str) {
 
 #[test]
 fn code_editor_header_state_readouts_use_single_line_control_readout() {
+    let doc_layout = read("src/ui/doc_layout.rs");
     let mvp_header = read("src/ui/previews/pages/editors/code_editor/mvp/header.rs");
     let torture = read("src/ui/previews/pages/editors/code_editor/torture.rs");
+
+    assert_contains_compact(&doc_layout, "decl_text::text_control_readout(cx, text)");
+    assert_not_contains_compact(&doc_layout, "fn control_readout_text_props");
 
     for expected in [
         "doc_layout::control_readout_text(cx, if syntax_enabled {",
