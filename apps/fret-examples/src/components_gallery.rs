@@ -24,6 +24,7 @@ use fret_ui::{ElementContext, UiTree};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::cached_subtree::{CachedSubtreeExt, CachedSubtreeProps};
 use fret_ui_kit::declarative::file_tree::{FileTreeViewProps, file_tree_view_retained_v0};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState};
 use fret_ui_kit::tree::{TreeItem, TreeItemId, TreeState};
 use fret_ui_kit::{ColorRef, LayoutRefinement, OverlayController, Space, UiExt, ui};
@@ -139,17 +140,20 @@ fn components_gallery_table_cell(
 ) -> fret_ui::element::AnyElement {
     let cx = cx.elements();
     match col.id.as_ref() {
-        "id" => cx.text(row.to_string()),
-        "status" => cx.text(if row % 3 == 0 {
-            "idle"
-        } else if row % 3 == 1 {
-            "busy"
-        } else {
-            "offline"
-        }),
-        "cpu" => cx.text(format!("{}%", (row * 7) % 100)),
-        "mem_mb" => cx.text(format!("{} MB", 128 + (row % 4096))),
-        _ => cx.text("?"),
+        "id" => decl_text::text_table_cell(cx, row.to_string()),
+        "status" => decl_text::text_table_cell(
+            cx,
+            if row % 3 == 0 {
+                "idle"
+            } else if row % 3 == 1 {
+                "busy"
+            } else {
+                "offline"
+            },
+        ),
+        "cpu" => decl_text::text_table_cell(cx, format!("{}%", (row * 7) % 100)),
+        "mem_mb" => decl_text::text_table_cell(cx, format!("{} MB", 128 + (row % 4096))),
+        _ => decl_text::text_table_cell(cx, "?"),
     }
 }
 
@@ -401,7 +405,7 @@ impl ComponentsGalleryDriver {
                         "Table torture (retained host): click headers to sort; wheel scroll crosses overscan boundaries.",
                     );
 
-                    let header = cx.text(header);
+                    let header = decl_text::text_paragraph(cx, header);
 
                     let table = cx.cached_subtree_with(
                         CachedSubtreeProps::default().contain_layout_when_bounds_known(true),

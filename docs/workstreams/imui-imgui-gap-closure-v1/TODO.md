@@ -379,6 +379,10 @@ Readiness order for the next locally testable review slices:
    open/selected/month status through `text_control_readout(...)`, switch captions through
    `text_control_label(...)`, and keyboard instructions through `text_paragraph(...)`, keeping the
    proof aligned with the fixed-chrome-vs-prose text role split.
+   2026-05-17 components gallery table proof text follow-up: `components_gallery` now routes the
+   retained table torture cell renderer through `text_table_cell(...)` and its explanatory table
+   header through `text_paragraph(...)`, keeping the runnable retained-table proof from teaching
+   bare default wrapping text in fixed cells.
    2026-05-17 gallery retained-table torture text follow-up: the UI Gallery retained-table torture
    page now routes fixed cell text through `text_table_cell(...)` and table state/status readouts
    through `control_readout_text(...)`, leaving only explicitly multi-line/paragraph copy as bare

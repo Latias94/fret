@@ -354,6 +354,10 @@ Exit criteria:
   one surface: status readouts use `text_control_readout(...)`, switch captions use
   `text_control_label(...)`, and keyboard instructions use `text_paragraph(...)`; source gates
   reject the old bare status/label/instruction `cx.text(...)` paths.
+  2026-05-17 components gallery table proof text result: the runnable `components_gallery`
+  retained table torture path now routes fixed cell renderers through `text_table_cell(...)` and
+  the table explanation through `text_paragraph(...)`; source gates reject the old bare table-cell
+  and header `cx.text(...)` paths.
   2026-05-17 gallery retained-table torture text result: the UI Gallery retained-table torture page
   now uses `text_table_cell(...)` for fixed table cells and `control_readout_text(...)` for table
   state readouts, so the visible retained-table stress surface no longer teaches bare fixed-cell
