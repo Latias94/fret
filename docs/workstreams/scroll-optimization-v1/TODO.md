@@ -140,7 +140,7 @@ Status: Active
     only `3-4us`, and root `Scroll` rejection is a `side_effect_boundary` with `0us` solve time.
   - Decision: the next optimization candidate is a conservative `Container` geometry contract. Do
     not start with `Canvas` or a root `Scroll` skip from this evidence.
-- [ ] Prototype a conservative `Container` clean-geometry contract.
+- [x] Prototype a conservative `Container` clean-geometry contract.
   - Accept only a provable subset: static children, px spacing/insets, nonnegative border widths,
     definite/fill width behavior whose child content rect can be derived from previous geometry, and
     height semantics that do not depend on reflow.
@@ -150,6 +150,23 @@ Status: Active
   - Required proof: focused Rust layout tests for padding/border child bounds and rejection cases,
     then rerun the no-4090 resize-jitter script to see whether the next blocker becomes wrap flex or
     another app-shell boundary.
+  - Implemented proof: `Container` participates only when px padding/border insets and static child
+    geometry allow manual child-bound derivation. `Container` is manual-bounds-only in the clean
+    propagation path, so unsupported variants do not silently fall back to stale engine local rects.
+  - Focused guardrails: px padding/border `Container` skips the small width-delta solve and updates
+    fill child content bounds; fraction padding rejects with `non_px_spacing / Container`.
+  - Local no-4090 evidence:
+    `target/fret-diag/local-next-container-clean-geometry-20260517-r1/1778981585274/bundle.schema2.json`.
+  - Result: top frame total/layout/solve is `1242/623/297us`, `layout_engine_solves=4`,
+    view-cache remains reused, and row replay/store remains `289/0`.
+  - New blockers: `auto_child_height` under `Container` for the content `Semantics` solve, and
+    `auto_child_height` under `Flex` for the root `Stack` solve. The content `Semantics` root still
+    reports one wrap-flex node, so the next step must classify auto-height/line-break stability
+    before widening the proof.
+- [ ] Classify the `auto_child_height` blockers before another geometry-proof expansion.
+  - Separate fixed-height-but-auto-style wrappers from genuine width-dependent height/reflow.
+  - Treat wrap flex as a hard blocker until a line-break stability proof exists.
+  - Use per-solve rejection attribution rather than broad element-name whitelisting.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

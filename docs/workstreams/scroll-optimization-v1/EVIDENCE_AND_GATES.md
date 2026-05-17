@@ -335,6 +335,57 @@ Per-solve clean-geometry rejection attribution refresh (2026-05-17):
     `Semantics` may immediately expose the known wrap-flex blocker, so the next patch should be
     proof-first and evidence-driven rather than a broad whitelist expansion.
 
+Conservative Container geometry contract slice (2026-05-17):
+
+- Mechanism anchors:
+  - `crates/fret-ui/src/tree/layout/node.rs`
+    (`CleanGeometryNodeContract::PureContainer`,
+    `clean_container_width_delta_child_bounds`,
+    `clean_engine_geometry_propagation_requires_manual_child_bounds`)
+  - `crates/fret-ui/src/declarative/tests/layout/layout_engine.rs`
+    (`clean_geometry_small_resize_skips_px_container_and_updates_child_bounds`,
+    `clean_geometry_small_resize_rejects_container_fraction_padding`)
+- Contract:
+  - `Container` can participate in clean width-delta geometry propagation only when its child bounds
+    are derived manually from px padding/border insets and previous clean geometry.
+  - `Container` is manual-bounds-only for this fast path. If its conservative proof fails, it does
+    not fall back to stale engine local child rects.
+  - Fraction/fill padding and non-static child geometry remain on the full solve path until their
+    basis/positioning semantics are proven.
+- Focused gates:
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_px_container_and_updates_child_bounds clean_geometry_small_resize_rejects_container_fraction_padding --no-fail-fast`
+    - Red before implementation: px `Container` still solved once; fraction padding reported
+      `unsupported_kind / Container`.
+    - Green after implementation: `2/2` passed.
+  - `cargo nextest run -p fret-ui layout_engine --no-fail-fast`
+    - Result: `20/20` passed.
+  - `cargo nextest run -p fret-ui scroll --no-fail-fast`
+    - Result: `153/153` passed.
+  - `cargo check -p fret-bootstrap --features ui-app-driver,diagnostics`
+    - Result: passed.
+- Local perf evidence:
+  - Bundle:
+    `target/fret-diag/local-next-container-clean-geometry-20260517-r1/1778981585274/bundle.schema2.json`
+  - Stats:
+    `target/fret-diag/local-next-container-clean-geometry-20260517-r1/worst.stats.json`
+  - Top frame total/layout/layout-roots/solve/prepaint/paint:
+    `1242/623/414/297/243/376us`.
+  - p95 total/layout/layout-roots/solve/prepaint/paint:
+    `1242/706/490/319/347/462us`.
+  - Guardrails remain stable: view-cache root reused `1`, needs-rerender `0`, row replay/store
+    `289/0`, renderer text prepare `62us`.
+  - Per-solve blocker shift:
+    - content `Semantics` solve `167us`: `auto_child_height`, blocker `Container`,
+      `wrap_nodes=1`;
+    - root `Stack` solve `125us`: `auto_child_height`, blocker `Flex`, `wrap_nodes=0`;
+    - editor `PointerRegion` solve `4us`: `unsupported_kind`, blocker `Canvas`;
+    - root `Scroll` solve `0us`: `side_effect_boundary`, blocker `Scroll`.
+- Decision:
+  - Keep the Container proof; it is small, tested, and makes the next blocker explicit.
+  - Do not widen auto-height next by name. First classify whether each `auto_child_height` blocker is
+    genuinely width/reflow-dependent; the content `Semantics` root still contains wrap flex and must
+    stay blocked until line-break stability is proven.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:

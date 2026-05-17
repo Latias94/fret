@@ -90,3 +90,13 @@ Status: Active
   layout-side-effect descendants on the full solve path until each has its own proof.
 - Validate with focused Rust tests first, then rerun the no-4090 resize-jitter diagnostics to learn
   the next blocker instead of assuming the fast path is complete.
+- 2026-05-17 minimum slice landed: `Container` supports a px-inset/static-child manual bounds proof
+  and remains manual-bounds-only in the clean propagation path. Fresh no-4090 evidence shows the next
+  meaningful blocker is `auto_child_height`, with wrap flex still present under the content
+  `Semantics` root.
+
+## M9 — Auto-height / line-break stability classification (candidate)
+
+- Classify `auto_child_height` rejections before widening the clean-geometry proof.
+- Separate stable wrapper auto-height from width-dependent text/wrap/flex reflow.
+- Keep wrap flex blocked until line-break stability can be proven against previous geometry.

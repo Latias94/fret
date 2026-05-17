@@ -1151,6 +1151,232 @@ fn clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve() {
 }
 
 #[test]
+fn clean_geometry_small_resize_skips_px_container_and_updates_child_bounds() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(324.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-px-container-child",
+        |cx| {
+            let mut container = crate::element::ContainerProps::default();
+            container.layout.size.width = Length::Fill;
+            container.layout.size.height = Length::Fill;
+            container.padding = crate::element::SpacingEdges {
+                left: crate::element::SpacingLength::Px(Px(7.0)),
+                right: crate::element::SpacingLength::Px(Px(11.0)),
+                top: crate::element::SpacingLength::Px(Px(3.0)),
+                bottom: crate::element::SpacingLength::Px(Px(5.0)),
+            };
+            container.border = fret_core::Edges {
+                left: Px(2.0),
+                right: Px(4.0),
+                top: Px(1.0),
+                bottom: Px(6.0),
+            };
+            let mut stack = crate::element::StackProps::default();
+            stack.layout.size.width = Length::Fill;
+            stack.layout.size.height = Length::Px(Px(20.0));
+            vec![cx.container(container, |cx| {
+                vec![cx.stack_props(stack, |_cx| Vec::<AnyElement>::new())]
+            })]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(184.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "px-only Container geometry should not force a small width-delta root solve"
+    );
+    assert_eq!(
+        ui.debug_stats().layout_clean_geometry_solve_skip_rejections,
+        0,
+        "accepted Container geometry skips should not report rejection noise"
+    );
+
+    let container_node = ui.children(child)[0];
+    let stack_node = ui.children(container_node)[0];
+    let stack_bounds = ui.debug_node_bounds(stack_node).expect("stack bounds");
+
+    assert_eq!(
+        stack_bounds.origin,
+        Point::new(Px(9.0), Px(4.0)),
+        "child origin should include px padding plus nonnegative border insets"
+    );
+    assert!(
+        (stack_bounds.size.width.0 - 160.0).abs() < 0.01,
+        "fill-width child should track the next Container content width"
+    );
+    assert!((stack_bounds.size.height.0 - 20.0).abs() < 0.01);
+}
+
+#[test]
+fn clean_geometry_small_resize_rejects_container_fraction_padding() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(324.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-container-fraction-padding-child",
+        |cx| {
+            let mut container = crate::element::ContainerProps::default();
+            container.layout.size.width = Length::Fill;
+            container.layout.size.height = Length::Fill;
+            container.padding.left = crate::element::SpacingLength::Fraction(0.1);
+            let mut stack = crate::element::StackProps::default();
+            stack.layout.size.width = Length::Fill;
+            stack.layout.size.height = Length::Px(Px(20.0));
+            vec![cx.container(container, |cx| {
+                vec![cx.stack_props(stack, |_cx| Vec::<AnyElement>::new())]
+            })]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(184.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert!(
+        ui.debug_stats().layout_engine_solves > 0,
+        "fraction padding must keep the authoritative root solve until percent basis propagation is proven"
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_rejection,
+        Some("non_px_spacing")
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_element_kind,
+        Some("Container")
+    );
+}
+
+#[test]
 fn clean_geometry_small_resize_reports_wrap_flex_rejection_reason() {
     struct PrecomputeThenResize {
         child: NodeId,
