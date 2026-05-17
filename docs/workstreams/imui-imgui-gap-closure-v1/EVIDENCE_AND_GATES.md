@@ -277,7 +277,8 @@ Run evidence:
   `table_column_visibility_menu_items(...)`, and returns an opaque/accessor-first response.
   `TableColumnVisibilityHeaderContextMenuOptions` exposes popup and menu-item policy instead of
   hard-coding placement/sizing. Callers still own when to apply `ImUiTableColumnVisibilityState` to
-  their columns; persistence, freeze panes, and old columns API shape remain separate follow-ons.
+  their columns; persistence, freeze panes, and old columns API shape were still separate
+  follow-ons at this point.
   Gates: `cargo nextest run -p fret-imui
   table_column_visibility_header_context_menu_opens_from_plain_header
   table_column_visibility_header_context_menu_opens_and_updates_state
@@ -313,10 +314,23 @@ Run evidence:
   `header()`, `id()`, `width()`, `visible()`, `is_sortable()`, `sort_direction()`,
   `resize_options()`, and `pin()`. `ImUiTableColumnVisibilityState::apply_to_columns(...)` now uses
   a crate-local visibility mutator, while table rendering, visibility menu policy, `fret-imui`
-  composition tests, and public smoke tests use read accessors instead of direct field reads. The
-  public fields remain available for compatibility; private-field hardening remains a separate
-  breaking follow-on. Gates: `cargo nextest run -p fret-ui-kit --features imui --test
+  composition tests, and public smoke tests use read accessors instead of direct field reads. This
+  prepared the private-field hardening follow-up below. Gates: `cargo nextest run -p fret-ui-kit --features imui --test
   imui_table_smoke table_column_helpers_compile table_column_visibility_helpers_compile
+  table_resizable_column_api_compiles table_sortable_header_api_compiles --no-fail-fast`, `cargo
+  nextest run -p fret-ui-kit --features imui --lib
+  visibility_state_applies_runtime_overrides_by_stable_column_id
+  visibility_state_leaves_unlisted_and_unidentified_columns_at_declared_visibility
+  horizontal_scroll_option_wraps_unpinned_header_and_body_center_groups --no-fail-fast`, `cargo
+  nextest run -p fret-imui table_helper_pins_left_and_right_columns_while_center_columns_scroll
+  table_column_visibility_menu_item_updates_visibility_state --no-fail-fast`, and `python
+  tools/gate_imui_workstream_source.py`.
+- 2026-05-18: completed the `TableColumn` private-field hardening follow-up. The struct is now
+  builder/accessor-first instead of a public option-data bag; fields are private, render and
+  visibility-policy internals keep crate-local `header_arc(...)`, `id_arc(...)`, and
+  `set_visible_for_policy(...)` seams, and `tools/gate_imui_workstream_source.py` rejects the old
+  public field shape from returning. Gates: `cargo nextest run -p fret-ui-kit --features imui
+  --test imui_table_smoke table_column_helpers_compile table_column_visibility_helpers_compile
   table_resizable_column_api_compiles table_sortable_header_api_compiles --no-fail-fast`, `cargo
   nextest run -p fret-ui-kit --features imui --lib
   visibility_state_applies_runtime_overrides_by_stable_column_id

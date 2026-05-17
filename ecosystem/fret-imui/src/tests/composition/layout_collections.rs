@@ -1430,10 +1430,10 @@ fn table_column_visibility_menu_items_update_shared_visibility_state_and_filter_
         .get_cloned(&model)
         .expect("visibility model")
         .apply_to_columns(&columns);
-    assert!(applied_visible[0].visible);
-    assert!(!applied_visible[1].visible);
-    assert!(applied_visible[2].visible);
-    assert!(applied_visible[3].visible);
+    assert!(applied_visible[0].visible());
+    assert!(!applied_visible[1].visible());
+    assert!(applied_visible[2].visible());
+    assert!(applied_visible[3].visible());
 
     app.advance_frame();
     let _root = run_frame(

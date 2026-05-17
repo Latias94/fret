@@ -273,6 +273,45 @@ def check_property_row_value_slot_overflow(failures: list[str]) -> None:
             )
 
 
+def check_table_column_accessors(failures: list[str]) -> None:
+    path = Path("ecosystem/fret-ui-kit/src/imui/options/collections.rs")
+    source = read_source(path)
+    body = find_struct_body(source, "TableColumn")
+    if body is None:
+        failures.append(f"{path.as_posix()}: missing public struct TableColumn")
+    else:
+        for field in (
+            "header",
+            "id",
+            "width",
+            "visible",
+            "sortable",
+            "sort_direction",
+            "resize",
+            "pin",
+        ):
+            if re.search(rf"^\s*pub(?:\([^)]+\))?\s+{field}\s*:", body, re.MULTILINE):
+                failures.append(
+                    f"{path.as_posix()} TableColumn: field must stay private/accessor-first: {field}"
+                )
+
+    for marker in (
+        "pub fn header(&self) -> Option<&str>",
+        "pub(crate) fn header_arc(&self) -> Option<Arc<str>>",
+        "pub fn id(&self) -> Option<&str>",
+        "pub(crate) fn id_arc(&self) -> Option<Arc<str>>",
+        "pub fn width(&self) -> TableColumnWidth",
+        "pub fn visible(&self) -> bool",
+        "pub(crate) fn set_visible_for_policy(&mut self, visible: bool)",
+        "pub fn is_sortable(&self) -> bool",
+        "pub fn sort_direction(&self) -> Option<TableSortDirection>",
+        "pub fn resize_options(&self) -> Option<TableColumnResizeOptions>",
+        "pub fn pin(&self) -> TableColumnPin",
+    ):
+        if marker not in source:
+            failures.append(f"{path.as_posix()}: missing TableColumn accessor seam {marker}")
+
+
 def main() -> None:
     opaque_struct_checks = [
         OpaqueStructCheck(
@@ -1412,7 +1451,7 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/options/collections.rs"),
             required=[
-                "pub visible: bool",
+                "visible: bool",
                 "visible: true",
                 "pub fn hidden(mut self) -> Self",
                 "pub fn with_visible(mut self, visible: bool) -> Self",
@@ -1428,13 +1467,22 @@ def main() -> None:
                 "self.visible = false;",
                 "self.visible = visible;",
                 "pub enum TableColumnPin",
-                "pub pin: TableColumnPin",
+                "pin: TableColumnPin",
                 "pub horizontal_scroll: Option<ScrollHandle>",
                 "pub fn pinned_left(mut self) -> Self",
                 "pub fn pinned_right(mut self) -> Self",
                 "pub fn with_pin(mut self, pin: TableColumnPin) -> Self",
             ],
-            forbidden=[],
+            forbidden=[
+                "pub header: Option<Arc<str>>",
+                "pub id: Option<Arc<str>>",
+                "pub width: TableColumnWidth",
+                "pub visible: bool",
+                "pub sortable: bool",
+                "pub sort_direction: Option<TableSortDirection>",
+                "pub resize: Option<TableColumnResizeOptions>",
+                "pub pin: TableColumnPin",
+            ],
         ),
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/table_controls.rs"),
@@ -1957,7 +2005,9 @@ def main() -> None:
                 "Sorting, resize handles, alternating row backgrounds, explicit per-row/per-cell background",
                 "override targets, a narrow runtime hideable-column helper, caller-owned visibility",
                 "snapshot/restore, default header visibility-menu wiring, and column pinning/freeze-pane seam",
-                "remaining table axis is old columns API shape",
+                "`TableColumn` is now builder/accessor-first with private fields",
+                "old public field-bag API shape is closed",
+                "old columns API shape as wholly missing",
                 "`TableOptions::striped` is already the current alternating row-background policy, while",
                 "`TableColumn::hidden()` / `TableColumn::with_visible(bool)` cover static",
                 "`TableColumn::pinned_left()` / `TableColumn::pinned_right()` plus",
@@ -10168,6 +10218,7 @@ def main() -> None:
         "editor",
         failures,
     )
+    check_table_column_accessors(failures)
     check_property_row_value_slot_overflow(failures)
     for failure in collect_docking_multiwindow_failures():
         failures.append(f"docking multiwindow source: {failure}")

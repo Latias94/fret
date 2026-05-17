@@ -23,7 +23,8 @@ has a caller-owned snapshot/restore seam through `TableColumnVisibilitySnapshot`
 `TableColumnVisibilityEntry`; storage and schema placement remain app/editor-owned. Column
 pinning now has a narrow freeze-pane proof through `TableColumn::pinned_left()` /
 `TableColumn::pinned_right()`, with pinned left/right groups staying outside the shared center
-horizontal scroll handle. Old columns API shape remains candidate-only.
+horizontal scroll handle. The old columns API shape has since been closed by making `TableColumn`
+builder/accessor-first with private fields.
 
 ## Decision
 
@@ -116,9 +117,9 @@ public helper widening:
   caller-owned save/restore data without moving file storage or a mutable table runtime into
   `fret-imui`. `TableColumn::pinned_left()` / `TableColumn::pinned_right()` plus
   `TableOptions::horizontal_scroll` provide the narrow freeze-pane seam without moving a mutable
-  table runtime into `fret-imui`. Do not treat Dear ImGui `RowBg`, visibility parity, or column
-  pinning as wholly missing; the remaining table axis is old columns API shape, which still needs a
-  narrow proof.
+  table runtime into `fret-imui`. `TableColumn` is now builder/accessor-first with private fields,
+  so the old public field-bag API shape is closed. Do not treat Dear ImGui `RowBg`, visibility
+  parity, column pinning, or the old columns API shape as wholly missing.
 - `ecosystem/fret-ui-editor/src/imui.rs` is only a thin adapter layer that forwards editor controls
   and composites through `into_element(...)`.
 - `repo-ref/imgui/imgui.h` still groups the upstream surface by Windows, Child Windows, Widgets,

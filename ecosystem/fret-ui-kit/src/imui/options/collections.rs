@@ -43,14 +43,14 @@ impl TableColumnWidth {
 
 #[derive(Debug, Clone)]
 pub struct TableColumn {
-    pub header: Option<Arc<str>>,
-    pub id: Option<Arc<str>>,
-    pub width: TableColumnWidth,
-    pub visible: bool,
-    pub sortable: bool,
-    pub sort_direction: Option<TableSortDirection>,
-    pub resize: Option<TableColumnResizeOptions>,
-    pub pin: TableColumnPin,
+    header: Option<Arc<str>>,
+    id: Option<Arc<str>>,
+    width: TableColumnWidth,
+    visible: bool,
+    sortable: bool,
+    sort_direction: Option<TableSortDirection>,
+    resize: Option<TableColumnResizeOptions>,
+    pin: TableColumnPin,
 }
 
 impl TableColumn {
