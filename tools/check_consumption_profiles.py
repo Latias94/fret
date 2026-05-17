@@ -25,6 +25,26 @@ def _run_checked(name: str, argv: list[str]) -> None:
         raise SystemExit(f"Step failed: {name} (exit code: {proc.returncode})")
 
 
+def _run_captured(name: str, argv: list[str]) -> str:
+    print(f"[profiles] {name}")
+    proc = subprocess.run(argv, check=False, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    if proc.returncode != 0:
+        print(proc.stdout, end="")
+        raise SystemExit(f"Step failed: {name} (exit code: {proc.returncode})")
+    return proc.stdout
+
+
+def _assert_tree_excludes(name: str, tree_output: str, banned_packages: set[str]) -> None:
+    found: list[str] = []
+    for line in tree_output.splitlines():
+        package = line.strip().split(" v", 1)[0]
+        if package in banned_packages:
+            found.append(package)
+    if found:
+        banned = ", ".join(sorted(set(found)))
+        raise SystemExit(f"{name} pulled backend/render packages: {banned}")
+
+
 def main(argv: list[str]) -> int:
     if argv:
         raise SystemExit("This script takes no arguments.")
@@ -51,6 +71,63 @@ def main(argv: list[str]) -> int:
             "--features",
             "core,runtime,ui",
         ],
+    )
+
+    banned_backend_packages = {
+        "fret-launch",
+        "fret-platform-native",
+        "fret-render",
+        "fret-runner-winit",
+        "wgpu",
+        "winit",
+    }
+    _assert_tree_excludes(
+        "app-authoring: fret --no-default-features",
+        _run_captured(
+            "app-authoring: fret --no-default-features tree",
+            [
+                "cargo",
+                "tree",
+                "-p",
+                "fret",
+                "--locked",
+                "--no-default-features",
+                "-e",
+                "normal",
+                "--depth",
+                "4",
+                "--prefix",
+                "none",
+            ],
+        ),
+        banned_backend_packages,
+    )
+    _assert_tree_excludes(
+        "app-authoring: fret app",
+        _run_captured(
+            "app-authoring: fret app tree",
+            [
+                "cargo",
+                "tree",
+                "-p",
+                "fret",
+                "--locked",
+                "--no-default-features",
+                "--features",
+                "app",
+                "-e",
+                "normal",
+                "--depth",
+                "4",
+                "--prefix",
+                "none",
+            ],
+        ),
+        banned_backend_packages,
+    )
+    _run_checked(
+        "app-authoring: fret app check",
+        ["cargo", "check", "-p", "fret", "--locked", "--no-default-features", "--features", "app"],
     )
 
     # Profile D — launcher facade

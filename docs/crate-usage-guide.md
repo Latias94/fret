@@ -318,23 +318,41 @@ authoring vocabulary through a hidden umbrella import.
 - `default` = `desktop` + `app` (recommended for native desktop apps).
   - Includes: shadcn integration.
   - Intentionally excludes: config files, UI asset caches, icon packs, icon preloading, command palette.
+- `app` with `default-features = false` = backend-free app-authoring baseline.
+  - Includes: the default app vocabulary and shadcn authoring surface.
+  - Excludes: `wgpu`, `winit`, `fret-launch`, `fret-render`, native platform crates, and runner
+    crates.
+  - Use this for reusable app-facing helpers or compile-test crates that should not own a native
+    process entry point.
+- `desktop` = explicit native runner/render opt-in.
+  - Pulls the `fret-framework/native-wgpu`, `fret-bootstrap`, and `fret-launch` path.
+  - Required for native startup methods that actually run a windowed app.
 - `batteries` = a bigger opt-in bundle for app/dev convenience:
-  - includes diagnostics wiring, config files, UI assets, icons, and (optional) icon SVG preloading.
+  - includes desktop-bound diagnostics wiring, config files, UI assets, icons, and icon SVG
+    preloading.
   - includes `state` (selector/query helpers).
 
 **Common feature combos (practical map):**
 
 | Goal | Suggested `fret` features | Notes |
 | --- | --- | --- |
+| Backend-free app-authoring check | `default-features = false, features = ["app"]` | No native runner/render stack; useful for reusable app-facing helpers and compile gates. |
 | Small desktop app (shadcn UI only) | `["desktop","shadcn"]` | Minimal explicit profile (no config files, no diagnostics, no assets/icons). |
 | Add derived + async state helpers | `["state"]` | Enables `AppUi` data helpers (`cx.data().selector_layout(...)`, raw `cx.data().selector(...)`, `cx.data().query(...)`) plus explicit `fret::selector::*` / `fret::query::*` secondary lanes. |
 | Add routing integration | `["router"]` | Exposes the explicit app-level router extension surface (`fret::router::*`). |
-| Add icons | `["icons"]` | Installs default icon packs (Lucide) via bootstrap wiring. |
-| Add image/SVG caches | `["ui-assets"]` | Wires UI asset caches + budgets (compile/runtime cost). |
+| Add icons | `["icons"]` | Desktop-bound; installs default icon packs (Lucide) via bootstrap wiring. |
+| Add image/SVG caches | `["ui-assets"]` | Desktop-bound; wires UI asset caches + budgets (compile/runtime cost). |
 | Enable layered `.fret/*` config | `["config-files"]` | Filesystem side effects; opt-in for embed/minimal builds. |
-| Opt into “everything convenient” | `["batteries"]` | Convenience bundle; may increase cold compile time. |
+| Opt into “everything convenient” | `["batteries"]` | Desktop-bound convenience bundle; may increase cold compile time. |
 
-Minimal / explicit profile (useful for embed/minimal builds that must avoid filesystem side effects):
+Backend-free app-authoring profile:
+
+```toml
+[dependencies]
+fret = { path = "../path/to/fret/ecosystem/fret", default-features = false, features = ["app"] }
+```
+
+Minimal / explicit native desktop profile (useful for apps that must avoid filesystem side effects):
 
 ```toml
 [dependencies]
@@ -365,10 +383,12 @@ fret = { path = "../path/to/fret/ecosystem/fret", features = ["batteries"] }
 Notes:
 
 - `config-files` is opt-in because it reads layered `.fret/*` files (settings/keymap/menubar).
-- `ui-assets` is opt-in because it wires caches/budgets and can increase compile + runtime cost.
-- `icons` / `preload-icon-svgs` are opt-in (GPU-time tradeoff; apps can install custom packs).
-- `devloop` and `tracing` are kept only as advanced/maintainer aliases on `fret`; prefer the
-  owning crates (`fret-launch/dev-state`, `fret-bootstrap/tracing`) for new integrations.
+- `diagnostics`, `ui-assets`, `icons`, `preload-icon-svgs`, `command-palette`, `devloop`, and
+  `tracing` are desktop-bound convenience features because their current implementation goes
+  through bootstrap/launch or GPU-ready app-driver wiring.
+- `devloop` and `tracing` are kept only as advanced/maintainer aliases on `fret`; prefer the owning
+  crates (`fret-launch/dev-state`, `fret-bootstrap/tracing`) for new integrations that already live
+  on the desktop/bootstrap lane.
 - Docking and editor-theming ecosystems should be used from their owning crates
   (`fret-docking`, `fret-ui-editor`) instead of expecting `fret` root feature proxies.
 - Design-system- or domain-specific crates that do not form a stable `fret` root story

@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "slug": "architecture-surface-fearless-refactor-v1",
+  "title": "Architecture Surface Fearless Refactor v1",
+  "status": "active",
+  "updated": "2026-05-17",
+  "scope_kind": "execution",
+  "problem": "Fret's hard layering gates pass, but public app-authoring, bootstrap, ecosystem, and renderer facade surfaces have grown too wide and sometimes imply backend-free consumption while pulling backend stacks.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/architecture-surface-fearless-refactor-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/architecture-surface-fearless-refactor-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/architecture-surface-fearless-refactor-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/architecture-surface-fearless-refactor-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/architecture-surface-fearless-refactor-v1/HANDOFF.md"
+    }
+  ],
+  "gates": [
+    "python tools/check_layering.py",
+    "python tools/check_consumption_profiles.py",
+    "cargo tree -p fret --no-default-features -e normal --depth 4",
+    "cargo tree -p fret --no-default-features --features app -e normal --depth 4",
+    "cargo check -p fret --no-default-features",
+    "cargo check -p fret --no-default-features --features app",
+    "cargo tree -p fret-bootstrap --no-default-features -e normal --depth 4"
+  ],
+  "evidence": [
+    {
+      "kind": "baseline",
+      "path": "docs/workstreams/architecture-surface-fearless-refactor-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "kind": "asf-020",
+      "path": "tools/check_consumption_profiles.py"
+    },
+    {
+      "kind": "asf-020-docs",
+      "path": "ecosystem/fret/README.md"
+    },
+    {
+      "kind": "asf-020-docs",
+      "path": "docs/crate-usage-guide.md"
+    }
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0092-crate-structure-core-backends-apps.md",
+    "docs/adr/0106-ecosystem-bootstrap-ui-assets-and-dev-tools.md",
+    "docs/adr/0109-user-facing-crate-surfaces-and-golden-path.md",
+    "docs/adr/0110-golden-path-ui-app-driver-and-pipelines.md",
+    "docs/adr/0154-ecosystem-crate-taxonomy-glue-and-ui-kit-split-v1.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue with ASF-020 first. Delete redundant compatibility surfaces when first-party callers can be migrated; do not preserve old interfaces by default."
+  }
+}

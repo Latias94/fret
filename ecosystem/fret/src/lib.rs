@@ -158,6 +158,7 @@ pub use fret_ui_shadcn::facade as shadcn;
 /// authoring.
 pub mod icons {
     pub use fret_icons::IconId;
+    #[cfg(feature = "icons")]
     pub use fret_ui_kit::declarative::icon;
 }
 
@@ -288,6 +289,7 @@ pub mod assets {
         FileAssetManifestV1, ResolvedAssetBytes, ResolvedAssetReference, StaticAssetEntry,
         UrlPassthroughAssetResolver, asset_app_bundle_id, asset_package_bundle_id,
     };
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use fret_bootstrap::{
         AssetReloadPolicy, AssetStartupMode, AssetStartupPlan, AssetStartupPlanError,
     };
@@ -991,12 +993,15 @@ pub mod advanced {
 #[derive(Debug, thiserror::Error)]
 /// Public error type for the `fret` facade.
 pub enum Error {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     #[error(transparent)]
     Bootstrap(#[from] BootstrapError),
     #[error(transparent)]
     AssetManifest(#[from] AssetManifestError),
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     #[error(transparent)]
     AssetStartup(#[from] fret_bootstrap::AssetStartupPlanError),
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     #[error(transparent)]
     Runner(#[from] RunnerError),
 }
@@ -1004,6 +1009,7 @@ pub enum Error {
 /// Result type used by the `fret` facade.
 pub type Result<T> = std::result::Result<T, Error>;
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 #[derive(Debug, thiserror::Error)]
 #[error(transparent)]
 pub struct BootstrapError(#[from] fret_bootstrap::BootstrapError);
@@ -1012,10 +1018,12 @@ pub struct BootstrapError(#[from] fret_bootstrap::BootstrapError);
 #[error(transparent)]
 pub struct AssetManifestError(#[from] fret_assets::AssetManifestLoadError);
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 #[derive(Debug, thiserror::Error)]
 #[error(transparent)]
 pub struct RunnerError(#[from] fret_launch::RunnerError);
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 impl Error {
     /// Returns a structured bootstrap failure report when this facade error represents a known
     /// startup/install failure taxonomy case.

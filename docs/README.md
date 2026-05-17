@@ -83,6 +83,9 @@ Unless a document says otherwise:
 - Examples redesign (Flutter-like ladder + cookbook + labs + gates): `docs/workstreams/example-suite-fearless-refactor-v1/design.md`
 - Open source readiness (README + examples + defaults polish): [docs/workstreams/open-source-readiness-fearless-refactor-v1/DESIGN.md](./workstreams/open-source-readiness-fearless-refactor-v1/DESIGN.md)
 - Framework modularity (Bevy-like consumption profiles): `docs/workstreams/framework-modularity-fearless-refactor-v1/design.md`
+- Architecture surface fearless refactor (active lane for narrowing `fret` / `fret-bootstrap`
+  feature boundaries, ecosystem taxonomy, menu/select policy ownership, and renderer facade
+  ownership): `docs/workstreams/architecture-surface-fearless-refactor-v1/DESIGN.md`
 - Shell composition fearless refactor (window bootstrap vs page shell vs workspace shell ownership): `docs/workstreams/shell-composition-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/shell-composition-fearless-refactor-v1/TODO.md`, and `docs/workstreams/shell-composition-fearless-refactor-v1/MILESTONES.md`
 - Default app productization (closed release-facing lane for blessed-path convergence, richer todo template productization, recipe-promotion audits, and resize/layout proof artifacts): `docs/workstreams/default-app-productization-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/default-app-productization-fearless-refactor-v1/TODO.md`, `docs/workstreams/default-app-productization-fearless-refactor-v1/MILESTONES.md`, `docs/workstreams/default-app-productization-fearless-refactor-v1/DRIFT_AUDIT_2026-04-02.md`, `docs/workstreams/default-app-productization-fearless-refactor-v1/RICH_TEMPLATE_PRODUCTIZATION_AUDIT_2026-04-02.md`, `docs/workstreams/default-app-productization-fearless-refactor-v1/RECIPE_PROMOTION_AUDIT_2026-04-02.md`, and `docs/workstreams/default-app-productization-fearless-refactor-v1/RESIZE_LAYOUT_PROOF_2026-04-02.md`
 - Launch/app public surface refactor (`fret-launch` + `fret` facade + GPUI comparison): `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/EXPORT_INVENTORY.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/CONFIG_INVENTORY.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/TODO.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/MILESTONES.md`, and `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/FINAL_STATUS.md`
@@ -183,6 +186,7 @@ Portable profiles we treat as regression gates:
 - Contracts-only: `fret-core` (+ `fret-runtime`, `fret-platform`, `fret-render-core`)
 - UI substrate: `fret-ui`
 - Manual assembly facade (portable): `fret-framework` with `--no-default-features --features core,runtime,ui`
+- Backend-free app-authoring facade: `fret` with `--no-default-features --features app`
 
 ## State management (authoring ergonomics)
 

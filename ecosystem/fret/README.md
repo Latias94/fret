@@ -126,6 +126,17 @@ Or explicitly opt into a smaller surface:
 fret = { path = "../fret", default-features = false, features = ["desktop", "shadcn"] }
 ```
 
+Or compile the backend-free app-authoring surface only:
+
+```toml
+[dependencies]
+fret = { path = "../fret", default-features = false, features = ["app"] }
+```
+
+This profile is useful for reusable app-facing helpers, docs checks, and compile tests that should
+not inherit the native runner stack. It does not expose native `FretApp::run()` startup wiring; opt
+into `desktop` when the crate actually owns a native app entry point.
+
 ## Minimal app skeleton
 
 ```rust,ignore
@@ -230,8 +241,11 @@ The same ordered builder surface now also includes compile-time/static entries t
 
 ## Features
 
-- `desktop`: enable the native desktop stack (winit + wgpu) via `fret-framework/native-wgpu`.
-- `app`: recommended baseline for apps (shadcn).
+- default features: `desktop` + `app`, the recommended native desktop app profile.
+- `desktop`: enable the native desktop runner/render stack (winit + wgpu) via
+  `fret-framework/native-wgpu`, `fret-bootstrap`, and `fret-launch`.
+- `app`: backend-free app-authoring baseline (shadcn). This keeps the default app vocabulary
+  available without compiling the native runner/render stack.
 - `state`: enable selector/query helpers on `AppUi` (`cx.data().selector_layout(...)` for
   LocalState-first derived values, raw `cx.data().selector(...)` for explicit signatures, and
   `cx.data().query(...)` plus `handle.read_layout(cx)` for the default query read path, plus
@@ -244,9 +258,11 @@ The same ordered builder surface now also includes compile-time/static entries t
 - `imui`: enable the explicit immediate-mode authoring lane
   (`fret::imui::{prelude::*, kit, editor, docking}`) for imgui-style control flow while keeping
   `fret::app::prelude::*` declarative-first.
-- `batteries`: “works out of the box” opt-in bundle (config files + UI assets + icons + preloading + diagnostics).
+- `batteries`: “works out of the box” opt-in desktop bundle (config files + UI assets + icons +
+  preloading + diagnostics).
 - `config-files`: load layered config files from `.fret/` (settings/keymap/menubar).
-- `diagnostics`: enable default diagnostics wiring (tracing + panic hook; plus extra dev tooling).
+- `diagnostics`: desktop-bound default diagnostics wiring (tracing + panic hook; plus extra dev
+  tooling).
 - `tracing`: advanced/maintainer alias for bootstrap tracing setup; prefer
   `fret-bootstrap/tracing` directly for explicit wiring.
 - `devloop`: advanced/maintainer alias for `fret-launch/dev-state`; prefer the owning crate
@@ -255,11 +271,11 @@ The same ordered builder surface now also includes compile-time/static entries t
   recipes and tokens.
 - `ui-ai`: discoverability alias only; depend on `fret-ui-ai` directly for AI-specific policy
   surfaces.
-- `ui-assets`: enable UI render-asset caches (images/SVG) and install default budgets.
-- `icons`: install the default built-in icon pack (Lucide).
-- `preload-icon-svgs`: pre-register SVG icons on GPU ready.
-- `command-palette`: enable the command palette wiring in the golden-path driver, including the
-  default shadcn overlay bridge.
+- `ui-assets`: desktop-bound UI render-asset caches (images/SVG) and default budgets.
+- `icons`: desktop-bound default built-in icon pack (Lucide) plus app-facing icon helper exports.
+- `preload-icon-svgs`: desktop-bound SVG icon pre-registration on GPU ready.
+- `command-palette`: desktop-bound command palette wiring in the golden-path driver, including
+  the default shadcn overlay bridge.
 
 Design-system- or domain-specific ecosystems that do not form a stable `fret` root authoring
 story should stay as direct crate dependencies instead of root feature proxies. The root

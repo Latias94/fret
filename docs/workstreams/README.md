@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 382
+- Dedicated directories: 383
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -1924,6 +1924,7 @@ Rule:
 - `docs/workstreams/app-composition-density-follow-on-v1/` — first 2026-03-17, latest 2026-03-20, 7 markdown docs
 - `docs/workstreams/app-entry-builder-v1/` — first 2026-02-26, latest 2026-03-12, 3 markdown docs
 - `docs/workstreams/app-iteration-fast-restart-v1/` — first 2026-02-15, latest 2026-02-15, 3 markdown docs
+- `docs/workstreams/architecture-surface-fearless-refactor-v1/` — first 2026-05-17, latest 2026-05-17, 5 markdown docs (active architecture surface lane for narrowing the `fret`/`fret-bootstrap` public dependency story, ecosystem taxonomy, shared menu/select policy, and renderer facade ownership; includes `WORKSTREAM.json`)
 - `docs/workstreams/authoring-density-reduction-fearless-refactor-v1/` — first 2026-03-16, latest 2026-03-20, 10 markdown docs
 - `docs/workstreams/authoring-ergonomics-fluent-builder/` — first 2026-01-21, latest 2026-03-12, 2 markdown docs
 - `docs/workstreams/authoring-paradigm-gpui-style-v1/` — first 2026-02-05, latest 2026-03-06, 2 markdown docs
