@@ -3019,6 +3019,18 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag-button-group-strict-candidate-v1/sessions/1778978465500-116384/suite.summary.json`
     reports `status=passed`, 13/13 rows, `scripts_with_evidence=13`,
     `focus_mismatch_total=0`, and zero lint errors/warnings for every row.
+- Button Group size icon-only Add geometry hardening:
+  - invariant:
+    icon-only Add controls should not rely on screenshots alone; each icon must keep a stable size
+    and remain centered inside its button across the small, medium, and large variants.
+  - findings:
+    the first draft used the wrong selector assumption for the icon anchor. The real ids are
+    `*-add-icon`, so the geometry proof only became valid after aligning to the actual test ids.
+  - implementation anchors:
+    `tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-size-screenshots-zinc-light-dark.json`
+  - run results:
+    the focused geometry assertions passed inline with the existing Button Group family evidence;
+    no new component or mechanism defect was reproduced.
 - Carousel embla-engine strict diagnostics lint promotion:
   - invariant:
     carousel runtime evidence should be split into compact, independently runnable evidence units

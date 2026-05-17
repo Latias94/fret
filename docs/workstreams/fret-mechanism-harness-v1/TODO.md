@@ -713,6 +713,12 @@ date: 2026-05-12
   - Result: `ui-gallery-button-group` passed 13/13 with `focus_mismatch_total=0` and zero lint
     errors/warnings. No new Button Group component or mechanism defect was reproduced in this
     candidate run; the suite now rejects future diagnostics lint drift.
+- [x] Convert the Button Group size icon-only Add row from screenshot-only evidence to geometry
+  evidence.
+  - Result: `ui-gallery-button-group-size-screenshots-zinc-light-dark.json` now asserts each Add
+    icon's bounds and center alignment against its enclosing button for small, medium, and large
+    variants. The first pass used the wrong icon selector assumption, then the real
+    `*-add-icon` ids were aligned and the geometry assertions passed.
 - [x] Promote the Carousel embla-engine runtime sub-suite to strict zero-warning diagnostics lint.
   - Result: the wide `ui-gallery-carousel-docs-parity` suite is too large to be a reliable single
     evidence unit under normal outer timeouts, but the focused `ui-gallery-carousel-embla-engine`
