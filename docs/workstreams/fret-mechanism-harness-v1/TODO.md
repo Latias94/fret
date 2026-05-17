@@ -713,3 +713,9 @@ date: 2026-05-12
   - Result: `ui-gallery-button-group` passed 13/13 with `focus_mismatch_total=0` and zero lint
     errors/warnings. No new Button Group component or mechanism defect was reproduced in this
     candidate run; the suite now rejects future diagnostics lint drift.
+- [x] Promote the Carousel embla-engine runtime sub-suite to strict zero-warning diagnostics lint.
+  - Result: the wide `ui-gallery-carousel-docs-parity` suite is too large to be a reliable single
+    evidence unit under normal outer timeouts, but the focused `ui-gallery-carousel-embla-engine`
+    sub-suite passed 5/5 with `focus_mismatch_total=0` and zero lint errors/warnings. No new
+    Carousel mechanism or recipe defect was reproduced; the embla-engine suite now rejects future
+    diagnostics lint drift for inertia, touch, resize reInit, and loop continuity/downgrade paths.

@@ -3019,6 +3019,37 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag-button-group-strict-candidate-v1/sessions/1778978465500-116384/suite.summary.json`
     reports `status=passed`, 13/13 rows, `scripts_with_evidence=13`,
     `focus_mismatch_total=0`, and zero lint errors/warnings for every row.
+- Carousel embla-engine strict diagnostics lint promotion:
+  - invariant:
+    carousel runtime evidence should be split into compact, independently runnable evidence units
+    rather than relying on one wide docs-parity suite. The embla-engine sub-suite should reject
+    future diagnostics lint drift for inertia, touch, resize reInit, loop continuity, and loop
+    downgrade behavior.
+  - findings:
+    the wide `ui-gallery-carousel-docs-parity` candidate run exceeded the outer command timeout
+    before writing a normal `suite.summary.json`, even though completed rows were clean and the
+    focused autoplay stop-on-last-snap script passed independently. This was a harness packaging
+    issue rather than a confirmed Carousel mechanism defect. The smaller
+    `ui-gallery-carousel-embla-engine` suite passed normally and is the durable evidence unit for
+    this slice.
+  - implementation anchors:
+    `tools/diag-scripts/suites/ui-gallery-carousel-embla-engine/suite.json`,
+    `tools/diag-scripts/ui-gallery-carousel-demo-inertia-pixels-changed.json`,
+    `tools/diag-scripts/ui-gallery-carousel-demo-inertia-touch-pixels-changed.json`,
+    `tools/diag-scripts/ui-gallery-carousel-demo-reinit-resize-gate.json`,
+    `tools/diag-scripts/ui-gallery-carousel-loop-continuity-touch-gate.json`,
+    and
+    `tools/diag-scripts/ui-gallery-carousel-loop-downgrade-cannot-loop-gate.json`.
+  - focused autoplay gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-stop-on-last-snap-gate.json --dir target/fret-diag-carousel-last-snap-candidate-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused autoplay result:
+    passed with run id `1778981149388`.
+  - candidate sub-suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-carousel-embla-engine --dir target/fret-diag-carousel-embla-engine-strict-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - candidate sub-suite result:
+    `target/fret-diag-carousel-embla-engine-strict-v1/sessions/1778982359710-115076/suite.summary.json`
+    reports `status=passed`, 5/5 rows, `scripts_with_evidence=5`,
+    `focus_mismatch_total=0`, and zero lint errors/warnings for every row.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`
