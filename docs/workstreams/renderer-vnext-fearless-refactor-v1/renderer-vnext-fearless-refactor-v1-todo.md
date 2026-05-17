@@ -589,6 +589,40 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+- [~] REN-VNEXT-refactor-240 Stage 24: modularize RenderPlan compiler internals.
+  - Goal: make `render_plan_compiler.rs` reviewable by separating pure helper domains from the
+    state-machine loop without changing pass order, target lifetimes, budget decisions, or
+    degradation semantics.
+  - Scope:
+    - Extract low-risk target/budget helper functions first.
+    - Preserve the public `compile_for_scene` entrypoint and `RenderPlan` IR shape.
+    - Keep all degradation records and strict output-clear validation behavior unchanged.
+  - Step plan:
+    - [x] Step 1: move intermediate target and budget accounting helpers into a dedicated
+      compiler helper module.
+    - [ ] Step 2: introduce an explicit compiler context for pass/degradation/segment mutation
+      after helper extraction has a green gate.
+    - [ ] Step 3: split clip-path, composite-group, effect-scope, and backdrop-source-group
+      compilation into focused modules only after the context boundary is stable.
+  - Landed (step 1): extracted target/budget helpers and their focused tests into
+    `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
+      `compile_for_scene_inner`)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`
+      (`intermediate_budget_breakdown_for_chain`, `can_allocate_intermediate_bytes`,
+      `choose_backdrop_source_group_pyramid_choice`)
+    - `docs/workstreams/renderer-render-plan-semantics-audit-v1/renderer-render-plan-semantics-audit-v1.md`
+      (target lifetime, load-op, scissor/mask, and deterministic degradation invariants)
+  - Gates:
+    - `python3 tools/check_layering.py`
+    - `cargo test -p fret-render-wgpu --lib renderer::`
+    - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+    - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+    - Note: `cargo test -p fret-render-wgpu --lib` compiled but failed on unrelated
+      text/system-font environment tests in this Windows environment.
+
 ## M7 — Post-v1 semantic expansions (deferred backlog)
 
 These items are intentionally *not* part of the vNext refactor’s v1 closure. They are common UI

@@ -801,6 +801,37 @@ Progress record (Material distinct encode tracking uses HashSet scratch):
   - `cargo test -p fret-render-wgpu --lib`
   - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+Progress record (RenderPlan compiler modularization):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 1; Stage 24 continues)
+- Objective:
+  - Extract target and budget helper code from `render_plan_compiler.rs` without changing the
+    `compile_for_scene` entrypoint, pass order, target lifetimes, load-op semantics, or degradation
+    decisions.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
+    `compile_for_scene_inner`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`
+    (`intermediate_budget_breakdown_for_chain`, `can_allocate_intermediate_bytes`,
+    `choose_backdrop_source_group_pyramid_choice`)
+  - `docs/workstreams/renderer-render-plan-semantics-audit-v1/renderer-render-plan-semantics-audit-v1.md`
+    (RenderPlan invariants)
+- Gates planned:
+  - `python3 tools/check_layering.py`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+- Gates run:
+  - `python3 tools/check_layering.py`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `cargo test -p fret-render-wgpu --lib` compiled, but failed on unrelated text/system-font
+    environment tests in this Windows environment.
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

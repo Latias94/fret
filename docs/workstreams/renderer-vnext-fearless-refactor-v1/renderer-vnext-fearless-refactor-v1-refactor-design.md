@@ -138,6 +138,42 @@ Examples:
 - effect pass implementations (blur, warp, color adjust) as per-pass recorders,
 - shader source plumbing organization.
 
+### Stage 6 — RenderPlan compiler modularization
+
+Motivation:
+
+- `render_plan_compiler.rs` is now the largest remaining semantic state machine in the renderer
+  internals.
+- It owns several independent concerns at once: target selection, intermediate budget accounting,
+  scope-stack mutation, clip/mask setup, effect-chain planning, composite-group planning, backdrop
+  source-group planning, and deterministic degradation recording.
+- Keeping those decisions in one file makes small refactors harder to review and increases the
+  chance of accidental semantic drift.
+
+Deliverables:
+
+- Keep `compile_for_scene` as the stable internal entrypoint while extracting pure helper domains.
+- Extract target/budget helpers first, because they are easy to validate without changing the main
+  state-machine loop.
+- Introduce a compiler context only after helper extraction is green, so mutation ownership is
+  explicit before splitting scope compilers.
+- Split scope-specific compilers (`clip_path`, `composite_group`, `effect_scope`,
+  `backdrop_source_group`) only after the context boundary has tests and conformance gates.
+
+Non-goals:
+
+- No public scene contract changes.
+- No RenderPlan IR redesign.
+- No render graph / DAG scheduler.
+- No changes to deterministic degradation policy without a separate ADR or conformance update.
+
+Gates:
+
+- `python3 tools/check_layering.py`
+- `cargo test -p fret-render-wgpu --lib`
+- `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+- `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## 4) Evidence discipline (what to record)
 
 For each stage:
