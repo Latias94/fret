@@ -249,6 +249,14 @@ Run evidence:
   -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`, `cargo nextest run -p
   fret-imui table_column_visibility_menu_item_updates_visibility_state --no-fail-fast`, and
   `python tools/gate_imui_workstream_source.py`.
+- 2026-05-17: added a table column visibility menu-items group helper through
+  `table_column_visibility_menu_items(...)`. The helper filters to stable-id, human-labeled
+  columns, clones caller-owned item options, returns opaque/accessor-first per-column responses,
+  and intentionally does not add popup placement, automatic header context-menu wiring,
+  persistence, freeze panes, or old columns API shape. Gates: `cargo nextest run -p fret-ui-kit
+  --features imui --test imui_table_smoke --no-fail-fast`, `cargo nextest run -p fret-imui
+  table_column_visibility_menu_items_update_shared_visibility_state_and_filter_columns
+  --no-fail-fast`, and `python tools/gate_imui_workstream_source.py`.
 - 2026-05-16: introduced `text_control_readout(...)` as the shared compact control-readout text
   role. The UI Gallery code-editor toolbar keeps its doc-layout helper, but that helper now
   delegates to `fret-ui-kit::declarative::text::text_control_readout(...)`, so dense status/readout

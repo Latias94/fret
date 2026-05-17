@@ -5,6 +5,7 @@ use std::sync::Arc;
 use fret_runtime::Model;
 use fret_ui::{ElementContext, UiHost};
 
+use super::label_identity::parse_label_identity;
 use super::{MenuItemOptions, ResponseExt, TableColumn, UiWriterImUiFacadeExt};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -21,6 +22,29 @@ struct TableColumnVisibilityOverride {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ImUiTableColumnVisibilityState {
     overrides: Vec<TableColumnVisibilityOverride>,
+}
+
+/// Options for composing a group of table-column visibility menu items.
+#[derive(Debug, Clone, Default)]
+pub struct TableColumnVisibilityMenuOptions {
+    /// Base options cloned into every generated checkbox menu item.
+    pub item_options: MenuItemOptions,
+    /// Optional test-id prefix. When set, item test ids are `{prefix}{stable_column_id_slug}`.
+    pub test_id_prefix: Option<Arc<str>>,
+}
+
+/// Aggregated response for a helper-composed table-column visibility menu section.
+#[derive(Debug, Clone, Default)]
+pub struct TableColumnVisibilityMenuResponse {
+    items: Vec<TableColumnVisibilityMenuItemResponse>,
+}
+
+/// Response for one generated table-column visibility menu item.
+#[derive(Debug, Clone)]
+pub struct TableColumnVisibilityMenuItemResponse {
+    column_id: Arc<str>,
+    visible: bool,
+    response: ResponseExt,
 }
 
 impl ImUiTableColumnVisibilityState {
@@ -121,6 +145,52 @@ impl ImUiTableColumnVisibilityState {
     }
 }
 
+impl TableColumnVisibilityMenuResponse {
+    pub fn items(&self) -> &[TableColumnVisibilityMenuItemResponse] {
+        &self.items
+    }
+
+    pub fn item(&self, column_id: &str) -> Option<&TableColumnVisibilityMenuItemResponse> {
+        self.items
+            .iter()
+            .find(|item| item.column_id.as_ref() == column_id)
+    }
+
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
+    pub fn changed(&self) -> bool {
+        self.items.iter().any(|item| item.changed())
+    }
+}
+
+impl TableColumnVisibilityMenuItemResponse {
+    pub fn column_id(&self) -> &str {
+        self.column_id.as_ref()
+    }
+
+    pub fn visible(&self) -> bool {
+        self.visible
+    }
+
+    pub fn response(&self) -> ResponseExt {
+        self.response
+    }
+
+    pub fn clicked(&self) -> bool {
+        self.response.clicked()
+    }
+
+    pub fn changed(&self) -> bool {
+        self.response.changed()
+    }
+}
+
 /// Returns a controllable visibility model for an immediate table column set.
 pub fn table_column_visibility_use_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -128,6 +198,51 @@ pub fn table_column_visibility_use_model<H: UiHost>(
     default_value: impl FnOnce() -> ImUiTableColumnVisibilityState,
 ) -> crate::primitives::controllable_state::ControllableModel<ImUiTableColumnVisibilityState> {
     crate::primitives::controllable_state::use_controllable_model(cx, controlled, default_value)
+}
+
+pub fn table_column_visibility_menu_items<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
+    ui: &mut W,
+    columns: &[TableColumn],
+    model: &Model<ImUiTableColumnVisibilityState>,
+    options: TableColumnVisibilityMenuOptions,
+) -> TableColumnVisibilityMenuResponse {
+    let mut items = Vec::new();
+
+    for (index, column) in columns.iter().enumerate() {
+        let Some(column_id) = menu_column_id(column) else {
+            continue;
+        };
+        if visible_menu_label(column).is_none() {
+            continue;
+        }
+
+        let mut item_options = options.item_options.clone();
+        if let Some(prefix) = options.test_id_prefix.as_ref() {
+            item_options.test_id = Some(Arc::from(format!(
+                "{}{}",
+                prefix,
+                menu_test_id_suffix(column_id.as_ref(), index)
+            )));
+        }
+
+        let Some(response) = table_column_visibility_menu_item(ui, column, model, item_options)
+        else {
+            continue;
+        };
+        let visible = ui.with_cx_mut(|cx| {
+            cx.read_model(model, fret_ui::Invalidation::Paint, |_app, state| {
+                state.is_visible(column_id.as_ref(), column.visible)
+            })
+            .unwrap_or(column.visible)
+        });
+        items.push(TableColumnVisibilityMenuItemResponse {
+            column_id,
+            visible,
+            response,
+        });
+    }
+
+    TableColumnVisibilityMenuResponse { items }
 }
 
 pub fn table_column_visibility_menu_item<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
@@ -169,6 +284,41 @@ pub fn table_column_visibility_menu_item<H: UiHost, W: UiWriterImUiFacadeExt<H> 
     }
 
     Some(response)
+}
+
+fn menu_column_id(column: &TableColumn) -> Option<Arc<str>> {
+    let id = column.id.clone()?;
+    (!id.is_empty()).then_some(id)
+}
+
+fn visible_menu_label(column: &TableColumn) -> Option<&str> {
+    let header = column.header.as_deref()?;
+    let parts = parse_label_identity(header);
+    (!parts.visible.is_empty()).then_some(parts.visible)
+}
+
+fn menu_test_id_suffix(id: &str, index: usize) -> String {
+    let mut out = String::new();
+    let mut last_was_separator = false;
+
+    for ch in id.chars() {
+        if ch.is_ascii_alphanumeric() {
+            out.push(ch.to_ascii_lowercase());
+            last_was_separator = false;
+        } else if !out.is_empty() && !last_was_separator {
+            out.push('-');
+            last_was_separator = true;
+        }
+    }
+
+    if out.ends_with('-') {
+        out.pop();
+    }
+    if out.is_empty() {
+        index.to_string()
+    } else {
+        out
+    }
 }
 
 #[cfg(test)]
@@ -224,5 +374,30 @@ mod tests {
         assert_eq!(state.visibility_for("status"), Some(true));
         assert_eq!(state.remove("status"), Some(true));
         assert!(state.visibility_for("status").is_none());
+    }
+
+    #[test]
+    fn menu_group_filters_to_stable_human_labeled_columns() {
+        let columns = [
+            TableColumn::fill("Name###name"),
+            TableColumn::unlabeled(super::super::TableColumnWidth::px(Px(64.0))).with_id("actions"),
+            TableColumn::px("###internal", Px(48.0)),
+            TableColumn::px("State###state", Px(80.0)),
+        ];
+
+        assert_eq!(menu_column_id(&columns[0]).as_deref(), Some("name"));
+        assert_eq!(visible_menu_label(&columns[0]), Some("Name"));
+        assert_eq!(menu_column_id(&columns[1]).as_deref(), Some("actions"));
+        assert!(visible_menu_label(&columns[1]).is_none());
+        assert_eq!(menu_column_id(&columns[2]).as_deref(), Some("internal"));
+        assert!(visible_menu_label(&columns[2]).is_none());
+        assert_eq!(visible_menu_label(&columns[3]), Some("State"));
+    }
+
+    #[test]
+    fn menu_group_test_id_suffix_uses_stable_column_id_slug() {
+        assert_eq!(menu_test_id_suffix("asset-status", 7), "asset-status");
+        assert_eq!(menu_test_id_suffix("Asset Status!", 7), "asset-status");
+        assert_eq!(menu_test_id_suffix("###", 7), "7");
     }
 }

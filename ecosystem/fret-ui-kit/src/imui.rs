@@ -139,7 +139,9 @@ pub use response::{
 };
 pub use tab_family_controls::ImUiTabBar;
 pub use table_column_visibility::{
-    ImUiTableColumnVisibilityState, table_column_visibility_menu_item,
+    ImUiTableColumnVisibilityState, TableColumnVisibilityMenuItemResponse,
+    TableColumnVisibilityMenuOptions, TableColumnVisibilityMenuResponse,
+    table_column_visibility_menu_item, table_column_visibility_menu_items,
     table_column_visibility_use_model,
 };
 pub use table_controls::{ImUiTable, ImUiTableRow};

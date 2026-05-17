@@ -334,7 +334,11 @@ def main() -> None:
         ),
         OpaqueStructCheck(
             Path("ecosystem/fret-ui-kit/src/imui/table_column_visibility.rs"),
-            ["ImUiTableColumnVisibilityState"],
+            [
+                "ImUiTableColumnVisibilityState",
+                "TableColumnVisibilityMenuResponse",
+                "TableColumnVisibilityMenuItemResponse",
+            ],
         ),
         OpaqueStructCheck(
             Path("ecosystem/fret-ui-kit/src/imui/response/drag.rs"),
@@ -4986,6 +4990,10 @@ def main() -> None:
                 "pub fn apply_to_columns(&self, columns: &[TableColumn]) -> Vec<TableColumn>",
                 "pub fn table_column_visibility_use_model<H: UiHost>",
                 "pub fn table_column_visibility_menu_item<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>",
+                "pub fn table_column_visibility_menu_items<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>",
+                "pub struct TableColumnVisibilityMenuResponse {",
+                "pub struct TableColumnVisibilityMenuItemResponse {",
+                "pub fn items(&self) -> &[TableColumnVisibilityMenuItemResponse]",
                 "ui.menu_item_checkbox_with_options(label, visible, options)",
                 "state.apply_to_columns(&columns)",
                 "Persistence, automatic header context-menu wiring, and",

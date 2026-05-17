@@ -220,6 +220,10 @@ Exit criteria:
   `ImUiTableColumnVisibilityState`. Callers still own where that menu is presented; automatic
   header context-menu popup wiring, persistence, freeze panes, and old columns API shape stay
   candidate-only.
+  2026-05-17 table visibility menu-items group result:
+  `table_column_visibility_menu_items(...)` now covers the repeated "show/hide columns" menu
+  section for stable-id, human-labeled columns. The helper returns opaque/accessor-first item
+  responses and keeps popup placement plus automatic header-menu policy outside `fret-imui`.
   2026-05-16 control readout text role result: `text_control_readout(...)` now sits in
   `fret-ui-kit::declarative::text` beside `text_table_cell(...)`. The UI Gallery code-editor
   readouts still use the doc-layout app helper, but that helper delegates to the shared role, so

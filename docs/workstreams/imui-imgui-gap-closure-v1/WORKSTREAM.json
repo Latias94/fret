@@ -390,6 +390,10 @@
       "command": "cargo nextest run -p fret-imui table_helper_skips_hidden_columns_in_header_and_body --no-fail-fast"
     },
     {
+      "name": "fret-imui table visibility menu group test",
+      "command": "cargo nextest run -p fret-imui table_column_visibility_menu_items_update_shared_visibility_state_and_filter_columns --no-fail-fast"
+    },
+    {
       "name": "diff check",
       "command": "git diff --check"
     }
