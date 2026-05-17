@@ -532,15 +532,27 @@ or helper surfaces that are intentionally not curated by the `fret-render` facad
 
 These crates are “real” but **policy-heavy and fast-moving**. They should remain portable unless explicitly runner-oriented.
 
+### `fret-ui-headless`
+
+**What it is:** deterministic, renderer-free state machines and transition helpers for reusable UI
+behavior.
+
+**Use it when:** you need shared component behavior without `ElementContext`, theme, styling, or
+runtime wiring. Example: boolean control transitions such as
+`boolean_control::checkbox_toggle_optional_bool(...)` and table/menu/roving-focus engines.
+
 ### `fret-ui-kit`
 
 **What it is:** reusable component infrastructure on top of `fret-ui`:
 
 - styling refinements (`ChromeRefinement`, `LayoutRefinement`),
-- headless primitives (roving focus, typeahead, popper/tooltip primitives),
+- Radix-named UI primitive facades and runtime/a11y wiring,
+- declarative helper surfaces for reusable component authors,
 - overlay controller/policy surfaces.
 
-**Use it when:** you are authoring reusable components and want shared policy primitives.
+**Use it when:** you are authoring reusable components and need `fret-ui` runtime wiring, shared
+style infrastructure, or higher-level component composition helpers. Prefer `fret-ui-headless`
+directly for pure state transitions.
 
 ### `fret-ui-shadcn`
 

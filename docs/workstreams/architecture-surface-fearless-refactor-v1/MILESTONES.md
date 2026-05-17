@@ -90,6 +90,13 @@ Primary gates:
 - `python tools/check_layering.py`
 - targeted package tests for the representative primitive family.
 
+Status:
+
+- Complete for the first representative family on 2026-05-17. Checkbox/switch optional-bool
+  transitions now live in `fret-ui-headless::boolean_control`; `fret-ui-kit::primitives` retains
+  only runtime/a11y/model facades for that family; shadcn, Material3, editor, gallery, and `fret`
+  facade callers import the headless owner directly for pure state.
+
 ## M5 — Shared Menu/Select Policy
 
 Exit criteria:

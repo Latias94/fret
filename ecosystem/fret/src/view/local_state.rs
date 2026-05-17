@@ -794,18 +794,18 @@ impl fret_ui_shadcn::facade::IntoFormStateModel
 
 #[cfg(feature = "shadcn")]
 impl fret_ui_shadcn::facade::IntoCheckedStateModel
-    for LocalState<fret_ui_kit::primitives::checkbox::CheckedState>
+    for LocalState<fret_ui_headless::checked_state::CheckedState>
 {
-    fn into_checked_state_model(self) -> Model<fret_ui_kit::primitives::checkbox::CheckedState> {
+    fn into_checked_state_model(self) -> Model<fret_ui_headless::checked_state::CheckedState> {
         self.clone_model()
     }
 }
 
 #[cfg(feature = "shadcn")]
 impl fret_ui_shadcn::facade::IntoCheckedStateModel
-    for &LocalState<fret_ui_kit::primitives::checkbox::CheckedState>
+    for &LocalState<fret_ui_headless::checked_state::CheckedState>
 {
-    fn into_checked_state_model(self) -> Model<fret_ui_kit::primitives::checkbox::CheckedState> {
+    fn into_checked_state_model(self) -> Model<fret_ui_headless::checked_state::CheckedState> {
         self.clone_model()
     }
 }

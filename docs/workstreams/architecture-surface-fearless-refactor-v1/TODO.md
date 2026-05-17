@@ -61,11 +61,11 @@ Last updated: 2026-05-17
 
 ## M4 — Ecosystem Taxonomy Closure
 
-- [ ] ASF-050 [owner=unassigned] [deps=ASF-010] [scope=ecosystem/fret-ui-headless,ecosystem/fret-ui-kit,ecosystem/fret-authoring,docs/adr/0154-ecosystem-crate-taxonomy-glue-and-ui-kit-split-v1.md,docs/adr/IMPLEMENTATION_ALIGNMENT.md]
+- [x] ASF-050 [owner=codex] [deps=ASF-010] [scope=ecosystem/fret-ui-headless,ecosystem/fret-ui-kit,ecosystem/fret-authoring,docs/adr/0154-ecosystem-crate-taxonomy-glue-and-ui-kit-split-v1.md,docs/adr/IMPLEMENTATION_ALIGNMENT.md]
   Goal: Decide and land the headless/primitives/kit taxonomy for one representative primitive family.
   Validation: targeted tests for the chosen family and `python tools/check_layering.py`.
-  Evidence: ADR alignment row updated with concrete shipped state.
-  Handoff: If a new crate is needed, name it once and make re-export shims temporary or delete them.
+  Evidence: `ecosystem/fret-ui-headless/src/boolean_control.rs`; `ecosystem/fret-ui-kit/src/primitives/{checkbox.rs,switch.rs}`; `ecosystem/fret-ui-shadcn/src/{checkbox.rs,switch.rs}`; `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
+  Handoff: Completed on 2026-05-17; the boolean-control family proves the split without reintroducing `fret-ui-primitives`: pure transitions live in `fret-ui-headless`, kit primitives keep runtime/a11y/model facades, and first-party recipes consume the headless owner directly.
 
 - [ ] ASF-051 [owner=unassigned] [deps=ASF-050] [scope=ecosystem/fret-ui-kit,ecosystem/fret-ui-shadcn,ecosystem/fret-ui-material3]
   Goal: Migrate at least one recipe surface to consume the finalized primitive taxonomy directly instead of depending on broad kit compatibility shims.

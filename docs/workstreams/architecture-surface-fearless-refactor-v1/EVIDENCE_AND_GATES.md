@@ -242,6 +242,48 @@ What this proves:
 - Shared policy modules stay backend-free.
 - Recipe surfaces still pass behavior tests after moving ownership.
 
+2026-05-17 result for ASF-050:
+
+- Chosen representative family: boolean controls (`checkbox` + `switch`).
+- `ecosystem/fret-ui-headless/src/boolean_control.rs` now owns pure optional-bool transitions for
+  checkbox and switch. `CheckedState` remains the headless tri-state value in
+  `ecosystem/fret-ui-headless/src/checked_state.rs`.
+- `ecosystem/fret-ui-kit/src/primitives/{checkbox.rs,switch.rs}` no longer owns or re-exports the
+  pure optional-bool helpers; those files keep runtime/a11y/controlled-model facades.
+- First-party recipe/application consumers now import the headless owner directly where they need
+  pure state: `ecosystem/fret-ui-shadcn/src/{checkbox.rs,switch.rs}`,
+  `ecosystem/fret-ui-material3/src/checkbox.rs`,
+  `ecosystem/fret-ui-editor/src/controls/checkbox.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/checkbox/table.rs`, and
+  `ecosystem/fret/src/view/local_state.rs`.
+- `docs/adr/IMPLEMENTATION_ALIGNMENT.md` now records that v1 does not reintroduce the deleted
+  `fret-ui-primitives` crate; `fret-ui-kit::headless` remains a convenience re-export while direct
+  headless ownership is the finalized path for this family.
+- Targeted checks passed:
+  - `cargo fmt --package fret-ui-headless --package fret-ui-kit --package fret-ui-shadcn`
+  - `cargo fmt --package fret-ui-material3 --package fret-ui-editor`
+  - `cargo fmt --package fret --package fret-ui-gallery`
+  - `cargo test -p fret-ui-headless --locked --lib boolean_control -j 1`
+  - `cargo check -p fret-ui-kit --locked -j 1`
+  - `cargo check -p fret-ui-shadcn --locked -j 1`
+  - `cargo check -p fret-ui-material3 --locked -j 1`
+  - `cargo check -p fret-ui-editor --locked -j 1`
+  - `cargo check -p fret --locked --no-default-features --features app -j 1`
+  - `cargo check -p fret-ui-gallery --locked -j 1`
+  - `cargo check -p fret --locked -j 1`
+  - `cargo test -p fret-ui-kit --locked --lib primitives::checkbox -j 1`
+  - `cargo test -p fret-ui-kit --locked --lib primitives::switch -j 1`
+  - `cargo test -p fret-ui-shadcn --locked --lib checkbox_optional_none_is_indeterminate_and_toggles_to_checked -j 1`
+  - `cargo test -p fret-ui-shadcn --locked --lib switch_optional_none_toggles_to_some_true -j 1`
+  - `cargo test -p fret-ui-material3 --locked --lib checkbox_new_optional_controllable_applies_default_checked -j 1`
+  - `python tools/check_layering.py`
+  - `python tools/check_consumption_profiles.py`
+  - `python tools/check_workstream_catalog.py`
+  - `git diff --check`
+- Note: `cargo nextest run -p fret-ui-headless --locked boolean_control -j 1 --no-fail-fast`
+  was attempted first, but Windows refused to enumerate an unrelated integration-test binary with
+  `os error 740`; the same owner tests were run through `cargo test --lib` instead.
+
 ### Renderer Facade Gates
 
 The exact gate depends on the ASF-070 decision:

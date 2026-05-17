@@ -11,6 +11,7 @@
     clippy::type_complexity
 )]
 
+pub mod boolean_control;
 pub mod calendar;
 pub mod calendar_solar_hijri;
 pub mod carousel;

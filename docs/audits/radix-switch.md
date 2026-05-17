@@ -27,13 +27,16 @@ Key upstream concepts:
 
 - Semantics role: `fret_core::SemanticsRole::Switch`.
 - Checked flag: `checked: Some(bool)` on the semantics node.
-- Radix-named facade: `ecosystem/fret-ui-kit/src/primitives/switch.rs` (`switch_a11y(...)`).
+- Headless optional-bool transitions:
+  `fret_ui_headless::boolean_control::{switch_checked_from_optional_bool, switch_toggle_optional_bool}`.
+- Radix-named runtime/a11y facade: `ecosystem/fret-ui-kit/src/primitives/switch.rs`
+  (`switch_a11y(...)`, `switch_use_checked_model(...)`).
 
 ## Current parity notes
 
 - Pass: A11y stamping helper matches Radix "role + checked" outcomes.
 - Pass: Controlled/uncontrolled checked state (`checked` / `defaultChecked`) can be modeled via
   `switch_use_checked_model(...)`.
-- Pass: Optional boolean shadcn bindings can be normalized/toggled via primitives helpers
-  (`switch_checked_from_optional_bool`, `toggle_optional_bool`).
+- Pass: Optional boolean bindings are normalized/toggled in `fret-ui-headless`, so recipe crates
+  can consume the deterministic owner directly.
 - N/A: HTML form integration (`BubbleInput`) is intentionally not modeled at the primitives layer.

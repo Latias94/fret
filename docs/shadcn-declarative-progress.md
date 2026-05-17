@@ -86,7 +86,9 @@ Related (out-of-scope for v4 parity tracking):
 This repo intentionally splits responsibilities across three layers (similar to Tailwind + headless + Radix/RSC composition, but in Rust):
 
 - `fret-ui` (**mechanisms/contracts**): element tree, hit-test, focus, semantics/a11y, overlay roots/layers, outside-press observers, layout, paint.
-- `fret-ui-kit` (**design-system + infra**, Tailwind-ish): token-driven styling (`Theme` keys + refinements), reusable declarative helpers (`scroll`, `text_field`, etc), and headless state machines (`roving_focus`, hover intent, menu navigation).
+- `fret-ui-headless` (**behavior engines**): deterministic state machines and pure transition
+  helpers consumed by kits and recipes.
+- `fret-ui-kit` (**design-system + infra**, Tailwind-ish): token-driven styling (`Theme` keys + refinements), reusable declarative helpers (`scroll`, `text_field`, etc), and Radix-named runtime/a11y primitive facades.
 - `fret-ui-shadcn` (**taxonomy + recipes**): shadcn/ui v4 naming surface and component composition; no retained widgets, no renderer/platform deps.
 
 App/editor-specific composition belongs in `fret-editor` and ecosystem app layers (e.g. `fret-bootstrap`) (app toolbars, menu bars, command palette wiring).

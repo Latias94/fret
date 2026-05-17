@@ -5,30 +5,31 @@ Last updated: 2026-05-17
 
 ## Current State
 
-The workstream has been opened from an architecture surface audit. ASF-020, ASF-021, ASF-030, and ASF-031
-are complete: the `fret` backend-free app-authoring profiles no longer pull the native
-launch/render/backend stack, `FretApp` is now a backend-free authoring spec with desktop-only
-execution methods, `fret-bootstrap --no-default-features` now exposes bootstrap planning/default
-policy without pulling the concrete launch/render/backend stack, and first-party scaffold/template
-guidance now uses the new app-spec-recording vs desktop-builder-application split.
+The workstream has been opened from an architecture surface audit. ASF-020, ASF-021, ASF-030,
+ASF-031, ASF-040, ASF-041, and ASF-050 are complete: the `fret` backend-free app-authoring profiles
+no longer pull the native launch/render/backend stack, `FretApp` is now a backend-free authoring
+spec with desktop-only execution methods, `fret-bootstrap --no-default-features` now exposes
+bootstrap planning/default policy without pulling the concrete launch/render/backend stack,
+first-party scaffold/template guidance now uses the new app-spec-recording vs
+desktop-builder-application split, the app prelude has a closed Golden Path budget, LocalState has
+a private owner module, and the boolean-control family now proves the headless/primitives/kit
+taxonomy.
 
 The user explicitly approved fearless refactoring with no compatibility burden: redundant old code,
 aliases, and wrappers may be deleted when first-party callers are migrated.
 
 ## Active Task
 
-- Task ID: ASF-050
+- Task ID: ASF-051
 - Owner: unassigned
 - Files:
-  - `ecosystem/fret-ui-headless`
   - `ecosystem/fret-ui-kit`
-  - `ecosystem/fret-authoring`
-  - `docs/adr/0154-ecosystem-crate-taxonomy-glue-and-ui-kit-split-v1.md`
-  - `docs/adr/IMPLEMENTATION_ALIGNMENT.md`
+  - `ecosystem/fret-ui-shadcn`
+  - `ecosystem/fret-ui-material3`
 - Validation:
-  - targeted tests for one representative primitive family
+  - package tests for the migrated recipe crate
   - `python tools/check_layering.py`
-  - ADR implementation alignment row updated with concrete shipped state
+  - no new backend deps in ecosystem crates
 
 ## Decisions Since Last Update
 
@@ -69,6 +70,11 @@ aliases, and wrappers may be deleted when first-party callers are migrated.
   `LocalActionCapture`, `WatchedState`, `TrackedStateExt`, and LocalState-backed component model
   adapters, while `crate::view` keeps the existing public re-export surface. Source-level tests now
   combine owner modules when checking the authoring API shape.
+- ASF-050 chose the boolean-control family (`checkbox` + `switch`) as the first taxonomy proof.
+  `ecosystem/fret-ui-headless/src/boolean_control.rs` now owns optional-bool transition behavior;
+  `fret-ui-kit::primitives::{checkbox,switch}` keep runtime/a11y/model facades only; shadcn,
+  Material3, editor, gallery, and `fret` facade call sites import the headless owner directly for
+  pure state. ADR 0154 alignment now records that `fret-ui-primitives` remains deleted for v1.
 
 ## Blockers
 
@@ -76,7 +82,7 @@ aliases, and wrappers may be deleted when first-party callers are migrated.
 
 ## Next Recommended Action
 
-- Start ASF-050: decide and land the headless/primitives/kit taxonomy for one representative
-  primitive family. Pick one high-signal primitive family with repeated recipe pressure, record the
-  intended owner path against ADR 0154, then migrate only that vertical slice with focused tests and
-  `python tools/check_layering.py`.
+- Start ASF-051: migrate one recipe surface to consume the finalized taxonomy directly rather than
+  broad kit compatibility shims. The boolean-control recipe family is already migrated; a good next
+  slice is a nearby recipe that still imports shared behavior through `fret-ui-kit::headless` when a
+  direct `fret-ui-headless` import would be the clearer owner path.

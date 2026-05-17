@@ -8,7 +8,7 @@ use fret_runtime::{CommandId, FrameId, Model};
 use fret_ui::action::{ActionCx, ActivateReason, UiActionHost};
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
-use crate::headless::checked_state::CheckedState;
+use fret_ui_headless::checked_state::CheckedState;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ControlId(Arc<str>);

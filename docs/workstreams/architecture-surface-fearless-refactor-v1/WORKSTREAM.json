@@ -108,6 +108,26 @@
     {
       "kind": "asf-041",
       "path": "ecosystem/fret/src/view.rs"
+    },
+    {
+      "kind": "asf-050",
+      "path": "ecosystem/fret-ui-headless/src/boolean_control.rs"
+    },
+    {
+      "kind": "asf-050",
+      "path": "ecosystem/fret-ui-kit/src/primitives/checkbox.rs"
+    },
+    {
+      "kind": "asf-050",
+      "path": "ecosystem/fret-ui-kit/src/primitives/switch.rs"
+    },
+    {
+      "kind": "asf-050",
+      "path": "ecosystem/fret-ui-shadcn/src/checkbox.rs"
+    },
+    {
+      "kind": "asf-050",
+      "path": "ecosystem/fret-ui-shadcn/src/switch.rs"
     }
   ],
   "adr_refs": [
@@ -120,6 +140,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue with ASF-050 next. Delete redundant compatibility surfaces when first-party callers can be migrated; do not preserve old interfaces by default."
+    "notes": "Continue with ASF-051 next. Delete redundant compatibility surfaces when first-party callers can be migrated; do not preserve old interfaces by default."
   }
 }

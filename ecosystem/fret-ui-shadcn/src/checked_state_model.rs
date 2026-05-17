@@ -1,5 +1,5 @@
 use fret_runtime::Model;
-use fret_ui_kit::primitives::checkbox::CheckedState;
+use fret_ui_headless::checked_state::CheckedState;
 
 /// Narrow interop bridge for tri-state widgets that still store their value in a
 /// `Model<CheckedState>`.
