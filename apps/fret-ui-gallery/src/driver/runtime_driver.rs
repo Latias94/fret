@@ -58,6 +58,7 @@ mod router;
 mod settings_sheet;
 mod shell;
 mod status_bar;
+mod text_roles;
 mod theme_runtime;
 mod toaster;
 mod window_bootstrap;

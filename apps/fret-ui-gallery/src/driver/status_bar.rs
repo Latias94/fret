@@ -3,17 +3,13 @@ use fret_core::SemanticsRole;
 use fret_ui::element::AnyElement;
 use fret_ui::element::SemanticsProps;
 use fret_ui::{ElementContext, Invalidation};
-use fret_ui_kit::declarative::text as decl_text;
 use fret_workspace::WorkspaceStatusBar;
 use std::sync::Arc;
 
+use super::text_roles;
 use crate::ui;
 
 pub(super) type InspectorStatus = (Arc<str>, Arc<str>, Arc<str>, Arc<str>);
-
-fn status_bar_readout_text(cx: &mut ElementContext<'_, App>, text: impl Into<Arc<str>>) -> AnyElement {
-    decl_text::text_control_readout(cx, text)
-}
 
 pub(super) fn status_bar_view(
     cx: &mut ElementContext<'_, App>,
@@ -35,7 +31,7 @@ pub(super) fn status_bar_view(
             .unwrap_or(false);
 
         let mut right_items: Vec<AnyElement> = Vec::new();
-        right_items.push(status_bar_readout_text(cx, format!(
+        right_items.push(text_roles::chrome_readout_text(cx, format!(
             "theme={} view_cache={} layout_us={} paint_us={}",
             status_theme.as_ref(),
             status_view_cache as u8,
@@ -43,7 +39,7 @@ pub(super) fn status_bar_view(
             paint_time_us
         )));
         if inspector_status.is_some() {
-            right_items.push(status_bar_readout_text(cx, "inspector=on"));
+            right_items.push(text_roles::chrome_readout_text(cx, "inspector=on"));
         }
 
         let status_last_action_label =
@@ -56,7 +52,7 @@ pub(super) fn status_bar_view(
                 test_id: Some(Arc::from("ui-gallery-status-last-action")),
                 ..Default::default()
             },
-            move |cx| vec![status_bar_readout_text(cx, status_last_action_text.clone())],
+            move |cx| vec![text_roles::chrome_readout_text(cx, status_last_action_text.clone())],
         );
 
         let status_bar = WorkspaceStatusBar::new()

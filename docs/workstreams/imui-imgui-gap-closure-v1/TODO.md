@@ -373,9 +373,13 @@ Readiness order for the next locally testable review slices:
    now use a crate-local spacer helper instead of returning empty text nodes, without widening
    `fret-imui`.
    2026-05-17 gallery status-bar readout follow-up: UI Gallery status-bar metrics,
-   inspector-state, and last-action text now route through a local helper backed by
-   `text_control_readout(...)` instead of bare `cx.text(...)`, keeping fixed status chrome
-   single-line and shrinkable under resize.
+   inspector-state, and last-action text now route through
+   `driver::text_roles::chrome_readout_text(...)`, backed by `text_control_readout(...)` instead
+   of bare `cx.text(...)`, keeping fixed status chrome single-line and shrinkable under resize.
+   2026-05-17 gallery driver chrome text follow-up: UI Gallery driver chrome now has a small
+   `driver::text_roles` owner. Disabled tabs/sidebar/content placeholders use the shared
+   control-readout role, and settings-sheet section labels use the shared section-chrome role
+   instead of bare `cx.text(...)`.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

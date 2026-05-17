@@ -8,6 +8,7 @@ use fret_workspace::commands::CMD_WORKSPACE_TAB_CLOSE_PREFIX;
 use fret_workspace::{WorkspaceTab, WorkspaceTabStrip, WorkspaceTopBar};
 use std::sync::Arc;
 
+use super::text_roles;
 use crate::spec::{CMD_APP_SETTINGS, PAGE_INTRO, page_meta, page_spec};
 
 pub(super) fn tab_strip_view(
@@ -19,7 +20,7 @@ pub(super) fn tab_strip_view(
 ) -> AnyElement {
     cx.keyed("ui_gallery.tab_strip", |cx| {
         if disabled {
-            return cx.text("Tabs (disabled)");
+            return text_roles::chrome_readout_text(cx, "Tabs (disabled)");
         }
 
         let selected = cx

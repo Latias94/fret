@@ -516,10 +516,17 @@ Run evidence:
   `fret-imui`. Gate: `cargo nextest run -p fret-ui-ai
   hidden_ai_element_paths_use_non_text_placeholder --no-fail-fast`.
 - 2026-05-17: UI Gallery's status bar now routes metric, inspector-state, and last-action text
-  through a local `status_bar_readout_text(...)` helper backed by
+  through `driver::text_roles::chrome_readout_text(...)`, backed by
   `fret-ui-kit::declarative::text::text_control_readout(...)`. This keeps fixed status chrome on
   the shared single-line/shrinkable readout role instead of bare/default text under resize. Gate:
   `cargo nextest run -p fret-ui-gallery --test code_editor_control_readout_surface
+  code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast`.
+- 2026-05-17: UI Gallery driver chrome now owns `driver::text_roles` as the local adapter over
+  shared kit text roles. Disabled tabs/sidebar/content placeholders route through
+  `chrome_readout_text(...)`, and settings-sheet section labels route through
+  `chrome_section_label(...)`, keeping fixed app-shell chrome on single-line role helpers instead
+  of bare/default text. Gate: `cargo nextest run -p fret-ui-gallery --test
+  code_editor_control_readout_surface
   code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast`.
 - 2026-05-16: tightened `UiWriterImUiFacadeExt::text(...)` to match Dear ImGui's default
   `Text()` posture: single-line, shrinkable, `min-width: 0`, and ellipsis-truncated under resize.
@@ -1173,6 +1180,15 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `git diff --check` passed.
 
 2026-05-17 gallery status-bar readout role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test code_editor_control_readout_surface code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery driver chrome text role slice:
 
 - `cargo fmt -p fret-ui-gallery` passed.
 - `cargo nextest run -p fret-ui-gallery --test code_editor_control_readout_surface code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast` passed.

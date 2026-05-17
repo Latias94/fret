@@ -345,8 +345,13 @@ Exit criteria:
   2026-05-17 fret-ui-ai empty placeholder result: AI element hidden/missing-content fallbacks now
   share a crate-local spacer helper instead of returning empty text nodes.
   2026-05-17 gallery status-bar readout result: UI Gallery status-bar metric, inspector, and
-  last-action text now use a local readout helper backed by `text_control_readout(...)`, so fixed
-  status chrome no longer teaches bare wrapping text under resize.
+  last-action text now use `driver::text_roles::chrome_readout_text(...)` backed by
+  `text_control_readout(...)`, so fixed status chrome no longer teaches bare wrapping text under
+  resize.
+  2026-05-17 gallery driver chrome text result: UI Gallery driver chrome now owns a tiny
+  `text_roles` module over the shared kit text roles. Disabled pane placeholders route through
+  control readouts, and settings sheet section labels route through section chrome labels instead
+  of bare/default text.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.
