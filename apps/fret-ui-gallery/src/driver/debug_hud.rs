@@ -5,6 +5,8 @@ use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
+use super::text_roles;
+
 pub(super) fn maybe_push_debug_hud(
     cx: &mut ElementContext<'_, App>,
     theme: Theme,
@@ -55,18 +57,7 @@ pub(super) fn maybe_push_debug_hud(
             let body = ui::v_stack(|cx| {
                 debug_hud_lines
                     .iter()
-                    .map(|line| {
-                        cx.text_props(TextProps {
-                            layout: Default::default(),
-                            text: line.clone(),
-                            style: None,
-                            color: Some(theme.color_token("foreground")),
-                            wrap: TextWrap::Word,
-                            overflow: TextOverflow::Clip,
-                            align: fret_core::TextAlign::Start,
-                            ink_overflow: fret_ui::element::TextInkOverflow::None,
-                        })
-                    })
+                    .map(|line| text_roles::chrome_readout_text(cx, line.clone()))
                     .collect::<Vec<_>>()
             })
             .layout(LayoutRefinement::default().w_full())

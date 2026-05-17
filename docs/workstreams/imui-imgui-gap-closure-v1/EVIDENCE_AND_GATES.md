@@ -611,6 +611,23 @@ Run evidence:
   of bare/default text. Gate: `cargo nextest run -p fret-ui-gallery --test
   code_editor_control_readout_surface
   code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast`.
+- 2026-05-17: UI Gallery's `BISECT_MINIMAL_ROOT` diagnostic root now routes its placeholder through
+  `driver::text_roles::chrome_readout_text(...)` instead of bare `cx.text(...)`. This keeps the
+  smallest resize/debug root on the same single-line readout role as the surrounding driver chrome.
+  Gate: `cargo nextest run -p fret-ui-gallery --test code_editor_control_readout_surface
+  code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast`.
+- 2026-05-17: UI Gallery's fixed-size debug HUD now renders each metric line through
+  `driver::text_roles::chrome_readout_text(...)` instead of local word-wrapping `TextProps`. Long
+  debug/readout lines now stay single-line and truncate inside the HUD chrome rather than growing
+  line boxes under resize. Gate: `cargo nextest run -p fret-ui-gallery --test
+  code_editor_control_readout_surface
+  code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast`.
+- 2026-05-17: UI Gallery shell content/nav text now routes page titles through
+  `text_chrome_title(...)`, page origins through `text_control_readout(...)`, and sidebar group
+  headings through `text_section_chrome_label(...)`. This removes local `TextProps` policy from
+  fixed app-shell chrome without widening `fret-imui`. Gate: `cargo nextest run -p
+  fret-ui-gallery --test code_editor_control_readout_surface
+  code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast`.
 - 2026-05-16: tightened `UiWriterImUiFacadeExt::text(...)` to match Dear ImGui's default
   `Text()` posture: single-line, shrinkable, `min-width: 0`, and ellipsis-truncated under resize.
   Added `UiWriterImUiFacadeExt::text_wrapped(...)` as the explicit wrapping path for explanatory
@@ -1281,6 +1298,33 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `git diff --check` passed.
 
 2026-05-17 gallery driver chrome label slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test code_editor_control_readout_surface code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery minimal-root text role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test code_editor_control_readout_surface code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery debug-HUD text role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test code_editor_control_readout_surface code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery shell content/nav text role slice:
 
 - `cargo fmt -p fret-ui-gallery` passed.
 - `cargo nextest run -p fret-ui-gallery --test code_editor_control_readout_surface code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast` passed.

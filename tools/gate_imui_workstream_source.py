@@ -1579,6 +1579,28 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/driver/debug_hud.rs"),
+            required=[
+                "use super::text_roles;",
+                ".map(|line| text_roles::chrome_readout_text(cx, line.clone()))",
+            ],
+            forbidden=[
+                "TextProps {",
+                "wrap: TextWrap::Word",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/driver/render_flow.rs"),
+            required=[
+                "use super::{",
+                "text_roles, toaster, ui_gallery_bisect_flags",
+                "text_roles::chrome_readout_text(\n            cx,\n            \"Hello, fret-ui-gallery\",\n        )",
+            ],
+            forbidden=[
+                "cx.text(\"Hello, fret-ui-gallery\")",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/driver/status_bar.rs"),
             required=[
                 "use super::text_roles;",
@@ -1606,13 +1628,26 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/content.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_chrome_title(cx, title)",
+                "decl_text::text_control_readout(cx, origin)",
+            ],
+            forbidden=[
+                "cx.text_props(TextProps {",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/nav.rs"),
             required=[
                 "use fret_ui_kit::declarative::text as decl_text;",
                 "decl_text::text_section_chrome_label(cx, \"Fret UI Gallery\")",
+                "decl_text::text_section_chrome_label(cx, title)",
             ],
             forbidden=[
                 "cx.text(\"Fret UI Gallery\")",
+                "cx.text_props(TextProps {",
             ],
         ),
         SourceCheck(
@@ -1665,11 +1700,14 @@ def main() -> None:
             Path("apps/fret-ui-gallery/tests/code_editor_control_readout_surface.rs"),
             required=[
                 "let chrome = read(\"src/driver/chrome.rs\");",
+                "let debug_hud = read(\"src/driver/debug_hud.rs\");",
                 "let shell = read(\"src/driver/shell.rs\");",
                 "let nav = read(\"src/ui/nav.rs\");",
                 "let settings_sheet = read(\"src/driver/settings_sheet.rs\");",
                 "let status_bar = read(\"src/driver/status_bar.rs\");",
+                "let render_flow = read(\"src/driver/render_flow.rs\");",
                 "let text_roles = read(\"src/driver/text_roles.rs\");",
+                "let content = read(\"src/ui/content.rs\");",
                 "pub(super) fn chrome_readout_text(",
                 "decl_text::text_control_readout(cx, text)",
                 "pub(super) fn chrome_section_label(",
@@ -1677,7 +1715,12 @@ def main() -> None:
                 "pub(super) fn chrome_control_label(",
                 "decl_text::text_control_label(cx, text)",
                 "decl_text::text_section_chrome_label(cx, \\\"Fret UI Gallery\\\")",
+                "decl_text::text_section_chrome_label(cx, title)",
+                "decl_text::text_chrome_title(cx, title)",
+                "decl_text::text_control_readout(cx, origin)",
                 "text_roles::chrome_readout_text(cx, format!(\\\"theme={} view_cache={} layout_us={} paint_us={}\\\"",
+                "return vec![text_roles::chrome_readout_text(cx, \\\"Hello, fret-ui-gallery\\\",)];",
+                ".map(|line| text_roles::chrome_readout_text(cx, line.clone()))",
                 "text_roles::chrome_readout_text(cx, \\\"Tabs (disabled)\\\")",
                 "text_roles::chrome_section_label(cx, \\\"Menu bar surfaces\\\")",
                 "text_roles::chrome_section_label(cx, \\\"Command availability (debug)\\\",)",

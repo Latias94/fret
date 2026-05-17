@@ -1,5 +1,6 @@
 use super::*;
 use fret::AppComponentCx;
+use fret_ui_kit::declarative::text as decl_text;
 
 pub(crate) fn content_view(
     cx: &mut AppComponentCx<'_>,
@@ -22,34 +23,8 @@ pub(crate) fn content_view(
     let header_content = ui::v_flex(|cx| {
         let left = ui::v_flex(|cx| {
             [
-                cx.text_props(TextProps {
-                    layout: {
-                        let mut layout = fret_ui::element::LayoutStyle::default();
-                        layout.size.width = fret_ui::element::Length::Fill;
-                        layout
-                    },
-                    text: Arc::from(title),
-                    style: None,
-                    color: None,
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Ellipsis,
-                    align: fret_core::TextAlign::Start,
-                    ink_overflow: fret_ui::element::TextInkOverflow::None,
-                }),
-                cx.text_props(TextProps {
-                    layout: {
-                        let mut layout = fret_ui::element::LayoutStyle::default();
-                        layout.size.width = fret_ui::element::Length::Fill;
-                        layout
-                    },
-                    text: Arc::from(origin),
-                    style: None,
-                    color: Some(theme.color_token("muted-foreground")),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Ellipsis,
-                    align: fret_core::TextAlign::Start,
-                    ink_overflow: fret_ui::element::TextInkOverflow::None,
-                }),
+                decl_text::text_chrome_title(cx, title),
+                decl_text::text_control_readout(cx, origin),
             ]
         })
         .layout(LayoutRefinement::default().w_full().min_w_0())

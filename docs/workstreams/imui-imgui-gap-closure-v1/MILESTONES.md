@@ -396,6 +396,15 @@ Exit criteria:
   2026-05-17 gallery driver chrome label result: the nav title now routes through section-chrome
   text, and settings-sheet switch captions route through control-label text instead of local
   `TextProps` policy.
+  2026-05-17 gallery minimal-root text result: the UI Gallery `BISECT_MINIMAL_ROOT` placeholder now
+  uses the driver chrome-readout text role instead of bare/default text, keeping even diagnostic
+  resize-bisect roots on the shared single-line text posture.
+  2026-05-17 gallery debug-HUD text result: fixed-size debug HUD lines now use the shared driver
+  chrome-readout role instead of local word-wrapping `TextProps`, keeping long diagnostic metrics
+  single-line/truncated inside HUD chrome.
+  2026-05-17 gallery shell content/nav text result: page header title/source and sidebar group
+  headings now use shared chrome/readout roles instead of hand-rolled `TextProps` in the gallery
+  app shell.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

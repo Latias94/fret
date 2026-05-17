@@ -425,6 +425,15 @@ Readiness order for the next locally testable review slices:
    2026-05-17 gallery driver chrome label follow-up: the nav title now uses section-chrome text,
    and settings-sheet switch captions use control-label text through `driver::text_roles` instead
    of local `TextProps` policy.
+   2026-05-17 gallery minimal-root text follow-up: the `BISECT_MINIMAL_ROOT` diagnostic root now
+   routes its placeholder readout through `driver::text_roles::chrome_readout_text(...)` instead
+   of bare `cx.text(...)`, so resize bisect surfaces do not teach default wrapping text.
+   2026-05-17 gallery debug-HUD text follow-up: fixed-size debug HUD lines now route through
+   `driver::text_roles::chrome_readout_text(...)` instead of local word-wrapping `TextProps`, so
+   long metric/readout lines truncate rather than growing HUD row height under resize.
+   2026-05-17 gallery shell content/nav text follow-up: the page header title/source and sidebar
+   group headings now route through shared chrome/readout roles instead of local `TextProps`,
+   keeping app-shell text policy centralized while staying outside `fret-imui`.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

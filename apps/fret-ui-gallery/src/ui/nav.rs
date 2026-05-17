@@ -215,16 +215,7 @@ pub(crate) fn sidebar_view(
             }
 
             vec![
-                cx.text_props(TextProps {
-                    layout: Default::default(),
-                    text: Arc::from(title),
-                    style: None,
-                    color: Some(theme.color_token("muted-foreground")),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                    align: fret_core::TextAlign::Start,
-                    ink_overflow: fret_ui::element::TextInkOverflow::None,
-                }),
+                decl_text::text_section_chrome_label(cx, title),
                 ui::v_flex(move |_cx| group_items)
                     .layout(LayoutRefinement::default().w_full())
                     .gap(Space::N1)
