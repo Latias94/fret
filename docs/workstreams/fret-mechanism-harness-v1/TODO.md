@@ -708,3 +708,8 @@ date: 2026-05-12
     resize grip was exposed as an unlabeled visible Button. The recipe now hides that grip from the
     visible accessibility tree and removes it from Tab traversal. The suite passes with zero lint
     errors/warnings; no ViewCache mechanism defect was reproduced.
+- [x] Promote the Button Group suite to strict zero-warning diagnostics lint after a clean
+  candidate run.
+  - Result: `ui-gallery-button-group` passed 13/13 with `focus_mismatch_total=0` and zero lint
+    errors/warnings. No new Button Group component or mechanism defect was reproduced in this
+    candidate run; the suite now rejects future diagnostics lint drift.

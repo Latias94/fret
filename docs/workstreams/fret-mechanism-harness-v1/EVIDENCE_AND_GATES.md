@@ -2997,6 +2997,28 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag-view-cache-model-mutation-v2/sessions/1778978131681-113548/suite.summary.json`
     reports `status=passed`, 1/1 row, `scripts_with_evidence=1`,
     `focus_mismatch_total=0`, and zero lint errors/warnings.
+- Button Group strict diagnostics lint promotion:
+  - invariant:
+    The Button Group family already covers the originally reported visual/layout risk areas, so the
+    focused suite should also reject future accessibility, duplicate-id, zero-size, and related
+    diagnostics lint drift.
+  - findings:
+    the candidate strict run did not reproduce a new Button Group component or mechanism defect.
+    All 13 scripts passed with zero lint errors/warnings and no focus mismatches, so the suite is
+    now safe to run with `max_warning_issues=0`.
+  - implementation anchors:
+    `tools/diag-scripts/suites/ui-gallery-button-group/suite.json`
+  - lint gates:
+    `python tools/test_check_diag_scripts_registry.py`,
+    `python tools/check_diag_scripts_registry.py`
+  - lint results:
+    passed; registry self-tests ran 21 tests.
+  - candidate full-suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-button-group --dir target/fret-diag-button-group-strict-candidate-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - candidate full-suite result:
+    `target/fret-diag-button-group-strict-candidate-v1/sessions/1778978465500-116384/suite.summary.json`
+    reports `status=passed`, 13/13 rows, `scripts_with_evidence=13`,
+    `focus_mismatch_total=0`, and zero lint errors/warnings for every row.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`
