@@ -379,6 +379,9 @@ Readiness order for the next locally testable review slices:
    open/selected/month status through `text_control_readout(...)`, switch captions through
    `text_control_label(...)`, and keyboard instructions through `text_paragraph(...)`, keeping the
    proof aligned with the fixed-chrome-vs-prose text role split.
+   2026-05-17 form proof text follow-up: `form_demo` now routes its compact header
+   submit/valid/dirty/status readout through `text_control_readout(...)`, keeping the runnable
+   shadcn form proof from teaching bare default wrapping text inside fixed header chrome.
    2026-05-17 components gallery table proof text follow-up: `components_gallery` now routes the
    retained table torture cell renderer through `text_table_cell(...)` and its explanatory table
    header through `text_paragraph(...)`. The same proof now routes its top chrome title, tree

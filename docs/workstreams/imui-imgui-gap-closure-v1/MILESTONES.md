@@ -354,6 +354,9 @@ Exit criteria:
   one surface: status readouts use `text_control_readout(...)`, switch captions use
   `text_control_label(...)`, and keyboard instructions use `text_paragraph(...)`; source gates
   reject the old bare status/label/instruction `cx.text(...)` paths.
+  2026-05-17 form proof text result: `form_demo` now routes its header submit/valid/dirty/status
+  readout through `text_control_readout(...)`, and source gates reject the old bare fixed-header
+  `cx.text(Arc::from(format!(...)))` path.
   2026-05-17 components gallery table proof text result: the runnable `components_gallery`
   retained table torture path now routes fixed cell renderers through `text_table_cell(...)` and
   the table explanation through `text_paragraph(...)`. The same proof now routes top chrome,

@@ -234,6 +234,10 @@
       "command": "cargo nextest run -p fret-examples --test date_picker_demo_surface date_picker_demo_keeps_fixed_chrome_text_on_roles --no-fail-fast"
     },
     {
+      "name": "form proof text roles",
+      "command": "cargo nextest run -p fret-examples --test form_demo_surface form_demo_header_status_uses_control_readout_role --no-fail-fast"
+    },
+    {
       "name": "components gallery table proof text roles",
       "command": "cargo nextest run -p fret-examples --test components_gallery_surface components_gallery_table_torture_uses_text_roles components_gallery_chrome_and_controls_use_text_roles components_gallery_overlay_text_uses_text_roles --no-fail-fast"
     },
@@ -478,6 +482,7 @@
     "apps/fret-examples/src/components_gallery.rs",
     "apps/fret-examples/src/canvas_datagrid_stress_demo.rs",
     "apps/fret-examples/src/date_picker_demo.rs",
+    "apps/fret-examples/src/form_demo.rs",
     "apps/fret-examples/src/virtual_list_stress_demo.rs",
     "apps/fret-examples/src/table_demo.rs",
     "apps/fret-examples/src/table_stress_demo.rs",
@@ -488,6 +493,7 @@
     "apps/fret-examples/tests/components_gallery_surface.rs",
     "apps/fret-examples/tests/canvas_datagrid_stress_demo_surface.rs",
     "apps/fret-examples/tests/date_picker_demo_surface.rs",
+    "apps/fret-examples/tests/form_demo_surface.rs",
     "apps/fret-examples/tests/virtual_list_stress_demo_surface.rs",
     "apps/fret-examples/tests/table_demo_surface.rs",
     "apps/fret-examples/tests/table_stress_demo_surface.rs",

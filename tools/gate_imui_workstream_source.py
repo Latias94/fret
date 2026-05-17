@@ -8503,6 +8503,17 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-examples/src/form_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(\n                        cx,\n                        Arc::from(format!(",
+                "\"submit_count={submit_count} valid={valid} dirty={dirty} status={}\"",
+            ],
+            forbidden=[
+                "cx.text(Arc::from(format!(\n                        \"submit_count={submit_count} valid={valid} dirty={dirty} status={}\"",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-examples/src/components_gallery.rs"),
             required=[
                 "use fret_ui_kit::declarative::text as decl_text;",
@@ -8635,6 +8646,16 @@ def main() -> None:
                 "decl_text::text_paragraph(cx,text)",
                 "\"cx.text(\\\"weekstartmonday\\\")\"",
                 "\"cx.text(Arc::from(\\\"Try:Tabtofocus\"",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/tests/form_demo_surface.rs"),
+            required=[
+                "fn form_demo_header_status_uses_control_readout_role()",
+                "usefret_ui_kit::declarative::textasdecl_text;",
+                "decl_text::text_control_readout(cx,Arc::from(format!(\\\"submit_count={submit_count}valid={valid}dirty={dirty}status={}\\\",status_text.as_ref())),)",
+                "cx.text(Arc::from(format!(\\\"submit_count={submit_count}valid={valid}dirty={dirty}status={}\\\",status_text.as_ref())))",
             ],
             forbidden=[],
         ),

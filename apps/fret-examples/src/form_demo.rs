@@ -16,6 +16,7 @@ use fret_ui::element::{
 };
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::form::FormRegistry;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::headless::calendar::CalendarMonth;
 use fret_ui_kit::headless::form_state::{FormState, FormValidateMode};
 use fret_ui_kit::headless::form_validation::{first_error, required_trimmed};
@@ -293,10 +294,13 @@ fn render(_driver: &mut FormDemoDriver, context: WinitRenderContext<'_, DemoWind
                         .size(shadcn::ButtonSize::Sm)
                         .on_click(CommandId::from("form_demo.submit"))
                         .into_element(cx),
-                    cx.text(Arc::from(format!(
-                        "submit_count={submit_count} valid={valid} dirty={dirty} status={}",
-                        status_text.as_ref()
-                    ))),
+                    decl_text::text_control_readout(
+                        cx,
+                        Arc::from(format!(
+                            "submit_count={submit_count} valid={valid} dirty={dirty} status={}",
+                            status_text.as_ref()
+                        )),
+                    ),
                 ]
             })
             .gap(Space::N2)
