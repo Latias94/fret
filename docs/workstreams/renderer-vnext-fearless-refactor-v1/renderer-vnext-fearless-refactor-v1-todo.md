@@ -629,6 +629,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - [x] Step 3r: replace backdrop-source-group reserved-target stack `Vec` with `SmallVec`.
     - [x] Step 3s: move effect-scope push/pop helpers onto `EffectScopeDispatchState`.
     - [x] Step 3t: move backdrop-source-group push/pop helpers onto `BackdropSourceGroupDispatchState`.
+    - [x] Step 3u: move clip-path push/pop helpers onto `ClipPathDispatchState`.
   - Landed (step 1): extracted target/budget helpers and their focused tests into
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
   - Landed (step 2): introduced `RenderPlanCompilerCtx` to own structural compiler outputs
@@ -716,6 +717,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     `BackdropSourceGroupDispatchState`, so scopes, reserved targets, and in-use bytes are mutated
     through the owning dispatch state instead of being threaded as multiple independent `&mut`
     parameters.
+  - Landed (step 3u): moved the private clip-path push/pop helper bodies onto
+    `ClipPathDispatchState`, so clip scopes and mask-in-use bytes are mutated through the owning
+    dispatch state instead of being threaded as multiple independent `&mut` parameters.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
       `compile_for_scene_inner`)
@@ -728,7 +732,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/context.rs`
       (`RenderPlanCompilerCtx`, `alloc_segment`, `flush_scene_range`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`
-      (`ClipPathDispatchState`, `ActiveMaskTargets`)
+      (`ClipPathDispatchState::{compile_push_inner,compile_pop_inner}`, `ActiveMaskTargets`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_chain.rs`
       (`apply_chain_in_place`, `SmallVec<[PlanTarget; 8]>` in-use target snapshot)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/composite_group.rs`

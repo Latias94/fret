@@ -68,15 +68,7 @@ impl ClipPathDispatchState {
         draw_ix: usize,
         args: ClipPathPushCtx<'_>,
     ) {
-        compile_clip_path_push(
-            plan,
-            draw_scopes,
-            &mut self.scopes,
-            &mut self.mask_in_use_bytes,
-            encoding,
-            draw_ix,
-            args,
-        );
+        self.compile_push_inner(plan, draw_scopes, encoding, draw_ix, args);
     }
 
     pub(super) fn compile_pop(
@@ -84,12 +76,183 @@ impl ClipPathDispatchState {
         plan: &mut RenderPlanCompilerCtx,
         draw_scopes: &mut Vec<DrawScope>,
     ) {
-        compile_clip_path_pop(
-            plan,
-            draw_scopes,
-            &mut self.scopes,
-            &mut self.mask_in_use_bytes,
-        );
+        self.compile_pop_inner(plan, draw_scopes);
+    }
+
+    fn compile_push_inner(
+        &mut self,
+        plan: &mut RenderPlanCompilerCtx,
+        draw_scopes: &mut Vec<DrawScope>,
+        encoding: &SceneEncoding,
+        draw_ix: usize,
+        args: ClipPathPushCtx<'_>,
+    ) {
+        let parent_scope = draw_scopes.last().expect("draw scope");
+        let parent_target = parent_scope.target;
+        let parent_origin = parent_scope.origin;
+        let parent_size = parent_scope.size;
+
+        let mut content_selection = target_selection::TargetSelection {
+            target: None,
+            had_free_target: false,
+        };
+        let mut mask_target: Option<PlanTarget> = None;
+        let mut had_free_mask_target = false;
+
+        let (content_origin, content_size) = if args.scissor_sized_intermediates {
+            (
+                (args.scissor.x, args.scissor.y),
+                (args.scissor.w, args.scissor.h),
+            )
+        } else {
+            ((0, 0), args.viewport_size)
+        };
+        let mask_size = (args.scissor.w, args.scissor.h);
+
+        if content_size.0 != 0 && content_size.1 != 0 && mask_size.0 != 0 && mask_size.1 != 0 {
+            content_selection = target_selection::choose_free_intermediate_target(
+                draw_scopes,
+                args.backdrop_source_group_reserved_targets,
+            );
+
+            let mask_selection = target_selection::choose_free_clip_path_mask_target(|target| {
+                self.scopes
+                    .iter()
+                    .any(|scope| scope.mask_target == Some(target))
+            });
+            mask_target = mask_selection.target;
+            had_free_mask_target = mask_selection.had_free_target;
+
+            if let (Some(_content_target), Some(_mask_target)) =
+                (content_selection.target, mask_target)
+            {
+                let required_color = estimate_texture_bytes(content_size, args.format, 1);
+                let required_mask = estimate_clip_mask_bytes(mask_size);
+                if !super::target_budget::can_allocate_intermediate_bytes(
+                    args.intermediate_budget_bytes,
+                    draw_scopes,
+                    required_color.saturating_add(required_mask),
+                    self.mask_in_use_bytes
+                        .saturating_add(args.backdrop_source_group_in_use_bytes),
+                    args.format,
+                ) {
+                    content_selection.target = None;
+                    mask_target = None;
+                }
+            }
+        }
+
+        let content_target = content_selection.target;
+        if (content_target.is_none() || mask_target.is_none())
+            && content_size.0 != 0
+            && content_size.1 != 0
+            && mask_size.0 != 0
+            && mask_size.1 != 0
+        {
+            let reason = if args.intermediate_budget_bytes == 0 {
+                RenderPlanDegradationReason::BudgetZero
+            } else if !content_selection.had_free_target || !had_free_mask_target {
+                RenderPlanDegradationReason::TargetExhausted
+            } else {
+                RenderPlanDegradationReason::BudgetInsufficient
+            };
+            plan.push_degradation(RenderPlanDegradation {
+                draw_ix,
+                kind: RenderPlanDegradationKind::ClipPathDisabled,
+                reason,
+            });
+        }
+
+        if let (Some(content_target), Some(mask_target)) = (content_target, mask_target) {
+            let mask_draw = encoding.clip_path_masks[args.mask_draw_index as usize];
+            debug_assert_eq!(mask_draw.scissor, args.scissor);
+            debug_assert_eq!(mask_draw.uniform_index, args.uniform_index);
+            plan.push_pass(RenderPlanPass::PathClipMask(PathClipMaskPass {
+                dst: mask_target,
+                dst_origin: (args.scissor.x, args.scissor.y),
+                dst_size: mask_size,
+                scissor: super::super::AbsoluteScissorRect(args.scissor),
+                uniform_index: args.uniform_index,
+                first_vertex: mask_draw.first_vertex,
+                vertex_count: mask_draw.vertex_count,
+                cache_key: mix_u64(
+                    mask_draw.cache_key,
+                    (u64::from(mask_size.0) << 32) | u64::from(mask_size.1),
+                ),
+                load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+            }));
+
+            draw_scopes.push(DrawScope {
+                target: content_target,
+                origin: content_origin,
+                size: content_size,
+                needs_clear: true,
+                clear_color: wgpu::Color::TRANSPARENT,
+            });
+
+            self.mask_in_use_bytes = self
+                .mask_in_use_bytes
+                .saturating_add(estimate_clip_mask_bytes(mask_size));
+        }
+
+        self.scopes.push(ClipPathScope {
+            scissor: args.scissor,
+            uniform_index: args.uniform_index,
+            mask_draw_index: args.mask_draw_index,
+            parent_target,
+            parent_origin,
+            parent_size,
+            content_target,
+            content_origin,
+            content_size,
+            mask_target,
+            mask_size,
+        });
+    }
+
+    fn compile_pop_inner(
+        &mut self,
+        plan: &mut RenderPlanCompilerCtx,
+        draw_scopes: &mut Vec<DrawScope>,
+    ) {
+        let Some(scope) = self.scopes.pop() else {
+            return;
+        };
+
+        if let (Some(content_target), Some(mask_target)) = (scope.content_target, scope.mask_target)
+        {
+            debug_assert_eq!(
+                draw_scopes.last().expect("draw scope").target,
+                content_target
+            );
+
+            plan.push_pass(RenderPlanPass::CompositePremul(CompositePremulPass {
+                src: content_target,
+                src_origin: scope.content_origin,
+                dst: scope.parent_target,
+                src_size: scope.content_size,
+                dst_origin: scope.parent_origin,
+                dst_size: scope.parent_size,
+                dst_scissor: Some(super::super::AbsoluteScissorRect(scope.scissor)),
+                mask_uniform_index: Some(scope.uniform_index),
+                mask: Some(MaskRef {
+                    target: mask_target,
+                    size: scope.mask_size,
+                    viewport_rect: scope.scissor,
+                }),
+                blend_mode: fret_core::BlendMode::Over,
+                opacity: 1.0,
+                load: take_scope_load_for_write(draw_scopes, scope.parent_target),
+            }));
+
+            let _ = draw_scopes.pop();
+
+            self.mask_in_use_bytes = self
+                .mask_in_use_bytes
+                .saturating_sub(estimate_clip_mask_bytes(scope.mask_size));
+        } else {
+            let _ = scope.mask_draw_index;
+        }
     }
 }
 
@@ -115,179 +278,6 @@ impl ActiveMaskTargets {
 
     pub(super) fn as_slice(&self) -> &[PlanTarget] {
         &self.targets[..self.len]
-    }
-}
-
-fn compile_clip_path_push(
-    plan: &mut RenderPlanCompilerCtx,
-    draw_scopes: &mut Vec<DrawScope>,
-    clip_path_scopes: &mut Vec<ClipPathScope>,
-    clip_path_mask_in_use_bytes: &mut u64,
-    encoding: &SceneEncoding,
-    draw_ix: usize,
-    args: ClipPathPushCtx<'_>,
-) {
-    let parent_scope = draw_scopes.last().expect("draw scope");
-    let parent_target = parent_scope.target;
-    let parent_origin = parent_scope.origin;
-    let parent_size = parent_scope.size;
-
-    let mut content_selection = target_selection::TargetSelection {
-        target: None,
-        had_free_target: false,
-    };
-    let mut mask_target: Option<PlanTarget> = None;
-    let mut had_free_mask_target = false;
-
-    let (content_origin, content_size) = if args.scissor_sized_intermediates {
-        (
-            (args.scissor.x, args.scissor.y),
-            (args.scissor.w, args.scissor.h),
-        )
-    } else {
-        ((0, 0), args.viewport_size)
-    };
-    let mask_size = (args.scissor.w, args.scissor.h);
-
-    if content_size.0 != 0 && content_size.1 != 0 && mask_size.0 != 0 && mask_size.1 != 0 {
-        content_selection = target_selection::choose_free_intermediate_target(
-            draw_scopes,
-            args.backdrop_source_group_reserved_targets,
-        );
-
-        let mask_selection = target_selection::choose_free_clip_path_mask_target(|target| {
-            clip_path_scopes
-                .iter()
-                .any(|scope| scope.mask_target == Some(target))
-        });
-        mask_target = mask_selection.target;
-        had_free_mask_target = mask_selection.had_free_target;
-
-        if let (Some(_content_target), Some(_mask_target)) = (content_selection.target, mask_target)
-        {
-            let required_color = estimate_texture_bytes(content_size, args.format, 1);
-            let required_mask = estimate_clip_mask_bytes(mask_size);
-            if !super::target_budget::can_allocate_intermediate_bytes(
-                args.intermediate_budget_bytes,
-                draw_scopes,
-                required_color.saturating_add(required_mask),
-                clip_path_mask_in_use_bytes.saturating_add(args.backdrop_source_group_in_use_bytes),
-                args.format,
-            ) {
-                content_selection.target = None;
-                mask_target = None;
-            }
-        }
-    }
-
-    let content_target = content_selection.target;
-    if (content_target.is_none() || mask_target.is_none())
-        && content_size.0 != 0
-        && content_size.1 != 0
-        && mask_size.0 != 0
-        && mask_size.1 != 0
-    {
-        let reason = if args.intermediate_budget_bytes == 0 {
-            RenderPlanDegradationReason::BudgetZero
-        } else if !content_selection.had_free_target || !had_free_mask_target {
-            RenderPlanDegradationReason::TargetExhausted
-        } else {
-            RenderPlanDegradationReason::BudgetInsufficient
-        };
-        plan.push_degradation(RenderPlanDegradation {
-            draw_ix,
-            kind: RenderPlanDegradationKind::ClipPathDisabled,
-            reason,
-        });
-    }
-
-    if let (Some(content_target), Some(mask_target)) = (content_target, mask_target) {
-        let mask_draw = encoding.clip_path_masks[args.mask_draw_index as usize];
-        debug_assert_eq!(mask_draw.scissor, args.scissor);
-        debug_assert_eq!(mask_draw.uniform_index, args.uniform_index);
-        plan.push_pass(RenderPlanPass::PathClipMask(PathClipMaskPass {
-            dst: mask_target,
-            dst_origin: (args.scissor.x, args.scissor.y),
-            dst_size: mask_size,
-            scissor: super::super::AbsoluteScissorRect(args.scissor),
-            uniform_index: args.uniform_index,
-            first_vertex: mask_draw.first_vertex,
-            vertex_count: mask_draw.vertex_count,
-            cache_key: mix_u64(
-                mask_draw.cache_key,
-                (u64::from(mask_size.0) << 32) | u64::from(mask_size.1),
-            ),
-            load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-        }));
-
-        draw_scopes.push(DrawScope {
-            target: content_target,
-            origin: content_origin,
-            size: content_size,
-            needs_clear: true,
-            clear_color: wgpu::Color::TRANSPARENT,
-        });
-
-        *clip_path_mask_in_use_bytes =
-            clip_path_mask_in_use_bytes.saturating_add(estimate_clip_mask_bytes(mask_size));
-    }
-
-    clip_path_scopes.push(ClipPathScope {
-        scissor: args.scissor,
-        uniform_index: args.uniform_index,
-        mask_draw_index: args.mask_draw_index,
-        parent_target,
-        parent_origin,
-        parent_size,
-        content_target,
-        content_origin,
-        content_size,
-        mask_target,
-        mask_size,
-    });
-}
-
-fn compile_clip_path_pop(
-    plan: &mut RenderPlanCompilerCtx,
-    draw_scopes: &mut Vec<DrawScope>,
-    clip_path_scopes: &mut Vec<ClipPathScope>,
-    clip_path_mask_in_use_bytes: &mut u64,
-) {
-    let Some(scope) = clip_path_scopes.pop() else {
-        return;
-    };
-
-    if let (Some(content_target), Some(mask_target)) = (scope.content_target, scope.mask_target) {
-        debug_assert_eq!(
-            draw_scopes.last().expect("draw scope").target,
-            content_target
-        );
-
-        plan.push_pass(RenderPlanPass::CompositePremul(CompositePremulPass {
-            src: content_target,
-            src_origin: scope.content_origin,
-            dst: scope.parent_target,
-            src_size: scope.content_size,
-            dst_origin: scope.parent_origin,
-            dst_size: scope.parent_size,
-            dst_scissor: Some(super::super::AbsoluteScissorRect(scope.scissor)),
-            mask_uniform_index: Some(scope.uniform_index),
-            mask: Some(MaskRef {
-                target: mask_target,
-                size: scope.mask_size,
-                viewport_rect: scope.scissor,
-            }),
-            blend_mode: fret_core::BlendMode::Over,
-            opacity: 1.0,
-            load: take_scope_load_for_write(draw_scopes, scope.parent_target),
-        }));
-
-        let _ = draw_scopes.pop();
-
-        *clip_path_mask_in_use_bytes =
-            clip_path_mask_in_use_bytes.saturating_sub(estimate_clip_mask_bytes(scope.mask_size));
-    } else {
-        let _ = scope.mask_draw_index;
     }
 }
 

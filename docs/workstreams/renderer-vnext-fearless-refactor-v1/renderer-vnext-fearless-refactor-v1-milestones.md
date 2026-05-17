@@ -1394,6 +1394,35 @@ Progress record (RenderPlan compiler backdrop-source-group owner-method cleanup)
   - `python3 tools/check_layering.py`
   - `git diff --check`
 
+Progress record (RenderPlan compiler clip-path owner-method cleanup):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3u; Stage 24 continues)
+- Objective:
+  - Move the private clip-path push/pop helper bodies onto `ClipPathDispatchState`, removing the
+    need to thread clip scopes and mask-in-use bytes as independent mutable parameters.
+  - Preserve `ClipPathPushCtx`, `mask_in_use_bytes()` and `active_mask_targets()` reads,
+    `PathClipMask` pass generation order, `Mask0..2` allocation order, content target push/pop
+    order, mask byte accounting, `ClipPathDisabled` reason precedence, marker dispatch call
+    sites, and pass/load-op ordering.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`
+    (`ClipPathDispatchState::{compile_push_inner,compile_pop_inner}`,
+    `ClipPathDispatchState::{compile_push,compile_pop,mask_in_use_bytes,active_mask_targets}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (unchanged call surface into `ClipPathDispatchState`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan::tests::compile_for_scene_clip_path_preserves_output_clear_guardrail`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:
