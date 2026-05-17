@@ -427,6 +427,8 @@
     "apps/fret-examples/src/imui_editor_proof_demo/collection.rs",
     "apps/fret-examples/src/workspace_shell_demo.rs",
     "apps/fret-examples/src/editor_notes_demo.rs",
+    "apps/fret-examples/src/docking_arbitration_demo.rs",
+    "apps/fret-examples/tests/docking_arbitration_surface.rs",
     "apps/fret-ui-gallery/src/driver/chrome.rs",
     "apps/fret-ui-gallery/src/driver/shell.rs",
     "apps/fret-ui-gallery/src/driver/settings_sheet.rs",

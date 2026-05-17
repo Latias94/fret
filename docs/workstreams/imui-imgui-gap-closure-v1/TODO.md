@@ -443,6 +443,10 @@ Readiness order for the next locally testable review slices:
    route their custom pointer-region labels through `button_label_text(...)`, and both the gallery
    source test and IMUI workstream source gate forbid those fixed action labels from returning to
    bare `cx.text(...)`.
+   2026-05-17 docking arbitration text-role follow-up: `docking_arbitration_demo` now routes
+   Popover body copy through a local paragraph helper and state/debug status lines through a local
+   readout helper backed by `text_control_readout(...)`. A source test and IMUI workstream source
+   gate prevent the docking proof from returning to bare `cx.text(...)`.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

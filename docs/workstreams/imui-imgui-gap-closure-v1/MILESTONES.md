@@ -413,6 +413,10 @@ Exit criteria:
   2026-05-17 code-editor IME gate button-label result: the MVP IME gate action labels now use
   `doc_layout::button_label_text(...)`, and focused source/test guards prevent those custom
   pointer-region buttons from drifting back to bare `cx.text(...)` under fixed row chrome.
+  2026-05-17 docking arbitration text-role result: `docking_arbitration_demo` now uses a local
+  paragraph helper for Popover body copy and a local readout helper backed by
+  `text_control_readout(...)` for state/debug status lines, keeping the docking proof on shared
+  text roles without moving policy into `fret-imui`.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

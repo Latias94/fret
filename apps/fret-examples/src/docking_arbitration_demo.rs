@@ -51,6 +51,20 @@ const PANEL_KIND_VIEWPORT_EXTRA: &str = "demo.viewport.extra";
 const PANEL_KIND_CONTROLS: &str = "demo.controls";
 const PANEL_KIND_DUMMY_OVERFLOW: &str = "demo.dummy.overflow";
 
+fn docking_arbitration_readout_text<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    fret_ui_kit::declarative::text::text_control_readout(cx, text)
+}
+
+fn docking_arbitration_paragraph_text<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    fret_ui_kit::declarative::text::text_paragraph(cx, text)
+}
+
 fn viewport_left_panel_key() -> fret_core::PanelKey {
     fret_core::PanelKey::new(PANEL_KIND_VIEWPORT_LEFT)
 }
@@ -1147,7 +1161,10 @@ fn render_controls_panel(
                         },
                         |cx| {
                             shadcn::PopoverContent::new(vec![
-                                cx.text("Non-modal overlay (Popover)."),
+                                docking_arbitration_paragraph_text(
+                                    cx,
+                                    "Non-modal overlay (Popover).",
+                                ),
                                 shadcn::Button::new("Close")
                                     .variant(shadcn::ButtonVariant::Secondary)
                                     .test_id("dock-arb-popover-close")
@@ -1300,11 +1317,14 @@ fn render_controls_panel(
                                             ..Default::default()
                                         },
                                         |cx| {
-                                            vec![cx.text(if popover_is_open {
-                                                "Popover: open"
-                                            } else {
-                                                "Popover: closed"
-                                            })]
+                                            vec![docking_arbitration_readout_text(
+                                                cx,
+                                                if popover_is_open {
+                                                    "Popover: open"
+                                                } else {
+                                                    "Popover: closed"
+                                                },
+                                            )]
                                         },
                                     ),
                                     cx.semantics(
@@ -1323,11 +1343,14 @@ fn render_controls_panel(
                                             ..Default::default()
                                         },
                                         |cx| {
-                                            vec![cx.text(if dialog_is_open {
-                                                "Dialog: open"
-                                            } else {
-                                                "Dialog: closed"
-                                            })]
+                                            vec![docking_arbitration_readout_text(
+                                                cx,
+                                                if dialog_is_open {
+                                                    "Dialog: open"
+                                                } else {
+                                                    "Dialog: closed"
+                                                },
+                                            )]
                                         },
                                     ),
                                     cx.semantics(
@@ -1346,11 +1369,14 @@ fn render_controls_panel(
                                             ..Default::default()
                                         },
                                         |cx| {
-                                            vec![cx.text(if drop_mask_left_disallowed {
-                                                "Drop mask: left edge docking disallowed"
-                                            } else {
-                                                "Drop mask: left edge docking allowed"
-                                            })]
+                                            vec![docking_arbitration_readout_text(
+                                                cx,
+                                                if drop_mask_left_disallowed {
+                                                    "Drop mask: left edge docking disallowed"
+                                                } else {
+                                                    "Drop mask: left edge docking allowed"
+                                                },
+                                            )]
                                         },
                                     ),
                                 ]
@@ -1511,7 +1537,7 @@ fn render_controls_panel(
                                         layer_lines
                                             .iter()
                                             .cloned()
-                                            .map(|v| cx.text(v))
+                                            .map(|v| docking_arbitration_readout_text(cx, v))
                                             .collect::<Vec<_>>()
                                     })
                                     .gap(Space::N1)

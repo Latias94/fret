@@ -8326,12 +8326,21 @@ def main() -> None:
         SourceCheck(
             Path("apps/fret-examples/src/docking_arbitration_demo.rs"),
             required=[
+                "fn docking_arbitration_readout_text<H: fret_ui::UiHost>(",
+                "fn docking_arbitration_paragraph_text<H: fret_ui::UiHost>(",
+                "fret_ui_kit::declarative::text::text_control_readout(cx, text)",
+                "fret_ui_kit::declarative::text::text_paragraph(cx, text)",
                 "UiRealPerfSpanCaptureV1::new_if_enabled()",
                 "fret.ui.diagnostics.drive_script",
                 "docking_arbitration_demo",
                 "capture.record_for_window(svc, window)",
             ],
-            forbidden=[],
+            forbidden=[
+                "vec![cx.text(if popover_is_open",
+                "vec![cx.text(if dialog_is_open",
+                "vec![cx.text(if drop_mask_left_disallowed",
+                "cx.text(",
+            ],
         ),
         SourceCheck(
             Path("ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs"),
