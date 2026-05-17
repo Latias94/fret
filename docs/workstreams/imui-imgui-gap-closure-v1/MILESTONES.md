@@ -337,6 +337,9 @@ Exit criteria:
   2026-05-17 virtual row fallback result: tree and file-tree virtualizer out-of-range fallback
   paths now return spacer placeholders instead of empty text nodes, so fixed-row helpers no longer
   create meaningless `Text` elements for missing rows.
+  2026-05-17 gallery disabled toaster placeholder result: the UI Gallery disabled toaster driver
+  path now returns a spacer placeholder instead of an empty text node, keeping app-shell placeholder
+  plumbing outside text layout semantics.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

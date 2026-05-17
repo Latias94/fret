@@ -363,6 +363,9 @@ Readiness order for the next locally testable review slices:
    2026-05-17 virtual row fallback follow-up: tree and file-tree virtualizer out-of-range fallback
    paths now use spacer placeholders instead of empty text nodes, removing another fixed-row
    `Text` escape hatch.
+   2026-05-17 gallery disabled toaster placeholder follow-up: the UI Gallery disabled toaster
+   driver path now uses a spacer placeholder instead of `cx.text("")`, so app-shell disabled
+   placeholder plumbing no longer creates meaningless text nodes.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

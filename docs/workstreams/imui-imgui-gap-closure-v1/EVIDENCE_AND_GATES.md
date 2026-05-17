@@ -119,6 +119,8 @@ Last updated: 2026-05-17
   - `ecosystem/fret-ui-kit/src/recipes/imui_drag_preview.rs`
   - `apps/fret-examples/src/editor_notes_demo.rs`
   - `apps/fret-examples/src/docking_arbitration_demo.rs`
+  - `apps/fret-ui-gallery/src/driver/toaster.rs`
+  - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
   - `tools/gate_imui_workstream_source.py`
   - `tools/diag_gate_imui_product_chain.py`
   - `tools/diag_gate_imui_p2_devtools_first_open.py`
@@ -495,6 +497,11 @@ Run evidence:
   roles, requires wrapping paragraph/validation copy to have parent layout that accounts for
   multi-line height, and keeps `fret-imui` policy-light by rejecting a public `TextRole` enum until
   two consumers need a data-driven role value. Gate: `python tools/gate_imui_workstream_source.py`.
+- 2026-05-17: UI Gallery's disabled toaster driver path now returns a spacer placeholder instead
+  of an empty text node. This keeps app-shell placeholder plumbing out of the text layout/measure
+  contract and prevents future resize fixes from treating invisible placeholders as text content.
+  Gate: `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  gallery_driver_disabled_toaster_does_not_emit_empty_text --no-fail-fast`.
 - 2026-05-16: tightened `UiWriterImUiFacadeExt::text(...)` to match Dear ImGui's default
   `Text()` posture: single-line, shrinkable, `min-width: 0`, and ellipsis-truncated under resize.
   Added `UiWriterImUiFacadeExt::text_wrapped(...)` as the explicit wrapping path for explanatory
@@ -1117,4 +1124,13 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `cargo nextest run -p fret-ui-kit --features imui --lib missing_tree_virtual_row_placeholder_is_not_text missing_file_tree_virtual_row_placeholder_is_not_text --no-fail-fast` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery disabled toaster placeholder slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app gallery_driver_disabled_toaster_does_not_emit_empty_text --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
 - `git diff --check` passed.

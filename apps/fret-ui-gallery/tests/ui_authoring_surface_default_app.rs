@@ -4592,6 +4592,20 @@ fn sonner_local_toaster_prefers_ui_child_over_anyelement() {
 }
 
 #[test]
+fn gallery_driver_disabled_toaster_does_not_emit_empty_text() {
+    let source = read("src/driver/toaster.rs");
+
+    assert!(
+        source.contains("return cx.spacer(SpacerProps::default());"),
+        "disabled toaster should emit a non-text placeholder"
+    );
+    assert!(
+        !source.contains(r#"return cx.text("");"#),
+        "disabled toaster should not emit empty text"
+    );
+}
+
+#[test]
 fn date_picker_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
