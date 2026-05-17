@@ -1,8 +1,8 @@
-use super::backdrop_source_group;
 use super::clip_path;
 use super::context::RenderPlanCompilerCtx;
 use super::draw_scope::{DrawScope, take_scope_load_for_write};
 use super::effect_chain::{EffectChainApplyCtx, EffectChainBudgetStats, apply_chain_in_place};
+use super::effects;
 use super::target_budget::can_allocate_intermediate_bytes;
 use super::target_selection;
 use crate::renderer::{
@@ -40,8 +40,7 @@ pub(super) struct EffectScopePushCtx<'a> {
     pub(super) intermediate_budget_bytes: u64,
     pub(super) clip_path_mask_in_use_bytes: u64,
     pub(super) clip_path_scopes: &'a [clip_path::ClipPathScope],
-    pub(super) backdrop_source_group_scopes:
-        &'a [backdrop_source_group::BackdropSourceGroupScope],
+    pub(super) backdrop_source_group: Option<effects::BackdropSourceGroupCtx>,
     pub(super) backdrop_source_group_reserved_targets: &'a [PlanTarget],
     pub(super) backdrop_source_group_in_use_bytes: u64,
 }
@@ -84,10 +83,6 @@ pub(super) fn compile_effect_scope_push(
             let before = plan.passes_len();
             let unavailable_mask_targets =
                 clip_path::ActiveMaskTargets::from_clip_path_scopes(args.clip_path_scopes);
-            let backdrop_source_group = args
-                .backdrop_source_group_scopes
-                .last()
-                .and_then(|scope| scope.effect_ctx());
 
             apply_chain_in_place(
                 plan,
@@ -110,7 +105,7 @@ pub(super) fn compile_effect_scope_push(
                         .saturating_add(args.backdrop_source_group_in_use_bytes),
                     unavailable_mask_targets: unavailable_mask_targets.as_slice(),
                     reserved_targets: args.backdrop_source_group_reserved_targets,
-                    backdrop_source_group,
+                    backdrop_source_group: args.backdrop_source_group,
                 },
                 effect_degradations,
                 effect_blur_quality,

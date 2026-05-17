@@ -1185,6 +1185,32 @@ Progress record (RenderPlan compiler effect-chain target scratch cleanup):
   - `python3 tools/check_layering.py`
   - `git diff --check`
 
+Progress record (RenderPlan compiler backdrop dispatch state split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3m; Stage 24 continues)
+- Objective:
+  - Move backdrop-source-group dispatch state out of `marker_dispatch.rs`, centralizing
+    backdrop scopes, reserved targets, in-use bytes, push/pop mutation, and current effect context
+    access behind `BackdropSourceGroupDispatchState` without changing marker routing, target
+    lifetime, raw/pyramid budget decisions, degradation counters, or effect-chain inputs.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/backdrop_source_group.rs`
+    (`BackdropSourceGroupDispatchState::{compile_push,compile_pop,reserved_targets,in_use_bytes,effect_ctx}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (`MarkerDispatchState` owns one backdrop dispatch-state field)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
+    (`EffectScopePushCtx` receives only the current backdrop effect context)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

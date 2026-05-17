@@ -32,6 +32,60 @@ impl BackdropSourceGroupScope {
     }
 }
 
+pub(super) struct BackdropSourceGroupDispatchState {
+    scopes: Vec<BackdropSourceGroupScope>,
+    reserved_targets: Vec<PlanTarget>,
+    in_use_bytes: u64,
+}
+
+impl BackdropSourceGroupDispatchState {
+    pub(super) fn new() -> Self {
+        Self {
+            scopes: Vec::new(),
+            reserved_targets: Vec::new(),
+            in_use_bytes: 0,
+        }
+    }
+
+    pub(super) fn reserved_targets(&self) -> &[PlanTarget] {
+        &self.reserved_targets
+    }
+
+    pub(super) fn in_use_bytes(&self) -> u64 {
+        self.in_use_bytes
+    }
+
+    pub(super) fn effect_ctx(&self) -> Option<effects::BackdropSourceGroupCtx> {
+        self.scopes.last().and_then(|scope| scope.effect_ctx())
+    }
+
+    pub(super) fn compile_push(
+        &mut self,
+        plan: &mut RenderPlanCompilerCtx,
+        draw_scopes: &[DrawScope],
+        degradations: &mut BackdropSourceGroupDegradationCounters,
+        args: BackdropSourceGroupPushCtx,
+    ) {
+        compile_backdrop_source_group_push(
+            plan,
+            draw_scopes,
+            &mut self.scopes,
+            &mut self.reserved_targets,
+            &mut self.in_use_bytes,
+            degradations,
+            args,
+        );
+    }
+
+    pub(super) fn compile_pop(&mut self) {
+        compile_backdrop_source_group_pop(
+            &mut self.scopes,
+            &mut self.reserved_targets,
+            &mut self.in_use_bytes,
+        );
+    }
+}
+
 pub(super) struct BackdropSourceGroupPushCtx {
     pub(super) scissor: ScissorRect,
     pub(super) pyramid: Option<fret_core::scene::CustomEffectPyramidRequestV1>,
@@ -43,7 +97,7 @@ pub(super) struct BackdropSourceGroupPushCtx {
     pub(super) clip_path_mask_in_use_bytes: u64,
 }
 
-pub(super) fn compile_backdrop_source_group_push(
+fn compile_backdrop_source_group_push(
     plan: &mut RenderPlanCompilerCtx,
     draw_scopes: &[DrawScope],
     backdrop_source_group_scopes: &mut Vec<BackdropSourceGroupScope>,
@@ -212,7 +266,7 @@ pub(super) fn compile_backdrop_source_group_push(
     });
 }
 
-pub(super) fn compile_backdrop_source_group_pop(
+fn compile_backdrop_source_group_pop(
     backdrop_source_group_scopes: &mut Vec<BackdropSourceGroupScope>,
     reserved_targets: &mut Vec<PlanTarget>,
     in_use_bytes: &mut u64,

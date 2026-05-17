@@ -621,6 +621,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - [x] Step 3j: split clip-path mask target selection into the target-selection helper module.
     - [x] Step 3k: replace active clip-path mask target scratch `Vec` with a fixed-size snapshot.
     - [x] Step 3l: replace effect-chain in-use target scratch `Vec` with `SmallVec`.
+    - [x] Step 3m: split backdrop-source-group dispatch state out of marker dispatch.
   - Landed (step 1): extracted target/budget helpers and their focused tests into
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
   - Landed (step 2): introduced `RenderPlanCompilerCtx` to own structural compiler outputs
@@ -679,6 +680,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     order and the slice passed to effect-chain planning.
   - Landed (step 3l): replaced effect-chain target deduplication's temporary `Vec` with
     `SmallVec<[PlanTarget; 8]>`, preserving dedupe order while avoiding heap allocation.
+  - Landed (step 3m): moved backdrop-source-group dispatch state into
+    `BackdropSourceGroupDispatchState`, centralizing scopes, reserved targets, in-use bytes,
+    push/pop mutation, and current effect context access outside `marker_dispatch.rs`.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
       `compile_for_scene_inner`)
@@ -699,7 +703,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
       (`compile_composite_group_push`, `compile_composite_group_pop`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/backdrop_source_group.rs`
       (`compile_backdrop_source_group_push`, `compile_backdrop_source_group_pop`,
-      `BackdropSourceGroupScope::effect_ctx`)
+      `BackdropSourceGroupDispatchState`, `BackdropSourceGroupScope::effect_ctx`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
       (`compile_effect_scope_push`, `compile_effect_scope_pop`,
       effect-scope push/pop target lifetime)

@@ -14,9 +14,7 @@ pub(super) struct MarkerDispatchState {
     composite_group_scopes: Vec<composite_group::CompositeGroupScope>,
     clip_path_scopes: Vec<clip_path::ClipPathScope>,
     clip_path_mask_in_use_bytes: u64,
-    backdrop_source_group_scopes: Vec<backdrop_source_group::BackdropSourceGroupScope>,
-    backdrop_source_group_reserved_targets: Vec<super::super::PlanTarget>,
-    backdrop_source_group_in_use_bytes: u64,
+    backdrop_source_group_state: backdrop_source_group::BackdropSourceGroupDispatchState,
     effect_chain_budget_stats: EffectChainBudgetStats,
     effect_degradations: EffectDegradationSnapshot,
     effect_blur_quality: BlurQualitySnapshot,
@@ -29,9 +27,8 @@ impl MarkerDispatchState {
             composite_group_scopes: Vec::new(),
             clip_path_scopes: Vec::new(),
             clip_path_mask_in_use_bytes: 0,
-            backdrop_source_group_scopes: Vec::new(),
-            backdrop_source_group_reserved_targets: Vec::new(),
-            backdrop_source_group_in_use_bytes: 0,
+            backdrop_source_group_state:
+                backdrop_source_group::BackdropSourceGroupDispatchState::new(),
             effect_chain_budget_stats: EffectChainBudgetStats::default(),
             effect_degradations: EffectDegradationSnapshot::default(),
             effect_blur_quality: BlurQualitySnapshot::default(),
@@ -76,10 +73,13 @@ impl MarkerDispatchState {
                         intermediate_budget_bytes: args.intermediate_budget_bytes,
                         clip_path_mask_in_use_bytes: self.clip_path_mask_in_use_bytes,
                         clip_path_scopes: &self.clip_path_scopes,
-                        backdrop_source_group_scopes: &self.backdrop_source_group_scopes,
-                        backdrop_source_group_reserved_targets: &self
-                            .backdrop_source_group_reserved_targets,
-                        backdrop_source_group_in_use_bytes: self.backdrop_source_group_in_use_bytes,
+                        backdrop_source_group: self.backdrop_source_group_state.effect_ctx(),
+                        backdrop_source_group_reserved_targets: self
+                            .backdrop_source_group_state
+                            .reserved_targets(),
+                        backdrop_source_group_in_use_bytes: self
+                            .backdrop_source_group_state
+                            .in_use_bytes(),
                     },
                 );
             }
@@ -99,9 +99,12 @@ impl MarkerDispatchState {
                         scale_factor: args.scale_factor,
                         intermediate_budget_bytes: args.intermediate_budget_bytes,
                         clip_path_mask_in_use_bytes: self.clip_path_mask_in_use_bytes,
-                        backdrop_source_group_reserved_targets: &self
-                            .backdrop_source_group_reserved_targets,
-                        backdrop_source_group_in_use_bytes: self.backdrop_source_group_in_use_bytes,
+                        backdrop_source_group_reserved_targets: self
+                            .backdrop_source_group_state
+                            .reserved_targets(),
+                        backdrop_source_group_in_use_bytes: self
+                            .backdrop_source_group_state
+                            .in_use_bytes(),
                     },
                 );
             }
@@ -125,9 +128,12 @@ impl MarkerDispatchState {
                         scissor_sized_intermediates: args.scissor_sized_intermediates,
                         format: args.format,
                         intermediate_budget_bytes: args.intermediate_budget_bytes,
-                        backdrop_source_group_reserved_targets: &self
-                            .backdrop_source_group_reserved_targets,
-                        backdrop_source_group_in_use_bytes: self.backdrop_source_group_in_use_bytes,
+                        backdrop_source_group_reserved_targets: self
+                            .backdrop_source_group_state
+                            .reserved_targets(),
+                        backdrop_source_group_in_use_bytes: self
+                            .backdrop_source_group_state
+                            .in_use_bytes(),
                     },
                 );
             }
@@ -144,12 +150,9 @@ impl MarkerDispatchState {
                 pyramid,
                 quality,
             } => {
-                backdrop_source_group::compile_backdrop_source_group_push(
+                self.backdrop_source_group_state.compile_push(
                     plan,
                     draw_scopes,
-                    &mut self.backdrop_source_group_scopes,
-                    &mut self.backdrop_source_group_reserved_targets,
-                    &mut self.backdrop_source_group_in_use_bytes,
                     &mut self.effect_degradations.backdrop_source_groups,
                     backdrop_source_group::BackdropSourceGroupPushCtx {
                         scissor,
@@ -164,11 +167,7 @@ impl MarkerDispatchState {
                 );
             }
             EffectMarkerKind::BackdropSourceGroupPop => {
-                backdrop_source_group::compile_backdrop_source_group_pop(
-                    &mut self.backdrop_source_group_scopes,
-                    &mut self.backdrop_source_group_reserved_targets,
-                    &mut self.backdrop_source_group_in_use_bytes,
-                );
+                self.backdrop_source_group_state.compile_pop();
             }
             EffectMarkerKind::CompositeGroupPush {
                 scissor,
@@ -193,9 +192,12 @@ impl MarkerDispatchState {
                         format: args.format,
                         intermediate_budget_bytes: args.intermediate_budget_bytes,
                         clip_path_mask_in_use_bytes: self.clip_path_mask_in_use_bytes,
-                        backdrop_source_group_reserved_targets: &self
-                            .backdrop_source_group_reserved_targets,
-                        backdrop_source_group_in_use_bytes: self.backdrop_source_group_in_use_bytes,
+                        backdrop_source_group_reserved_targets: self
+                            .backdrop_source_group_state
+                            .reserved_targets(),
+                        backdrop_source_group_in_use_bytes: self
+                            .backdrop_source_group_state
+                            .in_use_bytes(),
                     },
                 );
             }
