@@ -36,6 +36,7 @@ STRICT_CLICK_VISIBILITY_SUITES = {
     "ui-gallery-scroll-area",
     "ui-gallery-select",
     "ui-gallery-motion-pilot",
+    "ui-gallery-view-cache",
 }
 STRICT_UI_GALLERY_CONTENT_TEST_ID_PREFIXES = (
     "ui-gallery-command-",
@@ -44,6 +45,7 @@ STRICT_UI_GALLERY_CONTENT_TEST_ID_PREFIXES = (
     "ui-gallery-scrollbar-",
     "ui-gallery-select-",
     "ui-gallery-sidebar-",
+    "ui-gallery-view-cache-",
 )
 POINTER_EVENT_STEPS = {
     "move_pointer",
@@ -70,6 +72,7 @@ STRICT_PAGE_ENTRY_SUITES = {
     "ui-gallery-data-table",
     "ui-gallery-data-table-retained",
     "ui-gallery-data-table-view-cache-torture",
+    "ui-gallery-view-cache",
 }
 UI_GALLERY_PAGE_ENTRY_RULES = {
     "command": {
@@ -114,6 +117,12 @@ UI_GALLERY_PAGE_ENTRY_RULES = {
         ),
         "content_prefixes": ("ui-gallery-data-table-", "data-table-"),
         "start_page_values": ("data_table", "data_table_torture"),
+        "global_ids": (),
+    },
+    "view_cache": {
+        "page_id": "ui-gallery-page-view-cache",
+        "content_prefixes": ("ui-gallery-view-cache-",),
+        "start_page_values": ("view_cache",),
         "global_ids": (),
     },
 }

@@ -528,6 +528,17 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                 let theme_preset_open = app.models().get_cloned(&ids.theme_preset_open)?;
                 let motion_preset = app.models().get_cloned(&ids.motion_preset)?;
                 let motion_preset_open = app.models().get_cloned(&ids.motion_preset_open)?;
+                let view_cache_enabled = app.models().get_cloned(&ids.view_cache_enabled)?;
+                let view_cache_cache_shell =
+                    app.models().get_cloned(&ids.view_cache_cache_shell)?;
+                let view_cache_cache_content =
+                    app.models().get_cloned(&ids.view_cache_cache_content)?;
+                let view_cache_inner_enabled =
+                    app.models().get_cloned(&ids.view_cache_inner_enabled)?;
+                let view_cache_popover_open =
+                    app.models().get_cloned(&ids.view_cache_popover_open)?;
+                let view_cache_continuous = app.models().get_cloned(&ids.view_cache_continuous)?;
+                let view_cache_counter = app.models().get_cloned(&ids.view_cache_counter)?;
                 let settings_open = app.models().get_cloned(&ids.settings_open)?;
                 let settings_menu_bar_os = app.models().get_cloned(&ids.settings_menu_bar_os)?;
                 let settings_menu_bar_in_window = app.models().get_cloned(&ids.settings_menu_bar_in_window)?;
@@ -894,6 +905,19 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                     serde_json::json!({
                         "text_input_chars": text_input.chars().count(),
                         "text_area_chars": text_area.chars().count(),
+                    }),
+                );
+                out.insert(
+                    "view_cache".to_string(),
+                    serde_json::json!({
+                        "schema_version": 1,
+                        "enabled": view_cache_enabled,
+                        "cache_shell": view_cache_cache_shell,
+                        "cache_content": view_cache_cache_content,
+                        "inner_enabled": view_cache_inner_enabled,
+                        "popover_open": view_cache_popover_open,
+                        "continuous": view_cache_continuous,
+                        "counter": view_cache_counter,
                     }),
                 );
                 out.insert("shell".to_string(), serde_json::Value::Object(shell));

@@ -2958,6 +2958,45 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - full-suite result:
     `target/fret-diag-context-menu-suite-v1/sessions/1778975671673-115352/suite.summary.json`
     reports `status=passed`, 2/2 rows, and zero lint errors/warnings for both rows.
+- ViewCache cached model mutation runtime companion:
+  - invariant:
+    ViewCache runtime evidence should prove model changes inside cached UI Gallery content through
+    structured app-snapshot state, and strict lint should catch semantics drift that a visual-only
+    assertion would miss.
+  - findings:
+    adding `/view_cache` snapshot fields and the focused `ui-gallery-view-cache` suite did not
+    reproduce a ViewCache invalidation defect. The first strict suite run instead exposed a real
+    shadcn Textarea recipe semantics defect: the pointer-only resize grip was exported as an
+    unlabeled visible Button. The fix keeps the TextArea label visible while hiding the resize grip
+    from the visible accessibility tree and removing it from Tab traversal.
+  - implementation anchors:
+    `apps/fret-ui-gallery/src/driver/runtime_driver.rs`,
+    `apps/fret-ui-gallery/src/driver/window_bootstrap.rs`,
+    `apps/fret-ui-gallery/src/driver/diag_snapshot.rs`,
+    `ecosystem/fret-ui-shadcn/src/textarea.rs`,
+    `tools/check_diag_scripts_registry.py`,
+    `tools/diag-scripts/ui-gallery/view-cache/ui-gallery-view-cache-model-mutation-through-cache.json`,
+    and
+    `tools/diag-scripts/suites/ui-gallery-view-cache/suite.json`.
+  - focused component semantics gate:
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib textarea_resize_handle_stays_out_of_visible_accessibility_tree -- --nocapture`
+  - focused component semantics result:
+    passed.
+  - lint gates:
+    `python tools/test_check_diag_scripts_registry.py`,
+    `python tools/check_diag_scripts_registry.py`
+  - lint results:
+    passed; registry self-tests ran 21 tests.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - full-suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-view-cache --dir target/fret-diag-view-cache-model-mutation-v2 --session-auto --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - full-suite result:
+    `target/fret-diag-view-cache-model-mutation-v2/sessions/1778978131681-113548/suite.summary.json`
+    reports `status=passed`, 1/1 row, `scripts_with_evidence=1`,
+    `focus_mismatch_total=0`, and zero lint errors/warnings.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

@@ -700,3 +700,11 @@ date: 2026-05-12
     ContextMenu or hit-test mechanism defect; it closed a harness packaging gap where the scripts
     existed but were only reachable through broad conformance/overlay suites. The suite passes 2/2
     with zero lint errors/warnings.
+- [x] Add a ViewCache runtime companion that proves cached-subtree model mutation through UI
+  Gallery app-snapshot state instead of visible text proxies.
+  - Result: `ui-gallery-view-cache` now gates counter mutation and Popover open/close state through
+    the dedicated `/view_cache` snapshot payload while the page runs with nested ViewCache enabled.
+    The first strict suite run found a real shadcn Textarea semantics defect: its pointer-only
+    resize grip was exposed as an unlabeled visible Button. The recipe now hides that grip from the
+    visible accessibility tree and removes it from Tab traversal. The suite passes with zero lint
+    errors/warnings; no ViewCache mechanism defect was reproduced.
