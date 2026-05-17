@@ -827,6 +827,65 @@ Root missing-measured-size attribution and workspace fill-slot closeout (2026-05
   - The next proof should target either the new `flex_main_align / Flex` blocker or the content
     `Grid` / wrap-flex line-break stability story, with separate evidence and gates.
 
+Centered intrinsic horizontal Flex proof for shadcn Button chrome (2026-05-17):
+
+- Mechanism anchors:
+  - `crates/fret-ui/src/tree/layout/node.rs`
+    (`clean_horizontal_fixed_flex_width_delta_child_bounds`,
+    `clean_horizontal_preserved_flex_item_supported`)
+  - `crates/fret-ui/src/declarative/tests/layout/layout_engine.rs`
+    (`clean_geometry_small_resize_skips_center_justified_intrinsic_horizontal_flex`,
+    `clean_geometry_small_resize_rejects_center_justified_fill_horizontal_flex_width_delta`)
+  - `ecosystem/fret-ui-shadcn/src/button.rs`
+    (`Button::content_justify`, default `Justify::Center`, and the content `Flex`)
+- Contract:
+  - shadcn Button's default centered content row is correct recipe policy: it matches upstream
+    `inline-flex items-center justify-center`.
+  - The clean-geometry fast path may preserve non-start main-axis aligned horizontal flex children
+    only when the row's own inner width is unchanged. In that case, center/end/between alignment
+    does not produce new positions under the parent width delta.
+  - When the row's inner width changes, non-start main-axis alignment still rejects with
+    `flex_main_align`; centered fill rows keep their authoritative Taffy solve.
+  - For the zero-width-delta row, fixed/intrinsic child widths with default finite shrink may be
+    preserved because no new negative/positive free-space distribution is needed. Grow, non-auto
+    basis, align-self, fractional/fill constraints, and real width-delta distribution remain
+    rejected.
+- Focused gates:
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_center_justified_intrinsic_horizontal_flex clean_geometry_small_resize_rejects_center_justified_fill_horizontal_flex_width_delta --no-fail-fast`
+    - Result: `2/2` passed.
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_center_justified_intrinsic_horizontal_flex clean_geometry_small_resize_rejects_center_justified_fill_horizontal_flex_width_delta clean_geometry_small_resize_skips_horizontal_flex_single_basis0_grow_child clean_geometry_small_resize_rejects_horizontal_flex_multiple_grow_children clean_geometry_small_resize_skips_horizontal_flex_auto_width_no_shrink_child clean_geometry_small_resize_rejects_horizontal_flex_auto_width_child_fractional_max_constraint clean_geometry_small_resize_skips_horizontal_flex_empty_grow_container_slot clean_geometry_small_resize_skips_horizontal_roving_flex_auto_width_no_shrink_child --no-fail-fast`
+    - Result: `8/8` passed.
+- Local blocker evidence:
+  - Intermediate bundle after the main-align proof:
+    `target/fret-diag/local-next-flex-main-align-clean-geometry-20260517-r1/1779008013390/bundle.schema2.json`
+    - The shadcn Button content row moved from `flex_main_align / Flex` to
+      `flex_item_sizing / Flex`, confirming the main-axis alignment proof was correct but still
+      needed the zero-width-delta item-sizing proof.
+  - Final bundle:
+    `target/fret-diag/local-next-flex-main-align-clean-geometry-20260517-r2/1779008670784/bundle.schema2.json`
+  - Stats:
+    `target/fret-diag/local-next-flex-main-align-clean-geometry-20260517-r2/worst.stats.json`
+  - Result:
+    - Top frame total/layout/layout-engine-solve is `1309/683/297us` with `4` layout-engine
+      solves. This is recorded as blocker-shift evidence; the sample has local variance and is not
+      a perf-win claim.
+    - Guardrails remain stable: `top_view_cache_roots_reused=1`,
+      `top_view_cache_roots_needs_rerender=0`, row replay/store `289/0`, row replay hit rate
+      `100%`, renderer text prepare `62us`.
+    - The shadcn Button chrome path no longer appears as `flex_main_align / Flex` or
+      `flex_item_sizing / Flex`.
+    - Remaining blockers:
+      - content `Semantics`: `unsupported_kind=Grid`, `wrap_nodes=1`;
+      - root `Stack`: `flex_item_sizing / Flex` at
+        `apps/fret-ui-gallery/src/driver/render_flow.rs:336`, solve about `68-95us`;
+      - editor `PointerRegion`: `unsupported_kind=Canvas`, solve about `3-5us`;
+      - root `Scroll`: `side_effect_boundary / Scroll`, solve `0us`.
+- Decision:
+  - Keep this as a narrow mechanism proof for intrinsic centered rows. It fixes the Button blocker
+    without changing shadcn recipe semantics or widening real width-delta flex distribution.
+  - The next slice should target either the new app-shell `render_flow.rs:336` flex-item sizing
+    shape or the content `Grid` / wrap-flex line-break stability story, not both.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:

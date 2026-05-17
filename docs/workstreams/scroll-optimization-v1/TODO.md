@@ -340,6 +340,28 @@ Status: Active
   - Decision: close the root `missing_measured_size` blocker here. The next proof should target
     the new `flex_main_align / Flex` blocker or the content `Grid` / wrap-flex line-break story,
     but not both in the same patch.
+- [x] Prove the shadcn Button content-row `flex_main_align` blocker without changing Button
+  authoring.
+  - Source conclusion: shadcn Button's default `content_justify=Center` matches upstream
+    `inline-flex items-center justify-center`; changing it to start alignment would be a recipe
+    regression, not a perf fix.
+  - Implemented mechanism proof: horizontal no-wrap `Flex` may keep non-start main-axis alignment
+    only when its own inner width is unchanged across the parent resize. In that zero-width-delta
+    case, fixed/intrinsic child widths and default finite `shrink` do not require a new free-space
+    distribution.
+  - Guardrail locked: centered fill-width rows still reject with `flex_main_align` when the row's
+    inner width changes, so real main-axis redistribution remains on the full solve path.
+  - Focused gates:
+    `clean_geometry_small_resize_skips_center_justified_intrinsic_horizontal_flex` and
+    `clean_geometry_small_resize_rejects_center_justified_fill_horizontal_flex_width_delta`.
+  - Local blocker-shift evidence:
+    `target/fret-diag/local-next-flex-main-align-clean-geometry-20260517-r2/1779008670784/bundle.schema2.json`.
+  - Result: the shadcn Button chrome path no longer reports `flex_main_align / Flex` or
+    `flex_item_sizing / Flex`. The next root `Stack` blocker is now a different app-shell row:
+    `flex_item_sizing / Flex` at `apps/fret-ui-gallery/src/driver/render_flow.rs:336`.
+  - Decision: close the Button content-row proof here. The next proof should target the root shell
+    `render_flow.rs:336` flex-item sizing shape or the content `Grid` / wrap-flex story as separate
+    work; do not keep chasing both in this patch.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 
