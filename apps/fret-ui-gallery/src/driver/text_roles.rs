@@ -17,3 +17,10 @@ pub(super) fn chrome_section_label(
 ) -> AnyElement {
     decl_text::text_section_chrome_label(cx, text)
 }
+
+pub(super) fn chrome_control_label(
+    cx: &mut ElementContext<'_, App>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_control_label(cx, text)
+}

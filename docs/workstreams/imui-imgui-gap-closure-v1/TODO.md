@@ -422,6 +422,9 @@ Readiness order for the next locally testable review slices:
    `driver::text_roles` owner. Disabled tabs/sidebar/content placeholders use the shared
    control-readout role, and settings-sheet section labels use the shared section-chrome role
    instead of bare `cx.text(...)`.
+   2026-05-17 gallery driver chrome label follow-up: the nav title now uses section-chrome text,
+   and settings-sheet switch captions use control-label text through `driver::text_roles` instead
+   of local `TextProps` policy.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

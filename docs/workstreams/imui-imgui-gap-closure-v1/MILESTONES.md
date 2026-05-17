@@ -393,6 +393,9 @@ Exit criteria:
   `text_roles` module over the shared kit text roles. Disabled pane placeholders route through
   control readouts, and settings sheet section labels route through section chrome labels instead
   of bare/default text.
+  2026-05-17 gallery driver chrome label result: the nav title now routes through section-chrome
+  text, and settings-sheet switch captions route through control-label text instead of local
+  `TextProps` policy.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

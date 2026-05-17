@@ -29,6 +29,7 @@ fn code_editor_header_state_readouts_use_single_line_control_readout() {
     let doc_layout = read("src/ui/doc_layout.rs");
     let chrome = read("src/driver/chrome.rs");
     let shell = read("src/driver/shell.rs");
+    let nav = read("src/ui/nav.rs");
     let settings_sheet = read("src/driver/settings_sheet.rs");
     let status_bar = read("src/driver/status_bar.rs");
     let text_roles = read("src/driver/text_roles.rs");
@@ -46,6 +47,12 @@ fn code_editor_header_state_readouts_use_single_line_control_readout() {
     assert_contains_compact(
         &text_roles,
         "decl_text::text_section_chrome_label(cx, text)",
+    );
+    assert_contains_compact(&text_roles, "pub(super) fn chrome_control_label(");
+    assert_contains_compact(&text_roles, "decl_text::text_control_label(cx, text)");
+    assert_contains_compact(
+        &nav,
+        "decl_text::text_section_chrome_label(cx, \"Fret UI Gallery\")",
     );
     assert_contains_compact(
         &status_bar,
@@ -76,6 +83,18 @@ fn code_editor_header_state_readouts_use_single_line_control_readout() {
         "text_roles::chrome_section_label(cx, \"Text\")",
         "text_roles::chrome_section_label(cx, \"Chrome\")",
         "text_roles::chrome_section_label(cx, \"Command availability (debug)\",)",
+    ] {
+        assert_contains_compact(&settings_sheet, expected);
+    }
+    for expected in [
+        "text_roles::chrome_control_label(cx, text)",
+        "switch_row(",
+        "chrome_show_workspace_tab_strip_switch",
+        "\"Workspace tabs in the top bar\"",
+        "edit_can_undo_switch",
+        "\"edit.can_undo (enables OS/in-window Undo)\"",
+        "edit_can_redo_switch",
+        "\"edit.can_redo (enables OS/in-window Redo)\"",
     ] {
         assert_contains_compact(&settings_sheet, expected);
     }
@@ -125,6 +144,7 @@ fn code_editor_header_state_readouts_use_single_line_control_readout() {
     }
 
     for (source, forbidden) in [
+        (&nav, "cx.text(\"Fret UI Gallery\")"),
         (&chrome, "cx.text(\"Tabs (disabled)\")"),
         (&shell, "cx.text(\"Sidebar (disabled)\")"),
         (&shell, "cx.text(\"Content (disabled)\")"),
@@ -135,4 +155,7 @@ fn code_editor_header_state_readouts_use_single_line_control_readout() {
     ] {
         assert_not_contains_compact(source, forbidden);
     }
+
+    assert_not_contains_compact(&settings_sheet, "TextProps::new(text)");
+    assert_not_contains_compact(&settings_sheet, "props.layout.flex.grow");
 }
