@@ -372,6 +372,10 @@ Readiness order for the next locally testable review slices:
    2026-05-17 fret-ui-ai empty placeholder follow-up: hidden/missing-content AI element fallbacks
    now use a crate-local spacer helper instead of returning empty text nodes, without widening
    `fret-imui`.
+   2026-05-17 gallery status-bar readout follow-up: UI Gallery status-bar metrics,
+   inspector-state, and last-action text now route through a local helper backed by
+   `text_control_readout(...)` instead of bare `cx.text(...)`, keeping fixed status chrome
+   single-line and shrinkable under resize.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

@@ -422,6 +422,7 @@ def main() -> None:
                 "ecosystem/fret-ui-kit/tests/imui_table_smoke.rs",
                 "ecosystem/fret-imui/src/tests/composition/layout_collections.rs",
                 "apps/fret-ui-gallery/src/driver/toaster.rs",
+                "apps/fret-ui-gallery/src/driver/status_bar.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs",
                 "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
                 "apps/fret-ui-gallery/src/ui/doc_layout.rs",
@@ -1291,6 +1292,35 @@ def main() -> None:
                 "fn control_readout_text_props",
                 "let monospace = fret_core::TextStyle",
             ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/driver/status_bar.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "fn status_bar_readout_text(",
+                "decl_text::text_control_readout(cx, text)",
+                "status_bar_readout_text(cx, format!(",
+                "status_bar_readout_text(cx, \"inspector=on\")",
+                "status_bar_readout_text(cx, status_last_action_text.clone())",
+            ],
+            forbidden=[
+                "cx.text(format!(\n            \"theme={} view_cache={} layout_us={} paint_us={}\"",
+                "cx.text(\"inspector=on\")",
+                "cx.text(status_last_action_text.as_ref())",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/tests/code_editor_control_readout_surface.rs"),
+            required=[
+                "let status_bar = read(\"src/driver/status_bar.rs\");",
+                "fn status_bar_readout_text(cx: &mut ElementContext<'_, App>, text: impl Into<Arc<str>>) -> AnyElement",
+                "decl_text::text_control_readout(cx, text)",
+                "status_bar_readout_text(cx, format!(\\\"theme={} view_cache={} layout_us={} paint_us={}\\\"",
+                "status_bar_readout_text(cx, \\\"inspector=on\\\")",
+                "vec![status_bar_readout_text(cx, status_last_action_text.clone())]",
+                "cx.text(status_last_action_text.as_ref())",
+            ],
+            forbidden=[],
         ),
         SourceCheck(
             Path("tools/gate_imui_editor_collection_source.py"),

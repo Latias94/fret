@@ -428,6 +428,7 @@
     "apps/fret-examples/src/workspace_shell_demo.rs",
     "apps/fret-examples/src/editor_notes_demo.rs",
     "apps/fret-ui-gallery/src/driver/toaster.rs",
+    "apps/fret-ui-gallery/src/driver/status_bar.rs",
     "apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs",
     "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
     "apps/fret-ui-gallery/src/ui/doc_layout.rs",

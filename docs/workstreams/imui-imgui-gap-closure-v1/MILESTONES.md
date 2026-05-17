@@ -344,6 +344,9 @@ Exit criteria:
   uses a spacer placeholder for collapsed project groups instead of `cx.text("")`.
   2026-05-17 fret-ui-ai empty placeholder result: AI element hidden/missing-content fallbacks now
   share a crate-local spacer helper instead of returning empty text nodes.
+  2026-05-17 gallery status-bar readout result: UI Gallery status-bar metric, inspector, and
+  last-action text now use a local readout helper backed by `text_control_readout(...)`, so fixed
+  status chrome no longer teaches bare wrapping text under resize.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

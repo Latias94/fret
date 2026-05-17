@@ -27,6 +27,7 @@ fn assert_not_contains_compact(source: &str, forbidden: &str) {
 #[test]
 fn code_editor_header_state_readouts_use_single_line_control_readout() {
     let doc_layout = read("src/ui/doc_layout.rs");
+    let status_bar = read("src/driver/status_bar.rs");
     let mvp_header = read("src/ui/previews/pages/editors/code_editor/mvp/header.rs");
     let torture = read("src/ui/previews/pages/editors/code_editor/torture.rs");
 
@@ -34,6 +35,21 @@ fn code_editor_header_state_readouts_use_single_line_control_readout() {
     assert_contains_compact(&doc_layout, "decl_text::text_code_block(cx, code.clone())");
     assert_not_contains_compact(&doc_layout, "fn control_readout_text_props");
     assert_not_contains_compact(&doc_layout, "let monospace = fret_core::TextStyle");
+
+    assert_contains_compact(
+        &status_bar,
+        "fn status_bar_readout_text(cx: &mut ElementContext<'_, App>, text: impl Into<Arc<str>>) -> AnyElement",
+    );
+    assert_contains_compact(&status_bar, "decl_text::text_control_readout(cx, text)");
+    assert_contains_compact(
+        &status_bar,
+        "status_bar_readout_text(cx, format!(\"theme={} view_cache={} layout_us={} paint_us={}\"",
+    );
+    assert_contains_compact(&status_bar, "status_bar_readout_text(cx, \"inspector=on\")");
+    assert_contains_compact(
+        &status_bar,
+        "vec![status_bar_readout_text(cx, status_last_action_text.clone())]",
+    );
 
     for expected in [
         "doc_layout::control_readout_text(cx, if syntax_enabled {",
@@ -69,5 +85,13 @@ fn code_editor_header_state_readouts_use_single_line_control_readout() {
     ] {
         assert_not_contains_compact(&mvp_header, forbidden);
         assert_not_contains_compact(&torture, forbidden);
+    }
+
+    for forbidden in [
+        "cx.text(format!(\"theme={} view_cache={} layout_us={} paint_us={}\"",
+        "cx.text(\"inspector=on\")",
+        "cx.text(status_last_action_text.as_ref())",
+    ] {
+        assert_not_contains_compact(&status_bar, forbidden);
     }
 }
