@@ -434,6 +434,7 @@
     "apps/fret-ui-gallery/src/driver/status_bar.rs",
     "apps/fret-ui-gallery/src/driver/text_roles.rs",
     "apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs",
+    "apps/fret-ui-gallery/src/ui/previews/gallery/data/data_grid.rs",
     "apps/fret-ui-gallery/src/ui/previews/gallery/data/table_torture.rs",
     "apps/fret-ui-gallery/src/ui/previews/gallery/torture/table_retained_torture.rs",
     "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",

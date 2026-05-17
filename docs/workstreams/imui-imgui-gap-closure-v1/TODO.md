@@ -367,6 +367,9 @@ Readiness order for the next locally testable review slices:
    2026-05-17 gallery data-table torture text follow-up: the UI Gallery DataTable torture page now
    routes both retained and non-retained fixed cell renderers through `text_table_cell(...)`, and
    table sorting/filter/pinning status lines through `control_readout_text(...)`.
+   2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
+   virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
+   `control_readout_text(...)`.
    2026-05-17 virtual row fallback follow-up: tree and file-tree virtualizer out-of-range fallback
    paths now use spacer placeholders instead of empty text nodes, removing another fixed-row
    `Text` escape hatch.

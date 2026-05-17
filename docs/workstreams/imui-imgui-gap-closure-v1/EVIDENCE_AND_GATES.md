@@ -527,6 +527,11 @@ Run evidence:
   `doc_layout::control_readout_text(...)`. Gate: `cargo nextest run -p fret-ui-gallery --test
   ui_authoring_surface_internal_previews gallery_data_table_torture_exposes_header_row_anchor
   --no-fail-fast`.
+- 2026-05-17: UI Gallery's DataGrid preview now routes virtualized grid cell text through a helper
+  backed by `text_table_cell(...)`, and the selected-row status line through
+  `doc_layout::control_readout_text(...)`. Gate: `cargo nextest run -p fret-ui-gallery --test
+  ui_authoring_surface_internal_previews gallery_data_grid_uses_table_cell_text_roles
+  --no-fail-fast`.
 - 2026-05-17: UI Gallery's status bar now routes metric, inspector-state, and last-action text
   through `driver::text_roles::chrome_readout_text(...)`, backed by
   `fret-ui-kit::declarative::text::text_control_readout(...)`. This keeps fixed status chrome on
@@ -1222,6 +1227,15 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 
 - `cargo fmt -p fret-ui-gallery` passed.
 - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_data_table_torture_exposes_header_row_anchor --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery data-grid text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_data_grid_uses_table_cell_text_roles --no-fail-fast` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.

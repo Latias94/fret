@@ -941,3 +941,32 @@ fn gallery_data_table_torture_exposes_header_row_anchor() {
         );
     }
 }
+
+#[test]
+fn gallery_data_grid_uses_table_cell_text_roles() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/gallery/data/data_grid.rs",
+        &[
+            "fndata_grid_cell_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "fret_ui_kit::declarative::text::text_table_cell(cx,text)",
+            "data_grid_cell_text(cx,pid.to_string())",
+            "data_grid_cell_text(cx,format!(\"Process{row}\"))",
+            "data_grid_cell_text(cx,ifrow%3==0{\"Running\"}else{\"Idle\"})",
+            "data_grid_cell_text(cx,((row*7)%100).to_string())",
+            "doc_layout::control_readout_text(cx,format!(\"Selectedrow:{selected_text}\"))",
+        ],
+    );
+
+    for forbidden in [
+        "cx.text(pid.to_string())",
+        "cx.text(format!(\"Process{row}\"))",
+        "cx.text(ifrow%3==0{\"Running\"}else{\"Idle\"})",
+        "cx.text(((row*7)%100).to_string())",
+        "cx.text(format!(\"Selectedrow:{selected_text}\"))",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "data_grid reintroduced bare fixed grid/readout text: {forbidden}"
+        );
+    }
+}
