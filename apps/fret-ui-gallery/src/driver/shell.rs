@@ -41,7 +41,10 @@ pub(super) fn sidebar_view(
                             ChromeRefinement::default()
                                 .bg(ColorRef::Color(theme.color_token("muted")))
                                 .p(Space::N4),
-                            LayoutRefinement::default().w_px(Px(280.0)).h_full(),
+                            LayoutRefinement::default()
+                                .w_px(Px(280.0))
+                                .h_full()
+                                .flex_shrink_0(),
                         ),
                         |cx| vec![cx.text("Sidebar (disabled)")],
                     )
@@ -62,6 +65,7 @@ pub(super) fn sidebar_view(
                 let mut layout = LayoutStyle::default();
                 layout.size.width = Length::Px(Px(280.0));
                 layout.size.height = Length::Fill;
+                layout.flex.shrink = 0.0;
                 ViewCacheProps {
                     layout,
                     ..Default::default()
@@ -83,7 +87,10 @@ pub(super) fn sidebar_view(
                             ChromeRefinement::default()
                                 .bg(ColorRef::Color(theme.color_token("muted")))
                                 .p(Space::N4),
-                            LayoutRefinement::default().w_px(Px(280.0)).h_full(),
+                            LayoutRefinement::default()
+                                .w_px(Px(280.0))
+                                .h_full()
+                                .flex_shrink_0(),
                         ),
                         |cx| vec![cx.text("Sidebar (disabled)")],
                     )
@@ -114,7 +121,10 @@ pub(super) fn sidebar_view(
                         ChromeRefinement::default()
                             .bg(ColorRef::Color(theme.color_token("muted")))
                             .p(Space::N4),
-                        LayoutRefinement::default().w_px(Px(280.0)).h_full(),
+                        LayoutRefinement::default()
+                            .w_px(Px(280.0))
+                            .h_full()
+                            .flex_shrink_0(),
                     ),
                     |cx| vec![cx.text("Sidebar (disabled)")],
                 )
@@ -160,6 +170,8 @@ pub(super) fn content_view(
                 // screenshots/diag runs).
                 layout.size.min_width = Some(Length::Px(Px(0.0)));
                 layout.flex.grow = 1.0;
+                layout.flex.shrink = 1.0;
+                layout.flex.basis = Length::Px(Px(0.0));
                 ViewCacheProps {
                     layout,
                     ..Default::default()
@@ -219,6 +231,8 @@ pub(super) fn content_view(
         layout.size.height = Length::Fill;
         layout.size.min_width = Some(Length::Px(Px(0.0)));
         layout.flex.grow = 1.0;
+        layout.flex.shrink = 1.0;
+        layout.flex.basis = Length::Px(Px(0.0));
         cx.container(
             ContainerProps {
                 layout,

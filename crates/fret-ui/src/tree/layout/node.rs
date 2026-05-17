@@ -1465,7 +1465,11 @@ impl<H: UiHost> UiTree<H> {
                 width_offset_after_flexible += next_width.0 - prev_child.size.width.0;
                 next_width
             } else {
-                Self::clean_horizontal_fixed_flex_item_supported(child_style, element_kind)?;
+                Self::clean_horizontal_fixed_flex_item_supported(
+                    child_style,
+                    prev_child.size.width,
+                    element_kind,
+                )?;
                 prev_child.size.width
             };
             let local_x = prev_child.origin.x.0 - prev_bounds.origin.x.0;
@@ -1565,6 +1569,7 @@ impl<H: UiHost> UiTree<H> {
 
     fn clean_horizontal_fixed_flex_item_supported(
         child_style: crate::element::LayoutStyle,
+        prev_width: Px,
         element_kind: &'static str,
     ) -> Result<(), CleanGeometrySolveSkipRejection> {
         if child_style.flex.order != 0
@@ -1572,19 +1577,46 @@ impl<H: UiHost> UiTree<H> {
             || child_style.flex.shrink.abs() > 0.01
             || !matches!(child_style.flex.basis, crate::element::Length::Auto)
             || child_style.flex.align_self.is_some()
-            || matches!(
-                child_style.size.width,
-                crate::element::Length::Auto
-                    | crate::element::Length::Fill
-                    | crate::element::Length::Fraction(_)
-            )
         {
             return Err(CleanGeometrySolveSkipRejection::for_kind(
                 CleanGeometrySolveSkipRejectionReason::FlexItemSizing,
                 element_kind,
             ));
         }
+        if matches!(child_style.size.width, crate::element::Length::Auto)
+            && Self::clean_child_width_constraints_allow_preserved_width(child_style, prev_width)
+        {
+            return Ok(());
+        }
+        if matches!(
+            child_style.size.width,
+            crate::element::Length::Auto
+                | crate::element::Length::Fill
+                | crate::element::Length::Fraction(_)
+        ) {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::FlexItemSizing,
+                element_kind,
+            ));
+        }
         Self::clean_child_width_style_supported_for_width_delta(child_style, element_kind)
+    }
+
+    fn clean_child_width_constraints_allow_preserved_width(
+        child_style: crate::element::LayoutStyle,
+        prev_width: Px,
+    ) -> bool {
+        let min_ok = match child_style.size.min_width {
+            Some(crate::element::Length::Px(px)) => prev_width.0 + 0.01 >= px.0.max(0.0),
+            Some(crate::element::Length::Auto) | None => true,
+            Some(crate::element::Length::Fill | crate::element::Length::Fraction(_)) => false,
+        };
+        let max_ok = match child_style.size.max_width {
+            Some(crate::element::Length::Px(px)) => prev_width.0 - 0.01 <= px.0.max(0.0),
+            Some(crate::element::Length::Auto) | None => true,
+            Some(crate::element::Length::Fill | crate::element::Length::Fraction(_)) => false,
+        };
+        min_ok && max_ok
     }
 
     fn clean_child_width_style_supported_for_width_delta(

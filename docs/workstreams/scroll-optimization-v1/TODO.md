@@ -256,6 +256,35 @@ Status: Active
     the real app-shell/nav main-axis distribution contract or change the ecosystem/app-shell
     authoring to a more explicit `flex_1` / `basis=0` semantic if that is the correct policy-layer
     expression.
+- [x] Align app-shell/workspace authoring with the proven Flex contracts and prove fixed auto-width
+  chrome items.
+  - Implemented authoring fix: workspace/gallery shells now spell grow-driven content slots as
+    explicit basis-zero flex items and fixed-width sidebar/chrome slots as no-shrink items instead
+    of relying on raw `grow=1` / default-shrink behavior.
+  - Implemented mechanism proof: horizontal no-wrap flex can preserve a fixed auto-width,
+    no-shrink child when its previous computed width satisfies auto/px min/max constraints; parent
+    width delta is still absorbed only by the single basis-zero grow child.
+  - Guardrails locked: fractional/fill width constraints on preserved auto-width fixed items still
+    reject because they require a parent-width basis; multiple grow children, root `Scroll`,
+    `ViewCache`, `VirtualList`, layout-query/transform nodes, and `Canvas` remain outside this fast
+    path.
+  - Focused gates:
+    `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_horizontal_flex_auto_width_no_shrink_child clean_geometry_small_resize_rejects_horizontal_flex_auto_width_child_fractional_max_constraint clean_geometry_small_resize_skips_horizontal_flex_single_basis0_grow_child clean_geometry_small_resize_rejects_horizontal_flex_multiple_grow_children --no-fail-fast`,
+    `cargo nextest run -p fret-ui layout_engine --no-fail-fast`,
+    `cargo nextest run -p fret-ui scroll --no-fail-fast`,
+    `cargo nextest run -p fret-workspace workspace_frame_center_row_does_not_fill_height --no-fail-fast`,
+    `cargo check -p fret-ui-gallery --features gallery-full`, and `cargo fmt --check`.
+  - Local no-4090 evidence:
+    `target/fret-diag/local-next-horizontal-flex-authoring-and-auto-fixed-clean-geometry-20260517-r1/1778996086098/bundle.schema2.json`.
+  - Result: top frame total/layout/solve is `1212/583/258us`, `layout_engine_solves=4`,
+    view-cache remains reused, needs-rerender stays `0`, and row replay/store remains `289/0`.
+    The previous nav `Container` solve is gone from the top per-solve blockers.
+  - Remaining blockers: content `Semantics` is still `unsupported_kind=Grid` with `wrap_nodes=1`;
+    root `Stack` now rejects on `flex_item_sizing / RovingFlex` at roughly `80-88us`; editor
+    `Canvas` stays small and root `Scroll` remains a `side_effect_boundary`.
+  - Decision: stop this patch here. The next slice should target the root `RovingFlex` item-sizing
+    shape or the content `Grid`/wrap-flex blocker with separate proof; do not mix those into this
+    app-shell authoring and fixed-auto-width contract.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

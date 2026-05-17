@@ -266,6 +266,8 @@ fn render_root_contents(
                 layout.size.min_width = Some(Length::Px(Px(0.0)));
                 layout.size.min_height = Some(Length::Px(Px(0.0)));
                 layout.flex.grow = 1.0;
+                layout.flex.shrink = 1.0;
+                layout.flex.basis = Length::Px(Px(0.0));
                 layout
             },
             enabled: true,
@@ -288,6 +290,8 @@ fn render_root_contents(
                         layout.size.min_width = Some(Length::Px(Px(0.0)));
                         layout.size.min_height = Some(Length::Px(Px(0.0)));
                         layout.flex.grow = 1.0;
+                        layout.flex.shrink = 1.0;
+                        layout.flex.basis = Length::Px(Px(0.0));
                         layout
                     },
                     ..Default::default()
@@ -325,6 +329,8 @@ fn render_root_contents(
     center_layout.size.width = fret_ui::element::Length::Fill;
     center_layout.size.height = fret_ui::element::Length::Fill;
     center_layout.flex.grow = 1.0;
+    center_layout.flex.shrink = 1.0;
+    center_layout.flex.basis = fret_ui::element::Length::Px(Px(0.0));
 
     let center = cx
         .flex(
