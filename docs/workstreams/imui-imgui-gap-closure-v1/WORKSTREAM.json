@@ -226,6 +226,10 @@
       "command": "cargo nextest run -p fret-examples --test virtual_list_stress_demo_surface virtual_list_stress_demo_keeps_fixed_row_text_on_roles --no-fail-fast"
     },
     {
+      "name": "canvas datagrid stress proof text roles",
+      "command": "cargo nextest run -p fret-examples --test canvas_datagrid_stress_demo_surface canvas_datagrid_stress_demo_keeps_header_text_on_readout_role --no-fail-fast"
+    },
+    {
       "name": "examples table proof bin check",
       "command": "cargo check -p fret-demo --bin table_demo --bin table_stress_demo"
     },
@@ -236,6 +240,10 @@
     {
       "name": "virtual-list stress proof bin check",
       "command": "cargo check -p fret-demo --bin virtual_list_stress_demo"
+    },
+    {
+      "name": "canvas datagrid stress proof bin check",
+      "command": "cargo check -p fret-demo --bin canvas_datagrid_stress_demo"
     },
     {
       "name": "imui design surface editor anchors",
@@ -455,6 +463,7 @@
     "apps/fret-examples/src/docking_arbitration_demo.rs",
     "apps/fret-examples/src/container_queries_docking_demo.rs",
     "apps/fret-examples/src/datatable_demo.rs",
+    "apps/fret-examples/src/canvas_datagrid_stress_demo.rs",
     "apps/fret-examples/src/virtual_list_stress_demo.rs",
     "apps/fret-examples/src/table_demo.rs",
     "apps/fret-examples/src/table_stress_demo.rs",
@@ -462,6 +471,7 @@
     "apps/fret-examples/tests/docking_arbitration_surface.rs",
     "apps/fret-examples/tests/container_queries_docking_surface.rs",
     "apps/fret-examples/tests/datatable_demo_surface.rs",
+    "apps/fret-examples/tests/canvas_datagrid_stress_demo_surface.rs",
     "apps/fret-examples/tests/virtual_list_stress_demo_surface.rs",
     "apps/fret-examples/tests/table_demo_surface.rs",
     "apps/fret-examples/tests/table_stress_demo_surface.rs",

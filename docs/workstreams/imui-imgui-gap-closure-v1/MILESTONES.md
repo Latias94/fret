@@ -347,6 +347,9 @@ Exit criteria:
   same fixed-row text contract for virtualized lists. The scroll/state header uses
   `text_control_readout(...)`, visible row labels use `text_list_row_label(...)`, and source gates
   reject the old bare `cx.text(header)` / row-label text path.
+  2026-05-17 canvas datagrid stress proof text result: `canvas_datagrid_stress_demo` now routes its
+  compact retained-canvas grid stats header through `text_control_readout(...)`, and source gates
+  reject the old bare `cx.text(header)` path above the fixed grid slot.
   2026-05-17 gallery retained-table torture text result: the UI Gallery retained-table torture page
   now uses `text_table_cell(...)` for fixed table cells and `control_readout_text(...)` for table
   state readouts, so the visible retained-table stress surface no longer teaches bare fixed-cell

@@ -372,6 +372,9 @@ Readiness order for the next locally testable review slices:
    compact scroll/state header through `text_control_readout(...)` and visible fixed-row labels
    through `text_list_row_label(...)`, so the runnable virtual-list stress surface no longer
    teaches bare default wrapping text inside fixed-height rows.
+   2026-05-17 canvas datagrid stress proof text follow-up: `canvas_datagrid_stress_demo` now routes
+   its compact canvas grid stats header through `text_control_readout(...)`, so the retained-canvas
+   grid stress proof no longer teaches bare default wrapping text above the fixed grid slot.
    2026-05-17 gallery retained-table torture text follow-up: the UI Gallery retained-table torture
    page now routes fixed cell text through `text_table_cell(...)` and table state/status readouts
    through `control_readout_text(...)`, leaving only explicitly multi-line/paragraph copy as bare

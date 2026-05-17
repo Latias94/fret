@@ -451,6 +451,8 @@ def main() -> None:
                 "apps/fret-examples/src/workspace_shell_demo.rs",
                 "apps/fret-examples/src/datatable_demo.rs",
                 "apps/fret-examples/tests/datatable_demo_surface.rs",
+                "apps/fret-examples/src/canvas_datagrid_stress_demo.rs",
+                "apps/fret-examples/tests/canvas_datagrid_stress_demo_surface.rs",
                 "apps/fret-examples/src/virtual_list_stress_demo.rs",
                 "apps/fret-examples/tests/virtual_list_stress_demo_surface.rs",
                 "apps/fret-examples/src/table_demo.rs",
@@ -8455,6 +8457,18 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-examples/src/canvas_datagrid_stress_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "fn canvas_datagrid_stress_readout_text<H: fret_ui::UiHost>(",
+                "decl_text::text_control_readout(cx, text)",
+                "canvas_datagrid_stress_readout_text(cx, header)",
+            ],
+            forbidden=[
+                "cx.text(header)",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-examples/src/table_stress_demo.rs"),
             required=[
                 "use fret_ui_kit::declarative::text as decl_text;",
@@ -8510,6 +8524,17 @@ def main() -> None:
                 "decl_text::text_list_row_label(cx,text)",
                 "cx.text(header)",
                 "vec![cx.text(Arc::<str>::from(format!(\\\"Row{id}(tall={tall_rows_enabled})\\\")))]",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/tests/canvas_datagrid_stress_demo_surface.rs"),
+            required=[
+                "fn canvas_datagrid_stress_demo_keeps_header_text_on_readout_role()",
+                "fncanvas_datagrid_stress_readout_text<H:fret_ui::UiHost>(",
+                "decl_text::text_control_readout(cx,text)",
+                "canvas_datagrid_stress_readout_text(cx,header)",
+                "cx.text(header)",
             ],
             forbidden=[],
         ),
