@@ -1,6 +1,20 @@
 use super::super::super::super::*;
 use fret::AppComponentCx;
 
+fn inspector_row_label_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
+where
+    T: Into<Arc<str>>,
+{
+    fret_ui_kit::declarative::text::text_list_row_label(cx, text)
+}
+
+fn inspector_row_value_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
+where
+    T: Into<Arc<str>>,
+{
+    doc_layout::control_readout_text(cx, text)
+}
+
 pub(in crate::ui) fn preview_inspector_torture(
     cx: &mut AppComponentCx<'_>,
     theme: &Theme,
@@ -46,8 +60,8 @@ pub(in crate::ui) fn preview_inspector_torture(
         let depth = (index % 8) as f32;
         let indent_px = Px(depth * 12.0);
 
-        let name = cx.text(format!("prop_{index}"));
-        let value = cx.text(format!("value {index}"));
+        let name = inspector_row_label_text(cx, format!("prop_{index}"));
+        let value = inspector_row_value_text(cx, format!("value {index}"));
 
         let spacer = cx.container(
             fret_ui::element::ContainerProps {

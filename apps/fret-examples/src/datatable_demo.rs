@@ -9,16 +9,31 @@ use fret_launch::{
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{
-    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
 };
-use fret_ui::{Invalidation, UiTree};
+use fret_ui::{ElementContext, Invalidation, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState, create_column_helper};
 use fret_ui_kit::{Space, ui};
 use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 use std::time::Instant;
+
+fn datatable_demo_readout_text<H: fret_ui::UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_control_readout(cx, text)
+}
+
+fn datatable_demo_cell_text<H: fret_ui::UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_table_cell(cx, text)
+}
 
 #[derive(Debug, Clone)]
 struct DemoRow {
@@ -256,9 +271,10 @@ fn render(_driver: &mut DataTableDemoDriver, context: WinitRenderContext<'_, Dem
                         .size(shadcn::ButtonSize::Sm)
                         .on_click(CommandId::from("datatable_demo.close"))
                         .into_element(cx),
-                    cx.text(Arc::from(format!(
-                        "DataTable | selected={selected} sort={sorting}"
-                    ))),
+                    datatable_demo_readout_text(
+                        cx,
+                        Arc::from(format!("DataTable | selected={selected} sort={sorting}")),
+                    ),
                 ]
             })
             .gap(Space::N2)
@@ -307,11 +323,11 @@ fn render(_driver: &mut DataTableDemoDriver, context: WinitRenderContext<'_, Dem
                             .unwrap_or_else(|| Arc::clone(&col.id))
                     },
                     |cx, col, row| match col.id.as_ref() {
-                        "id" => cx.text(Arc::from(row.id.to_string())),
-                        "name" => cx.text(Arc::clone(&row.name)),
-                        "role" => cx.text(Arc::clone(&row.role)),
-                        "score" => cx.text(Arc::from(row.score.to_string())),
-                        _ => cx.text(Arc::from("")),
+                        "id" => datatable_demo_cell_text(cx, Arc::from(row.id.to_string())),
+                        "name" => datatable_demo_cell_text(cx, Arc::clone(&row.name)),
+                        "role" => datatable_demo_cell_text(cx, Arc::clone(&row.role)),
+                        "score" => datatable_demo_cell_text(cx, Arc::from(row.score.to_string())),
+                        _ => datatable_demo_cell_text(cx, Arc::from("")),
                     },
                 );
 

@@ -1,20 +1,15 @@
 use fret_app::{App, Model};
 use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
-use fret_ui::element::{Length, TextProps};
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
+use super::text_roles;
 use crate::spec::*;
 
 fn flex_row_wrap_label(cx: &mut ElementContext<'_, App>, text: &'static str) -> AnyElement {
-    let mut props = TextProps::new(text);
-    props.layout.flex.grow = 1.0;
-    props.layout.flex.shrink = 1.0;
-    props.layout.flex.basis = Length::Px(Px(0.0));
-    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
-    cx.text_props(props)
+    text_roles::chrome_control_label(cx, text)
 }
 
 fn switch_row(
@@ -152,18 +147,21 @@ pub(super) fn push_settings_sheet(
                                     ])
                                     .into_element(cx),
                                     shadcn::Separator::new().into_element(cx),
-                                    cx.text("Menu bar surfaces"),
+                                    text_roles::chrome_section_label(cx, "Menu bar surfaces"),
                                     os_select,
                                     in_window_select,
-                                    cx.text("Text"),
+                                    text_roles::chrome_section_label(cx, "Text"),
                                     text_common_fallback_injection_select,
-                                    cx.text("Chrome"),
+                                    text_roles::chrome_section_label(cx, "Chrome"),
                                     switch_row(
                                         cx,
                                         chrome_show_workspace_tab_strip_switch,
                                         "Workspace tabs in the top bar",
                                     ),
-                                    cx.text("Command availability (debug)"),
+                                    text_roles::chrome_section_label(
+                                        cx,
+                                        "Command availability (debug)",
+                                    ),
                                     switch_row(
                                         cx,
                                         edit_can_undo_switch,

@@ -360,6 +360,63 @@ Readiness order for the next locally testable review slices:
    2026-05-17 retained table text follow-up: retained table headers plus grouped row label and
    aggregation text now route through `text_table_cell(...)`, keeping fixed table cells on the
    shared single-line ellipsis role outside the IMUI-specific table wrapper.
+   2026-05-17 examples table proof text follow-up: `table_demo` and `table_stress_demo` now route
+   fixed header/status readouts through `text_control_readout(...)` and fixed table header/body
+   cells through `text_table_cell(...)`, so the runnable table proof surfaces no longer teach bare
+   default wrapping text inside fixed table rows.
+   2026-05-17 datatable proof text follow-up: `datatable_demo` now routes its compact selected/sort
+   status line through `text_control_readout(...)` and its DataTable body cells through
+   `text_table_cell(...)`, keeping the shadcn data-table proof aligned with the same fixed-row
+   text semantics as the lower-level table demos.
+   2026-05-17 virtual-list stress proof text follow-up: `virtual_list_stress_demo` now routes its
+   compact scroll/state header through `text_control_readout(...)` and visible fixed-row labels
+   through `text_list_row_label(...)`, so the runnable virtual-list stress surface no longer
+   teaches bare default wrapping text inside fixed-height rows.
+   2026-05-17 canvas datagrid stress proof text follow-up: `canvas_datagrid_stress_demo` now routes
+   its compact canvas grid stats header through `text_control_readout(...)`, so the retained-canvas
+   grid stress proof no longer teaches bare default wrapping text above the fixed grid slot.
+   2026-05-17 gallery retained-table torture text follow-up: the UI Gallery retained-table torture
+   page now routes fixed cell text through `text_table_cell(...)` and table state/status readouts
+   through `control_readout_text(...)`, leaving only explicitly multi-line/paragraph copy as bare
+   prose.
+   2026-05-17 gallery data-table torture text follow-up: the UI Gallery DataTable torture page now
+   routes both retained and non-retained fixed cell renderers through `text_table_cell(...)`, and
+   table sorting/filter/pinning status lines through `control_readout_text(...)`.
+   2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
+   virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
+   `control_readout_text(...)`.
+   2026-05-17 gallery data paragraph text follow-up: DataGrid/DataTable/Tree Torture explanatory
+   header copy now routes through `paragraph_text(...)`, backed by shared `text_paragraph(...)`,
+   instead of default `cx.text(...)`.
+   2026-05-17 gallery inspector torture text follow-up: the UI Gallery Inspector Torture page now
+   routes fixed virtual-row property labels through `text_list_row_label(...)` and fixed row values
+   through `control_readout_text(...)`.
+   2026-05-17 gallery virtual-list torture text follow-up: UI Gallery virtual-list harness row
+   labels now use `text_list_row_label(...)`, row detail/editing readouts use
+   `control_readout_text(...)`, and the UI Kit list torture custom row renderer also routes item
+   labels through `text_list_row_label(...)`.
+   2026-05-17 gallery harness header text follow-up: retained-table, hit-test, UI Kit list,
+   virtual-list, and view-cache harness headers now route explanatory copy through
+   `paragraph_text(...)` and mode/status lines through `control_readout_text(...)` instead of bare
+   `cx.text(...)`.
+   2026-05-17 gallery view-cache list text follow-up: the UI Gallery View Cache torture page now
+   routes its cached inner virtual-list row labels through `text_list_row_label(...)`.
+   2026-05-17 gallery view-cache control-label follow-up: fixed switch labels now route through
+   `control_label_text(...)` instead of bare `cx.text(...)`.
+   2026-05-17 gallery view-cache popover body follow-up: the cached Popover body copy now routes
+   through `paragraph_text(...)` instead of bare `cx.text(...)`.
+   2026-05-17 gallery tree torture status text follow-up: the UI Gallery Tree Torture dynamic
+   target status now routes through `control_readout_text(...)` instead of carrying local
+   muted/text-sm styling.
+   2026-05-17 gallery overlay status text follow-up: overlay and menu last-action/status flags now
+   route through `control_readout_text(...)` instead of bare `cx.text(...)`.
+   2026-05-17 gallery overlay scroll-row text follow-up: dialog/sheet/portal scroll filler rows
+   now route through `text_list_row_label(...)` instead of bare `cx.text(...)`.
+   2026-05-17 gallery overlay body prose follow-up: HoverCard and Popover body copy now route
+   through `paragraph_text(...)` instead of bare `cx.text(...)`.
+   2026-05-17 gallery chrome torture control-label follow-up: the fixed text-input/textarea
+   labels now route through `control_label_text(...)`, backed by shared `text_control_label(...)`,
+   instead of bare `cx.text(...)`.
    2026-05-17 virtual row fallback follow-up: tree and file-tree virtualizer out-of-range fallback
    paths now use spacer placeholders instead of empty text nodes, removing another fixed-row
    `Text` escape hatch.
@@ -369,6 +426,47 @@ Readiness order for the next locally testable review slices:
    2026-05-17 gallery app-sidebar collapsed placeholder follow-up: the copyable app-sidebar snippet
    now uses a spacer placeholder for collapsed project groups instead of teaching `cx.text("")` as
    a layout placeholder.
+   2026-05-17 fret-ui-ai empty placeholder follow-up: hidden/missing-content AI element fallbacks
+   now use a crate-local spacer helper instead of returning empty text nodes, without widening
+   `fret-imui`.
+   2026-05-17 gallery status-bar readout follow-up: UI Gallery status-bar metrics,
+   inspector-state, and last-action text now route through
+   `driver::text_roles::chrome_readout_text(...)`, backed by `text_control_readout(...)` instead
+   of bare `cx.text(...)`, keeping fixed status chrome single-line and shrinkable under resize.
+   2026-05-17 gallery driver chrome text follow-up: UI Gallery driver chrome now has a small
+   `driver::text_roles` owner. Disabled tabs/sidebar/content placeholders use the shared
+   control-readout role, and settings-sheet section labels use the shared section-chrome role
+   instead of bare `cx.text(...)`.
+   2026-05-17 gallery driver chrome label follow-up: the nav title now uses section-chrome text,
+   and settings-sheet switch captions use control-label text through `driver::text_roles` instead
+   of local `TextProps` policy.
+   2026-05-17 gallery minimal-root text follow-up: the `BISECT_MINIMAL_ROOT` diagnostic root now
+   routes its placeholder readout through `driver::text_roles::chrome_readout_text(...)` instead
+   of bare `cx.text(...)`, so resize bisect surfaces do not teach default wrapping text.
+   2026-05-17 gallery debug-HUD text follow-up: fixed-size debug HUD lines now route through
+   `driver::text_roles::chrome_readout_text(...)` instead of local word-wrapping `TextProps`, so
+   long metric/readout lines truncate rather than growing HUD row height under resize.
+   2026-05-17 gallery shell content/nav text follow-up: the page header title/source and sidebar
+   group headings now route through shared chrome/readout roles instead of local `TextProps`,
+   keeping app-shell text policy centralized while staying outside `fret-imui`.
+   2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
+   headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
+   through `control_readout_text(...)`, and custom pointer-region labels through
+   `button_label_text(...)`. This keeps resize-sensitive editor proof chrome on the shared
+   role vocabulary without adding a public `TextRole` enum or moving policy into `fret-imui`.
+   2026-05-17 code-editor IME gate button-label follow-up: code-editor MVP IME gate actions now
+   route their custom pointer-region labels through `button_label_text(...)`, and both the gallery
+   source test and IMUI workstream source gate forbid those fixed action labels from returning to
+   bare `cx.text(...)`.
+   2026-05-17 docking arbitration text-role follow-up: `docking_arbitration_demo` now routes
+   Popover body copy through a local paragraph helper and state/debug status lines through a local
+   readout helper backed by `text_control_readout(...)`. A source test and IMUI workstream source
+   gate prevent the docking proof from returning to bare `cx.text(...)`.
+   2026-05-17 docking/container-query panel text follow-up: `docking_demo` and
+   `container_queries_docking_demo` now route fixed panel labels, readouts, and placeholders through
+   local helpers backed by shared list-row, control-readout, and button-label text roles. Focused
+   source tests plus the IMUI workstream source gate keep those resize-sensitive panel demos from
+   returning to bare `cx.text(...)`.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

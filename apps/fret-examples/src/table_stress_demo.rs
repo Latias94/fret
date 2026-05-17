@@ -9,10 +9,11 @@ use fret_render::{Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{
-    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
 };
-use fret_ui::{Invalidation, UiTree, VirtualListScrollHandle};
+use fret_ui::{ElementContext, Invalidation, UiTree, VirtualListScrollHandle};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::headless::table::{
     ColumnDef, ColumnFilter, ColumnPinningState, RowKey, SortSpec, TableState,
     contains_ascii_case_insensitive, create_column_helper,
@@ -53,6 +54,20 @@ fn parse_env_bool(key: &str) -> Option<bool> {
             _ => None,
         }
     })
+}
+
+fn table_stress_readout_text<H: fret_ui::UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_control_readout(cx, text)
+}
+
+fn table_stress_cell_text<H: fret_ui::UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_table_cell(cx, text)
 }
 
 #[derive(Debug, Clone)]
@@ -603,7 +618,7 @@ fn render(
                                 },
                                 move |cx| {
                                     vec![
-                                        cx.text(header),
+                                        table_stress_readout_text(cx, header),
                                         cx.container(
                                             ContainerProps {
                                                 layout: table_slot,
@@ -668,7 +683,7 @@ fn render(
                                                         } else {
                                                             label_base
                                                         };
-                                                        vec![cx.text(label)]
+                                                        vec![table_stress_cell_text(cx, label)]
                                                     },
                                                     |cx, row, col| {
                                                         let text: Arc<str> = match col.id.as_ref() {
@@ -678,7 +693,7 @@ fn render(
                                                             "score" => row.original.score_text.clone(),
                                                             _ => empty_text.clone(),
                                                         };
-                                                        vec![cx.text(text)]
+                                                        vec![table_stress_cell_text(cx, text)]
                                                     },
                                                     None,
                                                     table_debug_ids,

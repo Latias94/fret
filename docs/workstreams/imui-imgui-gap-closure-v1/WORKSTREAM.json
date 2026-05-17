@@ -214,6 +214,38 @@
       "command": "cargo check -p fret-examples"
     },
     {
+      "name": "examples table proof text roles",
+      "command": "cargo nextest run -p fret-examples --test table_demo_surface table_demo_keeps_fixed_table_text_on_roles --test table_stress_demo_surface table_stress_demo_keeps_fixed_table_text_on_roles --no-fail-fast"
+    },
+    {
+      "name": "datatable proof text roles",
+      "command": "cargo nextest run -p fret-examples --test datatable_demo_surface datatable_demo_keeps_fixed_table_text_on_roles --no-fail-fast"
+    },
+    {
+      "name": "virtual-list stress proof text roles",
+      "command": "cargo nextest run -p fret-examples --test virtual_list_stress_demo_surface virtual_list_stress_demo_keeps_fixed_row_text_on_roles --no-fail-fast"
+    },
+    {
+      "name": "canvas datagrid stress proof text roles",
+      "command": "cargo nextest run -p fret-examples --test canvas_datagrid_stress_demo_surface canvas_datagrid_stress_demo_keeps_header_text_on_readout_role --no-fail-fast"
+    },
+    {
+      "name": "examples table proof bin check",
+      "command": "cargo check -p fret-demo --bin table_demo --bin table_stress_demo"
+    },
+    {
+      "name": "datatable proof crate check",
+      "command": "cargo check -p fret-examples"
+    },
+    {
+      "name": "virtual-list stress proof bin check",
+      "command": "cargo check -p fret-demo --bin virtual_list_stress_demo"
+    },
+    {
+      "name": "canvas datagrid stress proof bin check",
+      "command": "cargo check -p fret-demo --bin canvas_datagrid_stress_demo"
+    },
+    {
       "name": "imui design surface editor anchors",
       "command": "rg -n \"EditorThemePresetV1|ImguiLikeDense|install_editor_theme_preset_v1|reapply_installed_editor_theme_preset_v1\" ecosystem/fret-ui-editor/src/theme.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs"
     },
@@ -427,11 +459,53 @@
     "apps/fret-examples/src/imui_editor_proof_demo/collection.rs",
     "apps/fret-examples/src/workspace_shell_demo.rs",
     "apps/fret-examples/src/editor_notes_demo.rs",
+    "apps/fret-examples/src/docking_demo.rs",
+    "apps/fret-examples/src/docking_arbitration_demo.rs",
+    "apps/fret-examples/src/container_queries_docking_demo.rs",
+    "apps/fret-examples/src/datatable_demo.rs",
+    "apps/fret-examples/src/canvas_datagrid_stress_demo.rs",
+    "apps/fret-examples/src/virtual_list_stress_demo.rs",
+    "apps/fret-examples/src/table_demo.rs",
+    "apps/fret-examples/src/table_stress_demo.rs",
+    "apps/fret-examples/tests/docking_demo_surface.rs",
+    "apps/fret-examples/tests/docking_arbitration_surface.rs",
+    "apps/fret-examples/tests/container_queries_docking_surface.rs",
+    "apps/fret-examples/tests/datatable_demo_surface.rs",
+    "apps/fret-examples/tests/canvas_datagrid_stress_demo_surface.rs",
+    "apps/fret-examples/tests/virtual_list_stress_demo_surface.rs",
+    "apps/fret-examples/tests/table_demo_surface.rs",
+    "apps/fret-examples/tests/table_stress_demo_surface.rs",
+    "apps/fret-ui-gallery/src/driver/chrome.rs",
+    "apps/fret-ui-gallery/src/driver/shell.rs",
+    "apps/fret-ui-gallery/src/driver/settings_sheet.rs",
     "apps/fret-ui-gallery/src/driver/toaster.rs",
+    "apps/fret-ui-gallery/src/driver/status_bar.rs",
+    "apps/fret-ui-gallery/src/driver/text_roles.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/torture/chrome_torture.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/harness/hit_test_torture.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/harness/ui_kit_list_torture.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/harness/view_cache.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/harness/virtual_list_torture.rs",
+    "apps/fret-ui-gallery/src/ui/previews/gallery/overlays/menus.rs",
+    "apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/flags.rs",
+    "apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/widgets.rs",
     "apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs",
+    "apps/fret-ui-gallery/src/ui/previews/gallery/data/data_grid.rs",
+    "apps/fret-ui-gallery/src/ui/previews/gallery/data/table_torture.rs",
+    "apps/fret-ui-gallery/src/ui/previews/gallery/data/tree_torture.rs",
+    "apps/fret-ui-gallery/src/ui/previews/gallery/torture/inspector_torture.rs",
+    "apps/fret-ui-gallery/src/ui/previews/gallery/torture/table_retained_torture.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/mvp/gates.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/mvp/header.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/torture.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/editors/markdown.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/editors/web_ime.rs",
     "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
+    "apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs",
     "apps/fret-ui-gallery/src/ui/doc_layout.rs",
     "apps/fret-ui-gallery/tests/code_editor_control_readout_surface.rs",
+    "ecosystem/fret-ui-ai/src/elements/mod.rs",
+    "ecosystem/fret-ui-ai/src/surface_policy_tests.rs",
     "tools/gate_imui_workstream_source.py",
     "repo-ref/imgui/imgui.h",
     "repo-ref/imgui/imgui.cpp",

@@ -325,9 +325,9 @@ pub(in crate::ui) fn preview_code_editor_torture(
             let header_handle_controls = header_handle.clone();
             let header_handle_mode = header_handle.clone();
             vec![
-                cx.text("Goal: stress scroll stability + bounded text caching for the windowed code editor."),
-                cx.text("Expect: auto-scroll bounce; line prefixes must stay consistent (no stale paint)."),
-                cx.text("Note: with soft wrap enabled, continuation rows may start mid-token (the numeric prefix does not repeat)."),
+                doc_layout::paragraph_text(cx, "Goal: stress scroll stability + bounded text caching for the windowed code editor."),
+                doc_layout::paragraph_text(cx, "Expect: auto-scroll bounce; line prefixes must stay consistent (no stale paint)."),
+                doc_layout::paragraph_text(cx, "Note: with soft wrap enabled, continuation rows may start mid-token (the numeric prefix does not repeat)."),
                 ui::h_row(move |cx| {
                         vec![
                             shadcn::Switch::new(syntax_rust.clone())

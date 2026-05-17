@@ -5,6 +5,13 @@ use fret::UiChild;
 use super::OverlayModels;
 use fret_core::Color;
 
+fn overlay_scroll_row_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
+where
+    T: Into<Arc<str>>,
+{
+    fret_ui_kit::declarative::text::text_list_row_label(cx, text)
+}
+
 // Typed helper shells: these helpers may still lower to overlay/provider roots internally because
 // the current shadcn root APIs land concrete elements, but the gallery preview no longer stores a
 // landed widget inventory just to lay them out.
@@ -249,8 +256,8 @@ pub(super) fn hover_card(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     use std::time::Duration;
 
     let hover_card_content = shadcn::HoverCardContent::new(vec![
-        cx.text("HoverCard content (overlay-root)"),
-        cx.text("Move pointer from trigger to content."),
+        doc_layout::paragraph_text(cx, "HoverCard content (overlay-root)"),
+        doc_layout::paragraph_text(cx, "Move pointer from trigger to content."),
     ])
     .test_id("ui-gallery-hovercard-content")
     .into_element(cx);
@@ -353,7 +360,12 @@ pub(super) fn dialog(_cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> im
                 {
                     let body = ui::v_flex(|cx| {
                         (0..64)
-                            .map(|i| cx.text(format!("Scrollable content line {}", i + 1)))
+                            .map(|i| {
+                                overlay_scroll_row_text(
+                                    cx,
+                                    format!("Scrollable content line {}", i + 1),
+                                )
+                            })
                             .collect::<Vec<_>>()
                     })
                     .gap(Space::N2)
@@ -430,7 +442,12 @@ pub(super) fn dialog_glass(
                 {
                     let body = ui::v_flex(|cx| {
                         (0..64)
-                            .map(|i| cx.text(format!("Scrollable content line {}", i + 1)))
+                            .map(|i| {
+                                overlay_scroll_row_text(
+                                    cx,
+                                    format!("Scrollable content line {}", i + 1),
+                                )
+                            })
                             .collect::<Vec<_>>()
                     })
                     .gap(Space::N2)
@@ -532,7 +549,9 @@ pub(super) fn sheet(_cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> imp
                 {
                     let body = ui::v_flex(|cx| {
                         (0..96)
-                            .map(|i| cx.text(format!("Sheet body line {}", i + 1)))
+                            .map(|i| {
+                                overlay_scroll_row_text(cx, format!("Sheet body line {}", i + 1))
+                            })
                             .collect::<Vec<_>>()
                     })
                     .gap(Space::N2)
@@ -601,8 +620,8 @@ pub(super) fn portal_geometry(
                     .into_element(cx);
 
                 shadcn::PopoverContent::new(vec![
-                    cx.text("Popover content (placement + clamp)"),
-                    cx.text("Wheel-scroll the viewport while open."),
+                    doc_layout::paragraph_text(cx, "Popover content (placement + clamp)"),
+                    doc_layout::paragraph_text(cx, "Wheel-scroll the viewport while open."),
                     close,
                 ])
                 .refine_layout(LayoutRefinement::default().w_px(Px(360.0)).h_px(Px(220.0)))
@@ -615,7 +634,7 @@ pub(super) fn portal_geometry(
         );
 
     let items = (1..=48)
-        .map(|i| cx.text(format!("Scroll item {i:02}")))
+        .map(|i| overlay_scroll_row_text(cx, format!("Scroll item {i:02}")))
         .collect::<Vec<_>>();
 
     let body = ui::v_stack(|_cx| {

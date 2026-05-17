@@ -2,6 +2,13 @@ use super::super::super::super::*;
 use fret::{AppComponentCx, app::AppRenderActionsExt};
 use fret_ui_kit::declarative::ModelWatchExt as _;
 
+fn data_table_torture_cell_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
+where
+    T: Into<Arc<str>>,
+{
+    fret_ui_kit::declarative::text::text_table_cell(cx, text)
+}
+
 pub(in crate::ui) fn preview_data_table_torture(
     cx: &mut AppComponentCx<'_>,
     theme: &Theme,
@@ -205,33 +212,33 @@ pub(in crate::ui) fn preview_data_table_torture(
 
     let header = ui::v_flex(move |cx| {
             vec![
-                cx.text("Goal: baseline perf harness for a virtualized business table (TanStack-aligned headless engine + VirtualList)."),
-                cx.text("Use scripted scroll + bundle stats to validate cache-root reuse and prepaint-driven windowing refactors."),
-                cx.text(sorting_text.as_ref()).attach_semantics(
+                doc_layout::paragraph_text(cx, "Goal: baseline perf harness for a virtualized business table (TanStack-aligned headless engine + VirtualList)."),
+                doc_layout::paragraph_text(cx, "Use scripted scroll + bundle stats to validate cache-root reuse and prepaint-driven windowing refactors."),
+                doc_layout::control_readout_text(cx, sorting_text.clone()).attach_semantics(
                     SemanticsDecoration::default()
                         .role(fret_core::SemanticsRole::Text)
                         .label(sorting_text.clone())
                         .test_id("ui-gallery-data-table-torture-sorting"),
                 ),
-                cx.text(pinning_text.as_ref()).attach_semantics(
+                doc_layout::control_readout_text(cx, pinning_text.clone()).attach_semantics(
                     SemanticsDecoration::default()
                         .role(fret_core::SemanticsRole::Text)
                         .label(pinning_text.clone())
                         .test_id("ui-gallery-data-table-torture-pinning"),
                 ),
-                cx.text(global_filter_text.as_ref()).attach_semantics(
+                doc_layout::control_readout_text(cx, global_filter_text.clone()).attach_semantics(
                     SemanticsDecoration::default()
                         .role(fret_core::SemanticsRole::Text)
                         .label(global_filter_text.clone())
                         .test_id("ui-gallery-data-table-torture-global-filter"),
                 ),
-                cx.text(name_filter_text.as_ref()).attach_semantics(
+                doc_layout::control_readout_text(cx, name_filter_text.clone()).attach_semantics(
                     SemanticsDecoration::default()
                         .role(fret_core::SemanticsRole::Text)
                         .label(name_filter_text.clone())
                         .test_id("ui-gallery-data-table-torture-name-filter"),
                 ),
-                cx.text(status_filter_text.as_ref()).attach_semantics(
+                doc_layout::control_readout_text(cx, status_filter_text.clone()).attach_semantics(
                     SemanticsDecoration::default()
                         .role(fret_core::SemanticsRole::Text)
                         .label(status_filter_text.clone())
@@ -300,8 +307,8 @@ pub(in crate::ui) fn preview_data_table_torture(
                                 if variable_height && row.id % 15 == 0 {
                                     ui::v_stack(|cx| {
                                         vec![
-                                            cx.text(row.name.as_ref()),
-                                            cx.text(format!(
+                                            data_table_torture_cell_text(cx, row.name.clone()),
+                                            doc_layout::control_readout_text(cx, format!(
                                                 "Details: id={} cpu={} mem={}",
                                                 row.id, row.cpu, row.mem_mb
                                             )),
@@ -310,13 +317,15 @@ pub(in crate::ui) fn preview_data_table_torture(
                                     .gap(Space::N0)
                                     .into_element(cx)
                                 } else {
-                                    cx.text(row.name.as_ref())
+                                    data_table_torture_cell_text(cx, row.name.clone())
                                 }
                             }
-                            "status" => cx.text(row.status.as_ref()),
-                            "cpu%" => cx.text(format!("{}%", row.cpu)),
-                            "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
-                            _ => cx.text("?"),
+                            "status" => data_table_torture_cell_text(cx, row.status.clone()),
+                            "cpu%" => data_table_torture_cell_text(cx, format!("{}%", row.cpu)),
+                            "mem_mb" => {
+                                data_table_torture_cell_text(cx, format!("{} MB", row.mem_mb))
+                            }
+                            _ => data_table_torture_cell_text(cx, "?"),
                         },
                     )
             } else {
@@ -352,8 +361,8 @@ pub(in crate::ui) fn preview_data_table_torture(
                                 if variable_height && row.id % 15 == 0 {
                                     ui::v_stack(|cx| {
                                         vec![
-                                            cx.text(row.name.as_ref()),
-                                            cx.text(format!(
+                                            data_table_torture_cell_text(cx, row.name.clone()),
+                                            doc_layout::control_readout_text(cx, format!(
                                                 "Details: id={} cpu={} mem={}",
                                                 row.id, row.cpu, row.mem_mb
                                             )),
@@ -362,13 +371,15 @@ pub(in crate::ui) fn preview_data_table_torture(
                                     .gap(Space::N0)
                                     .into_element(cx)
                                 } else {
-                                    cx.text(row.name.as_ref())
+                                    data_table_torture_cell_text(cx, row.name.clone())
                                 }
                             }
-                            "status" => cx.text(row.status.as_ref()),
-                            "cpu%" => cx.text(format!("{}%", row.cpu)),
-                            "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
-                            _ => cx.text("?"),
+                            "status" => data_table_torture_cell_text(cx, row.status.clone()),
+                            "cpu%" => data_table_torture_cell_text(cx, format!("{}%", row.cpu)),
+                            "mem_mb" => {
+                                data_table_torture_cell_text(cx, format!("{} MB", row.mem_mb))
+                            }
+                            _ => data_table_torture_cell_text(cx, "?"),
                         },
                     )
             };

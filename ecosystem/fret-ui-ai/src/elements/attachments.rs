@@ -845,7 +845,7 @@ impl AttachmentPreview {
                 remove_test_id: None,
             })
         }) else {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         };
 
         let theme = Theme::global(&*cx.app).clone();
@@ -1007,12 +1007,12 @@ impl AttachmentInfo {
                 remove_test_id: None,
             })
         }) else {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         };
 
         let variant = self.variant.unwrap_or(parts.variant());
         if variant == AttachmentVariant::Grid {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         }
 
         let theme = Theme::global(&*cx.app).clone();
@@ -1184,7 +1184,7 @@ impl AttachmentRemove {
             .on_remove
             .or_else(|| parts.as_ref().and_then(|p| p.on_remove.clone()));
         let Some(on_remove) = on_remove else {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         };
 
         let theme = Theme::global(&*cx.app).clone();
@@ -1194,7 +1194,7 @@ impl AttachmentRemove {
             .clone()
             .or_else(|| parts.as_ref().map(|p| p.data().id().clone()));
         let Some(id) = id else {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         };
         let label = self.label.clone();
         let mut btn = Button::new("")
