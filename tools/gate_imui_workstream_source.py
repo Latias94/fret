@@ -409,6 +409,7 @@ def main() -> None:
                 "ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs",
                 "ecosystem/fret-ui-kit/src/declarative/text.rs",
                 "ecosystem/fret-ui-kit/src/declarative/file_tree.rs",
+                "ecosystem/fret-ui-kit/src/declarative/table.rs",
                 "ecosystem/fret-ui-kit/src/imui/control_chrome.rs",
                 "ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs",
                 "ecosystem/fret-ui-kit/src/imui/menu_controls.rs",
@@ -804,6 +805,7 @@ def main() -> None:
                 "`ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs`",
                 "`ecosystem/fret-ui-kit/src/declarative/text.rs`",
                 "`ecosystem/fret-ui-kit/src/declarative/file_tree.rs`",
+                "`ecosystem/fret-ui-kit/src/declarative/table.rs`",
                 "`ecosystem/fret-ui-kit/src/imui/control_chrome.rs`",
                 "`ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs`",
                 "`ecosystem/fret-ui-kit/src/imui/menu_controls.rs`",
@@ -852,6 +854,7 @@ def main() -> None:
                 "control_readout_text_uses_muted_compact_single_line_truncation",
                 "routed sortable and plain IMUI table header labels through",
                 "table_header_label_uses_shared_table_cell_text_role",
+                "retained_table_text_uses_shared_table_cell_role",
                 "added static table column visibility through",
                 "`TableColumn::hidden()` and",
                 "hidden_table_columns_do_not_render_header_body_or_response",
@@ -1017,6 +1020,22 @@ def main() -> None:
             forbidden=[
                 "crate::ui::text(icon).flex_shrink_0()",
                 "crate::ui::text(entry.label.as_ref())",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/declarative/table.rs"),
+            required=[
+                "fn table_cell_text",
+                "crate::declarative::text::text_table_cell(cx, text)",
+                "retained_table_text_uses_shared_table_cell_role",
+                "table_cell_text(\n                                                                    _cx,\n                                                                    header_text.clone(),",
+                "vec![table_cell_text(cx, text.clone())]",
+                "v.map(|v| vec![table_cell_text(cx, v)])",
+            ],
+            forbidden=[
+                "move |_cx| vec![_cx.text(header_text.as_ref())]",
+                "vec![cx.text(text.clone())]",
+                "v.map(|v| vec![cx.text(v)])",
             ],
         ),
         SourceCheck(

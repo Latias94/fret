@@ -357,6 +357,9 @@ Readiness order for the next locally testable review slices:
    2026-05-17 file tree text follow-up: `file_tree_view_retained_v0(...)`, the retained workspace
    file-tree surface, now routes fixed row icons through `text_chrome_glyph(...)` and file labels
    through `text_list_row_label(...)` instead of hand-rolling text truncation inside fixed rows.
+   2026-05-17 retained table text follow-up: retained table headers plus grouped row label and
+   aggregation text now route through `text_table_cell(...)`, keeping fixed table cells on the
+   shared single-line ellipsis role outside the IMUI-specific table wrapper.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

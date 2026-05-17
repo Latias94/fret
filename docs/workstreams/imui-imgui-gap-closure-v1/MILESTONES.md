@@ -331,6 +331,9 @@ Exit criteria:
   2026-05-17 file tree text result: `file_tree_view_retained_v0(...)` now routes fixed row icons
   through `text_chrome_glyph(...)` and file labels through `text_list_row_label(...)` instead of
   hand-rolling `ui::text(...).truncate()` inside the fixed-height row.
+  2026-05-17 retained table text result: `table_virtualized_retained_v0(...)` and grouped table
+  row text now route retained header labels, grouped row labels, and aggregation values through
+  `text_table_cell(...)` instead of bare `cx.text(...)` inside fixed table cells.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.
