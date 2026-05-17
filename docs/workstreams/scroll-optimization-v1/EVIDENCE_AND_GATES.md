@@ -284,6 +284,57 @@ Layout side-effect / geometry-propagation contract diagnostics slice (2026-05-17
   - `cargo fmt --check`
     - Result: passed.
 
+Per-solve clean-geometry rejection attribution refresh (2026-05-17):
+
+- Evidence before per-solve attribution:
+  `target/fret-diag/local-next-clean-geometry-rejections-20260517-r1/1778978609337/bundle.schema2.json`
+- Evidence after per-solve attribution:
+  `target/fret-diag/local-next-clean-geometry-rejections-20260517-r2/1778979436452/bundle.schema2.json`
+- Command shape:
+  - `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
+  - repeat `1`, warmup `5`, standard prewarm/prelude hooks, overlay disabled, view-cache shell
+    enabled, code-editor paint perf enabled, scroll/layout profiling enabled.
+  - Launch command: `cargo run -p fret-ui-gallery --release --features gallery-full`.
+- Mechanism anchors:
+  - `crates/fret-ui/src/tree/debug/layout.rs`
+    (`UiDebugLayoutEngineSolve::clean_geometry_solve_skip_rejection`)
+  - `crates/fret-ui/src/tree/layout/node.rs`
+    (`debug_record_clean_geometry_solve_skip_rejection`)
+  - `crates/fret-ui/src/tree/ui_tree_debug/record.rs`
+    (`debug_record_layout_engine_solve`)
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics/layout_paint_hotspot_diagnostics.rs`
+    (`UiLayoutEngineSolveV1::clean_geometry_solve_skip_rejection`)
+- Result:
+  - r2 top frame: `total=1257us`, `layout=632us`, `layout_engine_solve=306us`,
+    `layout_engine_solves=4`.
+  - View-cache and editor guardrails stay stable: `top_view_cache_roots_reused=1`,
+    `top_view_cache_roots_needs_rerender=0`, row replay/store `289/0`, row replay hit rate `100%`.
+  - Per-solve rejection attribution:
+    - content `Semantics` solve `180/173/162us`: `unsupported_kind`, blocker `Container`,
+      `subtree_nodes=136`, `flex_wrap_patch_wrap_nodes=1`;
+    - root `Stack` solve `134/130/128us`: `unsupported_kind`, blocker `Container`,
+      `subtree_nodes=102`, `flex_wrap_patch_wrap_nodes=0`;
+    - nav `Container` solve `28us`: `unsupported_kind`, blocker `Container`;
+    - editor `PointerRegion` solve `3-4us`: `unsupported_kind`, blocker `Canvas`;
+    - root `Scroll` solve `0us`: `side_effect_boundary`, blocker `Scroll`.
+- Focused gates:
+  - `cargo nextest run -p fret-ui layout_engine --no-fail-fast`
+    - Result: `18/18` passed.
+  - `cargo nextest run -p fret-ui scroll --no-fail-fast`
+    - Result: `153/153` passed.
+  - `cargo check -p fret-bootstrap --features ui-app-driver,diagnostics`
+    - Result: passed.
+  - `cargo fmt --check`
+    - Result: passed.
+- Decision:
+  - Do not use RTX4090 closeout as the completion condition for this local slice.
+  - Do not start with `Canvas`; the measured solve is too small for the next primary owner.
+  - Do not skip `Scroll`; its side-effect boundary is authoritative and the measured root solve is
+    `0us` in this sample.
+  - The next candidate is a conservative `Container` geometry contract. Even if that lands,
+    `Semantics` may immediately expose the known wrap-flex blocker, so the next patch should be
+    proof-first and evidence-driven rather than a broad whitelist expansion.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:

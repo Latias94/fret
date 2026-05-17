@@ -129,6 +129,27 @@ Status: Active
   - Guardrails locked: `ViewCache` remains `unsupported_kind`, wrapped flex reports `flex_wrap`,
     and successful clean skips keep the rejection counter at `0`. This intentionally does not widen
     the fast path to `ViewCache`, `VirtualList`, wrap flex, or `Canvas`.
+- [x] Attach clean-geometry solve-skip rejections to individual layout-engine solve records.
+  - Fresh local no-4090 resize-jitter evidence before per-solve attribution:
+    `target/fret-diag/local-next-clean-geometry-rejections-20260517-r1/1778978609337/bundle.schema2.json`.
+  - Fresh local no-4090 resize-jitter evidence after per-solve attribution:
+    `target/fret-diag/local-next-clean-geometry-rejections-20260517-r2/1778979436452/bundle.schema2.json`.
+  - Result: the worst changing-bounds solves now carry their own rejection reason/kind instead of
+    relying on the frame-level first rejection only. The large `Semantics` and root `Stack` solves
+    are blocked first by `unsupported_kind=Container`; the editor `PointerRegion -> Canvas` solve is
+    only `3-4us`, and root `Scroll` rejection is a `side_effect_boundary` with `0us` solve time.
+  - Decision: the next optimization candidate is a conservative `Container` geometry contract. Do
+    not start with `Canvas` or a root `Scroll` skip from this evidence.
+- [ ] Prototype a conservative `Container` clean-geometry contract.
+  - Accept only a provable subset: static children, px spacing/insets, nonnegative border widths,
+    definite/fill width behavior whose child content rect can be derived from previous geometry, and
+    height semantics that do not depend on reflow.
+  - Reject absolute children, non-px/fractional insets without a stable basis, auto-height cases
+    that can change child flow, and any side-effectful descendant boundary not already covered by
+    the existing proof.
+  - Required proof: focused Rust layout tests for padding/border child bounds and rejection cases,
+    then rerun the no-4090 resize-jitter script to see whether the next blocker becomes wrap flex or
+    another app-shell boundary.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

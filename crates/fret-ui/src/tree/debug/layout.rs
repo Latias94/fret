@@ -60,10 +60,17 @@ pub struct UiDebugLayoutEngineSolve {
     pub root_element_path: Option<String>,
     pub solve_time: Duration,
     pub solve_profile: Option<UiDebugLayoutEngineSolveProfile>,
+    pub clean_geometry_solve_skip_rejection: Option<UiDebugCleanGeometrySolveSkipRejection>,
     pub measure_calls: u64,
     pub measure_cache_hits: u64,
     pub measure_time: Duration,
     pub top_measures: Vec<UiDebugLayoutEngineMeasureHotspot>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugCleanGeometrySolveSkipRejection {
+    pub reason: &'static str,
+    pub element_kind: Option<&'static str>,
 }
 
 #[derive(Debug, Clone, Copy)]

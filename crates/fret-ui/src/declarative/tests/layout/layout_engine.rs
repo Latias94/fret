@@ -1133,6 +1133,21 @@ fn clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve() {
             .layout_clean_geometry_solve_skip_first_element_kind,
         Some("ViewCache")
     );
+
+    let rejected_solve = ui
+        .debug_layout_engine_solves()
+        .iter()
+        .find(|solve| solve.clean_geometry_solve_skip_rejection.is_some())
+        .expect("rejected root solve should carry its clean-geometry skip reason");
+    let rejection = rejected_solve
+        .clean_geometry_solve_skip_rejection
+        .expect("rejected solve should expose rejection details");
+    assert_eq!(rejection.reason, "unsupported_kind");
+    assert_eq!(rejection.element_kind, Some("ViewCache"));
+    assert!(
+        rejected_solve.root_element_kind.is_some(),
+        "per-solve rejection details should be attached to a concrete rejected root solve"
+    );
 }
 
 #[test]

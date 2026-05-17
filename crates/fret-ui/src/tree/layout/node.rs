@@ -3,6 +3,7 @@ use std::any::TypeId;
 
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints};
 use crate::layout_pass::LayoutPassKind;
+use crate::tree::UiDebugCleanGeometrySolveSkipRejection;
 
 #[derive(Debug, Clone, Copy)]
 enum CleanGeometrySolveSkipDecision {
@@ -630,9 +631,15 @@ impl<H: UiHost> UiTree<H> {
         prev_bounds: Rect,
     ) -> bool {
         match self.clean_geometry_engine_solve_skip_decision(app, root, bounds, prev_bounds) {
-            CleanGeometrySolveSkipDecision::Supported => true,
+            CleanGeometrySolveSkipDecision::Supported => {
+                if self.debug_enabled {
+                    self.debug_clean_geometry_solve_skip_rejections
+                        .remove(&root);
+                }
+                true
+            }
             CleanGeometrySolveSkipDecision::Rejected(rejection) => {
-                self.debug_record_clean_geometry_solve_skip_rejection(rejection);
+                self.debug_record_clean_geometry_solve_skip_rejection(root, rejection);
                 false
             }
         }
@@ -683,6 +690,7 @@ impl<H: UiHost> UiTree<H> {
 
     fn debug_record_clean_geometry_solve_skip_rejection(
         &mut self,
+        root: NodeId,
         rejection: CleanGeometrySolveSkipRejection,
     ) {
         if !self.debug_enabled {
@@ -702,6 +710,13 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats
                 .layout_clean_geometry_solve_skip_first_element_kind = rejection.element_kind;
         }
+        self.debug_clean_geometry_solve_skip_rejections.insert(
+            root,
+            UiDebugCleanGeometrySolveSkipRejection {
+                reason: rejection.reason.as_str(),
+                element_kind: rejection.element_kind,
+            },
+        );
     }
 
     fn clean_manual_geometry_subtree_supported_checked(

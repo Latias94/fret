@@ -76,3 +76,17 @@ Status: Active
 - 2026-05-17 minimum slice landed: `CleanGeometryNodeContract` separates pure pass-through
   geometry, no-wrap vertical flex, safe leaves, and side-effect boundaries; diagnostics now expose
   the per-frame rejection count plus first reason/kind for rejected clean root-solve skips.
+- 2026-05-17 follow-up: layout-engine solve diagnostics now attach the clean-geometry rejection
+  reason/kind to the individual rejected solve. Fresh no-4090 resize-jitter evidence points to
+  `Container` as the next meaningful blocker; `Canvas` is measured too small and `Scroll` remains a
+  side-effect boundary.
+
+## M8 — Conservative Container geometry contract (candidate)
+
+- Prove a narrow `Container` clean-geometry subset before widening the root-solve skip.
+- Start with static children, px padding/border/spacing, definite or fill width propagation, and no
+  auto-height reflow dependency.
+- Keep absolute children, non-px/fractional insets, retained/windowing surfaces, wrap flex, and
+  layout-side-effect descendants on the full solve path until each has its own proof.
+- Validate with focused Rust tests first, then rerun the no-4090 resize-jitter diagnostics to learn
+  the next blocker instead of assuming the fast path is complete.
