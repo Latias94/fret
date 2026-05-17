@@ -422,6 +422,7 @@ def main() -> None:
                 "ecosystem/fret-ui-kit/tests/imui_table_smoke.rs",
                 "ecosystem/fret-imui/src/tests/composition/layout_collections.rs",
                 "apps/fret-ui-gallery/src/driver/toaster.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs",
                 "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
                 "apps/fret-ui-gallery/src/ui/doc_layout.rs",
                 "apps/fret-ui-gallery/tests/code_editor_control_readout_surface.rs",
@@ -687,6 +688,8 @@ def main() -> None:
                 "`PropertyGrid` now has a composition-level gate",
                 "2026-05-17 gallery disabled toaster placeholder follow-up",
                 "the UI Gallery disabled toaster",
+                "2026-05-17 gallery app-sidebar collapsed placeholder follow-up",
+                "copyable app-sidebar snippet",
             ],
             forbidden=[],
         ),
@@ -817,6 +820,7 @@ def main() -> None:
                 "`ecosystem/fret-ui-kit/src/imui/separator_text_controls.rs`",
                 "`ecosystem/fret-ui-kit/src/imui/table_controls.rs`",
                 "`apps/fret-ui-gallery/src/driver/toaster.rs`",
+                "`apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs`",
                 "`apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`",
                 "`ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs`",
                 "`ecosystem/fret-ui-editor/src/composites/property_group.rs`",
@@ -939,6 +943,8 @@ def main() -> None:
                 "imui_control_text_uses_shared_button_label_role",
                 "UI Gallery's disabled toaster driver path now returns a spacer placeholder",
                 "gallery_driver_disabled_toaster_does_not_emit_empty_text",
+                "UI Gallery app-sidebar snippet collapsed-projects path now returns a spacer",
+                "sidebar_app_collapsed_projects_do_not_emit_empty_text",
                 "cargo check -p fret-examples",
             ],
             forbidden=[],
@@ -1198,6 +1204,16 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs"),
+            required=[
+                "use fret_ui::element::SpacerProps;",
+                "return cx.spacer(SpacerProps::default());",
+            ],
+            forbidden=[
+                "return cx.text(\"\");",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/driver/toaster.rs"),
             required=[
                 "use fret_ui::element::{AnyElement, SpacerProps};",
@@ -1211,6 +1227,7 @@ def main() -> None:
             Path("apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs"),
             required=[
                 "fn gallery_driver_disabled_toaster_does_not_emit_empty_text()",
+                "fn sidebar_app_collapsed_projects_do_not_emit_empty_text()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",
             ],

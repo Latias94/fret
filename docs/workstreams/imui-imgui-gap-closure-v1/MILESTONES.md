@@ -340,6 +340,8 @@ Exit criteria:
   2026-05-17 gallery disabled toaster placeholder result: the UI Gallery disabled toaster driver
   path now returns a spacer placeholder instead of an empty text node, keeping app-shell placeholder
   plumbing outside text layout semantics.
+  2026-05-17 gallery app-sidebar collapsed placeholder result: the copyable app-sidebar snippet now
+  uses a spacer placeholder for collapsed project groups instead of `cx.text("")`.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

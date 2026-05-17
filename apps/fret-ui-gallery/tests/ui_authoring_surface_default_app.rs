@@ -4606,6 +4606,24 @@ fn gallery_driver_disabled_toaster_does_not_emit_empty_text() {
 }
 
 #[test]
+fn sidebar_app_collapsed_projects_do_not_emit_empty_text() {
+    let source = read("src/ui/snippets/sidebar/app_sidebar.rs");
+
+    assert!(
+        source.contains("use fret_ui::element::SpacerProps;"),
+        "app sidebar should import the non-text placeholder props"
+    );
+    assert!(
+        source.contains("return cx.spacer(SpacerProps::default());"),
+        "collapsed app sidebar project group should emit a non-text placeholder"
+    );
+    assert!(
+        !source.contains(r#"return cx.text("");"#),
+        "collapsed app sidebar project group should not emit empty text"
+    );
+}
+
+#[test]
 fn date_picker_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[

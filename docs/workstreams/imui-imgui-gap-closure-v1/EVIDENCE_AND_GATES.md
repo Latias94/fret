@@ -120,6 +120,7 @@ Last updated: 2026-05-17
   - `apps/fret-examples/src/editor_notes_demo.rs`
   - `apps/fret-examples/src/docking_arbitration_demo.rs`
   - `apps/fret-ui-gallery/src/driver/toaster.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs`
   - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
   - `tools/gate_imui_workstream_source.py`
   - `tools/diag_gate_imui_product_chain.py`
@@ -502,6 +503,11 @@ Run evidence:
   contract and prevents future resize fixes from treating invisible placeholders as text content.
   Gate: `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
   gallery_driver_disabled_toaster_does_not_emit_empty_text --no-fail-fast`.
+- 2026-05-17: the UI Gallery app-sidebar snippet collapsed-projects path now returns a spacer
+  placeholder instead of an empty text node. This keeps the copyable sidebar recipe from teaching
+  empty text as layout placeholder plumbing. Gate: `cargo nextest run -p fret-ui-gallery --test
+  ui_authoring_surface_default_app sidebar_app_collapsed_projects_do_not_emit_empty_text
+  --no-fail-fast`.
 - 2026-05-16: tightened `UiWriterImUiFacadeExt::text(...)` to match Dear ImGui's default
   `Text()` posture: single-line, shrinkable, `min-width: 0`, and ellipsis-truncated under resize.
   Added `UiWriterImUiFacadeExt::text_wrapped(...)` as the explicit wrapping path for explanatory
@@ -1130,6 +1136,15 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 
 - `cargo fmt -p fret-ui-gallery` passed.
 - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app gallery_driver_disabled_toaster_does_not_emit_empty_text --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery app-sidebar collapsed placeholder slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app sidebar_app_collapsed_projects_do_not_emit_empty_text --no-fail-fast` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
