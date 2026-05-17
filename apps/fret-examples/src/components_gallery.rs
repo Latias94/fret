@@ -1160,8 +1160,8 @@ impl ComponentsGalleryDriver {
                                                                             },
                                                                             |cx| {
                                                                                 vec![
-                                                                                    cx.text("HoverCard content (overlay-root)"),
-                                                                                    cx.text("Move pointer from trigger to content."),
+                                                                                    decl_text::text_paragraph(cx, "HoverCard content (overlay-root)"),
+                                                                                    decl_text::text_paragraph(cx, "Move pointer from trigger to content."),
                                                                                 ]
                                                                             },
                                                                         )]);
@@ -1255,7 +1255,7 @@ impl ComponentsGalleryDriver {
                                                         },
                                                         |cx| {
                                                             shadcn::PopoverContent::new(vec![
-                                                                cx.text("Popover content"),
+                                                                decl_text::text_paragraph(cx, "Popover content"),
                                                                 shadcn::Button::new("Close")
                                                                     .variant(shadcn::ButtonVariant::Secondary)
                                                                     .toggle_model(popover_open.clone())
@@ -1399,13 +1399,17 @@ impl ComponentsGalleryDriver {
                                         });
 
                                         vec![
-                                            cx.text("overlays: tooltip / dropdown / context-menu / popover / dialog / alert-dialog / sheet"),
+                                            decl_text::text_paragraph(
+                                                cx,
+                                                "overlays: tooltip / dropdown / context-menu / popover / dialog / alert-dialog / sheet",
+                                            ),
                                             overlays,
-                                            cx.text(format!(
+                                            decl_text::text_control_readout(cx, format!(
                                                 "last action: {}",
                                                 last_action_value.as_ref()
                                             )),
-                                            cx.text(
+                                            decl_text::text_paragraph(
+                                                cx,
                                                 "cmdk: Ctrl/Cmd+P opens, arrows/hover highlight, Enter selects",
                                             ),
                                              cmdk,

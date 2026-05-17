@@ -358,8 +358,9 @@ Exit criteria:
   retained table torture path now routes fixed cell renderers through `text_table_cell(...)` and
   the table explanation through `text_paragraph(...)`. The same proof now routes top chrome,
   tree-status, theme-control, color-swatch, and control-state text through shared chrome, label,
-  and readout roles; source gates reject the old bare table-cell, header, and fixed control
-  `cx.text(...)` paths.
+  and readout roles. Overlay body copy now routes through paragraph text and overlay last-action
+  status routes through `text_control_readout(...)`; source gates reject the old bare table-cell,
+  header, fixed control, and overlay proof `cx.text(...)` paths.
   2026-05-17 gallery retained-table torture text result: the UI Gallery retained-table torture page
   now uses `text_table_cell(...)` for fixed table cells and `control_readout_text(...)` for table
   state readouts, so the visible retained-table stress surface no longer teaches bare fixed-cell

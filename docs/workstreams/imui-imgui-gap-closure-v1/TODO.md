@@ -383,8 +383,9 @@ Readiness order for the next locally testable review slices:
    retained table torture cell renderer through `text_table_cell(...)` and its explanatory table
    header through `text_paragraph(...)`. The same proof now routes its top chrome title, tree
    status, theme controls, color swatch labels, and control state readouts through the matching
-   shared text roles, keeping the runnable gallery proof from teaching bare default wrapping text
-   in fixed cells and fixed control chrome.
+   shared text roles. Overlay body copy now uses paragraph text, while the overlay last-action
+   status uses `text_control_readout(...)`, keeping the runnable gallery proof from teaching bare
+   default wrapping text in fixed cells, fixed control chrome, or overlay proof copy.
    2026-05-17 gallery retained-table torture text follow-up: the UI Gallery retained-table torture
    page now routes fixed cell text through `text_table_cell(...)` and table state/status readouts
    through `control_readout_text(...)`, leaving only explicitly multi-line/paragraph copy as bare
