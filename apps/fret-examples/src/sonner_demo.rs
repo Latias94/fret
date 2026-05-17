@@ -17,6 +17,7 @@ use fret_ui::action::UiActionHostAdapter;
 use fret_ui::declarative;
 use fret_ui::element::{CrossAlign, FlexProps, LayoutStyle, MainAlign};
 use fret_ui_kit::OverlayController;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::facade as shadcn;
 
 pub struct SonnerDemoWindowState {
@@ -95,8 +96,11 @@ impl SonnerDemoDriver {
                         },
                         |cx| {
                             vec![
-                                cx.text("Sonner (shadcn/ui) demo"),
-                                cx.text(format!(
+                                decl_text::text_section_chrome_label(
+                                    cx,
+                                    "Sonner (shadcn/ui) demo",
+                                ),
+                                decl_text::text_control_readout(cx, format!(
                                     "promise active: {promise_active} | last action: {last_action_value}"
                                 )),
                                 cx.flex(

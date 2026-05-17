@@ -8514,6 +8514,18 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-examples/src/sonner_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(\n                                    cx,\n                                    \"Sonner (shadcn/ui) demo\",",
+                "decl_text::text_control_readout(cx, format!(\n                                    \"promise active: {promise_active} | last action: {last_action_value}\"",
+            ],
+            forbidden=[
+                "cx.text(\"Sonner (shadcn/ui) demo\")",
+                "cx.text(format!(\n                                    \"promise active: {promise_active} | last action: {last_action_value}\"",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-examples/src/components_gallery.rs"),
             required=[
                 "use fret_ui_kit::declarative::text as decl_text;",
@@ -8656,6 +8668,18 @@ def main() -> None:
                 "usefret_ui_kit::declarative::textasdecl_text;",
                 "decl_text::text_control_readout(cx,Arc::from(format!(\\\"submit_count={submit_count}valid={valid}dirty={dirty}status={}\\\",status_text.as_ref())),)",
                 "cx.text(Arc::from(format!(\\\"submit_count={submit_count}valid={valid}dirty={dirty}status={}\\\",status_text.as_ref())))",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/tests/sonner_demo_surface.rs"),
+            required=[
+                "fn sonner_demo_header_text_uses_fixed_chrome_roles()",
+                "usefret_ui_kit::declarative::textasdecl_text;",
+                "decl_text::text_section_chrome_label(",
+                "\\\"Sonner(shadcn/ui)demo\\\",",
+                "decl_text::text_control_readout(cx,format!(\\\"promiseactive:{promise_active}|lastaction:{last_action_value}\\\"))",
+                "cx.text(\\\"Sonner(shadcn/ui)demo\\\")",
             ],
             forbidden=[],
         ),
