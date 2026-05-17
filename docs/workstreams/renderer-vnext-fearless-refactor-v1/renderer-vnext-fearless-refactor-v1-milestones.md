@@ -1211,6 +1211,33 @@ Progress record (RenderPlan compiler backdrop dispatch state split):
   - `python3 tools/check_layering.py`
   - `git diff --check`
 
+Progress record (RenderPlan compiler clip-path dispatch state split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3n; Stage 24 continues)
+- Objective:
+  - Move clip-path dispatch state out of `marker_dispatch.rs`, centralizing clip scopes,
+    mask-in-use bytes, push/pop mutation, and active mask target snapshots behind
+    `ClipPathDispatchState` while preserving `ClipPathPush/Pop` ordering, `Mask0..2` allocation
+    order, `ClipPathDisabled` degradation reason precedence, and effect-scope backdrop masking
+    semantics.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`
+    (`ClipPathDispatchState::{compile_push,compile_pop,mask_in_use_bytes,active_mask_targets}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (`MarkerDispatchState` owns one clip-path dispatch-state field)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
+    (`EffectScopePushCtx` receives the active-mask snapshot directly)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

@@ -8,7 +8,7 @@ use crate::renderer::{
 };
 
 #[derive(Clone, Copy, Debug)]
-pub(super) struct ClipPathScope {
+struct ClipPathScope {
     scissor: ScissorRect,
     uniform_index: u32,
     mask_draw_index: u32,
@@ -34,10 +34,63 @@ pub(super) struct ClipPathPushCtx<'a> {
     pub(super) backdrop_source_group_in_use_bytes: u64,
 }
 
-pub(super) fn active_mask_targets(
-    scopes: &[ClipPathScope],
-) -> impl Iterator<Item = PlanTarget> + '_ {
+fn active_mask_targets(scopes: &[ClipPathScope]) -> impl Iterator<Item = PlanTarget> + '_ {
     scopes.iter().filter_map(|scope| scope.mask_target)
+}
+
+#[derive(Clone, Debug)]
+pub(super) struct ClipPathDispatchState {
+    scopes: Vec<ClipPathScope>,
+    mask_in_use_bytes: u64,
+}
+
+impl ClipPathDispatchState {
+    pub(super) fn new() -> Self {
+        Self {
+            scopes: Vec::new(),
+            mask_in_use_bytes: 0,
+        }
+    }
+
+    pub(super) fn mask_in_use_bytes(&self) -> u64 {
+        self.mask_in_use_bytes
+    }
+
+    pub(super) fn active_mask_targets(&self) -> ActiveMaskTargets {
+        ActiveMaskTargets::from_clip_path_scopes(&self.scopes)
+    }
+
+    pub(super) fn compile_push(
+        &mut self,
+        plan: &mut RenderPlanCompilerCtx,
+        draw_scopes: &mut Vec<DrawScope>,
+        encoding: &SceneEncoding,
+        draw_ix: usize,
+        args: ClipPathPushCtx<'_>,
+    ) {
+        compile_clip_path_push(
+            plan,
+            draw_scopes,
+            &mut self.scopes,
+            &mut self.mask_in_use_bytes,
+            encoding,
+            draw_ix,
+            args,
+        );
+    }
+
+    pub(super) fn compile_pop(
+        &mut self,
+        plan: &mut RenderPlanCompilerCtx,
+        draw_scopes: &mut Vec<DrawScope>,
+    ) {
+        compile_clip_path_pop(
+            plan,
+            draw_scopes,
+            &mut self.scopes,
+            &mut self.mask_in_use_bytes,
+        );
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -47,7 +100,7 @@ pub(super) struct ActiveMaskTargets {
 }
 
 impl ActiveMaskTargets {
-    pub(super) fn from_clip_path_scopes(scopes: &[ClipPathScope]) -> Self {
+    fn from_clip_path_scopes(scopes: &[ClipPathScope]) -> Self {
         let mut targets = [PlanTarget::Mask0; 3];
         let mut len = 0;
         for target in active_mask_targets(scopes) {
@@ -65,7 +118,7 @@ impl ActiveMaskTargets {
     }
 }
 
-pub(super) fn compile_clip_path_push(
+fn compile_clip_path_push(
     plan: &mut RenderPlanCompilerCtx,
     draw_scopes: &mut Vec<DrawScope>,
     clip_path_scopes: &mut Vec<ClipPathScope>,
@@ -194,7 +247,7 @@ pub(super) fn compile_clip_path_push(
     });
 }
 
-pub(super) fn compile_clip_path_pop(
+fn compile_clip_path_pop(
     plan: &mut RenderPlanCompilerCtx,
     draw_scopes: &mut Vec<DrawScope>,
     clip_path_scopes: &mut Vec<ClipPathScope>,

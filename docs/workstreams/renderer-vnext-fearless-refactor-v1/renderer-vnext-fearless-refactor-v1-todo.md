@@ -622,6 +622,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - [x] Step 3k: replace active clip-path mask target scratch `Vec` with a fixed-size snapshot.
     - [x] Step 3l: replace effect-chain in-use target scratch `Vec` with `SmallVec`.
     - [x] Step 3m: split backdrop-source-group dispatch state out of marker dispatch.
+    - [x] Step 3n: split clip-path dispatch state out of marker dispatch and pass active mask snapshots into effect-scope planning.
   - Landed (step 1): extracted target/budget helpers and their focused tests into
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
   - Landed (step 2): introduced `RenderPlanCompilerCtx` to own structural compiler outputs
@@ -683,6 +684,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Landed (step 3m): moved backdrop-source-group dispatch state into
     `BackdropSourceGroupDispatchState`, centralizing scopes, reserved targets, in-use bytes,
     push/pop mutation, and current effect context access outside `marker_dispatch.rs`.
+  - Landed (step 3n): moved clip-path dispatch state into `ClipPathDispatchState`, centralizing
+    clip scopes, mask-in-use bytes, push/pop mutation, active mask target snapshots, and
+    clip-path helper visibility outside `marker_dispatch.rs`.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
       `compile_for_scene_inner`)
@@ -695,8 +699,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/context.rs`
       (`RenderPlanCompilerCtx`, `alloc_segment`, `flush_scene_range`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`
-      (`compile_clip_path_push`, `compile_clip_path_pop`, `active_mask_targets`,
-      `ActiveMaskTargets`)
+      (`ClipPathDispatchState`, `ActiveMaskTargets`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_chain.rs`
       (`apply_chain_in_place`, `SmallVec<[PlanTarget; 8]>` in-use target snapshot)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/composite_group.rs`

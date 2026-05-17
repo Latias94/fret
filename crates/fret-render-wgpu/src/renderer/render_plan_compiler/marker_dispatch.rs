@@ -12,8 +12,7 @@ use crate::renderer::{
 pub(super) struct MarkerDispatchState {
     effect_scopes: Vec<effect_scope::EffectScope>,
     composite_group_scopes: Vec<composite_group::CompositeGroupScope>,
-    clip_path_scopes: Vec<clip_path::ClipPathScope>,
-    clip_path_mask_in_use_bytes: u64,
+    clip_path_dispatch_state: clip_path::ClipPathDispatchState,
     backdrop_source_group_state: backdrop_source_group::BackdropSourceGroupDispatchState,
     effect_chain_budget_stats: EffectChainBudgetStats,
     effect_degradations: EffectDegradationSnapshot,
@@ -25,8 +24,7 @@ impl MarkerDispatchState {
         Self {
             effect_scopes: Vec::new(),
             composite_group_scopes: Vec::new(),
-            clip_path_scopes: Vec::new(),
-            clip_path_mask_in_use_bytes: 0,
+            clip_path_dispatch_state: clip_path::ClipPathDispatchState::new(),
             backdrop_source_group_state:
                 backdrop_source_group::BackdropSourceGroupDispatchState::new(),
             effect_chain_budget_stats: EffectChainBudgetStats::default(),
@@ -71,8 +69,12 @@ impl MarkerDispatchState {
                         clear: args.clear,
                         scale_factor: args.scale_factor,
                         intermediate_budget_bytes: args.intermediate_budget_bytes,
-                        clip_path_mask_in_use_bytes: self.clip_path_mask_in_use_bytes,
-                        clip_path_scopes: &self.clip_path_scopes,
+                        clip_path_mask_in_use_bytes: self
+                            .clip_path_dispatch_state
+                            .mask_in_use_bytes(),
+                        clip_path_active_mask_targets: self
+                            .clip_path_dispatch_state
+                            .active_mask_targets(),
                         backdrop_source_group: self.backdrop_source_group_state.effect_ctx(),
                         backdrop_source_group_reserved_targets: self
                             .backdrop_source_group_state
@@ -98,7 +100,9 @@ impl MarkerDispatchState {
                         clear: args.clear,
                         scale_factor: args.scale_factor,
                         intermediate_budget_bytes: args.intermediate_budget_bytes,
-                        clip_path_mask_in_use_bytes: self.clip_path_mask_in_use_bytes,
+                        clip_path_mask_in_use_bytes: self
+                            .clip_path_dispatch_state
+                            .mask_in_use_bytes(),
                         backdrop_source_group_reserved_targets: self
                             .backdrop_source_group_state
                             .reserved_targets(),
@@ -113,11 +117,9 @@ impl MarkerDispatchState {
                 uniform_index,
                 mask_draw_index,
             } => {
-                clip_path::compile_clip_path_push(
+                self.clip_path_dispatch_state.compile_push(
                     plan,
                     draw_scopes,
-                    &mut self.clip_path_scopes,
-                    &mut self.clip_path_mask_in_use_bytes,
                     encoding,
                     draw_ix,
                     clip_path::ClipPathPushCtx {
@@ -138,12 +140,7 @@ impl MarkerDispatchState {
                 );
             }
             EffectMarkerKind::ClipPathPop => {
-                clip_path::compile_clip_path_pop(
-                    plan,
-                    draw_scopes,
-                    &mut self.clip_path_scopes,
-                    &mut self.clip_path_mask_in_use_bytes,
-                );
+                self.clip_path_dispatch_state.compile_pop(plan, draw_scopes);
             }
             EffectMarkerKind::BackdropSourceGroupPush {
                 scissor,
@@ -162,7 +159,9 @@ impl MarkerDispatchState {
                         viewport_size: args.viewport_size,
                         format: args.format,
                         intermediate_budget_bytes: args.intermediate_budget_bytes,
-                        clip_path_mask_in_use_bytes: self.clip_path_mask_in_use_bytes,
+                        clip_path_mask_in_use_bytes: self
+                            .clip_path_dispatch_state
+                            .mask_in_use_bytes(),
                     },
                 );
             }
@@ -191,7 +190,9 @@ impl MarkerDispatchState {
                         scissor_sized_intermediates: args.scissor_sized_intermediates,
                         format: args.format,
                         intermediate_budget_bytes: args.intermediate_budget_bytes,
-                        clip_path_mask_in_use_bytes: self.clip_path_mask_in_use_bytes,
+                        clip_path_mask_in_use_bytes: self
+                            .clip_path_dispatch_state
+                            .mask_in_use_bytes(),
                         backdrop_source_group_reserved_targets: self
                             .backdrop_source_group_state
                             .reserved_targets(),
