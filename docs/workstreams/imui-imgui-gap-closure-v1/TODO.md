@@ -536,6 +536,15 @@ Readiness order for the next locally testable review slices:
    runtime measurement. This closes the container side of the text-resize failure mode where a
    caller accidentally submits oversized/wrapping content into a fixed row; the fix stays in
    `fret-ui-kit::imui` and does not add a mutable list runtime to `fret-imui`.
+   2026-05-18 retained tree fixed-row clip follow-up: `tree_view_retained(...)` now gives
+   fixed/known-height retained tree rows an explicit fill-width, fixed-height, `Overflow::Clip`
+   pressable row layout, while `Measured` retained tree rows stay auto-height/visible for runtime
+   measurement. This closes the same resize-overflow class for generic editor trees without moving
+   tree policy into `fret-imui`.
+   2026-05-18 retained file-tree fixed-row clip follow-up:
+   `file_tree_view_retained_v0(...)` now gives the retained Pressable row itself an explicit
+   fill-width, fixed-height, `Overflow::Clip` layout, matching its known-height virtualizer
+   contract instead of relying only on an inner content container to clip.
    2026-05-17 code-editor IME gate button-label follow-up: code-editor MVP IME gate actions now
    route their custom pointer-region labels through `button_label_text(...)`, and both the gallery
    source test and IMUI workstream source gate forbid those fixed action labels from returning to

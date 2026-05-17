@@ -4,8 +4,8 @@ use std::sync::Arc;
 use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, Elements, LayoutStyle, Length, PressableA11y, PressableProps,
-    SpacerProps,
+    AnyElement, ContainerProps, Elements, LayoutStyle, Length, Overflow, PressableA11y,
+    PressableProps, SpacerProps, VirtualListMeasureMode,
 };
 use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -80,6 +80,19 @@ fn tree_toggle_glyph<H: UiHost>(
 
 fn tree_missing_virtual_row_placeholder<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     cx.spacer(SpacerProps::default())
+}
+
+fn retained_tree_row_layout(row_h: Px, measure_mode: VirtualListMeasureMode) -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+    if matches!(
+        measure_mode,
+        VirtualListMeasureMode::Fixed | VirtualListMeasureMode::Known
+    ) {
+        layout.size.height = Length::Px(row_h);
+        layout.overflow = Overflow::Clip;
+    }
+    layout
 }
 
 impl<H: UiHost> TreeRowRenderer<H> for DefaultTreeRowRenderer {
@@ -186,8 +199,13 @@ pub fn tree_view_retained<H: UiHost + 'static>(
 mod tests {
     use super::*;
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Rect, TextOverflow, TextWrap};
+    use fret_core::{
+        AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
+        Point, Rect, SvgId, SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics,
+        TextOverflow, TextService, TextWrap,
+    };
     use fret_ui::element::ElementKind;
+    use fret_ui::{ThemeConfig, UiTree};
 
     fn test_bounds() -> Rect {
         Rect::new(
@@ -205,6 +223,116 @@ mod tests {
             has_children,
             disabled: false,
         }
+    }
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: fret_core::Size::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
+    fn render_retained_tree(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut FakeServices,
+        window: AppWindowId,
+        bounds: Rect,
+        measure_mode: VirtualListMeasureMode,
+    ) {
+        let items = app.models_mut().insert(vec![crate::TreeItem::new(
+            7,
+            "Long retained tree row that must not paint outside a fixed row",
+        )]);
+        let state = app.models_mut().insert(TreeState::default());
+
+        for _ in 0..3 {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "retained-tree-row-clip-test",
+                |cx| {
+                    vec![tree_view_retained_with_measure_mode(
+                        cx,
+                        items.clone(),
+                        state.clone(),
+                        Size::Medium,
+                        measure_mode,
+                        Some(Arc::from("retained-tree-row")),
+                    )]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(app, services, bounds, &mut scene, 1.0);
+            let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
+        }
+    }
+
+    fn semantics_node_id_by_test_id(ui: &UiTree<App>, test_id: &str) -> fret_core::NodeId {
+        ui.semantics_snapshot()
+            .expect("semantics snapshot")
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some(test_id))
+            .map(|node| node.id)
+            .unwrap_or_else(|| panic!("expected semantics node with test_id {test_id:?}"))
     }
 
     #[test]
@@ -296,6 +424,120 @@ mod tests {
             panic!("missing tree virtual row placeholder should be a spacer");
         };
         assert_eq!(props.min, Px(0.0));
+    }
+
+    #[test]
+    fn retained_tree_fixed_rows_clip_to_row_height() {
+        let layout = retained_tree_row_layout(Px(24.0), VirtualListMeasureMode::Fixed);
+
+        assert_eq!(layout.size.width, Length::Fill);
+        assert_eq!(layout.size.height, Length::Px(Px(24.0)));
+        assert_eq!(layout.overflow, Overflow::Clip);
+    }
+
+    #[test]
+    fn retained_tree_known_rows_clip_to_row_height() {
+        let layout = retained_tree_row_layout(Px(32.0), VirtualListMeasureMode::Known);
+
+        assert_eq!(layout.size.width, Length::Fill);
+        assert_eq!(layout.size.height, Length::Px(Px(32.0)));
+        assert_eq!(layout.overflow, Overflow::Clip);
+    }
+
+    #[test]
+    fn retained_tree_measured_rows_keep_overflow_visible_for_measurement() {
+        let layout = retained_tree_row_layout(Px(24.0), VirtualListMeasureMode::Measured);
+
+        assert_eq!(layout.size.width, Length::Fill);
+        assert_eq!(layout.size.height, Length::Auto);
+        assert_eq!(layout.overflow, LayoutStyle::default().overflow);
+    }
+
+    #[test]
+    fn retained_tree_fixed_rows_mount_as_clip_boundaries() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(240.0), Px(96.0)),
+        );
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        render_retained_tree(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            VirtualListMeasureMode::Fixed,
+        );
+
+        let row_node = semantics_node_id_by_test_id(&ui, "retained-tree-row-7");
+        let row_bounds = ui.debug_node_bounds(row_node).expect("row bounds");
+
+        assert_eq!(
+            ui.debug_declarative_instance_kind(&mut app, window, row_node),
+            Some("Pressable")
+        );
+        assert!(
+            row_bounds.size.height.0 <= 32.5,
+            "fixed retained tree row should keep medium row height, got {row_bounds:?}"
+        );
+        assert_eq!(
+            ui.debug_node_clips_hit_test(row_node),
+            Some(true),
+            "fixed retained tree row should clip oversized/wrapping row content"
+        );
+    }
+
+    #[test]
+    fn retained_tree_measured_rows_do_not_force_row_clip() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(240.0), Px(96.0)),
+        );
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        render_retained_tree(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            VirtualListMeasureMode::Measured,
+        );
+
+        let row_node = semantics_node_id_by_test_id(&ui, "retained-tree-row-7");
+
+        assert_eq!(
+            ui.debug_declarative_instance_kind(&mut app, window, row_node),
+            Some("Pressable")
+        );
+        assert_eq!(
+            ui.debug_node_clips_hit_test(row_node),
+            Some(false),
+            "measured retained tree row should keep overflow visible for runtime measurement"
+        );
     }
 }
 
@@ -640,6 +882,7 @@ fn tree_view_retained_impl<H: UiHost + 'static>(
 
                     cx.pressable(
                         PressableProps {
+                            layout: retained_tree_row_layout(row_h, measure_mode),
                             enabled,
                             a11y: tree_item_a11y(
                                 &entry,

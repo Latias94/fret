@@ -1397,6 +1397,28 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
 - `git diff --check` passed.
 
+2026-05-18 retained tree fixed-row clip slice:
+
+- `cargo fmt --package fret-ui-kit` passed.
+- `cargo fmt --check --package fret-ui-kit` passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib retained_tree_fixed_rows_clip_to_row_height retained_tree_known_rows_clip_to_row_height retained_tree_measured_rows_keep_overflow_visible_for_measurement retained_tree_fixed_rows_mount_as_clip_boundaries retained_tree_measured_rows_do_not_force_row_clip --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\check_workstream_catalog.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 retained file-tree fixed-row clip slice:
+
+- `cargo fmt --package fret-ui-kit` passed.
+- `cargo fmt --check --package fret-ui-kit` passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib file_tree_retained_row_layout_clips_to_row_height file_tree_retained_rows_mount_as_clip_boundaries --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\check_workstream_catalog.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
 2026-05-17 canvas datagrid stress proof text-role slice:
 
 - `cargo fmt -p fret-examples` passed.
