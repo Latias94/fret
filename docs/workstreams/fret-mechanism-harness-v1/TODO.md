@@ -725,3 +725,10 @@ date: 2026-05-12
     env defaults and scroll/click-stable preconditions, and `scroll_into_view` now classifies
     impossible unscrollable-axis containment instead of falling through to a generic stuck result.
     No Date Picker component or layout mechanism defect was reproduced in this slice.
+- [x] Split a compact Combobox geometry/placement suite out of the broad Combobox family gate.
+  - Result: the broad `ui-gallery-combobox` suite exceeded the outer command timeout after running
+    many clean rows, so it is too wide to be the day-to-day geometry/placement evidence unit. The
+    new `ui-gallery-combobox-geometry-placement` suite gates trigger chrome, LTR/RTL long-text
+    truncation/chevron geometry, popup top/bottom placement, and responsive open/resize placement
+    as a 7/7 zero-warning suite. No new Combobox recipe or overlay mechanism defect was
+    reproduced.

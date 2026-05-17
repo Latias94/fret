@@ -3098,6 +3098,32 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `python tools/check_diag_scripts_registry.py`
   - registry results:
     passed; registry self-tests ran 21 tests.
+- Combobox geometry/placement focused suite:
+  - invariant:
+    Combobox visual-geometry and overlay-placement regressions should have a compact daily gate
+    that covers trigger chrome, long-text truncation, chevron/checkmark spacing, top/bottom popup
+    placement, and responsive resize placement without relying on the broad 24-script family suite.
+  - findings:
+    the broad `ui-gallery-combobox` candidate exceeded the outer command timeout before writing a
+    normal `suite.summary.json`, even after many geometry/placement rows had passed. This was a
+    harness packaging issue rather than a confirmed Combobox recipe or `fret-ui` overlay mechanism
+    defect. The compact focused suite passed normally and is the better evidence unit for the
+    layout questions that originally motivated the Combobox checks.
+  - implementation anchors:
+    `tools/diag-scripts/suites/ui-gallery-combobox-geometry-placement/suite.json` and
+    `tools/diag-scripts/index.json`.
+  - registry gates:
+    `python tools/test_check_diag_scripts_registry.py`
+    `python tools/check_diag_scripts_registry.py`
+  - registry results:
+    passed; registry self-tests ran 21 tests.
+  - focused suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-combobox-geometry-placement --dir target/fret-diag-combobox-geometry-placement-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused suite result:
+    `target/fret-diag-combobox-geometry-placement-v1/sessions/1778988226668-109764/suite.summary.json`
+    reports 7/7 passed rows, `scripts_with_evidence=7`, `focus_mismatch_total=0`, top placement
+    traces for 3 rows, bottom placement traces for 4 rows, and zero lint errors/warnings for every
+    row.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

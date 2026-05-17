@@ -6274,6 +6274,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox",
+        "ui-gallery-combobox-geometry-placement",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -6360,7 +6361,8 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
-        "ui-gallery-combobox"
+        "ui-gallery-combobox",
+        "ui-gallery-combobox-geometry-placement"
       ],
       "tags": [
         "combobox",
@@ -6386,7 +6388,8 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
-        "ui-gallery-combobox"
+        "ui-gallery-combobox",
+        "ui-gallery-combobox-geometry-placement"
       ],
       "tags": [
         "bottom_room",
@@ -6412,7 +6415,8 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
-        "ui-gallery-combobox"
+        "ui-gallery-combobox",
+        "ui-gallery-combobox-geometry-placement"
       ],
       "tags": [
         "combobox",
@@ -6438,6 +6442,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox",
+        "ui-gallery-combobox-geometry-placement",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -6480,6 +6485,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox",
+        "ui-gallery-combobox-geometry-placement",
         "ui-gallery-rtl-smoke",
         "ui-gallery-shadcn-conformance"
       ],
@@ -6530,7 +6536,8 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
-        "ui-gallery-combobox"
+        "ui-gallery-combobox",
+        "ui-gallery-combobox-geometry-placement"
       ],
       "tags": [
         "combobox",
