@@ -875,6 +875,28 @@ Progress record (RenderPlan compiler clip-path helper split):
   - `python3 tools/check_layering.py`
   - `git diff --check`
 
+Progress record (RenderPlan compiler composite-group helper split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3b-1; Stage 24 continues)
+- Objective:
+  - Split composite-group push/pop planning out of the main RenderPlan compiler loop without
+    changing marker ordering, target lifetime semantics, pass load ops, isolated opacity, or
+    `CompositeGroupBlendDegradedToOver` degradation reasons.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/composite_group.rs`
+    (`compile_composite_group_push`, `compile_composite_group_pop`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (`EffectMarkerKind::CompositeGroupPush`, `EffectMarkerKind::CompositeGroupPop` delegate to the helper)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

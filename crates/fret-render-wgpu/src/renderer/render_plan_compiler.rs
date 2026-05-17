@@ -4,6 +4,7 @@
 // deterministic budget-driven degradations.
 
 mod clip_path;
+mod composite_group;
 mod context;
 mod target_budget;
 
@@ -36,21 +37,6 @@ struct EffectScope {
     quality: fret_core::EffectQuality,
     scissor: ScissorRect,
     uniform_index: u32,
-    parent_target: super::PlanTarget,
-    parent_origin: (u32, u32),
-    parent_size: (u32, u32),
-    content_target: Option<super::PlanTarget>,
-    content_origin: (u32, u32),
-    content_size: (u32, u32),
-}
-
-#[derive(Clone, Copy, Debug)]
-struct CompositeGroupScope {
-    mode: fret_core::BlendMode,
-    quality: fret_core::EffectQuality,
-    scissor: ScissorRect,
-    uniform_index: u32,
-    opacity: f32,
     parent_target: super::PlanTarget,
     parent_origin: (u32, u32),
     parent_size: (u32, u32),
@@ -238,7 +224,7 @@ fn compile_for_scene_inner(
         clear_color: clear,
     }];
     let mut effect_scopes: Vec<EffectScope> = Vec::new();
-    let mut composite_group_scopes: Vec<CompositeGroupScope> = Vec::new();
+    let mut composite_group_scopes: Vec<composite_group::CompositeGroupScope> = Vec::new();
     let mut clip_path_scopes: Vec<clip_path::ClipPathScope> = Vec::new();
     let mut clip_path_mask_in_use_bytes: u64 = 0;
     let mut backdrop_source_group_scopes: Vec<BackdropSourceGroupScope> = Vec::new();
@@ -876,125 +862,34 @@ fn compile_for_scene_inner(
                         quality,
                         opacity,
                     } => {
-                        let parent_scope = draw_scopes.last().expect("draw scope");
-                        let parent_target = parent_scope.target;
-                        let parent_origin = parent_scope.origin;
-                        let parent_size = parent_scope.size;
-
-                        let (content_origin, content_size) = if scissor_sized_intermediates {
-                            ((scissor.x, scissor.y), (scissor.w, scissor.h))
-                        } else {
-                            ((0, 0), viewport_size)
-                        };
-                        let mut content_target: Option<super::PlanTarget> = None;
-                        let mut had_free_target = false;
-                        if content_size.0 != 0 && content_size.1 != 0 {
-                            for t in [
-                                super::PlanTarget::Intermediate0,
-                                super::PlanTarget::Intermediate1,
-                                super::PlanTarget::Intermediate2,
-                                super::PlanTarget::Intermediate3,
-                            ] {
-                                if draw_scopes.iter().any(|s| s.target == t)
-                                    || backdrop_source_group_reserved_targets.contains(&t)
-                                {
-                                    continue;
-                                }
-                                content_target = Some(t);
-                                had_free_target = true;
-                                break;
-                            }
-
-                            if content_target.is_some()
-                                && !can_allocate_intermediate_bytes(
-                                    intermediate_budget_bytes,
-                                    &draw_scopes,
-                                    estimate_texture_bytes(content_size, format, 1),
-                                    clip_path_mask_in_use_bytes
-                                        .saturating_add(backdrop_source_group_in_use_bytes),
-                                    format,
-                                )
-                            {
-                                content_target = None;
-                            }
-                        }
-
-                        if let Some(content_target) = content_target {
-                            draw_scopes.push(DrawScope {
-                                target: content_target,
-                                origin: content_origin,
-                                size: content_size,
-                                needs_clear: true,
-                                clear_color: wgpu::Color::TRANSPARENT,
-                            });
-                        } else if mode != fret_core::BlendMode::Over
-                            && content_size.0 != 0
-                            && content_size.1 != 0
-                        {
-                            ctx.push_degradation(RenderPlanDegradation {
-                                draw_ix: cursor,
-                                kind: RenderPlanDegradationKind::CompositeGroupBlendDegradedToOver,
-                                reason: if !had_free_target {
-                                    RenderPlanDegradationReason::TargetExhausted
-                                } else if intermediate_budget_bytes == 0 {
-                                    RenderPlanDegradationReason::BudgetZero
-                                } else {
-                                    RenderPlanDegradationReason::BudgetInsufficient
-                                },
-                            });
-                        }
-
-                        composite_group_scopes.push(CompositeGroupScope {
-                            mode,
-                            quality,
-                            scissor,
-                            uniform_index,
-                            opacity,
-                            parent_target,
-                            parent_origin,
-                            parent_size,
-                            content_target,
-                            content_origin,
-                            content_size,
-                        });
+                        composite_group::compile_composite_group_push(
+                            &mut ctx,
+                            &mut draw_scopes,
+                            &mut composite_group_scopes,
+                            cursor,
+                            composite_group::CompositeGroupPushCtx {
+                                scissor,
+                                uniform_index,
+                                mode,
+                                quality,
+                                opacity,
+                                viewport_size,
+                                scissor_sized_intermediates,
+                                format,
+                                intermediate_budget_bytes,
+                                clip_path_mask_in_use_bytes,
+                                backdrop_source_group_reserved_targets:
+                                    &backdrop_source_group_reserved_targets,
+                                backdrop_source_group_in_use_bytes,
+                            },
+                        );
                     }
                     EffectMarkerKind::CompositeGroupPop => {
-                        let Some(scope) = composite_group_scopes.pop() else {
-                            marker_ix += 1;
-                            continue;
-                        };
-
-                        if let Some(content_target) = scope.content_target {
-                            debug_assert_eq!(
-                                draw_scopes.last().expect("draw scope").target,
-                                content_target
-                            );
-
-                            let load =
-                                take_scope_load_for_write(&mut draw_scopes, scope.parent_target);
-                            ctx.push_pass(RenderPlanPass::CompositePremul(
-                                super::CompositePremulPass {
-                                    src: content_target,
-                                    src_origin: scope.content_origin,
-                                    dst: scope.parent_target,
-                                    src_size: scope.content_size,
-                                    dst_origin: scope.parent_origin,
-                                    dst_size: scope.parent_size,
-                                    dst_scissor: Some(super::AbsoluteScissorRect(scope.scissor)),
-                                    mask_uniform_index: Some(scope.uniform_index),
-                                    mask: None,
-                                    blend_mode: scope.mode,
-                                    opacity: scope.opacity,
-                                    load,
-                                },
-                            ));
-
-                            let _ = draw_scopes.pop();
-                        } else if scope.mode != fret_core::BlendMode::Over {
-                            // Degraded: no free intermediate targets, so behave as if the group
-                            // was not isolated and the blend mode was `Over` (ADR 0247).
-                            let _ = scope.quality;
-                        }
+                        composite_group::compile_composite_group_pop(
+                            &mut ctx,
+                            &mut draw_scopes,
+                            &mut composite_group_scopes,
+                        );
                     }
                 }
 
