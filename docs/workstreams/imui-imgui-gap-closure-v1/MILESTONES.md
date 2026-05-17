@@ -374,6 +374,10 @@ Exit criteria:
   description, and toolbar state text on shared section-chrome, paragraph, and control-readout
   roles. Markdown body/image rendering remains a text-capability proof surface instead of being
   folded into the fixed-chrome role migration.
+  2026-05-17 residual bare text capability result: a focused `fret-examples` source test now keeps
+  remaining bare `cx.text(...)` / `TextProps::new(...)` paths limited to explicit text/IME
+  capability proofs. This prevents both accidental fixed-chrome regressions and mechanical
+  migration of surfaces that intentionally test text/input rendering.
   2026-05-17 gallery retained-table torture text result: the UI Gallery retained-table torture page
   now uses `text_table_cell(...)` for fixed table cells and `control_readout_text(...)` for table
   state readouts, so the visible retained-table stress surface no longer teaches bare fixed-cell

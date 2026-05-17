@@ -8766,6 +8766,23 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("apps/fret-examples/tests/text_role_residual_surface.rs"),
+            required=[
+                "fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface()",
+                "\"src/components_gallery.rs\".to_string()",
+                "DirectTextCounts {\n                cx_text: 4,\n                text_props_new: 3,",
+                "\"src/ime_smoke_demo.rs\".to_string()",
+                "DirectTextCounts {\n                cx_text: 8,\n                text_props_new: 0,",
+                "\"remaining bare text in fret-examples must stay limited to explicit text/IME capability proofs\"",
+                "\"text_smoke_title\"",
+                "\"TextProps::new(line.clone())\"",
+                "\"out.push(cx.text(line));\"",
+                "\"cx.text(last)\"",
+                "\"focus traversal\"",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("apps/fret-examples/tests/table_stress_demo_surface.rs"),
             required=[
                 "fn table_stress_demo_keeps_fixed_table_text_on_roles()",

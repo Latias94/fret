@@ -254,6 +254,10 @@
       "command": "cargo nextest run -p fret-examples --test markdown_demo_surface markdown_demo_chrome_text_uses_shared_roles --no-fail-fast"
     },
     {
+      "name": "fret-examples residual bare text capability surfaces",
+      "command": "cargo nextest run -p fret-examples --test text_role_residual_surface remaining_bare_text_in_fret_examples_is_explicit_capability_surface --no-fail-fast"
+    },
+    {
       "name": "examples table proof bin check",
       "command": "cargo check -p fret-demo --bin table_demo --bin table_stress_demo"
     },
@@ -507,6 +511,7 @@
     "apps/fret-examples/tests/datatable_demo_surface.rs",
     "apps/fret-examples/tests/components_gallery_surface.rs",
     "apps/fret-examples/tests/markdown_demo_surface.rs",
+    "apps/fret-examples/tests/text_role_residual_surface.rs",
     "apps/fret-examples/tests/canvas_datagrid_stress_demo_surface.rs",
     "apps/fret-examples/tests/date_picker_demo_surface.rs",
     "apps/fret-examples/tests/form_demo_surface.rs",
