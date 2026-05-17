@@ -14,13 +14,14 @@ use fret::{FretApp, advanced::prelude::*, component::prelude::*};
 use fret_core::{ImageColorSpace, Point, Px, SvgFit};
 use fret_markdown as markdown;
 use fret_ui::element::{
-    ImageProps, LayoutQueryRegionProps, LayoutStyle, Length, PressableProps, SvgIconProps,
-    TextProps,
+    AnyElement, ImageProps, LayoutQueryRegionProps, LayoutStyle, Length, PressableProps,
+    SvgIconProps, TextProps,
 };
 use fret_ui::{Invalidation, Theme, ThemeConfig};
 use fret_ui_assets::ui::use_rgba8_image_state_in;
 use fret_ui_kit::IntoUiElementInExt as _;
 use fret_ui_kit::declarative::QueryHandleWatchExt as _;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{ColorRef, IntoUiElement, Space, ui};
 use fret_ui_shadcn::facade as shadcn;
 
@@ -33,6 +34,27 @@ mod act {
 
 const REMOTE_IMAGE_NAMESPACE: &str = "fret-examples.markdown_demo.remote_image.v1";
 const TRANSIENT_REFRESH_REMOTE_IMAGES: u64 = 0xAFA0_0103;
+
+fn markdown_demo_readout_text<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_control_readout(cx, text)
+}
+
+fn markdown_demo_title_text<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_section_chrome_label(cx, text)
+}
+
+fn markdown_demo_paragraph_text<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_paragraph(cx, text)
+}
 
 #[derive(Debug)]
 enum RemoteImageData {
@@ -581,17 +603,20 @@ $$
 
         let toggles = ui::h_flex(|cx| {
             [
-                cx.text(format!(
-                    "wrap code: {}",
-                    if wrap_enabled { "on" } else { "off" }
-                )),
+                markdown_demo_readout_text(
+                    cx,
+                    format!("wrap code: {}", if wrap_enabled { "on" } else { "off" }),
+                ),
                 shadcn::Switch::new(&wrap_code_state)
                     .a11y_label("Wrap code blocks")
                     .into_element(cx),
-                cx.text(format!(
-                    "cap code height: {}",
-                    if cap_enabled { "on" } else { "off" }
-                )),
+                markdown_demo_readout_text(
+                    cx,
+                    format!(
+                        "cap code height: {}",
+                        if cap_enabled { "on" } else { "off" }
+                    ),
+                ),
                 shadcn::Switch::new(&cap_code_height_state)
                     .a11y_label("Cap code block height")
                     .into_element(cx),
@@ -600,7 +625,7 @@ $$
                     .size(shadcn::ButtonSize::Sm)
                     .action(act::RefreshRemoteImages)
                     .into_element(cx),
-                cx.text(format!("expanded code blocks: {expanded_count}")),
+                markdown_demo_readout_text(cx, format!("expanded code blocks: {expanded_count}")),
             ]
         })
         .gap(Space::N3)
@@ -632,8 +657,11 @@ $$
 
         let content = ui::v_flex(|cx| {
             [
-                cx.text("markdown_demo"),
-                cx.text("Scrollable markdown preview (links open via platform shell)."),
+                markdown_demo_title_text(cx, "markdown_demo"),
+                markdown_demo_paragraph_text(
+                    cx,
+                    "Scrollable markdown preview (links open via platform shell).",
+                ),
                 toggles,
                 scroll,
             ]

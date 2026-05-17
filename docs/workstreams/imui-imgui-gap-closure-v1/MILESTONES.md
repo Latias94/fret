@@ -370,6 +370,10 @@ Exit criteria:
   and readout roles. Overlay body copy now routes through paragraph text and overlay last-action
   status routes through `text_control_readout(...)`; source gates reject the old bare table-cell,
   header, fixed control, and overlay proof `cx.text(...)` paths.
+  2026-05-17 markdown proof chrome text result: `markdown_demo` now keeps fixed title, preview
+  description, and toolbar state text on shared section-chrome, paragraph, and control-readout
+  roles. Markdown body/image rendering remains a text-capability proof surface instead of being
+  folded into the fixed-chrome role migration.
   2026-05-17 gallery retained-table torture text result: the UI Gallery retained-table torture page
   now uses `text_table_cell(...)` for fixed table cells and `control_readout_text(...)` for table
   state readouts, so the visible retained-table stress surface no longer teaches bare fixed-cell

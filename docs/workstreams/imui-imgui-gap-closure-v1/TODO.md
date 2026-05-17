@@ -396,6 +396,11 @@ Readiness order for the next locally testable review slices:
    shared text roles. Overlay body copy now uses paragraph text, while the overlay last-action
    status uses `text_control_readout(...)`, keeping the runnable gallery proof from teaching bare
    default wrapping text in fixed cells, fixed control chrome, or overlay proof copy.
+   2026-05-17 markdown proof chrome text follow-up: `markdown_demo` now routes its fixed demo
+   title through `text_section_chrome_label(...)`, its explanatory preview copy through
+   `text_paragraph(...)`, and its toolbar/readout state through `text_control_readout(...)`.
+   Markdown body rendering, image placeholders, and text capability probes stay owned by the
+   Markdown surface instead of being mechanically rewritten.
    2026-05-17 gallery retained-table torture text follow-up: the UI Gallery retained-table torture
    page now routes fixed cell text through `text_table_cell(...)` and table state/status readouts
    through `control_readout_text(...)`, leaving only explicitly multi-line/paragraph copy as bare

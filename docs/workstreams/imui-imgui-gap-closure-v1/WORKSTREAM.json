@@ -250,6 +250,10 @@
       "command": "cargo nextest run -p fret-examples --test components_gallery_surface components_gallery_table_torture_uses_text_roles components_gallery_chrome_and_controls_use_text_roles components_gallery_overlay_text_uses_text_roles --no-fail-fast"
     },
     {
+      "name": "markdown proof chrome text roles",
+      "command": "cargo nextest run -p fret-examples --test markdown_demo_surface markdown_demo_chrome_text_uses_shared_roles --no-fail-fast"
+    },
+    {
       "name": "examples table proof bin check",
       "command": "cargo check -p fret-demo --bin table_demo --bin table_stress_demo"
     },
@@ -488,6 +492,7 @@
     "apps/fret-examples/src/container_queries_docking_demo.rs",
     "apps/fret-examples/src/datatable_demo.rs",
     "apps/fret-examples/src/components_gallery.rs",
+    "apps/fret-examples/src/markdown_demo.rs",
     "apps/fret-examples/src/canvas_datagrid_stress_demo.rs",
     "apps/fret-examples/src/date_picker_demo.rs",
     "apps/fret-examples/src/form_demo.rs",
@@ -501,6 +506,7 @@
     "apps/fret-examples/tests/container_queries_docking_surface.rs",
     "apps/fret-examples/tests/datatable_demo_surface.rs",
     "apps/fret-examples/tests/components_gallery_surface.rs",
+    "apps/fret-examples/tests/markdown_demo_surface.rs",
     "apps/fret-examples/tests/canvas_datagrid_stress_demo_surface.rs",
     "apps/fret-examples/tests/date_picker_demo_surface.rs",
     "apps/fret-examples/tests/form_demo_surface.rs",
