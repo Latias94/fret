@@ -433,6 +433,7 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs",
                 "apps/fret-ui-gallery/src/ui/previews/gallery/data/data_grid.rs",
                 "apps/fret-ui-gallery/src/ui/previews/gallery/data/table_torture.rs",
+                "apps/fret-ui-gallery/src/ui/previews/gallery/data/tree_torture.rs",
                 "apps/fret-ui-gallery/src/ui/previews/gallery/torture/inspector_torture.rs",
                 "apps/fret-ui-gallery/src/ui/previews/gallery/torture/table_retained_torture.rs",
                 "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
@@ -1212,6 +1213,18 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/previews/gallery/data/tree_torture.rs"),
+            required=[
+                "doc_layout::control_readout_text(cx, status.clone())",
+                ".test_id(\"ui-gallery-tree-target-disabled-status\")",
+            ],
+            forbidden=[
+                "ui::text(status.clone())",
+                ".text_color(status_color)",
+                "cx.text(status.clone())",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs"),
             required=[
                 "crate::declarative::text::text_chrome_title(cx, title.clone())",
@@ -1528,6 +1541,7 @@ def main() -> None:
                 "fn harness_virtual_list_torture_uses_fixed_row_text_roles()",
                 "fn harness_ui_kit_list_torture_uses_fixed_row_text_roles()",
                 "fn harness_view_cache_uses_fixed_row_text_roles()",
+                "fn gallery_tree_torture_uses_control_readout_for_status_text()",
                 "fnretained_table_cell_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
                 "fndata_table_torture_cell_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
                 "fndata_grid_cell_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
@@ -1552,6 +1566,7 @@ def main() -> None:
                 "virtual_list_row_detail_text(cx,format!(\\\"Editingrow:{row}\\\"))",
                 "ui_kit_list_row_label_text(cx,format!(\\\"Item{i}\\\"))",
                 "view_cache_list_row_label_text(cx,format!(\\\"Row{i}\\\"))",
+                "doc_layout::control_readout_text(cx,status.clone())",
                 "retained_table_cell_text(cx,row.status.clone())",
                 "data_table_torture_cell_text(cx,row.status.clone())",
                 "data_grid_cell_text(cx,ifrow%3==0{\\\"Running\\\"}else{\\\"Idle\\\"})",

@@ -1058,3 +1058,24 @@ fn harness_view_cache_uses_fixed_row_text_roles() {
         "view_cache reintroduced bare fixed cached-list row text"
     );
 }
+
+#[test]
+fn gallery_tree_torture_uses_control_readout_for_status_text() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/gallery/data/tree_torture.rs",
+        &[
+            "doc_layout::control_readout_text(cx,status.clone())",
+            ".test_id(\"ui-gallery-tree-target-disabled-status\")",
+        ],
+    );
+
+    for forbidden in [
+        "ui::text(status.clone()).text_sm().text_color(",
+        "cx.text(status.clone())",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "tree_torture reintroduced local fixed status text policy: {forbidden}"
+        );
+    }
+}

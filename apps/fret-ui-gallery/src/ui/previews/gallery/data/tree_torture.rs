@@ -121,7 +121,6 @@ pub(in crate::ui) fn preview_tree_torture(
     let controls = {
         let items_for_toggle = items.clone();
         let next_disabled = !target_disabled;
-        let status_color = ColorRef::Color(theme.color_token("muted-foreground"));
         let label = if target_disabled {
             "Enable dynamic target"
         } else {
@@ -150,11 +149,8 @@ pub(in crate::ui) fn preview_tree_torture(
                     }))
                     .test_id("ui-gallery-tree-toggle-target-disabled")
                     .into_element(cx),
-                ui::text(status.clone())
-                    .text_sm()
-                    .text_color(status_color)
-                    .test_id("ui-gallery-tree-target-disabled-status")
-                    .into_element(cx),
+                doc_layout::control_readout_text(cx, status.clone())
+                    .test_id("ui-gallery-tree-target-disabled-status"),
             ]
         })
         .layout(LayoutRefinement::default().w_full())

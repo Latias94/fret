@@ -379,6 +379,9 @@ Readiness order for the next locally testable review slices:
    labels through `text_list_row_label(...)`.
    2026-05-17 gallery view-cache list text follow-up: the UI Gallery View Cache torture page now
    routes its cached inner virtual-list row labels through `text_list_row_label(...)`.
+   2026-05-17 gallery tree torture status text follow-up: the UI Gallery Tree Torture dynamic
+   target status now routes through `control_readout_text(...)` instead of carrying local
+   muted/text-sm styling.
    2026-05-17 virtual row fallback follow-up: tree and file-tree virtualizer out-of-range fallback
    paths now use spacer placeholders instead of empty text nodes, removing another fixed-row
    `Text` escape hatch.
