@@ -1,5 +1,5 @@
 use super::super::*;
-use super::DrawScope;
+use super::draw_scope::DrawScope;
 use slotmap::Key;
 use std::ops::Range;
 

@@ -7,6 +7,7 @@ mod backdrop_source_group;
 mod clip_path;
 mod composite_group;
 mod context;
+mod draw_scope;
 mod effect_scope;
 mod marker_dispatch;
 mod path_msaa;
@@ -16,30 +17,7 @@ mod target_budget;
 use super::render_plan_effects as effects;
 use super::{EffectMarkerKind, SceneEncoding};
 use context::RenderPlanCompilerCtx;
-
-#[derive(Clone, Copy, Debug)]
-struct DrawScope {
-    target: super::PlanTarget,
-    origin: (u32, u32),
-    size: (u32, u32),
-    needs_clear: bool,
-    clear_color: wgpu::Color,
-}
-
-fn take_scope_load_for_write(
-    draw_scopes: &mut Vec<DrawScope>,
-    dst: super::PlanTarget,
-) -> wgpu::LoadOp<wgpu::Color> {
-    let Some(index) = draw_scopes.iter().rposition(|s| s.target == dst) else {
-        return wgpu::LoadOp::Load;
-    };
-    if draw_scopes[index].needs_clear {
-        draw_scopes[index].needs_clear = false;
-        wgpu::LoadOp::Clear(draw_scopes[index].clear_color)
-    } else {
-        wgpu::LoadOp::Load
-    }
-}
+use draw_scope::DrawScope;
 
 pub(super) fn compile_for_scene(
     encoding: &SceneEncoding,

@@ -1017,6 +1017,30 @@ Progress record (RenderPlan compiler marker dispatch helper split):
   - `python3 tools/check_layering.py`
   - `git diff --check`
 
+Progress record (RenderPlan compiler draw-scope helper split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3f; Stage 24 continues)
+- Objective:
+  - Split draw-scope stack ownership and load-op consumption out of the main RenderPlan compiler
+    file without changing the `compile_for_scene` entrypoint, `RenderPlan` IR shape, pass/load-op
+    ordering, scope clear semantics, target lifetimes, budget stats, or degradation snapshots.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/draw_scope.rs`
+    (`DrawScope`, `take_scope_load_for_write`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (main loop initializes the scene draw scope and delegates all scope mutation)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/{clip_path.rs,composite_group.rs,effect_scope.rs}`
+    (pop paths continue consuming parent-target load ops through `take_scope_load_for_write`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

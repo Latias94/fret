@@ -1,8 +1,8 @@
-use super::DrawScope;
 use super::backdrop_source_group;
 use super::clip_path;
 use super::composite_group;
 use super::context::RenderPlanCompilerCtx;
+use super::draw_scope::DrawScope;
 use super::effect_scope;
 use crate::renderer::{
     BlurQualitySnapshot, EffectDegradationSnapshot, EffectMarker, EffectMarkerKind, SceneEncoding,

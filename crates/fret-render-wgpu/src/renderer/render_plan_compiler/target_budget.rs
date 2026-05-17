@@ -1,5 +1,5 @@
 use super::super::render_plan_effects as effects;
-use super::DrawScope;
+use super::draw_scope::DrawScope;
 use crate::renderer::{PlanTarget, estimate_texture_bytes};
 
 pub(super) fn choose_backdrop_source_group_pyramid_choice(

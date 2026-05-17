@@ -1,5 +1,5 @@
 use super::context::RenderPlanCompilerCtx;
-use super::{DrawScope, take_scope_load_for_write};
+use super::draw_scope::{DrawScope, take_scope_load_for_write};
 use crate::renderer::{
     CompositePremulPass, MaskRef, PathClipMaskPass, PlanTarget, RenderPlanDegradation,
     RenderPlanDegradationKind, RenderPlanDegradationReason, RenderPlanPass, SceneEncoding,

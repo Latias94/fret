@@ -1,5 +1,5 @@
-use super::DrawScope;
 use super::context::RenderPlanCompilerCtx;
+use super::draw_scope::DrawScope;
 use crate::renderer::{OrderedDraw, PathMsaaBatchPass, RenderPlanPass, SceneEncoding};
 
 pub(super) fn try_compile_path_msaa_batch(
