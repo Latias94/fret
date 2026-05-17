@@ -11,7 +11,7 @@ use crate::renderer::{
 
 pub(super) struct MarkerDispatchState {
     effect_scopes: Vec<effect_scope::EffectScope>,
-    composite_group_scopes: Vec<composite_group::CompositeGroupScope>,
+    composite_group_state: composite_group::CompositeGroupDispatchState,
     clip_path_dispatch_state: clip_path::ClipPathDispatchState,
     backdrop_source_group_state: backdrop_source_group::BackdropSourceGroupDispatchState,
     effect_chain_budget_stats: EffectChainBudgetStats,
@@ -23,7 +23,7 @@ impl MarkerDispatchState {
     pub(super) fn new() -> Self {
         Self {
             effect_scopes: Vec::new(),
-            composite_group_scopes: Vec::new(),
+            composite_group_state: composite_group::CompositeGroupDispatchState::new(),
             clip_path_dispatch_state: clip_path::ClipPathDispatchState::new(),
             backdrop_source_group_state:
                 backdrop_source_group::BackdropSourceGroupDispatchState::new(),
@@ -175,10 +175,9 @@ impl MarkerDispatchState {
                 quality,
                 opacity,
             } => {
-                composite_group::compile_composite_group_push(
+                self.composite_group_state.compile_push(
                     plan,
                     draw_scopes,
-                    &mut self.composite_group_scopes,
                     draw_ix,
                     composite_group::CompositeGroupPushCtx {
                         scissor,
@@ -203,11 +202,7 @@ impl MarkerDispatchState {
                 );
             }
             EffectMarkerKind::CompositeGroupPop => {
-                composite_group::compile_composite_group_pop(
-                    plan,
-                    draw_scopes,
-                    &mut self.composite_group_scopes,
-                );
+                self.composite_group_state.compile_pop(plan, draw_scopes);
             }
         }
     }

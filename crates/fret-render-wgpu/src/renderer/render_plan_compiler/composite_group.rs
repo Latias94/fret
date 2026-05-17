@@ -7,7 +7,7 @@ use crate::renderer::{
 };
 
 #[derive(Clone, Copy, Debug)]
-pub(super) struct CompositeGroupScope {
+struct CompositeGroupScope {
     mode: fret_core::BlendMode,
     quality: fret_core::EffectQuality,
     scissor: ScissorRect,
@@ -19,6 +19,34 @@ pub(super) struct CompositeGroupScope {
     content_target: Option<PlanTarget>,
     content_origin: (u32, u32),
     content_size: (u32, u32),
+}
+
+pub(super) struct CompositeGroupDispatchState {
+    scopes: Vec<CompositeGroupScope>,
+}
+
+impl CompositeGroupDispatchState {
+    pub(super) fn new() -> Self {
+        Self { scopes: Vec::new() }
+    }
+
+    pub(super) fn compile_push(
+        &mut self,
+        plan: &mut RenderPlanCompilerCtx,
+        draw_scopes: &mut Vec<DrawScope>,
+        draw_ix: usize,
+        args: CompositeGroupPushCtx<'_>,
+    ) {
+        compile_composite_group_push(plan, draw_scopes, &mut self.scopes, draw_ix, args);
+    }
+
+    pub(super) fn compile_pop(
+        &mut self,
+        plan: &mut RenderPlanCompilerCtx,
+        draw_scopes: &mut Vec<DrawScope>,
+    ) {
+        compile_composite_group_pop(plan, draw_scopes, &mut self.scopes);
+    }
 }
 
 pub(super) struct CompositeGroupPushCtx<'a> {
@@ -36,7 +64,7 @@ pub(super) struct CompositeGroupPushCtx<'a> {
     pub(super) backdrop_source_group_in_use_bytes: u64,
 }
 
-pub(super) fn compile_composite_group_push(
+fn compile_composite_group_push(
     plan: &mut RenderPlanCompilerCtx,
     draw_scopes: &mut Vec<DrawScope>,
     composite_group_scopes: &mut Vec<CompositeGroupScope>,
@@ -119,7 +147,7 @@ pub(super) fn compile_composite_group_push(
     });
 }
 
-pub(super) fn compile_composite_group_pop(
+fn compile_composite_group_pop(
     plan: &mut RenderPlanCompilerCtx,
     draw_scopes: &mut Vec<DrawScope>,
     composite_group_scopes: &mut Vec<CompositeGroupScope>,

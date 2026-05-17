@@ -1238,6 +1238,28 @@ Progress record (RenderPlan compiler clip-path dispatch state split):
   - `python3 tools/check_layering.py`
   - `git diff --check`
 
+Progress record (RenderPlan compiler composite-group dispatch state split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3o; Stage 24 continues)
+- Objective:
+  - Move composite-group dispatch state out of `marker_dispatch.rs`, centralizing composite
+    scopes and push/pop mutation behind `CompositeGroupDispatchState` while preserving
+    `CompositeGroupPush/Pop` pass ordering, `Intermediate0..3` allocation order,
+    `CompositeGroupBlendDegradedToOver` degradation reason precedence, and composite pass
+    load-op behavior.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/composite_group.rs`
+    (`CompositeGroupDispatchState::{compile_push,compile_pop}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (`MarkerDispatchState` owns one composite-group dispatch-state field)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

@@ -623,6 +623,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - [x] Step 3l: replace effect-chain in-use target scratch `Vec` with `SmallVec`.
     - [x] Step 3m: split backdrop-source-group dispatch state out of marker dispatch.
     - [x] Step 3n: split clip-path dispatch state out of marker dispatch and pass active mask snapshots into effect-scope planning.
+    - [x] Step 3o: split composite-group dispatch state out of marker dispatch.
   - Landed (step 1): extracted target/budget helpers and their focused tests into
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
   - Landed (step 2): introduced `RenderPlanCompilerCtx` to own structural compiler outputs
@@ -687,6 +688,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Landed (step 3n): moved clip-path dispatch state into `ClipPathDispatchState`, centralizing
     clip scopes, mask-in-use bytes, push/pop mutation, active mask target snapshots, and
     clip-path helper visibility outside `marker_dispatch.rs`.
+  - Landed (step 3o): moved composite-group dispatch state into
+    `CompositeGroupDispatchState`, centralizing scopes, push/pop mutation, and helper visibility
+    outside `marker_dispatch.rs`.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
       `compile_for_scene_inner`)
@@ -703,7 +707,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_chain.rs`
       (`apply_chain_in_place`, `SmallVec<[PlanTarget; 8]>` in-use target snapshot)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/composite_group.rs`
-      (`compile_composite_group_push`, `compile_composite_group_pop`)
+      (`CompositeGroupDispatchState`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/backdrop_source_group.rs`
       (`compile_backdrop_source_group_push`, `compile_backdrop_source_group_pop`,
       `BackdropSourceGroupDispatchState`, `BackdropSourceGroupScope::effect_ctx`)
