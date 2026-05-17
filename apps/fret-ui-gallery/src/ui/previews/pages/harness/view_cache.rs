@@ -218,7 +218,7 @@ pub(in crate::ui) fn preview_view_cache(
                 },
                 |cx| {
                     shadcn::PopoverContent::new([
-                        cx.text("Popover content"),
+                        doc_layout::paragraph_text(cx, "Popover content"),
                         shadcn::Button::new("Close")
                             .variant(shadcn::ButtonVariant::Secondary)
                             .test_id("ui-gallery-view-cache-popover-close")

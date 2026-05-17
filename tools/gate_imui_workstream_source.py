@@ -1243,6 +1243,7 @@ def main() -> None:
                 "doc_layout::control_label_text(\n                        cx,\n                        \"Cache content root (requires 'Cache shell')\",\n                    )",
                 "doc_layout::control_label_text(\n                        cx,\n                        \"Enable inner ViewCache boundary (torture subtree)\",\n                    )",
                 "doc_layout::control_label_text(\n                        cx,\n                        \"Continuous frames (cache-hit should still keep state alive)\",\n                    )",
+                "doc_layout::paragraph_text(cx, \"Popover content\")",
             ],
             forbidden=[
                 "vec![cx.text(format!(\"Row {i}\"))]",
@@ -1253,6 +1254,7 @@ def main() -> None:
                 "cx.text(\"Cache content root (requires 'Cache shell')\")",
                 "cx.text(\"Enable inner ViewCache boundary (torture subtree)\")",
                 "cx.text(\"Continuous frames (cache-hit should still keep state alive)\")",
+                "cx.text(\"Popover content\")",
             ],
         ),
         SourceCheck(
@@ -1704,6 +1706,7 @@ def main() -> None:
                 "view_cache_list_row_label_text(cx,format!(\\\"Row{i}\\\"))",
                 "doc_layout::paragraph_text(cx,\\\"Goal:makehit-testameasurablehotspotsobounds-treevsfallbacktraversalA/Bismeaningful.\\\")",
                 "doc_layout::control_label_text(cx,\\\"Enableview-cachemode(globalUiTreeflag)\\\")",
+                "doc_layout::paragraph_text(cx,\\\"Popovercontent\\\")",
                 "doc_layout::control_readout_text(cx,status.clone())",
                 "doc_layout::control_readout_text(cx,format!(\\\"lastaction:{last}\\\"))",
                 "overlay_status_text(cx,text).test_id(\\\"ui-gallery-overlay-last-action\\\")",

@@ -388,6 +388,8 @@ Readiness order for the next locally testable review slices:
    routes its cached inner virtual-list row labels through `text_list_row_label(...)`.
    2026-05-17 gallery view-cache control-label follow-up: fixed switch labels now route through
    `control_label_text(...)` instead of bare `cx.text(...)`.
+   2026-05-17 gallery view-cache popover body follow-up: the cached Popover body copy now routes
+   through `paragraph_text(...)` instead of bare `cx.text(...)`.
    2026-05-17 gallery tree torture status text follow-up: the UI Gallery Tree Torture dynamic
    target status now routes through `control_readout_text(...)` instead of carrying local
    muted/text-sm styling.

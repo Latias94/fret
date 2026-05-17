@@ -1108,6 +1108,7 @@ fn harness_view_cache_uses_fixed_row_text_roles() {
             "doc_layout::control_label_text(cx,\"Cachecontentroot(requires'Cacheshell')\")",
             "doc_layout::control_label_text(cx,\"EnableinnerViewCacheboundary(torturesubtree)\")",
             "doc_layout::control_label_text(cx,\"Continuousframes(cache-hitshouldstillkeepstatealive)\")",
+            "doc_layout::paragraph_text(cx,\"Popovercontent\")",
         ],
     );
 
@@ -1120,6 +1121,7 @@ fn harness_view_cache_uses_fixed_row_text_roles() {
         "cx.text(\"Cachecontentroot(requires'Cacheshell')\")",
         "cx.text(\"EnableinnerViewCacheboundary(torturesubtree)\")",
         "cx.text(\"Continuousframes(cache-hitshouldstillkeepstatealive)\")",
+        "cx.text(\"Popovercontent\")",
     ] {
         assert!(
             !normalized.contains(forbidden),
