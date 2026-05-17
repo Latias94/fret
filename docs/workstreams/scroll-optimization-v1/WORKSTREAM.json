@@ -196,6 +196,6 @@
   "adr_refs": [],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Current no-4090 resize-jitter evidence has landed the stable auto-height classification slice. The next blocker is no longer auto_child_height; it is Grid under the content Semantics root and horizontal Flex under the app/nav shell, with Scroll still a side-effect boundary and Canvas too small to prioritize. Keep RTX4090 closeout as follow-up evidence, not a local completion gate. Before broadening beyond Grid/row-Flex, split clean-geometry classification into layout side-effect, child-bounds strategy, and width-delta size-stability axes."
+    "notes": "Current no-4090 resize-jitter evidence has landed the stable auto-height classification slice and the follow-up clean-geometry classification model refactor. The model now separates layout side effects, child-bounds strategy, and width-delta size stability, so it no longer needs a broad node-classification rewrite before the next proof. The next blocker is Grid under the content Semantics root and horizontal Flex under the app/nav shell, with Scroll still a side-effect boundary and Canvas too small to prioritize. Keep RTX4090 closeout as follow-up evidence, not a local completion gate. Continue in this workstream with a proof-first Grid / horizontal Flex geometry contract unless new evidence points elsewhere."
   }
 }

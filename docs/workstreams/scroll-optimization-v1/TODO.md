@@ -188,6 +188,26 @@ Status: Active
   - Decision: do not start a broad node-classification rewrite yet. The next optimization candidate
     is a proof-first `Grid` / horizontal `Flex` geometry contract or a formal classification-model
     refactor if that proof cannot stay local and reviewable.
+- [x] Refactor the clean-geometry node classification model before widening to `Grid` or
+  horizontal `Flex`.
+  - Audit conclusion: no broad layout-architecture rewrite is needed from the current evidence.
+    The problematic part was narrower: `CleanGeometryNodeContract` was beginning to mix node
+    categories, layout side-effect policy, child-bound derivation, and leaf size stability into a
+    single enum.
+  - Implemented answer: keep the same supported node set and rejection behavior, but split the
+    internal contract into explicit axes: `layout_effect`, `child_bounds`, and `size_stability`.
+  - `Scroll` remains a side-effect boundary, but boundary detection now reads from the same
+    `CleanGeometryNodeContract` instead of a separate `Scroll` special-case. Future boundaries
+    should therefore be added in one classification surface.
+  - Guardrails: this intentionally does not add `Grid`, horizontal `Flex`, `ViewCache`,
+    `VirtualList`, `Canvas`, layout-query, or transform participation. Those still require their
+    own proof and evidence.
+  - Verified gates:
+    `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_px_container_and_updates_child_bounds clean_geometry_small_resize_rejects_container_fraction_padding clean_geometry_small_resize_skips_stable_auto_height_container_wrapper clean_geometry_small_resize_skips_stable_auto_height_vertical_flex_child clean_geometry_small_resize_rejects_auto_height_text_reflow --no-fail-fast`,
+    `cargo nextest run -p fret-ui layout_engine --no-fail-fast`,
+    `cargo nextest run -p fret-ui scroll --no-fail-fast`,
+    `cargo check -p fret-bootstrap --features ui-app-driver,diagnostics`,
+    `cargo fmt`, and `python3 tools/check_layering.py`.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

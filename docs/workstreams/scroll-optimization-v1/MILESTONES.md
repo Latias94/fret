@@ -105,6 +105,9 @@ Status: Active
   changing-size text leaves reject with `text_reflow`. Fresh no-4090 evidence moves the next
   blockers to `Grid` and horizontal `Flex`; wrap flex remains visible under the content root, and
   `Scroll` remains a side-effect boundary.
-- Do not treat the current enum as the final architecture if the next slice expands into grid,
-  row-flex, retained/cache, canvas, layout-query, or transform nodes. Split into separate
-  side-effect, child-bounds, and size-stability axes before that grows into an implicit whitelist.
+- 2026-05-17 model refactor landed: `CleanGeometryNodeContract` now records separate layout-effect,
+  child-bounds, and width-delta size-stability axes. Boundary detection also reads that contract,
+  instead of keeping a separate `Scroll` special-case table.
+- Do not treat the current supported node set as permission to expand by name. The next grid,
+  row-flex, retained/cache, canvas, layout-query, or transform slice still needs a focused proof and
+  evidence.

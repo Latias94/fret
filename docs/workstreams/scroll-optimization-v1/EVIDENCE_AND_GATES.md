@@ -339,7 +339,7 @@ Conservative Container geometry contract slice (2026-05-17):
 
 - Mechanism anchors:
   - `crates/fret-ui/src/tree/layout/node.rs`
-    (`CleanGeometryNodeContract::PureContainer`,
+    (`CleanGeometryChildBoundsStrategy::ContainerPxInsets`,
     `clean_container_width_delta_child_bounds`,
     `clean_engine_geometry_propagation_requires_manual_child_bounds`)
   - `crates/fret-ui/src/declarative/tests/layout/layout_engine.rs`
@@ -390,7 +390,7 @@ Auto-height / size-stability classification slice (2026-05-17):
 
 - Mechanism anchors:
   - `crates/fret-ui/src/tree/layout/node.rs`
-    (`CleanGeometryNodeContract::StableSizeLeaf`,
+    (`CleanGeometryWidthDeltaSizeStability::StableComputedBox`,
     `clean_child_height_style_supported_for_width_delta`,
     `clean_child_width_style_supported_for_width_delta`)
   - `crates/fret-ui/src/declarative/tests/layout/layout_engine.rs`
@@ -442,6 +442,46 @@ Auto-height / size-stability classification slice (2026-05-17):
   - Do not start a broad node-classification rewrite solely from this evidence. Start the next slice
     with either a proof-first `Grid` / horizontal `Flex` geometry contract or a small formal
     classification-model refactor if those proofs cannot stay local.
+
+Clean-geometry classification model refactor (2026-05-17):
+
+- Mechanism anchors:
+  - `crates/fret-ui/src/tree/layout/node.rs`
+    (`CleanGeometryNodeContract`,
+    `CleanGeometryLayoutEffect`,
+    `CleanGeometryChildBoundsStrategy`,
+    `CleanGeometryWidthDeltaSizeStability`,
+    `clean_geometry_boundary_layout_node_kind`)
+- Contract:
+  - The supported node set and rejection strings are unchanged. This is a model-clarity refactor,
+    not a fast-path expansion.
+  - `CleanGeometryNodeContract` now records three explicit axes:
+    layout side effects (`Pure` vs `SideEffectBoundary`), parent-derived child-bound strategy
+    (`None`, `PreserveLocalOrigins`, `ContainerPxInsets`, `VerticalNoWrapFlex`), and width-delta
+    size stability (`Propagated` vs `StableComputedBox`).
+  - Side-effect boundary detection reads the same contract as the recursive clean-geometry proof,
+    so future layout-effect boundaries do not need a second element-name table.
+  - The next `Grid` or horizontal `Flex` slice should add a new child-bound strategy only after a
+    focused proof. `ViewCache`, `VirtualList`, `Canvas`, layout queries, transforms, and retained
+    surfaces remain excluded until their side effects and bounds dependencies are proven.
+- Focused gates:
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_px_container_and_updates_child_bounds clean_geometry_small_resize_rejects_container_fraction_padding clean_geometry_small_resize_skips_stable_auto_height_container_wrapper clean_geometry_small_resize_skips_stable_auto_height_vertical_flex_child clean_geometry_small_resize_rejects_auto_height_text_reflow --no-fail-fast`
+    - Result: `5/5` passed.
+  - `cargo nextest run -p fret-ui layout_engine --no-fail-fast`
+    - Result: `23/23` passed.
+  - `cargo nextest run -p fret-ui scroll --no-fail-fast`
+    - Result: `153/153` passed.
+  - `cargo check -p fret-bootstrap --features ui-app-driver,diagnostics`
+    - Result: passed.
+  - `cargo fmt`
+    - Result: passed.
+  - `python3 tools/check_layering.py`
+    - Result: passed.
+- Decision:
+  - No new workstream is needed for this refactor; it closes the local M7/M9 architecture concern.
+  - The next optimization can proceed as a bounded `Grid` / horizontal `Flex` proof in
+    `scroll-optimization-v1`, with RTX4090 validation still tracked as follow-up evidence rather
+    than a local completion gate.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

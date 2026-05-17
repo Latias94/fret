@@ -62,19 +62,64 @@ enum CleanGeometrySolveSkipRejectionReason {
 }
 
 #[derive(Clone)]
-enum CleanGeometryNodeContract {
-    /// Geometry-only wrapper whose children keep their previous local origins and may stretch in width.
-    PurePassthrough,
-    /// Vertical, no-wrap flex subset whose line structure is stable across small width deltas.
-    PureVerticalFlex(crate::element::FlexProps),
-    /// Box-sizing:border-box container subset with px insets and static children.
-    PureContainer(crate::element::ContainerProps),
-    /// Leaf whose layout is stable only when its computed box size does not change.
-    StableSizeLeaf,
-    /// Leaf whose layout result has no child geometry or layout side effects.
-    SafeLeaf,
-    /// Node whose own layout must still run, but whose parent may propagate resized bounds to it.
+struct CleanGeometryNodeContract {
+    layout_effect: CleanGeometryLayoutEffect,
+    child_bounds: CleanGeometryChildBoundsStrategy,
+    size_stability: CleanGeometryWidthDeltaSizeStability,
+}
+
+#[derive(Clone, Copy)]
+enum CleanGeometryLayoutEffect {
+    /// Layout publishes no side effects beyond geometry.
+    Pure,
+    /// Own layout must run; ancestors may only propagate this node's resized bounds.
     SideEffectBoundary,
+}
+
+#[derive(Clone)]
+enum CleanGeometryChildBoundsStrategy {
+    /// Leaf node: no child bounds to derive.
+    None,
+    /// Geometry-only wrapper whose children keep previous local origins and may stretch in width.
+    PreserveLocalOrigins,
+    /// Box-sizing:border-box container subset with px insets and static children.
+    ContainerPxInsets(crate::element::ContainerProps),
+    /// Vertical, no-wrap flex subset whose line structure is stable across small width deltas.
+    VerticalNoWrapFlex(crate::element::FlexProps),
+}
+
+#[derive(Clone, Copy)]
+enum CleanGeometryWidthDeltaSizeStability {
+    /// The node may take the propagated bounds size.
+    Propagated,
+    /// The node is stable only when the computed box size does not change.
+    StableComputedBox,
+}
+
+impl CleanGeometryNodeContract {
+    fn pure(child_bounds: CleanGeometryChildBoundsStrategy) -> Self {
+        Self {
+            layout_effect: CleanGeometryLayoutEffect::Pure,
+            child_bounds,
+            size_stability: CleanGeometryWidthDeltaSizeStability::Propagated,
+        }
+    }
+
+    fn stable_leaf() -> Self {
+        Self {
+            layout_effect: CleanGeometryLayoutEffect::Pure,
+            child_bounds: CleanGeometryChildBoundsStrategy::None,
+            size_stability: CleanGeometryWidthDeltaSizeStability::StableComputedBox,
+        }
+    }
+
+    fn side_effect_boundary() -> Self {
+        Self {
+            layout_effect: CleanGeometryLayoutEffect::SideEffectBoundary,
+            child_bounds: CleanGeometryChildBoundsStrategy::None,
+            size_stability: CleanGeometryWidthDeltaSizeStability::Propagated,
+        }
+    }
 }
 
 impl CleanGeometrySolveSkipRejectionReason {
@@ -834,12 +879,21 @@ impl<H: UiHost> UiTree<H> {
         window: AppWindowId,
         node: NodeId,
     ) -> Option<&'static str> {
+        let children = self
+            .nodes
+            .get(node)
+            .map(|entry| entry.children.as_slice())?;
         crate::declarative::frame::with_element_record_for_node(app, window, node, |record| {
+            let kind = record.instance.kind_name();
+            let Ok(contract) = Self::clean_geometry_node_contract(&record.instance, children, kind)
+            else {
+                return None;
+            };
             if matches!(
-                record.instance,
-                crate::declarative::frame::ElementInstance::Scroll(_)
+                contract.layout_effect,
+                CleanGeometryLayoutEffect::SideEffectBoundary
             ) {
-                Some(record.instance.kind_name())
+                Some(kind)
             } else {
                 None
             }
@@ -883,15 +937,30 @@ impl<H: UiHost> UiTree<H> {
                 )
             })?;
         let kind = record.instance.kind_name();
-        match Self::clean_geometry_node_contract(record.instance, children, kind)? {
-            CleanGeometryNodeContract::SideEffectBoundary => {
+        let contract = Self::clean_geometry_node_contract(&record.instance, children, kind)?;
+        match contract.layout_effect {
+            CleanGeometryLayoutEffect::Pure => {}
+            CleanGeometryLayoutEffect::SideEffectBoundary => {
                 Err(CleanGeometrySolveSkipRejection::for_kind(
                     CleanGeometrySolveSkipRejectionReason::SideEffectBoundary,
                     kind,
-                ))
+                ))?
             }
-            CleanGeometryNodeContract::PurePassthrough => self
-                .clean_passthrough_width_delta_child_bounds_checked(
+        }
+        match contract.size_stability {
+            CleanGeometryWidthDeltaSizeStability::Propagated => {}
+            CleanGeometryWidthDeltaSizeStability::StableComputedBox => {
+                if !Self::clean_size_matches(bounds.size, prev_bounds.size) {
+                    return Err(CleanGeometrySolveSkipRejection::for_kind(
+                        CleanGeometrySolveSkipRejectionReason::TextReflow,
+                        kind,
+                    ));
+                }
+            }
+        }
+        match contract.child_bounds {
+            CleanGeometryChildBoundsStrategy::PreserveLocalOrigins => self
+                .clean_preserved_origin_width_delta_child_bounds_checked(
                     app,
                     window,
                     children,
@@ -899,7 +968,7 @@ impl<H: UiHost> UiTree<H> {
                     prev_bounds,
                     kind,
                 ),
-            CleanGeometryNodeContract::PureVerticalFlex(props) => self
+            CleanGeometryChildBoundsStrategy::VerticalNoWrapFlex(props) => self
                 .clean_vertical_flex_width_delta_child_bounds(
                     app,
                     window,
@@ -909,7 +978,7 @@ impl<H: UiHost> UiTree<H> {
                     props,
                     kind,
                 ),
-            CleanGeometryNodeContract::PureContainer(props) => self
+            CleanGeometryChildBoundsStrategy::ContainerPxInsets(props) => self
                 .clean_container_width_delta_child_bounds(
                     app,
                     window,
@@ -919,28 +988,18 @@ impl<H: UiHost> UiTree<H> {
                     props,
                     kind,
                 ),
-            CleanGeometryNodeContract::StableSizeLeaf => {
-                if Self::clean_size_matches(bounds.size, prev_bounds.size) {
-                    Ok(Vec::new())
-                } else {
-                    Err(CleanGeometrySolveSkipRejection::for_kind(
-                        CleanGeometrySolveSkipRejectionReason::TextReflow,
-                        kind,
-                    ))
-                }
-            }
-            CleanGeometryNodeContract::SafeLeaf => Ok(Vec::new()),
+            CleanGeometryChildBoundsStrategy::None => Ok(Vec::new()),
         }
     }
 
     fn clean_geometry_node_contract(
-        instance: crate::declarative::frame::ElementInstance,
+        instance: &crate::declarative::frame::ElementInstance,
         children: &[NodeId],
         kind: &'static str,
     ) -> Result<CleanGeometryNodeContract, CleanGeometrySolveSkipRejection> {
         match instance {
             crate::declarative::frame::ElementInstance::Scroll(_) => {
-                Ok(CleanGeometryNodeContract::SideEffectBoundary)
+                Ok(CleanGeometryNodeContract::side_effect_boundary())
             }
             crate::declarative::frame::ElementInstance::Stack(_)
             | crate::declarative::frame::ElementInstance::Pressable(_)
@@ -961,22 +1020,34 @@ impl<H: UiHost> UiTree<H> {
             | crate::declarative::frame::ElementInstance::HitTestGate(_)
             | crate::declarative::frame::ElementInstance::FocusTraversalGate(_)
             | crate::declarative::frame::ElementInstance::DismissibleLayer(_) => {
-                Ok(CleanGeometryNodeContract::PurePassthrough)
+                Ok(CleanGeometryNodeContract::pure(
+                    CleanGeometryChildBoundsStrategy::PreserveLocalOrigins,
+                ))
             }
             crate::declarative::frame::ElementInstance::Container(props) => {
-                Ok(CleanGeometryNodeContract::PureContainer(props))
+                Ok(CleanGeometryNodeContract::pure(
+                    CleanGeometryChildBoundsStrategy::ContainerPxInsets(*props),
+                ))
             }
-            crate::declarative::frame::ElementInstance::Flex(props)
-            | crate::declarative::frame::ElementInstance::SemanticFlex(
-                crate::element::SemanticFlexProps { flex: props, .. },
-            )
-            | crate::declarative::frame::ElementInstance::RovingFlex(
-                crate::element::RovingFlexProps { flex: props, .. },
-            ) => Ok(CleanGeometryNodeContract::PureVerticalFlex(props)),
+            crate::declarative::frame::ElementInstance::Flex(props) => {
+                Ok(CleanGeometryNodeContract::pure(
+                    CleanGeometryChildBoundsStrategy::VerticalNoWrapFlex(*props),
+                ))
+            }
+            crate::declarative::frame::ElementInstance::SemanticFlex(props) => {
+                Ok(CleanGeometryNodeContract::pure(
+                    CleanGeometryChildBoundsStrategy::VerticalNoWrapFlex(props.flex),
+                ))
+            }
+            crate::declarative::frame::ElementInstance::RovingFlex(props) => {
+                Ok(CleanGeometryNodeContract::pure(
+                    CleanGeometryChildBoundsStrategy::VerticalNoWrapFlex(props.flex),
+                ))
+            }
             crate::declarative::frame::ElementInstance::Text(_)
             | crate::declarative::frame::ElementInstance::StyledText(_)
             | crate::declarative::frame::ElementInstance::SelectableText(_) => {
-                Ok(CleanGeometryNodeContract::StableSizeLeaf)
+                Ok(CleanGeometryNodeContract::stable_leaf())
             }
             crate::declarative::frame::ElementInstance::Spacer(_)
             | crate::declarative::frame::ElementInstance::Image(_)
@@ -985,7 +1056,9 @@ impl<H: UiHost> UiTree<H> {
             | crate::declarative::frame::ElementInstance::Spinner(_)
                 if children.is_empty() =>
             {
-                Ok(CleanGeometryNodeContract::SafeLeaf)
+                Ok(CleanGeometryNodeContract::pure(
+                    CleanGeometryChildBoundsStrategy::None,
+                ))
             }
             _ => Err(CleanGeometrySolveSkipRejection::for_kind(
                 CleanGeometrySolveSkipRejectionReason::UnsupportedKind,
@@ -994,7 +1067,7 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn clean_passthrough_width_delta_child_bounds_checked(
+    fn clean_preserved_origin_width_delta_child_bounds_checked(
         &mut self,
         app: &mut H,
         window: AppWindowId,
