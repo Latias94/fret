@@ -2201,8 +2201,8 @@ Rule:
 - `docs/workstreams/open-source-readiness-fearless-refactor-v1/` — first 2026-03-04, latest 2026-03-12, 4 markdown docs
 - `docs/workstreams/overlay-input-arbitration-v2/` — first 2026-01-24, latest 2026-02-11, 3 markdown docs
 - `docs/workstreams/paint-eval-space-v1/` — first 2026-02-28, latest 2026-03-02, 3 markdown docs
-- `docs/workstreams/path-paint-surface-v1/` — first 2026-02-16, latest 2026-02-16, 3 markdown docs
-- `docs/workstreams/path-stroke-style-v2/` — first 2026-02-16, latest 2026-02-16, 3 markdown docs
+- `docs/workstreams/path-paint-surface-v1/` — first 2026-02-16, latest 2026-05-17, 4 markdown docs (closed path paint contract lane; `SceneOp::Path` uses bounded `PaintBindingV1` with gradient/material conformance)
+- `docs/workstreams/path-stroke-style-v2/` — first 2026-02-16, latest 2026-05-17, 4 markdown docs (closed vector path stroke v2 lane for join/cap/miter/dash semantics and conformance)
 - `docs/workstreams/perf-baselines/` — first 2026-02-06, latest 2026-02-10, 1 markdown docs
 - `docs/workstreams/primitives-interaction-semantics-alignment-v1/` — first 2026-02-09, latest 2026-02-17, 19 markdown docs
 - `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/` — first 2026-04-02, latest 2026-04-15, 6 markdown docs

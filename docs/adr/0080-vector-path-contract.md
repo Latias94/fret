@@ -9,9 +9,14 @@ Fret exposes a prepared vector path API:
 - `fret-core::vector_path` (`PathCommand`, `PathStyle`, `PathService`)
 - `SceneOp::Path` (render a prepared `PathId` at an origin)
 
-The implementation exists today (`crates/fret-render-wgpu/src/renderer/mod.rs` tessellates paths via `lyon`),
-but the contract has not been explicitly locked. If left implicit, component and renderer work will
-drift quickly (stroke joins/caps, AA expectations, transform interaction, clip composition, and cache keys).
+The implementation exists today (`crates/fret-render-wgpu/src/renderer/path.rs` tessellates paths
+via `lyon`). This ADR locks the base prepared-path contract so component and renderer work does not
+drift across AA expectations, transform interaction, clip composition, metrics, and cache keys.
+
+Follow-on ADRs extend this base contract without changing the v1 compatibility surface:
+
+- ADR 0277 adds `StrokeStyleV2` join/cap/miter/dash semantics.
+- ADR 0278 upgrades `SceneOp::Path` to the bounded scene `Paint` surface.
 
 References:
 
@@ -26,7 +31,7 @@ References:
 ### 1) Paths are a prepared geometry primitive behind stable IDs
 
 - `PathService::prepare(...) -> (PathId, PathMetrics)` produces a stable handle for a prepared path.
-- `SceneOp::Path` draws a prepared path by `PathId` with a solid color.
+- `SceneOp::Path` draws a prepared path by `PathId` with a bounded `Paint` surface (ADR 0278).
 - UI/runtime code does not own tessellation or GPU resources; it only holds `PathId` handles (ADR 0004).
 
 ### 2) Coordinate space and transforms
@@ -35,14 +40,14 @@ References:
 - `SceneOp::Path { origin, ... }` adds a local translation for the prepared path.
 - The cumulative transform stack applies to both the origin and the path geometry (ADR 0019 / ADR 0078).
 
-### 3) Fill and stroke semantics (v1)
+### 3) Fill and stroke semantics
 
 #### Fill
 
 - `PathStyle::Fill` fills the path interior.
 - `FillRule::NonZero` and `FillRule::EvenOdd` match the standard winding semantics used by SVG/canvas.
 
-#### Stroke
+#### Stroke v1 compatibility
 
 - `PathStyle::Stroke { width }` draws a stroked outline centered on the path.
 - `width` is in logical pixels and is clamped to `>= 0`.
@@ -56,6 +61,12 @@ Stroke joins/caps are intentionally fixed in v1 (to avoid exposing incomplete su
 
 If the framework needs configurable joins/caps/dashes, it must be added as a v2 extension to the
 core contract (new fields/types and updated conformance tests), not as renderer-only behavior.
+
+That v2 extension is now accepted as ADR 0277:
+
+- `PathStyle::StrokeV2(StrokeStyleV2)` keeps width-only v1 callsites valid.
+- `StrokeStyleV2` adds join, cap, miter limit, and optional `DashPatternV1`.
+- Renderer cache keys and conformance gates must include v2 style fields.
 
 ### 4) Metrics and bounds
 
@@ -86,14 +97,11 @@ To keep the contract tolerant of upstream command streams (SVG conversions, edit
 - Renderer implementations may evolve (tessellation strategy, AA, caching) without changing UI semantics.
 - The contract is compatible with future full-affine rendering and shader-based clipping (ADR 0078).
 
-## Future Work
+## Remaining Work
 
 - Add renderer conformance tests that validate:
   - fill rule correctness for self-intersecting paths,
   - stroke width behavior and bounds conservativeness,
   - transform + clip composition correctness for rotated paths (after full affine lands).
-- Extend v2 surface area if needed:
-  - joins/caps options,
-  - dash patterns,
-  - per-path gradients (likely via a separate paint abstraction, not by bloating `SceneOp::Path`).
-
+- Additional future path surface should be additive ADR work above this base contract. Stroke
+  join/cap/dash is already owned by ADR 0277; path paint is already owned by ADR 0278.

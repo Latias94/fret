@@ -1,6 +1,6 @@
 ---
 title: Path Paint Surface v1 — Milestones
-status: active
+status: closed
 date: 2026-02-16
 scope: SceneOp::Path accepts Paint
 ---
@@ -58,4 +58,11 @@ Acceptance criteria:
 
 - At least one consumer uses non-solid `Paint` on paths to validate ergonomics.
 
-Status: Not started.
+Status: Deferred; optional adoption does not block contract closeout.
+
+## Closeout
+
+Status: Closed on 2026-05-17.
+
+The required path paint contract is accepted, implemented, and conformance-gated. Future adoption
+should start as a product-surface follow-on only when a real caller needs non-solid path paint.

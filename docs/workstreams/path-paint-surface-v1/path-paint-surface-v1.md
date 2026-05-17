@@ -1,6 +1,6 @@
 ---
 title: Path Paint Surface v1 — Workstream
-status: completed
+status: closed
 date: 2026-02-16
 scope: fret-core SceneOp::Path, renderer path pipeline, portability + conformance
 ---
@@ -55,3 +55,9 @@ Key semantics to lock:
 
 Detailed TODOs: `docs/workstreams/path-paint-surface-v1/path-paint-surface-v1-todo.md`
 Milestones: `docs/workstreams/path-paint-surface-v1/path-paint-surface-v1-milestones.md`
+
+## Closure
+
+Closed on 2026-05-17. The required contract, renderer implementation, gradient conformance, and
+material conformance are complete. Optional non-solid consumer adoption remains future work only
+when a product surface needs it.

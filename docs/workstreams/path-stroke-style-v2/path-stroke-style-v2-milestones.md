@@ -1,6 +1,6 @@
 ---
 title: Path Stroke Style v2 — Milestones
-status: active
+status: closed
 date: 2026-02-16
 scope: vector path stroke semantics v2
 ---
@@ -68,3 +68,10 @@ Acceptance criteria:
 - At least one consumer uses v2 style in a visible demo (optional, but recommended to validate API ergonomics).
 
 Status: Completed (ecosystem consumer wired: node graph).
+
+## Closeout
+
+Status: Closed on 2026-05-17.
+
+The required v2 stroke contract is accepted, implemented, conformance-gated, and adopted by a real
+consumer. Future work should start as narrower lanes only when new evidence appears.
