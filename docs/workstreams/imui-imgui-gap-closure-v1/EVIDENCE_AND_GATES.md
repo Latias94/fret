@@ -1344,6 +1344,21 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
 - `git diff --check` passed.
 
+2026-05-17 fret-examples residual direct TextProps capability slice:
+
+- `assets_demo` image/SVG stats and `image_heavy_memory_demo` image-memory stats now route through
+  `text_control_readout(...)` instead of local direct `TextProps` construction.
+- `text_role_residual_surface` now counts direct `TextProps { ... }` struct literals as well as
+  `cx.text(...)` and `TextProps::new(...)`, limiting remaining direct text construction to explicit
+  text/IME/rendering capability proofs.
+- `cargo fmt -p fret-examples` passed.
+- `cargo check -p fret-examples` passed.
+- `cargo nextest run -p fret-examples --test text_role_residual_surface remaining_bare_text_in_fret_examples_is_explicit_capability_surface --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
 2026-05-17 form proof header text-role slice:
 
 - `cargo fmt -p fret-examples` passed.

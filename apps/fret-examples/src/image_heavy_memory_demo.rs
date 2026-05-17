@@ -3,14 +3,12 @@
 use std::sync::Arc;
 
 use fret::{FretApp, advanced::prelude::*};
-use fret_core::{
-    AlphaMode, AppWindowId, ImageColorSpace, ImageId, Px, TextAlign, TextOverflow, TextWrap,
-};
+use fret_core::{AlphaMode, AppWindowId, ImageColorSpace, ImageId, Px};
 use fret_render::{ImageDescriptor, Renderer, WgpuContext, write_rgba8_texture_region};
 use fret_ui::element::{
-    FlexProps, ImageProps, LayoutStyle, Length, ScrollProps, SizeStyle, SpacingEdges,
-    SpacingLength, TextProps,
+    FlexProps, ImageProps, LayoutStyle, Length, ScrollProps, SizeStyle, SpacingEdges, SpacingLength,
 };
+use fret_ui_kit::declarative::text as decl_text;
 
 #[derive(Debug, Clone)]
 struct ImageHeavyImages {
@@ -190,28 +188,15 @@ where
         .app
         .with_global_mut_untracked(ImageHeavyImages::default, |g, _app| g.clone());
 
-    let header = cx.text_props(TextProps {
-        layout: LayoutStyle {
-            size: SizeStyle {
-                width: Length::Fill,
-                height: Length::Auto,
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-        text: Arc::from(format!(
+    let header = decl_text::text_control_readout(
+        cx,
+        Arc::<str>::from(format!(
             "image-heavy memory demo: images={} texture_size_px={} estimated_rgba8_bytes={}",
             images.images.len(),
             images.texture_size_px,
             images.estimated_rgba8_bytes
         )),
-        style: None,
-        color: None,
-        wrap: TextWrap::Word,
-        overflow: TextOverflow::Clip,
-        align: TextAlign::Start,
-        ink_overflow: Default::default(),
-    });
+    );
 
     let grid = cx.flex(
         FlexProps {

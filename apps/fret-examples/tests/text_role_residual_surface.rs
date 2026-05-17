@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 struct DirectTextCounts {
     cx_text: usize,
     text_props_new: usize,
+    text_props_literal: usize,
 }
 
 fn collect_rs_files(root: &Path, out: &mut Vec<PathBuf>) {
@@ -38,9 +39,15 @@ fn direct_text_counts() -> BTreeMap<String, DirectTextCounts> {
         let count = counts.entry(rel).or_default();
         count.cx_text += source.matches("cx.text(").count();
         count.text_props_new += source.matches("TextProps::new(").count();
+        count.text_props_literal += source.matches("cx.text_props(TextProps {").count()
+            + source
+                .matches("cx.text_props(fret_ui::element::TextProps {")
+                .count();
     }
 
-    counts.retain(|_, count| count.cx_text > 0 || count.text_props_new > 0);
+    counts.retain(|_, count| {
+        count.cx_text > 0 || count.text_props_new > 0 || count.text_props_literal > 0
+    });
     counts
 }
 
@@ -52,6 +59,79 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
             DirectTextCounts {
                 cx_text: 4,
                 text_props_new: 3,
+                text_props_literal: 0,
+            },
+        ),
+        (
+            "src/cjk_conformance_demo.rs".to_string(),
+            DirectTextCounts {
+                cx_text: 0,
+                text_props_new: 0,
+                text_props_literal: 7,
+            },
+        ),
+        (
+            "src/custom_effect_v1_demo.rs".to_string(),
+            DirectTextCounts {
+                cx_text: 0,
+                text_props_new: 0,
+                text_props_literal: 1,
+            },
+        ),
+        (
+            "src/custom_effect_v2_demo.rs".to_string(),
+            DirectTextCounts {
+                cx_text: 0,
+                text_props_new: 0,
+                text_props_literal: 1,
+            },
+        ),
+        (
+            "src/custom_effect_v2_glass_chrome_web_demo.rs".to_string(),
+            DirectTextCounts {
+                cx_text: 0,
+                text_props_new: 0,
+                text_props_literal: 3,
+            },
+        ),
+        (
+            "src/custom_effect_v2_identity_web_demo.rs".to_string(),
+            DirectTextCounts {
+                cx_text: 0,
+                text_props_new: 0,
+                text_props_literal: 3,
+            },
+        ),
+        (
+            "src/custom_effect_v2_lut_web_demo.rs".to_string(),
+            DirectTextCounts {
+                cx_text: 0,
+                text_props_new: 0,
+                text_props_literal: 3,
+            },
+        ),
+        (
+            "src/custom_effect_v2_web_demo.rs".to_string(),
+            DirectTextCounts {
+                cx_text: 0,
+                text_props_new: 0,
+                text_props_literal: 3,
+            },
+        ),
+        (
+            "src/custom_effect_v3_demo.rs".to_string(),
+            DirectTextCounts {
+                cx_text: 0,
+                text_props_new: 0,
+                text_props_literal: 1,
+            },
+        ),
+        (
+            "src/emoji_conformance_demo.rs".to_string(),
+            DirectTextCounts {
+                cx_text: 0,
+                text_props_new: 0,
+                text_props_literal: 5,
             },
         ),
         (
@@ -59,6 +139,39 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
             DirectTextCounts {
                 cx_text: 8,
                 text_props_new: 0,
+                text_props_literal: 0,
+            },
+        ),
+        (
+            "src/liquid_glass_demo.rs".to_string(),
+            DirectTextCounts {
+                cx_text: 0,
+                text_props_new: 0,
+                text_props_literal: 2,
+            },
+        ),
+        (
+            "src/markdown_demo.rs".to_string(),
+            DirectTextCounts {
+                cx_text: 0,
+                text_props_new: 0,
+                text_props_literal: 2,
+            },
+        ),
+        (
+            "src/postprocess_theme_demo.rs".to_string(),
+            DirectTextCounts {
+                cx_text: 0,
+                text_props_new: 0,
+                text_props_literal: 2,
+            },
+        ),
+        (
+            "src/text_heavy_memory_demo.rs".to_string(),
+            DirectTextCounts {
+                cx_text: 0,
+                text_props_new: 0,
+                text_props_literal: 1,
             },
         ),
     ]);
@@ -66,7 +179,7 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
     assert_eq!(
         direct_text_counts(),
         expected,
-        "remaining bare text in fret-examples must stay limited to explicit text/IME capability proofs",
+        "remaining direct text construction in fret-examples must stay limited to explicit text/IME/rendering capability proofs",
     );
 
     let gallery = include_str!("../src/components_gallery.rs");

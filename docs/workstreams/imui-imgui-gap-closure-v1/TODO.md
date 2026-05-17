@@ -408,9 +408,11 @@ Readiness order for the next locally testable review slices:
    Markdown surface instead of being mechanically rewritten.
    2026-05-17 residual bare text capability follow-up: the remaining first-party
    `apps/fret-examples/src` bare `cx.text(...)` / `TextProps::new(...)` paths are now source-gated
-   to explicit text/IME capability proofs only: `components_gallery` text smoke/font probes and
-   `ime_smoke_demo` IME behavior instructions/status. New bare text in runnable proof apps must now
-   either use a shared role or update the residual proof gate with a documented reason.
+   to explicit text/IME/rendering capability proofs only: `components_gallery` text smoke/font
+   probes, `ime_smoke_demo` IME behavior instructions/status, and the explicit rendering-capability
+   demos that still use direct `TextProps { ... }` constructors. New bare text in runnable proof
+   apps must now either use a shared role or update the residual proof gate with a documented
+   reason.
    2026-05-17 gallery retained-table torture text follow-up: the UI Gallery retained-table torture
    page now routes fixed cell text through `text_table_cell(...)` and table state/status readouts
    through `control_readout_text(...)`, leaving only explicitly multi-line/paragraph copy as bare
