@@ -362,6 +362,29 @@ Status: Active
   - Decision: close the Button content-row proof here. The next proof should target the root shell
     `render_flow.rs:336` flex-item sizing shape or the content `Grid` / wrap-flex story as separate
     work; do not keep chasing both in this patch.
+- [x] Resolve the root shell `render_flow.rs:336` flex-item sizing blocker as a sidebar authoring
+  issue.
+  - Source conclusion: the remaining root `Stack` blocker was caused by the fixed 280px gallery
+    sidebar participating in a horizontal flex row with the default `flex-shrink: 1`. That shape is
+    not covered by the basis-zero grow proof because Taffy negative free-space distribution depends
+    on the item's flex basis and shrink factor.
+  - Implemented authoring fix: the gallery sidebar container now keeps its fixed width out of
+    negative free-space distribution with explicit `flex_shrink_0()`.
+  - Guardrail locked: a new negative clean-geometry test proves a fixed px child with default
+    shrink still rejects with `flex_item_sizing / Flex`, so the core fast path does not silently
+    absorb an unproven flex distribution case.
+  - Local blocker-shift evidence:
+    `target/fret-diag/local-next-gallery-sidebar-no-shrink-clean-geometry-20260517-r1/1779010876907/bundle.schema2.json`.
+  - Result: the `render_flow.rs:336` `flex_item_sizing / Flex` blocker disappeared. Top frame
+    total/layout/solve is `1238/602/255us` with `4` layout-engine solves,
+    `top_view_cache_roots_reused=1`, `top_view_cache_roots_needs_rerender=0`, and row replay/store
+    remains `289/0`.
+  - Remaining blockers: content `Semantics` remains `unsupported_kind=Grid` with `wrap_nodes=1`;
+    root `Stack` is now blocked by `unsupported_kind=TextInput` through the gallery sidebar search
+    input; editor `Canvas` remains a small solve, and root `Scroll` remains a side-effect boundary.
+  - Decision: close the sidebar blocker here. The next optimization should audit `TextInput` as a
+    side-effectful layout boundary / possible leaf contract, or separately tackle the content
+    `Grid` / wrap-flex line-break stability story. Do not mix either with this authoring fix.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

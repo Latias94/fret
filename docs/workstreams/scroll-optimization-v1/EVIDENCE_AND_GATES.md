@@ -886,6 +886,61 @@ Centered intrinsic horizontal Flex proof for shadcn Button chrome (2026-05-17):
   - The next slice should target either the new app-shell `render_flow.rs:336` flex-item sizing
     shape or the content `Grid` / wrap-flex line-break stability story, not both.
 
+Gallery sidebar no-shrink authoring closeout (2026-05-17):
+
+- Mechanism anchors:
+  - `crates/fret-ui/src/declarative/tests/layout/layout_engine.rs`
+    (`clean_geometry_small_resize_rejects_horizontal_flex_fixed_px_default_shrink_child`)
+  - `apps/fret-ui-gallery/src/ui/nav.rs`
+    (`sidebar_view`)
+- Contract:
+  - A fixed-width sidebar in a horizontal app-shell row is fixed chrome, so app authoring should
+    express it as `shrink=0`.
+  - Core clean-geometry propagation must not treat `width: px` plus default `flex-shrink: 1` as a
+    fixed main-axis item. Negative free-space distribution is still an authoritative Taffy flex
+    solve unless the shrink behavior has an explicit proof.
+  - The existing single basis-zero grow proof remains unchanged: the flexible content child absorbs
+    the width delta only when the fixed siblings are actually fixed/no-shrink.
+- Focused gates:
+  - `cargo check -p fret-ui-gallery --features gallery-full`
+    - Result: passed.
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_rejects_horizontal_flex_fixed_px_default_shrink_child clean_geometry_small_resize_skips_horizontal_flex_single_basis0_grow_child clean_geometry_small_resize_skips_horizontal_flex_auto_width_no_shrink_child clean_geometry_small_resize_rejects_horizontal_flex_multiple_grow_children --no-fail-fast`
+    - Result: `4/4` passed.
+- Final gates:
+  - `cargo fmt --check`
+    - Result: passed.
+  - `cargo check -p fret-bootstrap --features ui-app-driver,diagnostics`
+    - Result: passed.
+  - `python3 tools/check_layering.py`
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed.
+- Local blocker evidence:
+  - Bundle:
+    `target/fret-diag/local-next-gallery-sidebar-no-shrink-clean-geometry-20260517-r1/1779010876907/bundle.schema2.json`
+  - Stats:
+    `target/fret-diag/local-next-gallery-sidebar-no-shrink-clean-geometry-20260517-r1/worst.stats.json`
+  - Result:
+    - Top frame total/layout/layout-engine-solve/prepaint/paint is `1238/602/255/244/392us` with
+      `4` layout-engine solves.
+    - Guardrails remain stable: `top_view_cache_roots_reused=1`,
+      `top_view_cache_roots_needs_rerender=0`, row replay/store `289/0`, row replay hit rate
+      `100%`.
+    - The previous root `Stack` `flex_item_sizing / Flex` blocker at
+      `apps/fret-ui-gallery/src/driver/render_flow.rs:336` is gone from the per-solve blockers.
+    - Remaining blockers:
+      - content `Semantics`: `unsupported_kind=Grid`, `wrap_nodes=1`, solve about `176-184us`;
+      - root `Stack`: `unsupported_kind=TextInput`, path through
+        `ecosystem/fret-ui-shadcn/src/input.rs:514`, solve about `74-80us`;
+      - editor `PointerRegion`: `unsupported_kind=Canvas`, solve about `4us`;
+      - root `Scroll`: `side_effect_boundary / Scroll`, solve `0us`.
+- Decision:
+  - Close `render_flow.rs:336` as an authoring-policy fix plus core negative guard, not as a new
+    core flex distribution proof.
+  - Keep RTX4090 closeout as follow-up evidence.
+  - The next slice should audit either the `TextInput` blocker or the content `Grid` / wrap-flex
+    line-break stability story as separate work.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:
