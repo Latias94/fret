@@ -5,11 +5,11 @@ Last updated: 2026-05-17
 
 ## M0 — Contract Triage
 
-- [ ] SMS-010 [owner=unassigned] [deps=none] [scope=ecosystem/fret-ui-shadcn/src/select.rs,ecosystem/fret-ui-kit/src/primitives/select.rs,repo-ref/primitives,repo-ref/base-ui,repo-ref/ui]
+- [x] SMS-010 [owner=codex] [deps=none] [scope=ecosystem/fret-ui-shadcn/src/select.rs,ecosystem/fret-ui-kit/src/primitives/select.rs,repo-ref/primitives,repo-ref/base-ui,repo-ref/ui]
   Goal: Resolve the select pointer-open + ArrowDown contract using Radix/Base UI/shadcn source evidence.
   Validation: `cargo test -p fret-ui-shadcn --locked --test select_keyboard_navigation -j 1`.
-  Evidence: Update this lane's evidence doc with the chosen behavior and source anchors.
-  Handoff: Do not blindly change the test or implementation; first decide whether pointer-open should leave no active row, make ArrowDown land on the first option, or preserve a selected/current active row before navigation.
+  Evidence: `docs/workstreams/shadcn-menu-select-policy-followon-v1/EVIDENCE_AND_GATES.md#sms-010-select-pointer-open--arrowdown`.
+  Result: shadcn v4 wraps Radix Select; Radix pointer-open focuses the selected item after content positioning, falling back to the first valid item. Base UI also treats the selected/first highlighted item as the open-time navigation anchor. Fret keeps focus on the listbox container for pointer-open, but initializes `active_descendant` to that same selected/first-enabled row so the first ArrowDown advances to the next enabled item.
 
 ## M1 — Shared Policy Owners
 

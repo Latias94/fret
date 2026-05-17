@@ -22,7 +22,7 @@
     }
   ],
   "repro": {
-    "summary": "Start from the select ArrowDown expectation conflict observed during ASF-060.",
+    "summary": "Start from the select ArrowDown expectation conflict observed during ASF-060; SMS-010 resolves it with Radix/shadcn-backed pointer-open active-descendant semantics.",
     "commands": [
       "cargo test -p fret-ui-shadcn --locked --test select_keyboard_navigation -j 1"
     ]
@@ -41,6 +41,14 @@
       "command": "cargo test -p fret-ui-shadcn --locked --test select_keyboard_navigation -j 1"
     },
     {
+      "name": "shadcn-select-pointer-open-active-descendant",
+      "command": "cargo test -p fret-ui-shadcn --locked --lib select_pointer_open_arrow_down_moves_active_descendant -j 1"
+    },
+    {
+      "name": "shadcn-select-grouped-pointer-open-active-descendant",
+      "command": "cargo test -p fret-ui-shadcn --locked --lib select_grouped_pointer_open_arrow_down_moves_active_descendant -j 1"
+    },
+    {
       "name": "layering",
       "command": "python tools/check_layering.py"
     }
@@ -51,7 +59,8 @@
     "ecosystem/fret-ui-kit/src/primitives/menu/root.rs",
     "ecosystem/fret-ui-kit/src/primitives/select.rs",
     "ecosystem/fret-ui-shadcn/src/select.rs",
-    "ecosystem/fret-ui-shadcn/tests/select_keyboard_navigation.rs"
+    "ecosystem/fret-ui-shadcn/tests/select_keyboard_navigation.rs",
+    "docs/workstreams/shadcn-menu-select-policy-followon-v1/JOURNAL/2026-05-17-sms-010.md"
   ],
   "adr_refs": [
     "docs/adr/0094-menu-open-modality-and-entry-focus.md",
@@ -60,6 +69,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Keep this lane narrow: resolve the select ArrowDown contract first, then extract only shared policy that reduces drift across shadcn select/dropdown/context/menubar surfaces."
+    "notes": "SMS-010 is resolved. Continue with SMS-030 closeout/split decision by default; run SMS-020 only if a concrete repeated policy owner across shadcn select/dropdown/context/menubar surfaces is worth extracting."
   }
 }
