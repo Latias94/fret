@@ -433,6 +433,37 @@ Status: Active
   - Decision: close the sidebar absolute chrome blocker here. The next meaningful optimization is
     the content `Grid` / wrap-flex line-break stability story; keep `Canvas`, root `Scroll`, and
     `measured_size: Option<Size>` as separate follow-ups.
+- [x] Prove the narrow card-header-like `Grid` clean-geometry subset.
+  - Source conclusion: the real content root blocker was not a general CSS grid problem. The
+    relevant path is a one-column, explicit auto-row card-header-like grid whose child bounds can
+    be derived from previous clean geometry during a small width-only resize.
+  - Implemented mechanism proof: `Grid` participates only when it has one column, no explicit
+    column template, explicit non-empty `Auto` / `Px` row tracks, matching row count, px padding /
+    gaps, start alignment, static children, px margins, simple grid lines, and stable child
+    width/height styles.
+  - Guardrails locked: flexible grid tracks (`Fr` / `Flex` / explicit flex columns), item
+    self-alignment, non-px spacing, positioned children, and text/height reflow remain on the
+    authoritative solve path. `Grid` is manual-bounds-only in this clean propagation path, so
+    unsupported variants do not fall back to stale engine local rects.
+  - Focused gates:
+    `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_card_header_like_auto_grid clean_geometry_small_resize_rejects_flexible_grid_track --no-fail-fast`,
+    `cargo nextest run -p fret-ui layout_engine --no-fail-fast`,
+    `cargo nextest run -p fret-ui scroll --no-fail-fast`,
+    `cargo check -p fret-bootstrap --features ui-app-driver,diagnostics`,
+    `cargo fmt --check`, `python3 tools/check_layering.py`, and `git diff --check`.
+  - Local no-4090 evidence:
+    `target/fret-diag/local-next-card-header-grid-clean-geometry-20260517-r1/1779032450806/bundle.schema2.json`.
+  - Result: the previous content `Semantics` `unsupported_kind=Grid` blocker disappeared. Top
+    frame total/layout/layout-roots/layout-engine-solve/prepaint/paint is
+    `1214/602/399/263/234/378us` with `4` layout-engine solves. View-cache reuse remains present,
+    row replay/store remains `289/0`, and renderer text prepare is `64us`.
+  - Remaining blockers: content `Semantics` is now `text_reflow / Text` at
+    `apps/fret-ui-gallery/src/ui/content.rs:742`; root `Stack` is `missing_measured_size / Stack`
+    through the sidebar nav `ScrollArea`; editor `Canvas` remains a small solve; root `Scroll`
+    remains a side-effect boundary.
+  - Decision: close the narrow `Grid` proof here. The next slice should first classify the
+    `text_reflow / Text` and root `missing_measured_size / Stack` blockers rather than widening
+    text or grid participation by name.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

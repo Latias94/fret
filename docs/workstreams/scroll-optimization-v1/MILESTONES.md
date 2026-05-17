@@ -129,3 +129,18 @@ Status: Active
   `flex_item_sizing`; content `Semantics` remains blocked by `unsupported_kind=Grid` with
   `wrap_nodes=1`, `Canvas` remains too small to prioritize, and `Scroll` remains a side-effect
   boundary.
+
+## M11 — Narrow Grid geometry contract (candidate)
+
+- Prove only the real card-header-like grid shape before attempting any general grid or text
+  reflow optimization.
+- Accept one-column grids with explicit non-empty `Auto` / `Px` row tracks, px spacing, start
+  alignment, static children, simple grid lines, and stable child size semantics.
+- Keep flexible tracks, multi-column placement, item self-alignment, non-px spacing, positioned
+  children, text reflow, retained/windowing surfaces, and side-effect boundaries on the full solve
+  path until each has a focused proof.
+- 2026-05-17 minimum slice landed: `Grid` now has a
+  `SingleColumnAutoRowsGrid` child-bounds strategy for this narrow subset, plus a negative flexible
+  track guardrail. Fresh no-4090 evidence moves the content blocker from `unsupported_kind=Grid` to
+  `text_reflow / Text`; the root blocker is now `missing_measured_size / Stack` through sidebar
+  nav `ScrollArea`, while `Canvas` and root `Scroll` remain separate follow-ups.

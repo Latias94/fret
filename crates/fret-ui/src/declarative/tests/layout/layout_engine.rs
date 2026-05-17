@@ -4516,6 +4516,275 @@ fn clean_geometry_small_resize_preserves_fixed_stack_child_width() {
 }
 
 #[test]
+fn clean_geometry_small_resize_skips_card_header_like_auto_grid() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(324.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-card-header-like-grid-child",
+        |cx| {
+            let grid = crate::element::GridProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                cols: 1,
+                rows: Some(2),
+                template_rows: Some(vec![
+                    crate::element::GridTrackSizing::Auto,
+                    crate::element::GridTrackSizing::Auto,
+                ]),
+                gap: Px(3.0).into(),
+                padding: crate::element::SpacingEdges {
+                    left: crate::element::SpacingLength::Px(Px(7.0)),
+                    right: crate::element::SpacingLength::Px(Px(11.0)),
+                    top: crate::element::SpacingLength::Px(Px(5.0)),
+                    bottom: crate::element::SpacingLength::Px(Px(13.0)),
+                },
+                align: crate::element::CrossAlign::Start,
+                ..Default::default()
+            };
+
+            let title = crate::element::StackProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Px(Px(14.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            };
+            let description = crate::element::StackProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Px(Px(9.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            };
+
+            vec![cx.grid(grid, |cx| {
+                vec![
+                    cx.stack_props(title, |_cx| Vec::<AnyElement>::new()),
+                    cx.stack_props(description, |_cx| Vec::<AnyElement>::new()),
+                ]
+            })]
+        },
+    );
+
+    let rect_a = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(180.0), Px(44.0)));
+    let rect_b = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(184.0), Px(44.0)));
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "single-column auto-row Grid geometry should not force a small width-delta root solve"
+    );
+    assert_eq!(
+        ui.debug_stats().layout_clean_geometry_solve_skip_rejections,
+        0,
+        "accepted Grid geometry skips should not report rejection noise"
+    );
+
+    let grid_node = ui.children(child)[0];
+    let rows = ui.children(grid_node);
+    let title_bounds = ui.debug_node_bounds(rows[0]).expect("title bounds");
+    let description_bounds = ui.debug_node_bounds(rows[1]).expect("description bounds");
+
+    assert_eq!(title_bounds.origin, Point::new(Px(7.0), Px(5.0)));
+    assert!((title_bounds.size.width.0 - 166.0).abs() < 0.01);
+    assert!((title_bounds.size.height.0 - 14.0).abs() < 0.01);
+    assert_eq!(description_bounds.origin, Point::new(Px(7.0), Px(22.0)));
+    assert!((description_bounds.size.width.0 - 166.0).abs() < 0.01);
+    assert!((description_bounds.size.height.0 - 9.0).abs() < 0.01);
+}
+
+#[test]
+fn clean_geometry_small_resize_rejects_flexible_grid_track() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(324.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-flexible-grid-track-child",
+        |cx| {
+            let grid = crate::element::GridProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                cols: 1,
+                rows: Some(1),
+                template_columns: Some(vec![crate::element::GridTrackSizing::Flex(1.0)]),
+                template_rows: Some(vec![crate::element::GridTrackSizing::Auto]),
+                align: crate::element::CrossAlign::Start,
+                ..Default::default()
+            };
+            let child = crate::element::StackProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Px(Px(14.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            };
+
+            vec![cx.grid(grid, |cx| {
+                vec![cx.stack_props(child, |_cx| Vec::<AnyElement>::new())]
+            })]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(184.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert!(
+        ui.debug_stats().layout_engine_solves > 0,
+        "flexible Grid tracks must keep the authoritative solve path"
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_rejection,
+        Some("grid_track_sizing")
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_element_kind,
+        Some("Grid")
+    );
+}
+
+#[test]
 fn layout_engine_v2_scales_px_styles_with_scale_factor() {
     struct RegistersViewportRoot {
         viewport: Rect,

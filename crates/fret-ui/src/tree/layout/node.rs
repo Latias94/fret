@@ -70,6 +70,8 @@ enum CleanGeometrySolveSkipRejectionReason {
     FlexCrossAlign,
     FlexHeightDelta,
     FlexItemSizing,
+    GridTrackSizing,
+    GridItemSizing,
     NonPxSpacing,
     AutoChildHeight,
     TextReflow,
@@ -104,6 +106,8 @@ enum CleanGeometryChildBoundsStrategy {
     VerticalNoWrapFlex(crate::element::FlexProps),
     /// Horizontal, no-wrap flex subset with stable main-axis distribution.
     HorizontalFixedFlex(crate::element::FlexProps),
+    /// One-column grid subset whose row structure is stable across small width deltas.
+    SingleColumnAutoRowsGrid(crate::element::GridProps),
 }
 
 #[derive(Clone, Copy)]
@@ -171,6 +175,8 @@ impl CleanGeometrySolveSkipRejectionReason {
             Self::FlexCrossAlign => "flex_cross_align",
             Self::FlexHeightDelta => "flex_height_delta",
             Self::FlexItemSizing => "flex_item_sizing",
+            Self::GridTrackSizing => "grid_track_sizing",
+            Self::GridItemSizing => "grid_item_sizing",
             Self::NonPxSpacing => "non_px_spacing",
             Self::AutoChildHeight => "auto_child_height",
             Self::TextReflow => "text_reflow",
@@ -1082,6 +1088,16 @@ impl<H: UiHost> UiTree<H> {
                     props,
                     kind,
                 ),
+            CleanGeometryChildBoundsStrategy::SingleColumnAutoRowsGrid(props) => self
+                .clean_single_column_auto_rows_grid_width_delta_child_bounds(
+                    app,
+                    window,
+                    children,
+                    bounds,
+                    prev_bounds,
+                    props,
+                    kind,
+                ),
             CleanGeometryChildBoundsStrategy::None => Ok(Vec::new()),
         }
     }
@@ -1127,6 +1143,11 @@ impl<H: UiHost> UiTree<H> {
             crate::declarative::frame::ElementInstance::Flex(props) => Ok(
                 CleanGeometryNodeContract::pure(Self::clean_flex_child_bounds_strategy(*props)),
             ),
+            crate::declarative::frame::ElementInstance::Grid(props) => {
+                Ok(CleanGeometryNodeContract::pure(
+                    CleanGeometryChildBoundsStrategy::SingleColumnAutoRowsGrid(props.clone()),
+                ))
+            }
             crate::declarative::frame::ElementInstance::SemanticFlex(props) => Ok(
                 CleanGeometryNodeContract::pure(Self::clean_flex_child_bounds_strategy(props.flex)),
             ),
@@ -1787,6 +1808,187 @@ impl<H: UiHost> UiTree<H> {
         Ok(out)
     }
 
+    fn clean_single_column_auto_rows_grid_width_delta_child_bounds(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        children: &[NodeId],
+        bounds: Rect,
+        prev_bounds: Rect,
+        props: crate::element::GridProps,
+        element_kind: &'static str,
+    ) -> Result<Vec<(NodeId, Rect)>, CleanGeometrySolveSkipRejection> {
+        if (bounds.size.height.0 - prev_bounds.size.height.0).abs() > 0.01 {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::GridItemSizing,
+                element_kind,
+            ));
+        }
+        let Some(row_count) =
+            Self::clean_grid_explicit_auto_or_px_track_count(props.template_rows.as_deref())
+        else {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::GridTrackSizing,
+                element_kind,
+            ));
+        };
+        if props.cols != 1
+            || props
+                .template_columns
+                .as_ref()
+                .is_some_and(|tracks| !tracks.is_empty())
+            || props.rows.is_some_and(|rows| rows as usize != row_count)
+            || children.len() > row_count
+        {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::GridTrackSizing,
+                element_kind,
+            ));
+        }
+        if props.justify != crate::element::MainAlign::Start
+            || props.align != crate::element::CrossAlign::Start
+            || props.justify_items.is_some()
+        {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::GridItemSizing,
+                element_kind,
+            ));
+        }
+
+        let pad_left = Self::clean_spacing_px(props.padding.left).ok_or_else(|| {
+            CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::NonPxSpacing,
+                element_kind,
+            )
+        })?;
+        let pad_right = Self::clean_spacing_px(props.padding.right).ok_or_else(|| {
+            CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::NonPxSpacing,
+                element_kind,
+            )
+        })?;
+        let pad_top = Self::clean_spacing_px(props.padding.top).ok_or_else(|| {
+            CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::NonPxSpacing,
+                element_kind,
+            )
+        })?;
+        let _pad_bottom = Self::clean_spacing_px(props.padding.bottom).ok_or_else(|| {
+            CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::NonPxSpacing,
+                element_kind,
+            )
+        })?;
+        let _column_gap = Self::clean_spacing_px(props.resolved_column_gap()).ok_or_else(|| {
+            CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::NonPxSpacing,
+                element_kind,
+            )
+        })?;
+        let _row_gap = Self::clean_spacing_px(props.resolved_row_gap()).ok_or_else(|| {
+            CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::NonPxSpacing,
+                element_kind,
+            )
+        })?;
+
+        let prev_inner_width = (prev_bounds.size.width.0 - pad_left - pad_right).max(0.0);
+        let next_inner_width = (bounds.size.width.0 - pad_left - pad_right).max(0.0);
+        let prev_inner_origin = Point::new(
+            Px(prev_bounds.origin.x.0 + pad_left),
+            Px(prev_bounds.origin.y.0 + pad_top),
+        );
+        let next_inner_origin = Point::new(
+            Px(bounds.origin.x.0 + pad_left),
+            Px(bounds.origin.y.0 + pad_top),
+        );
+
+        let mut out = Vec::with_capacity(children.len());
+        for &child in children {
+            let child_style = crate::declarative::frame::layout_style_for_node(app, window, child);
+            if child_style.position != crate::element::PositionStyle::Static {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::PositionedChild,
+                    element_kind,
+                ));
+            }
+            if !Self::clean_margin_edges_are_px(child_style.margin) {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::NonPxMargin,
+                    element_kind,
+                ));
+            }
+            if !Self::clean_grid_item_line_is_auto_or_single(child_style.grid.column)
+                || !Self::clean_grid_item_line_is_auto_or_single(child_style.grid.row)
+                || child_style.grid.align_self.is_some()
+                || child_style.grid.justify_self.is_some()
+            {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::GridItemSizing,
+                    element_kind,
+                ));
+            }
+            Self::clean_child_height_style_supported_for_width_delta(child_style, element_kind)?;
+            Self::clean_child_width_style_supported_for_width_delta(child_style, element_kind)?;
+
+            let prev_child = self
+                .nodes
+                .get(child)
+                .ok_or_else(|| {
+                    CleanGeometrySolveSkipRejection::new(
+                        CleanGeometrySolveSkipRejectionReason::MissingNode,
+                    )
+                    .at_node(child)
+                })?
+                .bounds;
+            let local_x = prev_child.origin.x.0 - prev_inner_origin.x.0;
+            let local_y = prev_child.origin.y.0 - prev_inner_origin.y.0;
+            let width = if (prev_child.size.width.0 - prev_inner_width).abs() <= 0.01
+                || matches!(child_style.size.width, crate::element::Length::Fill)
+            {
+                Px(next_inner_width)
+            } else {
+                prev_child.size.width
+            };
+            out.push((
+                child,
+                Rect::new(
+                    Point::new(
+                        Px(next_inner_origin.x.0 + local_x),
+                        Px(next_inner_origin.y.0 + local_y),
+                    ),
+                    Size::new(width, prev_child.size.height),
+                ),
+            ));
+        }
+
+        Ok(out)
+    }
+
+    fn clean_grid_explicit_auto_or_px_track_count(
+        tracks: Option<&[crate::element::GridTrackSizing]>,
+    ) -> Option<usize> {
+        tracks.and_then(|tracks| {
+            if tracks.is_empty() {
+                return None;
+            }
+            tracks
+                .iter()
+                .all(|track| {
+                    matches!(
+                        track,
+                        crate::element::GridTrackSizing::Auto
+                            | crate::element::GridTrackSizing::Px(_)
+                    )
+                })
+                .then_some(tracks.len())
+        })
+    }
+
+    fn clean_grid_item_line_is_auto_or_single(line: crate::element::GridLine) -> bool {
+        matches!(line.start, None | Some(1)) && matches!(line.span, None | Some(1))
+    }
+
     fn clean_horizontal_flex_basis0_grow_item_next_width(
         child_style: crate::element::LayoutStyle,
         prev_width: Px,
@@ -2072,6 +2274,7 @@ impl<H: UiHost> UiTree<H> {
         let supported = match record.instance {
             crate::declarative::frame::ElementInstance::Stack(_) => true,
             crate::declarative::frame::ElementInstance::Container(_) => true,
+            crate::declarative::frame::ElementInstance::Grid(_) => true,
             crate::declarative::frame::ElementInstance::Flex(_)
             | crate::declarative::frame::ElementInstance::SemanticFlex(_)
             | crate::declarative::frame::ElementInstance::RovingFlex(_) => {
@@ -2105,6 +2308,7 @@ impl<H: UiHost> UiTree<H> {
             matches!(
                 record.instance,
                 crate::declarative::frame::ElementInstance::Container(_)
+                    | crate::declarative::frame::ElementInstance::Grid(_)
             )
         })
         .unwrap_or(false)

@@ -1062,6 +1062,70 @@ Sidebar `ScrollArea` absolute overlay closeout (2026-05-17):
     separate proof. `Canvas`, root `Scroll`, and the `measured_size: Size` sentinel refactor remain
     separate follow-ups.
 
+Card-header-like `Grid` clean-geometry closeout (2026-05-17):
+
+- Mechanism anchors:
+  - `crates/fret-ui/src/tree/layout/node.rs`
+    (`CleanGeometryChildBoundsStrategy::SingleColumnAutoRowsGrid`,
+    `clean_single_column_auto_rows_grid_width_delta_child_bounds`,
+    `clean_grid_explicit_auto_or_px_track_count`, and
+    `CleanGeometrySolveSkipRejectionReason::{GridTrackSizing,GridItemSizing}`)
+  - `crates/fret-ui/src/declarative/tests/layout/layout_engine.rs`
+    (`clean_geometry_small_resize_skips_card_header_like_auto_grid` and
+    `clean_geometry_small_resize_rejects_flexible_grid_track`)
+- Contract:
+  - This is a one-column explicit-row proof, not a general grid fast path.
+  - Accepted grids must have `cols == 1`, no explicit column template, explicit non-empty
+    `template_rows` containing only `Auto` / `Px` tracks, a matching optional `rows` count,
+    child count within the explicit rows, px padding/gaps, start alignment, static children, px
+    margins, simple grid lines, and stable child width/height styles.
+  - `Grid` is manual-bounds-only for clean propagation. Unsupported variants do not reuse stale
+    engine local child rects.
+  - Flexible tracks (`Fr` / `Flex`), item self-alignment, non-px spacing, positioned children,
+    text reflow, and width-dependent height changes remain on the authoritative solve path.
+- Focused gates:
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_card_header_like_auto_grid clean_geometry_small_resize_rejects_flexible_grid_track --no-fail-fast`
+    - Result: `2/2` passed.
+- Final gates:
+  - `cargo nextest run -p fret-ui layout_engine --no-fail-fast`
+    - Result: `42/42` passed.
+  - `cargo nextest run -p fret-ui scroll --no-fail-fast`
+    - Result: `153/153` passed.
+  - `cargo check -p fret-bootstrap --features ui-app-driver,diagnostics`
+    - Result: passed.
+  - `cargo fmt --check`
+    - Result: passed.
+  - `python3 tools/check_layering.py`
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed.
+- Local blocker evidence:
+  - Bundle:
+    `target/fret-diag/local-next-card-header-grid-clean-geometry-20260517-r1/1779032450806/bundle.schema2.json`
+  - Stats:
+    `target/fret-diag/local-next-card-header-grid-clean-geometry-20260517-r1/worst.stats.json`
+  - Result:
+    - Top frame total/layout/layout-roots/layout-engine-solve/prepaint/paint is
+      `1214/602/399/263/234/378us` with `4` layout-engine solves.
+    - Guardrails remain stable: the content view-cache reuse root is present, row replay/store is
+      `289/0`, and renderer text prepare is `64us`.
+    - The previous content `Semantics` `unsupported_kind=Grid` blocker is gone from the per-solve
+      blockers.
+    - Remaining blockers:
+      - content `Semantics`: `text_reflow / Text` at
+        `apps/fret-ui-gallery/src/ui/content.rs:742`, solve about `169-174us`;
+      - root `Stack`: `missing_measured_size / Stack` through
+        `apps/fret-ui-gallery/src/ui/nav.rs:245` and
+        `ecosystem/fret-ui-shadcn/src/scroll_area.rs:340`, solve about `84-87us`;
+      - editor `PointerRegion`: `unsupported_kind=Canvas`, solve about `4us`;
+      - root `Scroll`: `side_effect_boundary / Scroll`, solve `0us`.
+- Decision:
+  - Close the `Grid` blocker as a narrow core layout contract backed by focused tests and local
+    no-4090 evidence.
+  - Do not treat this as permission to add a general grid skip or a text skip. The next slice should
+    classify the `text_reflow / Text` blocker and the remaining root `missing_measured_size / Stack`
+    blocker before implementing another fast path or authoring cleanup.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:
