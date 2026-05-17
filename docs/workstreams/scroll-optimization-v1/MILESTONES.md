@@ -73,3 +73,6 @@ Status: Active
 - Add diagnostics that explain the first unsupported kind/reason when a clean root cannot skip its
   engine solve.
 - Treat `Canvas` leaf participation as a small optional proof, not the next primary perf owner.
+- 2026-05-17 minimum slice landed: `CleanGeometryNodeContract` separates pure pass-through
+  geometry, no-wrap vertical flex, safe leaves, and side-effect boundaries; diagnostics now expose
+  the per-frame rejection count plus first reason/kind for rejected clean root-solve skips.

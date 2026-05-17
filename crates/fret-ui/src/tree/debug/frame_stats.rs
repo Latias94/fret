@@ -257,6 +257,12 @@ pub struct UiDebugFrameStats {
     pub layout_engine_solves: u64,
     /// Total time spent in layout engine solves during the current frame.
     pub layout_engine_solve_time: Duration,
+    /// Count of clean-geometry root-solve skip attempts rejected during the current frame.
+    pub layout_clean_geometry_solve_skip_rejections: u32,
+    /// First rejection reason observed for a clean-geometry root-solve skip attempt this frame.
+    pub layout_clean_geometry_solve_skip_first_rejection: Option<&'static str>,
+    /// Element kind attached to the first clean-geometry root-solve skip rejection, when known.
+    pub layout_clean_geometry_solve_skip_first_element_kind: Option<&'static str>,
     /// Total number of `layout_engine_child_local_rect` queries performed during the current frame.
     pub layout_engine_child_rect_queries: u64,
     /// Total wall time spent inside layout engine child-rect queries during the current frame.

@@ -251,6 +251,39 @@ Remaining small-width-delta solve classification (2026-05-17):
     propagation, plus diagnostics that report the first unsupported kind/reason when a clean root
     cannot skip its solve.
 
+Layout side-effect / geometry-propagation contract diagnostics slice (2026-05-17):
+
+- Mechanism anchors:
+  - `crates/fret-ui/src/tree/layout/node.rs`
+    (`CleanGeometryNodeContract`, `CleanGeometrySolveSkipRejectionReason`,
+    `can_skip_clean_geometry_engine_solve_for_resize`)
+  - `crates/fret-ui/src/tree/debug/frame_stats.rs`
+    (`layout_clean_geometry_solve_skip_*`)
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics/frame_stats.rs`
+    (`UiFrameStatsV1` clean-geometry rejection fields)
+- Contract:
+  - The current proof is explicit instead of a silent bool/`Option` chain: pure pass-through
+    geometry, no-wrap vertical flex, safe leaves, and side-effect boundaries are separate internal
+    classes.
+  - `Scroll` remains a side-effect boundary. A parent may propagate geometry to it, but a root
+    `Scroll` cannot skip its own layout solve body via this proof.
+  - Unsupported retained/windowing/line-breaking surfaces continue to reject with a reason and
+    optional element kind. This keeps `ViewCache`, `VirtualList`, wrap flex, and future `Canvas`
+    participation behind dedicated proofs rather than ad hoc name expansion.
+  - Per-frame diagnostics record only a rejection count plus the first reason/kind, avoiding
+    high-volume per-node strings while still making top rejected solve owners explainable.
+- Focused gates:
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_barrier_root_engine_solve clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve clean_geometry_small_resize_reports_wrap_flex_rejection_reason clean_parent_geometry_skip_still_runs_scroll_layout_side_effects virtual_list_render_window_range_tracks_viewport_resize --no-fail-fast`
+    - Result: `5/5` passed.
+  - `cargo nextest run -p fret-ui layout_engine --no-fail-fast`
+    - Result: `18/18` passed.
+  - `cargo nextest run -p fret-ui scroll --no-fail-fast`
+    - Result: `153/153` passed.
+  - `cargo check -p fret-bootstrap --features ui-app-driver,diagnostics`
+    - Result: passed.
+  - `cargo fmt --check`
+    - Result: passed.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:

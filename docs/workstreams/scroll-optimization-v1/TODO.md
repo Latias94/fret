@@ -112,7 +112,7 @@ Status: Active
   - Decision: stop expanding clean-geometry proof ad hoc. The next meaningful optimization is an
     explicit layout side-effect / geometry-propagation contract, plus debug rejection reasons for
     why a clean root cannot skip its solve.
-- [ ] Draft the layout side-effect / geometry-propagation contract before attempting another root
+- [x] Draft the layout side-effect / geometry-propagation contract before attempting another root
   solve skip expansion.
   - Minimum contract questions: which element kinds are pure geometry, which are side-effectful
     layout boundaries, which may be safe leaves only, and what data model records this without
@@ -122,6 +122,13 @@ Status: Active
     geometry, and virtual-list visible ranges.
   - Add low-noise diagnostics that report the first unsupported kind/reason in
     `can_skip_clean_geometry_engine_solve_for_resize(...)` before adding more fast-path coverage.
+  - Implemented minimum slice: `CleanGeometryNodeContract` now classifies the current supported
+    proof as pure pass-through geometry, no-wrap vertical flex, safe leaf, or side-effect boundary,
+    and `CleanGeometrySolveSkipRejectionReason` records the first rejected reason/kind in
+    `UiDebugFrameStats` / diagnostics bundles.
+  - Guardrails locked: `ViewCache` remains `unsupported_kind`, wrapped flex reports `flex_wrap`,
+    and successful clean skips keep the rejection counter at `0`. This intentionally does not widen
+    the fast path to `ViewCache`, `VirtualList`, wrap flex, or `Canvas`.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

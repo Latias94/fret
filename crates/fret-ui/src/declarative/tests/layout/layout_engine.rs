@@ -997,6 +997,11 @@ fn clean_geometry_small_resize_skips_barrier_root_engine_solve() {
         0,
         "clean width-only resize should propagate geometry without a Taffy root solve"
     );
+    assert_eq!(
+        ui.debug_stats().layout_clean_geometry_solve_skip_rejections,
+        0,
+        "accepted clean geometry skips should not leave rejection noise in frame stats"
+    );
 
     let flex_node = ui.children(child)[0];
     let flex_bounds = ui.debug_node_bounds(flex_node).expect("flex bounds");
@@ -1113,6 +1118,143 @@ fn clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve() {
     assert!(
         ui.debug_stats().layout_engine_solves > 0,
         "ViewCache stays off the root-solve skip support set until its retained semantics have a dedicated proof"
+    );
+    assert!(
+        ui.debug_stats().layout_clean_geometry_solve_skip_rejections > 0,
+        "unsupported clean geometry roots should report why the solve skip was rejected"
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_rejection,
+        Some("unsupported_kind")
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_element_kind,
+        Some("ViewCache")
+    );
+}
+
+#[test]
+fn clean_geometry_small_resize_reports_wrap_flex_rejection_reason() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(324.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-wrap-flex-rejection-child",
+        |cx| {
+            let flex = crate::element::FlexProps {
+                direction: fret_core::Axis::Vertical,
+                wrap: true,
+                gap: Px(1.0).into(),
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            vec![cx.flex(flex, |cx| {
+                (0..8)
+                    .map(|_| {
+                        cx.spacer(crate::element::SpacerProps {
+                            layout: crate::element::LayoutStyle {
+                                size: crate::element::SizeStyle {
+                                    width: Length::Px(Px(90.0)),
+                                    height: Length::Px(Px(8.0)),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            min: Px(8.0),
+                        })
+                    })
+                    .collect::<Vec<_>>()
+            })]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(184.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert!(
+        ui.debug_stats().layout_engine_solves > 0,
+        "wrapped flex must keep the authoritative engine solve until line-break stability is proven"
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_rejection,
+        Some("flex_wrap")
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_element_kind,
+        Some("Flex")
     );
 }
 
