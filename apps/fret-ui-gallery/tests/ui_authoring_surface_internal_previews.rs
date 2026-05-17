@@ -903,7 +903,20 @@ fn gallery_table_retained_torture_uses_structured_table_debug_ids() {
 fn gallery_data_table_torture_exposes_header_row_anchor() {
     let normalized = assert_normalized_markers_present(
         "src/ui/previews/gallery/data/table_torture.rs",
-        &["header_row_test_id: Some(Arc::<str>::from(\"ui-gallery-data-table-header-row\",)),"],
+        &[
+            "fndata_table_torture_cell_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "fret_ui_kit::declarative::text::text_table_cell(cx,text)",
+            "doc_layout::control_readout_text(cx,sorting_text.clone()).attach_semantics(",
+            "doc_layout::control_readout_text(cx,pinning_text.clone()).attach_semantics(",
+            "doc_layout::control_readout_text(cx,global_filter_text.clone()).attach_semantics(",
+            "doc_layout::control_readout_text(cx,name_filter_text.clone()).attach_semantics(",
+            "doc_layout::control_readout_text(cx,status_filter_text.clone()).attach_semantics(",
+            "data_table_torture_cell_text(cx,row.name.clone())",
+            "data_table_torture_cell_text(cx,row.status.clone())",
+            "data_table_torture_cell_text(cx,format!(\"{}%\",row.cpu))",
+            "data_table_torture_cell_text(cx,format!(\"{}MB\",row.mem_mb))",
+            "header_row_test_id: Some(Arc::<str>::from(\"ui-gallery-data-table-header-row\",)),",
+        ],
     );
 
     assert!(
@@ -911,4 +924,20 @@ fn gallery_data_table_torture_exposes_header_row_anchor() {
             && normalized.contains("ui-gallery-data-table-row-"),
         "table_torture should keep the structured data-table header/body diagnostics prefixes alongside the header-row anchor"
     );
+    for forbidden in [
+        "cx.text(sorting_text.as_ref()).attach_semantics(",
+        "cx.text(pinning_text.as_ref()).attach_semantics(",
+        "cx.text(global_filter_text.as_ref()).attach_semantics(",
+        "cx.text(name_filter_text.as_ref()).attach_semantics(",
+        "cx.text(status_filter_text.as_ref()).attach_semantics(",
+        "cx.text(row.name.as_ref())",
+        "cx.text(row.status.as_ref())",
+        "cx.text(format!(\"{}%\",row.cpu))",
+        "cx.text(format!(\"{}MB\",row.mem_mb))",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "table_torture reintroduced bare fixed table/readout text: {forbidden}"
+        );
+    }
 }

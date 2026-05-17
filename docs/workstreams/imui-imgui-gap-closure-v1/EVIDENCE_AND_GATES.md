@@ -521,6 +521,12 @@ Run evidence:
   description copy separate, while the fixed 28px table rows no longer use bare/default text. Gate:
   `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews
   gallery_table_retained_torture_uses_structured_table_debug_ids --no-fail-fast`.
+- 2026-05-17: UI Gallery's DataTable torture page now follows the same role split in both retained
+  and non-retained render paths. Fixed cells route through a helper backed by
+  `text_table_cell(...)`, while sorting/filter/pinning status lines use
+  `doc_layout::control_readout_text(...)`. Gate: `cargo nextest run -p fret-ui-gallery --test
+  ui_authoring_surface_internal_previews gallery_data_table_torture_exposes_header_row_anchor
+  --no-fail-fast`.
 - 2026-05-17: UI Gallery's status bar now routes metric, inspector-state, and last-action text
   through `driver::text_roles::chrome_readout_text(...)`, backed by
   `fret-ui-kit::declarative::text::text_control_readout(...)`. This keeps fixed status chrome on
@@ -1207,6 +1213,15 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 
 - `cargo fmt -p fret-ui-gallery` passed.
 - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_table_retained_torture_uses_structured_table_debug_ids --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery data-table torture text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_data_table_torture_exposes_header_row_anchor --no-fail-fast` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.

@@ -338,6 +338,9 @@ Exit criteria:
   now uses `text_table_cell(...)` for fixed table cells and `control_readout_text(...)` for table
   state readouts, so the visible retained-table stress surface no longer teaches bare fixed-cell
   text under resize.
+  2026-05-17 gallery data-table torture text result: the UI Gallery DataTable torture page now
+  routes fixed cells through `text_table_cell(...)` in both retained and non-retained render paths,
+  and table sorting/filter/pinning status lines through `control_readout_text(...)`.
   2026-05-17 virtual row fallback result: tree and file-tree virtualizer out-of-range fallback
   paths now return spacer placeholders instead of empty text nodes, so fixed-row helpers no longer
   create meaningless `Text` elements for missing rows.
