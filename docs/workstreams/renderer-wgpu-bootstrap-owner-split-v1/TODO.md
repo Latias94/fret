@@ -1,6 +1,6 @@
 # Renderer WGPU Bootstrap Owner Split v1 — TODO
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-17
 
 ## M0 — Bootstrap Owner Extraction
@@ -14,7 +14,8 @@ Last updated: 2026-05-17
 
 ## M1 — Closeout
 
-- [ ] RWBO-020 [owner=planner] [deps=RWBO-010] [scope=docs/workstreams/renderer-wgpu-bootstrap-owner-split-v1]
+- [x] RWBO-020 [owner=planner] [deps=RWBO-010] [scope=docs/workstreams/renderer-wgpu-bootstrap-owner-split-v1]
   Goal: Close this narrow lane after the owner split or record a smaller follow-on only if the first slice exposes a real second bootstrap owner.
   Validation: `WORKSTREAM.json`, `TODO.md`, and `EVIDENCE_AND_GATES.md` agree.
   Evidence: closeout note or updated status.
+  Status: Done on 2026-05-17. Lane closed; no follow-on split was required.

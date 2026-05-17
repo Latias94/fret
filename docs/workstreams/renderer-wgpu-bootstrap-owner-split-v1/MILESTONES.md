@@ -1,6 +1,6 @@
 # Renderer WGPU Bootstrap Owner Split v1 — Milestones
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-17
 
 ## M0 — Owner Split Lands
@@ -16,6 +16,8 @@ Exit criteria:
 - Backend tests that cover parsing/context public paths still compile.
 
 ## M1 — Lane Closed Or Split
+
+Status: Done on 2026-05-17.
 
 Exit criteria:
 

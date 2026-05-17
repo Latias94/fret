@@ -2221,7 +2221,7 @@ Rule:
 - `docs/workstreams/renderer-scene-encoding-semantics-audit-v1/` — first 2026-02-23, latest 2026-02-23, 3 markdown docs
 - `docs/workstreams/renderer-upstream-semantics-parity-v1/` — first 2026-02-22, latest 2026-02-22, 3 markdown docs
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1/` — first 2026-02-14, latest 2026-02-23, 4 markdown docs
-- `docs/workstreams/renderer-wgpu-bootstrap-owner-split-v1/` — first 2026-05-17, latest 2026-05-17, 5 markdown docs (active narrow follow-on for moving `WgpuContext` bootstrap and adapter diagnostics out of the backend crate root while preserving renderer facade paths; includes `WORKSTREAM.json`)
+- `docs/workstreams/renderer-wgpu-bootstrap-owner-split-v1/` — first 2026-05-17, latest 2026-05-17, 6 markdown docs (closed narrow follow-on that moved `WgpuContext` bootstrap and adapter diagnostics out of the backend crate root while preserving renderer facade paths; includes `WORKSTREAM.json`)
 - `docs/workstreams/resizable-adaptive-panel-proof-v1/` — first n/a, latest n/a, 5 markdown docs (closed narrow closeout lane that promotes ADR 0325's fixed-window panel-resize/container-query proof into the first-party `Resizable` gallery/docs surface)
 - `docs/workstreams/resource-loading-fearless-refactor-v1/` — first 2026-03-15, latest 2026-03-16, 7 markdown docs
 - `docs/workstreams/resource-loading-release-readiness-fearless-refactor-v1/` — first n/a, latest n/a, 3 markdown docs

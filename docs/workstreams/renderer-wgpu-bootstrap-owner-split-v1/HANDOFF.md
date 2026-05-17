@@ -1,18 +1,14 @@
 # Renderer WGPU Bootstrap Owner Split v1 — Handoff
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-17
 
-Current task status:
+Final task status:
 
 - RWBO-010 is done. `crates/fret-render-wgpu/src/context.rs` owns `WgpuContext` and related
   bootstrap/diagnostic implementation; `crates/fret-render-wgpu/src/lib.rs` keeps stable public
   re-exports.
-
-Next task:
-
-- RWBO-020: close this narrow lane or split only if fresh evidence shows another concrete bootstrap
-  owner.
+- RWBO-020 is done. The lane is closed without a follow-on split.
 
 Constraints:
 

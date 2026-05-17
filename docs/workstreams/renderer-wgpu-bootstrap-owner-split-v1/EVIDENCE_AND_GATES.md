@@ -1,6 +1,6 @@
 # Renderer WGPU Bootstrap Owner Split v1 — Evidence And Gates
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-17
 
 ## Baseline Observation
@@ -59,3 +59,4 @@ Implementation evidence:
 - `crates/fret-render/tests/facade_surface_snapshot.rs`
 - `crates/fret-render-wgpu/tests/host_provided_gpu_topology_smoke.rs`
 - `docs/workstreams/renderer-modularity-fearless-refactor-v1/CLOSEOUT_AUDIT.md`
+- `docs/workstreams/renderer-wgpu-bootstrap-owner-split-v1/CLOSEOUT_AUDIT_2026-05-17.md`

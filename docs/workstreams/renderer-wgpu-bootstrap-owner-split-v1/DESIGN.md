@@ -1,6 +1,6 @@
 # Renderer WGPU Bootstrap Owner Split v1
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-17
 
 ## Why This Lane Exists
@@ -52,3 +52,8 @@ moving the implementation behind `crate::context`.
 
 `RWBO-010`: move the WGPU bootstrap owner out of `lib.rs` into a private module while preserving all
 public re-exports and existing gates.
+
+## Closure
+
+Closed on 2026-05-17 after `RWBO-010` landed. The target state is met without exposing another
+bootstrap owner that needs this lane to stay open.
