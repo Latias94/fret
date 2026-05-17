@@ -40,6 +40,31 @@ pub(super) fn active_mask_targets(
     scopes.iter().filter_map(|scope| scope.mask_target)
 }
 
+#[derive(Clone, Copy, Debug)]
+pub(super) struct ActiveMaskTargets {
+    targets: [PlanTarget; 3],
+    len: usize,
+}
+
+impl ActiveMaskTargets {
+    pub(super) fn from_clip_path_scopes(scopes: &[ClipPathScope]) -> Self {
+        let mut targets = [PlanTarget::Mask0; 3];
+        let mut len = 0;
+        for target in active_mask_targets(scopes) {
+            debug_assert!(len < targets.len());
+            if len < targets.len() {
+                targets[len] = target;
+                len += 1;
+            }
+        }
+        Self { targets, len }
+    }
+
+    pub(super) fn as_slice(&self) -> &[PlanTarget] {
+        &self.targets[..self.len]
+    }
+}
+
 pub(super) fn compile_clip_path_push(
     plan: &mut RenderPlanCompilerCtx,
     draw_scopes: &mut Vec<DrawScope>,

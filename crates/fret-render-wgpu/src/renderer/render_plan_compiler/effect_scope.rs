@@ -82,8 +82,8 @@ pub(super) fn compile_effect_scope_push(
                 parent_target,
             );
             let before = plan.passes_len();
-            let unavailable_mask_targets: Vec<PlanTarget> =
-                clip_path::active_mask_targets(args.clip_path_scopes).collect();
+            let unavailable_mask_targets =
+                clip_path::ActiveMaskTargets::from_clip_path_scopes(args.clip_path_scopes);
             let backdrop_source_group = args
                 .backdrop_source_group_scopes
                 .last()
@@ -108,7 +108,7 @@ pub(super) fn compile_effect_scope_push(
                     extra_in_use_bytes: args
                         .clip_path_mask_in_use_bytes
                         .saturating_add(args.backdrop_source_group_in_use_bytes),
-                    unavailable_mask_targets: &unavailable_mask_targets,
+                    unavailable_mask_targets: unavailable_mask_targets.as_slice(),
                     reserved_targets: args.backdrop_source_group_reserved_targets,
                     backdrop_source_group,
                 },

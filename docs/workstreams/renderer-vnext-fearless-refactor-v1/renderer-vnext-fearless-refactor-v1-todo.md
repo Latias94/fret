@@ -619,6 +619,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
       module.
     - [x] Step 3i: split intermediate target selection into a focused helper module.
     - [x] Step 3j: split clip-path mask target selection into the target-selection helper module.
+    - [x] Step 3k: replace active clip-path mask target scratch `Vec` with a fixed-size snapshot.
   - Landed (step 1): extracted target/budget helpers and their focused tests into
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
   - Landed (step 2): introduced `RenderPlanCompilerCtx` to own structural compiler outputs
@@ -672,6 +673,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_selection.rs` while keeping
     the mask target pool separate from intermediate targets, active clip-path scope exclusion,
     mask allocation order, and `ClipPathDisabled` degradation reason precedence unchanged.
+  - Landed (step 3k): replaced the Backdrop effect push path's temporary active mask target
+    `Vec` with a fixed-size `ActiveMaskTargets` snapshot, preserving active clip-path mask target
+    order and the slice passed to effect-chain planning.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
       `compile_for_scene_inner`)
@@ -684,7 +688,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/context.rs`
       (`RenderPlanCompilerCtx`, `alloc_segment`, `flush_scene_range`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`
-      (`compile_clip_path_push`, `compile_clip_path_pop`, `active_mask_targets`)
+      (`compile_clip_path_push`, `compile_clip_path_pop`, `active_mask_targets`,
+      `ActiveMaskTargets`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/composite_group.rs`
       (`compile_composite_group_push`, `compile_composite_group_pop`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/backdrop_source_group.rs`

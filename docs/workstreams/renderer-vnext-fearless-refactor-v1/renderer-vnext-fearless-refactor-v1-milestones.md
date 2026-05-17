@@ -1138,6 +1138,29 @@ Progress record (RenderPlan compiler clip-path mask target-selection helper spli
   - `python3 tools/check_layering.py`
   - `git diff --check`
 
+Progress record (RenderPlan compiler active mask target scratch cleanup):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3k; Stage 24 continues)
+- Objective:
+  - Replace the Backdrop effect push path's temporary active clip-path mask target `Vec` with a
+    fixed-size snapshot, avoiding heap allocation while preserving mask target order and the exact
+    unavailable-mask slice passed into effect-chain planning.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`
+    (`ActiveMaskTargets::from_clip_path_scopes`, `ActiveMaskTargets::as_slice`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
+    (Backdrop push path passes the fixed snapshot slice to `EffectChainApplyCtx`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_effects`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan::tests::compile_for_scene_backdrop_color_adjust_emits_mask_target_when_budget_allows`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:
