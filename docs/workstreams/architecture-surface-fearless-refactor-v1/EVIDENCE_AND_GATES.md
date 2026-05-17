@@ -351,12 +351,46 @@ What this proves:
 
 ### Renderer Facade Gates
 
-The exact gate depends on the ASF-070 decision:
+ASF-070 decision: keep and deepen/curate `fret-render` as the stable default renderer facade. Do
+not collapse it into `fret-render-wgpu`.
 
-- collapse path: compile first-party renderer callers after dependency migration.
-- deepen path: compile the chosen renderer profile and run renderer contract tests.
+Why this path won:
 
-Record the chosen commands in this file when ASF-070 starts.
+- The closed `docs/workstreams/renderer-modularity-fearless-refactor-v1/` lane already made
+  `crates/fret-render` a curated default facade with explicit v1 buckets.
+- `crates/fret-render/src/lib.rs` documents both editor-hosted convenience and engine-hosted direct
+  topology, and includes compile-fail guards for backend-only diagnostics that should not leak
+  through the default facade.
+- `crates/fret-render/tests/facade_surface_snapshot.rs` locks the v1 export buckets.
+- `crates/fret-render-wgpu/tests/host_provided_gpu_topology_smoke.rs` proves the direct
+  host-provided GPU path that prevents `WgpuContext` from becoming the only ergonomic topology.
+
+Target gates for this decision:
+
+```bash
+cargo test -p fret-render --locked --test facade_surface_snapshot -j 1
+cargo check -p fret-render --locked -j 1
+cargo test -p fret-render-wgpu --locked --test host_provided_gpu_topology_smoke -j 1
+cargo check -p fret-render-wgpu --locked --tests -j 1
+python tools/check_layering.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+What this proves:
+
+- The curated default facade still compiles and exports only the locked v1 buckets.
+- Backend-specific topology coverage still compiles on the concrete wgpu backend.
+- No crate-boundary drift was introduced while recording the decision.
+
+2026-05-17 result for ASF-070:
+
+- Decision recorded: `fret-render` is retained as the curated default renderer facade rather than
+  collapsed into `fret-render-wgpu`.
+- No renderer code move was required in this architecture-surface slice; future semantic or
+  capability work should open a renderer-specific follow-on.
+- Validation results are recorded in
+  `docs/workstreams/architecture-surface-fearless-refactor-v1/JOURNAL/2026-05-17-asf-070.md`.
 
 ## Evidence Anchors
 

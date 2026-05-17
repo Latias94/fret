@@ -38,7 +38,11 @@
     "cargo check -p fret --no-default-features --features app --test backend_free_app_authoring_profile",
     "cargo tree -p fret-bootstrap --no-default-features -e normal --depth 4",
     "cargo check -p fret-bootstrap --no-default-features",
-    "cargo check -p fret-bootstrap --no-default-features --test backend_free_bootstrap_profile"
+    "cargo check -p fret-bootstrap --no-default-features --test backend_free_bootstrap_profile",
+    "cargo test -p fret-render --locked --test facade_surface_snapshot -j 1",
+    "cargo check -p fret-render --locked -j 1",
+    "cargo test -p fret-render-wgpu --locked --test host_provided_gpu_topology_smoke -j 1",
+    "cargo check -p fret-render-wgpu --locked --tests -j 1"
   ],
   "evidence": [
     {
@@ -160,6 +164,22 @@
     {
       "kind": "asf-061",
       "path": "docs/workstreams/shadcn-menu-select-policy-followon-v1/DESIGN.md"
+    },
+    {
+      "kind": "asf-070",
+      "path": "docs/workstreams/architecture-surface-fearless-refactor-v1/JOURNAL/2026-05-17-asf-070.md"
+    },
+    {
+      "kind": "asf-070",
+      "path": "crates/fret-render/src/lib.rs"
+    },
+    {
+      "kind": "asf-070",
+      "path": "crates/fret-render/tests/facade_surface_snapshot.rs"
+    },
+    {
+      "kind": "asf-070",
+      "path": "docs/workstreams/renderer-modularity-fearless-refactor-v1/CLOSEOUT_AUDIT.md"
     }
   ],
   "adr_refs": [
@@ -172,6 +192,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue with ASF-070 next. Remaining shadcn menu/select policy cleanup is split to docs/workstreams/shadcn-menu-select-policy-followon-v1. Delete redundant compatibility surfaces when first-party callers can be migrated; do not preserve old interfaces by default."
+    "notes": "Continue with ASF-080 closeout next. Remaining shadcn menu/select policy cleanup is split to docs/workstreams/shadcn-menu-select-policy-followon-v1. The renderer facade decision is complete: keep fret-render as the curated default facade and open a renderer-specific follow-on for future semantic/capability goals. Delete redundant compatibility surfaces when first-party callers can be migrated; do not preserve old interfaces by default."
   }
 }

@@ -6,7 +6,7 @@ Last updated: 2026-05-17
 ## Current State
 
 The workstream has been opened from an architecture surface audit. ASF-020, ASF-021, ASF-030,
-ASF-031, ASF-040, ASF-041, ASF-050, ASF-051, and ASF-060 are complete: the `fret` backend-free app-authoring
+ASF-031, ASF-040, ASF-041, ASF-050, ASF-051, ASF-060, ASF-061, and ASF-070 are complete: the `fret` backend-free app-authoring
 profiles no longer pull the native launch/render/backend stack, `FretApp` is now a backend-free
 authoring spec with desktop-only execution methods, `fret-bootstrap --no-default-features` now
 exposes bootstrap planning/default policy without pulling the concrete launch/render/backend stack,
@@ -14,24 +14,25 @@ first-party scaffold/template guidance now uses the new app-spec-recording vs
 desktop-builder-application split, the app prelude has a closed Golden Path budget, LocalState has
 a private owner module, the boolean-control family now proves the headless/primitives/kit taxonomy,
 the carousel recipe consumes headless engines directly instead of through kit shims, and menu/select
-entry-focus target selection is now owned by a shared headless module.
+entry-focus target selection is now owned by a shared headless module. Remaining shadcn menu/select
+policy cleanup has been split into a follow-on lane, and `fret-render` has been retained as the
+curated default renderer facade instead of being collapsed into `fret-render-wgpu`.
 
 The user explicitly approved fearless refactoring with no compatibility burden: redundant old code,
 aliases, and wrappers may be deleted when first-party callers are migrated.
 
 ## Active Task
 
-- Task ID: ASF-070
+- Task ID: ASF-080
 - Owner: unassigned
 - Files:
-  - `crates/fret-render`
-  - `crates/fret-render-core`
-  - `crates/fret-render-wgpu`
-  - `docs/workstreams/renderer-modularity-fearless-refactor-v1`
-  - `docs/adr/IMPLEMENTATION_ALIGNMENT.md`
+  - `docs/workstreams/architecture-surface-fearless-refactor-v1`
+  - `docs/workstreams/README.md`
+  - `docs/todo-tracker.md`
 - Validation:
-  - decision note for collapse vs deepen
-  - targeted compile gate for the chosen renderer profile
+  - final evidence audit
+  - closeout note or narrower follow-on split
+  - workstream catalog check
 
 ## Decisions Since Last Update
 
@@ -91,6 +92,11 @@ aliases, and wrappers may be deleted when first-party callers are migrated.
   `docs/workstreams/shadcn-menu-select-policy-followon-v1/`. The older
   `docs/workstreams/menu-surfaces-alignment-v1/` lane remains completed historical OS/in-window
   menubar scope and should not be silently reopened.
+- ASF-070 decided not to collapse `fret-render` into `fret-render-wgpu`. The closed
+  `docs/workstreams/renderer-modularity-fearless-refactor-v1/` lane already established
+  `crates/fret-render` as a curated default facade with explicit v1 buckets, compile-fail guards for
+  backend-only diagnostics, and host-provided GPU topology coverage. Future renderer semantic or
+  capability work belongs in a renderer-specific follow-on, not in this architecture-surface lane.
 
 ## Blockers
 
@@ -98,6 +104,6 @@ aliases, and wrappers may be deleted when first-party callers are migrated.
 
 ## Next Recommended Action
 
-- Start ASF-070: decide whether `fret-render` should be collapsed into the concrete wgpu renderer
-  facade or deepened into a real renderer interface. If this becomes more than a decision + compile
-  proof, split it into `renderer-modularity-fearless-refactor-v1` before large implementation.
+- Start ASF-080: close this architecture-surface lane or split any remaining work into narrower
+  follow-ons. Do not reopen `renderer-modularity-fearless-refactor-v1` or
+  `menu-surfaces-alignment-v1`; both are historical/closed for their original scopes.

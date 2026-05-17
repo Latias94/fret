@@ -89,11 +89,11 @@ Last updated: 2026-05-17
 
 ## M6 — Renderer Facade Decision
 
-- [ ] ASF-070 [owner=unassigned] [deps=ASF-010] [scope=crates/fret-render,crates/fret-render-core,crates/fret-render-wgpu,docs/workstreams/renderer-modularity-fearless-refactor-v1,docs/adr/IMPLEMENTATION_ALIGNMENT.md]
+- [x] ASF-070 [owner=codex] [deps=ASF-010] [scope=crates/fret-render,crates/fret-render-core,crates/fret-render-wgpu,docs/workstreams/renderer-modularity-fearless-refactor-v1,docs/adr/IMPLEMENTATION_ALIGNMENT.md]
   Goal: Decide whether `fret-render` is collapsed into `fret-render-wgpu` or deepened into the renderer interface.
   Validation: a short decision note plus one compile gate demonstrating the chosen profile.
-  Evidence: updated renderer docs/workstream and Cargo feature behavior.
-  Handoff: If deepening requires a renderer-specific design, split it out before implementation.
+  Evidence: `docs/workstreams/architecture-surface-fearless-refactor-v1/JOURNAL/2026-05-17-asf-070.md`; `docs/workstreams/renderer-modularity-fearless-refactor-v1/CLOSEOUT_AUDIT.md`; `crates/fret-render/src/lib.rs`; `crates/fret-render/tests/facade_surface_snapshot.rs`; `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
+  Handoff: Completed on 2026-05-17; `fret-render` remains the curated default renderer facade. Do not collapse it into `fret-render-wgpu`; future renderer semantic/capability work should open a renderer-specific follow-on instead of widening this architecture-surface lane.
 
 ## M7 — Closeout
 

@@ -129,6 +129,13 @@ Exit criteria:
 - `fret-render` is either collapsed as a shallow facade or deepened as the renderer interface.
 - The decision is reflected in docs, Cargo features, and at least one compile/test gate.
 
+Status:
+
+- Complete through ASF-070 on 2026-05-17. `fret-render` remains the curated default renderer
+  facade rather than collapsing into `fret-render-wgpu`. The closed renderer-modularity lane already
+  locked the v1 facade buckets, host-provided GPU topology, and backend-specific diagnostics escape
+  hatch; future renderer semantic/capability goals should open a renderer-specific follow-on.
+
 Primary gates:
 
 - targeted `cargo check` for the chosen renderer profile.
