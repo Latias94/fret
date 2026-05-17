@@ -129,6 +129,21 @@ def main(argv: list[str]) -> int:
         "app-authoring: fret app check",
         ["cargo", "check", "-p", "fret", "--locked", "--no-default-features", "--features", "app"],
     )
+    _run_checked(
+        "app-authoring: fret app authoring spec test check",
+        [
+            "cargo",
+            "check",
+            "-p",
+            "fret",
+            "--locked",
+            "--no-default-features",
+            "--features",
+            "app",
+            "--test",
+            "backend_free_app_authoring_profile",
+        ],
+    )
 
     # Profile D — launcher facade
     _run_checked("launch: fret-launch", ["cargo", "check", "-p", "fret-launch", "--locked"])

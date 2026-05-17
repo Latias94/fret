@@ -33,6 +33,7 @@ Primary gates:
 - `cargo tree -p fret --no-default-features --features app -e normal --depth 4`
 - `cargo check -p fret --no-default-features`
 - `cargo check -p fret --no-default-features --features app`
+- `cargo check -p fret --no-default-features --features app --test backend_free_app_authoring_profile`
 - `python tools/check_consumption_profiles.py`
 
 ## M2 — Bootstrap Plan vs Launch Adapter

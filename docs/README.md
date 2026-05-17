@@ -187,6 +187,7 @@ Portable profiles we treat as regression gates:
 - UI substrate: `fret-ui`
 - Manual assembly facade (portable): `fret-framework` with `--no-default-features --features core,runtime,ui`
 - Backend-free app-authoring facade: `fret` with `--no-default-features --features app`
+  (`FretApp::new(...)` spec + `View` / `AppUi`, without native window/runner methods)
 
 ## State management (authoring ergonomics)
 

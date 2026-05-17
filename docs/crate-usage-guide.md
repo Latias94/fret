@@ -319,14 +319,16 @@ authoring vocabulary through a hidden umbrella import.
   - Includes: shadcn integration.
   - Intentionally excludes: config files, UI asset caches, icon packs, icon preloading, command palette.
 - `app` with `default-features = false` = backend-free app-authoring baseline.
-  - Includes: the default app vocabulary and shadcn authoring surface.
+  - Includes: the default app vocabulary, shadcn authoring surface, `FretApp::new(...)` authoring
+    spec, setup bundles, and static asset registrations.
   - Excludes: `wgpu`, `winit`, `fret-launch`, `fret-render`, native platform crates, and runner
     crates.
   - Use this for reusable app-facing helpers or compile-test crates that should not own a native
     process entry point.
 - `desktop` = explicit native runner/render opt-in.
   - Pulls the `fret-framework/native-wgpu`, `fret-bootstrap`, and `fret-launch` path.
-  - Required for native startup methods that actually run a windowed app.
+  - Required for native startup methods that create windows, build `UiAppBuilder`, or run a
+    windowed app.
 - `batteries` = a bigger opt-in bundle for app/dev convenience:
   - includes desktop-bound diagnostics wiring, config files, UI assets, icons, and icon SVG
     preloading.
@@ -351,6 +353,10 @@ Backend-free app-authoring profile:
 [dependencies]
 fret = { path = "../path/to/fret/ecosystem/fret", default-features = false, features = ["app"] }
 ```
+
+This profile can compile app-facing helper crates that use `FretApp::new(...)`, `.setup(...)`,
+static asset entries, `View`, and `AppUi` without inheriting the native runner. The
+`.window(...).view::<V>()?.run()` chain is intentionally a `desktop` profile surface.
 
 Minimal / explicit native desktop profile (useful for apps that must avoid filesystem side effects):
 

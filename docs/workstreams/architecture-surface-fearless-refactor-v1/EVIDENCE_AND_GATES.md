@@ -46,6 +46,7 @@ cargo tree -p fret --no-default-features -e normal --depth 4
 cargo tree -p fret --no-default-features --features app -e normal --depth 4
 cargo check -p fret --no-default-features
 cargo check -p fret --no-default-features --features app
+cargo check -p fret --no-default-features --features app --test backend_free_app_authoring_profile
 ```
 
 What this proves:
@@ -81,6 +82,30 @@ Disallowed dependency names for backend-free profiles unless explicitly reclassi
   - `cargo check -p fret --no-default-features --features app`
   - `python tools/check_consumption_profiles.py`
   - `python tools/check_workstream_catalog.py`
+
+2026-05-17 result for ASF-021:
+
+- `FretApp` is now exported in backend-free app-authoring profiles instead of being wholly hidden
+  behind `desktop`.
+- Backend-free methods on `FretApp` are limited to authoring/spec configuration such as
+  `new(...)`, defaults, config-file preference, static asset registrations, and setup bundles.
+- Desktop execution methods remain `desktop`-only: window configuration, `view::<V>()`,
+  `view_with_hooks::<V>(...)`, asset startup/reload policies, command-palette driver wiring,
+  `UiAppBuilder`, and `.run()`.
+- `ecosystem/fret/tests/backend_free_app_authoring_profile.rs` proves that
+  `fret::app::prelude::*` exposes the backend-free `FretApp` authoring spec under
+  `--no-default-features --features app`.
+- `tools/check_consumption_profiles.py` now compiles that test target as part of the modular
+  consumption gate.
+- Targeted checks passed:
+  - `cargo fmt --package fret`
+  - `cargo check -p fret --locked --no-default-features`
+  - `cargo check -p fret --locked --no-default-features --features app`
+  - `cargo check -p fret --locked --no-default-features --features app --test backend_free_app_authoring_profile`
+  - `cargo check -p fret --locked`
+  - `python tools/check_consumption_profiles.py`
+  - `cargo nextest run -p fret --locked --no-default-features --features app --test backend_free_app_authoring_profile`
+  - `cargo nextest run -p fret --locked authoring_surface_policy_tests`
 
 ### Bootstrap Plan Gates
 

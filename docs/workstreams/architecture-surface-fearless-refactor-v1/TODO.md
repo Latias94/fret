@@ -25,11 +25,11 @@ Last updated: 2026-05-17
   Evidence: `tools/check_consumption_profiles.py`; `ecosystem/fret/Cargo.toml`; `ecosystem/fret/README.md`; `docs/crate-usage-guide.md`.
   Handoff: Completed on 2026-05-17; `desktop` now owns the native runner/render stack and `app` remains backend-free.
 
-- [ ] ASF-021 [owner=unassigned] [deps=ASF-020] [scope=ecosystem/fret/src/lib.rs,ecosystem/fret/src/app_entry.rs,ecosystem/fret/README.md,docs/examples]
+- [x] ASF-021 [owner=codex] [deps=ASF-020] [scope=ecosystem/fret/src/lib.rs,ecosystem/fret/src/app_entry.rs,ecosystem/fret/README.md,docs/examples]
   Goal: Separate backend-running methods from backend-free app authoring types so `FretApp` or its replacement has an honest feature boundary.
   Validation: `cargo check -p fret --no-default-features --features app` and a targeted template/doc gate if affected.
-  Evidence: Updated public app entry docs and first-party call sites.
-  Handoff: If an existing type cannot be made honest without contortion, split it and migrate callers.
+  Evidence: `ecosystem/fret/src/app_entry.rs`; `ecosystem/fret/src/lib.rs`; `ecosystem/fret/tests/backend_free_app_authoring_profile.rs`; `tools/check_consumption_profiles.py`; `ecosystem/fret/README.md`; `docs/crate-usage-guide.md`.
+  Handoff: Completed on 2026-05-17; `FretApp` is now a backend-free authoring spec and desktop window/runner methods remain `desktop`-only.
 
 ## M2 — Bootstrap Plan vs Launch Adapter
 

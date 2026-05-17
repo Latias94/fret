@@ -1,13 +1,18 @@
 //! Batteries-included desktop-first entry points for Fret.
 //!
 //! This crate is intentionally **ecosystem-level**:
-//! - it composes `fret-bootstrap` (golden-path wiring) with a default component surface,
-//! - it enables a practical desktop-first default stack,
+//! - it exposes a backend-free app-authoring surface under `app`,
+//! - it composes `fret-bootstrap` (golden-path wiring) with a default component surface under
+//!   `desktop`,
+//! - it enables a practical desktop-first default stack by default,
 //! - it remains optional: advanced users can depend on `fret-framework` + `fret-bootstrap` directly.
 //! - it is **not** the repository?s canonical example host; runnable lessons stay in app-owned
 //!   surfaces such as `apps/fret-cookbook`, `apps/fret-ui-gallery`, and other app shells.
 //!
 //! ## Choosing a native entry path
+//!
+//! `FretApp::new(...)` is available in the backend-free `app` profile as an app-authoring spec.
+//! Native window creation, `view::<V>()?`, `UiAppBuilder`, and `.run()` are `desktop` surfaces.
 //!
 //! - `fret::FretApp::new(...).window(...).view::<V>()?` is the recommended app-author path.
 //! - `fret::FretApp::new(...).window(...).view_with_hooks::<V>(...)?` is the recommended advanced
@@ -89,7 +94,7 @@
 //! - use `fret::assets::{AssetBundleId, AssetLocator, AssetRequest, StaticAssetEntry, ...}`
 //!   for logical bundle/embedded assets; prefer `AssetBundleId::app(...)` /
 //!   `AssetBundleId::package(...)` over raw global strings; keep app-facing startup on
-//!   `AssetStartupPlan` + `AssetStartupMode` through `FretApp::asset_startup(...)` or
+//!   `AssetStartupPlan` + `AssetStartupMode` through desktop-only `FretApp::asset_startup(...)` or
 //!   `UiAppBuilder::with_asset_startup(...)`; when host/bootstrap code intentionally installs
 //!   file-backed resolver layers directly, construct
 //!   `FileAssetManifestResolver::from_bundle_dir(...)` /
@@ -348,8 +353,11 @@ pub mod assets {
     pub use fret_runtime::resolve_asset_locator_reference as resolve_locator_reference;
 }
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 #[derive(Debug, Clone)]
+#[cfg_attr(
+    not(all(not(target_arch = "wasm32"), feature = "desktop")),
+    allow(dead_code)
+)]
 pub(crate) enum AssetMount {
     BundleEntries {
         bundle: fret_assets::AssetBundleId,
@@ -359,11 +367,13 @@ pub(crate) enum AssetMount {
         owner: fret_assets::AssetBundleId,
         entries: Vec<fret_assets::StaticAssetEntry>,
     },
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     Startup {
         bundle: fret_assets::AssetBundleId,
         mode: fret_bootstrap::AssetStartupMode,
         plan: fret_bootstrap::AssetStartupPlan,
     },
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     ReloadPolicy {
         policy: fret_bootstrap::AssetReloadPolicy,
     },
@@ -376,9 +386,7 @@ mod view;
 /// Explicit app-integration contracts for reusable ecosystem bundles.
 pub mod integration;
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 mod app_entry;
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub use app_entry::FretApp;
 
 /// Canonical app-facing UI context alias for the default authoring surface.
@@ -528,7 +536,6 @@ pub mod app {
 
     /// Common imports for app code on the default authoring surface.
     pub mod prelude {
-        #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
         pub use crate::FretApp;
         pub use crate::app::App;
         pub use crate::app::AppRenderContext;

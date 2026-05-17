@@ -134,8 +134,9 @@ fret = { path = "../fret", default-features = false, features = ["app"] }
 ```
 
 This profile is useful for reusable app-facing helpers, docs checks, and compile tests that should
-not inherit the native runner stack. It does not expose native `FretApp::run()` startup wiring; opt
-into `desktop` when the crate actually owns a native app entry point.
+not inherit the native runner stack. It keeps the backend-free `FretApp::new(...)` authoring spec,
+static asset registration, setup bundles, `View`, and `AppUi`; native `.window(...).view(...)?` and
+the returned `UiAppBuilder::run()` surface require `desktop`.
 
 ## Minimal app skeleton
 
@@ -245,7 +246,8 @@ The same ordered builder surface now also includes compile-time/static entries t
 - `desktop`: enable the native desktop runner/render stack (winit + wgpu) via
   `fret-framework/native-wgpu`, `fret-bootstrap`, and `fret-launch`.
 - `app`: backend-free app-authoring baseline (shadcn). This keeps the default app vocabulary
-  available without compiling the native runner/render stack.
+  available, including the `FretApp` authoring spec, without compiling the native runner/render
+  stack.
 - `state`: enable selector/query helpers on `AppUi` (`cx.data().selector_layout(...)` for
   LocalState-first derived values, raw `cx.data().selector(...)` for explicit signatures, and
   `cx.data().query(...)` plus `handle.read_layout(cx)` for the default query read path, plus
