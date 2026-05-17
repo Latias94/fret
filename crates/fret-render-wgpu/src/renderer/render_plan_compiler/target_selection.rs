@@ -1,4 +1,4 @@
-use super::draw_scope::DrawScope;
+use super::draw_scope::DrawScopeStack;
 use crate::renderer::PlanTarget;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -8,14 +8,14 @@ pub(super) struct TargetSelection {
 }
 
 pub(super) fn choose_free_intermediate_target(
-    draw_scopes: &[DrawScope],
+    draw_scopes: &DrawScopeStack,
     reserved_targets: &[PlanTarget],
 ) -> TargetSelection {
     choose_free_intermediate_target_except(draw_scopes, reserved_targets, None)
 }
 
 pub(super) fn choose_free_intermediate_target_except(
-    draw_scopes: &[DrawScope],
+    draw_scopes: &DrawScopeStack,
     reserved_targets: &[PlanTarget],
     excluded: Option<PlanTarget>,
 ) -> TargetSelection {
@@ -26,7 +26,7 @@ pub(super) fn choose_free_intermediate_target_except(
         PlanTarget::Intermediate3,
     ] {
         if excluded == Some(target)
-            || draw_scopes.iter().any(|scope| scope.target == target)
+            || draw_scopes.contains_target(target)
             || reserved_targets.contains(&target)
         {
             continue;
@@ -44,7 +44,7 @@ pub(super) fn choose_free_intermediate_target_except(
 }
 
 pub(super) fn has_free_intermediate_target_except(
-    draw_scopes: &[DrawScope],
+    draw_scopes: &DrawScopeStack,
     reserved_targets: &[PlanTarget],
     excluded: PlanTarget,
 ) -> bool {
@@ -73,6 +73,7 @@ pub(super) fn choose_free_clip_path_mask_target(
 
 #[cfg(test)]
 mod tests {
+    use super::super::draw_scope::DrawScope;
     use super::*;
 
     fn scope(target: PlanTarget) -> DrawScope {
@@ -87,7 +88,7 @@ mod tests {
 
     #[test]
     fn intermediate_target_selection_preserves_order_and_exclusions() {
-        let draw_scopes = [scope(PlanTarget::Intermediate0)];
+        let draw_scopes = DrawScopeStack::new(scope(PlanTarget::Intermediate0));
         let reserved_targets = [PlanTarget::Intermediate2];
 
         let selection = choose_free_intermediate_target(&draw_scopes, &reserved_targets);
@@ -98,7 +99,7 @@ mod tests {
 
     #[test]
     fn intermediate_target_selection_respects_explicit_exclusion() {
-        let draw_scopes = [scope(PlanTarget::Intermediate0)];
+        let draw_scopes = DrawScopeStack::new(scope(PlanTarget::Intermediate0));
         let reserved_targets = [PlanTarget::Intermediate2];
 
         let selection = choose_free_intermediate_target_except(

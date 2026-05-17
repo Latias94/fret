@@ -19,7 +19,7 @@ mod target_selection;
 use super::SceneEncoding;
 use super::render_plan_effects as effects;
 use context::RenderPlanCompilerCtx;
-use draw_scope::DrawScope;
+use draw_scope::{DrawScope, DrawScopeStack};
 
 pub(super) fn compile_for_scene(
     encoding: &SceneEncoding,
@@ -68,13 +68,13 @@ fn compile_for_scene_inner(
     let draws = &encoding.ordered_draws;
     let markers = &encoding.effect_markers;
     let mut ctx = RenderPlanCompilerCtx::new();
-    let mut draw_scopes: Vec<DrawScope> = vec![DrawScope {
+    let mut draw_scopes = DrawScopeStack::new(DrawScope {
         target: scene_target,
         origin: (0, 0),
         size: viewport_size,
         needs_clear: true,
         clear_color: clear,
-    }];
+    });
     let mut marker_dispatch_state = marker_dispatch::MarkerDispatchState::new();
 
     let mut scene_range_start: usize = 0;

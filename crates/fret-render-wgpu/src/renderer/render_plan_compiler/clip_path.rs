@@ -1,5 +1,5 @@
 use super::context::RenderPlanCompilerCtx;
-use super::draw_scope::{DrawScope, take_scope_load_for_write};
+use super::draw_scope::{DrawScope, DrawScopeStack};
 use super::target_selection;
 use crate::renderer::{
     CompositePremulPass, MaskRef, PathClipMaskPass, PlanTarget, RenderPlanDegradation,
@@ -63,7 +63,7 @@ impl ClipPathDispatchState {
     pub(super) fn compile_push(
         &mut self,
         plan: &mut RenderPlanCompilerCtx,
-        draw_scopes: &mut Vec<DrawScope>,
+        draw_scopes: &mut DrawScopeStack,
         encoding: &SceneEncoding,
         draw_ix: usize,
         args: ClipPathPushCtx<'_>,
@@ -74,7 +74,7 @@ impl ClipPathDispatchState {
     pub(super) fn compile_pop(
         &mut self,
         plan: &mut RenderPlanCompilerCtx,
-        draw_scopes: &mut Vec<DrawScope>,
+        draw_scopes: &mut DrawScopeStack,
     ) {
         self.compile_pop_inner(plan, draw_scopes);
     }
@@ -82,12 +82,12 @@ impl ClipPathDispatchState {
     fn compile_push_inner(
         &mut self,
         plan: &mut RenderPlanCompilerCtx,
-        draw_scopes: &mut Vec<DrawScope>,
+        draw_scopes: &mut DrawScopeStack,
         encoding: &SceneEncoding,
         draw_ix: usize,
         args: ClipPathPushCtx<'_>,
     ) {
-        let parent_scope = draw_scopes.last().expect("draw scope");
+        let parent_scope = draw_scopes.current();
         let parent_target = parent_scope.target;
         let parent_origin = parent_scope.origin;
         let parent_size = parent_scope.size;
@@ -213,7 +213,7 @@ impl ClipPathDispatchState {
     fn compile_pop_inner(
         &mut self,
         plan: &mut RenderPlanCompilerCtx,
-        draw_scopes: &mut Vec<DrawScope>,
+        draw_scopes: &mut DrawScopeStack,
     ) {
         let Some(scope) = self.scopes.pop() else {
             return;
@@ -221,10 +221,7 @@ impl ClipPathDispatchState {
 
         if let (Some(content_target), Some(mask_target)) = (scope.content_target, scope.mask_target)
         {
-            debug_assert_eq!(
-                draw_scopes.last().expect("draw scope").target,
-                content_target
-            );
+            debug_assert_eq!(draw_scopes.current().target, content_target);
 
             plan.push_pass(RenderPlanPass::CompositePremul(CompositePremulPass {
                 src: content_target,
@@ -242,7 +239,7 @@ impl ClipPathDispatchState {
                 }),
                 blend_mode: fret_core::BlendMode::Over,
                 opacity: 1.0,
-                load: take_scope_load_for_write(draw_scopes, scope.parent_target),
+                load: draw_scopes.take_load_for_write(scope.parent_target),
             }));
 
             let _ = draw_scopes.pop();

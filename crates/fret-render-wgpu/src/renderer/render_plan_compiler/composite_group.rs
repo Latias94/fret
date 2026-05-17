@@ -1,5 +1,5 @@
 use super::context::RenderPlanCompilerCtx;
-use super::draw_scope::{DrawScope, take_scope_load_for_write};
+use super::draw_scope::{DrawScope, DrawScopeStack};
 use super::target_selection;
 use crate::renderer::{
     CompositePremulPass, PlanTarget, RenderPlanDegradation, RenderPlanDegradationKind,
@@ -33,7 +33,7 @@ impl CompositeGroupDispatchState {
     pub(super) fn compile_push(
         &mut self,
         plan: &mut RenderPlanCompilerCtx,
-        draw_scopes: &mut Vec<DrawScope>,
+        draw_scopes: &mut DrawScopeStack,
         draw_ix: usize,
         args: CompositeGroupPushCtx<'_>,
     ) {
@@ -43,7 +43,7 @@ impl CompositeGroupDispatchState {
     pub(super) fn compile_pop(
         &mut self,
         plan: &mut RenderPlanCompilerCtx,
-        draw_scopes: &mut Vec<DrawScope>,
+        draw_scopes: &mut DrawScopeStack,
     ) {
         self.compile_pop_inner(plan, draw_scopes);
     }
@@ -51,11 +51,11 @@ impl CompositeGroupDispatchState {
     fn compile_push_inner(
         &mut self,
         plan: &mut RenderPlanCompilerCtx,
-        draw_scopes: &mut Vec<DrawScope>,
+        draw_scopes: &mut DrawScopeStack,
         draw_ix: usize,
         args: CompositeGroupPushCtx<'_>,
     ) {
-        let parent_scope = draw_scopes.last().expect("draw scope");
+        let parent_scope = draw_scopes.current();
         let parent_target = parent_scope.target;
         let parent_origin = parent_scope.origin;
         let parent_size = parent_scope.size;
@@ -136,19 +136,16 @@ impl CompositeGroupDispatchState {
     fn compile_pop_inner(
         &mut self,
         plan: &mut RenderPlanCompilerCtx,
-        draw_scopes: &mut Vec<DrawScope>,
+        draw_scopes: &mut DrawScopeStack,
     ) {
         let Some(scope) = self.scopes.pop() else {
             return;
         };
 
         if let Some(content_target) = scope.content_target {
-            debug_assert_eq!(
-                draw_scopes.last().expect("draw scope").target,
-                content_target
-            );
+            debug_assert_eq!(draw_scopes.current().target, content_target);
 
-            let load = take_scope_load_for_write(draw_scopes, scope.parent_target);
+            let load = draw_scopes.take_load_for_write(scope.parent_target);
             plan.push_pass(RenderPlanPass::CompositePremul(CompositePremulPass {
                 src: content_target,
                 src_origin: scope.content_origin,

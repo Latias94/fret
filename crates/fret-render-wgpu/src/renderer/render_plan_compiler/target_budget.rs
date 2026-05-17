@@ -1,5 +1,5 @@
 use super::super::render_plan_effects as effects;
-use super::draw_scope::DrawScope;
+use super::draw_scope::DrawScopeStack;
 use crate::renderer::{PlanTarget, estimate_texture_bytes};
 
 pub(super) fn choose_backdrop_source_group_pyramid_choice(
@@ -45,7 +45,7 @@ fn is_intermediate_target(t: PlanTarget) -> bool {
 }
 
 pub(super) fn estimate_in_use_intermediate_bytes(
-    draw_scopes: &[DrawScope],
+    draw_scopes: &DrawScopeStack,
     format: wgpu::TextureFormat,
 ) -> u64 {
     draw_scopes
@@ -56,7 +56,7 @@ pub(super) fn estimate_in_use_intermediate_bytes(
 }
 
 fn estimate_target_bytes_in_scopes(
-    draw_scopes: &[DrawScope],
+    draw_scopes: &DrawScopeStack,
     target: PlanTarget,
     format: wgpu::TextureFormat,
 ) -> Option<u64> {
@@ -74,7 +74,7 @@ pub(super) struct IntermediateBudgetBreakdown {
 
 pub(super) fn intermediate_budget_breakdown_for_chain(
     intermediate_budget_bytes: u64,
-    draw_scopes: &[DrawScope],
+    draw_scopes: &DrawScopeStack,
     srcdst: PlanTarget,
     format: wgpu::TextureFormat,
     extra_in_use_bytes: u64,
@@ -96,7 +96,7 @@ pub(super) fn intermediate_budget_breakdown_for_chain(
 
 pub(super) fn can_allocate_intermediate_bytes(
     intermediate_budget_bytes: u64,
-    draw_scopes: &[DrawScope],
+    draw_scopes: &DrawScopeStack,
     required_bytes: u64,
     extra_in_use_bytes: u64,
     format: wgpu::TextureFormat,
@@ -110,6 +110,7 @@ pub(super) fn can_allocate_intermediate_bytes(
 
 #[cfg(test)]
 mod tests {
+    use super::super::draw_scope::DrawScope;
     use super::*;
 
     #[test]
@@ -152,22 +153,20 @@ mod tests {
         let format = wgpu::TextureFormat::Rgba8Unorm;
         let intermediate_budget_bytes = 1000u64;
 
-        let draw_scopes = [
-            DrawScope {
-                target: PlanTarget::Intermediate0,
-                origin: (0, 0),
-                size: (4, 4),
-                needs_clear: false,
-                clear_color: wgpu::Color::TRANSPARENT,
-            },
-            DrawScope {
-                target: PlanTarget::Intermediate1,
-                origin: (0, 0),
-                size: (2, 2),
-                needs_clear: false,
-                clear_color: wgpu::Color::TRANSPARENT,
-            },
-        ];
+        let mut draw_scopes = DrawScopeStack::new(DrawScope {
+            target: PlanTarget::Intermediate0,
+            origin: (0, 0),
+            size: (4, 4),
+            needs_clear: false,
+            clear_color: wgpu::Color::TRANSPARENT,
+        });
+        draw_scopes.push(DrawScope {
+            target: PlanTarget::Intermediate1,
+            origin: (0, 0),
+            size: (2, 2),
+            needs_clear: false,
+            clear_color: wgpu::Color::TRANSPARENT,
+        });
 
         let srcdst_bytes = estimate_texture_bytes((4, 4), format, 1);
         let in_use_bytes = estimate_texture_bytes((4, 4), format, 1)

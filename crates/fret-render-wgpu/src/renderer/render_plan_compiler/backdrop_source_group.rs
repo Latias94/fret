@@ -1,5 +1,5 @@
 use super::context::RenderPlanCompilerCtx;
-use super::draw_scope::DrawScope;
+use super::draw_scope::DrawScopeStack;
 use super::effects;
 use super::target_budget::{
     can_allocate_intermediate_bytes, choose_backdrop_source_group_pyramid_choice,
@@ -63,7 +63,7 @@ impl BackdropSourceGroupDispatchState {
     pub(super) fn compile_push(
         &mut self,
         plan: &mut RenderPlanCompilerCtx,
-        draw_scopes: &[DrawScope],
+        draw_scopes: &DrawScopeStack,
         degradations: &mut BackdropSourceGroupDegradationCounters,
         args: BackdropSourceGroupPushCtx,
     ) {
@@ -77,7 +77,7 @@ impl BackdropSourceGroupDispatchState {
     fn compile_push_inner(
         &mut self,
         plan: &mut RenderPlanCompilerCtx,
-        draw_scopes: &[DrawScope],
+        draw_scopes: &DrawScopeStack,
         degradations: &mut BackdropSourceGroupDegradationCounters,
         args: BackdropSourceGroupPushCtx,
     ) {
@@ -101,7 +101,7 @@ impl BackdropSourceGroupDispatchState {
             })
             .unwrap_or(0);
 
-        let parent_scope = draw_scopes.last().expect("draw scope");
+        let parent_scope = draw_scopes.current();
         let parent_target = parent_scope.target;
 
         let raw_selection =

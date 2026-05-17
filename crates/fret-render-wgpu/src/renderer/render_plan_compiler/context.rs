@@ -1,5 +1,5 @@
 use super::super::*;
-use super::draw_scope::DrawScope;
+use super::draw_scope::DrawScopeStack;
 use slotmap::Key;
 use std::ops::Range;
 
@@ -128,12 +128,12 @@ impl RenderPlanCompilerCtx {
     pub(super) fn flush_scene_range(
         &mut self,
         end: usize,
-        draw_scopes: &mut Vec<DrawScope>,
+        draw_scopes: &mut DrawScopeStack,
         draws: &[OrderedDraw],
         encoding: &SceneEncoding,
         scene_range_start: &mut usize,
     ) {
-        let scope = draw_scopes.last_mut().expect("draw scope");
+        let scope = draw_scopes.current_mut();
         if scope.needs_clear {
             let segment = self.alloc_segment(*scene_range_start..end, draws, encoding);
             self.push_pass(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {

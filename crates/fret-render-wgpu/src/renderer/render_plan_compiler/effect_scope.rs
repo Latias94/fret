@@ -1,6 +1,6 @@
 use super::clip_path;
 use super::context::RenderPlanCompilerCtx;
-use super::draw_scope::{DrawScope, take_scope_load_for_write};
+use super::draw_scope::{DrawScope, DrawScopeStack};
 use super::effect_chain::{EffectChainApplyCtx, EffectChainBudgetStats, apply_chain_in_place};
 use super::effects;
 use super::target_budget::can_allocate_intermediate_bytes;
@@ -46,7 +46,7 @@ impl EffectScopeDispatchState {
     pub(super) fn compile_push(
         &mut self,
         plan: &mut RenderPlanCompilerCtx,
-        draw_scopes: &mut Vec<DrawScope>,
+        draw_scopes: &mut DrawScopeStack,
         draw_ix: usize,
         args: EffectScopePushCtx<'_>,
     ) {
@@ -56,7 +56,7 @@ impl EffectScopeDispatchState {
     pub(super) fn compile_pop(
         &mut self,
         plan: &mut RenderPlanCompilerCtx,
-        draw_scopes: &mut Vec<DrawScope>,
+        draw_scopes: &mut DrawScopeStack,
         draw_ix: usize,
         args: EffectScopePopCtx<'_>,
     ) {
@@ -72,11 +72,11 @@ impl EffectScopeDispatchState {
     fn compile_push_inner(
         &mut self,
         plan: &mut RenderPlanCompilerCtx,
-        draw_scopes: &mut Vec<DrawScope>,
+        draw_scopes: &mut DrawScopeStack,
         draw_ix: usize,
         args: EffectScopePushCtx<'_>,
     ) {
-        let parent_scope = draw_scopes.last().expect("draw scope");
+        let parent_scope = draw_scopes.current();
         let parent_target = parent_scope.target;
         let parent_origin = parent_scope.origin;
         let parent_size = parent_scope.size;
@@ -223,7 +223,7 @@ impl EffectScopeDispatchState {
     fn compile_pop_inner(
         &mut self,
         plan: &mut RenderPlanCompilerCtx,
-        draw_scopes: &mut Vec<DrawScope>,
+        draw_scopes: &mut DrawScopeStack,
         draw_ix: usize,
         args: EffectScopePopCtx<'_>,
     ) {
@@ -234,10 +234,7 @@ impl EffectScopeDispatchState {
         if scope.mode == fret_core::EffectMode::FilterContent
             && let Some(content_target) = scope.content_target
         {
-            debug_assert_eq!(
-                draw_scopes.last().expect("draw scope").target,
-                content_target
-            );
+            debug_assert_eq!(draw_scopes.current().target, content_target);
 
             let had_free_scratch_target = target_selection::has_free_intermediate_target_except(
                 draw_scopes,
@@ -298,7 +295,7 @@ impl EffectScopeDispatchState {
 
             let cropped =
                 scope.content_origin != (0, 0) || scope.content_size != args.viewport_size;
-            let load = take_scope_load_for_write(draw_scopes, scope.parent_target);
+            let load = draw_scopes.take_load_for_write(scope.parent_target);
             plan.push_pass(RenderPlanPass::CompositePremul(CompositePremulPass {
                 src: content_target,
                 src_origin: scope.content_origin,

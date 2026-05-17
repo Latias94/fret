@@ -1,10 +1,10 @@
 use super::context::RenderPlanCompilerCtx;
-use super::draw_scope::DrawScope;
+use super::draw_scope::DrawScopeStack;
 use crate::renderer::{OrderedDraw, PathMsaaBatchPass, RenderPlanPass, SceneEncoding};
 
 pub(super) fn try_compile_path_msaa_batch(
     plan: &mut RenderPlanCompilerCtx,
-    draw_scopes: &mut Vec<DrawScope>,
+    draw_scopes: &mut DrawScopeStack,
     draws: &[OrderedDraw],
     encoding: &SceneEncoding,
     cursor: usize,
@@ -35,7 +35,7 @@ pub(super) fn try_compile_path_msaa_batch(
         }
     }
 
-    let scope = draw_scopes.last().expect("draw scope");
+    let scope = draw_scopes.current();
     let target = scope.target;
     let segment = plan.alloc_segment(cursor..end, draws, encoding);
     plan.push_pass(RenderPlanPass::PathMsaaBatch(PathMsaaBatchPass {

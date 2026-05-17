@@ -1,5 +1,5 @@
 use super::context::RenderPlanCompilerCtx;
-use super::draw_scope::DrawScope;
+use super::draw_scope::DrawScopeStack;
 use super::effects;
 use super::target_budget::intermediate_budget_breakdown_for_chain;
 use crate::renderer::{BlurQualitySnapshot, EffectDegradationSnapshot, PlanTarget, ScissorRect};
@@ -101,7 +101,7 @@ pub(super) struct EffectChainApplyCtx<'a> {
 pub(super) fn apply_chain_in_place(
     plan: &mut RenderPlanCompilerCtx,
     stats: &mut EffectChainBudgetStats,
-    draw_scopes: &[DrawScope],
+    draw_scopes: &DrawScopeStack,
     srcdst: PlanTarget,
     mode: fret_core::EffectMode,
     chain: fret_core::EffectChain,
@@ -139,7 +139,7 @@ pub(super) fn apply_chain_in_place(
     }
 
     let mut in_use_targets: SmallVec<[PlanTarget; 8]> = SmallVec::new();
-    for scope in draw_scopes {
+    for scope in draw_scopes.iter() {
         if !in_use_targets.contains(&scope.target) {
             in_use_targets.push(scope.target);
         }

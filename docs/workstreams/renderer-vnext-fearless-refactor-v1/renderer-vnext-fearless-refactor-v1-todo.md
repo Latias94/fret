@@ -631,6 +631,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - [x] Step 3t: move backdrop-source-group push/pop helpers onto `BackdropSourceGroupDispatchState`.
     - [x] Step 3u: move clip-path push/pop helpers onto `ClipPathDispatchState`.
     - [x] Step 3v: move composite-group push/pop helpers onto `CompositeGroupDispatchState`.
+    - [x] Step 3w: wrap the compiler draw-scope stack in `DrawScopeStack`.
   - Landed (step 1): extracted target/budget helpers and their focused tests into
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
   - Landed (step 2): introduced `RenderPlanCompilerCtx` to own structural compiler outputs
@@ -724,6 +725,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Landed (step 3v): moved the private composite-group push/pop helper bodies onto
     `CompositeGroupDispatchState`, so composite scopes and push/pop mutation are handled through
     the owning dispatch state instead of threading `&mut scopes` through standalone helpers.
+  - Landed (step 3w): introduced `DrawScopeStack` for compiler draw-scope stack access, so
+    current-scope lookup, push/pop, live-target iteration, and load-op consumption are centralized
+    instead of passing a mutable `Vec<DrawScope>` across RenderPlan compiler modules.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
       `compile_for_scene_inner`)
@@ -758,7 +762,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
       (`MarkerDispatchState`, `MarkerSharedDispatchInputs`, `shared_inputs`, `compile_marker`,
       `into_parts`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/draw_scope.rs`
-      (`DrawScope`, `take_scope_load_for_write`)
+      (`DrawScope`, `DrawScopeStack`)
     - `docs/workstreams/renderer-render-plan-semantics-audit-v1/renderer-render-plan-semantics-audit-v1.md`
       (target lifetime, load-op, scissor/mask, and deterministic degradation invariants)
   - Gates:

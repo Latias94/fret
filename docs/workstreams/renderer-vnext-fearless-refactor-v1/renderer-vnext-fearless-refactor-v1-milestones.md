@@ -1451,6 +1451,36 @@ Progress record (RenderPlan compiler composite-group owner-method cleanup):
   - `python3 tools/check_layering.py`
   - `git diff --check`
 
+Progress record (RenderPlan compiler draw-scope stack wrapper):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3w; Stage 24 continues)
+- Objective:
+  - Replace cross-module `Vec<DrawScope>` threading with `DrawScopeStack`, centralizing
+    current-scope lookup, push/pop, live-target iteration, target-presence checks, and load-op
+    consumption.
+  - Preserve `SceneDrawRange`, `PathMsaaBatch`, clip-path, effect-scope, backdrop-source-group,
+    and composite-group pass ordering; preserve target lifetime, target selection order,
+    intermediate budget accounting, and clear/load consumption semantics.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/draw_scope.rs`
+    (`DrawScopeStack::{new,current,current_mut,push,pop,iter,contains_target,take_load_for_write}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (`compile_for_scene_inner` owns a `DrawScopeStack`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_selection.rs`
+    (`DrawScopeStack` live-target checks for intermediate target allocation)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`
+    (`DrawScopeStack` live-scope iteration for budget accounting)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

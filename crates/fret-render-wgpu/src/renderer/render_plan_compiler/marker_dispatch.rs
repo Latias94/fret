@@ -2,7 +2,7 @@ use super::backdrop_source_group;
 use super::clip_path;
 use super::composite_group;
 use super::context::RenderPlanCompilerCtx;
-use super::draw_scope::DrawScope;
+use super::draw_scope::DrawScopeStack;
 use super::effect_chain::EffectChainBudgetStats;
 use super::effect_scope;
 use super::effects;
@@ -33,7 +33,7 @@ impl MarkerDispatchState {
     pub(super) fn compile_marker(
         &mut self,
         plan: &mut RenderPlanCompilerCtx,
-        draw_scopes: &mut Vec<DrawScope>,
+        draw_scopes: &mut DrawScopeStack,
         encoding: &SceneEncoding,
         draw_ix: usize,
         marker: EffectMarker,
