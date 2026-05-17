@@ -625,6 +625,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - [x] Step 3n: split clip-path dispatch state out of marker dispatch and pass active mask snapshots into effect-scope planning.
     - [x] Step 3o: split composite-group dispatch state out of marker dispatch.
     - [x] Step 3p: split effect-scope dispatch state out of marker dispatch.
+    - [x] Step 3q: introduce marker shared dispatch input snapshots.
+    - [x] Step 3r: replace backdrop-source-group reserved-target stack `Vec` with `SmallVec`.
   - Landed (step 1): extracted target/budget helpers and their focused tests into
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
   - Landed (step 2): introduced `RenderPlanCompilerCtx` to own structural compiler outputs
@@ -696,6 +698,14 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     centralizing effect scopes, effect-chain budget stats, degradation snapshots, blur-quality
     snapshots, push/pop mutation, and the narrow backdrop-source-group degradation counter
     mutation entrypoint outside `marker_dispatch.rs`.
+  - Landed (step 3q): introduced `MarkerSharedDispatchInputs` in `marker_dispatch.rs`,
+    centralizing the shared clip-path/backdrop-source-group inputs needed by effect, clip-path,
+    backdrop-source-group, and composite-group marker branches while keeping the snapshot owned to
+    avoid borrow conflicts with the per-branch mutable dispatch state.
+  - Landed (step 3r): replaced `BackdropSourceGroupDispatchState`'s reserved-target stack `Vec`
+    with `SmallVec<[PlanTarget; 4]>`, preserving the public reserved-target slice contract,
+    push/pop target order, and backdrop raw/pyramid budget/degradation accounting while avoiding
+    heap allocation for the bounded intermediate target pool.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
       `compile_for_scene_inner`)
@@ -715,7 +725,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
       (`CompositeGroupDispatchState`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/backdrop_source_group.rs`
       (`compile_backdrop_source_group_push`, `compile_backdrop_source_group_pop`,
-      `BackdropSourceGroupDispatchState`, `BackdropSourceGroupScope::effect_ctx`)
+      `BackdropSourceGroupDispatchState`, `BackdropSourceGroupScope::effect_ctx`,
+      `SmallVec<[PlanTarget; 4]>` reserved-target stack)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
       (`EffectScopeDispatchState`, effect-scope push/pop target lifetime)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_chain.rs`
@@ -725,7 +736,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/preflight.rs`
       (`RenderPlanPreflight`, `plan_render_targets`, scissor-sized-intermediate eligibility)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
-      (`MarkerDispatchState`, `compile_marker`, `into_parts`)
+      (`MarkerDispatchState`, `MarkerSharedDispatchInputs`, `shared_inputs`, `compile_marker`,
+      `into_parts`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/draw_scope.rs`
       (`DrawScope`, `take_scope_load_for_write`)
     - `docs/workstreams/renderer-render-plan-semantics-audit-v1/renderer-render-plan-semantics-audit-v1.md`
@@ -734,6 +746,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `python3 tools/check_layering.py`
     - `cargo test -p fret-render-wgpu --lib renderer::`
     - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+    - `cargo test -p fret-render-wgpu render_plan_compiler::target_selection`
     - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
     - Note: `cargo test -p fret-render-wgpu --lib` compiled but failed on unrelated

@@ -10,6 +10,7 @@ use crate::renderer::{
     BackdropSourceGroupDegradationCounters, FullscreenBlitPass, LocalScissorRect, PlanTarget,
     RenderPlanPass, ScissorRect, estimate_texture_bytes,
 };
+use smallvec::SmallVec;
 
 #[derive(Clone, Copy, Debug)]
 pub(super) struct BackdropSourceGroupScope {
@@ -34,7 +35,7 @@ impl BackdropSourceGroupScope {
 
 pub(super) struct BackdropSourceGroupDispatchState {
     scopes: Vec<BackdropSourceGroupScope>,
-    reserved_targets: Vec<PlanTarget>,
+    reserved_targets: SmallVec<[PlanTarget; 4]>,
     in_use_bytes: u64,
 }
 
@@ -42,7 +43,7 @@ impl BackdropSourceGroupDispatchState {
     pub(super) fn new() -> Self {
         Self {
             scopes: Vec::new(),
-            reserved_targets: Vec::new(),
+            reserved_targets: SmallVec::new(),
             in_use_bytes: 0,
         }
     }
@@ -101,7 +102,7 @@ fn compile_backdrop_source_group_push(
     plan: &mut RenderPlanCompilerCtx,
     draw_scopes: &[DrawScope],
     backdrop_source_group_scopes: &mut Vec<BackdropSourceGroupScope>,
-    reserved_targets: &mut Vec<PlanTarget>,
+    reserved_targets: &mut SmallVec<[PlanTarget; 4]>,
     in_use_bytes: &mut u64,
     degradations: &mut BackdropSourceGroupDegradationCounters,
     args: BackdropSourceGroupPushCtx,
@@ -268,7 +269,7 @@ fn compile_backdrop_source_group_push(
 
 fn compile_backdrop_source_group_pop(
     backdrop_source_group_scopes: &mut Vec<BackdropSourceGroupScope>,
-    reserved_targets: &mut Vec<PlanTarget>,
+    reserved_targets: &mut SmallVec<[PlanTarget; 4]>,
     in_use_bytes: &mut u64,
 ) {
     let Some(scope) = backdrop_source_group_scopes.pop() else {

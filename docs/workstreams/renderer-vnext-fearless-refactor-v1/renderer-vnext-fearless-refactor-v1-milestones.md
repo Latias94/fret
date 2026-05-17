@@ -1282,6 +1282,60 @@ Progress record (RenderPlan compiler effect-scope dispatch state split):
   - `cargo test -p fret-render-wgpu render_plan_compiler::target_selection`
   - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
 
+Progress record (RenderPlan compiler marker shared input snapshot):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3q; Stage 24 continues)
+- Objective:
+  - Introduce an owned shared-input snapshot for marker dispatch so repeated reads of active
+    clip-path mask bytes/targets and backdrop-source-group reserved targets, in-use bytes, and
+    effect context are centralized without reintroducing borrow coupling between dispatch states.
+  - Preserve marker routing order, `Push`/`Pop` pass ordering, target allocation order, scope
+    lifetimes, degradation snapshots, and effect-chain/backdrop input semantics.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (`MarkerSharedDispatchInputs`, `MarkerDispatchState::shared_inputs`, per-branch snapshot use)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`
+    (`ClipPathDispatchState::{mask_in_use_bytes,active_mask_targets}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/backdrop_source_group.rs`
+    (`BackdropSourceGroupDispatchState::{reserved_targets,in_use_bytes,effect_ctx}`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler backdrop reserved-target stack cleanup):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3r; Stage 24 continues)
+- Objective:
+  - Replace `BackdropSourceGroupDispatchState`'s reserved-target stack `Vec<PlanTarget>` with a
+    bounded `SmallVec<[PlanTarget; 4]>`, matching the renderer's four intermediate target pool.
+  - Preserve the `reserved_targets()` slice contract, stack push/pop order, in-use byte
+    accounting, raw/pyramid budget decisions, degradation counters, marker dispatch inputs, and
+    pass/load-op ordering.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/backdrop_source_group.rs`
+    (`BackdropSourceGroupDispatchState::reserved_targets`,
+    `compile_backdrop_source_group_push`, `compile_backdrop_source_group_pop`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_selection.rs`
+    (`choose_free_intermediate_target` consumes the same reserved-target slice)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan::tests::compile_for_scene_backdrop_color_adjust_emits_mask_target_when_budget_allows`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:
