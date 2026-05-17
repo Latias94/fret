@@ -45,11 +45,7 @@ OPAQUE_STRUCT_SUFFIXES = (
     "Summary",
 )
 
-IMUI_DIRECT_TEXT_PROPS_ALLOWED = {
-    Path("ecosystem/fret-ui-kit/src/imui/facade_writer.rs"): {
-        "let mut props = fret_ui::element::TextProps::new(text);": 1,
-    },
-}
+IMUI_DIRECT_TEXT_PROPS_ALLOWED: dict[Path, dict[str, int]] = {}
 
 EDITOR_DIRECT_TEXT_PROPS_ALLOWED = {
     Path("ecosystem/fret-ui-editor/src/primitives/input_group.rs"): {
@@ -696,7 +692,10 @@ def main() -> None:
                 "2026-05-17 control label text follow-up",
                 "labels in `fret-ui-kit::declarative::text`, and `control_chrome::fill_text(...)` routes through",
                 "2026-05-16 text role source-gate follow-up",
-                "explicit allowlist for remaining direct `TextProps::new(...)` constructors",
+                "rejects direct `TextProps::new(...)` constructors",
+                "2026-05-17 IMUI text item role cleanup",
+                "`UiWriterImUiFacadeExt::text(...)` now delegates to the",
+                "shared `text_section_chrome_label(...)` role",
                 "2026-05-16 IMUI text item resize follow-up",
                 "`UiWriterImUiFacadeExt::text(...)` now follows Dear",
                 "`text_wrapped(...)` is the explicit opt-in path",
@@ -956,8 +955,11 @@ def main() -> None:
                 "role and routed disclosure/tree indicators through it",
                 "chrome_glyph_text_uses_fixed_slot_single_line_clip",
                 "disclosure_indicator_uses_shared_chrome_glyph_text_role",
-                "hardened `tools/gate_imui_workstream_source.py` with an explicit allowlist",
-                "remaining direct `TextProps::new(...)` constructors under `fret-ui-kit::imui`",
+                "hardened `tools/gate_imui_workstream_source.py` so direct",
+                "`TextProps::new(...)` constructors under `fret-ui-kit::imui` fail",
+                "removed the last IMUI direct text constructor exception",
+                "`UiWriterImUiFacadeExt::text(...)` through the shared",
+                "`text_section_chrome_label(...)` role",
                 "introduced `editor_input_value_text(...)` in `fret-ui-editor` input-group primitives",
                 "routed drag-value plus axis-drag-value scrub readouts through it",
                 "editor_input_value_text_is_single_line_and_shrinkable",
@@ -1971,9 +1973,7 @@ def main() -> None:
             Path("ecosystem/fret-ui-kit/src/imui/facade_writer.rs"),
             required=[
                 "fn text(&mut self, text: impl Into<Arc<str>>)",
-                "props.wrap = fret_core::TextWrap::None;",
-                "props.overflow = fret_core::TextOverflow::Ellipsis;",
-                "props.layout.size.min_width =",
+                "crate::declarative::text::text_section_chrome_label(cx, text)",
                 "fn text_wrapped(&mut self, text: impl Into<Arc<str>>)",
                 "crate::declarative::text::text_compact_paragraph(cx, text)",
                 "imui_text_item_is_single_line_and_shrinkable",
@@ -1985,6 +1985,7 @@ def main() -> None:
                 "/// - OS-window tear-out and multi-viewport behavior are docking/runner concerns, not this",
             ],
             forbidden=[
+                "TextProps::new(text)",
                 "Render a minimal in-window floating window.",
                 "This is intentionally v1-small",
                 "Z-order and focus arbitration are tracked as a separate work item",

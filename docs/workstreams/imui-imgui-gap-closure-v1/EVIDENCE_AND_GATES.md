@@ -371,11 +371,14 @@ Run evidence:
   fret-ui-kit --features imui --lib control_label_text_uses_fill_width_single_line_truncation
   imui_fill_text_is_single_line_and_shrinkable imui_control_text_uses_shared_button_label_role
   --no-fail-fast`.
-- 2026-05-16: hardened `tools/gate_imui_workstream_source.py` with an explicit allowlist for the
-  remaining direct `TextProps::new(...)` constructors under `fret-ui-kit::imui`: facade
-  `text(...)` only. New direct constructors now fail the
-  source gate unless they are routed through the shared text roles or intentionally added to the
-  allowlist. Gate: `python tools/gate_imui_workstream_source.py`.
+- 2026-05-16: hardened `tools/gate_imui_workstream_source.py` so direct
+  `TextProps::new(...)` constructors under `fret-ui-kit::imui` fail the source gate unless they
+  are moved into shared text roles with explicit evidence.
+- 2026-05-17: removed the last IMUI direct text constructor exception by routing
+  `UiWriterImUiFacadeExt::text(...)` through the shared `text_section_chrome_label(...)` role.
+  Gates: `cargo nextest run -p fret-ui-kit --features imui --lib
+  imui_text_item_is_single_line_and_shrinkable imui_text_wrapped_is_explicit_wrapping_text
+  --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: introduced `editor_input_value_text(...)` in `fret-ui-editor` input-group primitives
   and routed drag-value plus axis-drag-value scrub readouts through it. The helper keeps editor
   numeric value text fill-width, `min-width: 0`, shrinkable, single-line, and ellipsis-truncated
@@ -664,6 +667,11 @@ Run evidence:
   prose, and routed first-party editor/workspace proof prose through it. Gates: `cargo nextest run
   -p fret-ui-kit --features imui --lib imui_text_item_is_single_line_and_shrinkable
   imui_text_wrapped_is_explicit_wrapping_text --no-fail-fast` and `cargo check -p fret-examples`.
+- 2026-05-17: `UiWriterImUiFacadeExt::text(...)` now delegates to
+  `text_section_chrome_label(...)`, removing the former local `TextProps` construction while
+  keeping the same single-line resize contract. Gate: `cargo nextest run -p fret-ui-kit
+  --features imui --lib imui_text_item_is_single_line_and_shrinkable
+  imui_text_wrapped_is_explicit_wrapping_text --no-fail-fast`.
 - 2026-05-16: tightened `control_chrome::fill_text(...)`, the shared path for boolean labels,
   combo preview/captions, and slider captions, to fill, shrink, `min-width: 0`, and truncate instead
   of word-wrapping inside compact control chrome. Gates: `cargo nextest run -p fret-ui-kit

@@ -262,14 +262,17 @@ Readiness order for the next locally testable review slices:
    2026-05-17 floating close glyph follow-up: floating-window close button glyphs now reuse
    `text_chrome_glyph(...)` too, so fixed title-bar chrome no longer falls back to bare
    `cx.text(...)` default wrapping semantics.
-   2026-05-16 text role source-gate follow-up: `tools/gate_imui_workstream_source.py` now keeps an
-   explicit allowlist for remaining direct `TextProps::new(...)` constructors under
-   `fret-ui-kit::imui`, so new compact IMUI text policy cannot bypass the shared role vocabulary
-   without updating the gate.
+   2026-05-16 text role source-gate follow-up: `tools/gate_imui_workstream_source.py`
+   rejects direct `TextProps::new(...)` constructors under `fret-ui-kit::imui`, so new compact IMUI text
+   policy must route through the shared role vocabulary instead of gaining local text layout
+   exceptions.
    2026-05-16 IMUI text item resize follow-up: `UiWriterImUiFacadeExt::text(...)` now follows Dear
    ImGui's default `Text()` posture by staying single-line, shrinkable, and ellipsis-truncated
    under narrow resize. `text_wrapped(...)` is the explicit opt-in path for explanatory copy that
    should wrap, and first-party proof prose now uses that API.
+   2026-05-17 IMUI text item role cleanup: `UiWriterImUiFacadeExt::text(...)` now delegates to the
+   shared `text_section_chrome_label(...)` role instead of hand-rolling `TextProps`, and the source
+   gate no longer keeps an allowlist exception for IMUI default text.
    2026-05-16 control chrome fill-text follow-up: checkbox/radio/switch labels plus combo/slider
    captions now inherit the same compact single-line shrink/ellipsis posture through
    `control_chrome::fill_text(...)`, so fixed-height control chrome cannot grow rows by word
