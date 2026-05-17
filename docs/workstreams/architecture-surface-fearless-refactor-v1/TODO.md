@@ -53,11 +53,11 @@ Last updated: 2026-05-17
   Evidence: `ecosystem/fret/src/lib.rs`; `docs/crate-usage-guide.md`.
   Handoff: Completed on 2026-05-17; `fret::app::prelude::*` now has a source-level closed pub-use budget plus docs that describe named exports and anonymous extension traits.
 
-- [ ] ASF-041 [owner=unassigned] [deps=ASF-040] [scope=ecosystem/fret/src/view.rs,ecosystem/fret/src/actions.rs,ecosystem/fret/src/lib.rs]
+- [x] ASF-041 [owner=codex] [deps=ASF-040] [scope=ecosystem/fret/src/view.rs,ecosystem/fret/src/view/local_state.rs,ecosystem/fret/src/actions.rs,ecosystem/fret/src/lib.rs]
   Goal: Split the large view/action authoring implementation into deeper owner modules without widening the public interface.
   Validation: existing `fret` tests plus targeted compile tests for `LocalState`, typed actions, selector/query reads, and advanced raw-model escape hatches.
-  Evidence: Smaller owner modules with stable public re-exports.
-  Handoff: This is a structure refactor; delete dead compatibility bridges as they are found.
+  Evidence: `ecosystem/fret/src/view/local_state.rs`; `ecosystem/fret/src/view.rs`.
+  Handoff: Completed on 2026-05-17; the `LocalState` / `WatchedState` / tracked read owner family now lives in a private `view/local_state.rs` module and is re-exported through `crate::view` without widening the public surface.
 
 ## M4 — Ecosystem Taxonomy Closure
 

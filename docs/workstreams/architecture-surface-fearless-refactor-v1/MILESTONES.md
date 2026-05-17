@@ -66,6 +66,12 @@ Exit criteria:
   explicit imports.
 - Public surface tests lock the distinction.
 
+Status:
+
+- Complete through ASF-041 on 2026-05-17. The app prelude has a closed Golden Path budget, and the
+  LocalState owner family has been split into a private `view/local_state.rs` module while retaining
+  the existing `crate::view` public re-export surface.
+
 Primary gates:
 
 - `cargo nextest run -p fret`

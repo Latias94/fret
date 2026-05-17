@@ -100,6 +100,14 @@
     {
       "kind": "asf-040",
       "path": "docs/crate-usage-guide.md"
+    },
+    {
+      "kind": "asf-041",
+      "path": "ecosystem/fret/src/view/local_state.rs"
+    },
+    {
+      "kind": "asf-041",
+      "path": "ecosystem/fret/src/view.rs"
     }
   ],
   "adr_refs": [
@@ -112,6 +120,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue with ASF-041 next. Delete redundant compatibility surfaces when first-party callers can be migrated; do not preserve old interfaces by default."
+    "notes": "Continue with ASF-050 next. Delete redundant compatibility surfaces when first-party callers can be migrated; do not preserve old interfaces by default."
   }
 }

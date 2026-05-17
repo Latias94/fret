@@ -154,6 +154,23 @@ Disallowed dependency names for backend-free profiles unless explicitly reclassi
   - `cargo nextest run -p fret --locked app_prelude_pub_use_budget_is_curated_and_closed -j 1`
   - `cargo nextest run -p fret --locked authoring_surface_policy_tests -j 1`
 
+2026-05-17 result for ASF-041:
+
+- `LocalState`, `LocalStateTxn`, `LocalActionCapture`, `WatchedState`, `TrackedStateExt`, and the
+  LocalState-backed component model adapters moved from the monolithic `ecosystem/fret/src/view.rs`
+  into the private owner module `ecosystem/fret/src/view/local_state.rs`.
+- `crate::view` keeps stable re-exports for the existing app/advanced surfaces, so callers still
+  use the same public paths while `view.rs` no longer owns the LocalState implementation body.
+- Source-level tests now combine `view.rs` with `view/local_state.rs` for authoring-surface checks,
+  which locks the public contract without treating single-file placement as the contract.
+- Targeted checks passed:
+  - `cargo fmt --package fret`
+  - `cargo check -p fret --locked -j 1`
+  - `cargo check -p fret --locked --features state,state-mutation -j 1`
+  - `cargo nextest run -p fret --locked view::tests -j 1 --no-fail-fast`
+  - `cargo nextest run -p fret --locked --test app_render_actions_surface --test app_render_data_surface --test render_authoring_capability_surface --test raw_state_advanced_surface_docs -j 1 --no-fail-fast`
+  - `cargo nextest run -p fret --locked authoring_surface_policy_tests -j 1`
+
 ### Bootstrap Plan Gates
 
 ```bash
