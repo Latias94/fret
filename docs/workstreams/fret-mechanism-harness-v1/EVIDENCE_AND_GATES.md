@@ -43,6 +43,21 @@ visual-order consistency: `FlexItemStyle.order` is now applied through the same 
 sequence in layout and intrinsic measurement, including wrap-sensitive measurement cases
 (`b269764aa2`).
 
+The same fixture now also covers auto-sized container child margin accounting: max-content
+measurement for a margin-bearing child now matches the laid-out container bounds, so measurement
+and layout stay aligned for finite margins in the auto-container path.
+
+Evidence anchor:
+
+- `crates/fret-ui/src/declarative/host_widget/measure.rs`
+- `crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json`
+- `crates/fret-ui/src/declarative/tests/layout/mechanism_harness.rs`
+
+Run result:
+
+- `cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_primitives_match_oracles -- --nocapture`
+  - Result: passed.
+
 ## Suite Lint Policy Gates
 
 ```powershell

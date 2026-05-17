@@ -308,6 +308,60 @@
       }
     },
     {
+      "id": "auto-container-child-margin-measure-matches-layout",
+      "scenario": { "kind": "auto_container_child_margin_measure_matches_layout" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "auto-margin-container" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 32.0, "height": 17.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "auto-margin-child" },
+            "expected": {
+              "origin": { "x": 5.0, "y": 3.0 },
+              "size": { "width": 20.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "auto_container_margin.layout_width",
+            "comparison": "eq",
+            "value": 32.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "auto_container_margin.layout_height",
+            "comparison": "eq",
+            "value": 17.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "auto_container_margin.measured_width",
+            "comparison": "eq",
+            "value": 32.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "auto_container_margin.measured_height",
+            "comparison": "eq",
+            "value": 17.0,
+            "eps": 0.01
+          }
+        ]
+      }
+    },
+    {
       "id": "flex-cross-axis-stretch-matches-control-height",
       "scenario": { "kind": "flex_cross_axis_stretch" },
       "oracle": {

@@ -743,3 +743,8 @@ date: 2026-05-12
     `FlexItemStyle.order` affected final layout but not intrinsic flex measurement. `fret-ui` now
     shares the same visual-order child helper between layout and measurement, and the fixture locks
     both final child positions and wrap-sensitive measured width.
+- [x] Add auto-container child margin measure/layout consistency coverage.
+  - Result: `measure_impl` now includes child margins when it computes max-content sizing for
+    auto-sized container children, so `measure` and laid-out bounds agree for auto containers with
+    finite margins. The new layout primitive fixture locks both the layout bounds and the measured
+    max-content size for a margin-bearing child.

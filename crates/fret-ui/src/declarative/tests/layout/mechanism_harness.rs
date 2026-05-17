@@ -26,6 +26,7 @@ enum LayoutPrimitiveScenario {
     TextMeasurePaintOverflowScale,
     ScrollRootPreservesChildLayoutBounds,
     AbsoluteInsetFractionResolvesAgainstContainingBlock,
+    AutoContainerChildMarginMeasureMatchesLayout,
     FlexCrossAxisStretch,
     FlexPercentBasisKeepsAutoHeightFixedSibling,
     TransparentWrapperPreservesFill,
@@ -328,6 +329,33 @@ fn observe_post_layout_scalar_metrics(
             Ok(vec![
                 ("flex_order.wrap.measured_width", measured.width.0),
                 ("flex_order.wrap.measured_height", measured.height.0),
+            ])
+        }
+        LayoutPrimitiveScenario::AutoContainerChildMarginMeasureMatchesLayout => {
+            let container = child_at(ui, root, 0, "auto margin container")?;
+            let layout_bounds = ui
+                .debug_node_bounds(container)
+                .ok_or_else(|| ScenarioObserveError::new("missing auto margin layout bounds"))?;
+            let constraints = crate::layout_constraints::LayoutConstraints::new(
+                crate::layout_constraints::LayoutSize::new(None, None),
+                crate::layout_constraints::LayoutSize::new(
+                    crate::layout_constraints::AvailableSpace::MaxContent,
+                    crate::layout_constraints::AvailableSpace::MaxContent,
+                ),
+            );
+            let measured = ui.measure_in(app, &mut *services, container, constraints, 1.0);
+
+            Ok(vec![
+                (
+                    "auto_container_margin.layout_width",
+                    layout_bounds.size.width.0,
+                ),
+                (
+                    "auto_container_margin.layout_height",
+                    layout_bounds.size.height.0,
+                ),
+                ("auto_container_margin.measured_width", measured.width.0),
+                ("auto_container_margin.measured_height", measured.height.0),
             ])
         }
         _ => Ok(Vec::new()),
@@ -679,6 +707,27 @@ fn build_scenario(
                         .test_id("absolute-percent-child"),
                 ]
             })]
+        }
+        LayoutPrimitiveScenario::AutoContainerChildMarginMeasureMatchesLayout => {
+            let parent = crate::element::ContainerProps::default();
+
+            let mut child = crate::element::ContainerProps::default();
+            child.layout.size.width = Length::Px(Px(20.0));
+            child.layout.size.height = Length::Px(Px(10.0));
+            child.layout.margin.left = crate::element::MarginEdge::Px(Px(5.0));
+            child.layout.margin.right = crate::element::MarginEdge::Px(Px(7.0));
+            child.layout.margin.top = crate::element::MarginEdge::Px(Px(3.0));
+            child.layout.margin.bottom = crate::element::MarginEdge::Px(Px(4.0));
+
+            vec![
+                cx.container(parent, |cx| {
+                    vec![
+                        cx.container(child, |_cx| Vec::new())
+                            .test_id("auto-margin-child"),
+                    ]
+                })
+                .test_id("auto-margin-container"),
+            ]
         }
         LayoutPrimitiveScenario::FlexCrossAxisStretch => {
             let row = crate::element::FlexProps {
