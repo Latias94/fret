@@ -1588,7 +1588,7 @@ fn clean_geometry_small_resize_rejects_fraction_absolute_stack_overlay_inset() {
 }
 
 #[test]
-fn clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve() {
+fn clean_geometry_small_resize_propagates_to_view_cache_boundary_without_root_solve() {
     struct PrecomputeThenResize {
         child: NodeId,
         rect_a: Rect,
@@ -1640,6 +1640,7 @@ fn clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve() {
             let mut cache = crate::element::ViewCacheProps::default();
             cache.layout.size.width = Length::Fill;
             cache.layout.size.height = Length::Fill;
+            cache = cache.contain_layout_when_bounds_known(true);
             vec![cx.view_cache(cache, |cx| {
                 vec![cx.stack_props(
                     crate::element::StackProps {
@@ -1677,6 +1678,138 @@ fn clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve() {
     ui.set_root(parent);
 
     ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+    let cache_node = ui.children(child)[0];
+    assert!(ui.should_reuse_view_cache_node(cache_node));
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "clean width-only resize should propagate to a clean ViewCache boundary without a Taffy root solve"
+    );
+    assert_eq!(
+        ui.debug_stats().layout_clean_geometry_solve_skip_rejections,
+        0,
+        "accepted ViewCache boundary propagation should not leave rejection noise in frame stats"
+    );
+    assert_eq!(
+        ui.debug_stats().view_cache_contained_relayouts,
+        0,
+        "clean cache roots should not be forced into contained relayout by parent geometry propagation"
+    );
+
+    let cache_bounds = ui.debug_node_bounds(cache_node).expect("cache bounds");
+    assert!(
+        (cache_bounds.size.width.0 - rect_b.size.width.0).abs() < 0.01,
+        "ViewCache bounds must track the propagated root width"
+    );
+
+    assert!(
+        ui.should_reuse_view_cache_node(cache_node),
+        "clean geometry propagation must not mark the cache root for declarative rerender"
+    );
+    assert!(
+        !ui.view_cache_node_needs_rerender(cache_node),
+        "clean geometry propagation must leave view-cache rerender pressure unchanged"
+    );
+}
+
+#[test]
+fn clean_geometry_small_resize_keeps_view_cache_root_solve_as_boundary() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+    ui.set_view_cache_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(324.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let cache = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-view-cache-root-boundary-child",
+        |cx| {
+            let mut cache = crate::element::ViewCacheProps::default();
+            cache.layout.size.width = Length::Fill;
+            cache.layout.size.height = Length::Fill;
+            cache = cache.contain_layout_when_bounds_known(true);
+            let element = cx.view_cache(cache, |cx| {
+                vec![cx.stack_props(
+                    crate::element::StackProps {
+                        layout: crate::element::LayoutStyle {
+                            size: crate::element::SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Fill,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                    },
+                    |_cx| Vec::<AnyElement>::new(),
+                )]
+            });
+            vec![element]
+        },
+    );
+    let cache = ui.children(cache)[0];
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(184.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child: cache,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![cache]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
 
     app.advance_frame();
     ui.invalidate(parent, Invalidation::Layout);
@@ -1684,45 +1817,21 @@ fn clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve() {
 
     assert!(
         ui.debug_stats().layout_engine_solves > 0,
-        "ViewCache stays off the root-solve skip support set until its retained semantics have a dedicated proof"
+        "ViewCache as the explicit root remains a layout/cache boundary and should not skip its own solve"
     );
     assert!(
         ui.debug_stats().layout_clean_geometry_solve_skip_rejections > 0,
-        "unsupported clean geometry roots should report why the solve skip was rejected"
+        "boundary roots should report why their own root solve was kept"
     );
     assert_eq!(
         ui.debug_stats()
             .layout_clean_geometry_solve_skip_first_rejection,
-        Some("unsupported_kind")
+        Some("side_effect_boundary")
     );
     assert_eq!(
         ui.debug_stats()
             .layout_clean_geometry_solve_skip_first_element_kind,
         Some("ViewCache")
-    );
-
-    let rejected_solve = ui
-        .debug_layout_engine_solves()
-        .iter()
-        .find(|solve| solve.clean_geometry_solve_skip_rejection.is_some())
-        .expect("rejected root solve should carry its clean-geometry skip reason");
-    let rejection = rejected_solve
-        .clean_geometry_solve_skip_rejection
-        .as_ref()
-        .expect("rejected solve should expose rejection details");
-    assert_eq!(rejection.reason, "unsupported_kind");
-    assert_eq!(rejection.element_kind, Some("ViewCache"));
-    assert!(
-        rejection.node.is_some(),
-        "per-solve rejection attribution should expose the rejected node"
-    );
-    assert!(
-        rejection.element.is_some(),
-        "per-solve rejection attribution should expose the rejected element id"
-    );
-    assert!(
-        rejected_solve.root_element_kind.is_some(),
-        "per-solve rejection details should be attached to a concrete rejected root solve"
     );
 }
 

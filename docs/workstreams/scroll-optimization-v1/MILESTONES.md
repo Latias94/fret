@@ -158,3 +158,15 @@ Status: Active
   parent `Stack` root solve as `missing_measured_size`. Fresh no-4090 evidence moves the root
   blocker to `unsupported_kind / ViewCache`; content `Text`, editor `Canvas`, and root `Scroll`
   remain separate follow-ups.
+
+## M13 — ViewCache boundary clean-geometry propagation
+
+- Treat `ViewCache` as a side-effect/cache boundary instead of a pure geometry wrapper.
+- Allow clean ancestors to propagate width-only resized bounds to a clean contained `ViewCache`
+  boundary without a parent Taffy root solve.
+- Keep explicit `ViewCache` roots on their own authoritative solve path with
+  `side_effect_boundary / ViewCache` attribution.
+- 2026-05-18 minimum slice landed: the root `Stack` blocker moved away from
+  `unsupported_kind / ViewCache`. Fresh no-4090 evidence now points to `missing_measured_size /
+  Spacer` through shadcn `sonner` toast chrome; content `Text`, editor `Canvas`, and root `Scroll`
+  remain separate follow-ups.

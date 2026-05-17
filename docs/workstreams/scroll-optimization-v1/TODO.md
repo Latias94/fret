@@ -498,6 +498,30 @@ Status: Active
     `Option<Size>` data-model refactor from this evidence alone; the sentinel issue was real but
     narrow enough to address at the absent overlay contract. The next optimization should audit
     `ViewCache` clean-geometry participation or explicitly stop at text/view-cache boundaries.
+- [x] Audit and implement the `ViewCache` clean-geometry boundary slice.
+  - Contract decision: `ViewCache` is not a pure pass-through wrapper. It is a retained/cache
+    side-effect boundary whose own explicit root solve must remain authoritative.
+  - Implemented proof: a clean ancestor can propagate width-only resize geometry to a clean
+    contained `ViewCache` boundary without a parent Taffy root solve, without forcing contained
+    relayout, and without adding view-cache rerender pressure.
+  - Guardrails: `ViewCache` as the explicit clean root still reports `side_effect_boundary /
+    ViewCache` and keeps its own solve; dirty cache roots and contained relayout semantics remain
+    outside this propagation shortcut.
+  - Focused gates:
+    `clean_geometry_small_resize_propagates_to_view_cache_boundary_without_root_solve` and
+    `clean_geometry_small_resize_keeps_view_cache_root_solve_as_boundary`.
+  - Local no-4090 evidence:
+    `target/fret-diag/local-next-view-cache-clean-geometry-20260518-r1/1779039672694/bundle.schema2.json`.
+  - Result: the root `Stack` blocker moved away from `unsupported_kind / ViewCache`. Top frame
+    total/layout/solve/prepaint/paint is `1269/628/261/249/392us` with `4` layout-engine solves;
+    view-cache reuse remains `1`, needs-rerender remains `0`, and row replay/store remains
+    `289/0`.
+  - Remaining blockers: content `Semantics` remains `text_reflow / Text`; root `Stack` is now
+    `missing_measured_size / Spacer` through `ecosystem/fret-ui-shadcn/src/sonner.rs:382`;
+    editor `Canvas` remains small; root `Scroll` remains a side-effect boundary.
+  - Decision: close the `ViewCache` slice here. The next narrow optimization candidate is the
+    toast/sonner `Spacer` missing-measured-size path, with a measured-size data-model follow-up only
+    if the same sentinel ambiguity recurs across more real roots.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

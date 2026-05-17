@@ -1129,7 +1129,8 @@ impl<H: UiHost> UiTree<H> {
                 Ok(CleanGeometryNodeContract::propagated_leaf())
             }
             crate::declarative::frame::ElementInstance::Scroll(_)
-            | crate::declarative::frame::ElementInstance::TextInput(_) => {
+            | crate::declarative::frame::ElementInstance::TextInput(_)
+            | crate::declarative::frame::ElementInstance::ViewCache(_) => {
                 Ok(CleanGeometryNodeContract::side_effect_boundary())
             }
             crate::declarative::frame::ElementInstance::Stack(_)

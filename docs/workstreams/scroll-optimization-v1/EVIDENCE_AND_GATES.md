@@ -183,7 +183,7 @@ Implemented root-solve / clean-geometry propagation slice (2026-05-17):
     semantics proof before participating; `VirtualList` must keep resize-driven render-window
     updates authoritative.
 - Focused gates:
-  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_barrier_root_engine_solve clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve clean_parent_geometry_skip_still_runs_scroll_layout_side_effects virtual_list_render_window_range_tracks_viewport_resize --no-fail-fast`
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_barrier_root_engine_solve clean_geometry_small_resize_keeps_view_cache_root_solve_as_boundary clean_parent_geometry_skip_still_runs_scroll_layout_side_effects virtual_list_render_window_range_tracks_viewport_resize --no-fail-fast`
     - Result: `4/4` passed.
   - `cargo nextest run -p fret-ui layout_engine --no-fail-fast`
     - Result: `17/17` passed.
@@ -265,15 +265,15 @@ Layout side-effect / geometry-propagation contract diagnostics slice (2026-05-17
   - The current proof is explicit instead of a silent bool/`Option` chain: pure pass-through
     geometry, no-wrap vertical flex, safe leaves, and side-effect boundaries are separate internal
     classes.
-  - `Scroll` remains a side-effect boundary. A parent may propagate geometry to it, but a root
-    `Scroll` cannot skip its own layout solve body via this proof.
+  - `Scroll`, `TextInput`, and `ViewCache` remain side-effect boundaries. A parent may propagate
+    geometry to them, but these nodes cannot skip their own layout solve bodies via this proof.
   - Unsupported retained/windowing/line-breaking surfaces continue to reject with a reason and
-    optional element kind. This keeps `ViewCache`, `VirtualList`, wrap flex, and future `Canvas`
-    participation behind dedicated proofs rather than ad hoc name expansion.
+    optional element kind. This keeps `VirtualList`, wrap flex, and future `Canvas` participation
+    behind dedicated proofs rather than ad hoc name expansion.
   - Per-frame diagnostics record only a rejection count plus the first reason/kind, avoiding
     high-volume per-node strings while still making top rejected solve owners explainable.
 - Focused gates:
-  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_barrier_root_engine_solve clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve clean_geometry_small_resize_reports_wrap_flex_rejection_reason clean_parent_geometry_skip_still_runs_scroll_layout_side_effects virtual_list_render_window_range_tracks_viewport_resize --no-fail-fast`
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_barrier_root_engine_solve clean_geometry_small_resize_keeps_view_cache_root_solve_as_boundary clean_geometry_small_resize_reports_wrap_flex_rejection_reason clean_parent_geometry_skip_still_runs_scroll_layout_side_effects virtual_list_render_window_range_tracks_viewport_resize --no-fail-fast`
     - Result: `5/5` passed.
   - `cargo nextest run -p fret-ui layout_engine --no-fail-fast`
     - Result: `18/18` passed.
@@ -519,7 +519,7 @@ Horizontal fixed Flex clean-geometry proof (2026-05-17):
 - Final gates:
   - `cargo fmt --check`
     - Result: passed.
-  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_barrier_root_engine_solve clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve clean_geometry_small_resize_reports_wrap_flex_rejection_reason clean_geometry_small_resize_skips_px_container_and_updates_child_bounds clean_geometry_small_resize_rejects_container_fraction_padding clean_geometry_small_resize_skips_stable_auto_height_container_wrapper clean_geometry_small_resize_skips_stable_auto_height_vertical_flex_child clean_geometry_small_resize_rejects_center_aligned_vertical_flex_child clean_geometry_small_resize_rejects_auto_height_text_reflow clean_geometry_small_resize_skips_fixed_horizontal_flex_children clean_geometry_small_resize_skips_center_aligned_fixed_horizontal_flex_children clean_geometry_small_resize_rejects_horizontal_flex_grow_children --no-fail-fast`
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_barrier_root_engine_solve clean_geometry_small_resize_keeps_view_cache_root_solve_as_boundary clean_geometry_small_resize_reports_wrap_flex_rejection_reason clean_geometry_small_resize_skips_px_container_and_updates_child_bounds clean_geometry_small_resize_rejects_container_fraction_padding clean_geometry_small_resize_skips_stable_auto_height_container_wrapper clean_geometry_small_resize_skips_stable_auto_height_vertical_flex_child clean_geometry_small_resize_rejects_center_aligned_vertical_flex_child clean_geometry_small_resize_rejects_auto_height_text_reflow clean_geometry_small_resize_skips_fixed_horizontal_flex_children clean_geometry_small_resize_skips_center_aligned_fixed_horizontal_flex_children clean_geometry_small_resize_rejects_horizontal_flex_grow_children --no-fail-fast`
     - Result: `12/12` passed.
   - `cargo nextest run -p fret-ui layout_engine --no-fail-fast`
     - Result: `27/27` passed.
@@ -787,7 +787,7 @@ Root missing-measured-size attribution and workspace fill-slot closeout (2026-05
       `apps/fret-ui-gallery/src/driver/chrome.rs:87` and
       `ecosystem/fret-workspace/src/frame.rs:353` / `frame.rs:387`.
 - Focused gates:
-  - `cargo nextest run -p fret-ui clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve clean_geometry_rejection_reports_descendant_node_attribution clean_geometry_small_resize_reports_wrap_flex_rejection_reason clean_geometry_small_resize_skips_horizontal_flex_empty_grow_container_slot clean_geometry_small_resize_skips_horizontal_flex_auto_width_no_shrink_child clean_geometry_small_resize_skips_horizontal_roving_flex_auto_width_no_shrink_child clean_geometry_small_resize_rejects_horizontal_flex_auto_width_child_fractional_max_constraint --no-fail-fast`
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_keeps_view_cache_root_solve_as_boundary clean_geometry_rejection_reports_descendant_node_attribution clean_geometry_small_resize_reports_wrap_flex_rejection_reason clean_geometry_small_resize_skips_horizontal_flex_empty_grow_container_slot clean_geometry_small_resize_skips_horizontal_flex_auto_width_no_shrink_child clean_geometry_small_resize_skips_horizontal_roving_flex_auto_width_no_shrink_child clean_geometry_small_resize_rejects_horizontal_flex_auto_width_child_fractional_max_constraint --no-fail-fast`
     - Result: `7/7` passed.
   - `cargo check -p fret-bootstrap --features ui-app-driver,diagnostics`
     - Result: passed.
@@ -1027,7 +1027,7 @@ Sidebar `ScrollArea` absolute overlay closeout (2026-05-17):
     - Result: `2/2` passed after the mechanism change. Before the change both tests failed: the
       px-inset positive case still solved once, and the fraction-inset negative case reported the
       broader `positioned_child` rejection.
-  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_px_absolute_stack_overlay_child clean_geometry_small_resize_rejects_fraction_absolute_stack_overlay_inset clean_geometry_small_resize_runs_text_input_layout_as_side_effect_boundary clean_geometry_small_resize_skips_barrier_root_engine_solve clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve clean_geometry_small_resize_reports_wrap_flex_rejection_reason clean_geometry_small_resize_skips_px_container_and_updates_child_bounds clean_geometry_small_resize_skips_fixed_horizontal_flex_children --no-fail-fast`
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_px_absolute_stack_overlay_child clean_geometry_small_resize_rejects_fraction_absolute_stack_overlay_inset clean_geometry_small_resize_runs_text_input_layout_as_side_effect_boundary clean_geometry_small_resize_skips_barrier_root_engine_solve clean_geometry_small_resize_keeps_view_cache_root_solve_as_boundary clean_geometry_small_resize_reports_wrap_flex_rejection_reason clean_geometry_small_resize_skips_px_container_and_updates_child_bounds clean_geometry_small_resize_skips_fixed_horizontal_flex_children --no-fail-fast`
     - Result: `8/8` passed.
   - `cargo nextest run -p fret-ui layout_engine --no-fail-fast`
     - Result: `40/40` passed.
@@ -1197,6 +1197,57 @@ Sidebar absent-overlay `missing_measured_size` closeout (2026-05-18):
     more evidence shows the sentinel ambiguity recurring outside absent `0x0` overlays.
   - The next optimization candidate is `ViewCache` clean-geometry participation, not direct text
     reflow skipping and not root `Scroll` layout skipping.
+
+ViewCache clean-geometry boundary slice (2026-05-18):
+
+- Mechanism anchors:
+  - `crates/fret-ui/src/tree/layout/node.rs`
+    (`clean_geometry_node_contract`, `CleanGeometryNodeContract::side_effect_boundary`)
+  - `crates/fret-ui/src/declarative/tests/layout/layout_engine.rs`
+    (`clean_geometry_small_resize_propagates_to_view_cache_boundary_without_root_solve`,
+    `clean_geometry_small_resize_keeps_view_cache_root_solve_as_boundary`)
+- Contract:
+  - `ViewCache` is a retained/cache side-effect boundary, not a general pure wrapper.
+  - A clean ancestor may propagate width-only resized bounds to a clean contained `ViewCache`
+    boundary without a parent Taffy root solve.
+  - A `ViewCache` that is itself the explicit root still keeps its own authoritative solve and
+    reports `side_effect_boundary / ViewCache`.
+  - The propagation path must not force contained relayout and must not mark the cache root for
+    declarative rerender.
+- Focused gates:
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_propagates_to_view_cache_boundary_without_root_solve clean_geometry_small_resize_keeps_view_cache_root_solve_as_boundary --no-fail-fast`
+    - Result: `2/2` passed.
+  - `cargo nextest run -p fret-ui layout_engine --no-fail-fast`
+    - Result: `44/44` passed.
+  - `cargo nextest run -p fret-ui view_cache --no-fail-fast`
+    - Result: `68/68` passed.
+  - `cargo nextest run -p fret-ui scroll --no-fail-fast`
+    - Result: `153/153` passed.
+- Local blocker evidence:
+  - Bundle:
+    `target/fret-diag/local-next-view-cache-clean-geometry-20260518-r1/1779039672694/bundle.schema2.json`
+  - Perf summary:
+    `target/fret-diag/local-next-view-cache-clean-geometry-20260518-r1/regression.summary.json`
+  - Result:
+    - Top frame total/layout/layout-engine-solve/prepaint/paint is `1269/628/261/249/392us` with
+      `4` layout-engine solves.
+    - Guardrails remain stable: `top_view_cache_roots_reused=1`,
+      `top_view_cache_roots_needs_rerender=0`, row replay/store is `289/0`, row-scene replay hit
+      rate is `100%`, and renderer text prepare is `65us`.
+    - The previous root `Stack` blocker `unsupported_kind / ViewCache` is gone from per-solve
+      attribution.
+    - Remaining blockers:
+      - content `Semantics`: `text_reflow / Text` at
+        `apps/fret-ui-gallery/src/ui/content.rs:742`, solve about `178us`;
+      - root `Stack`: `missing_measured_size / Spacer` at
+        `ecosystem/fret-ui-shadcn/src/sonner.rs:382`, solve about `97us`;
+      - editor `PointerRegion`: `unsupported_kind / Canvas`, solve about `4us`;
+      - root `Scroll`: `side_effect_boundary / Scroll`, solve `0us`.
+- Decision:
+  - Close the `ViewCache` blocker as a boundary-participation proof, not as a retained root skip.
+  - Keep text reflow and root `Scroll` as explicit stop conditions.
+  - The next narrow candidate is the toast/sonner `Spacer` missing-measured-size path, with a
+    measured-size data-model refactor only if the same sentinel ambiguity recurs across more roots.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 
