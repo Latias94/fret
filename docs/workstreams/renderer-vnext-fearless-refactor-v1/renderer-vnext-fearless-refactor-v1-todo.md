@@ -609,6 +609,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
       module.
     - [x] Step 3b-2b: split effect-scope compilation into a focused helper module.
     - [x] Step 3c: split path MSAA batch planning into a focused helper module.
+    - [x] Step 3d: split compile preflight and scene-target planning into a focused helper
+      module.
   - Landed (step 1): extracted target/budget helpers and their focused tests into
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
   - Landed (step 2): introduced `RenderPlanCompilerCtx` to own structural compiler outputs
@@ -636,6 +638,10 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/path_msaa.rs` while leaving
     `cursor`/`scene_range_start` advancement, scene-range flush ordering, segment allocation,
     `PathMsaaBatchPass` fields, load-op behavior, and marker boundaries unchanged.
+  - Landed (step 3d): moved `compile_for_scene` preflight and scene-target planning into
+    `crates/fret-render-wgpu/src/renderer/render_plan_compiler/preflight.rs` while leaving backdrop
+    effect enablement, postprocess fallback, scene target selection, and explicit sRGB encode
+    behavior unchanged.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
       `compile_for_scene_inner`)
@@ -656,6 +662,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
       `EffectChainBudgetStats::apply_to_plan`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/path_msaa.rs`
       (`try_compile_path_msaa_batch`)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/preflight.rs`
+      (`plan_render_targets`)
     - `docs/workstreams/renderer-render-plan-semantics-audit-v1/renderer-render-plan-semantics-audit-v1.md`
       (target lifetime, load-op, scissor/mask, and deterministic degradation invariants)
   - Gates:

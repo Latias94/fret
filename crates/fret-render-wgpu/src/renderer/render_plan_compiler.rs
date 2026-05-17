@@ -9,6 +9,7 @@ mod composite_group;
 mod context;
 mod effect_scope;
 mod path_msaa;
+mod preflight;
 mod target_budget;
 
 use super::render_plan_effects as effects;
@@ -49,109 +50,13 @@ pub(super) fn compile_for_scene(
     postprocess: super::DebugPostprocess,
     intermediate_budget_bytes: u64,
 ) -> super::RenderPlan {
-    let mut postprocess = postprocess;
-    let output_transfer_needed = super::output_requires_explicit_srgb_encode(format);
-
-    let backdrop_effect_enabled = encoding.effect_markers.iter().any(|m| {
-        let EffectMarkerKind::Push {
-            mode,
-            chain,
-            quality,
-            scissor,
-            ..
-        } = m.kind
-        else {
-            return false;
-        };
-        if mode != fret_core::EffectMode::Backdrop {
-            return false;
-        }
-
-        chain.iter().any(|step| match step {
-            fret_core::EffectStep::GaussianBlur {
-                radius_px,
-                downsample,
-            } => {
-                if !radius_px.0.is_finite() || radius_px.0 <= 0.0 {
-                    return false;
-                }
-                effects::choose_effect_blur_downsample_scale(
-                    viewport_size,
-                    format,
-                    intermediate_budget_bytes,
-                    downsample,
-                    quality,
-                )
-                .is_some()
-            }
-            fret_core::EffectStep::BackdropWarpV1(_w) => {
-                effects::backdrop_warp_enabled(viewport_size, format, intermediate_budget_bytes)
-            }
-            fret_core::EffectStep::BackdropWarpV2(_w) => {
-                effects::backdrop_warp_enabled(viewport_size, format, intermediate_budget_bytes)
-            }
-            fret_core::EffectStep::DropShadowV1(_s) => false,
-            fret_core::EffectStep::ColorAdjust { .. } => {
-                effects::color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
-            }
-            fret_core::EffectStep::ColorMatrix { .. } => {
-                effects::color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
-            }
-            fret_core::EffectStep::AlphaThreshold { .. } => {
-                effects::color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
-            }
-            fret_core::EffectStep::Pixelate { scale } => effects::pixelate_enabled(
-                viewport_size,
-                Some(scissor),
-                format,
-                intermediate_budget_bytes,
-                scale,
-            ),
-            fret_core::EffectStep::Dither { .. } => {
-                effects::dither_enabled(viewport_size, format, intermediate_budget_bytes)
-            }
-            fret_core::EffectStep::NoiseV1(_n) => {
-                effects::noise_enabled(viewport_size, format, intermediate_budget_bytes)
-            }
-            fret_core::EffectStep::CustomV1 { .. } => {
-                effects::color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
-            }
-            fret_core::EffectStep::CustomV2 { .. } => {
-                effects::color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
-            }
-            fret_core::EffectStep::CustomV3 { .. } => {
-                effects::color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
-            }
-        })
-    });
-
-    let needs_intermediate = backdrop_effect_enabled
-        || matches!(
-            postprocess,
-            super::DebugPostprocess::OffscreenBlit { .. }
-                | super::DebugPostprocess::Pixelate { .. }
-                | super::DebugPostprocess::Blur { .. }
-        );
-
-    if needs_intermediate && matches!(postprocess, super::DebugPostprocess::None) {
-        postprocess = super::DebugPostprocess::OffscreenBlit {
-            src: super::PlanTarget::Intermediate0,
-        };
-    }
-
-    let mut scene_target = if needs_intermediate {
-        super::PlanTarget::Intermediate0
-    } else {
-        super::PlanTarget::Output
-    };
-
-    if scene_target == super::PlanTarget::Output
-        && output_transfer_needed
-        && matches!(postprocess, super::DebugPostprocess::None)
-    {
-        scene_target = super::PlanTarget::Intermediate3;
-        postprocess = super::DebugPostprocess::OffscreenBlit { src: scene_target };
-    }
+    let preflight = preflight::plan_render_targets(
+        encoding,
+        viewport_size,
+        format,
+        postprocess,
+        intermediate_budget_bytes,
+    );
 
     compile_for_scene_inner(
         encoding,
@@ -160,9 +65,9 @@ pub(super) fn compile_for_scene(
         format,
         clear,
         path_samples,
-        postprocess,
+        preflight.postprocess,
         intermediate_budget_bytes,
-        scene_target,
+        preflight.scene_target,
     )
 }
 

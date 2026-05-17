@@ -970,6 +970,29 @@ Progress record (RenderPlan compiler path MSAA helper split):
   - `python3 tools/check_layering.py`
   - `git diff --check`
 
+Progress record (RenderPlan compiler preflight helper split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3d; Stage 24 continues)
+- Objective:
+  - Split `compile_for_scene` preflight and scene-target planning out of the main compiler file
+    without changing the `compile_for_scene` entrypoint, `RenderPlan` IR shape, backdrop effect
+    enablement, postprocess fallback, scene target selection, or explicit sRGB encode behavior.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/preflight.rs`
+    (`plan_render_targets`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (`compile_for_scene` delegates preflight and passes the returned `postprocess`/`scene_target`
+    into `compile_for_scene_inner`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:
