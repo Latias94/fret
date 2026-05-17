@@ -3,7 +3,7 @@
   "slug": "imui-imgui-gap-closure-v1",
   "title": "ImUi Dear ImGui Gap Closure v1",
   "status": "active",
-  "updated": "2026-05-17",
+  "updated": "2026-05-18",
   "scope_kind": "execution",
   "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "Refresh the Dear ImGui gap read from current Fret sources and repo-ref/imgui before further fearless refactors: identify stale parity conclusions, rank the remaining gaps, name delete/refactor candidates, and keep each follow-on tied to repro, gate, and evidence.",
@@ -408,6 +408,14 @@
     {
       "name": "fret-ui-kit table visibility snapshot smoke",
       "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke table_column_visibility_snapshot_api_compiles_and_roundtrips table_column_visibility_snapshot_entries_are_public_data_shape --no-fail-fast"
+    },
+    {
+      "name": "imui table column pinning freeze seam",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --lib horizontal_scroll_option_wraps_unpinned_header_and_body_center_groups --no-fail-fast && cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke table_column_pinning_helpers_compile --no-fail-fast && cargo nextest run -p fret-imui table_helper_pins_left_and_right_columns_while_center_columns_scroll --no-fail-fast"
+    },
+    {
+      "name": "imui table column accessor-first API shape",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke table_column_helpers_compile table_column_visibility_helpers_compile table_resizable_column_api_compiles table_sortable_header_api_compiles --no-fail-fast && cargo nextest run -p fret-ui-kit --features imui --lib visibility_state_applies_runtime_overrides_by_stable_column_id visibility_state_leaves_unlisted_and_unidentified_columns_at_declared_visibility horizontal_scroll_option_wraps_unpinned_header_and_body_center_groups --no-fail-fast && cargo nextest run -p fret-imui table_helper_pins_left_and_right_columns_while_center_columns_scroll table_column_visibility_menu_item_updates_visibility_state --no-fail-fast"
     },
     {
       "name": "diff check",

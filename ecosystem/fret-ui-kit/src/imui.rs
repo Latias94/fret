@@ -123,9 +123,9 @@ pub use options::{
     InputTextMode, InputTextOptions, InputTextPickerFilter, InputTextPickerOptions, MenuBarOptions,
     MenuItemOptions, PopupMenuOptions, PopupModalOptions, RadioOptions, ScrollOptions,
     SelectableOptions, SeparatorTextOptions, SliderOptions, SwitchOptions, TabBarOptions,
-    TabItemOptions, TableCellOptions, TableColumn, TableColumnResizeOptions, TableColumnWidth,
-    TableOptions, TableRowOptions, TableSortDirection, TextAreaOptions, TextAreaSubmitKey,
-    TooltipOptions, TreeNodeOptions, VerticalOptions, VirtualListOptions,
+    TabItemOptions, TableCellOptions, TableColumn, TableColumnPin, TableColumnResizeOptions,
+    TableColumnWidth, TableOptions, TableRowOptions, TableSortDirection, TextAreaOptions,
+    TextAreaSubmitKey, TooltipOptions, TreeNodeOptions, VerticalOptions, VirtualListOptions,
 };
 use popup_store::{
     drop_popup_scope_for_id, popup_render_generation_for_window, with_popup_store_for_id,

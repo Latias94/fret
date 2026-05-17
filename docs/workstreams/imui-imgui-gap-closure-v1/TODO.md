@@ -235,6 +235,18 @@ Readiness order for the next locally testable review slices:
    flags, round-trips through serde, ignores empty ids on restore, and uses last-entry-wins for
    duplicate ids. Apps/editors still own storage, schema placement, and when to apply the restored
    state; freeze panes and old columns API shape remain separate follow-ons.
+   2026-05-17 table column pinning follow-up: `TableColumn::pinned_left()` and
+   `TableColumn::pinned_right()` now provide the narrow freeze-pane seam for IMUI tables. The
+   render path splits visible cells into left/center/right groups and keeps left/right frozen
+   outside the shared center horizontal scroll handle. This stays in `fret-ui-kit::imui`, reuses
+   `fret-ui` scroll mechanics, and does not add a table-state runtime to `fret-imui`; old columns
+   API shape remains a separate follow-on.
+   2026-05-18 table column API-shape first pass: `TableColumn` now has accessor-first read methods
+   for header, stable id, width, visibility, sortability, sort direction, resize options, and pin
+   state. The IMUI table render path, visibility helper, `fret-imui` composition tests, and public
+   smoke tests now read through those accessors instead of teaching direct field reads. Public
+   fields remain temporarily available for compatibility; making them private should be a separate
+   breaking cleanup after downstream call sites are audited.
    2026-05-16 control readout text role follow-up: `text_control_readout(...)` now lives beside
    `text_table_cell(...)` in `fret-ui-kit::declarative::text`, and the UI Gallery code-editor
    toolbar readouts route through that shared role instead of carrying app-local text layout policy.

@@ -241,6 +241,18 @@ Exit criteria:
   shape. Empty ids are ignored on restore and duplicate ids use last-entry-wins; applications still
   own storage, schema placement, and when to apply restored state. Freeze panes and old columns API
   shape remain candidate-only.
+  2026-05-17 table column pinning result: `TableColumn::pinned_left()` and
+  `TableColumn::pinned_right()` now cover the first IMUI freeze-pane slice without copying Dear
+  ImGui's table runtime. The helper render path splits visible header/body cells into frozen
+  left/right groups plus a shared-scroll center group, keeps scroll state caller-owned when a
+  `horizontal_scroll` handle is supplied, and falls back to an element-local scroll handle inside
+  `fret-ui-kit::imui` when pinned columns need one. `fret-imui` stays a thin composition facade.
+  Old columns API shape remains candidate-only.
+  2026-05-18 table column API-shape first-pass result: `TableColumn` now exposes accessor-first
+  reads for its public option data, and table rendering, column-visibility policy, `fret-imui`
+  composition tests, and public smoke tests use those accessors. This reduces the teaching/API
+  pressure from direct field reads without yet making the public fields private; that remains a
+  separate breaking cleanup candidate.
   2026-05-16 control readout text role result: `text_control_readout(...)` now sits in
   `fret-ui-kit::declarative::text` beside `text_table_cell(...)`. The UI Gallery code-editor
   readouts still use the doc-layout app helper, but that helper delegates to the shared role, so

@@ -2,8 +2,9 @@
 
 use fret_core::{Color, Px};
 use fret_ui::UiHost;
+use fret_ui::scroll::ScrollHandle;
 use fret_ui_kit::imui::{
-    ImUiTableColumnVisibilityState, MenuItemOptions, TableCellOptions, TableColumn,
+    ImUiTableColumnVisibilityState, MenuItemOptions, TableCellOptions, TableColumn, TableColumnPin,
     TableColumnVisibilityEntry, TableColumnVisibilityHeaderContextMenuOptions,
     TableColumnVisibilityMenuOptions, TableColumnVisibilitySnapshot, TableColumnWidth,
     TableOptions, TableResponse, TableRowOptions, TableSortDirection, UiWriterImUiFacadeExt,
@@ -41,6 +42,7 @@ fn table_api_compiles<H: UiHost>(ui: &mut impl UiWriterImUiFacadeExt<H>) {
         &columns,
         TableOptions {
             striped: true,
+            horizontal_scroll: Some(ScrollHandle::default()),
             test_id: Some("table.root".into()),
             ..Default::default()
         },
@@ -163,6 +165,7 @@ fn table_option_defaults_compile() {
     assert!(options.show_header);
     assert!(!options.striped);
     assert!(options.clip_cells);
+    assert!(options.horizontal_scroll.is_none());
     assert!(options.test_id.is_none());
 
     let row_options = TableRowOptions::default();
@@ -177,56 +180,68 @@ fn table_option_defaults_compile() {
 #[test]
 fn table_column_helpers_compile() {
     let fill = TableColumn::fill("Name");
-    assert_eq!(fill.header.as_deref(), Some("Name"));
-    assert_eq!(fill.id.as_deref(), Some("Name"));
-    assert_eq!(fill.width, TableColumnWidth::Fill(1.0));
-    assert!(fill.visible);
-    assert!(!fill.sortable);
-    assert_eq!(fill.sort_direction, None);
-    assert!(fill.resize.is_none());
+    assert_eq!(fill.header(), Some("Name"));
+    assert_eq!(fill.id(), Some("Name"));
+    assert_eq!(fill.width(), TableColumnWidth::Fill(1.0));
+    assert!(fill.visible());
+    assert_eq!(fill.pin(), TableColumnPin::None);
+    assert!(!fill.is_sortable());
+    assert_eq!(fill.sort_direction(), None);
+    assert!(fill.resize_options().is_none());
 
     let weighted = TableColumn::weighted("Kind", 2.5);
-    assert_eq!(weighted.header.as_deref(), Some("Kind"));
-    assert_eq!(weighted.id.as_deref(), Some("Kind"));
-    assert_eq!(weighted.width, TableColumnWidth::Fill(2.5));
-    assert!(weighted.visible);
-    assert!(!weighted.sortable);
-    assert_eq!(weighted.sort_direction, None);
-    assert!(weighted.resize.is_none());
+    assert_eq!(weighted.header(), Some("Kind"));
+    assert_eq!(weighted.id(), Some("Kind"));
+    assert_eq!(weighted.width(), TableColumnWidth::Fill(2.5));
+    assert!(weighted.visible());
+    assert!(!weighted.is_sortable());
+    assert_eq!(weighted.sort_direction(), None);
+    assert!(weighted.resize_options().is_none());
 
     let px = TableColumn::px("State", Px(96.0));
-    assert_eq!(px.header.as_deref(), Some("State"));
-    assert_eq!(px.id.as_deref(), Some("State"));
-    assert_eq!(px.width, TableColumnWidth::Px(Px(96.0)));
-    assert!(px.visible);
-    assert!(!px.sortable);
-    assert_eq!(px.sort_direction, None);
-    assert!(px.resize.is_none());
+    assert_eq!(px.header(), Some("State"));
+    assert_eq!(px.id(), Some("State"));
+    assert_eq!(px.width(), TableColumnWidth::Px(Px(96.0)));
+    assert!(px.visible());
+    assert!(!px.is_sortable());
+    assert_eq!(px.sort_direction(), None);
+    assert!(px.resize_options().is_none());
 
     let double_hash = TableColumn::fill("Name##asset-name-column");
-    assert_eq!(
-        double_hash.header.as_deref(),
-        Some("Name##asset-name-column")
-    );
-    assert_eq!(double_hash.id.as_deref(), Some("Name##asset-name-column"));
+    assert_eq!(double_hash.header(), Some("Name##asset-name-column"));
+    assert_eq!(double_hash.id(), Some("Name##asset-name-column"));
 
     let stable = TableColumn::px("Status###status-column", Px(96.0));
-    assert_eq!(stable.header.as_deref(), Some("Status###status-column"));
-    assert_eq!(stable.id.as_deref(), Some("status-column"));
+    assert_eq!(stable.header(), Some("Status###status-column"));
+    assert_eq!(stable.id(), Some("status-column"));
 
     let unlabeled = TableColumn::unlabeled(TableColumnWidth::px(Px(72.0))).with_id("actions");
-    assert_eq!(unlabeled.header, None);
-    assert_eq!(unlabeled.id.as_deref(), Some("actions"));
+    assert_eq!(unlabeled.header(), None);
+    assert_eq!(unlabeled.id(), Some("actions"));
+}
+
+#[test]
+fn table_column_pinning_helpers_compile() {
+    let left = TableColumn::px("ID###asset-id", Px(72.0)).pinned_left();
+    assert_eq!(left.id(), Some("asset-id"));
+    assert_eq!(left.pin(), TableColumnPin::Left);
+
+    let right = TableColumn::px("Score###asset-score", Px(84.0)).pinned_right();
+    assert_eq!(right.id(), Some("asset-score"));
+    assert_eq!(right.pin(), TableColumnPin::Right);
+
+    let unpinned = right.with_pin(TableColumnPin::None);
+    assert_eq!(unpinned.pin(), TableColumnPin::None);
 }
 
 #[test]
 fn table_column_visibility_helpers_compile() {
     let hidden = TableColumn::px("Internal###internal", Px(64.0)).hidden();
-    assert_eq!(hidden.id.as_deref(), Some("internal"));
-    assert!(!hidden.visible);
+    assert_eq!(hidden.id(), Some("internal"));
+    assert!(!hidden.visible());
 
     let visible_again = hidden.with_visible(true);
-    assert!(visible_again.visible);
+    assert!(visible_again.visible());
 }
 
 #[test]
@@ -244,9 +259,9 @@ fn table_column_visibility_state_applies_runtime_visibility_by_column_id() {
 
     let applied = state.apply_to_columns(&columns);
 
-    assert!(applied[0].visible);
-    assert!(!applied[1].visible);
-    assert!(applied[2].visible);
+    assert!(applied[0].visible());
+    assert!(!applied[1].visible());
+    assert!(applied[2].visible());
     assert_eq!(state.visibility_for("asset-status"), Some(false));
     assert!(state.is_visible("asset-owner", false));
 }
@@ -296,15 +311,17 @@ fn table_column_visibility_snapshot_entries_are_public_data_shape() {
 #[test]
 fn table_resizable_column_api_compiles() {
     let default_resize = TableColumn::px("Name###asset-name", Px(180.0)).resizable();
-    let resize = default_resize.resize.expect("default resize options");
-    assert_eq!(default_resize.id.as_deref(), Some("asset-name"));
+    let resize = default_resize
+        .resize_options()
+        .expect("default resize options");
+    assert_eq!(default_resize.id(), Some("asset-name"));
     assert_eq!(resize.min_width, Some(Px(32.0)));
     assert_eq!(resize.max_width, None);
 
     let limited = TableColumn::weighted("Kind###asset-kind", 1.5)
         .resizable_with_limits(Some(Px(72.0)), Some(Px(280.0)));
-    let resize = limited.resize.expect("limited resize options");
-    assert_eq!(limited.id.as_deref(), Some("asset-kind"));
+    let resize = limited.resize_options().expect("limited resize options");
+    assert_eq!(limited.id(), Some("asset-kind"));
     assert_eq!(resize.min_width, Some(Px(72.0)));
     assert_eq!(resize.max_width, Some(Px(280.0)));
 }
@@ -314,21 +331,21 @@ fn table_sortable_header_api_compiles() {
     let sorted = TableColumn::fill("Name###asset-name")
         .sortable()
         .sorted(TableSortDirection::Ascending);
-    assert_eq!(sorted.id.as_deref(), Some("asset-name"));
-    assert!(sorted.sortable);
-    assert_eq!(sorted.sort_direction, Some(TableSortDirection::Ascending));
+    assert_eq!(sorted.id(), Some("asset-name"));
+    assert!(sorted.is_sortable());
+    assert_eq!(sorted.sort_direction(), Some(TableSortDirection::Ascending));
 
     let unsorted = TableColumn::px("Status###asset-status", Px(120.0)).sortable();
-    assert_eq!(unsorted.id.as_deref(), Some("asset-status"));
-    assert!(unsorted.sortable);
-    assert_eq!(unsorted.sort_direction, None);
+    assert_eq!(unsorted.id(), Some("asset-status"));
+    assert!(unsorted.is_sortable());
+    assert_eq!(unsorted.sort_direction(), None);
 
     let descending = TableColumn::weighted("Kind###asset-kind", 1.5)
         .with_sort_direction(Some(TableSortDirection::Descending));
-    assert_eq!(descending.id.as_deref(), Some("asset-kind"));
-    assert!(descending.sortable);
+    assert_eq!(descending.id(), Some("asset-kind"));
+    assert!(descending.is_sortable());
     assert_eq!(
-        descending.sort_direction,
+        descending.sort_direction(),
         Some(TableSortDirection::Descending)
     );
 }

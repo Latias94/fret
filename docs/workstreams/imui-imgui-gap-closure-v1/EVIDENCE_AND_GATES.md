@@ -298,6 +298,33 @@ Run evidence:
   table_column_visibility_snapshot_api_compiles_and_roundtrips
   table_column_visibility_snapshot_entries_are_public_data_shape --no-fail-fast`, and `python
   tools/gate_imui_workstream_source.py`.
+- 2026-05-17: added IMUI table column pinning as the first narrow freeze-pane seam. `TableColumn`
+  now exposes `TableColumn::pinned_left()`, `TableColumn::pinned_right()`, and `with_pin(...)`;
+  `TableOptions` accepts an optional `horizontal_scroll` handle. The helper render path partitions visible header/body cells
+  into left/center/right groups and keeps frozen left/right cells outside the shared center X-scroll
+  region. This uses `fret-ui` scroll mechanics and does not add table-state storage to `fret-imui`.
+  Gates: `cargo nextest run -p fret-ui-kit --features imui --lib
+  horizontal_scroll_option_wraps_unpinned_header_and_body_center_groups --no-fail-fast`,
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke
+  table_column_pinning_helpers_compile --no-fail-fast`, `cargo nextest run -p fret-imui
+  table_helper_pins_left_and_right_columns_while_center_columns_scroll --no-fail-fast`, and
+  `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: added the first accessor-first cleanup for `TableColumn`. New read accessors cover
+  `header()`, `id()`, `width()`, `visible()`, `is_sortable()`, `sort_direction()`,
+  `resize_options()`, and `pin()`. `ImUiTableColumnVisibilityState::apply_to_columns(...)` now uses
+  a crate-local visibility mutator, while table rendering, visibility menu policy, `fret-imui`
+  composition tests, and public smoke tests use read accessors instead of direct field reads. The
+  public fields remain available for compatibility; private-field hardening remains a separate
+  breaking follow-on. Gates: `cargo nextest run -p fret-ui-kit --features imui --test
+  imui_table_smoke table_column_helpers_compile table_column_visibility_helpers_compile
+  table_resizable_column_api_compiles table_sortable_header_api_compiles --no-fail-fast`, `cargo
+  nextest run -p fret-ui-kit --features imui --lib
+  visibility_state_applies_runtime_overrides_by_stable_column_id
+  visibility_state_leaves_unlisted_and_unidentified_columns_at_declared_visibility
+  horizontal_scroll_option_wraps_unpinned_header_and_body_center_groups --no-fail-fast`, `cargo
+  nextest run -p fret-imui table_helper_pins_left_and_right_columns_while_center_columns_scroll
+  table_column_visibility_menu_item_updates_visibility_state --no-fail-fast`, and `python
+  tools/gate_imui_workstream_source.py`.
 - 2026-05-16: introduced `text_control_readout(...)` as the shared compact control-readout text
   role. The UI Gallery code-editor toolbar keeps its doc-layout helper, but that helper now
   delegates to `fret-ui-kit::declarative::text::text_control_readout(...)`, so dense status/readout
