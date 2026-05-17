@@ -1565,6 +1565,30 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/mvp/gates.rs"),
+            required=[
+                "use crate::ui::doc_layout;",
+                "doc_layout::button_label_text(cx, \"Inject preedit\")",
+                "doc_layout::button_label_text(cx, \"Clear preedit\")",
+                "doc_layout::button_label_text(\n                    cx,\n                    \"IME setMarkedText (replace selection)\",\n                )",
+                "doc_layout::button_label_text(\n                    cx,\n                    \"IME cancel (empty marked text)\",\n                )",
+                "doc_layout::button_label_text(cx, \"Inject preedit (wrap)\")",
+                "doc_layout::button_label_text(cx, \"Clear preedit (wrap)\")",
+                "doc_layout::button_label_text(cx, \"Inject preedit (drag)\")",
+                "doc_layout::button_label_text(cx, \"Clear preedit (drag)\")",
+            ],
+            forbidden=[
+                "vec![cx.text(\"Inject preedit\")]",
+                "vec![cx.text(\"Clear preedit\")]",
+                "vec![cx.text(\"IME setMarkedText (replace selection)\")]",
+                "vec![cx.text(\"IME cancel (empty marked text)\")]",
+                "vec![cx.text(\"Inject preedit (wrap)\")]",
+                "vec![cx.text(\"Clear preedit (wrap)\")]",
+                "vec![cx.text(\"Inject preedit (drag)\")]",
+                "vec![cx.text(\"Clear preedit (drag)\")]",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/previews/pages/editors/markdown.rs"),
             required=[
                 "doc_layout::paragraph_text(",

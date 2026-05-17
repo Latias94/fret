@@ -439,6 +439,10 @@ Readiness order for the next locally testable review slices:
    through `control_readout_text(...)`, and custom pointer-region labels through
    `button_label_text(...)`. This keeps resize-sensitive editor proof chrome on the shared
    role vocabulary without adding a public `TextRole` enum or moving policy into `fret-imui`.
+   2026-05-17 code-editor IME gate button-label follow-up: code-editor MVP IME gate actions now
+   route their custom pointer-region labels through `button_label_text(...)`, and both the gallery
+   source test and IMUI workstream source gate forbid those fixed action labels from returning to
+   bare `cx.text(...)`.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

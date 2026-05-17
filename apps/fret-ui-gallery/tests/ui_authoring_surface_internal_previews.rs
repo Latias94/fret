@@ -693,6 +693,7 @@ fn code_editor_mvp_internal_helpers_prefer_ui_child_over_anyelement() {
     assert_imports_ui_child_with_app_component(&gates_path, &gates_source, &gates_normalized);
     for marker in [
         "fngate_panel<B>(cx:&mutAppComponentCx<'_>,theme:&Theme,child:B)->implUiChild+use<B>",
+        "usecrate::ui::doc_layout;",
         "pub(super)fnword_boundary_gate(cx:&mutAppComponentCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
         "pub(super)fnword_boundary_soft_wrap_gate(cx:&mutAppComponentCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
         "pub(super)fna11y_selection_gate(cx:&mutAppComponentCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
@@ -700,6 +701,14 @@ fn code_editor_mvp_internal_helpers_prefer_ui_child_over_anyelement() {
         "pub(super)fna11y_selection_wrap_gate(cx:&mutAppComponentCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
         "pub(super)fna11y_composition_wrap_gate(cx:&mutAppComponentCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
         "pub(super)fna11y_composition_drag_gate(cx:&mutAppComponentCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
+        "doc_layout::button_label_text(cx,\"Injectpreedit\")",
+        "doc_layout::button_label_text(cx,\"Clearpreedit\")",
+        "doc_layout::button_label_text(cx,\"IMEsetMarkedText(replaceselection)\")",
+        "doc_layout::button_label_text(cx,\"IMEcancel(emptymarkedtext)\")",
+        "doc_layout::button_label_text(cx,\"Injectpreedit(wrap)\")",
+        "doc_layout::button_label_text(cx,\"Clearpreedit(wrap)\")",
+        "doc_layout::button_label_text(cx,\"Injectpreedit(drag)\")",
+        "doc_layout::button_label_text(cx,\"Clearpreedit(drag)\")",
     ] {
         let marker = canonicalize_rust_fragment(marker);
         assert!(
@@ -713,6 +722,23 @@ fn code_editor_mvp_internal_helpers_prefer_ui_child_over_anyelement() {
         "{} should not regress gate helpers back to AnyElement",
         gates_path.display(),
     );
+    for forbidden in [
+        "vec![cx.text(\"Inject preedit\")]",
+        "vec![cx.text(\"Clear preedit\")]",
+        "vec![cx.text(\"IME setMarkedText (replace selection)\")]",
+        "vec![cx.text(\"IME cancel (empty marked text)\")]",
+        "vec![cx.text(\"Inject preedit (wrap)\")]",
+        "vec![cx.text(\"Clear preedit (wrap)\")]",
+        "vec![cx.text(\"Inject preedit (drag)\")]",
+        "vec![cx.text(\"Clear preedit (drag)\")]",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !gates_normalized.contains(&forbidden),
+            "{} reintroduced bare IME gate button label text: {forbidden}",
+            gates_path.display(),
+        );
+    }
 }
 
 #[test]

@@ -410,6 +410,9 @@ Exit criteria:
   and button label text for custom pointer-region actions. The slice keeps editor-proof resize
   text semantics in gallery/doc-layout helpers and the shared kit role vocabulary, not in
   `fret-imui`.
+  2026-05-17 code-editor IME gate button-label result: the MVP IME gate action labels now use
+  `doc_layout::button_label_text(...)`, and focused source/test guards prevent those custom
+  pointer-region buttons from drifting back to bare `cx.text(...)` under fixed row chrome.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

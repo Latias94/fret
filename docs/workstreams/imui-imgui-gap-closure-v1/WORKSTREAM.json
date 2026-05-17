@@ -447,6 +447,7 @@
     "apps/fret-ui-gallery/src/ui/previews/gallery/data/tree_torture.rs",
     "apps/fret-ui-gallery/src/ui/previews/gallery/torture/inspector_torture.rs",
     "apps/fret-ui-gallery/src/ui/previews/gallery/torture/table_retained_torture.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/mvp/gates.rs",
     "apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/mvp/header.rs",
     "apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/torture.rs",
     "apps/fret-ui-gallery/src/ui/previews/pages/editors/markdown.rs",

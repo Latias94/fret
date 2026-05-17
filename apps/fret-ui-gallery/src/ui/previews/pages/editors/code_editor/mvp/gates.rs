@@ -1,4 +1,5 @@
 use super::prelude::*;
+use crate::ui::doc_layout;
 use fret::AppComponentCx;
 use fret::UiChild;
 use fret_ui_kit::IntoUiElement;
@@ -158,7 +159,7 @@ pub(super) fn a11y_composition_gate(
                 true
             }));
             cx.pointer_region_on_pointer_up(inject.clone());
-            vec![cx.text("Inject preedit")]
+            vec![doc_layout::button_label_text(cx, "Inject preedit")]
         })
         .attach_semantics(
             SemanticsDecoration::default()
@@ -174,7 +175,7 @@ pub(super) fn a11y_composition_gate(
                 true
             }));
             cx.pointer_region_on_pointer_up(clear.clone());
-            vec![cx.text("Clear preedit")]
+            vec![doc_layout::button_label_text(cx, "Clear preedit")]
         })
         .attach_semantics(
             SemanticsDecoration::default()
@@ -196,7 +197,10 @@ pub(super) fn a11y_composition_gate(
                     true
                 }));
                 cx.pointer_region_on_pointer_up(ime_start.clone());
-                vec![cx.text("IME setMarkedText (replace selection)")]
+                vec![doc_layout::button_label_text(
+                    cx,
+                    "IME setMarkedText (replace selection)",
+                )]
             })
             .attach_semantics(
                 SemanticsDecoration::default()
@@ -212,7 +216,10 @@ pub(super) fn a11y_composition_gate(
                     true
                 }));
                 cx.pointer_region_on_pointer_up(ime_cancel.clone());
-                vec![cx.text("IME cancel (empty marked text)")]
+                vec![doc_layout::button_label_text(
+                    cx,
+                    "IME cancel (empty marked text)",
+                )]
             })
             .attach_semantics(
                 SemanticsDecoration::default()
@@ -303,7 +310,7 @@ pub(super) fn a11y_composition_wrap_gate(
                 true
             }));
             cx.pointer_region_on_pointer_up(inject.clone());
-            vec![cx.text("Inject preedit (wrap)")]
+            vec![doc_layout::button_label_text(cx, "Inject preedit (wrap)")]
         })
         .attach_semantics(
             SemanticsDecoration::default()
@@ -319,7 +326,7 @@ pub(super) fn a11y_composition_wrap_gate(
                 true
             }));
             cx.pointer_region_on_pointer_up(clear.clone());
-            vec![cx.text("Clear preedit (wrap)")]
+            vec![doc_layout::button_label_text(cx, "Clear preedit (wrap)")]
         })
         .attach_semantics(
             SemanticsDecoration::default()
@@ -394,7 +401,7 @@ pub(super) fn a11y_composition_drag_gate(
                 true
             }));
             cx.pointer_region_on_pointer_up(inject.clone());
-            vec![cx.text("Inject preedit (drag)")]
+            vec![doc_layout::button_label_text(cx, "Inject preedit (drag)")]
         })
         .attach_semantics(
             SemanticsDecoration::default()
@@ -410,7 +417,7 @@ pub(super) fn a11y_composition_drag_gate(
                 true
             }));
             cx.pointer_region_on_pointer_up(clear.clone());
-            vec![cx.text("Clear preedit (drag)")]
+            vec![doc_layout::button_label_text(cx, "Clear preedit (drag)")]
         })
         .attach_semantics(
             SemanticsDecoration::default()
