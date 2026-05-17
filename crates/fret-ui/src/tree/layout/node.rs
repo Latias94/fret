@@ -54,6 +54,7 @@ enum CleanGeometrySolveSkipRejectionReason {
     FlexMainAlign,
     FlexCrossAlign,
     FlexHeightDelta,
+    FlexItemSizing,
     NonPxSpacing,
     AutoChildHeight,
     TextReflow,
@@ -86,6 +87,8 @@ enum CleanGeometryChildBoundsStrategy {
     ContainerPxInsets(crate::element::ContainerProps),
     /// Vertical, no-wrap flex subset whose line structure is stable across small width deltas.
     VerticalNoWrapFlex(crate::element::FlexProps),
+    /// Horizontal, no-wrap flex subset with fixed main-axis children and stable cross-axis geometry.
+    HorizontalFixedFlex(crate::element::FlexProps),
 }
 
 #[derive(Clone, Copy)]
@@ -110,6 +113,14 @@ impl CleanGeometryNodeContract {
             layout_effect: CleanGeometryLayoutEffect::Pure,
             child_bounds: CleanGeometryChildBoundsStrategy::None,
             size_stability: CleanGeometryWidthDeltaSizeStability::StableComputedBox,
+        }
+    }
+
+    fn propagated_leaf() -> Self {
+        Self {
+            layout_effect: CleanGeometryLayoutEffect::Pure,
+            child_bounds: CleanGeometryChildBoundsStrategy::None,
+            size_stability: CleanGeometryWidthDeltaSizeStability::Propagated,
         }
     }
 
@@ -144,6 +155,7 @@ impl CleanGeometrySolveSkipRejectionReason {
             Self::FlexMainAlign => "flex_main_align",
             Self::FlexCrossAlign => "flex_cross_align",
             Self::FlexHeightDelta => "flex_height_delta",
+            Self::FlexItemSizing => "flex_item_sizing",
             Self::NonPxSpacing => "non_px_spacing",
             Self::AutoChildHeight => "auto_child_height",
             Self::TextReflow => "text_reflow",
@@ -978,6 +990,16 @@ impl<H: UiHost> UiTree<H> {
                     props,
                     kind,
                 ),
+            CleanGeometryChildBoundsStrategy::HorizontalFixedFlex(props) => self
+                .clean_horizontal_fixed_flex_width_delta_child_bounds(
+                    app,
+                    window,
+                    children,
+                    bounds,
+                    prev_bounds,
+                    props,
+                    kind,
+                ),
             CleanGeometryChildBoundsStrategy::ContainerPxInsets(props) => self
                 .clean_container_width_delta_child_bounds(
                     app,
@@ -1029,21 +1051,15 @@ impl<H: UiHost> UiTree<H> {
                     CleanGeometryChildBoundsStrategy::ContainerPxInsets(*props),
                 ))
             }
-            crate::declarative::frame::ElementInstance::Flex(props) => {
-                Ok(CleanGeometryNodeContract::pure(
-                    CleanGeometryChildBoundsStrategy::VerticalNoWrapFlex(*props),
-                ))
-            }
-            crate::declarative::frame::ElementInstance::SemanticFlex(props) => {
-                Ok(CleanGeometryNodeContract::pure(
-                    CleanGeometryChildBoundsStrategy::VerticalNoWrapFlex(props.flex),
-                ))
-            }
-            crate::declarative::frame::ElementInstance::RovingFlex(props) => {
-                Ok(CleanGeometryNodeContract::pure(
-                    CleanGeometryChildBoundsStrategy::VerticalNoWrapFlex(props.flex),
-                ))
-            }
+            crate::declarative::frame::ElementInstance::Flex(props) => Ok(
+                CleanGeometryNodeContract::pure(Self::clean_flex_child_bounds_strategy(*props)),
+            ),
+            crate::declarative::frame::ElementInstance::SemanticFlex(props) => Ok(
+                CleanGeometryNodeContract::pure(Self::clean_flex_child_bounds_strategy(props.flex)),
+            ),
+            crate::declarative::frame::ElementInstance::RovingFlex(props) => Ok(
+                CleanGeometryNodeContract::pure(Self::clean_flex_child_bounds_strategy(props.flex)),
+            ),
             crate::declarative::frame::ElementInstance::Text(_)
             | crate::declarative::frame::ElementInstance::StyledText(_)
             | crate::declarative::frame::ElementInstance::SelectableText(_) => {
@@ -1056,14 +1072,25 @@ impl<H: UiHost> UiTree<H> {
             | crate::declarative::frame::ElementInstance::Spinner(_)
                 if children.is_empty() =>
             {
-                Ok(CleanGeometryNodeContract::pure(
-                    CleanGeometryChildBoundsStrategy::None,
-                ))
+                Ok(CleanGeometryNodeContract::propagated_leaf())
             }
             _ => Err(CleanGeometrySolveSkipRejection::for_kind(
                 CleanGeometrySolveSkipRejectionReason::UnsupportedKind,
                 kind,
             )),
+        }
+    }
+
+    fn clean_flex_child_bounds_strategy(
+        props: crate::element::FlexProps,
+    ) -> CleanGeometryChildBoundsStrategy {
+        match props.direction {
+            fret_core::Axis::Vertical => {
+                CleanGeometryChildBoundsStrategy::VerticalNoWrapFlex(props)
+            }
+            fret_core::Axis::Horizontal => {
+                CleanGeometryChildBoundsStrategy::HorizontalFixedFlex(props)
+            }
         }
     }
 
@@ -1326,6 +1353,143 @@ impl<H: UiHost> UiTree<H> {
                 ),
             ));
         }
+        Ok(out)
+    }
+
+    fn clean_horizontal_fixed_flex_width_delta_child_bounds(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        children: &[NodeId],
+        bounds: Rect,
+        prev_bounds: Rect,
+        props: crate::element::FlexProps,
+        element_kind: &'static str,
+    ) -> Result<Vec<(NodeId, Rect)>, CleanGeometrySolveSkipRejection> {
+        if props.wrap {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::FlexWrap,
+                element_kind,
+            ));
+        }
+        if props.justify != crate::element::MainAlign::Start {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::FlexMainAlign,
+                element_kind,
+            ));
+        }
+        if (bounds.size.height.0 - prev_bounds.size.height.0).abs() > 0.01 {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::FlexHeightDelta,
+                element_kind,
+            ));
+        }
+
+        let _pad_left = Self::clean_spacing_px(props.padding.left).ok_or_else(|| {
+            CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::NonPxSpacing,
+                element_kind,
+            )
+        })?;
+        let _pad_right = Self::clean_spacing_px(props.padding.right).ok_or_else(|| {
+            CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::NonPxSpacing,
+                element_kind,
+            )
+        })?;
+        let pad_top = Self::clean_spacing_px(props.padding.top).ok_or_else(|| {
+            CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::NonPxSpacing,
+                element_kind,
+            )
+        })?;
+        let pad_bottom = Self::clean_spacing_px(props.padding.bottom).ok_or_else(|| {
+            CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::NonPxSpacing,
+                element_kind,
+            )
+        })?;
+        let _gap = Self::clean_spacing_px(props.gap).ok_or_else(|| {
+            CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::NonPxSpacing,
+                element_kind,
+            )
+        })?;
+
+        let next_inner_height = (bounds.size.height.0 - pad_top - pad_bottom).max(0.0);
+        let mut out = Vec::with_capacity(children.len());
+        for &child in children {
+            let child_style = crate::declarative::frame::layout_style_for_node(app, window, child);
+            if child_style.position != crate::element::PositionStyle::Static {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::PositionedChild,
+                    element_kind,
+                ));
+            }
+            if !Self::clean_margin_edges_are_px(child_style.margin) {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::NonPxMargin,
+                    element_kind,
+                ));
+            }
+            if child_style.flex.order != 0
+                || child_style.flex.grow.abs() > 0.01
+                || child_style.flex.shrink.abs() > 0.01
+                || !matches!(child_style.flex.basis, crate::element::Length::Auto)
+                || child_style.flex.align_self.is_some()
+            {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::FlexItemSizing,
+                    element_kind,
+                ));
+            }
+            if matches!(
+                child_style.size.width,
+                crate::element::Length::Auto
+                    | crate::element::Length::Fill
+                    | crate::element::Length::Fraction(_)
+            ) {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::FlexItemSizing,
+                    element_kind,
+                ));
+            }
+            Self::clean_child_width_style_supported_for_width_delta(child_style, element_kind)?;
+            Self::clean_child_height_style_supported_for_width_delta(child_style, element_kind)?;
+
+            let prev_child = self
+                .nodes
+                .get(child)
+                .ok_or_else(|| {
+                    CleanGeometrySolveSkipRejection::new(
+                        CleanGeometrySolveSkipRejectionReason::MissingNode,
+                    )
+                })?
+                .bounds;
+            let local_x = prev_child.origin.x.0 - prev_bounds.origin.x.0;
+            let local_y = prev_child.origin.y.0 - prev_bounds.origin.y.0;
+            let height = if (prev_child.size.height.0
+                - (prev_bounds.size.height.0 - pad_top - pad_bottom).max(0.0))
+            .abs()
+                <= 0.01
+                || matches!(child_style.size.height, crate::element::Length::Fill)
+            {
+                Px(next_inner_height)
+            } else {
+                prev_child.size.height
+            };
+            out.push((
+                child,
+                Rect::new(
+                    Point::new(
+                        Px(bounds.origin.x.0 + local_x),
+                        Px(bounds.origin.y.0 + local_y),
+                    ),
+                    Size::new(prev_child.size.width, height),
+                ),
+            ));
+        }
+
         Ok(out)
     }
 

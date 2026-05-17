@@ -111,3 +111,21 @@ Status: Active
 - Do not treat the current supported node set as permission to expand by name. The next grid,
   row-flex, retained/cache, canvas, layout-query, or transform slice still needs a focused proof and
   evidence.
+
+## M10 — Horizontal fixed Flex geometry contract (candidate)
+
+- Prove horizontal no-wrap `Flex` only for fixed main-axis child distribution before attempting
+  `Grid` or flex-grow/fill semantics.
+- Accept horizontal cross-axis alignment when the resize proof is width-only and parent height plus
+  px vertical padding remain stable; keep vertical non-stretch cross-axis alignment rejected until it
+  has its own proof.
+- Keep grow/shrink/order/basis/align-self and auto/fill/fraction main-axis widths on the full solve
+  path with a dedicated `flex_item_sizing` rejection.
+- 2026-05-17 minimum slice landed: horizontal fixed `Flex` gets a dedicated
+  `HorizontalFixedFlex` child-bounds strategy, pure leaf geometry is separated from text
+  stable-computed leaves, and focused tests cover stretch horizontal acceptance, center horizontal
+  acceptance, vertical center rejection, and horizontal grow rejection.
+- Fresh no-4090 resize-jitter evidence moves the app-shell/nav blocker from `flex_cross_align` to
+  `flex_item_sizing`; content `Semantics` remains blocked by `unsupported_kind=Grid` with
+  `wrap_nodes=1`, `Canvas` remains too small to prioritize, and `Scroll` remains a side-effect
+  boundary.

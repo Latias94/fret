@@ -483,6 +483,86 @@ Clean-geometry classification model refactor (2026-05-17):
     `scroll-optimization-v1`, with RTX4090 validation still tracked as follow-up evidence rather
     than a local completion gate.
 
+Horizontal fixed Flex clean-geometry proof (2026-05-17):
+
+- Mechanism anchors:
+  - `crates/fret-ui/src/tree/layout/node.rs`
+    (`CleanGeometryChildBoundsStrategy::HorizontalFixedFlex`,
+    `clean_horizontal_fixed_flex_width_delta_child_bounds`,
+    `CleanGeometrySolveSkipRejectionReason::FlexItemSizing`,
+    `CleanGeometryNodeContract::propagated_leaf`)
+  - `crates/fret-ui/src/declarative/tests/layout/layout_engine.rs`
+    (`clean_geometry_small_resize_skips_fixed_horizontal_flex_children`,
+    `clean_geometry_small_resize_skips_center_aligned_fixed_horizontal_flex_children`,
+    `clean_geometry_small_resize_rejects_center_aligned_vertical_flex_child`,
+    `clean_geometry_small_resize_rejects_horizontal_flex_grow_children`)
+- Contract:
+  - Horizontal no-wrap `Flex` can participate only when main-axis distribution is fixed:
+    `justify=Start`, px padding/gap, static children, px margins, default order, zero grow/shrink,
+    `basis=Auto`, no `align_self`, and non-auto/non-fill/non-fraction child main-axis widths.
+  - Horizontal cross-axis alignment can be preserved from previous clean geometry because this proof
+    only runs for width-only resize and rejects parent height deltas. Stretch-height children still
+    update to the stable inner height.
+  - Vertical no-wrap `Flex` keeps the older stricter cross-axis rule: non-stretch alignment still
+    rejects with `flex_cross_align` because a width delta can move children horizontally.
+  - Text leaves remain stable-computed boxes, while pure geometry leaves such as `Spacer`, `Image`,
+    `SvgIcon`, `SvgImage`, and `Spinner` are propagated leaves. This keeps text reflow blocked
+    without forcing geometry-only leaves to require unchanged boxes.
+  - `ViewCache`, `VirtualList`, `Canvas`, layout-query/transform nodes, and root `Scroll` remain
+    excluded or boundary-protected.
+- Focused gates:
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_stable_auto_height_vertical_flex_child clean_geometry_small_resize_rejects_center_aligned_vertical_flex_child clean_geometry_small_resize_skips_fixed_horizontal_flex_children clean_geometry_small_resize_skips_center_aligned_fixed_horizontal_flex_children clean_geometry_small_resize_rejects_horizontal_flex_grow_children --no-fail-fast`
+    - Result: `5/5` passed.
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_fixed_horizontal_flex_children clean_geometry_small_resize_skips_center_aligned_fixed_horizontal_flex_children clean_geometry_small_resize_rejects_horizontal_flex_grow_children --no-fail-fast`
+    - Red/green note: before the horizontal cross-axis proof, the center-aligned horizontal case
+      still solved once with `flex_cross_align / Flex`; after the proof, `3/3` passed.
+- Final gates:
+  - `cargo fmt --check`
+    - Result: passed.
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_barrier_root_engine_solve clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve clean_geometry_small_resize_reports_wrap_flex_rejection_reason clean_geometry_small_resize_skips_px_container_and_updates_child_bounds clean_geometry_small_resize_rejects_container_fraction_padding clean_geometry_small_resize_skips_stable_auto_height_container_wrapper clean_geometry_small_resize_skips_stable_auto_height_vertical_flex_child clean_geometry_small_resize_rejects_center_aligned_vertical_flex_child clean_geometry_small_resize_rejects_auto_height_text_reflow clean_geometry_small_resize_skips_fixed_horizontal_flex_children clean_geometry_small_resize_skips_center_aligned_fixed_horizontal_flex_children clean_geometry_small_resize_rejects_horizontal_flex_grow_children --no-fail-fast`
+    - Result: `12/12` passed.
+  - `cargo nextest run -p fret-ui layout_engine --no-fail-fast`
+    - Result: `27/27` passed.
+  - `cargo nextest run -p fret-ui scroll --no-fail-fast`
+    - Result: `153/153` passed.
+  - `cargo check -p fret-bootstrap --features ui-app-driver,diagnostics`
+    - Result: passed.
+  - `python3 tools/check_layering.py`
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed.
+- Local blocker-shift evidence:
+  - Bundle:
+    `target/fret-diag/local-next-horizontal-flex-clean-geometry-20260517-r2/1778989269602/bundle.schema2.json`
+  - Stats:
+    `target/fret-diag/local-next-horizontal-flex-clean-geometry-20260517-r2/worst.stats.json`
+  - Command shape:
+    - `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
+    - repeat `1`, warmup `5`, standard prewarm/prelude hooks, overlay disabled, view-cache shell
+      enabled, code-editor paint perf enabled, scroll/layout/node profiling enabled.
+    - Launch command: `cargo run -p fret-ui-gallery --release --features gallery-full`.
+  - Result:
+    - The sample is useful for blocker classification, not for a perf-win claim: max/p95
+      total/layout/layout-roots/solve/prepaint/paint/text-prepare is
+      `3234/1630/1113/823/909/1103/94us`, which shows local variance beyond the clean-geometry
+      change itself.
+    - Guardrails remain stable in the top row: view-cache root reused `1`, needs-rerender `0`, row
+      replay/store `289/0`, and row-scene replay hit rate `100%`.
+    - Per-solve blocker shift:
+      - content `Semantics`: `unsupported_kind=Grid`, `wrap_nodes=1`, solve `190/321/405us`
+        across the sampled solve frames;
+      - root `Stack`: `flex_item_sizing`, blocker `Flex`, solve `151/496/248us`;
+      - nav `Container`: `flex_item_sizing`, blocker `Flex`, solve `48us` on the sampled nav frame;
+      - editor `PointerRegion`: `unsupported_kind=Canvas`, solve `5-18us`;
+      - root `Scroll`: `side_effect_boundary`, blocker `Scroll`, solve `0us`.
+- Decision:
+  - Keep the horizontal fixed `Flex` proof; it removes the cross-align false blocker without
+    weakening vertical flex or main-axis sizing semantics.
+  - Do not broaden to grow/fill horizontal flex in the same patch. The next app-shell/nav slice
+    would need a dedicated main-axis distribution proof for `flex_item_sizing`.
+  - Do not start `Grid` until the content `Semantics` root's wrap-flex context is handled or the
+    Grid proof explicitly accounts for the visible `wrap_nodes=1` blocker.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:

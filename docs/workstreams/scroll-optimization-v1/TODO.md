@@ -208,6 +208,29 @@ Status: Active
     `cargo nextest run -p fret-ui scroll --no-fail-fast`,
     `cargo check -p fret-bootstrap --features ui-app-driver,diagnostics`,
     `cargo fmt`, and `python3 tools/check_layering.py`.
+- [x] Prove the smaller horizontal fixed `Flex` clean-geometry subset before attempting `Grid`.
+  - Decision: start with horizontal fixed `Flex`, not `Grid`, because the content `Grid` blocker
+    still sits under a root with `wrap_nodes=1`, while the shell/nav blockers were plain no-wrap
+    horizontal flex paths.
+  - Implemented proof: horizontal no-wrap flex can propagate clean geometry during width-only
+    resize when main-axis distribution is fixed (`justify=Start`, static children, px spacing and
+    margins, no order/grow/shrink/basis/align_self overrides, and definite child widths).
+  - Cross-axis alignment is accepted for the horizontal subset because parent height and px vertical
+    padding are unchanged in this width-only proof; the child cross-axis geometry is inherited from
+    the previous clean frame. The vertical no-wrap proof still rejects non-stretch cross-axis
+    alignment because a width delta can move children horizontally.
+  - Guardrails locked: `grow`/`shrink`/fill/auto/fraction main-axis child sizing rejects with
+    `flex_item_sizing`; vertical center-aligned flex still rejects with `flex_cross_align`;
+    `ViewCache`, `VirtualList`, `Canvas`, layout-query/transform boundaries, and root `Scroll`
+    remain outside the fast path.
+  - Local no-4090 blocker-shift evidence:
+    `target/fret-diag/local-next-horizontal-flex-clean-geometry-20260517-r2/1778989269602/bundle.schema2.json`.
+  - Result: `flex_cross_align` disappeared from the real resize-jitter per-solve blockers. The
+    root `Stack` and nav `Container` blockers moved to `flex_item_sizing`; content `Semantics`
+    remains `unsupported_kind=Grid` with `wrap_nodes=1`; editor `Canvas` remains measured small; root
+    `Scroll` remains a `side_effect_boundary`.
+  - Note: the r2 top frame had local scheduling/render variance (`top_total_time_us=3234`), so this
+    sample is recorded as blocker-shift evidence rather than a perf-win claim.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 
