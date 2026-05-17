@@ -6,6 +6,20 @@ fn virtual_list_row_label_test_id(index: usize) -> Arc<str> {
     Arc::<str>::from(format!("ui-gallery-virtual-list-row-{index}-label"))
 }
 
+fn virtual_list_row_label_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
+where
+    T: Into<Arc<str>>,
+{
+    fret_ui_kit::declarative::text::text_list_row_label(cx, text)
+}
+
+fn virtual_list_row_detail_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
+where
+    T: Into<Arc<str>>,
+{
+    doc_layout::control_readout_text(cx, text)
+}
+
 fn virtual_list_row_semantics(index: usize, len: usize) -> SemanticsDecoration {
     let mut decoration = SemanticsDecoration::default()
         .role(fret_core::SemanticsRole::ListItem)
@@ -162,9 +176,9 @@ pub(in crate::ui) fn preview_virtual_list_torture(
         };
 
         let text = if let Some(row) = header_editing_row {
-            cx.text(format!("Editing row: {row}"))
+            virtual_list_row_detail_text(cx, format!("Editing row: {row}"))
         } else {
-            cx.text("Editing row: <none>")
+            virtual_list_row_detail_text(cx, "Editing row: <none>")
         };
         text.attach_semantics(
             SemanticsDecoration::default()
@@ -176,18 +190,18 @@ pub(in crate::ui) fn preview_virtual_list_torture(
 
     let header = ui::v_flex(|cx| {
             let mut out = vec![
-                cx.text("Goal: deterministic virtualization torture surface (10k rows + scroll-to-item + inline edit)."),
-                cx.text(if retained_host {
+                doc_layout::paragraph_text(cx, "Goal: deterministic virtualization torture surface (10k rows + scroll-to-item + inline edit)."),
+                doc_layout::control_readout_text(cx, if retained_host {
                     "Mode: retained host (virt-003 prototype; item subtrees can reattach without rerendering the parent cache root)."
                 } else {
                     "Mode: render-driven (baseline; visible items update requires rerender when the window changes)."
                 }),
-                cx.text(if known_heights {
+                doc_layout::control_readout_text(cx, if known_heights {
                     "Mode: known row heights (no measure pass; better for perf baselines)."
                 } else {
                     "Mode: measured row heights (baseline)."
                 }),
-                cx.text(if keep_alive > 0 {
+                doc_layout::control_readout_text(cx, if keep_alive > 0 {
                     format!("Mode: keep-alive enabled (budget={keep_alive}).")
                 } else {
                     "Mode: keep-alive disabled (budget=0).".to_string()
@@ -195,7 +209,7 @@ pub(in crate::ui) fn preview_virtual_list_torture(
             ];
 
             if minimal_harness {
-                out.push(cx.text("Harness: minimal (no focusable controls; reduces RAF/notify noise in perf bundles)."));
+                out.push(doc_layout::paragraph_text(cx, "Harness: minimal (no focusable controls; reduces RAF/notify noise in perf bundles)."));
             } else {
                 if let Some(controls) = controls {
                     out.push(controls);
@@ -252,14 +266,16 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                         };
 
                         let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
-                        let row_label = cx
-                            .text(format!("Row {index}"))
+                        let row_label = virtual_list_row_label_text(cx, format!("Row {index}"))
                             .test_id(virtual_list_row_label_test_id(index));
-                        let extra_line = cx.text(format!(
-                            "Details: index={index} seed={} repeat={}",
-                            index.wrapping_mul(2654435761),
-                            (index % 7) + 1
-                        ));
+                        let extra_line = virtual_list_row_detail_text(
+                            cx,
+                            format!(
+                                "Details: index={index} seed={} repeat={}",
+                                index.wrapping_mul(2654435761),
+                                (index % 7) + 1
+                            ),
+                        );
 
                         let mut container_props = decl_style::container_props(
                             &theme,
@@ -310,14 +326,16 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                             };
 
                             let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
-                            let row_label = cx
-                                .text(format!("Row {index}"))
+                            let row_label = virtual_list_row_label_text(cx, format!("Row {index}"))
                                 .test_id(virtual_list_row_label_test_id(index));
-                            let extra_line = cx.text(format!(
-                                "Details: index={index} seed={} repeat={}",
-                                index.wrapping_mul(2654435761),
-                                (index % 7) + 1
-                            ));
+                            let extra_line = virtual_list_row_detail_text(
+                                cx,
+                                format!(
+                                    "Details: index={index} seed={} repeat={}",
+                                    index.wrapping_mul(2654435761),
+                                    (index % 7) + 1
+                                ),
+                            );
 
                             let mut container_props = decl_style::container_props(
                                 theme,

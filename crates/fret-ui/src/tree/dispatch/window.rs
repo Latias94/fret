@@ -519,6 +519,11 @@ impl<H: UiHost> UiTree<H> {
                                         ),
                                     crate::elements::TimerTarget::Node(node) => Some(node),
                                 });
+                            if let Some(node) = timer_target
+                                && !timer_dispatch_cx.node_in_active_input_layers(node)
+                            {
+                                timer_target = None;
+                            }
                         }
                         if let Some(node) = timer_target {
                             let (targeted_stopped, _) = fret_perf::measure_span(

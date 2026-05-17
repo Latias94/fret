@@ -8,20 +8,18 @@
 use std::panic::Location;
 use std::sync::{Arc, Mutex};
 
-use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Corners, Edges, KeyCode, Px, TextAlign, TextStyle};
+use fret_core::{Axis, Corners, Edges, KeyCode, Px};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, OnKeyDown};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    PressableA11y, PressableProps, ScrollAxis, ScrollProps, SizeStyle, SpacingLength, TextProps,
+    PressableA11y, PressableProps, ScrollAxis, ScrollProps, SizeStyle, SpacingLength,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::primitives::{active_descendant as active_desc, combobox as kit_combobox, popper};
-use fret_ui_kit::typography;
 use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 
 use crate::controls::MiniSearchBox;
@@ -29,12 +27,12 @@ use crate::primitives::colors::editor_muted_foreground;
 use crate::primitives::icons::editor_icon_with;
 use crate::primitives::input_group::{
     editor_input_group_divider, editor_input_group_frame, editor_input_group_inset,
-    editor_input_group_row,
+    editor_input_group_row, editor_input_value_text,
 };
 use crate::primitives::popup_list::{
-    EditorPopupListRowState, editor_popup_list_row_gap, editor_popup_list_row_palette,
-    editor_popup_list_row_radius, editor_popup_list_row_text_style, editor_popup_side_offset,
-    editor_popup_window_margin,
+    EditorPopupListRowState, editor_popup_empty_text_props, editor_popup_list_row_gap,
+    editor_popup_list_row_palette, editor_popup_list_row_radius, editor_popup_list_row_text_props,
+    editor_popup_side_offset, editor_popup_window_margin,
 };
 use crate::primitives::popup_surface::{
     EditorPopupSurfaceChrome, resolve_editor_popup_surface_chrome,
@@ -270,27 +268,14 @@ impl EnumSelect {
                         semantic: EditorFrameSemanticState::default(),
                     },
                     move |cx, visuals| {
-                        let text_el = cx.text_props(TextProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Auto,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            text: trigger_text.clone(),
-                            style: Some(typography::as_control_text(TextStyle {
-                                size: Px(12.0),
-                                line_height: Some(density.row_height),
-                                ..Default::default()
-                            })),
-                            color: Some(visuals.fg),
-                            wrap: TextWrap::None,
-                            overflow: TextOverflow::Ellipsis,
-                            align: TextAlign::Start,
-                            ink_overflow: Default::default(),
-                        });
+                        let text_el = editor_input_value_text(
+                            cx,
+                            density,
+                            Px(12.0),
+                            trigger_text.clone(),
+                            visuals.fg,
+                            Length::Auto,
+                        );
                         let text = editor_input_group_inset(cx, frame_chrome.padding, text_el);
 
                         let sep = editor_input_group_divider(cx, divider);
@@ -624,14 +609,13 @@ fn request_overlay<H: UiHost>(
                                         move |cx| {
                                             if filtered.is_empty() {
                                                 let theme = Theme::global(&*cx.app);
-                                                let mut props =
-                                                    TextProps::new(Arc::from("No matches"));
-                                                props.style =
-                                                    Some(editor_popup_list_row_text_style(
+                                                return vec![cx.text_props(
+                                                    editor_popup_empty_text_props(
+                                                        Arc::from("No matches"),
+                                                        editor_muted_foreground(theme),
                                                         density.row_height,
-                                                    ));
-                                                props.color = Some(editor_muted_foreground(theme));
-                                                return vec![cx.text_props(props)];
+                                                    ),
+                                                )];
                                             }
 
                                             let item_test_id_prefix = item_test_id_prefix.clone();
@@ -848,23 +832,11 @@ fn enum_select_row<H: UiHost>(
                     ..Default::default()
                 },
                 move |cx| {
-                    vec![cx.text_props(TextProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Fill,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        text: item.label.clone(),
-                        style: Some(editor_popup_list_row_text_style(density.row_height)),
-                        color: Some(row_palette.fg),
-                        wrap: TextWrap::None,
-                        overflow: TextOverflow::Ellipsis,
-                        align: TextAlign::Start,
-                        ink_overflow: Default::default(),
-                    })]
+                    vec![cx.text_props(editor_popup_list_row_text_props(
+                        item.label.clone(),
+                        row_palette.fg,
+                        density.row_height,
+                    ))]
                 },
             )]
         },

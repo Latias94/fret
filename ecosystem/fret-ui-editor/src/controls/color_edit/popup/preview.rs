@@ -1,19 +1,18 @@
 use std::sync::Arc;
 
-use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Color, Corners, Edges, Px, TextAlign, TextStyle};
+use fret_core::{Axis, Color, Corners, Edges, Px};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, GridProps, GridTrackSizing, InsetStyle,
     LayoutStyle, Length, MainAlign, Overflow, PositionStyle, PressableA11y, PressableProps,
-    SizeStyle, SpacingLength, StackProps, TextProps,
+    SizeStyle, SpacingLength, StackProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::typography;
 
 use crate::primitives::colors::{editor_border, editor_muted_foreground};
 use crate::primitives::input_group::derived_test_id;
+use crate::primitives::readout::editor_preview_caption_text_props;
 
 use super::super::model::format_hex;
 use super::super::{
@@ -254,27 +253,10 @@ fn preview_cell_content<H: UiHost>(
         },
         move |cx| {
             vec![
-                cx.text_props(TextProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Auto,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    text: Arc::from(label),
-                    style: Some(typography::as_control_text(TextStyle {
-                        size: Px(10.0),
-                        line_height: Some(Px(12.0)),
-                        ..Default::default()
-                    })),
-                    color: Some(text_color),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Ellipsis,
-                    align: TextAlign::Start,
-                    ink_overflow: Default::default(),
-                }),
+                cx.text_props(editor_preview_caption_text_props(
+                    Arc::from(label),
+                    text_color,
+                )),
                 cx.container(
                     ContainerProps {
                         layout: LayoutStyle {

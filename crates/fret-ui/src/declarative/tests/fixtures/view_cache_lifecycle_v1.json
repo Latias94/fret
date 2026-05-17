@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "suite_id": "fret-ui.view-cache-lifecycle.mechanism-harness-v1",
+  "owner_layer": "crates/fret-ui",
+  "domains": ["invalidation", "layout"],
+  "cases": [
+    {
+      "id": "clean-cache-hit-skips-render-and-preserves-element-state",
+      "scenario": {
+        "kind": "view_cache_lifecycle",
+        "frames": 4,
+        "dependency": "none",
+        "preserve_state": true
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "renders.cache_root", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.first_mount", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.marked_reuse_root", "comparison": "eq", "value": 3.0 },
+          { "kind": "mechanism_metric", "metric_id": "state.leaf_value", "comparison": "eq", "value": 123.0 }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Declarative cache hit keeps retained element identity/state while skipping child render.",
+        "note": "A clean ViewCache root should execute once, then reuse for stable frames without losing element state."
+      }
+    },
+    {
+      "id": "explicit-cache-key-change-forces-rerender",
+      "scenario": {
+        "kind": "view_cache_lifecycle",
+        "frames": 3,
+        "cache_keys": [1, 1, 2],
+        "dependency": "none"
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "renders.cache_root", "comparison": "eq", "value": 2.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.first_mount", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.marked_reuse_root", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.cache_key_mismatch", "comparison": "eq", "value": 1.0 }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Explicit cache keys are part of the view-cache reuse contract.",
+        "note": "A changed cache key must miss even when the subtree was otherwise clean."
+      }
+    },
+    {
+      "id": "request-animation-frame-keeps-cache-root-dirty",
+      "scenario": {
+        "kind": "view_cache_lifecycle",
+        "frames": 3,
+        "dependency": "none",
+        "request_animation_frame": true
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "renders.cache_root", "comparison": "eq", "value": 3.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.first_mount", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.needs_rerender", "comparison": "eq", "value": 2.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.marked_reuse_root", "comparison": "eq", "value": 0.0 }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Animation requests inside a cached subtree invalidate the nearest cache root.",
+        "note": "A subtree that requests animation should not be reused while it continues asking for another frame."
+      }
+    },
+    {
+      "id": "model-observation-survives-cache-hit-and-invalidates-on-change",
+      "scenario": {
+        "kind": "view_cache_lifecycle",
+        "frames": 4,
+        "dependency": "observed_model",
+        "update_after_frame": 1,
+        "update_model": "observed",
+        "contain_layout_when_bounds_known": true
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "renders.cache_root", "comparison": "eq", "value": 2.0 },
+          { "kind": "mechanism_metric", "metric_id": "observed.model_unique_values", "comparison": "eq", "value": 2.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.first_mount", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.marked_reuse_root", "comparison": "eq", "value": 2.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.needs_rerender", "comparison": "eq", "value": 1.0 }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Cache-hit frames must keep model observation edges live for later invalidation.",
+        "note": "Frame 1 is a cache hit. Updating the observed model after that frame must still invalidate the cached root on frame 2."
+      }
+    },
+    {
+      "id": "unrelated-model-change-does-not-rerender-cache-root",
+      "scenario": {
+        "kind": "view_cache_lifecycle",
+        "frames": 4,
+        "dependency": "observed_model",
+        "update_after_frame": 1,
+        "update_model": "unrelated"
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "renders.cache_root", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "observed.model_unique_values", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.first_mount", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.marked_reuse_root", "comparison": "eq", "value": 3.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.needs_rerender", "comparison": "eq", "value": 0.0 }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Model invalidation must be scoped to observed dependencies.",
+        "note": "A changed model with no observation edge must not defeat ViewCache reuse."
+      }
+    },
+    {
+      "id": "inspection-mode-disables-view-cache-reuse",
+      "scenario": {
+        "kind": "view_cache_lifecycle",
+        "frames": 3,
+        "dependency": "none",
+        "inspection_active": true
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "renders.cache_root", "comparison": "eq", "value": 3.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.first_mount", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.inspection_active", "comparison": "eq", "value": 2.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.marked_reuse_root", "comparison": "eq", "value": 0.0 }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Inspection/picking must see fresh child elements instead of reused cached children.",
+        "note": "The mechanism layer intentionally disables ViewCache reuse while inspection is active."
+      }
+    },
+    {
+      "id": "layout-query-size-change-invalidates-cache-root-next-frame",
+      "scenario": {
+        "kind": "layout_query_view_cache",
+        "frames": 4,
+        "initial_width": 80.0,
+        "changed_width": 140.0,
+        "change_before_frame": 2,
+        "viewport_width": 240.0,
+        "viewport_height": 120.0
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "renders.cache_root", "comparison": "eq", "value": 3.0 },
+          { "kind": "mechanism_metric", "metric_id": "layout_query.render_delta_same_frame", "comparison": "eq", "value": 0.0 },
+          { "kind": "mechanism_metric", "metric_id": "layout_query.render_delta_final", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "layout_query.root_read.frame1_width", "comparison": "eq", "value": 80.0, "eps": 0.01 },
+          { "kind": "mechanism_metric", "metric_id": "layout_query.root_read.frame2_width", "comparison": "eq", "value": 80.0, "eps": 0.01 },
+          { "kind": "mechanism_metric", "metric_id": "layout_query.root_read.frame3_width", "comparison": "eq", "value": 140.0, "eps": 0.01 },
+          { "kind": "mechanism_metric", "metric_id": "layout_query.cached_last_width", "comparison": "eq", "value": 140.0, "eps": 0.01 }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Layout-query reads are frame-lagged and invalidate dependent cache roots on the next frame.",
+        "note": "Changing a queried region's size should not rerender the dependent cache root in the same frame; it should rerender once the committed layout-query revision advances."
+      }
+    }
+  ]
+}

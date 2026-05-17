@@ -271,6 +271,9 @@ impl ElementHostWidget {
                     if let Some(label) = props.a11y.label.as_ref() {
                         cx.set_label(label.as_ref().to_string());
                     }
+                    if let Some(value) = props.a11y.value.as_ref() {
+                        cx.set_value(value.as_ref().to_string());
+                    }
                     if let Some(test_id) = props.a11y.test_id.as_ref() {
                         cx.set_test_id(test_id.as_ref().to_string());
                     }

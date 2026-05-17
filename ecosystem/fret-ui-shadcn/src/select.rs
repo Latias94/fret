@@ -1912,6 +1912,28 @@ fn select_impl<H: UiHost>(
             None
         }
 
+        fn trigger_value_text(
+            selected: Option<Arc<str>>,
+            entries: &[SelectEntry],
+            placeholder: &Arc<str>,
+            trigger_label_policy: SelectTriggerLabelPolicy,
+        ) -> Arc<str> {
+            if trigger_label_policy == SelectTriggerLabelPolicy::Value
+                && let Some(value) = selected.as_ref()
+            {
+                return value.clone();
+            }
+
+            selected
+                .as_ref()
+                .and_then(|v| {
+                    find_item_label_overrides(entries, v.as_ref()).map(
+                        |(label, _label_features_override, _label_axes_override)| label,
+                    )
+                })
+                .unwrap_or_else(|| placeholder.clone())
+        }
+
         fn count_items(entries: &[SelectEntry]) -> usize {
             let mut count: usize = 0;
             for entry in entries {
@@ -2639,12 +2661,26 @@ fn select_impl<H: UiHost>(
             props.a11y.required = required;
             props.a11y.invalid = aria_invalid.then_some(fret_core::SemanticsInvalid::True);
             props.a11y.test_id = trigger_test_id_for_trigger.clone();
+            let has_labelled_by_for_trigger = labelled_by_element_for_trigger.is_some();
             if !has_a11y_label_for_trigger {
                 props.a11y.labelled_by_element =
                     labelled_by_element_for_trigger.map(|id| id.0);
             }
             props.a11y.described_by_element =
                 described_by_element_for_trigger.map(|id| id.0);
+            let selected_for_a11y = cx
+                .get_model_cloned(&model_for_trigger, fret_ui::Invalidation::Paint)
+                .unwrap_or_default();
+            let trigger_value_for_a11y = trigger_value_text(
+                selected_for_a11y,
+                entries,
+                &placeholder,
+                trigger_label_policy,
+            );
+            props.a11y.value = Some(trigger_value_for_a11y.clone());
+            if props.a11y.label.is_none() && !has_labelled_by_for_trigger {
+                props.a11y.label = Some(trigger_value_for_a11y);
+            }
 
             // Radix Select uses `hideOthers(content)` (aria-hide outside) and disables outside
             // pointer events while open. In Fret we approximate that by installing a modal barrier
@@ -4732,11 +4768,17 @@ fn select_impl<H: UiHost>(
                                                 fret_ui::Invalidation::Paint,
                                             )
                                             .unwrap_or_default();
-                                        let (label, label_features_override, label_axes_override) =
+                                        let label = trigger_value_text(
+                                            selected.clone(),
+                                            entries,
+                                            &placeholder_for_value_node,
+                                            trigger_label_policy,
+                                        );
+                                        let (label_features_override, label_axes_override) =
                                             if trigger_label_policy == SelectTriggerLabelPolicy::Value
-                                                && let Some(value) = selected.as_ref()
+                                                && selected.is_some()
                                             {
-                                                (value.clone(), Vec::new(), Vec::new())
+                                                (Vec::new(), Vec::new())
                                             } else {
                                                 selected
                                                     .as_ref()
@@ -4745,17 +4787,23 @@ fn select_impl<H: UiHost>(
                                                             entries,
                                                             v.as_ref(),
                                                         )
-                                                    })
-                                                    .unwrap_or_else(|| {
-                                                        (
-                                                            placeholder_for_value_node.clone(),
-                                                            Vec::new(),
-                                                            Vec::new(),
+                                                        .map(
+                                                            |(
+                                                                _label,
+                                                                label_features_override,
+                                                                label_axes_override,
+                                                            )| {
+                                                                (
+                                                                    label_features_override,
+                                                                    label_axes_override,
+                                                                )
+                                                            },
                                                         )
                                                     })
+                                                    .unwrap_or_else(|| (Vec::new(), Vec::new()))
                                             };
 
-                                        let mut text = ui::text( label);
+                                        let mut text = ui::text(label);
                                         if let Some(font) = trigger_font_override {
                                             text = text.font(font);
                                         }
@@ -4998,6 +5046,96 @@ mod tests {
             find_pressable_by_test_id(&el, "select-trigger").expect("select trigger pressable");
         assert_eq!(trigger.layout.size.width, Length::Auto);
         assert_eq!(trigger.layout.flex.align_self, Some(CrossAlign::Start));
+    }
+
+    #[test]
+    fn select_trigger_exposes_accessible_name_and_current_value() {
+        fn render_trigger(
+            model_value: Option<Arc<str>>,
+            a11y_label: Option<&'static str>,
+            trigger_value_as_label: bool,
+        ) -> (Option<String>, Option<String>) {
+            let window = AppWindowId::default();
+            let mut app = App::new();
+            let mut ui: UiTree<App> = UiTree::new();
+            ui.set_window(window);
+
+            let value = app.models_mut().insert(model_value);
+            let open = app.models_mut().insert(false);
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                fret_core::Size::new(Px(400.0), Px(240.0)),
+            );
+            let mut services = FakeServices;
+            let items = vec![
+                SelectItem::new("alpha", "Alpha label"),
+                SelectItem::new("beta", "Beta label"),
+            ];
+
+            let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
+
+            fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+            let root = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "select-trigger-a11y-value",
+                |cx| {
+                    let mut select = Select::new(value.clone(), open.clone())
+                        .items(items)
+                        .value(SelectValue::new().placeholder("Choose fruit"))
+                        .trigger_test_id("select-trigger");
+                    if let Some(label) = a11y_label {
+                        select = select.a11y_label(label);
+                    }
+                    if trigger_value_as_label {
+                        select = select.trigger_value_as_label();
+                    }
+                    vec![select.into_element(cx)]
+                },
+            );
+            ui.set_root(root);
+            fret_ui_kit::OverlayController::render(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+            );
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+            let snap = ui.semantics_snapshot().expect("semantics snapshot");
+            let trigger = snap
+                .nodes
+                .iter()
+                .find(|n| n.test_id.as_deref() == Some("select-trigger"))
+                .expect("select trigger semantics");
+
+            (
+                trigger.label.as_deref().map(ToOwned::to_owned),
+                trigger.value.as_deref().map(ToOwned::to_owned),
+            )
+        }
+
+        let (label, value) = render_trigger(None, None, false);
+        assert_eq!(label.as_deref(), Some("Choose fruit"));
+        assert_eq!(value.as_deref(), Some("Choose fruit"));
+
+        let (label, value) = render_trigger(Some(Arc::from("beta")), None, false);
+        assert_eq!(label.as_deref(), Some("Beta label"));
+        assert_eq!(value.as_deref(), Some("Beta label"));
+
+        let (label, value) = render_trigger(Some(Arc::from("beta")), Some("Favorite fruit"), false);
+        assert_eq!(label.as_deref(), Some("Favorite fruit"));
+        assert_eq!(value.as_deref(), Some("Beta label"));
+
+        let (label, value) = render_trigger(Some(Arc::from("beta")), None, true);
+        assert_eq!(label.as_deref(), Some("beta"));
+        assert_eq!(value.as_deref(), Some("beta"));
     }
 
     #[test]

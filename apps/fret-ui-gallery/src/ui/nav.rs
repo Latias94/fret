@@ -1,6 +1,7 @@
 use super::*;
 use fret::AppComponentCx;
 use fret_ui::scroll::ScrollHandle;
+use fret_ui_kit::declarative::text as decl_text;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) struct NavVisibilitySummary {
@@ -166,7 +167,7 @@ pub(crate) fn sidebar_view(
 
     let title_row = ui::h_row(|cx| {
         [
-            cx.text("Fret UI Gallery"),
+            decl_text::text_section_chrome_label(cx, "Fret UI Gallery"),
             shadcn::Badge::new("WIP")
                 .variant(shadcn::BadgeVariant::Secondary)
                 .into_element(cx),
@@ -214,16 +215,7 @@ pub(crate) fn sidebar_view(
             }
 
             vec![
-                cx.text_props(TextProps {
-                    layout: Default::default(),
-                    text: Arc::from(title),
-                    style: None,
-                    color: Some(theme.color_token("muted-foreground")),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                    align: fret_core::TextAlign::Start,
-                    ink_overflow: fret_ui::element::TextInkOverflow::None,
-                }),
+                decl_text::text_section_chrome_label(cx, title),
                 ui::v_flex(move |_cx| group_items)
                     .layout(LayoutRefinement::default().w_full())
                     .gap(Space::N1)

@@ -397,21 +397,15 @@ where
                         },
                         move |ui| {
                             let element = ui.with_cx_mut(|cx| {
-                                let mut props = fret_ui::element::TextProps::new(title.clone());
-                                props.layout.size.width = if resizable_layout {
-                                    Length::Fill
+                                let title = if resizable_layout {
+                                    crate::declarative::text::text_chrome_title(cx, title.clone())
                                 } else {
-                                    Length::Auto
+                                    crate::declarative::text::text_section_chrome_label(
+                                        cx,
+                                        title.clone(),
+                                    )
                                 };
-                                if resizable_layout {
-                                    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
-                                    props.layout.flex.grow = 1.0;
-                                    props.layout.flex.shrink = 1.0;
-                                    props.layout.flex.basis = Length::Px(Px(0.0));
-                                }
-                                props.wrap = fret_core::TextWrap::None;
-                                props.overflow = fret_core::TextOverflow::Ellipsis;
-                                cx.text_props(props).attach_semantics(
+                                title.attach_semantics(
                                     fret_ui::element::SemanticsDecoration::default()
                                         .test_id(title_bar_test_id.clone()),
                                 )
@@ -441,7 +435,7 @@ where
                                     });
                                     host.notify(acx);
                                 }));
-                                vec![cx.text("\u{00D7}")]
+                                vec![floating_window_close_glyph_text(cx)]
                             })
                         });
 
@@ -863,4 +857,45 @@ where
 
     ui.add(window);
     chrome
+}
+
+fn floating_window_close_glyph_text<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    crate::declarative::text::text_chrome_glyph(cx, Arc::<str>::from("\u{00D7}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Rect, TextOverflow, TextWrap};
+    use fret_ui::element::ElementKind;
+    use fret_ui::elements;
+
+    fn test_bounds() -> Rect {
+        Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(48.0)))
+    }
+
+    #[test]
+    fn floating_window_close_glyph_uses_shared_chrome_glyph_text_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+            floating_window_close_glyph_text(cx)
+        });
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected floating window close glyph to be text");
+        };
+
+        assert_eq!(props.text.as_ref(), "\u{00D7}");
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert!(el.inherited_text_style.is_some());
+    }
 }

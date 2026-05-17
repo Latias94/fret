@@ -434,6 +434,59 @@ fn pressable_spin_button_exposes_stepper_actions_when_numeric_metadata_is_presen
 }
 
 #[test]
+fn pressable_semantics_exposes_label_and_value_separately() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-pressable-value",
+        |cx| {
+            let mut props = crate::element::PressableProps::default();
+            props.enabled = true;
+            props.focusable = true;
+            props.layout.size.width = Length::Px(Px(200.0));
+            props.layout.size.height = Length::Px(Px(24.0));
+            props.a11y = crate::element::PressableA11y {
+                role: Some(fret_core::SemanticsRole::Button),
+                label: Some(Arc::from("Filter")),
+                value: Some(Arc::from("Banana")),
+                ..Default::default()
+            };
+
+            vec![cx.pressable(props, |_cx, _state| Vec::new())]
+        },
+    );
+    ui.set_root(root);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let node = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == fret_core::SemanticsRole::Button && n.label.as_deref() == Some("Filter")
+        })
+        .expect("expected a Button semantics node");
+
+    assert_eq!(node.value.as_deref(), Some("Banana"));
+}
+
+#[test]
 fn declarative_scrollbar_emits_role_and_scroll_metadata() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

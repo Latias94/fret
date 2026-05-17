@@ -2,7 +2,8 @@
   "schema_version": 2,
   "meta": {
     "name": "ui-gallery-hover-card-trigger-delays",
-    "required_capabilities": ["diag.script_v2"]
+    "required_capabilities": ["diag.script_v2"],
+    "env_defaults": { "FRET_DIAG_FIXED_FRAME_DELTA_MS": "16" }
   },
   "steps": [
     {

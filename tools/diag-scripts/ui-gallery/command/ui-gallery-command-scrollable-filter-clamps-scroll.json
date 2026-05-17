@@ -139,7 +139,7 @@
       "require_fully_within_container": true
     },
     {
-      "type": "click",
+      "type": "click_stable",
       "target": {
         "kind": "test_id",
         "id": "ui-gallery-command-scrollable-trigger.chrome"
@@ -182,7 +182,17 @@
       }
     },
     {
-      "type": "click",
+      "type": "ensure_visible",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-command-scrollable-input"
+      },
+      "padding_px": 4.0,
+      "within_window": true,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
       "target": {
         "kind": "test_id",
         "id": "ui-gallery-command-scrollable-input"

@@ -801,6 +801,805 @@ Progress record (Material distinct encode tracking uses HashSet scratch):
   - `cargo test -p fret-render-wgpu --lib`
   - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+Progress record (RenderPlan compiler modularization):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 1; Stage 24 continues)
+- Objective:
+  - Extract target and budget helper code from `render_plan_compiler.rs` without changing the
+    `compile_for_scene` entrypoint, pass order, target lifetimes, load-op semantics, or degradation
+    decisions.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
+    `compile_for_scene_inner`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`
+    (`intermediate_budget_breakdown_for_chain`, `can_allocate_intermediate_bytes`,
+    `choose_backdrop_source_group_pyramid_choice`)
+  - `docs/workstreams/renderer-render-plan-semantics-audit-v1/renderer-render-plan-semantics-audit-v1.md`
+    (RenderPlan invariants)
+- Gates planned:
+  - `python3 tools/check_layering.py`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+- Gates run:
+  - `python3 tools/check_layering.py`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `cargo test -p fret-render-wgpu --lib` compiled, but failed on unrelated text/system-font
+    environment tests in this Windows environment.
+
+Progress record (RenderPlan compiler context boundary):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 2; Stage 24 continues)
+- Objective:
+  - Move structural compiler outputs behind an explicit context so pass/degradation/segment
+    mutation has one owner before extracting scope-specific compilers.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/context.rs`
+    (`RenderPlanCompilerCtx`, `alloc_segment`, `flush_scene_range`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (`compile_for_scene_inner` uses the context while preserving the entrypoint and IR shape)
+- Gates run:
+  - `python3 tools/check_layering.py`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `cargo test -p fret-render-wgpu --lib` compiled, but failed on unrelated text/system-font
+    environment tests in this Windows environment.
+
+Progress record (RenderPlan compiler clip-path helper split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3a; Stage 24 continues)
+- Objective:
+  - Split clip-path push/pop planning out of the main RenderPlan compiler loop without changing
+    marker ordering, target lifetime semantics, pass load ops, or `ClipPathDisabled` degradation
+    reasons.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`
+    (`compile_clip_path_push`, `compile_clip_path_pop`, `active_mask_targets`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (`EffectMarkerKind::ClipPathPush`, `EffectMarkerKind::ClipPathPop` delegate to the helper)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler composite-group helper split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3b-1; Stage 24 continues)
+- Objective:
+  - Split composite-group push/pop planning out of the main RenderPlan compiler loop without
+    changing marker ordering, target lifetime semantics, pass load ops, isolated opacity, or
+    `CompositeGroupBlendDegradedToOver` degradation reasons.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/composite_group.rs`
+    (`compile_composite_group_push`, `compile_composite_group_pop`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (`EffectMarkerKind::CompositeGroupPush`, `EffectMarkerKind::CompositeGroupPop` delegate to the helper)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler backdrop-source-group helper split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3b-2a; Stage 24 continues)
+- Objective:
+  - Split backdrop-source-group push/pop planning out of the main RenderPlan compiler loop without
+    changing the `compile_for_scene` entrypoint, `RenderPlan` IR shape, pass ordering, target
+    reservation/lifetime semantics, `reserved_bytes` accounting, or pyramid choice/degradation
+    counters.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/backdrop_source_group.rs`
+    (`compile_backdrop_source_group_push`, `compile_backdrop_source_group_pop`,
+    `BackdropSourceGroupScope::effect_ctx`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (`EffectMarkerKind::BackdropSourceGroupPush`, `EffectMarkerKind::BackdropSourceGroupPop`
+    delegate to the helper; effect chains read the backdrop context via `effect_ctx`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler effect-scope helper split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3b-2b; Stage 24 continues)
+- Objective:
+  - Split effect-scope push/pop planning and effect-chain budget sampling out of the main
+    RenderPlan compiler loop without changing the `compile_for_scene` entrypoint, `RenderPlan` IR
+    shape, marker/pass ordering, FilterContent target lifetime, load-op behavior, Backdrop no-op
+    degradation, FilterContent disabled degradation, or backdrop-source-group context propagation.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
+    (`compile_effect_scope_push`, `compile_effect_scope_pop`,
+    `EffectChainBudgetStats::apply_to_plan`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (`EffectMarkerKind::Push`, `EffectMarkerKind::Pop` delegate to the helper; finalize applies
+    effect-chain budget stats after `RenderPlan::finalize`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler path MSAA helper split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3c; Stage 24 continues)
+- Objective:
+  - Split path MSAA batch planning out of the main RenderPlan compiler loop without changing the
+    `compile_for_scene` entrypoint, `RenderPlan` IR shape, `cursor`/`scene_range_start`
+    advancement, scene-range flush ordering, segment allocation, `PathMsaaBatchPass` fields,
+    load-op behavior, or marker boundaries.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/path_msaa.rs`
+    (`try_compile_path_msaa_batch`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (main loop delegates path MSAA batch planning and only applies the returned cursor)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler preflight helper split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3d; Stage 24 continues)
+- Objective:
+  - Split `compile_for_scene` preflight and scene-target planning out of the main compiler file
+    without changing the `compile_for_scene` entrypoint, `RenderPlan` IR shape, backdrop effect
+    enablement, postprocess fallback, scene target selection, or explicit sRGB encode behavior.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/preflight.rs`
+    (`plan_render_targets`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (`compile_for_scene` delegates preflight and passes the returned `postprocess`/`scene_target`
+    into `compile_for_scene_inner`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler marker dispatch helper split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3e; Stage 24 continues)
+- Objective:
+  - Split effect-marker dispatch state and routing out of the main RenderPlan compiler loop
+    without changing the `compile_for_scene` entrypoint, `RenderPlan` IR shape, `marker_ix`
+    advancement, marker/pass ordering, scope stack lifetimes, target reservation, budget stats, or
+    degradation snapshots.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (`MarkerDispatchState`, `compile_marker`, `into_parts`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (main loop delegates marker routing while retaining sequence-point flushes and `marker_ix`
+    advancement)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler draw-scope helper split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3f; Stage 24 continues)
+- Objective:
+  - Split draw-scope stack ownership and load-op consumption out of the main RenderPlan compiler
+    file without changing the `compile_for_scene` entrypoint, `RenderPlan` IR shape, pass/load-op
+    ordering, scope clear semantics, target lifetimes, budget stats, or degradation snapshots.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/draw_scope.rs`
+    (`DrawScope`, `take_scope_load_for_write`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (main loop initializes the scene draw scope and delegates all scope mutation)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/{clip_path.rs,composite_group.rs,effect_scope.rs}`
+    (pop paths continue consuming parent-target load ops through `take_scope_load_for_write`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler preflight eligibility consolidation):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3g; Stage 24 continues)
+- Objective:
+  - Move scissor-sized-intermediate eligibility into compile preflight so the main RenderPlan
+    compiler loop no longer scans `EffectMarkerKind` directly before marker dispatch, without
+    changing target selection, `RenderPlan` IR shape, marker/pass ordering, load-op behavior, or
+    degradation snapshots.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/preflight.rs`
+    (`RenderPlanPreflight`, `plan_render_targets`, scissor-sized-intermediate eligibility)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (`compile_for_scene` passes the preflight result into `compile_for_scene_inner`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler effect-chain helper split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3h; Stage 24 continues)
+- Objective:
+  - Split effect-chain pass application and budget-stat accumulation out of the effect-scope
+    compiler without changing effect-scope push/pop target lifetimes, Backdrop no-op degradation,
+    FilterContent disabled degradation, effect degradation snapshots, blur quality snapshots, or
+    compile stats.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_chain.rs`
+    (`apply_chain_in_place`, `EffectChainApplyCtx`, `EffectChainBudgetStats::apply_to_plan`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
+    (push/pop lifetimes still pass original stats/degradation/blur handles into `effect_chain`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (`EffectChainBudgetStats` ownership moved to the effect-chain helper)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler target-selection helper split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3i; Stage 24 continues)
+- Objective:
+  - Split free intermediate target selection out of effect/composite/clip/backdrop-source-group
+    compiler paths without changing `Intermediate0..3` allocation order, reserved-target
+    exclusion, active draw-scope exclusion, scope lifetimes, pass/load-op behavior, or existing
+    degradation reason precedence.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_selection.rs`
+    (`choose_free_intermediate_target`, `has_free_intermediate_target_except`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/{effect_scope,composite_group,clip_path,backdrop_source_group}.rs`
+    (call sites keep their budget checks and degradation reason ordering)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`
+    (budget/degradation tests remain the focused semantic guard)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler clip-path mask target-selection helper split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3j; Stage 24 continues)
+- Objective:
+  - Split clip-path `Mask0..2` target selection into the target-selection helper module while
+    keeping the mask target pool separate from intermediate targets, preserving active clip-path
+    scope exclusion, allocation order, content target selection, budget checks, and
+    `ClipPathDisabled` degradation reason precedence.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_selection.rs`
+    (`choose_free_clip_path_mask_target` plus focused order/exhaustion tests)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`
+    (`compile_clip_path_push` keeps budget and degradation checks local)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler active mask target scratch cleanup):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3k; Stage 24 continues)
+- Objective:
+  - Replace the Backdrop effect push path's temporary active clip-path mask target `Vec` with a
+    fixed-size snapshot, avoiding heap allocation while preserving mask target order and the exact
+    unavailable-mask slice passed into effect-chain planning.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`
+    (`ActiveMaskTargets::from_clip_path_scopes`, `ActiveMaskTargets::as_slice`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
+    (Backdrop push path passes the fixed snapshot slice to `EffectChainApplyCtx`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_effects`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan::tests::compile_for_scene_backdrop_color_adjust_emits_mask_target_when_budget_allows`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler effect-chain target scratch cleanup):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3l; Stage 24 continues)
+- Objective:
+  - Replace effect-chain in-use target deduplication's temporary `Vec` with
+    `SmallVec<[PlanTarget; 8]>`, avoiding heap allocation while preserving draw-scope-first
+    target order, reserved-target append order, and the exact slice passed into effect-chain
+    planning.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_chain.rs`
+    (`apply_chain_in_place` builds the in-use target slice with `SmallVec<[PlanTarget; 8]>`)
+  - `crates/fret-render-wgpu/Cargo.toml` + `Cargo.lock`
+    (`smallvec` workspace dependency enabled for `fret-render-wgpu`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_effects`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan::tests::compile_for_scene_backdrop_color_adjust_emits_mask_target_when_budget_allows`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler backdrop dispatch state split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3m; Stage 24 continues)
+- Objective:
+  - Move backdrop-source-group dispatch state out of `marker_dispatch.rs`, centralizing
+    backdrop scopes, reserved targets, in-use bytes, push/pop mutation, and current effect context
+    access behind `BackdropSourceGroupDispatchState` without changing marker routing, target
+    lifetime, raw/pyramid budget decisions, degradation counters, or effect-chain inputs.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/backdrop_source_group.rs`
+    (`BackdropSourceGroupDispatchState::{compile_push,compile_pop,reserved_targets,in_use_bytes,effect_ctx}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (`MarkerDispatchState` owns one backdrop dispatch-state field)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
+    (`EffectScopePushCtx` receives only the current backdrop effect context)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler clip-path dispatch state split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3n; Stage 24 continues)
+- Objective:
+  - Move clip-path dispatch state out of `marker_dispatch.rs`, centralizing clip scopes,
+    mask-in-use bytes, push/pop mutation, and active mask target snapshots behind
+    `ClipPathDispatchState` while preserving `ClipPathPush/Pop` ordering, `Mask0..2` allocation
+    order, `ClipPathDisabled` degradation reason precedence, and effect-scope backdrop masking
+    semantics.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`
+    (`ClipPathDispatchState::{compile_push,compile_pop,mask_in_use_bytes,active_mask_targets}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (`MarkerDispatchState` owns one clip-path dispatch-state field)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
+    (`EffectScopePushCtx` receives the active-mask snapshot directly)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler composite-group dispatch state split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3o; Stage 24 continues)
+- Objective:
+  - Move composite-group dispatch state out of `marker_dispatch.rs`, centralizing composite
+    scopes and push/pop mutation behind `CompositeGroupDispatchState` while preserving
+    `CompositeGroupPush/Pop` pass ordering, `Intermediate0..3` allocation order,
+    `CompositeGroupBlendDegradedToOver` degradation reason precedence, and composite pass
+    load-op behavior.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/composite_group.rs`
+    (`CompositeGroupDispatchState::{compile_push,compile_pop}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (`MarkerDispatchState` owns one composite-group dispatch-state field)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+
+Progress record (RenderPlan compiler effect-scope dispatch state split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3p; Stage 24 continues)
+- Objective:
+  - Move effect-scope dispatch state out of `marker_dispatch.rs`, centralizing effect scopes,
+    effect-chain budget stats, degradation snapshots, blur-quality snapshots, and effect push/pop
+    mutation behind `EffectScopeDispatchState` while preserving FilterContent target lifetimes,
+    Backdrop no-op degradation, FilterContent disabled degradation, effect-chain inputs, pass
+    ordering, and load-op behavior.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
+    (`EffectScopeDispatchState::{compile_push,compile_pop,backdrop_source_group_degradations_mut,into_parts}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (`MarkerDispatchState` owns one effect-scope dispatch-state field)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+
+Progress record (RenderPlan compiler marker shared input snapshot):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3q; Stage 24 continues)
+- Objective:
+  - Introduce an owned shared-input snapshot for marker dispatch so repeated reads of active
+    clip-path mask bytes/targets and backdrop-source-group reserved targets, in-use bytes, and
+    effect context are centralized without reintroducing borrow coupling between dispatch states.
+  - Preserve marker routing order, `Push`/`Pop` pass ordering, target allocation order, scope
+    lifetimes, degradation snapshots, and effect-chain/backdrop input semantics.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (`MarkerSharedDispatchInputs`, `MarkerDispatchState::shared_inputs`, per-branch snapshot use)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`
+    (`ClipPathDispatchState::{mask_in_use_bytes,active_mask_targets}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/backdrop_source_group.rs`
+    (`BackdropSourceGroupDispatchState::{reserved_targets,in_use_bytes,effect_ctx}`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler backdrop reserved-target stack cleanup):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3r; Stage 24 continues)
+- Objective:
+  - Replace `BackdropSourceGroupDispatchState`'s reserved-target stack `Vec<PlanTarget>` with a
+    bounded `SmallVec<[PlanTarget; 4]>`, matching the renderer's four intermediate target pool.
+  - Preserve the `reserved_targets()` slice contract, stack push/pop order, in-use byte
+    accounting, raw/pyramid budget decisions, degradation counters, marker dispatch inputs, and
+    pass/load-op ordering.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/backdrop_source_group.rs`
+    (`BackdropSourceGroupDispatchState::reserved_targets`,
+    `compile_backdrop_source_group_push`, `compile_backdrop_source_group_pop`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_selection.rs`
+    (`choose_free_intermediate_target` consumes the same reserved-target slice)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan::tests::compile_for_scene_backdrop_color_adjust_emits_mask_target_when_budget_allows`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler effect-scope owner-method cleanup):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3s; Stage 24 continues)
+- Objective:
+  - Move the private effect-scope push/pop helper bodies onto `EffectScopeDispatchState`, removing
+    the need to thread `scopes`, effect-chain budget stats, degradation snapshots, and blur-quality
+    snapshots as independent mutable parameters.
+  - Preserve `EffectScopePushCtx`/`EffectScopePopCtx`, FilterContent and Backdrop push/pop
+    semantics, target lifetimes, pass/load-op ordering, degradation and blur-quality snapshots,
+    effect-chain budget stats, and marker dispatch call sites.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
+    (`EffectScopeDispatchState::{compile_push_inner,compile_pop_inner}`,
+    `EffectScopeDispatchState::{compile_push,compile_pop}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (unchanged call surface into `EffectScopeDispatchState`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_effects`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan::tests::compile_for_scene_backdrop_color_adjust_emits_mask_target_when_budget_allows`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler backdrop-source-group owner-method cleanup):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3t; Stage 24 continues)
+- Objective:
+  - Move the private backdrop-source-group push/pop helper bodies onto
+    `BackdropSourceGroupDispatchState`, removing the need to thread scopes, reserved targets, and
+    in-use bytes as independent mutable parameters.
+  - Preserve `BackdropSourceGroupPushCtx`, `reserved_targets()` slice access, raw target
+    push/pop stack order, reserved-byte/in-use-byte accounting, raw/pyramid budget decisions,
+    degradation counters, marker dispatch call sites, and pass/load-op ordering.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/backdrop_source_group.rs`
+    (`BackdropSourceGroupDispatchState::{compile_push_inner,compile_pop_inner}`,
+    `BackdropSourceGroupDispatchState::{compile_push,compile_pop,reserved_targets,in_use_bytes,effect_ctx}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (unchanged call surface into `BackdropSourceGroupDispatchState`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan::tests::compile_for_scene_backdrop_color_adjust_emits_mask_target_when_budget_allows`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_effects`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler clip-path owner-method cleanup):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3u; Stage 24 continues)
+- Objective:
+  - Move the private clip-path push/pop helper bodies onto `ClipPathDispatchState`, removing the
+    need to thread clip scopes and mask-in-use bytes as independent mutable parameters.
+  - Preserve `ClipPathPushCtx`, `mask_in_use_bytes()` and `active_mask_targets()` reads,
+    `PathClipMask` pass generation order, `Mask0..2` allocation order, content target push/pop
+    order, mask byte accounting, `ClipPathDisabled` reason precedence, marker dispatch call
+    sites, and pass/load-op ordering.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`
+    (`ClipPathDispatchState::{compile_push_inner,compile_pop_inner}`,
+    `ClipPathDispatchState::{compile_push,compile_pop,mask_in_use_bytes,active_mask_targets}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (unchanged call surface into `ClipPathDispatchState`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan::tests::compile_for_scene_clip_path_preserves_output_clear_guardrail`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler composite-group owner-method cleanup):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3v; Stage 24 continues)
+- Objective:
+  - Move the private composite-group push/pop helper bodies onto
+    `CompositeGroupDispatchState`, removing the need to thread composite scopes as an independent
+    mutable parameter.
+  - Preserve `CompositeGroupPushCtx`, `CompositeGroupPush/Pop` pass ordering,
+    `Intermediate0..3` allocation order, scissor-sized content target selection,
+    `CompositeGroupBlendDegradedToOver` reason precedence, content target push/pop order,
+    marker dispatch call sites, and composite pass load-op behavior.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/composite_group.rs`
+    (`CompositeGroupDispatchState::{compile_push_inner,compile_pop_inner}`,
+    `CompositeGroupDispatchState::{compile_push,compile_pop}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (unchanged call surface into `CompositeGroupDispatchState`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler draw-scope stack wrapper):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3w; Stage 24 continues)
+- Objective:
+  - Replace cross-module `Vec<DrawScope>` threading with `DrawScopeStack`, centralizing
+    current-scope lookup, push/pop, live-target iteration, target-presence checks, and load-op
+    consumption.
+  - Preserve `SceneDrawRange`, `PathMsaaBatch`, clip-path, effect-scope, backdrop-source-group,
+    and composite-group pass ordering; preserve target lifetime, target selection order,
+    intermediate budget accounting, and clear/load consumption semantics.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/draw_scope.rs`
+    (`DrawScopeStack::{new,current,current_mut,push,pop,iter,contains_target,take_load_for_write}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (`compile_for_scene_inner` owns a `DrawScopeStack`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_selection.rs`
+    (`DrawScopeStack` live-target checks for intermediate target allocation)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`
+    (`DrawScopeStack` live-scope iteration for budget accounting)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler scoped intermediate allocation helper):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3x; Stage 24 continues)
+- Objective:
+  - Extract the shared scoped intermediate target allocation budget filter used by clip-path
+    content targets, effect-scope FilterContent targets, and composite-group content targets.
+  - Preserve `Intermediate0..3` allocation order, reserved-target exclusion, live draw-scope
+    exclusion, `had_free_target` evidence, budget-zero vs budget-insufficient degradation reason
+    precedence, and each caller's own scope push/pop and degradation record behavior.
+  - Keep backdrop-source-group raw target budgeting separate because that path reserves a source
+    snapshot target rather than a pushed draw content scope.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_selection.rs`
+    (`IntermediateAllocationBudget`, `choose_budgeted_intermediate_target`,
+    `budget_filter_intermediate_target`,
+    `budgeted_intermediate_target_preserves_free_target_evidence_when_budget_blocks`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`
+    (`ClipPathDispatchState::compile_push_inner`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
+    (`EffectScopeDispatchState::compile_push_inner` FilterContent branch)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/composite_group.rs`
+    (`CompositeGroupDispatchState::compile_push_inner`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan::tests::compile_for_scene_composite_group_preserves_output_clear_guardrail`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler marker input snapshot cleanup):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3y; Stage 24 continues)
+- Objective:
+  - Replace the all-fields `MarkerSharedDispatchInputs` copy with branch-specific borrowed input
+    snapshots for effect-scope, clip-path, backdrop-source-group, and composite-group marker
+    branches.
+  - Preserve marker routing order, dispatch-state ownership, backdrop-source-group reserved-target
+    lifetimes, clip-path active mask snapshot semantics, backdrop-source-group degradation counter
+    mutation, and all target allocation/degradation behavior.
+  - Avoid copying reserved targets into a per-marker `SmallVec`; branches now borrow the reserved
+    target slice from `BackdropSourceGroupDispatchState` when they need it.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (`BackdropSourceGroupTargetInputs`, `EffectScopePushInputs`,
+    `ClipMaskAndBackdropTargetInputs`, `effect_scope_push_inputs`,
+    `clip_mask_and_backdrop_target_inputs`, `backdrop_source_group_targets`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/backdrop_source_group.rs`
+    (`BackdropSourceGroupDispatchState::{reserved_targets,in_use_bytes,effect_ctx}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`
+    (`ClipPathDispatchState::{mask_in_use_bytes,active_mask_targets}`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler marker dispatch branch split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3z; Stage 24 continues)
+- Objective:
+  - Split `MarkerDispatchState::compile_marker` branch bodies into private methods for effect
+    scope push/pop, clip-path push, backdrop-source-group push, and composite-group push.
+  - Preserve the `compile_marker` route order, marker variant mapping, dispatch state ownership,
+    branch-specific borrowed input snapshots, reserved target lifetimes, degradation counter
+    mutation, target lifetime, and pass/load-op ordering.
+  - Keep the public marker dispatch call surface unchanged for `compile_for_scene_inner`.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (`MarkerDispatchState::compile_marker`,
+    `MarkerDispatchState::{compile_effect_scope_push,compile_effect_scope_pop,compile_clip_path_push,compile_backdrop_source_group_push,compile_composite_group_push}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (`compile_for_scene_inner` unchanged call into `MarkerDispatchState::compile_marker`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
+Progress record (RenderPlan compiler Stage 24 closeout scan):
+
+- Date: 2026-05-17
+- Status: Closed (Stage 24 complete)
+- Objective:
+  - Confirm that the RenderPlan compiler modularization target is met and that remaining internals
+    do not justify another Stage 24 slice.
+  - Keep semantic expansion work out of this closure; post-v1 renderer semantics remain tracked in
+    the deferred M7 backlog or future workstreams.
+- Evidence anchors:
+  - `docs/workstreams/renderer-vnext-fearless-refactor-v1/renderer-vnext-fearless-refactor-v1-todo.md`
+    (`REN-VNEXT-refactor-240` marked complete)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (`compile_for_scene`, `compile_for_scene_inner`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (`MarkerDispatchState::compile_marker` route-order-preserving dispatcher)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/draw_scope.rs`
+    (`DrawScopeStack`)
+- Scan notes:
+  - No remaining `MarkerSharedDispatchInputs`, `take_scope_load_for_write`, bare
+    `Vec<DrawScope>` threading outside `DrawScopeStack`, or standalone push/pop helper functions
+    were found.
+  - Remaining `compile_push`/`compile_pop` methods are dispatch-state entrypoints and are
+    intentionally retained.
+- Gates run:
+  - `rg -n "MarkerSharedDispatchInputs|shared_inputs\\(|take_scope_load_for_write|Vec<DrawScope>|&mut Vec<DrawScope>|fn compile_.*push\\(|fn compile_.*pop\\(|compile_.*_push\\(|compile_.*_pop\\(" crates/fret-render-wgpu/src/renderer/render_plan_compiler crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+  - `git status --short`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

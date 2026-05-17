@@ -597,7 +597,7 @@ pub fn shadow_xl(theme: &impl ThemeTokenRead, radius: Px) -> ShadowStyle {
 mod tests {
     use super::*;
 
-    use fret_ui::element::CrossAlign;
+    use fret_ui::element::{CrossAlign, Length};
 
     #[derive(Debug, Default)]
     struct TestTheme;
@@ -649,5 +649,14 @@ mod tests {
         assert_eq!(layout.flex.align_self, Some(CrossAlign::Stretch));
         assert_eq!(layout.grid.align_self, Some(CrossAlign::Stretch));
         assert_eq!(layout.grid.justify_self, Some(CrossAlign::Center));
+    }
+
+    #[test]
+    fn layout_refinement_flex_1_uses_tailwind_percent_basis() {
+        let layout = layout_style(&TestTheme, LayoutRefinement::default().flex_1());
+
+        assert_eq!(layout.flex.grow, 1.0);
+        assert_eq!(layout.flex.shrink, 1.0);
+        assert_eq!(layout.flex.basis, Length::Fraction(0.0));
     }
 }

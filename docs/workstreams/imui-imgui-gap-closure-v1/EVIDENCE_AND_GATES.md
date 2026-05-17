@@ -48,11 +48,14 @@ Last updated: 2026-05-17
   - `ecosystem/fret-imui/src/tests/popup_hover/mod.rs`
   - `ecosystem/fret-ui-kit/src/imui.rs`
   - `ecosystem/fret-ui-kit/src/declarative/text.rs`
+  - `ecosystem/fret-ui-kit/src/declarative/file_tree.rs`
+  - `ecosystem/fret-ui-kit/src/declarative/table.rs`
   - `ecosystem/fret-ui-kit/src/imui/control_chrome.rs`
   - `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/menu_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs`
+  - `ecosystem/fret-ui-kit/src/imui/separator_text_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs`
   - `ecosystem/fret-ui-kit/src/imui/table_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs`
@@ -71,8 +74,21 @@ Last updated: 2026-05-17
   - `ecosystem/fret-ui-editor/src/imui.rs`
   - `ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs`
   - `ecosystem/fret-ui-editor/src/primitives/input_group.rs`
+  - `ecosystem/fret-ui-editor/src/primitives/popup_list.rs`
+  - `ecosystem/fret-ui-editor/src/primitives/readout.rs`
+  - `ecosystem/fret-ui-editor/src/composites/property_group.rs`
+  - `ecosystem/fret-ui-editor/src/composites/property_row.rs`
+  - `ecosystem/fret-ui-editor/src/controls/field_status.rs`
+  - `ecosystem/fret-ui-editor/src/controls/color_edit.rs`
+  - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/copy.rs`
+  - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/numeric.rs`
+  - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/options.rs`
+  - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview.rs`
+  - `ecosystem/fret-ui-editor/src/controls/color_edit/popup/tooltip.rs`
   - `ecosystem/fret-ui-editor/src/controls/drag_value.rs`
   - `ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs`
+  - `ecosystem/fret-ui-editor/src/controls/enum_select.rs`
+  - `ecosystem/fret-ui-editor/src/controls/text_assist_field.rs`
   - `ecosystem/fret/src/lib.rs`
   - `apps/fret-cookbook/src/lib.rs`
 - Closed image item and child resize follow-ons:
@@ -102,7 +118,19 @@ Last updated: 2026-05-17
   - `ecosystem/fret-ui-kit/src/recipes/imui_sortable.rs`
   - `ecosystem/fret-ui-kit/src/recipes/imui_drag_preview.rs`
   - `apps/fret-examples/src/editor_notes_demo.rs`
+  - `apps/fret-examples/src/docking_demo.rs`
   - `apps/fret-examples/src/docking_arbitration_demo.rs`
+  - `apps/fret-examples/src/container_queries_docking_demo.rs`
+  - `apps/fret-examples/tests/docking_demo_surface.rs`
+  - `apps/fret-examples/tests/docking_arbitration_surface.rs`
+  - `apps/fret-examples/tests/container_queries_docking_surface.rs`
+  - `apps/fret-ui-gallery/src/driver/toaster.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs`
+  - `apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/mvp/gates.rs`
+  - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
+  - `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs`
+  - `ecosystem/fret-ui-ai/src/elements/mod.rs`
+  - `ecosystem/fret-ui-ai/src/surface_policy_tests.rs`
   - `tools/gate_imui_workstream_source.py`
   - `tools/diag_gate_imui_product_chain.py`
   - `tools/diag_gate_imui_p2_devtools_first_open.py`
@@ -182,6 +210,11 @@ Run evidence:
   `text_table_cell(...)` too. Header labels now share compact single-line ellipsis semantics with
   body cells instead of default word wrapping. Gate: `cargo nextest run -p fret-ui-kit --features
   imui --lib table_header_label_uses_shared_table_cell_text_role --no-fail-fast`.
+- 2026-05-17: routed sortable IMUI table header sort indicators through `text_chrome_glyph(...)`
+  instead of bare `cx.text(...)`. Header labels remain table-cell text, while sort arrows are now
+  fixed chrome glyphs with single-line clip semantics. Gate: `cargo nextest run -p fret-ui-kit
+  --features imui --lib table_sort_indicator_uses_shared_chrome_glyph_text_role
+  --no-fail-fast`.
 - 2026-05-16: added static table column visibility through `TableColumn::hidden()` and
   `TableColumn::with_visible(bool)`. Hidden columns still consume author-submitted row cells in
   declared column order, but they do not render header/body cells and do not emit header responses.
@@ -190,6 +223,26 @@ Run evidence:
   fret-ui-kit --features imui --test imui_table_smoke table_column_visibility_helpers_compile
   --no-fail-fast`, and `cargo nextest run -p fret-imui
   table_helper_skips_hidden_columns_in_header_and_body --no-fail-fast`.
+- 2026-05-17: added runtime table-column visibility state through
+  `ImUiTableColumnVisibilityState`. The helper stays in `fret-ui-kit::imui`, keeps storage opaque,
+  applies stable-id overrides to `TableColumn` lists before render, and intentionally does not add
+  persistence, header-menu policy, freeze panes, or a Dear ImGui-style mutable table runtime.
+  Gates: `cargo nextest run -p fret-ui-kit --features imui --lib
+  visibility_state_applies_runtime_overrides_by_stable_column_id
+  visibility_state_leaves_unlisted_and_unidentified_columns_at_declared_visibility
+  visibility_state_toggle_uses_current_override_or_default_visibility --no-fail-fast`, `cargo
+  nextest run -p fret-ui-kit --features imui --test imui_table_smoke
+  table_column_visibility_state_applies_runtime_visibility_by_column_id --no-fail-fast`, `cargo
+  nextest run -p fret-imui table_helper_applies_runtime_column_visibility_state
+  table_helper_skips_hidden_columns_in_header_and_body --no-fail-fast`, and `python
+  tools/gate_imui_workstream_source.py`.
+- 2026-05-17: added a table column visibility menu-item bridge through
+  `table_column_visibility_menu_item(...)`. The helper stays in `fret-ui-kit::imui`, reuses the
+  existing checkbox menu-item behavior, updates `ImUiTableColumnVisibilityState`, and intentionally
+  does not add automatic header context-menu popup wiring or persistence. Gates: `cargo nextest run
+  -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`, `cargo nextest run -p
+  fret-imui table_column_visibility_menu_item_updates_visibility_state --no-fail-fast`, and
+  `python tools/gate_imui_workstream_source.py`.
 - 2026-05-16: introduced `text_control_readout(...)` as the shared compact control-readout text
   role. The UI Gallery code-editor toolbar keeps its doc-layout helper, but that helper now
   delegates to `fret-ui-kit::declarative::text::text_control_readout(...)`, so dense status/readout
@@ -211,6 +264,22 @@ Run evidence:
   text-role vocabulary pass without breaking shadcn/Tailwind-oriented naming. Gate: `cargo nextest
   run -p fret-ui-kit --features imui --lib
   prose_variants_and_code_wrap_install_semantic_inherited_overrides --no-fail-fast`.
+- 2026-05-17: added a shared text-role layout gate in
+  `fret-ui-kit::declarative::text`. The gate uses a wrapping fake text service plus
+  `UiTree::layout_all(...)` to prove the base single-line roles (`text_control_readout(...)`,
+  `text_button_label(...)`, `text_table_cell(...)`, and `text_code_block(...)`) stay one measured
+  line under narrow resize, while `text_paragraph(...)` measures as multiple lines. Gate:
+  `cargo nextest run -p fret-ui-kit --features imui --lib
+  base_single_line_text_roles_stay_single_line_under_narrow_layout
+  paragraph_text_role_measures_multiple_lines_under_narrow_layout --no-fail-fast`.
+- 2026-05-17: introduced `text_compact_paragraph(...)` as the shared dense wrapping paragraph role
+  for editor/IMUI body copy. IMUI `bullet_text(...)` labels and
+  `UiWriterImUiFacadeExt::text_wrapped(...)` now route through it, preserving explicit wrapping
+  while moving fill-width/min-width-zero layout policy out of local `TextProps`. Gate: `cargo
+  nextest run -p fret-ui-kit --features imui --lib
+  compact_paragraph_text_uses_wrapping_fill_width_layout
+  bullet_text_uses_shared_compact_paragraph_role imui_text_wrapped_is_explicit_wrapping_text
+  --no-fail-fast`.
 - 2026-05-16: routed IMUI tab triggers and menubar triggers through the shared
   `text_button_label(...)` role. This keeps button-like trigger labels single-line and truncating
   while leaving menu item/selectable row labels out of the button-label role. Gate: `cargo nextest
@@ -232,17 +301,340 @@ Run evidence:
   ellipsis-truncated without adding a menu-specific shortcut role. Gate: `cargo nextest run -p
   fret-ui-kit --features imui --lib menu_item_shortcut_text_uses_shared_control_readout_role
   menu_item_label_text_uses_shared_list_row_text_role --no-fail-fast`.
+- 2026-05-17: routed IMUI menu checkbox/radio indicators and submenu chevrons through the shared
+  `text_chrome_glyph(...)` role instead of bare `cx.text(...)`. Menu glyph chrome now follows the
+  same single-line clip contract as disclosure indicators, and the source gate rejects the old
+  indicator text paths. Gate: `cargo nextest run -p fret-ui-kit --features imui --lib
+  menu_item_indicator_text_uses_shared_chrome_glyph_role --no-fail-fast`.
+- 2026-05-17: introduced `text_section_chrome_label(...)` as the shared compact section/chrome
+  label role and routed IMUI `separator_text` labels through it. Separator labels no longer carry
+  local `TextProps` policy or default word wrapping; they stay single-line, shrinkable, and
+  ellipsis-truncated under resize. Gate: `cargo nextest run -p fret-ui-kit --features imui --lib
+  section_chrome_label_text_uses_single_line_truncation --no-fail-fast`.
+- 2026-05-17: introduced `text_chrome_title(...)` as the shared fill-width chrome title role and
+  routed floating window title-bar text through shared chrome text helpers. Resizable floating
+  titles keep fill, grow, shrink, `min-width: 0`, and ellipsis behavior; non-resizable titles reuse
+  `text_section_chrome_label(...)` instead of local `TextProps`. Gate: `cargo nextest run -p
+  fret-ui-kit --features imui --lib chrome_title_text_uses_fill_width_single_line_truncation
+  section_chrome_label_text_uses_single_line_truncation --no-fail-fast`.
+- 2026-05-17: introduced `text_chrome_glyph(...)` as the shared compact fixed-slot chrome glyph
+  role and routed disclosure/tree indicators through it. Indicator glyphs now stay single-line and
+  clipped inside fixed chrome slots without owning local `TextProps` policy in disclosure controls.
+  Gate: `cargo nextest run -p fret-ui-kit --features imui --lib
+  chrome_glyph_text_uses_fixed_slot_single_line_clip
+  disclosure_indicator_uses_shared_chrome_glyph_text_role --no-fail-fast`.
+- 2026-05-17: routed `list_from_strings(...)` row text through the shared text-role vocabulary.
+  Leading list glyphs now use `text_chrome_glyph(...)`, row labels use
+  `text_list_row_label(...)`, and trailing shortcut/readout text uses
+  `text_control_readout(...)`. This closes a generic fixed-row compatibility-helper path without
+  adding an IMUI ListBox API or moving policy into `fret-imui`. Gates: `cargo nextest run -p
+  fret-ui-kit --features imui --lib list_from_strings_uses_shared_single_line_text_roles
+  --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-17: routed the default retained tree row renderer through the shared text-role
+  vocabulary too. Tree labels now use `text_list_row_label(...)` and toggle glyphs use
+  `text_chrome_glyph(...)` instead of the local `crate::ui::text(...).truncate()` / bare
+  `cx.text(...)` path. Gates: `cargo nextest run -p fret-ui-kit --features imui --lib
+  default_tree_row_label_uses_shared_list_row_text_role tree_toggle_glyph_uses_shared_chrome_glyph_text_role
+  --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-17: routed floating-window close button glyphs through the same
+  `text_chrome_glyph(...)` role via `floating_window_close_glyph_text(...)`. This keeps fixed
+  title-bar action chrome on the shared single-line clip contract instead of bare `cx.text(...)`
+  default wrapping semantics. Gate: `cargo nextest run -p fret-ui-kit --features imui --lib
+  floating_window_close_glyph_uses_shared_chrome_glyph_text_role --no-fail-fast`.
+- 2026-05-17: introduced `text_control_label(...)` as the shared compact control-label text role
+  and routed `control_chrome::fill_text(...)` through it. Checkbox/radio/switch labels plus
+  combo/slider captions keep their fill, grow, shrink, `min-width: 0`, and ellipsis behavior
+  without owning local `TextProps` policy inside IMUI chrome. Gate: `cargo nextest run -p
+  fret-ui-kit --features imui --lib control_label_text_uses_fill_width_single_line_truncation
+  imui_fill_text_is_single_line_and_shrinkable imui_control_text_uses_shared_button_label_role
+  --no-fail-fast`.
 - 2026-05-16: hardened `tools/gate_imui_workstream_source.py` with an explicit allowlist for the
-  remaining direct `TextProps::new(...)` constructors under `fret-ui-kit::imui`: bullet prose,
-  control chrome, disclosure indicator, facade `text`/`text_wrapped`, floating title, and separator
-  label. New direct constructors now fail the source gate unless they are routed through the shared
-  text roles or intentionally added to the allowlist. Gate: `python tools/gate_imui_workstream_source.py`.
+  remaining direct `TextProps::new(...)` constructors under `fret-ui-kit::imui`: facade
+  `text(...)` only. New direct constructors now fail the
+  source gate unless they are routed through the shared text roles or intentionally added to the
+  allowlist. Gate: `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: introduced `editor_input_value_text(...)` in `fret-ui-editor` input-group primitives
   and routed drag-value plus axis-drag-value scrub readouts through it. The helper keeps editor
   numeric value text fill-width, `min-width: 0`, shrinkable, single-line, and ellipsis-truncated
   while preserving editor-specific density and chrome policy outside `fret-imui`. Gates: `cargo
   nextest run -p fret-ui-editor editor_input_value_text_is_single_line_and_shrinkable --no-fail-fast`
   and `cargo nextest run -p fret-ui-editor drag_value axis_drag_value --no-fail-fast`.
+- 2026-05-17: moved `FieldStatusBadge` label text policy into
+  `editor_status_badge_text_props(...)` in the editor readout primitive layer. The control keeps its
+  compact centered badge label, single-line ellipsis, and palette behavior without owning local
+  `TextProps` policy. Gate: `cargo nextest run -p fret-ui-editor
+  editor_status_badge_text_uses_compact_single_line_readout_role
+  error_badge_palette_keeps_short_visible_label loading_badge_palette_uses_short_label
+  loading_badge_palette_stays_darker_than_editor_foreground --no-fail-fast`.
+- 2026-05-17: introduced `editor_inline_error_text_props(...)` for compact single-line editor error
+  readouts and routed both `ColorEdit` root errors and popup numeric errors through it. The role is
+  destructive-color aware through caller-supplied color, fill-width, `min-width: 0`, and ellipsis
+  truncated; wrapping validation prose remains a separate explicit control policy. Gate: `cargo
+  nextest run -p fret-ui-editor editor_inline_error_text_is_single_line_and_shrinkable
+  editor_preview_caption_text_is_single_line_and_shrinkable
+  editor_tooltip_readout_text_is_single_line_and_shrinkable
+  numeric_readout_formats_rgb_hsv_and_optional_alpha
+  color_tooltip_lines_match_imgui_hex_rgb_hsv_preview_text --no-fail-fast`.
+- 2026-05-17: introduced `editor_validation_message_text_props(...)` for editor validation prose
+  that is allowed to wrap and grow height. `NumericInput` inline validation messages now use that
+  explicit role instead of local `TextProps`, while `tools/gate_imui_workstream_source.py` freezes
+  direct `TextProps` construction under `fret-ui-editor/src` to the editor primitive owners
+  (`input_group`, `popup_list`, and `readout`). Gates: `cargo nextest run -p fret-ui-editor
+  editor_validation_message_text_wraps_and_shrinks --no-fail-fast` and
+  `python tools/gate_imui_workstream_source.py`.
+- 2026-05-17: introduced `editor_preview_caption_text_props(...)` and
+  `editor_tooltip_readout_text_props(...)` for color side-preview captions and color tooltip
+  numeric lines. These stay in the editor readout primitive layer instead of being folded into
+  popup-list rows, preserving the semantic distinction while removing local `TextProps` policy from
+  `color_edit/popup/preview.rs` and `color_edit/popup/tooltip.rs`.
+- 2026-05-17: introduced shared transform-label text helpers in
+  `ecosystem/fret-ui-editor/src/primitives/readout.rs` and routed `TransformEdit` section badges,
+  section headings, and inline link/uniform checkbox labels through them. The control no longer
+  owns local `TextProps` literals for compact labels, and those labels now consistently stay
+  single-line, `min-width: 0` where they need to shrink, and ellipsis/clip constrained under
+  resize. Gate: `cargo nextest run -p fret-ui-editor
+  editor_section_badge_text_is_single_line_centered_badge_label
+  editor_section_heading_text_is_single_line_and_shrinkable
+  editor_inline_control_label_text_is_single_line_and_shrinkable
+  transform_edit_axis_outcome_exposes_read_only_signals --no-fail-fast`.
+- 2026-05-17: introduced `editor_popup_list_row_text_props(...)` and
+  `editor_popup_empty_text_props(...)` in `ecosystem/fret-ui-editor/src/primitives/popup_list.rs`.
+  `EnumSelect` trigger/row/empty text and `TextAssistField` row/empty text now use shared editor
+  helpers instead of local `TextProps` or `TextProps::new(...)`, closing another default
+  word-wrap path under resize. Color-edit copy menu rows and popup option captions now reuse the
+  same popup-list family through start-aligned, centered-row, and fixed-caption variants while
+  leaving preview labels and tooltip lines as separate semantics. Gate: `cargo nextest run -p
+  fret-ui-editor
+  popup_list_row_text_is_single_line_and_shrinkable
+  popup_empty_text_is_single_line_and_shrinkable
+  popup_list_centered_row_text_keeps_row_fill_and_center_alignment
+  popup_list_option_caption_text_keeps_fixed_caption_line_box
+  enum_select_item_test_id_segment_is_stable_ascii empty_label_is_inline_only
+  color_copy_entries_match_imgui_copy_as_payloads
+  popup_options_default_to_imgui_like_hue_bar_surface --no-fail-fast`.
+- 2026-05-17: introduced `editor_property_group_header_text_props(...)`,
+  introduced `editor_property_row_reset_glyph_text_props(...)`. This slice also
+  introduced `editor_inspector_panel_title_text_props(...)` in
+  `ecosystem/fret-ui-editor/src/primitives/readout.rs`, then routed `PropertyGroup` header labels,
+  `PropertyRow` reset glyphs, and `InspectorPanel` titles through those shared roles. This removes
+  local inspector chrome/default text policy from the composites while keeping fixed-row text
+  single-line, shrinkable where needed, and line-height constrained under resize. The
+  `InspectorPanel` layout gate renders a narrow header with toolbar siblings and proves the title
+  remains one measured line. Gate:
+  `cargo nextest run -p fret-ui-editor
+  editor_property_group_header_text_is_single_line_and_shrinkable
+  editor_property_row_reset_glyph_text_keeps_fixed_button_line_box
+  editor_inspector_panel_title_text_is_single_line_and_shrinkable
+  inspector_panel_title_stays_single_line_when_header_is_narrow --no-fail-fast`.
+- 2026-05-17: introduced `editor_property_row_label_text_props(...)` and the property-grid row
+  context `label_text(...)` convenience path for fixed inspector label chrome. `PropertyRow` label
+  slots now clamp their own line box to the editor row height, so accidental bare/default label
+  text cannot wrap and grow a fixed-height row under resize. `GradientEditor`, eager
+  `PropertyGrid`, and virtualized grid smoke usage now route first-party labels through the helper,
+  while arbitrary custom label elements remain possible for fully custom rows. Gate:
+  `cargo nextest run -p fret-ui-editor
+  editor_property_row_label_text_is_single_line_and_shrinkable
+  row_label_slot_keeps_fixed_line_box_when_label_text_wraps_under_narrow_layout --no-fail-fast`.
+- 2026-05-17: migrated the `imui_editor_proof_demo` property-grid labels to
+  `row_cx.label_text(...)` so the selected editor-grade proof teaches the fixed-label role instead
+  of relying on `PropertyRow`'s container fallback for bare `cx.text(...)`. The source gate now
+  requires representative proof labels (`Name`, `Typed numeric`, `Blend slider`, `Transform`) to
+  use `label_text(...)` and forbids those labels from returning to `|cx| cx.text(...)` in property
+  label slots. Gates: `python tools/gate_imui_workstream_source.py` and
+  `cargo check -p fret-demo --bin imui_editor_proof_demo`.
+- 2026-05-17: migrated the `workspace_shell_demo` editor rail to teach the shared text roles too.
+  Rail command buttons now use `text_button_label(...)`, property labels use `row_cx.label_text(...)`,
+  and compact property values route through `text_control_readout(...)` via a local proof helper.
+  Gates: `cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface
+  --no-fail-fast`, `cargo check -p fret-demo --bin workspace_shell_demo`, and
+  `python tools/gate_imui_workstream_source.py`.
+- 2026-05-17: migrated the `editor_notes_demo` inspector metadata surface to the same resize-safe
+  text roles. Property-grid labels now use `row_cx.label_text(...)`, inspector subtitle and compact
+  committed/outcome/draft/summary status values route through a local
+  `editor_notes_readout_text(...)` helper backed by `text_control_readout(...)`, and the
+  `editor_notes_editor_rail_surface` test plus the IMUI workstream source gate reject those fixed
+  property-row labels/readouts drifting back to bare `cx.text(...)`. Gates:
+  `cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --no-fail-fast`,
+  `cargo check -p fret-demo --bin editor_notes_demo`, and
+  `python tools/gate_imui_workstream_source.py`.
+- 2026-05-17: migrated the `workspace_shell_demo` dirty-close prompt title/details to the same
+  role vocabulary. The title now uses `workspace_shell_section_chrome_label(...)` backed by
+  `text_section_chrome_label(...)`, while reason/dirty-detail lines use
+  `workspace_shell_readout_text(...)` backed by `text_control_readout(...)`. Gates:
+  `cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface --no-fail-fast`,
+  `cargo check -p fret-demo --bin workspace_shell_demo`, and
+  `python tools/gate_imui_workstream_source.py`.
+- 2026-05-17: migrated selected `imui_editor_proof_demo` proof text to shared roles without
+  widening framework API. Material/advanced/global `No matches` labels now use
+  `proof_empty_state_text(...)`, authoring shared-state lines use `proof_compact_readout_element(...)`
+  backed by `text_control_readout(...)`, and the declarative gradient section label uses
+  `proof_section_chrome_label(...)` backed by `text_section_chrome_label(...)`. Gates:
+  `python tools/gate_imui_workstream_source.py` and
+  `cargo check -p fret-demo --bin imui_editor_proof_demo`.
+- 2026-05-17: migrated `imui_editor_proof_demo` drag-preview cards away from a newline-joined bare
+  text blob. Preview titles now use `text_section_chrome_label(...)`, optional subtitles use
+  `text_control_readout(...)`, and `proof_drag_preview_card_uses_single_line_text_roles` locks the
+  two-line preview as two single-line role elements. Gates: `cargo nextest run -p fret-examples
+  --lib proof_drag_preview_card_uses_single_line_text_roles --no-fail-fast`, `cargo check -p
+  fret-demo --bin imui_editor_proof_demo`, and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-17: introduced `editor_empty_state_text_props(...)` for compact editor empty-state
+  labels and routed `GradientEditor`'s `No stops` label through
+  `gradient_editor_empty_state_text(...)`. This removes another real component bare-text path while
+  keeping the empty-state role in `fret-ui-editor`, not `fret-imui`. Gates: `cargo nextest run -p
+  fret-ui-editor editor_empty_state_text_is_single_line_and_shrinkable
+  gradient_editor_empty_state_text_is_single_line_and_shrinkable --no-fail-fast` and
+  `python tools/gate_imui_workstream_source.py`.
+- 2026-05-17: removed clipping from `PropertyRow` value slots while keeping fixed label/reset/action
+  chrome clipped. This is the layout-container side of the text-role contract: wrapping validation
+  prose such as `NumericInput` inline errors may grow to multiple lines, so the parent value slot
+  must not clip the measured line box under resize. Gates:
+  `cargo nextest run -p fret-ui-editor row_value_slot_keeps_overflow_visible_for_wrapping_value_children row_value_slot_grows_to_wrapping_value_text_under_narrow_layout --no-fail-fast`
+  and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-17: added a layout-level `PropertyRow` resize regression for wrapping validation text.
+  The test renders a narrow row with `editor_validation_message_text_props(...)`, runs the real
+  `UiTree::layout_all(...)` path through public element-bounds queries, and asserts that the
+  measured multi-line text bottom stays inside the value slot and row bounds. This closes the
+  evidence gap between the structural overflow contract and the visual resize bug report.
+- 2026-05-17: added a composition-level `PropertyGrid` resize regression for the same wrapping
+  validation role. The test renders mixed single-line and wrapping rows in a narrow grid, reuses the
+  same measured wrapping text service, and asserts that the wrapping row grows, pushes the
+  following row down, and remains contained by the grid. Gate:
+  `cargo nextest run -p fret-ui-editor property_grid_keeps_rows_separated_when_value_text_wraps_under_narrow_layout --no-fail-fast`.
+- 2026-05-17: added `P3_TEXT_ROLE_MATRIX_2026-05-17.md` as the resize triage contract for the
+  current text-role work. It names the stable base roles (`text_control_readout(...)`,
+  `text_button_label(...)`, `text_paragraph(...)` / `text_paragraph_break_words(...)`,
+  `text_code_block(...)` / `text_code_wrap(...)`, and `text_table_cell(...)`), maps current derived
+  roles, requires wrapping paragraph/validation copy to have parent layout that accounts for
+  multi-line height, and keeps `fret-imui` policy-light by rejecting a public `TextRole` enum until
+  two consumers need a data-driven role value. Gate: `python tools/gate_imui_workstream_source.py`.
+- 2026-05-17: UI Gallery's disabled toaster driver path now returns a spacer placeholder instead
+  of an empty text node. This keeps app-shell placeholder plumbing out of the text layout/measure
+  contract and prevents future resize fixes from treating invisible placeholders as text content.
+  Gate: `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  gallery_driver_disabled_toaster_does_not_emit_empty_text --no-fail-fast`.
+- 2026-05-17: the UI Gallery app-sidebar snippet collapsed-projects path now returns a spacer
+  placeholder instead of an empty text node. This keeps the copyable sidebar recipe from teaching
+  empty text as layout placeholder plumbing. Gate: `cargo nextest run -p fret-ui-gallery --test
+  ui_authoring_surface_default_app sidebar_app_collapsed_projects_do_not_emit_empty_text
+  --no-fail-fast`.
+- 2026-05-17: `fret-ui-ai` now owns a crate-local `empty_placeholder(...)` helper for hidden or
+  missing-content AI element paths. The affected AI surfaces return spacer placeholders instead of
+  empty text nodes, keeping optional AI chrome out of text layout semantics without widening
+  `fret-imui`. Gate: `cargo nextest run -p fret-ui-ai
+  hidden_ai_element_paths_use_non_text_placeholder --no-fail-fast`.
+- 2026-05-17: UI Gallery's retained-table torture page now routes fixed row/cell text through a
+  local helper backed by `fret-ui-kit::declarative::text::text_table_cell(...)`, and table state
+  readouts through `doc_layout::control_readout_text(...)`. The page keeps explicit prose/diagnostic
+  description copy separate, while the fixed 28px table rows no longer use bare/default text. Gate:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews
+  gallery_table_retained_torture_uses_structured_table_debug_ids --no-fail-fast`.
+- 2026-05-17: UI Gallery's DataTable torture page now follows the same role split in both retained
+  and non-retained render paths. Fixed cells route through a helper backed by
+  `text_table_cell(...)`, while sorting/filter/pinning status lines use
+  `doc_layout::control_readout_text(...)`. Gate: `cargo nextest run -p fret-ui-gallery --test
+  ui_authoring_surface_internal_previews gallery_data_table_torture_exposes_header_row_anchor
+  --no-fail-fast`.
+- 2026-05-17: UI Gallery's DataGrid preview now routes virtualized grid cell text through a helper
+  backed by `text_table_cell(...)`, and the selected-row status line through
+  `doc_layout::control_readout_text(...)`. Gate: `cargo nextest run -p fret-ui-gallery --test
+  ui_authoring_surface_internal_previews gallery_data_grid_uses_table_cell_text_roles
+  --no-fail-fast`.
+- 2026-05-17: UI Gallery's DataGrid/DataTable/Tree Torture explanatory header copy now routes
+  through `doc_layout::paragraph_text(...)`, backed by shared `text_paragraph(...)`, instead of
+  default `cx.text(...)`. Gates: `cargo nextest run -p fret-ui-gallery --test
+  ui_authoring_surface_internal_previews gallery_data_grid_uses_table_cell_text_roles
+  gallery_data_table_torture_exposes_header_row_anchor
+  gallery_tree_torture_uses_control_readout_for_status_text --no-fail-fast`.
+- 2026-05-17: UI Gallery's Inspector Torture preview now routes fixed virtual-row property labels
+  through a helper backed by `text_list_row_label(...)`, and fixed row values through
+  `doc_layout::control_readout_text(...)`. Gate: `cargo nextest run -p fret-ui-gallery --test
+  ui_authoring_surface_internal_previews gallery_inspector_torture_uses_fixed_row_text_roles
+  --no-fail-fast`.
+- 2026-05-17: UI Gallery's virtual-list torture harness now routes fixed custom row labels through
+  helpers backed by `text_list_row_label(...)`, and row detail/editing readouts through
+  `doc_layout::control_readout_text(...)`. The UI Kit list torture custom row renderer also routes
+  item labels through the shared list-row label role. Gate: `cargo nextest run -p fret-ui-gallery
+  --test ui_authoring_surface_internal_previews
+  harness_virtual_list_torture_uses_fixed_row_text_roles
+  harness_ui_kit_list_torture_uses_fixed_row_text_roles --no-fail-fast`.
+- 2026-05-17: UI Gallery's retained-table, hit-test, UI Kit list, virtual-list, and view-cache
+  harness headers now route explanatory copy through `doc_layout::paragraph_text(...)` and
+  mode/status lines through `doc_layout::control_readout_text(...)` instead of bare `cx.text(...)`.
+  Gates: `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews
+  gallery_table_retained_torture_uses_structured_table_debug_ids
+  harness_hit_test_torture_uses_header_text_roles
+  harness_virtual_list_torture_uses_fixed_row_text_roles
+  harness_ui_kit_list_torture_uses_fixed_row_text_roles
+  harness_view_cache_uses_fixed_row_text_roles --no-fail-fast`.
+- 2026-05-17: UI Gallery's View Cache torture page now routes cached inner virtual-list row labels
+  through a helper backed by `text_list_row_label(...)`. Gate: `cargo nextest run -p
+  fret-ui-gallery --test ui_authoring_surface_internal_previews
+  harness_view_cache_uses_fixed_row_text_roles --no-fail-fast`.
+- 2026-05-17: UI Gallery's View Cache torture page now routes fixed switch labels through
+  `doc_layout::control_label_text(...)` instead of bare `cx.text(...)`. Gate: `cargo nextest run
+  -p fret-ui-gallery --test ui_authoring_surface_internal_previews
+  harness_view_cache_uses_fixed_row_text_roles --no-fail-fast`.
+- 2026-05-17: UI Gallery's View Cache cached Popover body copy now routes through
+  `doc_layout::paragraph_text(...)` instead of bare `cx.text(...)`. Gate: `cargo nextest run -p
+  fret-ui-gallery --test ui_authoring_surface_internal_previews
+  harness_view_cache_uses_fixed_row_text_roles --no-fail-fast`.
+- 2026-05-17: UI Gallery's Tree Torture dynamic target status now routes through
+  `doc_layout::control_readout_text(...)` instead of local muted/text-sm styling. Gate: `cargo
+  nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews
+  gallery_tree_torture_uses_control_readout_for_status_text --no-fail-fast`.
+- 2026-05-17: UI Gallery's overlay and menu last-action/status flags now route through
+  `doc_layout::control_readout_text(...)` instead of bare `cx.text(...)`. Gate: `cargo nextest run
+  -p fret-ui-gallery --test ui_authoring_surface_internal_previews
+  gallery_overlay_status_text_uses_control_readout_roles
+  gallery_menus_last_action_uses_control_readout_role --no-fail-fast`.
+- 2026-05-17: UI Gallery's overlay dialog/sheet/portal scroll filler rows now route through a
+  helper backed by `text_list_row_label(...)` instead of bare `cx.text(...)`. Gate: `cargo nextest
+  run -p fret-ui-gallery --test ui_authoring_surface_internal_previews
+  gallery_overlay_scroll_rows_use_list_row_roles --no-fail-fast`.
+- 2026-05-17: UI Gallery's HoverCard and Popover body copy now route through
+  `doc_layout::paragraph_text(...)` instead of bare `cx.text(...)`. Gate: `cargo nextest run -p
+  fret-ui-gallery --test ui_authoring_surface_internal_previews
+  gallery_overlay_body_copy_uses_paragraph_roles --no-fail-fast`.
+- 2026-05-17: UI Gallery nav title and settings-sheet switch captions now route through the
+  driver text-role owner. The nav title uses section-chrome text, and switch captions use
+  control-label text instead of local `TextProps` policy. Gate: `cargo nextest run -p
+  fret-ui-gallery --test code_editor_control_readout_surface
+  code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast`.
+- 2026-05-17: UI Gallery's chrome torture text-input/textarea labels now route through
+  `doc_layout::control_label_text(...)`, backed by shared
+  `fret-ui-kit::declarative::text::text_control_label(...)`, instead of bare `cx.text(...)`. Gate:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews
+  page_chrome_torture_uses_control_label_roles --no-fail-fast`.
+- 2026-05-17: UI Gallery's status bar now routes metric, inspector-state, and last-action text
+  through `driver::text_roles::chrome_readout_text(...)`, backed by
+  `fret-ui-kit::declarative::text::text_control_readout(...)`. This keeps fixed status chrome on
+  the shared single-line/shrinkable readout role instead of bare/default text under resize. Gate:
+  `cargo nextest run -p fret-ui-gallery --test code_editor_control_readout_surface
+  code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast`.
+- 2026-05-17: UI Gallery driver chrome now owns `driver::text_roles` as the local adapter over
+  shared kit text roles. Disabled tabs/sidebar/content placeholders route through
+  `chrome_readout_text(...)`, and settings-sheet section labels route through
+  `chrome_section_label(...)`, keeping fixed app-shell chrome on single-line role helpers instead
+  of bare/default text. Gate: `cargo nextest run -p fret-ui-gallery --test
+  code_editor_control_readout_surface
+  code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast`.
+- 2026-05-17: UI Gallery's `BISECT_MINIMAL_ROOT` diagnostic root now routes its placeholder through
+  `driver::text_roles::chrome_readout_text(...)` instead of bare `cx.text(...)`. This keeps the
+  smallest resize/debug root on the same single-line readout role as the surrounding driver chrome.
+  Gate: `cargo nextest run -p fret-ui-gallery --test code_editor_control_readout_surface
+  code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast`.
+- 2026-05-17: UI Gallery's fixed-size debug HUD now renders each metric line through
+  `driver::text_roles::chrome_readout_text(...)` instead of local word-wrapping `TextProps`. Long
+  debug/readout lines now stay single-line and truncate inside the HUD chrome rather than growing
+  line boxes under resize. Gate: `cargo nextest run -p fret-ui-gallery --test
+  code_editor_control_readout_surface
+  code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast`.
+- 2026-05-17: UI Gallery shell content/nav text now routes page titles through
+  `text_chrome_title(...)`, page origins through `text_control_readout(...)`, and sidebar group
+  headings through `text_section_chrome_label(...)`. This removes local `TextProps` policy from
+  fixed app-shell chrome without widening `fret-imui`. Gate: `cargo nextest run -p
+  fret-ui-gallery --test code_editor_control_readout_surface
+  code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast`.
 - 2026-05-16: tightened `UiWriterImUiFacadeExt::text(...)` to match Dear ImGui's default
   `Text()` posture: single-line, shrinkable, `min-width: 0`, and ellipsis-truncated under resize.
   Added `UiWriterImUiFacadeExt::text_wrapped(...)` as the explicit wrapping path for explanatory
@@ -258,6 +650,8 @@ Run evidence:
   `cargo nextest run -p fret-ui-kit --features imui --lib
   input_text_model_uses_compact_imui_chrome_without_focus_ring
   textarea_model_uses_compact_imui_chrome_without_focus_ring --no-fail-fast`.
+- 2026-05-17: `control_chrome::fill_text(...)` now delegates to the shared
+  `text_control_label(...)` role instead of keeping that layout policy local to IMUI chrome.
 - 2026-05-14: made `DisclosureResponse` / `ComboResponse` accessor-first for trigger/open/toggle
   state too. Public callers now read trigger details through `response()` and semantic helpers, the
   response types no longer expose external `Default` construction, and
@@ -801,4 +1195,351 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools/gate_imui_facade_teaching_source.py` passed.
 - `python tools/gate_imui_workstream_source.py` passed.
 - `cargo check -p fret-examples-imui` passed.
+- `git diff --check` passed.
+
+2026-05-17 property-row wrapping value layout gate:
+
+- `cargo nextest run -p fret-ui-editor row_value_slot_grows_to_wrapping_value_text_under_narrow_layout --no-fail-fast` passed.
+
+2026-05-17 property-grid wrapping value layout gate:
+
+- `cargo nextest run -p fret-ui-editor property_grid_keeps_rows_separated_when_value_text_wraps_under_narrow_layout row_value_slot_grows_to_wrapping_value_text_under_narrow_layout row_value_slot_keeps_overflow_visible_for_wrapping_value_children --no-fail-fast` passed.
+
+2026-05-17 editor-notes proof text-role slice:
+
+- `cargo fmt -p fret-examples` passed.
+- `cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --test editor_notes_device_shell_surface --no-fail-fast` passed.
+- `cargo check -p fret-demo --bin editor_notes_demo` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.
+
+2026-05-17 shared text-role layout gate:
+
+- `cargo fmt -p fret-ui-kit` passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib base_single_line_text_roles_stay_single_line_under_narrow_layout paragraph_text_role_measures_multiple_lines_under_narrow_layout --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.
+
+2026-05-17 generic list text-role slice:
+
+- `cargo fmt -p fret-ui-kit` passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib list_from_strings_uses_shared_single_line_text_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.
+
+2026-05-17 generic tree text-role slice:
+
+- `cargo fmt -p fret-ui-kit` passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib default_tree_row_label_uses_shared_list_row_text_role tree_toggle_glyph_uses_shared_chrome_glyph_text_role --no-fail-fast` passed.
+
+2026-05-17 file tree text-role slice:
+
+- `cargo fmt -p fret-ui-kit` passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib file_tree_row_icon_uses_shared_chrome_glyph_text_role file_tree_row_label_uses_shared_list_row_text_role --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.
+
+2026-05-17 retained table text-role slice:
+
+- `cargo fmt -p fret-ui-kit` passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib retained_table_text_uses_shared_table_cell_role --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.
+
+2026-05-17 examples table proof text-role slice:
+
+- `cargo fmt -p fret-examples` passed.
+- `cargo check -p fret-demo --bin table_demo --bin table_stress_demo` passed.
+- `cargo nextest run -p fret-examples --test table_demo_surface table_demo_keeps_fixed_table_text_on_roles --test table_stress_demo_surface table_stress_demo_keeps_fixed_table_text_on_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 datatable proof text-role slice:
+
+- `cargo fmt -p fret-examples` passed.
+- `cargo check -p fret-examples` passed.
+- `cargo nextest run -p fret-examples --test datatable_demo_surface datatable_demo_keeps_fixed_table_text_on_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 virtual-list stress proof text-role slice:
+
+- `cargo fmt -p fret-examples` passed.
+- `cargo check -p fret-demo --bin virtual_list_stress_demo` passed.
+- `cargo nextest run -p fret-examples --test virtual_list_stress_demo_surface virtual_list_stress_demo_keeps_fixed_row_text_on_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 canvas datagrid stress proof text-role slice:
+
+- `cargo fmt -p fret-examples` passed.
+- `cargo check -p fret-demo --bin canvas_datagrid_stress_demo` passed.
+- `cargo nextest run -p fret-examples --test canvas_datagrid_stress_demo_surface canvas_datagrid_stress_demo_keeps_header_text_on_readout_role --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 virtual row fallback text removal slice:
+
+- `cargo fmt -p fret-ui-kit` passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib missing_tree_virtual_row_placeholder_is_not_text missing_file_tree_virtual_row_placeholder_is_not_text --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery disabled toaster placeholder slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app gallery_driver_disabled_toaster_does_not_emit_empty_text --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery app-sidebar collapsed placeholder slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app sidebar_app_collapsed_projects_do_not_emit_empty_text --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 fret-ui-ai empty placeholder helper slice:
+
+- `cargo fmt -p fret-ui-ai` passed.
+- `cargo nextest run -p fret-ui-ai hidden_ai_element_paths_use_non_text_placeholder --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery status-bar readout role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test code_editor_control_readout_surface code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery driver chrome text role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test code_editor_control_readout_surface code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery driver chrome label slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test code_editor_control_readout_surface code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery minimal-root text role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test code_editor_control_readout_surface code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery debug-HUD text role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test code_editor_control_readout_surface code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery shell content/nav text role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test code_editor_control_readout_surface code_editor_header_state_readouts_use_single_line_control_readout --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery editor preview text role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews code_editor_mvp_internal_helpers_prefer_ui_child_over_anyelement --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 code-editor IME gate button-label slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews code_editor_mvp_internal_helpers_prefer_ui_child_over_anyelement --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+
+2026-05-17 docking arbitration body/readout text-role slice:
+
+- `cargo fmt -p fret-examples` passed.
+- `cargo nextest run -p fret-examples --test docking_arbitration_surface docking_arbitration_demo_keeps_body_and_state_text_on_roles --no-fail-fast` passed.
+- `cargo check -p fret-demo --bin docking_arbitration_demo` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+
+2026-05-17 docking/container-query panel text-role slice:
+
+- `cargo fmt -p fret-examples` passed.
+- `cargo check -p fret-demo --bin container_queries_docking_demo --bin docking_demo` passed.
+- `cargo nextest run -p fret-examples --test container_queries_docking_surface container_queries_docking_demo_keeps_fixed_panel_text_on_roles --test docking_demo_surface docking_demo_keeps_panel_text_on_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+
+2026-05-17 gallery retained-table torture text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_table_retained_torture_uses_structured_table_debug_ids --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery data-table torture text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_data_table_torture_exposes_header_row_anchor --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery data-grid text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_data_grid_uses_table_cell_text_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery data paragraph text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_data_grid_uses_table_cell_text_roles gallery_data_table_torture_exposes_header_row_anchor gallery_tree_torture_uses_control_readout_for_status_text --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery inspector torture text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_inspector_torture_uses_fixed_row_text_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery virtual-list torture text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews harness_virtual_list_torture_uses_fixed_row_text_roles harness_ui_kit_list_torture_uses_fixed_row_text_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery harness header text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_table_retained_torture_uses_structured_table_debug_ids harness_hit_test_torture_uses_header_text_roles harness_virtual_list_torture_uses_fixed_row_text_roles harness_ui_kit_list_torture_uses_fixed_row_text_roles harness_view_cache_uses_fixed_row_text_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery view-cache list text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews harness_view_cache_uses_fixed_row_text_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery view-cache control-label slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews harness_view_cache_uses_fixed_row_text_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery view-cache popover body slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews harness_view_cache_uses_fixed_row_text_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery tree torture status text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_tree_torture_uses_control_readout_for_status_text --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery overlay status text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_overlay_status_text_uses_control_readout_roles gallery_menus_last_action_uses_control_readout_role --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery overlay scroll-row text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_overlay_scroll_rows_use_list_row_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery overlay body prose slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_overlay_body_copy_uses_paragraph_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery chrome torture control-label slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews page_chrome_torture_uses_control_label_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
 - `git diff --check` passed.

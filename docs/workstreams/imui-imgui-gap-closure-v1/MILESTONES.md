@@ -171,6 +171,13 @@ Exit criteria:
   path instead of growing a second row-policy wrapper.
   2026-05-14 follow-up result: both eager and virtualized grid row contexts are now opaque; row
   options stay crate-local while external callers use row helpers instead of public fields.
+  2026-05-17 text-role follow-up result: eager and virtualized grid row contexts now expose
+  `label_text(...)` for fixed inspector row labels. `PropertyRow` also clamps label slot line boxes
+  to the editor row height, so default/bare label text cannot wrap and grow fixed inspector rows
+  under resize.
+  2026-05-17 proof teaching follow-up result: `imui_editor_proof_demo` property-grid labels now
+  use `row_cx.label_text(...)`, and the source gate rejects representative proof labels if they
+  return to bare `|cx| cx.text(...)` label slots.
   2026-05-14 inspector follow-up result: `InspectorPanelCx` now exposes query behavior through
   methods and keeps `query_lower` private.
   2026-05-16 child-region resize result: `imui-child-region-resize-y-v1` and
@@ -192,15 +199,27 @@ Exit criteria:
   in `TableRowOptions::background` and `TableCellOptions::background`, with scene-paint proof that
   cell overrides paint after row overrides. `ImUiTableRow::cell_text(...)` now uses the shared
   `text_table_cell(...)` role helper, so default table text no longer inherits paragraph wrapping
-  semantics. Freeze panes, runtime hideable-column policy, and old columns API remain
+  semantics. Freeze panes, persistence, header-menu policy, and old columns API remain
   advanced-table candidates.
   2026-05-16 table header text result: sortable and plain table header labels also use
   `text_table_cell(...)`, preserving the same compact single-line ellipsis semantics as body cells.
   2026-05-16 static table column visibility result: `TableColumn::hidden()` and
   `TableColumn::with_visible(bool)` now cover author-declared hidden columns without copying Dear
   ImGui's mutable table runtime. Hidden columns still consume submitted row cells in declared order
-  but skip header/body rendering and header responses; runtime hideable columns, persistence, and
-  header-menu policy stay candidate-only.
+  but skip header/body rendering and header responses; runtime hideable-column policy is covered
+  by the follow-up state helper below, while persistence and header-menu policy stay
+  candidate-only.
+  2026-05-17 runtime table column visibility result: `ImUiTableColumnVisibilityState` now covers
+  runtime stable-id visibility overrides as a policy-layer helper in `fret-ui-kit::imui`. It
+  produces an adjusted `TableColumn` list and reuses the existing hidden-column render contract;
+  persistence, header-menu policy, freeze panes, and old columns API shape stay candidate-only. A
+  `fret-imui` composition gate proves the helper can drive table rendering while the runtime
+  facade remains policy-light.
+  2026-05-17 table visibility menu-item result: `table_column_visibility_menu_item(...)` now
+  bridges `TableColumn`, existing checkbox menu item behavior, and
+  `ImUiTableColumnVisibilityState`. Callers still own where that menu is presented; automatic
+  header context-menu popup wiring, persistence, freeze panes, and old columns API shape stay
+  candidate-only.
   2026-05-16 control readout text role result: `text_control_readout(...)` now sits in
   `fret-ui-kit::declarative::text` beside `text_table_cell(...)`. The UI Gallery code-editor
   readouts still use the doc-layout app helper, but that helper delegates to the shared role, so
@@ -214,6 +233,9 @@ Exit criteria:
   2026-05-16 paragraph text role result: `text_paragraph(...)` and
   `text_paragraph_break_words(...)` now close the first shared text-role vocabulary pass while
   keeping `text_prose(...)` as the shadcn/Tailwind-compatible name.
+  2026-05-17 compact paragraph text result: `text_compact_paragraph(...)` now owns dense wrapping
+  body copy for editor/IMUI panels. IMUI `bullet_text(...)` labels and `text_wrapped(...)` route
+  through that shared role instead of carrying local fill-width/min-width-zero `TextProps` policy.
   2026-05-16 trigger label reuse result: IMUI tab triggers and menubar triggers now reuse
   `text_button_label(...)`; selectable/menu item row labels stayed out of that role because they
   are command/list rows, not button labels.
@@ -224,6 +246,16 @@ Exit criteria:
   2026-05-16 menu shortcut readout reuse result: IMUI menu shortcut labels now reuse
   `text_control_readout(...)` as muted compact auxiliary readouts, keeping shortcut text inside the
   stable control-readout role instead of adding another menu-specific text policy.
+  2026-05-17 section chrome label text result: `text_section_chrome_label(...)` now owns compact
+  separator/section chrome labels in `fret-ui-kit::declarative::text`. IMUI `separator_text`
+  labels use that shared role, so section chrome stays single-line, shrinkable, and ellipsis-based
+  under resize instead of inheriting default word wrapping.
+  2026-05-17 chrome title text result: `text_chrome_title(...)` now owns fill-width floating
+  window title-bar text. Resizable floating titles keep fill/grow/min-width-zero behavior, while
+  non-resizable titles reuse the section/chrome label role instead of local `TextProps`.
+  2026-05-17 chrome glyph text result: `text_chrome_glyph(...)` now owns compact fixed-slot
+  chrome glyph text in `fret-ui-kit::declarative::text`. Disclosure/tree indicators use that
+  shared role, so glyph-only chrome stays single-line and clipped without local `TextProps`.
   2026-05-16 text role source-gate result: `tools/gate_imui_workstream_source.py` now freezes the
   remaining direct `TextProps::new(...)` constructors under `fret-ui-kit::imui` behind an explicit
   allowlist, forcing future compact text policy additions through the shared role vocabulary or an
@@ -235,11 +267,176 @@ Exit criteria:
   2026-05-16 control chrome fill-text result: shared checkbox/radio/switch labels, combo preview
   text, and slider captions now use single-line shrink/ellipsis layout through
   `control_chrome::fill_text(...)`, removing another fixed-height control wrapping path.
+  2026-05-17 control label text result: `text_control_label(...)` now owns the compact control
+  label role in `fret-ui-kit::declarative::text`, and `control_chrome::fill_text(...)` delegates
+  to that shared role instead of carrying local `TextProps` policy.
   2026-05-17 editor input value text result: `editor_input_value_text(...)` now owns the shared
   numeric scrub-readout text role for drag-value and axis-drag-value controls. The role stays in
   `fret-ui-editor` because it depends on editor density/chrome policy, but it now has the same
   resize-safe fill, `min-width: 0`, shrink, single-line, and ellipsis behavior expected by IMUI
   editor panels.
+  2026-05-17 editor status badge text result: `FieldStatusBadge` no longer hand-rolls badge label
+  `TextProps`; it uses `editor_status_badge_text_props(...)` from the editor readout primitive
+  layer, preserving compact centered ellipsis text while keeping role policy reusable.
+  2026-05-17 editor inline error text result: `ColorEdit` root errors and popup numeric errors now
+  share `editor_inline_error_text_props(...)`, so compact destructive readouts are single-line,
+  shrinkable, and owned by the editor readout primitive layer instead of duplicated per surface.
+  2026-05-17 editor validation message text result: `NumericInput` inline validation messages now
+  use `editor_validation_message_text_props(...)`, keeping the explicit wrapping validation role in
+  the editor primitive layer. `tools/gate_imui_workstream_source.py` also freezes direct
+  `TextProps` construction under `fret-ui-editor/src` to the named primitive owners, so new editor
+  controls cannot bypass the text-role vocabulary by adding local text literals.
+  2026-05-17 transform label text result: `TransformEdit` section badges, section headings, and
+  inline link/uniform labels now reuse editor readout text helpers. The control no longer carries
+  local compact-label `TextProps`, so future resize fixes happen in the shared editor text role
+  layer instead of per-transform branches.
+  2026-05-17 popup list text result: enum-select and text-assist popup/list empty labels now reuse
+  shared popup-list text helpers. This removes the `TextProps::new(...)` default word-wrap path
+  from those editor assist surfaces while keeping the behavior in `fret-ui-editor`, not
+  `fret-imui`. Color-edit copy menu rows and popup option captions now use the same popup-list text
+  family through explicit aligned variants, while preview/tooltip text stays separate.
+  2026-05-17 color preview/tooltip text result: color side-preview captions and tooltip numeric
+  lines now use dedicated editor readout helpers. This keeps readout/caption semantics out of
+  popup-list rows while eliminating the remaining local `TextProps` in those color surfaces.
+  2026-05-17 property chrome text result: property-group header labels, property-row reset glyphs,
+  and inspector panel titles now reuse editor readout helpers. Fixed inspector chrome text no
+  longer hand-rolls local/default `TextProps`, so header, title, and reset glyph behavior remains
+  single-line and line-box constrained under resize. A narrow-header `InspectorPanel` layout gate
+  proves long titles stay one measured line beside toolbar siblings.
+  2026-05-17 text role matrix result: `P3_TEXT_ROLE_MATRIX_2026-05-17.md` now records the stable
+  base role vocabulary for future resize triage: control readout, button label, paragraph, code
+  text, and table cell text. The matrix treats wrapping paragraph/validation copy as an explicit
+  multi-line layout contract, keeps fixed chrome/control text single-line by default, and avoids a
+  public `TextRole` enum until a data-driven role value has at least two consumers.
+  2026-05-17 property-row value overflow result: `PropertyRow` now keeps its value slot overflow
+  visible so wrapping validation/prose children can contribute and paint multi-line height under
+  resize. The fixed label/reset/action chrome slots remain clipped. This closes the first concrete
+  layout-container fix from the text-role matrix without moving policy into `fret-imui`.
+  2026-05-17 property-row wrapping layout result: the overflow fix now has a layout-level gate.
+  A narrow `PropertyRow` with `editor_validation_message_text_props(...)` runs through
+  `UiTree::layout_all(...)`, then public element-bounds queries assert that the wrapped validation
+  text is contained by the value slot and row bounds instead of painting past the row bottom.
+  2026-05-17 property-grid wrapping layout result: the container fix is now covered at the
+  inspector composition level too. A narrow `PropertyGrid` with single-line rows before/after a
+  wrapping validation row proves that the wrapping row grows and pushes following rows down instead
+  of preserving a fixed-row-height assumption.
+  2026-05-17 generic list text result: the compatibility `list_from_strings(...)` helper now uses
+  the shared text-role vocabulary for fixed virtual-list rows. Leading status glyphs use
+  `text_chrome_glyph(...)`, labels use `text_list_row_label(...)`, and trailing shortcut text uses
+  `text_control_readout(...)`, with a focused structure test and source-gate marker preventing the
+  old bare `cx.text(...)` row path from returning.
+  2026-05-17 generic tree text result: the default retained tree row renderer now routes row labels
+  through `text_list_row_label(...)` and toggle glyphs through `text_chrome_glyph(...)`, while
+  leaving custom tree row renderers free to own their own content policy.
+  2026-05-17 file tree text result: `file_tree_view_retained_v0(...)` now routes fixed row icons
+  through `text_chrome_glyph(...)` and file labels through `text_list_row_label(...)` instead of
+  hand-rolling `ui::text(...).truncate()` inside the fixed-height row.
+  2026-05-17 retained table text result: `table_virtualized_retained_v0(...)` and grouped table
+  row text now route retained header labels, grouped row labels, and aggregation values through
+  `text_table_cell(...)` instead of bare `cx.text(...)` inside fixed table cells.
+  2026-05-17 examples table proof text result: `table_demo` and `table_stress_demo` now teach the
+  same shared text-role vocabulary as the retained/data-grid proof surfaces. Their long status
+  headers use `text_control_readout(...)`, while table headers and body cells use
+  `text_table_cell(...)`, with source tests preventing the old bare `cx.text(header/label/text)`
+  paths from returning.
+  2026-05-17 datatable proof text result: `datatable_demo` now teaches the same contract at the
+  shadcn data-table layer. The compact selected/sort status readout uses
+  `text_control_readout(...)`, and body cells use `text_table_cell(...)`; source gates reject the
+  old bare `cx.text(...)` cell/readout paths.
+  2026-05-17 virtual-list stress proof text result: `virtual_list_stress_demo` now teaches the
+  same fixed-row text contract for virtualized lists. The scroll/state header uses
+  `text_control_readout(...)`, visible row labels use `text_list_row_label(...)`, and source gates
+  reject the old bare `cx.text(header)` / row-label text path.
+  2026-05-17 canvas datagrid stress proof text result: `canvas_datagrid_stress_demo` now routes its
+  compact retained-canvas grid stats header through `text_control_readout(...)`, and source gates
+  reject the old bare `cx.text(header)` path above the fixed grid slot.
+  2026-05-17 gallery retained-table torture text result: the UI Gallery retained-table torture page
+  now uses `text_table_cell(...)` for fixed table cells and `control_readout_text(...)` for table
+  state readouts, so the visible retained-table stress surface no longer teaches bare fixed-cell
+  text under resize.
+  2026-05-17 gallery data-table torture text result: the UI Gallery DataTable torture page now
+  routes fixed cells through `text_table_cell(...)` in both retained and non-retained render paths,
+  and table sorting/filter/pinning status lines through `control_readout_text(...)`.
+  2026-05-17 gallery data-grid text result: the UI Gallery DataGrid preview now routes virtualized
+  grid cells through `text_table_cell(...)` and the selected-row status line through
+  `control_readout_text(...)`.
+  2026-05-17 gallery data paragraph text result: DataGrid/DataTable/Tree Torture explanatory
+  header copy now routes through `paragraph_text(...)`, backed by shared `text_paragraph(...)`,
+  instead of default `cx.text(...)`.
+  2026-05-17 gallery inspector torture text result: the UI Gallery Inspector Torture virtual rows
+  now route fixed property labels through `text_list_row_label(...)` and fixed values through
+  `control_readout_text(...)`.
+  2026-05-17 gallery virtual-list torture text result: the UI Gallery virtual-list harness now
+  routes fixed custom row labels through `text_list_row_label(...)`, detail/editing readouts
+  through `control_readout_text(...)`, and the UI Kit list torture custom row renderer through the
+  shared list-row label role.
+  2026-05-17 gallery harness header text result: retained-table, hit-test, UI Kit list,
+  virtual-list, and view-cache harness headers now route explanatory copy through
+  `paragraph_text(...)` and mode/status lines through `control_readout_text(...)` instead of bare
+  `cx.text(...)`.
+  2026-05-17 gallery view-cache list text result: the UI Gallery View Cache torture page now routes
+  cached inner virtual-list row labels through `text_list_row_label(...)`.
+  2026-05-17 gallery view-cache control-label result: fixed switch labels now route through
+  `control_label_text(...)` instead of bare `cx.text(...)`.
+  2026-05-17 gallery view-cache popover body result: the cached Popover body copy now routes
+  through `paragraph_text(...)` instead of bare `cx.text(...)`.
+  2026-05-17 gallery tree torture status text result: the UI Gallery Tree Torture dynamic target
+  status now routes through `control_readout_text(...)` instead of local text-sm/muted styling.
+  2026-05-17 gallery overlay status text result: overlay and menu last-action/status flags now
+  route through `control_readout_text(...)` instead of bare `cx.text(...)`.
+  2026-05-17 gallery overlay scroll-row text result: dialog/sheet/portal scroll filler rows now
+  route through `text_list_row_label(...)` instead of bare `cx.text(...)`.
+  2026-05-17 gallery overlay body prose result: HoverCard and Popover body copy now route
+  through `paragraph_text(...)` instead of bare `cx.text(...)`.
+  2026-05-17 gallery chrome torture control-label result: fixed text-input/textarea labels now
+  route through `control_label_text(...)`, backed by shared `text_control_label(...)`, instead of
+  bare `cx.text(...)`.
+  2026-05-17 virtual row fallback result: tree and file-tree virtualizer out-of-range fallback
+  paths now return spacer placeholders instead of empty text nodes, so fixed-row helpers no longer
+  create meaningless `Text` elements for missing rows.
+  2026-05-17 gallery disabled toaster placeholder result: the UI Gallery disabled toaster driver
+  path now returns a spacer placeholder instead of an empty text node, keeping app-shell placeholder
+  plumbing outside text layout semantics.
+  2026-05-17 gallery app-sidebar collapsed placeholder result: the copyable app-sidebar snippet now
+  uses a spacer placeholder for collapsed project groups instead of `cx.text("")`.
+  2026-05-17 fret-ui-ai empty placeholder result: AI element hidden/missing-content fallbacks now
+  share a crate-local spacer helper instead of returning empty text nodes.
+  2026-05-17 gallery status-bar readout result: UI Gallery status-bar metric, inspector, and
+  last-action text now use `driver::text_roles::chrome_readout_text(...)` backed by
+  `text_control_readout(...)`, so fixed status chrome no longer teaches bare wrapping text under
+  resize.
+  2026-05-17 gallery driver chrome text result: UI Gallery driver chrome now owns a tiny
+  `text_roles` module over the shared kit text roles. Disabled pane placeholders route through
+  control readouts, and settings sheet section labels route through section chrome labels instead
+  of bare/default text.
+  2026-05-17 gallery driver chrome label result: the nav title now routes through section-chrome
+  text, and settings-sheet switch captions route through control-label text instead of local
+  `TextProps` policy.
+  2026-05-17 gallery minimal-root text result: the UI Gallery `BISECT_MINIMAL_ROOT` placeholder now
+  uses the driver chrome-readout text role instead of bare/default text, keeping even diagnostic
+  resize-bisect roots on the shared single-line text posture.
+  2026-05-17 gallery debug-HUD text result: fixed-size debug HUD lines now use the shared driver
+  chrome-readout role instead of local word-wrapping `TextProps`, keeping long diagnostic metrics
+  single-line/truncated inside HUD chrome.
+  2026-05-17 gallery shell content/nav text result: page header title/source and sidebar group
+  headings now use shared chrome/readout roles instead of hand-rolled `TextProps` in the gallery
+  app shell.
+  2026-05-17 gallery editor preview text result: code-editor, Markdown, and Web IME preview
+  headers now use paragraph text for prose, control readout text for fixed status/debug values,
+  and button label text for custom pointer-region actions. The slice keeps editor-proof resize
+  text semantics in gallery/doc-layout helpers and the shared kit role vocabulary, not in
+  `fret-imui`.
+  2026-05-17 code-editor IME gate button-label result: the MVP IME gate action labels now use
+  `doc_layout::button_label_text(...)`, and focused source/test guards prevent those custom
+  pointer-region buttons from drifting back to bare `cx.text(...)` under fixed row chrome.
+  2026-05-17 docking arbitration text-role result: `docking_arbitration_demo` now uses a local
+  paragraph helper for Popover body copy and a local readout helper backed by
+  `text_control_readout(...)` for state/debug status lines, keeping the docking proof on shared
+  text roles without moving policy into `fret-imui`.
+  2026-05-17 docking/container-query panel text result: `docking_demo` and
+  `container_queries_docking_demo` now use local helpers over shared list-row, control-readout, and
+  button-label text roles for fixed panel text. This closes the simple docking demo resize escape
+  hatch while leaving docking topology/policy ownership unchanged.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

@@ -2,7 +2,9 @@
   "schema_version": 2,
   "meta": {
     "name": "ui-gallery-command-palette-disabled-focusable-keyboard-suppression",
-    "required_capabilities": ["diag.script_v2"],
+    "required_capabilities": [
+      "diag.script_v2"
+    ],
     "tags": [
       "ui_gallery",
       "shadcn",
@@ -24,14 +26,25 @@
     ]
   },
   "steps": [
-    { "type": "reset_diagnostics" },
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "reset_diagnostics"
+    },
+    {
+      "type": "press_key",
+      "key": "escape"
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-command" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-page-command"
+        }
       },
       "timeout_frames": 600
     },
@@ -39,7 +52,10 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-content-scroll"
+        }
       },
       "timeout_frames": 240
     },
@@ -47,14 +63,23 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-command-behavior-input" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-command-behavior-input"
+        }
       },
       "timeout_frames": 600
     },
     {
       "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-command-behavior-input" },
+      "container": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-scroll"
+      },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-command-behavior-input"
+      },
       "delta_x": 0.0,
       "delta_y": -720.0,
       "padding_px": 4.0,
@@ -64,20 +89,29 @@
     },
     {
       "type": "ensure_visible",
-      "target": { "kind": "test_id", "id": "ui-gallery-command-behavior-input" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-command-behavior-input"
+      },
       "padding_px": 4.0,
       "within_window": true,
       "timeout_frames": 600
     },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-command-behavior-input" }
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-command-behavior-input"
+      }
     },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-command-behavior-input" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-command-behavior-input"
+        }
       },
       "timeout_frames": 240
     },
@@ -85,8 +119,14 @@
       "type": "wait_until",
       "predicate": {
         "kind": "active_item_is",
-        "container": { "kind": "test_id", "id": "ui-gallery-command-behavior-input" },
-        "item": { "kind": "test_id", "id": "ui-gallery-command-behavior-item-open-project" }
+        "container": {
+          "kind": "test_id",
+          "id": "ui-gallery-command-behavior-input"
+        },
+        "item": {
+          "kind": "test_id",
+          "id": "ui-gallery-command-behavior-item-open-project"
+        }
       },
       "timeout_frames": 240
     },
@@ -94,7 +134,10 @@
       "type": "assert",
       "predicate": {
         "kind": "disabled_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-command-behavior-item-legacy-export" },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-command-behavior-item-legacy-export"
+        },
         "disabled": true
       }
     },
@@ -102,18 +145,30 @@
       "type": "assert",
       "predicate": {
         "kind": "semantics_action_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-command-behavior-item-legacy-export" },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-command-behavior-item-legacy-export"
+        },
         "action": "invoke",
         "enabled": false
       }
     },
-    { "type": "press_key", "key": "arrow_down" },
+    {
+      "type": "press_key",
+      "key": "arrow_down"
+    },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "active_item_is",
-        "container": { "kind": "test_id", "id": "ui-gallery-command-behavior-input" },
-        "item": { "kind": "test_id", "id": "ui-gallery-command-behavior-item-deploy-api" }
+        "container": {
+          "kind": "test_id",
+          "id": "ui-gallery-command-behavior-input"
+        },
+        "item": {
+          "kind": "test_id",
+          "id": "ui-gallery-command-behavior-item-deploy-api"
+        }
       },
       "timeout_frames": 240
     },
@@ -121,7 +176,10 @@
       "type": "assert",
       "predicate": {
         "kind": "disabled_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-command-behavior-item-deploy-api" },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-command-behavior-item-deploy-api"
+        },
         "disabled": true
       }
     },
@@ -129,7 +187,10 @@
       "type": "assert",
       "predicate": {
         "kind": "semantics_action_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-command-behavior-item-deploy-api" },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-command-behavior-item-deploy-api"
+        },
         "action": "invoke",
         "enabled": false
       }
@@ -138,14 +199,23 @@
       "type": "assert",
       "predicate": {
         "kind": "label_contains",
-        "target": { "kind": "test_id", "id": "ui-gallery-command-behavior-last-action" },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-command-behavior-last-action"
+        },
         "text": "Last action: <none>"
       }
     },
     {
       "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-command-behavior-item-deploy-api" },
+      "container": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-scroll"
+      },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-command-behavior-item-deploy-api"
+      },
       "delta_x": 0.0,
       "delta_y": -160.0,
       "padding_px": 4.0,
@@ -157,21 +227,36 @@
       "type": "capture_bundle",
       "label": "ui-gallery-command-palette-disabled-focusable-active-descendant"
     },
-    { "type": "press_key", "key": "enter" },
-    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "press_key",
+      "key": "enter"
+    },
+    {
+      "type": "wait_frames",
+      "n": 6
+    },
     {
       "type": "assert",
       "predicate": {
         "kind": "active_item_is",
-        "container": { "kind": "test_id", "id": "ui-gallery-command-behavior-input" },
-        "item": { "kind": "test_id", "id": "ui-gallery-command-behavior-item-deploy-api" }
+        "container": {
+          "kind": "test_id",
+          "id": "ui-gallery-command-behavior-input"
+        },
+        "item": {
+          "kind": "test_id",
+          "id": "ui-gallery-command-behavior-item-deploy-api"
+        }
       }
     },
     {
       "type": "assert",
       "predicate": {
         "kind": "label_contains",
-        "target": { "kind": "test_id", "id": "ui-gallery-command-behavior-last-action" },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-command-behavior-last-action"
+        },
         "text": "Last action: <none>"
       }
     },
@@ -185,8 +270,14 @@
     },
     {
       "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-command-behavior-item-deploy-api" },
+      "container": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-scroll"
+      },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-command-behavior-item-deploy-api"
+      },
       "delta_x": 0.0,
       "delta_y": -160.0,
       "padding_px": 4.0,

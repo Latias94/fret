@@ -38,6 +38,10 @@
     },
     {
       "role": "status",
+      "path": "docs/workstreams/imui-imgui-gap-closure-v1/P3_TEXT_ROLE_MATRIX_2026-05-17.md"
+    },
+    {
+      "role": "status",
       "path": "docs/workstreams/imui-imgui-gap-closure-v1/P3_DESIGN_SURFACE_READINESS_2026-05-06.md"
     },
     {
@@ -159,23 +163,87 @@
     },
     {
       "name": "imui text item resize semantics",
-      "command": "cargo nextest run -p fret-ui-kit --features imui --lib imui_text_item_is_single_line_and_shrinkable imui_text_wrapped_is_explicit_wrapping_text --no-fail-fast"
+      "command": "cargo nextest run -p fret-ui-kit --features imui --lib imui_text_item_is_single_line_and_shrinkable imui_text_wrapped_is_explicit_wrapping_text compact_paragraph_text_uses_wrapping_fill_width_layout bullet_text_uses_shared_compact_paragraph_role --no-fail-fast"
     },
     {
       "name": "imui control chrome fill text semantics",
-      "command": "cargo nextest run -p fret-ui-kit --features imui --lib imui_fill_text_is_single_line_and_shrinkable imui_control_text_uses_shared_button_label_role --no-fail-fast"
+      "command": "cargo nextest run -p fret-ui-kit --features imui --lib control_label_text_uses_fill_width_single_line_truncation imui_fill_text_is_single_line_and_shrinkable imui_control_text_uses_shared_button_label_role --no-fail-fast"
     },
     {
       "name": "imui menu shortcut text role reuse",
-      "command": "cargo nextest run -p fret-ui-kit --features imui --lib menu_item_shortcut_text_uses_shared_control_readout_role menu_item_label_text_uses_shared_list_row_text_role --no-fail-fast"
+      "command": "cargo nextest run -p fret-ui-kit --features imui --lib menu_item_shortcut_text_uses_shared_control_readout_role menu_item_label_text_uses_shared_list_row_text_role menu_item_indicator_text_uses_shared_chrome_glyph_role --no-fail-fast"
+    },
+    {
+      "name": "imui section chrome label text semantics",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --lib chrome_title_text_uses_fill_width_single_line_truncation section_chrome_label_text_uses_single_line_truncation chrome_glyph_text_uses_fixed_slot_single_line_clip disclosure_indicator_uses_shared_chrome_glyph_text_role --no-fail-fast"
     },
     {
       "name": "editor input value text semantics",
       "command": "cargo nextest run -p fret-ui-editor editor_input_value_text_is_single_line_and_shrinkable drag_value axis_drag_value --no-fail-fast"
     },
     {
+      "name": "editor status badge text semantics",
+      "command": "cargo nextest run -p fret-ui-editor editor_status_badge_text_uses_compact_single_line_readout_role error_badge_palette_keeps_short_visible_label loading_badge_palette_uses_short_label loading_badge_palette_stays_darker_than_editor_foreground --no-fail-fast"
+    },
+    {
+      "name": "editor inline error text semantics",
+      "command": "cargo nextest run -p fret-ui-editor editor_inline_error_text_is_single_line_and_shrinkable editor_preview_caption_text_is_single_line_and_shrinkable editor_tooltip_readout_text_is_single_line_and_shrinkable numeric_readout_formats_rgb_hsv_and_optional_alpha color_tooltip_lines_match_imgui_hex_rgb_hsv_preview_text --no-fail-fast"
+    },
+    {
+      "name": "editor validation message text semantics",
+      "command": "cargo nextest run -p fret-ui-editor editor_validation_message_text_wraps_and_shrinks --no-fail-fast"
+    },
+    {
+      "name": "editor transform label text semantics",
+      "command": "cargo nextest run -p fret-ui-editor editor_section_badge_text_is_single_line_centered_badge_label editor_section_heading_text_is_single_line_and_shrinkable editor_inline_control_label_text_is_single_line_and_shrinkable transform_edit_axis_outcome_exposes_read_only_signals --no-fail-fast"
+    },
+    {
+      "name": "editor property chrome text semantics",
+      "command": "cargo nextest run -p fret-ui-editor editor_property_group_header_text_is_single_line_and_shrinkable editor_property_row_label_text_is_single_line_and_shrinkable editor_property_row_reset_glyph_text_keeps_fixed_button_line_box editor_inspector_panel_title_text_is_single_line_and_shrinkable inspector_panel_title_stays_single_line_when_header_is_narrow row_label_slot_keeps_fixed_line_box_when_label_text_wraps_under_narrow_layout --no-fail-fast"
+    },
+    {
+      "name": "editor property wrapping value overflow and layout",
+      "command": "cargo nextest run -p fret-ui-editor row_value_slot_keeps_overflow_visible_for_wrapping_value_children row_value_slot_grows_to_wrapping_value_text_under_narrow_layout property_grid_keeps_rows_separated_when_value_text_wraps_under_narrow_layout --no-fail-fast"
+    },
+    {
+      "name": "editor popup list text semantics",
+      "command": "cargo nextest run -p fret-ui-editor popup_list_row_text_is_single_line_and_shrinkable popup_empty_text_is_single_line_and_shrinkable popup_list_centered_row_text_keeps_row_fill_and_center_alignment popup_list_option_caption_text_keeps_fixed_caption_line_box enum_select_item_test_id_segment_is_stable_ascii empty_label_is_inline_only color_copy_entries_match_imgui_copy_as_payloads popup_options_default_to_imgui_like_hue_bar_surface --no-fail-fast"
+    },
+    {
       "name": "fret-examples imui proof check",
       "command": "cargo check -p fret-examples"
+    },
+    {
+      "name": "examples table proof text roles",
+      "command": "cargo nextest run -p fret-examples --test table_demo_surface table_demo_keeps_fixed_table_text_on_roles --test table_stress_demo_surface table_stress_demo_keeps_fixed_table_text_on_roles --no-fail-fast"
+    },
+    {
+      "name": "datatable proof text roles",
+      "command": "cargo nextest run -p fret-examples --test datatable_demo_surface datatable_demo_keeps_fixed_table_text_on_roles --no-fail-fast"
+    },
+    {
+      "name": "virtual-list stress proof text roles",
+      "command": "cargo nextest run -p fret-examples --test virtual_list_stress_demo_surface virtual_list_stress_demo_keeps_fixed_row_text_on_roles --no-fail-fast"
+    },
+    {
+      "name": "canvas datagrid stress proof text roles",
+      "command": "cargo nextest run -p fret-examples --test canvas_datagrid_stress_demo_surface canvas_datagrid_stress_demo_keeps_header_text_on_readout_role --no-fail-fast"
+    },
+    {
+      "name": "examples table proof bin check",
+      "command": "cargo check -p fret-demo --bin table_demo --bin table_stress_demo"
+    },
+    {
+      "name": "datatable proof crate check",
+      "command": "cargo check -p fret-examples"
+    },
+    {
+      "name": "virtual-list stress proof bin check",
+      "command": "cargo check -p fret-demo --bin virtual_list_stress_demo"
+    },
+    {
+      "name": "canvas datagrid stress proof bin check",
+      "command": "cargo check -p fret-demo --bin canvas_datagrid_stress_demo"
     },
     {
       "name": "imui design surface editor anchors",
@@ -301,6 +369,7 @@
     "docs/workstreams/imui-imgui-gap-closure-v1/P2_GOLDEN_PATH_PROMOTION_2026-05-06.md",
     "docs/workstreams/imui-imgui-gap-closure-v1/P3_PUBLIC_SURFACE_CATALOG_2026-05-06.md",
     "docs/workstreams/imui-imgui-gap-closure-v1/P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md",
+    "docs/workstreams/imui-imgui-gap-closure-v1/P3_TEXT_ROLE_MATRIX_2026-05-17.md",
     "docs/workstreams/imui-imgui-gap-closure-v1/P3_DESIGN_SURFACE_READINESS_2026-05-06.md",
     "docs/workstreams/imui-imgui-gap-closure-v1/P3_PORTING_SUGAR_READINESS_2026-05-06.md",
     "docs/workstreams/imui-imgui-gap-closure-v1/P3_CHILD_REGION_READINESS_2026-05-06.md",
@@ -326,19 +395,38 @@
     "ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs",
     "ecosystem/fret-ui-kit/src/declarative/text.rs",
+    "ecosystem/fret-ui-kit/src/declarative/file_tree.rs",
+    "ecosystem/fret-ui-kit/src/declarative/table.rs",
     "ecosystem/fret-ui-kit/src/imui/control_chrome.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/multi_select.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/separator_text_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/response/widgets.rs",
     "ecosystem/fret-ui-kit/src/imui/options/collections.rs",
     "ecosystem/fret-ui-editor/src/imui.rs",
     "ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs",
     "ecosystem/fret-ui-editor/src/primitives/input_group.rs",
+    "ecosystem/fret-ui-editor/src/primitives/popup_list.rs",
+    "ecosystem/fret-ui-editor/src/primitives/readout.rs",
+    "ecosystem/fret-ui-editor/src/composites/inspector_panel.rs",
+    "ecosystem/fret-ui-editor/src/composites/property_group.rs",
+    "ecosystem/fret-ui-editor/src/composites/property_grid.rs",
+    "ecosystem/fret-ui-editor/src/composites/property_row.rs",
+    "ecosystem/fret-ui-editor/src/test_support.rs",
+    "ecosystem/fret-ui-editor/src/controls/field_status.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/popup/copy.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/popup/numeric.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/popup/options.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/popup/preview.rs",
+    "ecosystem/fret-ui-editor/src/controls/color_edit/popup/tooltip.rs",
     "ecosystem/fret-ui-editor/src/controls/drag_value.rs",
     "ecosystem/fret-ui-editor/src/controls/axis_drag_value.rs",
+    "ecosystem/fret-ui-editor/src/controls/enum_select.rs",
+    "ecosystem/fret-ui-editor/src/controls/text_assist_field.rs",
     "ecosystem/fret-ui-editor/src/controls/vec_edit.rs",
     "ecosystem/fret-ui-editor/src/controls/transform_edit.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs",
@@ -371,8 +459,53 @@
     "apps/fret-examples/src/imui_editor_proof_demo/collection.rs",
     "apps/fret-examples/src/workspace_shell_demo.rs",
     "apps/fret-examples/src/editor_notes_demo.rs",
+    "apps/fret-examples/src/docking_demo.rs",
+    "apps/fret-examples/src/docking_arbitration_demo.rs",
+    "apps/fret-examples/src/container_queries_docking_demo.rs",
+    "apps/fret-examples/src/datatable_demo.rs",
+    "apps/fret-examples/src/canvas_datagrid_stress_demo.rs",
+    "apps/fret-examples/src/virtual_list_stress_demo.rs",
+    "apps/fret-examples/src/table_demo.rs",
+    "apps/fret-examples/src/table_stress_demo.rs",
+    "apps/fret-examples/tests/docking_demo_surface.rs",
+    "apps/fret-examples/tests/docking_arbitration_surface.rs",
+    "apps/fret-examples/tests/container_queries_docking_surface.rs",
+    "apps/fret-examples/tests/datatable_demo_surface.rs",
+    "apps/fret-examples/tests/canvas_datagrid_stress_demo_surface.rs",
+    "apps/fret-examples/tests/virtual_list_stress_demo_surface.rs",
+    "apps/fret-examples/tests/table_demo_surface.rs",
+    "apps/fret-examples/tests/table_stress_demo_surface.rs",
+    "apps/fret-ui-gallery/src/driver/chrome.rs",
+    "apps/fret-ui-gallery/src/driver/shell.rs",
+    "apps/fret-ui-gallery/src/driver/settings_sheet.rs",
+    "apps/fret-ui-gallery/src/driver/toaster.rs",
+    "apps/fret-ui-gallery/src/driver/status_bar.rs",
+    "apps/fret-ui-gallery/src/driver/text_roles.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/torture/chrome_torture.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/harness/hit_test_torture.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/harness/ui_kit_list_torture.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/harness/view_cache.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/harness/virtual_list_torture.rs",
+    "apps/fret-ui-gallery/src/ui/previews/gallery/overlays/menus.rs",
+    "apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/flags.rs",
+    "apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/widgets.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs",
+    "apps/fret-ui-gallery/src/ui/previews/gallery/data/data_grid.rs",
+    "apps/fret-ui-gallery/src/ui/previews/gallery/data/table_torture.rs",
+    "apps/fret-ui-gallery/src/ui/previews/gallery/data/tree_torture.rs",
+    "apps/fret-ui-gallery/src/ui/previews/gallery/torture/inspector_torture.rs",
+    "apps/fret-ui-gallery/src/ui/previews/gallery/torture/table_retained_torture.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/mvp/gates.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/mvp/header.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/torture.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/editors/markdown.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/editors/web_ime.rs",
+    "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
+    "apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs",
     "apps/fret-ui-gallery/src/ui/doc_layout.rs",
     "apps/fret-ui-gallery/tests/code_editor_control_readout_surface.rs",
+    "ecosystem/fret-ui-ai/src/elements/mod.rs",
+    "ecosystem/fret-ui-ai/src/surface_policy_tests.rs",
     "tools/gate_imui_workstream_source.py",
     "repo-ref/imgui/imgui.h",
     "repo-ref/imgui/imgui.cpp",

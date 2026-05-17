@@ -5,16 +5,15 @@
 
 use std::sync::Arc;
 
-use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Color, Corners, Edges, FontWeight, Px, TextAlign, TextStyle};
-use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, SizeStyle, TextProps};
+use fret_core::{Color, Corners, Edges, Px};
+use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, SizeStyle};
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::typography;
 
 use crate::primitives::colors::{
     editor_accent, editor_border, editor_focus_ring, editor_foreground, editor_muted_foreground,
     editor_subtle_bg,
 };
+use crate::primitives::readout::editor_status_badge_text_props;
 use crate::primitives::{EditorDensity, EditorTokenKeys};
 
 #[derive(Debug, Clone)]
@@ -83,12 +82,6 @@ impl FieldStatusBadge {
         let (bg, border, fg, label) = status_badge_palette(theme, &self.status);
 
         let badge_h = Px((density.row_height.0 - 6.0).max(14.0));
-        let text_style = typography::as_control_text(TextStyle {
-            size: Px(9.0),
-            weight: FontWeight::MEDIUM,
-            line_height: Some(badge_h),
-            ..Default::default()
-        });
 
         cx.container(
             ContainerProps {
@@ -101,23 +94,7 @@ impl FieldStatusBadge {
                 ..Default::default()
             },
             move |cx| {
-                vec![cx.text_props(TextProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Auto,
-                            height: Length::Px(badge_h),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    text: label.clone(),
-                    style: Some(text_style),
-                    color: Some(fg),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Ellipsis,
-                    align: TextAlign::Center,
-                    ink_overflow: Default::default(),
-                })]
+                vec![cx.text_props(editor_status_badge_text_props(label.clone(), fg, badge_h))]
             },
         )
     }

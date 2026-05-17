@@ -1367,7 +1367,7 @@ impl CommitFileAdditions {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         if self.count == 0 {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         }
 
         if !self.children.is_empty() {
@@ -1423,7 +1423,7 @@ impl CommitFileDeletions {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         if self.count == 0 {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         }
 
         if !self.children.is_empty() {

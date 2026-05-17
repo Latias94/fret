@@ -20,6 +20,90 @@ enum BuiltinSuite {
     DockingMotionPilot,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Deserialize)]
+struct SuiteLintPolicy {
+    #[serde(default)]
+    max_warning_issues: Option<u64>,
+}
+
+impl SuiteLintPolicy {
+    fn merge_from(&mut self, next: SuiteLintPolicy, source: &Path) -> Result<(), String> {
+        if let (Some(current), Some(incoming)) = (self.max_warning_issues, next.max_warning_issues)
+            && current != incoming
+        {
+            return Err(format!(
+                "conflicting suite lint policy max_warning_issues: {current} vs {incoming} ({})",
+                source.display()
+            ));
+        }
+        if self.max_warning_issues.is_none() {
+            self.max_warning_issues = next.max_warning_issues;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct SuiteLintFailure {
+    reason_code: &'static str,
+    failure_kind: &'static str,
+}
+
+fn evaluate_suite_lint_policy(
+    lint_policy: SuiteLintPolicy,
+    error_issues: u64,
+    warning_issues: u64,
+) -> Option<SuiteLintFailure> {
+    if error_issues > 0 {
+        return Some(SuiteLintFailure {
+            reason_code: "diag.suite.lint_failed",
+            failure_kind: "lint_failed",
+        });
+    }
+    if let Some(max_warning_issues) = lint_policy.max_warning_issues
+        && warning_issues > max_warning_issues
+    {
+        return Some(SuiteLintFailure {
+            reason_code: "diag.suite.lint_warning_budget_exceeded",
+            failure_kind: "lint_warning_budget_exceeded",
+        });
+    }
+    None
+}
+
+fn suite_lint_policy_summary(
+    lint_policy: SuiteLintPolicy,
+    warning_issues: u64,
+) -> Option<serde_json::Value> {
+    let max_warning_issues = lint_policy.max_warning_issues?;
+    let status = if warning_issues > max_warning_issues {
+        "failed"
+    } else {
+        "passed"
+    };
+    let mut payload = serde_json::json!({
+        "status": status,
+        "max_warning_issues": max_warning_issues,
+        "warning_issues": warning_issues,
+    });
+    if status == "failed" {
+        payload
+            .as_object_mut()
+            .expect("suite lint policy summary must stay an object")
+            .insert(
+                "reason_code".to_string(),
+                serde_json::json!("diag.suite.lint_warning_budget_exceeded"),
+            );
+    }
+    Some(payload)
+}
+
+#[derive(Debug)]
+struct SuiteManifestExpansion {
+    scripts: Vec<PathBuf>,
+    lint_policy: SuiteLintPolicy,
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 struct SuiteRunProfile {
     strict_termination: bool,
@@ -214,7 +298,12 @@ fn suite_row_to_regression_item(
         .pointer("/lint/error_issues")
         .and_then(|v| v.as_u64())
         .unwrap_or(0);
-    let status = if lint_error_issues > 0 {
+    let lint_policy_failed =
+        row.pointer("/lint/policy/status").and_then(|v| v.as_str()) == Some("failed");
+    let lint_policy_reason_code = row
+        .pointer("/lint/policy/reason_code")
+        .and_then(|v| v.as_str());
+    let status = if lint_error_issues > 0 || lint_policy_failed {
         RegressionStatusV1::FailedDeterministic
     } else {
         match stage {
@@ -227,6 +316,7 @@ fn suite_row_to_regression_item(
         .get("reason_code")
         .and_then(|v| v.as_str())
         .map(|v| v.to_string())
+        .or_else(|| lint_policy_reason_code.map(|v| v.to_string()))
         .or_else(|| (lint_error_issues > 0).then(|| "diag.suite.lint_failed".to_string()))
         .or_else(|| match stage {
             Some("passed") => None,
@@ -1077,6 +1167,7 @@ struct SuiteScriptLintRequest<'a> {
     result: &'a crate::stats::ScriptResultSummary,
     resolved_out_dir: &'a Path,
     suite_lint: bool,
+    lint_policy: SuiteLintPolicy,
     bundle_doctor_mode: BundleDoctorMode,
     warmup_frames: u64,
     lint_all_test_ids_bounds: bool,
@@ -1088,9 +1179,9 @@ struct SuiteScriptLintRequest<'a> {
 fn maybe_run_suite_script_lint(
     request: SuiteScriptLintRequest<'_>,
     script_ctx: &mut PreparedSuiteScriptContext,
-) -> Result<bool, String> {
+) -> Result<Option<SuiteLintFailure>, String> {
     if !request.suite_lint {
-        return Ok(false);
+        return Ok(None);
     }
 
     let Some(last_bundle_dir) = request
@@ -1099,7 +1190,7 @@ fn maybe_run_suite_script_lint(
         .as_deref()
         .and_then(|value| (!value.trim().is_empty()).then_some(value.trim()))
     else {
-        return Ok(false);
+        return Ok(None);
     };
 
     let bundle_dir = PathBuf::from(last_bundle_dir);
@@ -1135,38 +1226,48 @@ fn maybe_run_suite_script_lint(
     )?;
 
     let out = default_lint_out_path(&bundle_path);
-    script_ctx.lint_summary = Some(serde_json::json!({
+    let error_issues = report
+        .payload
+        .get("error_issues")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(report.error_issues);
+    let warning_issues = report
+        .payload
+        .get("warning_issues")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let mut lint_summary = serde_json::json!({
         "out": out.display().to_string(),
-        "error_issues": report
-            .payload
-            .get("error_issues")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(report.error_issues),
-        "warning_issues": report
-            .payload
-            .get("warning_issues")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0),
+        "error_issues": error_issues,
+        "warning_issues": warning_issues,
         "counts_by_code": report.payload.get("counts_by_code").cloned(),
-    }));
+    });
+    if let Some(policy) = suite_lint_policy_summary(request.lint_policy, warning_issues) {
+        lint_summary
+            .as_object_mut()
+            .expect("suite lint summary must stay an object")
+            .insert("policy".to_string(), policy);
+    }
+    script_ctx.lint_summary = Some(lint_summary);
     if let Some(parent) = out.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     let pretty = serde_json::to_string_pretty(&report.payload).unwrap_or_else(|_| "{}".to_string());
     std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
 
-    if report.error_issues == 0 {
-        return Ok(false);
+    let failure = evaluate_suite_lint_policy(request.lint_policy, error_issues, warning_issues);
+    if let Some(failure) = failure {
+        eprintln!(
+            "LINT-FAIL {} (run_id={}) errors={} warnings={} reason_code={} out={}",
+            request.src.display(),
+            request.result.run_id,
+            error_issues,
+            warning_issues,
+            failure.reason_code,
+            out.display()
+        );
     }
-
-    eprintln!(
-        "LINT-FAIL {} (run_id={}) errors={} out={}",
-        request.src.display(),
-        request.result.run_id,
-        report.error_issues,
-        out.display()
-    );
-    Ok(true)
+    Ok(failure)
 }
 
 struct PreparedSuiteScriptPostRunContext {
@@ -1555,6 +1656,7 @@ struct SuiteScriptSuccessTailRequest<'a> {
     resolved_out_dir: &'a Path,
     poll_ms: u64,
     suite_lint: bool,
+    lint_policy: SuiteLintPolicy,
     bundle_doctor_mode: BundleDoctorMode,
     warmup_frames: u64,
     lint_all_test_ids_bounds: bool,
@@ -1576,12 +1678,13 @@ struct SuiteScriptSuccessTailRequest<'a> {
 fn finalize_suite_script_success_tail(
     request: SuiteScriptSuccessTailRequest<'_>,
 ) -> Result<(), String> {
-    if maybe_run_suite_script_lint(
+    if let Some(lint_failure) = maybe_run_suite_script_lint(
         SuiteScriptLintRequest {
             src: request.src,
             result: request.result,
             resolved_out_dir: request.resolved_out_dir,
             suite_lint: request.suite_lint,
+            lint_policy: request.lint_policy,
             bundle_doctor_mode: request.bundle_doctor_mode,
             warmup_frames: request.warmup_frames,
             lint_all_test_ids_bounds: request.lint_all_test_ids_bounds,
@@ -1606,8 +1709,8 @@ fn finalize_suite_script_success_tail(
             request.script_ctx.lint_summary.as_ref(),
             request.script_ctx.evidence_highlights.as_ref(),
             "failed",
-            None,
-            Some("lint_failed"),
+            Some(lint_failure.reason_code),
+            Some(lint_failure.failure_kind),
         );
     }
 
@@ -1947,18 +2050,25 @@ fn dedup_paths_preserve_order(paths: Vec<PathBuf>) -> Vec<PathBuf> {
     out
 }
 
-fn maybe_expand_suite_manifest_input(
-    workspace_root: &Path,
-    input: &Path,
-) -> Result<Option<Vec<PathBuf>>, String> {
-    #[derive(Debug, serde::Deserialize)]
-    struct SuiteManifestV1 {
-        schema_version: u64,
-        kind: String,
-        scripts: Vec<String>,
+fn find_suite_manifest_path_for_input(workspace_root: &Path, input: &Path) -> Option<PathBuf> {
+    let raw = input.to_string_lossy();
+    if !raw.contains(['/', '\\', ':']) && !raw.ends_with(".json") {
+        let suite_root = workspace_root
+            .join("tools")
+            .join("diag-scripts")
+            .join("suites")
+            .join(raw.as_ref());
+        if let Some(path) = ["suite.json", "_suite.json"]
+            .into_iter()
+            .map(|name| suite_root.join(name))
+            .find(|path| path.is_file())
+        {
+            return Some(path);
+        }
     }
 
-    let manifest_path = if input.is_dir() {
+    let input = resolve_path(workspace_root, input.to_path_buf());
+    if input.is_dir() {
         ["suite.json", "_suite.json"]
             .into_iter()
             .map(|name| input.join(name))
@@ -1968,14 +2078,24 @@ fn maybe_expand_suite_manifest_input(
         .and_then(|name| name.to_str())
         .is_some_and(|name| matches!(name, "suite.json" | "_suite.json"))
     {
-        Some(input.to_path_buf())
+        Some(input)
     } else {
         None
-    };
+    }
+}
 
-    let Some(manifest_path) = manifest_path else {
-        return Ok(None);
-    };
+fn load_suite_manifest_expansion(
+    workspace_root: &Path,
+    manifest_path: &Path,
+) -> Result<SuiteManifestExpansion, String> {
+    #[derive(Debug, serde::Deserialize)]
+    struct SuiteManifestV1 {
+        schema_version: u64,
+        kind: String,
+        scripts: Vec<String>,
+        #[serde(default)]
+        lint_policy: SuiteLintPolicy,
+    }
 
     let bytes = std::fs::read(&manifest_path).map_err(|e| e.to_string())?;
     let manifest: SuiteManifestV1 = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
@@ -2016,7 +2136,21 @@ fn maybe_expand_suite_manifest_input(
         }
         out.push(resolved);
     }
-    Ok(Some(dedup_paths_preserve_order(out)))
+    Ok(SuiteManifestExpansion {
+        scripts: dedup_paths_preserve_order(out),
+        lint_policy: manifest.lint_policy,
+    })
+}
+
+fn maybe_expand_suite_manifest_input(
+    workspace_root: &Path,
+    input: &Path,
+) -> Result<Option<SuiteManifestExpansion>, String> {
+    let Some(manifest_path) = find_suite_manifest_path_for_input(workspace_root, input) else {
+        return Ok(None);
+    };
+
+    load_suite_manifest_expansion(workspace_root, &manifest_path).map(Some)
 }
 
 fn resolve_builtin_suite_scripts(
@@ -2315,6 +2449,7 @@ fn resolve_builtin_suite_scripts(
 struct ResolvedSuiteRunInputs {
     scripts: Vec<PathBuf>,
     builtin_suite: Option<BuiltinSuite>,
+    lint_policy: SuiteLintPolicy,
     suite_launch_env: Vec<(String, String)>,
     resolved_suite_prewarm_scripts: Vec<PathBuf>,
     resolved_suite_prelude_scripts: Vec<PathBuf>,
@@ -2332,6 +2467,14 @@ fn resolve_suite_run_inputs(
     strict_termination: bool,
 ) -> Result<ResolvedSuiteRunInputs, String> {
     let suite_resolver = SuiteResolver::try_load_from_workspace_root(workspace_root)?;
+    let mut lint_policy = SuiteLintPolicy::default();
+    for raw in suite_args.iter().chain(suite_script_inputs.iter()) {
+        let input = Path::new(raw);
+        if let Some(manifest_path) = find_suite_manifest_path_for_input(workspace_root, input) {
+            let expansion = load_suite_manifest_expansion(workspace_root, &manifest_path)?;
+            lint_policy.merge_from(expansion.lint_policy, &manifest_path)?;
+        }
+    }
 
     let mut used_fallback_paths = false;
     let (mut scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) =
@@ -2376,7 +2519,8 @@ fn resolve_suite_run_inputs(
     let mut expanded_suite_manifest_inputs: Vec<PathBuf> = Vec::new();
     for path in scripts {
         if let Some(expanded) = maybe_expand_suite_manifest_input(workspace_root, &path)? {
-            expanded_suite_manifest_inputs.extend(expanded);
+            lint_policy.merge_from(expanded.lint_policy, &path)?;
+            expanded_suite_manifest_inputs.extend(expanded.scripts);
         } else {
             expanded_suite_manifest_inputs.push(path);
         }
@@ -2486,6 +2630,7 @@ hint: list promoted scripts via `fretboard-dev diag list scripts --contains {nam
     Ok(ResolvedSuiteRunInputs {
         scripts,
         builtin_suite,
+        lint_policy,
         suite_launch_env: launch_env,
         resolved_suite_prewarm_scripts,
         resolved_suite_prelude_scripts,
@@ -3368,6 +3513,7 @@ hint: list suites via `fretboard-dev diag list suites`"
     let ResolvedSuiteRunInputs {
         scripts,
         builtin_suite,
+        lint_policy,
         suite_launch_env,
         resolved_suite_prewarm_scripts,
         resolved_suite_prelude_scripts,
@@ -3906,6 +4052,7 @@ hint: list suites via `fretboard-dev diag list suites`"
                 resolved_out_dir: &resolved_out_dir,
                 poll_ms,
                 suite_lint,
+                lint_policy,
                 bundle_doctor_mode,
                 warmup_frames,
                 lint_all_test_ids_bounds,
@@ -4288,6 +4435,7 @@ mod tests {
                 result: &result,
                 resolved_out_dir: std::path::Path::new("diag-out"),
                 suite_lint: false,
+                lint_policy: SuiteLintPolicy::default(),
                 bundle_doctor_mode: BundleDoctorMode::Off,
                 warmup_frames: 0,
                 lint_all_test_ids_bounds: false,
@@ -4299,7 +4447,7 @@ mod tests {
         )
         .expect("disabled suite lint should skip helper work");
 
-        assert!(!lint_failed);
+        assert!(lint_failed.is_none());
         assert!(script_ctx.lint_summary.is_none());
     }
 
@@ -4325,6 +4473,7 @@ mod tests {
                 result: &result,
                 resolved_out_dir: std::path::Path::new("diag-out"),
                 suite_lint: true,
+                lint_policy: SuiteLintPolicy::default(),
                 bundle_doctor_mode: BundleDoctorMode::Off,
                 warmup_frames: 0,
                 lint_all_test_ids_bounds: false,
@@ -4336,8 +4485,102 @@ mod tests {
         )
         .expect("missing bundle dir should skip lint helper");
 
-        assert!(!lint_failed);
+        assert!(lint_failed.is_none());
         assert!(script_ctx.lint_summary.is_none());
+    }
+
+    #[test]
+    fn suite_manifest_expansion_parses_lint_warning_budget() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-suite-manifest-policy-{}-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("tools/diag-scripts/suites/policy"))
+            .expect("create suite dir");
+        std::fs::write(root.join("script.json"), "{}").expect("write script placeholder");
+        std::fs::write(
+            root.join("tools/diag-scripts/suites/policy/suite.json"),
+            r#"{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "lint_policy": { "max_warning_issues": 0 },
+  "scripts": ["script.json"]
+}"#,
+        )
+        .expect("write suite manifest");
+
+        let expanded = maybe_expand_suite_manifest_input(&root, Path::new("policy"))
+            .expect("expand suite manifest")
+            .expect("manifest should exist");
+
+        assert_eq!(expanded.scripts, vec![root.join("script.json")]);
+        assert_eq!(expanded.lint_policy.max_warning_issues, Some(0));
+    }
+
+    #[test]
+    fn suite_lint_policy_fails_when_warning_budget_is_exceeded() {
+        let policy = SuiteLintPolicy {
+            max_warning_issues: Some(0),
+        };
+
+        let failure =
+            evaluate_suite_lint_policy(policy, 0, 1).expect("warning over budget should fail");
+
+        assert_eq!(
+            failure.reason_code,
+            "diag.suite.lint_warning_budget_exceeded"
+        );
+        assert_eq!(failure.failure_kind, "lint_warning_budget_exceeded");
+    }
+
+    #[test]
+    fn suite_lint_policy_passes_when_warning_budget_is_met() {
+        let policy = SuiteLintPolicy {
+            max_warning_issues: Some(0),
+        };
+
+        assert!(evaluate_suite_lint_policy(policy, 0, 0).is_none());
+        assert_eq!(
+            suite_lint_policy_summary(policy, 0)
+                .and_then(|value| value.get("status").cloned())
+                .and_then(|value| value.as_str().map(str::to_string)),
+            Some("passed".to_string())
+        );
+    }
+
+    #[test]
+    fn suite_row_regression_item_marks_lint_warning_budget_failure() {
+        let row = serde_json::json!({
+            "script": "script.json",
+            "stage": "passed",
+            "lint": {
+                "error_issues": 0,
+                "warning_issues": 1,
+                "policy": {
+                    "status": "failed",
+                    "reason_code": "diag.suite.lint_warning_budget_exceeded",
+                    "max_warning_issues": 0,
+                    "warning_issues": 1
+                }
+            }
+        });
+
+        let item = suite_row_to_regression_item(
+            &row,
+            Path::new("diag-out"),
+            RegressionLaneV1::Correctness,
+        );
+
+        assert_eq!(item.status, RegressionStatusV1::FailedDeterministic);
+        assert_eq!(
+            item.reason_code.as_deref(),
+            Some("diag.suite.lint_warning_budget_exceeded")
+        );
     }
 
     #[test]
@@ -4390,6 +4633,7 @@ mod tests {
             resolved_out_dir,
             poll_ms: 1,
             suite_lint: false,
+            lint_policy: SuiteLintPolicy::default(),
             bundle_doctor_mode: BundleDoctorMode::Off,
             warmup_frames: 0,
             lint_all_test_ids_bounds: false,

@@ -52,6 +52,25 @@ fn resolve_row_padding_y(theme: &Theme) -> Px {
     MetricRef::space(Space::N1p5).resolve(theme)
 }
 
+fn list_from_strings_row_contents<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: &str,
+    leading: &str,
+    trailing: Option<&str>,
+) -> Vec<AnyElement> {
+    let mut out = Vec::new();
+    out.push(crate::declarative::text::text_chrome_glyph(cx, leading));
+    out.push(crate::declarative::text::text_list_row_label(cx, label));
+    out.push(cx.spacer(SpacerProps {
+        min: Px(0.0),
+        ..Default::default()
+    }));
+    if let Some(trailing) = trailing {
+        out.push(crate::declarative::text::text_control_readout(cx, trailing));
+    }
+    out
+}
+
 /// Declarative virtualized list helper (component-friendly, row content is fully composable).
 ///
 /// This intentionally avoids a fixed row schema (`VirtualListRow { text/secondary/trailing... }`)
@@ -557,19 +576,8 @@ pub fn list_from_strings<H: UiHost + 'static>(
                 move |cx, i| {
                     let label = values.get(i).map(String::as_str).unwrap_or("");
                     let leading = if i % 3 == 0 { "●" } else { "○" };
-                    let trailing = if i % 5 == 0 { "⌘O" } else { "" };
-
-                    let mut out = Vec::new();
-                    out.push(cx.text(leading));
-                    out.push(cx.text(label));
-                    out.push(cx.spacer(SpacerProps {
-                        min: Px(0.0),
-                        ..Default::default()
-                    }));
-                    if !trailing.is_empty() {
-                        out.push(cx.text(trailing));
-                    }
-                    out
+                    let trailing = (i % 5 == 0).then_some("⌘O");
+                    list_from_strings_row_contents(cx, label, leading, trailing)
                 }
             },
         ),
@@ -589,19 +597,8 @@ pub fn list_from_strings<H: UiHost + 'static>(
                 move |cx, i| {
                     let label = values.get(i).map(String::as_str).unwrap_or("");
                     let leading = if i % 3 == 0 { "●" } else { "○" };
-                    let trailing = if i % 5 == 0 { "⌘O" } else { "" };
-
-                    let mut out = Vec::new();
-                    out.push(cx.text(leading));
-                    out.push(cx.text(label));
-                    out.push(cx.spacer(SpacerProps {
-                        min: Px(0.0),
-                        ..Default::default()
-                    }));
-                    if !trailing.is_empty() {
-                        out.push(cx.text(trailing));
-                    }
-                    out
+                    let trailing = (i % 5 == 0).then_some("⌘O");
+                    list_from_strings_row_contents(cx, label, leading, trailing)
                 }
             },
         ),
@@ -614,12 +611,13 @@ mod tests {
     use fret_app::App;
     use fret_core::{
         AppWindowId, PathCommand, SvgId, SvgService, TextBlobId, TextConstraints, TextInput,
-        TextMetrics, TextService,
+        TextMetrics, TextOverflow, TextService, TextWrap,
     };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Point, Px, Rect};
     use fret_runtime::CommandId;
     use fret_ui::ThemeConfig;
+    use fret_ui::element::{ElementKind, Length};
     use fret_ui::{Theme, UiTree};
 
     #[derive(Default)]
@@ -677,6 +675,76 @@ mod tests {
         fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
+    }
+
+    fn collect_text_elements<'a>(root: &'a AnyElement, out: &mut Vec<&'a AnyElement>) {
+        if matches!(root.kind, ElementKind::Text(_)) {
+            out.push(root);
+        }
+        for child in &root.children {
+            collect_text_elements(child, out);
+        }
+    }
+
+    fn first_text<'a>(root: &'a AnyElement, expected: &str) -> &'a AnyElement {
+        let mut texts = Vec::new();
+        collect_text_elements(root, &mut texts);
+        texts
+            .into_iter()
+            .find(|element| matches!(&element.kind, ElementKind::Text(props) if props.text.as_ref() == expected))
+            .unwrap_or_else(|| panic!("expected text element {expected:?}"))
+    }
+
+    #[test]
+    fn list_from_strings_uses_shared_single_line_text_roles() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(120.0), Px(32.0)),
+        );
+
+        let row = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ui::h_row(|cx| {
+                list_from_strings_row_contents(
+                    cx,
+                    "A long virtualized list row label that should not wrap",
+                    "●",
+                    Some("⌘O"),
+                )
+            })
+            .gap(Space::N2)
+            .into_element(cx)
+        });
+
+        let ElementKind::Text(leading) = &first_text(&row, "●").kind else {
+            panic!("leading glyph should be text");
+        };
+        assert_eq!(leading.wrap, TextWrap::None);
+        assert_eq!(leading.overflow, TextOverflow::Clip);
+        assert_eq!(leading.layout.size.min_width, Some(Length::Px(Px(0.0))));
+
+        let ElementKind::Text(label) = &first_text(
+            &row,
+            "A long virtualized list row label that should not wrap",
+        )
+        .kind
+        else {
+            panic!("row label should be text");
+        };
+        assert_eq!(label.layout.size.width, Length::Fill);
+        assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(label.layout.flex.shrink, 1.0);
+        assert_eq!(label.wrap, TextWrap::None);
+        assert_eq!(label.overflow, TextOverflow::Ellipsis);
+
+        let ElementKind::Text(trailing) = &first_text(&row, "⌘O").kind else {
+            panic!("trailing shortcut should be text");
+        };
+        assert_eq!(trailing.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(trailing.layout.flex.shrink, 1.0);
+        assert_eq!(trailing.wrap, TextWrap::None);
+        assert_eq!(trailing.overflow, TextOverflow::Ellipsis);
     }
 
     #[test]

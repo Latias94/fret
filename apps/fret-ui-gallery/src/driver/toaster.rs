@@ -1,5 +1,5 @@
 use fret_app::App;
-use fret_ui::element::AnyElement;
+use fret_ui::element::{AnyElement, SpacerProps};
 use fret_ui::{ElementContext, Invalidation};
 use fret_ui_shadcn::facade as shadcn;
 
@@ -11,7 +11,7 @@ pub(super) fn toaster_view(
     disabled: bool,
 ) -> AnyElement {
     if disabled {
-        return cx.text("");
+        return cx.spacer(SpacerProps::default());
     }
 
     let position = cx

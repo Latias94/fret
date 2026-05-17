@@ -9,8 +9,7 @@
 use std::panic::Location;
 use std::sync::Arc;
 
-use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Color, Corners, Edges, KeyCode, MouseButton, Px, TextAlign, TextStyle};
+use fret_core::{Axis, Color, Corners, Edges, KeyCode, MouseButton, Px};
 use fret_runtime::Model;
 use fret_ui::action::{
     ActionCx, ActivateReason, OnActivate, PressablePointerDownResult, UiActionHost,
@@ -18,14 +17,13 @@ use fret_ui::action::{
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     PointerRegionProps, PressableA11y, PressableProps, SizeStyle, SpacingLength, TextInputProps,
-    TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, Size};
 
 use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::input_group::derived_test_id;
+use crate::primitives::readout::editor_inline_error_text_props;
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
 use crate::primitives::{EditorDensity, EditorTokenKeys};
@@ -1123,27 +1121,11 @@ impl ColorEdit {
             .get_model_cloned(&error, Invalidation::Paint)
             .unwrap_or(None);
         let error_el = error_msg.map(|msg| {
-            cx.text_props(TextProps {
-                layout: LayoutStyle {
-                    size: SizeStyle {
-                        width: Length::Fill,
-                        height: Length::Auto,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                text: msg,
-                style: Some(typography::as_control_text(TextStyle {
-                    size: Px(10.0),
-                    line_height: Some(density.row_height),
-                    ..Default::default()
-                })),
-                color: Some(Theme::global(&*cx.app).color_token("destructive")),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Ellipsis,
-                align: TextAlign::Start,
-                ink_overflow: Default::default(),
-            })
+            cx.text_props(editor_inline_error_text_props(
+                msg,
+                Theme::global(&*cx.app).color_token("destructive"),
+                density.row_height,
+            ))
         });
 
         let mut root_layout = self.options.layout;

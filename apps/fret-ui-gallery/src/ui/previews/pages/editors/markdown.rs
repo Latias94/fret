@@ -144,7 +144,10 @@ pub(in crate::ui) fn preview_markdown_editor_source(
         };
 
         vec![
-            cx.text("Goal: validate a minimal Markdown source editor milestone."),
+            doc_layout::paragraph_text(
+                cx,
+                "Goal: validate a minimal Markdown source editor milestone.",
+            ),
             doc_layout::wrap_controls_row(cx, theme, Space::N2, move |cx| {
                 let set_soft_wrap_on = soft_wrap.clone();
                 let set_soft_wrap_off = soft_wrap.clone();
@@ -173,11 +176,14 @@ pub(in crate::ui) fn preview_markdown_editor_source(
                             host.request_redraw(action_cx.window);
                         }))
                         .into_element(cx),
-                    cx.text(if soft_wrap_enabled {
-                        "Soft wrap: 80 cols"
-                    } else {
-                        "Soft wrap: off"
-                    }),
+                    doc_layout::control_readout_text(
+                        cx,
+                        if soft_wrap_enabled {
+                            "Soft wrap: 80 cols"
+                        } else {
+                            "Soft wrap: off"
+                        },
+                    ),
                 ]
             })
             .into_element(cx),
@@ -242,11 +248,14 @@ pub(in crate::ui) fn preview_markdown_editor_source(
                                 host.request_redraw(action_cx.window);
                             }))
                             .into_element(cx),
-                        cx.text(if folds_enabled {
-                            "Folds: fixture"
-                        } else {
-                            "Folds: off"
-                        }),
+                        doc_layout::control_readout_text(
+                            cx,
+                            if folds_enabled {
+                                "Folds: fixture"
+                            } else {
+                                "Folds: off"
+                            },
+                        ),
                         shadcn::Switch::new(inlays.clone())
                             .test_id("ui-gallery-markdown-editor-inlays")
                             .a11y_label("Toggle inlay fixture on line 0")
@@ -271,11 +280,14 @@ pub(in crate::ui) fn preview_markdown_editor_source(
                                 host.request_redraw(action_cx.window);
                             }))
                             .into_element(cx),
-                        cx.text(if inlays_enabled {
-                            "Inlays: fixture"
-                        } else {
-                            "Inlays: off"
-                        }),
+                        doc_layout::control_readout_text(
+                            cx,
+                            if inlays_enabled {
+                                "Inlays: fixture"
+                            } else {
+                                "Inlays: off"
+                            },
+                        ),
                     ]
                 })
                 .into_element(cx)
@@ -332,7 +344,7 @@ pub(in crate::ui) fn preview_markdown_editor_source(
                             true
                         }));
                         cx.pointer_region_on_pointer_up(inject.clone());
-                        vec![cx.text("Preedit: inject")]
+                        vec![doc_layout::button_label_text(cx, "Preedit: inject")]
                     })
                     .attach_semantics(
                         SemanticsDecoration::default()
@@ -348,7 +360,7 @@ pub(in crate::ui) fn preview_markdown_editor_source(
                             true
                         }));
                         cx.pointer_region_on_pointer_up(clear.clone());
-                        vec![cx.text("Preedit: clear")]
+                        vec![doc_layout::button_label_text(cx, "Preedit: clear")]
                     })
                     .attach_semantics(
                         SemanticsDecoration::default()
@@ -396,7 +408,7 @@ pub(in crate::ui) fn preview_markdown_editor_source(
                         .into_element(cx),
                     inject,
                     clear,
-                    cx.text(format!("Interaction: {mode_label}")),
+                    doc_layout::control_readout_text(cx, format!("Interaction: {mode_label}")),
                 ]
             })
             .gap(Space::N2)

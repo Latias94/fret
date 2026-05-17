@@ -58,6 +58,7 @@ mod router;
 mod settings_sheet;
 mod shell;
 mod status_bar;
+mod text_roles;
 mod theme_runtime;
 mod toaster;
 mod window_bootstrap;
@@ -343,6 +344,13 @@ struct UiGalleryHarnessModelIds {
     theme_preset_open: Model<bool>,
     motion_preset: Model<Option<Arc<str>>>,
     motion_preset_open: Model<bool>,
+    view_cache_enabled: Model<bool>,
+    view_cache_cache_shell: Model<bool>,
+    view_cache_cache_content: Model<bool>,
+    view_cache_inner_enabled: Model<bool>,
+    view_cache_popover_open: Model<bool>,
+    view_cache_continuous: Model<bool>,
+    view_cache_counter: Model<u64>,
     settings_open: Model<bool>,
     settings_menu_bar_os: Model<Option<Arc<str>>>,
     settings_menu_bar_in_window: Model<Option<Arc<str>>>,

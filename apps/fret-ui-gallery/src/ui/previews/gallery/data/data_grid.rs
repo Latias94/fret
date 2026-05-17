@@ -2,6 +2,13 @@ use super::super::super::super::*;
 use fret::AppComponentCx;
 use fret_ui_shadcn::facade as shadcn;
 
+fn data_grid_cell_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
+where
+    T: Into<Arc<str>>,
+{
+    fret_ui_kit::declarative::text::text_table_cell(cx, text)
+}
+
 pub(in crate::ui) fn preview_data_grid(
     cx: &mut AppComponentCx<'_>,
     selected_row: Model<Option<u64>>,
@@ -46,10 +53,10 @@ pub(in crate::ui) fn preview_data_grid(
                 |cx, row, col| {
                     let pid = 1000 + row as u64;
                     match col {
-                        0 => cx.text(pid.to_string()),
-                        1 => cx.text(format!("Process {row}")),
-                        2 => cx.text(if row % 3 == 0 { "Running" } else { "Idle" }),
-                        _ => cx.text(((row * 7) % 100).to_string()),
+                        0 => data_grid_cell_text(cx, pid.to_string()),
+                        1 => data_grid_cell_text(cx, format!("Process {row}")),
+                        2 => data_grid_cell_text(cx, if row % 3 == 0 { "Running" } else { "Idle" }),
+                        _ => data_grid_cell_text(cx, ((row * 7) % 100).to_string()),
                     }
                 },
             );
@@ -59,8 +66,11 @@ pub(in crate::ui) fn preview_data_grid(
     );
 
     vec![
-        cx.text("Virtualized rows/cols viewport; click a row to select (disabled every 17th row)."),
-        cx.text(format!("Selected row: {selected_text}")),
+        doc_layout::paragraph_text(
+            cx,
+            "Virtualized rows/cols viewport; click a row to select (disabled every 17th row).",
+        ),
+        doc_layout::control_readout_text(cx, format!("Selected row: {selected_text}")),
         grid,
     ]
 }

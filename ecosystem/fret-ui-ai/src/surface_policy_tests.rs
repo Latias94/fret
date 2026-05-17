@@ -5,6 +5,7 @@ const CONFIRMATION_RS: &str = include_str!("elements/confirmation.rs");
 const PROMPT_INPUT_RS: &str = include_str!("elements/prompt_input.rs");
 const CHECKPOINT_RS: &str = include_str!("elements/checkpoint.rs");
 const CONVERSATION_DOWNLOAD_RS: &str = include_str!("elements/conversation_download.rs");
+const COMMIT_RS: &str = include_str!("elements/commit.rs");
 const WEB_PREVIEW_RS: &str = include_str!("elements/web_preview.rs");
 const SOURCES_RS: &str = include_str!("elements/sources.rs");
 const CODE_BLOCK_RS: &str = include_str!("elements/code_block.rs");
@@ -28,11 +29,15 @@ const MODEL_SELECTOR_RS: &str = include_str!("elements/model_selector.rs");
 const VOICE_SELECTOR_RS: &str = include_str!("elements/voice_selector.rs");
 const CONTEXT_RS: &str = include_str!("elements/context.rs");
 const FILE_TREE_RS: &str = include_str!("elements/file_tree.rs");
+const PACKAGE_INFO_RS: &str = include_str!("elements/package_info.rs");
 const CONVERSATION_RS: &str = include_str!("elements/conversation.rs");
 const AI_CONVERSATION_RS: &str = include_str!("elements/ai_conversation.rs");
 const AI_CHAT_RS: &str = include_str!("elements/ai_chat.rs");
+const TERMINAL_RS: &str = include_str!("elements/terminal.rs");
+const TRANSCRIPTION_RS: &str = include_str!("elements/transcription.rs");
 const WEB_PREVIEW_RS_AI: &str = include_str!("elements/web_preview.rs");
 const INLINE_CITATION_RS: &str = include_str!("elements/inline_citation.rs");
+const ELEMENTS_MOD_RS: &str = include_str!("elements/mod.rs");
 
 #[test]
 fn default_facing_ai_action_wrappers_keep_native_action_first_aliases() {
@@ -663,4 +668,33 @@ fn web_preview_surface_does_not_require_static_host() {
         WEB_PREVIEW_RS_AI.contains("pub fn into_element_with_children<H: UiHost>("),
         "web_preview.rs should keep the root children lane available to non-static hosts"
     );
+}
+
+#[test]
+fn hidden_ai_element_paths_use_non_text_placeholder() {
+    assert!(
+        ELEMENTS_MOD_RS.contains("pub(crate) fn empty_placeholder<H: UiHost>"),
+        "elements/mod.rs should own the crate-local no-content placeholder helper"
+    );
+    assert!(
+        ELEMENTS_MOD_RS.contains("cx.spacer(SpacerProps::default())"),
+        "empty AI element placeholders should be non-text spacers"
+    );
+
+    for (label, source) in [
+        ("ai_conversation.rs", AI_CONVERSATION_RS),
+        ("attachments.rs", ATTACHMENTS_RS),
+        ("commit.rs", COMMIT_RS),
+        ("conversation.rs", CONVERSATION_RS),
+        ("file_tree.rs", FILE_TREE_RS),
+        ("package_info.rs", PACKAGE_INFO_RS),
+        ("prompt_input.rs", PROMPT_INPUT_RS),
+        ("terminal.rs", TERMINAL_RS),
+        ("transcription.rs", TRANSCRIPTION_RS),
+    ] {
+        assert!(
+            !source.contains(r#"return cx.text("");"#),
+            "{label} should not use empty text nodes for hidden or missing-content paths"
+        );
+    }
 }

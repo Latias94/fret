@@ -17,7 +17,7 @@ use std::sync::Arc;
 
 use super::{
     UiGalleryDriver, UiGalleryWindowState, chrome, debug_hud, debug_stats, inspector, menubar,
-    settings_sheet, shell, status_bar, toaster, ui_gallery_bisect_flags,
+    settings_sheet, shell, status_bar, text_roles, toaster, ui_gallery_bisect_flags,
 };
 
 pub(super) struct PreparedFrame {
@@ -236,7 +236,10 @@ fn render_root_contents(
     frame: &PreparedFrame,
 ) -> Vec<AnyElement> {
     if (frame.bisect & BISECT_MINIMAL_ROOT) != 0 {
-        return vec![cx.text("Hello, fret-ui-gallery")];
+        return vec![text_roles::chrome_readout_text(
+            cx,
+            "Hello, fret-ui-gallery",
+        )];
     }
 
     let theme = cx.theme().clone();

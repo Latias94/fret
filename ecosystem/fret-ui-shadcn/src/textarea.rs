@@ -663,6 +663,8 @@ fn textarea_element<H: UiHost>(
 
                 let mut pressable = PressableProps::default();
                 pressable.layout = resize_handle_layout;
+                pressable.focusable = false;
+                pressable.a11y.hidden = true;
                 let dot_color = alpha_mul(grip_color, 0.65);
                 let dot_size = Px(2.0);
                 let dot_radius = Px(1.0);
@@ -1089,6 +1091,62 @@ mod tests {
             .as_ref()
             .expect("expected labelled_by decoration on TextArea");
         assert_eq!(decoration.labelled_by_element, Some(root.children[0].id.0));
+    }
+
+    #[test]
+    fn textarea_resize_handle_stays_out_of_visible_accessibility_tree() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let window = AppWindowId::default();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(180.0)),
+        );
+        let mut services = FakeServices;
+        let model = app.models_mut().insert(String::new());
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "textarea-resize-handle-a11y",
+            |cx| {
+                vec![
+                    Textarea::new(model.clone())
+                        .a11y_label("Notes")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().any(|n| {
+                n.role == fret_core::SemanticsRole::TextField && n.label.as_deref() == Some("Notes")
+            }),
+            "expected Textarea text field label to remain visible"
+        );
+        assert!(
+            !snap.nodes.iter().any(|n| {
+                n.role == fret_core::SemanticsRole::Button
+                    && !n.flags.hidden
+                    && n.label.as_deref().is_none()
+                    && n.actions.invoke
+            }),
+            "resizable Textarea must not expose an unlabeled visible button for the pointer-only resize grip"
+        );
     }
 
     #[test]

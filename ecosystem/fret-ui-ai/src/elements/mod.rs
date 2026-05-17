@@ -53,6 +53,13 @@ mod voice_selector;
 mod web_preview;
 mod workflow;
 
+use fret_ui::element::{AnyElement, SpacerProps};
+use fret_ui::{ElementContext, UiHost};
+
+pub(crate) fn empty_placeholder<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    cx.spacer(SpacerProps::default())
+}
+
 pub use agent::*;
 pub use ai_chat::*;
 pub use ai_conversation::*;

@@ -1,6 +1,13 @@
 use super::super::super::super::*;
 use fret::AppComponentCx;
 
+fn retained_table_cell_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
+where
+    T: Into<Arc<str>>,
+{
+    fret_ui_kit::declarative::text::text_table_cell(cx, text)
+}
+
 pub(in crate::ui) fn preview_table_retained_torture(
     cx: &mut AppComponentCx<'_>,
     theme: &Theme,
@@ -211,7 +218,7 @@ pub(in crate::ui) fn preview_table_retained_torture(
                 .a11y_label("Keep pinned rows")
                 .test_id("ui-gallery-table-retained-keep-pinned-rows")
                 .into_element(cx),
-            cx.text("Keep pinned rows"),
+            doc_layout::control_readout_text(cx, "Keep pinned rows"),
         ]
     })
     .gap(Space::N2)
@@ -220,31 +227,31 @@ pub(in crate::ui) fn preview_table_retained_torture(
 
     let header = ui::v_flex(|cx| {
             vec![
-                cx.text(
+                doc_layout::paragraph_text(cx,
                     "Goal: baseline harness for `fret-ui-kit::declarative::table` running on the virt-003 retained host path.",
                 ),
-                cx.text(
+                doc_layout::paragraph_text(cx,
                     "Use scripted sort/selection + scroll to validate reconcile deltas under view-cache reuse (no notify-based dirty views).",
                 ),
-                cx.text(sorting_text.as_ref()).attach_semantics(
+                doc_layout::control_readout_text(cx, sorting_text.clone()).attach_semantics(
                     SemanticsDecoration::default()
                         .role(fret_core::SemanticsRole::Text)
                         .label(sorting_text.clone())
                         .test_id("ui-gallery-table-retained-sorting"),
                 ),
-                cx.text(row_pinning_text.as_ref()).attach_semantics(
+                doc_layout::control_readout_text(cx, row_pinning_text.clone()).attach_semantics(
                     SemanticsDecoration::default()
                         .role(fret_core::SemanticsRole::Text)
                         .label(row_pinning_text.clone())
                         .test_id("ui-gallery-table-retained-row-pinning"),
                 ),
-                cx.text(keep_pinned_rows_text.as_ref()).attach_semantics(
+                doc_layout::control_readout_text(cx, keep_pinned_rows_text.clone()).attach_semantics(
                     SemanticsDecoration::default()
                         .role(fret_core::SemanticsRole::Text)
                         .label(keep_pinned_rows_text.clone())
                         .test_id("ui-gallery-table-retained-keep-pinned-rows-text"),
                 ),
-                cx.text(page_text.as_ref()).attach_semantics(
+                doc_layout::control_readout_text(cx, page_text.clone()).attach_semantics(
                     SemanticsDecoration::default()
                         .role(fret_core::SemanticsRole::Text)
                         .label(page_text.clone())
@@ -294,23 +301,26 @@ pub(in crate::ui) fn preview_table_retained_torture(
                             if variable_height && row.id % 15 == 0 {
                                 ui::v_stack(|cx| {
                                     vec![
-                                        cx.text(row.name.as_ref()),
-                                        cx.text(format!(
-                                            "Details: id={} cpu={} mem={}",
-                                            row.id, row.cpu, row.mem_mb
-                                        )),
+                                        retained_table_cell_text(cx, row.name.clone()),
+                                        doc_layout::control_readout_text(
+                                            cx,
+                                            format!(
+                                                "Details: id={} cpu={} mem={}",
+                                                row.id, row.cpu, row.mem_mb
+                                            ),
+                                        ),
                                     ]
                                 })
                                 .gap(Space::N0)
                                 .into_element(cx)
                             } else {
-                                cx.text(row.name.as_ref())
+                                retained_table_cell_text(cx, row.name.clone())
                             }
                         }
-                        "status" => cx.text(row.status.as_ref()),
-                        "cpu%" => cx.text(format!("{}%", row.cpu)),
-                        "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
-                        _ => cx.text("?"),
+                        "status" => retained_table_cell_text(cx, row.status.clone()),
+                        "cpu%" => retained_table_cell_text(cx, format!("{}%", row.cpu)),
+                        "mem_mb" => retained_table_cell_text(cx, format!("{} MB", row.mem_mb)),
+                        _ => retained_table_cell_text(cx, "?"),
                     }
                 },
             );

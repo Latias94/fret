@@ -165,6 +165,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .column_filter("email")
             .column_filter_placeholder("Filter customer emails...")
             .column_filter_a11y_label("Customer email filter")
+            .test_id_prefix("ui-gallery-data-table-default-toolbar")
             .columns_button_label("Columns")
             .show_pinning_menu(false)
             .show_selected_text(false)

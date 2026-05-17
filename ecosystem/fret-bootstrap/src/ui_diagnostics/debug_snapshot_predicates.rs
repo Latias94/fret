@@ -12,10 +12,23 @@ pub(super) fn eval_debug_snapshot_predicate_from_recent_snapshot(
     if age_ms > max_age_ms {
         return None;
     }
-    if let Some(ok) = eval_debug_snapshot_predicate_from_ring(ring, predicate) {
-        return Some(ok);
+    if predicate_uses_debug_snapshot_history(predicate) {
+        if let Some(ok) = eval_debug_snapshot_predicate_from_ring(ring, predicate) {
+            return Some(ok);
+        }
     }
     eval_debug_snapshot_predicate(&snapshot.debug, predicate)
+}
+
+fn predicate_uses_debug_snapshot_history(predicate: &UiPredicateV1) -> bool {
+    matches!(
+        predicate,
+        UiPredicateV1::VirtualListWindowShiftSamplesLenLe { .. }
+            | UiPredicateV1::VirtualListWindowShiftSamplesMatchingGe { .. }
+            | UiPredicateV1::VirtualListWindowsMatchingGe { .. }
+            | UiPredicateV1::RetainedVirtualListReconcilesMatchingGe { .. }
+            | UiPredicateV1::ScrollHandleChangesMatchingGe { .. }
+    )
 }
 
 fn eval_debug_snapshot_predicate_from_ring(
@@ -882,6 +895,36 @@ mod tests {
             eval_debug_snapshot_predicate(
                 &released.debug,
                 &UiPredicateV1::InputPointerCaptureActiveIs { active: false },
+            ),
+            Some(true)
+        );
+    }
+
+    #[test]
+    fn current_state_predicates_do_not_match_stale_ring_snapshots() {
+        let mut svc = UiDiagnosticsService::default();
+        let window = AppWindowId::from(KeyData::from_ffi(1));
+        let ring = svc.per_window.entry(window).or_default();
+        ring.snapshots
+            .push_back(snapshot_with_pointer_capture_active(true));
+        ring.snapshots
+            .push_back(snapshot_with_pointer_capture_active(false));
+
+        assert_eq!(
+            eval_debug_snapshot_predicate_from_recent_snapshot(
+                &svc,
+                window,
+                &UiPredicateV1::InputPointerCaptureActiveIs { active: true },
+                250,
+            ),
+            Some(false)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate_from_recent_snapshot(
+                &svc,
+                window,
+                &UiPredicateV1::InputPointerCaptureActiveIs { active: false },
+                250,
             ),
             Some(true)
         );

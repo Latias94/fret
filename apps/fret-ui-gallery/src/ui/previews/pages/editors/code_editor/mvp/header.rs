@@ -33,10 +33,14 @@ pub(super) fn build_header(
 
     ui::v_flex(move |cx| {
             vec![
-                cx.text(
+                doc_layout::paragraph_text(
+                    cx,
                     "Goal: validate a paint-driven editable surface using TextInputRegion (focus + IME).",
                 ),
-                cx.text("Try: drag selection, Ctrl+C/Ctrl+V, arrows, Backspace/Delete, Enter/Tab, IME preedit."),
+                doc_layout::paragraph_text(
+                    cx,
+                    "Try: drag selection, Ctrl+C/Ctrl+V, arrows, Backspace/Delete, Enter/Tab, IME preedit.",
+                ),
                 ui::h_row(move |cx| {
                         vec![
                             shadcn::Switch::new(syntax_rust_switch.clone())

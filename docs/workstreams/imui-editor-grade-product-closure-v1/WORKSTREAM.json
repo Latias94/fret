@@ -261,6 +261,10 @@
       "path": "docs/workstreams/docking-multiwindow-imgui-parity/M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md"
     },
     {
+      "role": "next",
+      "path": "docs/workstreams/docking-multiwindow-imgui-parity/M19_WAYLAND_ACCEPTANCE_OPEN_GUARD_2026-05-17.md"
+    },
+    {
       "role": "execution",
       "path": "docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md"
     },
@@ -640,6 +644,7 @@
     "docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M19_WAYLAND_ACCEPTANCE_OPEN_GUARD_2026-05-17.md",
     "docs/workstreams/docking-multiwindow-imgui-parity/docking-multiwindow-imgui-parity.md",
     "docs/workstreams/standalone/imui-imgui-parity-audit-v2.md",
     "docs/workstreams/standalone/macos-docking-multiwindow-imgui-parity.md",
@@ -732,6 +737,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Keep this lane in maintenance only as the phase-ordering and cross-phase status umbrella. Do not resume implementation-heavy work here by default: reuse the closed narrow P0/P1 closeout records as evidence, treat `imui-child-region-depth-v1` as the closed child-region closeout record for the landed chrome slice, keep the remaining active P3 execution in `docking-multiwindow-imgui-parity`, treat `M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md` as the current launched bounded-campaign proof, and treat `M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`, `M16_SOURCE_DRIFT_GUARD_2026-05-14.md`, `M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md`, and `M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md` as local source/admission/policy-skip evidence only. M17 is the first local policy-skip gate; M18 broadens it into the Windows plus Linux/X11 sidecar matrix. The 2026-05-15 goal audit remains not complete until real-host Wayland hand-feel, DevTools GUI productization, and broader perf attribution/smoothness close in their owner lanes; start a new narrow follow-on if fresh P0/P1/P2 pressure becomes implementation-heavy again."
+    "notes": "Keep this lane in maintenance only as the phase-ordering and cross-phase status umbrella. Do not resume implementation-heavy work here by default: reuse the closed narrow P0/P1 closeout records as evidence, treat `imui-child-region-depth-v1` as the closed child-region closeout record for the landed chrome slice, keep the remaining active P3 execution in `docking-multiwindow-imgui-parity`, treat `M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md` as the current launched bounded-campaign proof, and treat `M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`, `M16_SOURCE_DRIFT_GUARD_2026-05-14.md`, `M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md`, `M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md`, and `M19_WAYLAND_ACCEPTANCE_OPEN_GUARD_2026-05-17.md` as local source/admission/policy-skip/acceptance-boundary evidence only. M17 is the first local policy-skip gate; M18 broadens it into the Windows plus Linux/X11 sidecar matrix; M19 freezes that local policy-skip evidence is not Wayland compositor acceptance. The 2026-05-15 goal audit remains not complete until real-host Wayland hand-feel, DevTools GUI productization, and broader perf attribution/smoothness close in their owner lanes; start a new narrow follow-on if fresh P0/P1/P2 pressure becomes implementation-heavy again."
   }
 }

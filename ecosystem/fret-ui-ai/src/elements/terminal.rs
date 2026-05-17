@@ -480,10 +480,10 @@ impl TerminalStatus {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_terminal_controller(cx) else {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         };
         if !controller.is_streaming {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         }
 
         let theme = Theme::global(&*cx.app).clone();
@@ -625,7 +625,7 @@ impl TerminalCopyButton {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_terminal_controller(cx) else {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         };
         let theme = Theme::global(&*cx.app).clone();
         let feedback = cx.slot_state(ClipboardCopyFeedbackRef::default, |st| st.clone());
@@ -822,10 +822,10 @@ impl TerminalClearButton {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_terminal_controller(cx) else {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         };
         let Some(on_clear) = controller.on_clear else {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         };
         let theme = Theme::global(&*cx.app).clone();
 
@@ -938,7 +938,7 @@ impl TerminalContent {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_terminal_controller(cx) else {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         };
         let theme = Theme::global(&*cx.app).clone();
 

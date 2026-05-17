@@ -302,7 +302,7 @@ impl TranscriptionSegment {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_transcription_controller(cx) else {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         };
 
         let theme = Theme::global(&*cx.app).clone();

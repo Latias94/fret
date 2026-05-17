@@ -464,7 +464,7 @@ date: 2026-05-12
     sidecar, and runs inside the promoted `ui-gallery-select` suite. The first drafts found harness
     authoring defects in the start-section filter and `bounds_max_size` width oracle; no runtime
     Select placement defect was confirmed.
-- [ ] Add an overlay/listbox placement ownership runtime slice for Select or Combobox that
+- [x] Add an overlay/listbox placement ownership runtime slice for Select or Combobox that
   exercises scroll-container clipping, modal boundary choice, RTL direction, and viewport resize
   with placement/layout sidecar evidence.
   - Progress: the Select item-aligned resize sub-axis is now covered by
@@ -507,9 +507,14 @@ date: 2026-05-12
   - Result: `element_root_bounds_cache_rebuilds_on_view_cache_hit_after_viewport_move` now covers
     the same ownership move through retained render reuse when the cached subtree render function is
     not re-entered.
-  - Remaining: promote a runtime UI Gallery view-cache movement companion only if a real surface can
-    move cached overlay sources across viewport roots; otherwise continue to the next uncovered
-    mechanism axis.
+  - Result: this ownership axis is closed for v1. The runtime matrix now covers Select
+    item-aligned resize-close policy, Combobox anchored resize-reposition policy, scroll-container
+    clipping plus RTL ownership, modal/root-boundary ownership, synthetic cross-root coordinates,
+    and the Resizable multi-viewport runtime companion. It found and fixed the mechanism-layer
+    effective root-boundary cache defect where overlay placement used the OS window/owner root
+    instead of the source element's nearest layout viewport root. A view-cache movement companion
+    remains only as a future follow-on if a real Gallery surface can move cached overlay sources
+    across viewport roots.
 - [x] Add a diagnostics script lint/registry audit for long-page content clicks that use plain
   `click` without a nearby `scroll_into_view`, `bounds_within_window`, or `click_stable`
   precondition.
@@ -595,7 +600,151 @@ date: 2026-05-12
     CSS-like inset fill behavior without explicit Fill sizing, so the diagnostics node could be
     0px wide. Tabs now sizes the shared indicator gate and canvas explicitly, focused unit/runtime
     gates pass, and the full `ui-gallery-motion-pilot` suite is 14/14 with zero lint warnings.
-- [ ] Pick the next harness slice outside the now-clean `ui-gallery-motion-pilot` suite.
+- [x] Pick the next harness slice outside the now-clean `ui-gallery-motion-pilot` suite.
+  - Result: moved back to the synthetic mechanism layer and expanded the Layout Primitives fixture
+    suite across percent sizing, min/max constraints, percent min/max intrinsic measurement,
+    wrapped text height propagation, scroll-root child layout bounds, and absolute percent inset
+    placement. No new mechanism defect was reproduced; the slice closed a harness coverage gap.
+- [x] Add the next layout primitive companion for text measurement/paint agreement or
+  RTL/writing-mode behavior once the mechanism owner and public direction model are clear.
+  - Result: added text measurement/paint agreement cases for column wrap width, max-width row wrap
+    width, and overflow/scale constraints. No new mechanism defect was reproduced; the harness now
+    records text measure/prepare constraint deltas and painted-height layout follow-through as
+    scalar fixture metrics.
+- [x] Promote declarative `ViewCache` lifecycle guarantees into a fixture-driven mechanism harness.
+  - Result: `view_cache_lifecycle_v1.json` now covers clean cache-hit reuse, retained element
+    state, cache-key misses, RAF invalidation, model-observation preservation across cache-hit
+    frames, unrelated model scoping, inspection-mode cache bypass, and layout-query next-frame
+    invalidation. No new mechanism defect was reproduced; the slice closed a harness coverage gap.
+- [ ] Add RTL/writing-mode layout primitive cases once the direction/writing-mode contract is
+  explicit enough to avoid encoding a recipe policy as a mechanism oracle.
+- [ ] Add a runtime UI Gallery companion for cached model/layout-query dependency mutation only if
+  a real surface exposes a non-synthetic risk; otherwise continue with scroll/click stability or
+  retained/component semantics mutation.
+- [x] Promote the ScrollArea content-growth runtime gate if the focused run proves it is stable.
+  - Result: `ui-gallery-scroll-area-expand-at-bottom.json` passed as a focused runtime gate and is
+    now part of the promoted `ui-gallery-scroll-area` suite. No new mechanism defect was
+    reproduced; the slice fixed a harness promotion gap where dynamic scroll extent growth was
+    checked only by a standalone script.
+- [x] Turn the promoted DataTable page-entry authoring debt into a strict registry lint gate.
+  - Result: the first candidate audit reported 174 violations across 21 promoted scripts under a
+    single-root model. The actual harness gap was rule expressiveness: DataTable has multiple valid
+    page/variant roots. `check_diag_scripts_registry.py` now supports `entry_ids`, strict
+    page-entry is enabled for the promoted DataTable suites, and the registry/self-test gates pass.
+- [x] Extend strict click-visibility authoring coverage to the promoted ScrollArea suite.
+  - Result: five long-page content clicks were converted to guarded `click_stable` steps and
+    `ui-gallery-scroll-area` is now enforced by the registry lint. Running the full ScrollArea
+    suite exposed and fixed a diagnostics harness defect where current-state debug predicates could
+    match stale ring snapshots, plus a multi-pointer script authoring issue where capture-state
+    assertions needed `wait_until` convergence after pointer events.
+- [x] Add a promoted-script lint for pointer-event steps that immediately assert current pointer
+  state instead of waiting for debug-snapshot convergence.
+  - Result: the candidate audit found 6 adjacent pointer/current-state patterns in promoted
+    scripts. Three were already bounded `wait_until` checks; three remained immediate `assert`
+    steps in ScrollArea scrollbar-drag scripts. Those scripts now use bounded `wait_until`, the
+    registry lint rejects future promoted regressions, both focused ScrollArea runtime gates pass,
+    and the full `ui-gallery-scroll-area` suite passes.
 - [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.
+- [x] Promote timer-target visibility semantics into a fixture-driven mechanism matrix.
+  - Result: `timer_dispatch_v1.json` now covers visible base targets, visible but hit-test-inert
+    overlay targets, hidden overlay targets, and removed overlay targets. No new mechanism defect
+    was reproduced after F138; the slice turns the Select-discovered hidden-layer timer defect into
+    durable, case-addressable harness coverage.
+- [x] Promote the Command suite into strict diagnostics authoring coverage.
+  - Result: strict page-entry and long-page click-visibility lint now cover promoted
+    `ui-gallery-command` scripts. The candidate audit found 4 page-entry violations, 20 plain
+    long-page content clicks, and 6 missing target-level visibility proofs. These were harness
+    authoring defects, not Command component or `fret-ui` mechanism defects: the full Command suite
+    passes 18/18 after replacing content clicks with guarded `click_stable`, adding missing
+    visibility guards, and adding the missing Command page-root proof.
+- [x] Continue the shadcn runtime evidence suite until it finds a real semantics or diagnostics
+  surface defect.
+  - Result: `ui-gallery-shadcn-runtime-evidence` reached the DataTable pagination gate and exposed
+    real semantics lint defects after the runtime assertions passed: duplicate DataTable toolbar
+    input `test_id`s across same-page examples and missing accessible names on table header sort
+    button action owners. `DataTableToolbar::test_id_prefix(...)` now scopes recipe-owned child ids
+    for multi-instance pages, UI Gallery DataTable/torture surfaces use scoped ids, retained and
+    view-cache scripts target the scoped torture toolbar ids, and virtualized table header
+    pressables now export labels in retained and non-retained paths. The suite passes 10/10 after
+    rebuilding `fret-ui-gallery`.
+- [x] Add a promoted-script fixed-frame-clock contract for time-sensitive diagnostics scripts.
+  - Result: the HoverCard `trigger-delays` failure was a harness timing false positive. Promoted
+    scripts whose names declare `fixed-frame-delta` or `trigger-delays` now carry
+    `FRET_DIAG_FIXED_FRAME_DELTA_MS=16`, and the registry lint rejects future promoted scripts that
+    forget that clock contract. The focused HoverCard delay gate passes under the fixed frame clock.
+- [x] Repair the HoverCard `sides-placement` leave-target authoring issue and rerun the
+  `ui-gallery-hover-card` suite.
+  - Result: after the fixed-frame-clock repair, the HoverCard suite advances past
+    `trigger-delays`; `ui-gallery-hover-card-sides-placement.json` now fails at step 20 with
+    `move_pointer_no_semantics_match` because it uses `ui-gallery-status-last-action` as a leave
+    target and that node is not present on the HoverCard page snapshot.
+    The script now uses the stable `ui-gallery-nav-search` leave target and asserts the bottom
+    case as an intentional collision flip (`preferred_side=bottom`, `chosen_side=top`,
+    `flipped=true`) because the current page geometry leaves only ~43px below the trigger. The
+    full `ui-gallery-hover-card` suite passes 6/6.
+- [x] Promote Menubar submenu placement traces into a focused runtime suite.
+  - Result: `ui-gallery-menubar-placement` now gates the existing LTR submenu, RTL wide submenu,
+    and RTL tight-left collision scripts as a small durable placement suite. The suite passed 3/3
+    with zero lint errors/warnings; no new Menubar or overlay mechanism defect was reproduced.
+- [x] Promote DropdownMenu runtime evidence into a focused suite.
+  - Result: `ui-gallery-dropdown-menu` now gates submenu placement, basic keyboard typeahead
+    commit, and disabled-but-focusable keyboard suppression as a small durable suite. The first
+    focused runs found harness defects rather than recipe defects: the typeahead script allowed a
+    trigger to remain at the window edge before `click_stable`, and it used an optional status-bar
+    semantics node as its result oracle. The suite now passes 3/3 with zero lint errors/warnings.
+- [x] Promote ContextMenu submenu corridor evidence into a focused suite.
+  - Result: `ui-gallery-context-menu` now gates both safe-corridor sweep and branch/corridor
+    routing as a small independently runnable pointer-policy suite. This did not reproduce a new
+    ContextMenu or hit-test mechanism defect; it closed a harness packaging gap where the scripts
+    existed but were only reachable through broad conformance/overlay suites. The suite passes 2/2
+    with zero lint errors/warnings.
+- [x] Add a ViewCache runtime companion that proves cached-subtree model mutation through UI
+  Gallery app-snapshot state instead of visible text proxies.
+  - Result: `ui-gallery-view-cache` now gates counter mutation and Popover open/close state through
+    the dedicated `/view_cache` snapshot payload while the page runs with nested ViewCache enabled.
+    The first strict suite run found a real shadcn Textarea semantics defect: its pointer-only
+    resize grip was exposed as an unlabeled visible Button. The recipe now hides that grip from the
+    visible accessibility tree and removes it from Tab traversal. The suite passes with zero lint
+    errors/warnings; no ViewCache mechanism defect was reproduced.
+- [x] Promote the Button Group suite to strict zero-warning diagnostics lint after a clean
+  candidate run.
+  - Result: `ui-gallery-button-group` passed 13/13 with `focus_mismatch_total=0` and zero lint
+    errors/warnings. No new Button Group component or mechanism defect was reproduced in this
+    candidate run; the suite now rejects future diagnostics lint drift.
+- [x] Convert the Button Group size icon-only Add row from screenshot-only evidence to geometry
+  evidence.
+  - Result: `ui-gallery-button-group-size-screenshots-zinc-light-dark.json` now asserts each Add
+    icon's bounds and center alignment against its enclosing button for small, medium, and large
+    variants. The first pass used the wrong icon selector assumption, then the real
+    `*-add-icon` ids were aligned and the geometry assertions passed.
+- [x] Promote the Carousel embla-engine runtime sub-suite to strict zero-warning diagnostics lint.
+  - Result: the wide `ui-gallery-carousel-docs-parity` suite is too large to be a reliable single
+    evidence unit under normal outer timeouts, but the focused `ui-gallery-carousel-embla-engine`
+    sub-suite passed 5/5 with `focus_mismatch_total=0` and zero lint errors/warnings. No new
+    Carousel mechanism or recipe defect was reproduced; the embla-engine suite now rejects future
+    diagnostics lint drift for inertia, touch, resize reInit, and loop continuity/downgrade paths.
+- [x] Harden the Date Picker suite after strict lint exposed scroll/script precondition gaps.
+  - Result: the mobile Drawer script now uses a mobile-branch width that the Gallery content
+    viewport can actually contain, the range-roving script is independently runnable with its own
+    env defaults and scroll/click-stable preconditions, and `scroll_into_view` now classifies
+    impossible unscrollable-axis containment instead of falling through to a generic stuck result.
+    No Date Picker component or layout mechanism defect was reproduced in this slice.
+- [x] Split a compact Combobox geometry/placement suite out of the broad Combobox family gate.
+  - Result: the broad `ui-gallery-combobox` suite exceeded the outer command timeout after running
+    many clean rows, so it is too wide to be the day-to-day geometry/placement evidence unit. The
+    new `ui-gallery-combobox-geometry-placement` suite gates trigger chrome, LTR/RTL long-text
+    truncation/chevron geometry, popup top/bottom placement, and responsive open/resize placement
+    as a 7/7 zero-warning suite. No new Combobox recipe or overlay mechanism defect was
+    reproduced.
+- [x] Add flex visual-order layout/measurement consistency coverage.
+  - Result: the layout primitive fixture exposed a real mechanism defect where
+    `FlexItemStyle.order` affected final layout but not intrinsic flex measurement. `fret-ui` now
+    shares the same visual-order child helper between layout and measurement, and the fixture locks
+    both final child positions and wrap-sensitive measured width.
+- [x] Add auto-container child margin measure/layout consistency coverage.
+  - Result: `measure_impl` now includes child margins when it computes max-content sizing for
+    auto-sized container children, so `measure` and laid-out bounds agree for auto containers with
+    finite margins. The new layout primitive fixture locks both the layout bounds and the measured
+    max-content size for a margin-bearing child.

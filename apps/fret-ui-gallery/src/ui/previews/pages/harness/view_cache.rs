@@ -4,6 +4,13 @@ use fret::AppComponentCx;
 use fret_ui::VirtualListScrollHandle;
 use fret_ui::element::ContainerProps;
 
+fn view_cache_list_row_label_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
+where
+    T: Into<Arc<str>>,
+{
+    fret_ui_kit::declarative::text::text_list_row_label(cx, text)
+}
+
 pub(in crate::ui) fn preview_view_cache(
     cx: &mut AppComponentCx<'_>,
     theme: &Theme,
@@ -41,7 +48,10 @@ pub(in crate::ui) fn preview_view_cache(
                         .a11y_label("Enable view-cache mode")
                         .test_id("ui-gallery-view-cache-enabled")
                         .into_element(cx),
-                    cx.text("Enable view-cache mode (global UiTree flag)"),
+                    doc_layout::control_label_text(
+                        cx,
+                        "Enable view-cache mode (global UiTree flag)",
+                    ),
                 ]
             })
             .gap(Space::N2)
@@ -53,7 +63,7 @@ pub(in crate::ui) fn preview_view_cache(
                         .a11y_label("Cache the gallery shell")
                         .test_id("ui-gallery-view-cache-cache-shell")
                         .into_element(cx),
-                    cx.text("Cache shell (sidebar/content wrappers)"),
+                    doc_layout::control_label_text(cx, "Cache shell (sidebar/content wrappers)"),
                 ]
             })
             .gap(Space::N2)
@@ -65,7 +75,10 @@ pub(in crate::ui) fn preview_view_cache(
                         .a11y_label("Cache the gallery content root")
                         .test_id("ui-gallery-view-cache-cache-content")
                         .into_element(cx),
-                    cx.text("Cache content root (requires 'Cache shell')"),
+                    doc_layout::control_label_text(
+                        cx,
+                        "Cache content root (requires 'Cache shell')",
+                    ),
                 ]
             })
             .gap(Space::N2)
@@ -77,7 +90,10 @@ pub(in crate::ui) fn preview_view_cache(
                         .a11y_label("Enable inner ViewCache boundary")
                         .test_id("ui-gallery-view-cache-inner-cache")
                         .into_element(cx),
-                    cx.text("Enable inner ViewCache boundary (torture subtree)"),
+                    doc_layout::control_label_text(
+                        cx,
+                        "Enable inner ViewCache boundary (torture subtree)",
+                    ),
                 ]
             })
             .gap(Space::N2)
@@ -89,7 +105,10 @@ pub(in crate::ui) fn preview_view_cache(
                         .a11y_label("Request continuous frames")
                         .test_id("ui-gallery-view-cache-continuous")
                         .into_element(cx),
-                    cx.text("Continuous frames (cache-hit should still keep state alive)"),
+                    doc_layout::control_label_text(
+                        cx,
+                        "Continuous frames (cache-hit should still keep state alive)",
+                    ),
                 ]
             })
             .gap(Space::N2)
@@ -123,8 +142,8 @@ pub(in crate::ui) fn preview_view_cache(
 
     let header = ui::v_flex(|cx| {
             vec![
-                cx.text("Goal: validate cached-subtree correctness under real interaction."),
-                cx.text(format!(
+                doc_layout::paragraph_text(cx, "Goal: validate cached-subtree correctness under real interaction."),
+                doc_layout::control_readout_text(cx, format!(
                     "Current settings: view_cache={} shell_cache={} content_cache={} inner_cache={} continuous={}",
                     enabled as u8,
                     cache_shell as u8,
@@ -199,7 +218,7 @@ pub(in crate::ui) fn preview_view_cache(
                 },
                 |cx| {
                     shadcn::PopoverContent::new([
-                        cx.text("Popover content"),
+                        doc_layout::paragraph_text(cx, "Popover content"),
                         shadcn::Button::new("Close")
                             .variant(shadcn::ButtonVariant::Secondary)
                             .test_id("ui-gallery-view-cache-popover-close")
@@ -238,7 +257,7 @@ pub(in crate::ui) fn preview_view_cache(
                             0,
                             |i| i as u64,
                             |_i| None,
-                            |cx, i| vec![cx.text(format!("Row {i}"))],
+                            |cx, i| vec![view_cache_list_row_label_text(cx, format!("Row {i}"))],
                         ),
                     ]
                 },

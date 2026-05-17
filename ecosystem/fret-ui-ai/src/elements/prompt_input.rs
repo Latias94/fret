@@ -4635,14 +4635,14 @@ impl PromptInputAttachmentsRow {
             .attachments
             .or_else(|| use_prompt_input_controller(cx).and_then(|c| c.attachments));
         let Some(attachments_model) = attachments_model else {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         };
 
         let items = cx
             .get_model_cloned(&attachments_model, Invalidation::Layout)
             .unwrap_or_default();
         if items.is_empty() {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         }
 
         let cfg = use_prompt_input_config(cx);
@@ -4734,14 +4734,14 @@ impl PromptInputReferencedSourcesRow {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_prompt_input_referenced_sources(cx) else {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         };
 
         let items = cx
             .get_model_cloned(&controller.sources, Invalidation::Layout)
             .unwrap_or_default();
         if items.is_empty() {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         }
 
         let cfg = use_prompt_input_config(cx);

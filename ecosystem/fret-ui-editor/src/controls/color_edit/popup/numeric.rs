@@ -1,12 +1,11 @@
 use std::sync::Arc;
 
-use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Axis, Color, Edges, KeyCode, Px, SemanticsInvalid, TextAlign, TextStyle};
+use fret_core::{Axis, Color, Edges, KeyCode, Px, SemanticsInvalid, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::ActionCx;
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, SpacingLength,
-    TextInputProps, TextProps,
+    TextInputProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
@@ -15,6 +14,7 @@ use fret_ui_kit::{ChromeRefinement, Size};
 use crate::primitives::EditorDensity;
 use crate::primitives::chrome::resolve_editor_text_field_style;
 use crate::primitives::input_group::derived_test_id;
+use crate::primitives::readout::editor_inline_error_text_props;
 
 use super::super::ColorEditPopupNumericInputs;
 use super::super::model::{
@@ -223,27 +223,7 @@ fn color_numeric_error_line<H: UiHost>(
     color: Color,
     row_height: Px,
 ) -> AnyElement {
-    cx.text_props(TextProps {
-        layout: LayoutStyle {
-            size: SizeStyle {
-                width: Length::Fill,
-                height: Length::Auto,
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-        text,
-        style: Some(typography::as_control_text(TextStyle {
-            size: Px(10.0),
-            line_height: Some(row_height),
-            ..Default::default()
-        })),
-        color: Some(color),
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Ellipsis,
-        align: TextAlign::Start,
-        ink_overflow: Default::default(),
-    })
+    cx.text_props(editor_inline_error_text_props(text, color, row_height))
 }
 
 fn row_height_from_style(style: &TextStyle) -> Px {

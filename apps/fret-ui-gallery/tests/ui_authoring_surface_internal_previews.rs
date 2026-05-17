@@ -215,6 +215,29 @@ fn harness_preview_shells_prefer_ui_cx_on_the_internal_gallery_surface() {
 }
 
 #[test]
+fn harness_hit_test_torture_uses_header_text_roles() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/pages/harness/hit_test_torture.rs",
+        &[
+            "doc_layout::paragraph_text(cx,\"Goal:makehit-testameasurablehotspotsobounds-treevsfallbacktraversalA/Bismeaningful.\")",
+            "doc_layout::control_readout_text(cx,format!(\"Shape:{stripes}stripes({}pxeach)plus{noise}1x1noiseregions.\",",
+            "doc_layout::control_readout_text(cx,\"Env:FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES/FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE\")",
+        ],
+    );
+
+    for forbidden in [
+        "cx.text(\"Goal:makehit-testameasurablehotspotsobounds-treevsfallbacktraversalA/Bismeaningful.\")",
+        "cx.text(format!(\"Shape:{stripes}stripes({}pxeach)plus{noise}1x1noiseregions.\",",
+        "cx.text(\"Env:FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES/FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE\")",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "hit_test_torture reintroduced bare header text: {forbidden}"
+        );
+    }
+}
+
+#[test]
 fn wrap_preview_page_callers_land_the_typed_preview_shell_explicitly() {
     let normalized = assert_normalized_markers_present(
         "src/ui/doc_layout.rs",
@@ -583,12 +606,94 @@ fn code_editor_mvp_internal_helpers_prefer_ui_child_over_anyelement() {
         );
     }
 
+    let markdown_path = manifest_path("src/ui/previews/pages/editors/markdown.rs");
+    let markdown_source = read_path(&markdown_path);
+    let markdown_normalized = canonicalize_rust_fragment(&markdown_source);
+    assert!(
+        markdown_source.contains("use fret::AppComponentCx;"),
+        "{} should use the shared helper context alias",
+        markdown_path.display(),
+    );
+    for marker in [
+        "doc_layout::paragraph_text(cx,\"Goal:validateaminimalMarkdownsourceeditormilestone.\")",
+        "doc_layout::control_readout_text(cx,ifsoft_wrap_enabled{",
+        "doc_layout::control_readout_text(cx,iffolds_enabled{",
+        "doc_layout::control_readout_text(cx,ifinlays_enabled{",
+        "doc_layout::button_label_text(cx,\"Preedit:inject\")",
+        "doc_layout::button_label_text(cx,\"Preedit:clear\")",
+        "doc_layout::control_readout_text(cx,format!(\"Interaction:{mode_label}\"))",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            markdown_normalized.contains(&marker),
+            "{} is missing marker `{marker}`",
+            markdown_path.display(),
+        );
+    }
+    for forbidden in [
+        "cx.text(\"Goal: validate a minimal Markdown source editor milestone.\")",
+        "cx.text(if soft_wrap_enabled {",
+        "cx.text(if folds_enabled {",
+        "cx.text(if inlays_enabled {",
+        "cx.text(\"Preedit: inject\")",
+        "cx.text(\"Preedit: clear\")",
+        "cx.text(format!(\"Interaction: {mode_label}\"))",
+    ] {
+        assert!(
+            !markdown_normalized.contains(forbidden),
+            "{} reintroduced bare markdown editor text: {forbidden}",
+            markdown_path.display(),
+        );
+    }
+
+    let web_ime_path = manifest_path("src/ui/previews/pages/editors/web_ime.rs");
+    let web_ime_source = read_path(&web_ime_path);
+    let web_ime_normalized = canonicalize_rust_fragment(&web_ime_source);
+    assert!(
+        web_ime_source.contains("use fret::AppComponentCx;"),
+        "{} should use the shared helper context alias",
+        web_ime_path.display(),
+    );
+    for marker in [
+        "fn debug_readout_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+        "doc_layout::paragraph_text(cx,\"Goal:validatethewasmtextareaIMEbridge(ADR0180).\")",
+        "doc_layout::paragraph_text(cx,\"Try:CJKIMEpreedit→commit;ensureno doubleinsertoncompositionend+input.\")",
+        "doc_layout::button_label_text(cx,label)",
+        "doc_layout::control_readout_text(cx,\"Editablewidgets(sanitycheck):\")",
+        "debug_readout_text(cx,format!(\"harness_region_ime_enabled={harness_region_ime_enabled}\"))",
+        "debug_readout_text(cx,\"window_text_input_snapshot:\")",
+        "debug_readout_text(cx,\"bridge_debug_snapshot(wasmtextarea):\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            web_ime_normalized.contains(&marker),
+            "{} is missing marker `{marker}`",
+            web_ime_path.display(),
+        );
+    }
+    for forbidden in [
+        "cx.text(\"Goal: validate the wasm textarea IME bridge (ADR 0180).\")",
+        "cx.text(\"Click inside the region to focus it (IME should enable).\")",
+        "cx.text(\"Editable widgets (sanity check):\")",
+        "cx.text(label)",
+        "cx.text(format!(\"harness_region_ime_enabled={harness_region_ime_enabled}\"))",
+        "cx.text(\"window_text_input_snapshot:\")",
+        "cx.text(\"bridge_debug_snapshot (wasm textarea):\")",
+    ] {
+        assert!(
+            !web_ime_normalized.contains(forbidden),
+            "{} reintroduced bare web-ime text: {forbidden}",
+            web_ime_path.display(),
+        );
+    }
+
     let gates_path = manifest_path("src/ui/previews/pages/editors/code_editor/mvp/gates.rs");
     let gates_source = read_path(&gates_path);
     let gates_normalized = canonicalize_rust_fragment(&gates_source);
     assert_imports_ui_child_with_app_component(&gates_path, &gates_source, &gates_normalized);
     for marker in [
         "fngate_panel<B>(cx:&mutAppComponentCx<'_>,theme:&Theme,child:B)->implUiChild+use<B>",
+        "usecrate::ui::doc_layout;",
         "pub(super)fnword_boundary_gate(cx:&mutAppComponentCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
         "pub(super)fnword_boundary_soft_wrap_gate(cx:&mutAppComponentCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
         "pub(super)fna11y_selection_gate(cx:&mutAppComponentCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
@@ -596,6 +701,14 @@ fn code_editor_mvp_internal_helpers_prefer_ui_child_over_anyelement() {
         "pub(super)fna11y_selection_wrap_gate(cx:&mutAppComponentCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
         "pub(super)fna11y_composition_wrap_gate(cx:&mutAppComponentCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
         "pub(super)fna11y_composition_drag_gate(cx:&mutAppComponentCx<'_>,theme:&Theme,handle:code_editor::CodeEditorHandle,)->implUiChild+use<>",
+        "doc_layout::button_label_text(cx,\"Injectpreedit\")",
+        "doc_layout::button_label_text(cx,\"Clearpreedit\")",
+        "doc_layout::button_label_text(cx,\"IMEsetMarkedText(replaceselection)\")",
+        "doc_layout::button_label_text(cx,\"IMEcancel(emptymarkedtext)\")",
+        "doc_layout::button_label_text(cx,\"Injectpreedit(wrap)\")",
+        "doc_layout::button_label_text(cx,\"Clearpreedit(wrap)\")",
+        "doc_layout::button_label_text(cx,\"Injectpreedit(drag)\")",
+        "doc_layout::button_label_text(cx,\"Clearpreedit(drag)\")",
     ] {
         let marker = canonicalize_rust_fragment(marker);
         assert!(
@@ -609,6 +722,23 @@ fn code_editor_mvp_internal_helpers_prefer_ui_child_over_anyelement() {
         "{} should not regress gate helpers back to AnyElement",
         gates_path.display(),
     );
+    for forbidden in [
+        "vec![cx.text(\"Inject preedit\")]",
+        "vec![cx.text(\"Clear preedit\")]",
+        "vec![cx.text(\"IME setMarkedText (replace selection)\")]",
+        "vec![cx.text(\"IME cancel (empty marked text)\")]",
+        "vec![cx.text(\"Inject preedit (wrap)\")]",
+        "vec![cx.text(\"Clear preedit (wrap)\")]",
+        "vec![cx.text(\"Inject preedit (drag)\")]",
+        "vec![cx.text(\"Clear preedit (drag)\")]",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !gates_normalized.contains(&forbidden),
+            "{} reintroduced bare IME gate button label text: {forbidden}",
+            gates_path.display(),
+        );
+    }
 }
 
 #[test]
@@ -861,6 +991,16 @@ fn gallery_table_retained_torture_uses_structured_table_debug_ids() {
     let normalized = assert_normalized_markers_present(
         "src/ui/previews/gallery/torture/table_retained_torture.rs",
         &[
+            "fnretained_table_cell_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "fret_ui_kit::declarative::text::text_table_cell(cx,text)",
+            "doc_layout::paragraph_text(cx,\"Goal:baselineharnessfor`fret-ui-kit::declarative::table`runningonthevirt-003retainedhostpath.\")",
+            "doc_layout::paragraph_text(cx,\"Usescriptedsort/selection+scrolltovalidatereconciledeltasunderview-cachereuse(nonotify-baseddirtyviews).\")",
+            "doc_layout::control_readout_text(cx,\"Keeppinnedrows\")",
+            "doc_layout::control_readout_text(cx,sorting_text.clone()).attach_semantics(",
+            "retained_table_cell_text(cx,row.name.clone())",
+            "retained_table_cell_text(cx,row.status.clone())",
+            "retained_table_cell_text(cx,format!(\"{}%\",row.cpu))",
+            "retained_table_cell_text(cx,format!(\"{}MB\",row.mem_mb))",
             "let table_debug_ids = fret_ui_kit::declarative::table::TableDebugIds {",
             "header_row_test_id: Some(Arc::<str>::from(\"ui-gallery-table-retained-header-row\")),",
             "header_cell_test_id_prefix: Some(Arc::<str>::from(\"ui-gallery-table-retained-header-\",)),",
@@ -873,13 +1013,46 @@ fn gallery_table_retained_torture_uses_structured_table_debug_ids() {
         !normalized.contains("TableDebugIds::default()"),
         "table_retained_torture should not fall back to an empty default diagnostics contract"
     );
+    for forbidden in [
+        "cx.text(\"Goal:baselineharnessfor`fret-ui-kit::declarative::table`runningonthevirt-003retainedhostpath.\")",
+        "cx.text(\"Usescriptedsort/selection+scrolltovalidatereconciledeltasunderview-cachereuse(nonotify-baseddirtyviews).\")",
+        "cx.text(\"Keeppinnedrows\")",
+        "cx.text(sorting_text.as_ref()).attach_semantics(",
+        "cx.text(row_pinning_text.as_ref()).attach_semantics(",
+        "cx.text(keep_pinned_rows_text.as_ref()).attach_semantics(",
+        "cx.text(page_text.as_ref()).attach_semantics(",
+        "cx.text(row.name.as_ref())",
+        "cx.text(row.status.as_ref())",
+        "cx.text(format!(\"{}%\",row.cpu))",
+        "cx.text(format!(\"{}MB\",row.mem_mb))",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "table_retained_torture reintroduced bare fixed table/readout text: {forbidden}"
+        );
+    }
 }
 
 #[test]
 fn gallery_data_table_torture_exposes_header_row_anchor() {
     let normalized = assert_normalized_markers_present(
         "src/ui/previews/gallery/data/table_torture.rs",
-        &["header_row_test_id: Some(Arc::<str>::from(\"ui-gallery-data-table-header-row\",)),"],
+        &[
+            "fndata_table_torture_cell_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "fret_ui_kit::declarative::text::text_table_cell(cx,text)",
+            "doc_layout::paragraph_text(cx,\"Goal:baselineperfharnessforavirtualizedbusinesstable(TanStack-alignedheadlessengine+VirtualList).\")",
+            "doc_layout::paragraph_text(cx,\"Usescriptedscroll+bundlestatstovalidatecache-rootreuseandprepaint-drivenwindowingrefactors.\")",
+            "doc_layout::control_readout_text(cx,sorting_text.clone()).attach_semantics(",
+            "doc_layout::control_readout_text(cx,pinning_text.clone()).attach_semantics(",
+            "doc_layout::control_readout_text(cx,global_filter_text.clone()).attach_semantics(",
+            "doc_layout::control_readout_text(cx,name_filter_text.clone()).attach_semantics(",
+            "doc_layout::control_readout_text(cx,status_filter_text.clone()).attach_semantics(",
+            "data_table_torture_cell_text(cx,row.name.clone())",
+            "data_table_torture_cell_text(cx,row.status.clone())",
+            "data_table_torture_cell_text(cx,format!(\"{}%\",row.cpu))",
+            "data_table_torture_cell_text(cx,format!(\"{}MB\",row.mem_mb))",
+            "header_row_test_id: Some(Arc::<str>::from(\"ui-gallery-data-table-header-row\",)),",
+        ],
     );
 
     assert!(
@@ -887,4 +1060,328 @@ fn gallery_data_table_torture_exposes_header_row_anchor() {
             && normalized.contains("ui-gallery-data-table-row-"),
         "table_torture should keep the structured data-table header/body diagnostics prefixes alongside the header-row anchor"
     );
+    for forbidden in [
+        "cx.text(\"Goal:baselineperfharnessforavirtualizedbusinesstable(TanStack-alignedheadlessengine+VirtualList).\")",
+        "cx.text(\"Usescriptedscroll+bundlestatstovalidatecache-rootreuseandprepaint-drivenwindowingrefactors.\")",
+        "cx.text(sorting_text.as_ref()).attach_semantics(",
+        "cx.text(pinning_text.as_ref()).attach_semantics(",
+        "cx.text(global_filter_text.as_ref()).attach_semantics(",
+        "cx.text(name_filter_text.as_ref()).attach_semantics(",
+        "cx.text(status_filter_text.as_ref()).attach_semantics(",
+        "cx.text(row.name.as_ref())",
+        "cx.text(row.status.as_ref())",
+        "cx.text(format!(\"{}%\",row.cpu))",
+        "cx.text(format!(\"{}MB\",row.mem_mb))",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "table_torture reintroduced bare fixed table/readout text: {forbidden}"
+        );
+    }
+}
+
+#[test]
+fn gallery_data_grid_uses_table_cell_text_roles() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/gallery/data/data_grid.rs",
+        &[
+            "fndata_grid_cell_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "fret_ui_kit::declarative::text::text_table_cell(cx,text)",
+            "data_grid_cell_text(cx,pid.to_string())",
+            "data_grid_cell_text(cx,format!(\"Process{row}\"))",
+            "data_grid_cell_text(cx,ifrow%3==0{\"Running\"}else{\"Idle\"})",
+            "data_grid_cell_text(cx,((row*7)%100).to_string())",
+            "doc_layout::paragraph_text(cx,\"Virtualizedrows/colsviewport;clickarowtoselect(disabledevery17throw).\")",
+            "doc_layout::control_readout_text(cx,format!(\"Selectedrow:{selected_text}\"))",
+        ],
+    );
+
+    for forbidden in [
+        "cx.text(pid.to_string())",
+        "cx.text(format!(\"Process{row}\"))",
+        "cx.text(ifrow%3==0{\"Running\"}else{\"Idle\"})",
+        "cx.text(((row*7)%100).to_string())",
+        "cx.text(\"Virtualizedrows/colsviewport;clickarowtoselect(disabledevery17throw).\")",
+        "cx.text(format!(\"Selectedrow:{selected_text}\"))",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "data_grid reintroduced bare fixed grid/readout text: {forbidden}"
+        );
+    }
+}
+
+#[test]
+fn gallery_inspector_torture_uses_fixed_row_text_roles() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/gallery/torture/inspector_torture.rs",
+        &[
+            "fninspector_row_label_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "fret_ui_kit::declarative::text::text_list_row_label(cx,text)",
+            "fninspector_row_value_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "doc_layout::control_readout_text(cx,text)",
+            "inspector_row_label_text(cx,format!(\"prop_{index}\"))",
+            "inspector_row_value_text(cx,format!(\"value{index}\"))",
+        ],
+    );
+
+    for forbidden in [
+        "cx.text(format!(\"prop_{index}\"))",
+        "cx.text(format!(\"value{index}\"))",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "inspector_torture reintroduced bare fixed inspector-row text: {forbidden}"
+        );
+    }
+}
+
+#[test]
+fn harness_virtual_list_torture_uses_fixed_row_text_roles() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/pages/harness/virtual_list_torture.rs",
+        &[
+            "fnvirtual_list_row_label_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "fret_ui_kit::declarative::text::text_list_row_label(cx,text)",
+            "fnvirtual_list_row_detail_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "doc_layout::control_readout_text(cx,text)",
+            "doc_layout::paragraph_text(cx,\"Goal:deterministicvirtualizationtorturesurface(10krows+scroll-to-item+inlineedit).\")",
+            "doc_layout::control_readout_text(cx,ifretained_host{",
+            "doc_layout::control_readout_text(cx,ifknown_heights{",
+            "doc_layout::control_readout_text(cx,ifkeep_alive>0{",
+            "doc_layout::paragraph_text(cx,\"Harness:minimal(nofocusablecontrols;reducesRAF/notifynoiseinperfbundles).\")",
+            "virtual_list_row_detail_text(cx,format!(\"Editingrow:{row}\"))",
+            "virtual_list_row_detail_text(cx,\"Editingrow:<none>\")",
+            "virtual_list_row_label_text(cx,format!(\"Row{index}\"))",
+            "virtual_list_row_detail_text(cx,format!(\"Details:index={index}seed={}repeat={}\"",
+        ],
+    );
+
+    for forbidden in [
+        "cx.text(format!(\"Editingrow:{row}\"))",
+        "cx.text(\"Editingrow:<none>\")",
+        "cx.text(format!(\"Row{index}\"))",
+        "cx.text(format!(\"Details:index={index}seed={}repeat={}\"",
+        "cx.text(\"Goal:deterministicvirtualizationtorturesurface(10krows+scroll-to-item+inlineedit).\")",
+        "cx.text(ifretained_host{",
+        "cx.text(ifknown_heights{",
+        "cx.text(ifkeep_alive>0{",
+        "cx.text(\"Harness:minimal(nofocusablecontrols;reducesRAF/notifynoiseinperfbundles).\")",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "virtual_list_torture reintroduced bare fixed virtual-row text: {forbidden}"
+        );
+    }
+}
+
+#[test]
+fn harness_ui_kit_list_torture_uses_fixed_row_text_roles() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/pages/harness/ui_kit_list_torture.rs",
+        &[
+            "fnui_kit_list_row_label_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "fret_ui_kit::declarative::text::text_list_row_label(cx,text)",
+            "doc_layout::paragraph_text(cx,\"Goal:validatefret-ui-kitlistvirtualizationunderview-cache+shellreuse(ADR0177).\")",
+            "doc_layout::paragraph_text(cx,\"Expect:scrollboundaryshiftsreconcilewithoutscroll-windowdirtyviews.\")",
+            "ui_kit_list_row_label_text(cx,format!(\"Item{i}\"))",
+        ],
+    );
+
+    for forbidden in [
+        "cx.text(format!(\"Item{i}\"))",
+        "cx.text(\"Goal:validatefret-ui-kitlistvirtualizationunderview-cache+shellreuse(ADR0177).\")",
+        "cx.text(\"Expect:scrollboundaryshiftsreconcilewithoutscroll-windowdirtyviews.\")",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "ui_kit_list_torture reintroduced bare header/list text: {forbidden}"
+        );
+    }
+}
+
+#[test]
+fn harness_view_cache_uses_fixed_row_text_roles() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/pages/harness/view_cache.rs",
+        &[
+            "fnview_cache_list_row_label_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "fret_ui_kit::declarative::text::text_list_row_label(cx,text)",
+            "view_cache_list_row_label_text(cx,format!(\"Row{i}\"))",
+            "doc_layout::paragraph_text(cx,\"Goal:validatecached-subtreecorrectnessunderrealinteraction.\")",
+            "doc_layout::control_readout_text(cx,format!(\"Currentsettings:view_cache={}shell_cache={}content_cache={}inner_cache={}continuous={}\"",
+            "doc_layout::control_label_text(cx,\"Enableview-cachemode(globalUiTreeflag)\")",
+            "doc_layout::control_label_text(cx,\"Cacheshell(sidebar/contentwrappers)\")",
+            "doc_layout::control_label_text(cx,\"Cachecontentroot(requires'Cacheshell')\")",
+            "doc_layout::control_label_text(cx,\"EnableinnerViewCacheboundary(torturesubtree)\")",
+            "doc_layout::control_label_text(cx,\"Continuousframes(cache-hitshouldstillkeepstatealive)\")",
+            "doc_layout::paragraph_text(cx,\"Popovercontent\")",
+        ],
+    );
+
+    for forbidden in [
+        "vec![cx.text(format!(\"Row{i}\"))]",
+        "cx.text(\"Goal:validatecached-subtreecorrectnessunderrealinteraction.\")",
+        "cx.text(format!(\"Currentsettings:view_cache={}shell_cache={}content_cache={}inner_cache={}continuous={}\"",
+        "cx.text(\"Enableview-cachemode(globalUiTreeflag)\")",
+        "cx.text(\"Cacheshell(sidebar/contentwrappers)\")",
+        "cx.text(\"Cachecontentroot(requires'Cacheshell')\")",
+        "cx.text(\"EnableinnerViewCacheboundary(torturesubtree)\")",
+        "cx.text(\"Continuousframes(cache-hitshouldstillkeepstatealive)\")",
+        "cx.text(\"Popovercontent\")",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "view_cache reintroduced bare fixed control/list text: {forbidden}"
+        );
+    }
+}
+
+#[test]
+fn gallery_tree_torture_uses_control_readout_for_status_text() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/gallery/data/tree_torture.rs",
+        &[
+            "doc_layout::paragraph_text(cx,\"Goal:baselineperfharnessforavirtualizedtree(expand/collapse+selection+scroll).\")",
+            "doc_layout::paragraph_text(cx,\"Usescriptedscroll+bundlestatstovalidatecache-rootreuseandprepaint-drivenwindowingrefactors.\")",
+            "doc_layout::control_readout_text(cx,status.clone())",
+            ".test_id(\"ui-gallery-tree-target-disabled-status\")",
+        ],
+    );
+
+    for forbidden in [
+        "cx.text(\"Goal:baselineperfharnessforavirtualizedtree(expand/collapse+selection+scroll).\")",
+        "cx.text(\"Usescriptedscroll+bundlestatstovalidatecache-rootreuseandprepaint-drivenwindowingrefactors.\")",
+        "ui::text(status.clone()).text_sm().text_color(",
+        "cx.text(status.clone())",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "tree_torture reintroduced local fixed status text policy: {forbidden}"
+        );
+    }
+}
+
+#[test]
+fn gallery_overlay_status_text_uses_control_readout_roles() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/gallery/overlays/overlay/flags.rs",
+        &[
+            "fnoverlay_status_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "doc_layout::control_readout_text(cx,text)",
+            "overlay_status_text(cx,text).test_id(\"ui-gallery-overlay-last-action\")",
+            "overlay_status_text(cx,\"Popoverdismissed\")",
+            "overlay_status_text(cx,\"Dialogopen\").test_id(\"ui-gallery-dialog-open\")",
+            "overlay_status_text(cx,\"Dialog(Glass)open\")",
+            "overlay_status_text(cx,\"Underlayactivated\")",
+            "overlay_status_text(cx,\"AlertDialogopen\")",
+        ],
+    );
+
+    for forbidden in [
+        "cx.text(text).test_id(\"ui-gallery-overlay-last-action\")",
+        "cx.text(\"Popoverdismissed\")",
+        "cx.text(\"Dialogopen\")",
+        "cx.text(\"Dialog(Glass)open\")",
+        "cx.text(\"Underlayactivated\")",
+        "cx.text(\"AlertDialogopen\")",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "overlay flags reintroduced bare status text: {forbidden}"
+        );
+    }
+}
+
+#[test]
+fn gallery_menus_last_action_uses_control_readout_role() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/gallery/overlays/menus.rs",
+        &["doc_layout::control_readout_text(cx,format!(\"lastaction:{last}\"))"],
+    );
+
+    assert!(
+        !normalized.contains("cx.text(format!(\"lastaction:{last}\"))"),
+        "menus preview reintroduced bare last-action status text"
+    );
+}
+
+#[test]
+fn gallery_overlay_scroll_rows_use_list_row_roles() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/gallery/overlays/overlay/widgets.rs",
+        &[
+            "fnoverlay_scroll_row_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "fret_ui_kit::declarative::text::text_list_row_label(cx,text)",
+            "overlay_scroll_row_text(cx,format!(\"Scrollablecontentline{}\",i+1))",
+            "overlay_scroll_row_text(cx,format!(\"Sheetbodyline{}\",i+1))",
+            "overlay_scroll_row_text(cx,format!(\"Scrollitem{i:02}\"))",
+        ],
+    );
+
+    for forbidden in [
+        "cx.text(format!(\"Scrollablecontentline{}\",i+1))",
+        "cx.text(format!(\"Sheetbodyline{}\",i+1))",
+        "cx.text(format!(\"Scrollitem{i:02}\"))",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "overlay widgets reintroduced bare scroll-row text: {forbidden}"
+        );
+    }
+}
+
+#[test]
+fn gallery_overlay_body_copy_uses_paragraph_roles() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/gallery/overlays/overlay/widgets.rs",
+        &[
+            "doc_layout::paragraph_text(cx,\"HoverCardcontent(overlay-root)\")",
+            "doc_layout::paragraph_text(cx,\"Movepointerfromtriggertocontent.\")",
+            "doc_layout::paragraph_text(cx,\"Popovercontent(placement+clamp)\")",
+            "doc_layout::paragraph_text(cx,\"Wheel-scrolltheviewportwhileopen.\")",
+        ],
+    );
+
+    for forbidden in [
+        "cx.text(\"HoverCardcontent(overlay-root)\")",
+        "cx.text(\"Movepointerfromtriggertocontent.\")",
+        "cx.text(\"Popovercontent(placement+clamp)\")",
+        "cx.text(\"Wheel-scrolltheviewportwhileopen.\")",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "overlay body copy reintroduced bare paragraph text: {forbidden}"
+        );
+    }
+}
+
+#[test]
+fn page_chrome_torture_uses_control_label_roles() {
+    let doc_layout = assert_normalized_markers_present(
+        "src/ui/doc_layout.rs",
+        &[
+            "pub(incrate::ui)fncontrol_label_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "decl_text::text_control_label(cx,text)",
+        ],
+    );
+    assert!(
+        !doc_layout.contains("fncontrol_label_text_props"),
+        "doc_layout should delegate control labels to the shared text role"
+    );
+
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/pages/torture/chrome_torture.rs",
+        &[
+            "doc_layout::control_label_text(cx,\"Textinput\")",
+            "doc_layout::control_label_text(cx,\"Textarea\")",
+        ],
+    );
+
+    for forbidden in ["cx.text(\"Textinput\")", "cx.text(\"Textarea\")"] {
+        assert!(
+            !normalized.contains(forbidden),
+            "chrome_torture reintroduced bare fixed control label text: {forbidden}"
+        );
+    }
 }

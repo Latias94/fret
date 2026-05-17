@@ -589,6 +589,213 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+- [x] REN-VNEXT-refactor-240 Stage 24: modularize RenderPlan compiler internals.
+  - Goal: make `render_plan_compiler.rs` reviewable by separating pure helper domains from the
+    state-machine loop without changing pass order, target lifetimes, budget decisions, or
+    degradation semantics.
+  - Scope:
+    - Extract low-risk target/budget helper functions first.
+    - Preserve the public `compile_for_scene` entrypoint and `RenderPlan` IR shape.
+    - Keep all degradation records and strict output-clear validation behavior unchanged.
+  - Step plan:
+    - [x] Step 1: move intermediate target and budget accounting helpers into a dedicated
+      compiler helper module.
+    - [x] Step 2: introduce an explicit compiler context for pass/degradation/segment mutation
+      after helper extraction has a green gate.
+    - [x] Step 3a: split clip-path push/pop compilation into a focused helper module after
+      the context boundary is stable.
+    - [x] Step 3b-1: split composite-group push/pop compilation into a focused helper module.
+    - [x] Step 3b-2a: split backdrop-source-group push/pop compilation into a focused helper
+      module.
+    - [x] Step 3b-2b: split effect-scope compilation into a focused helper module.
+    - [x] Step 3c: split path MSAA batch planning into a focused helper module.
+    - [x] Step 3d: split compile preflight and scene-target planning into a focused helper
+      module.
+    - [x] Step 3e: split marker dispatch state and effect-marker routing into a focused helper
+      module.
+    - [x] Step 3f: split draw-scope stack and load-op consumption into a focused helper module.
+    - [x] Step 3g: move scissor-sized-intermediate eligibility into compile preflight.
+    - [x] Step 3h: split effect-chain pass application and budget stats into a focused helper
+      module.
+    - [x] Step 3i: split intermediate target selection into a focused helper module.
+    - [x] Step 3j: split clip-path mask target selection into the target-selection helper module.
+    - [x] Step 3k: replace active clip-path mask target scratch `Vec` with a fixed-size snapshot.
+    - [x] Step 3l: replace effect-chain in-use target scratch `Vec` with `SmallVec`.
+    - [x] Step 3m: split backdrop-source-group dispatch state out of marker dispatch.
+    - [x] Step 3n: split clip-path dispatch state out of marker dispatch and pass active mask snapshots into effect-scope planning.
+    - [x] Step 3o: split composite-group dispatch state out of marker dispatch.
+    - [x] Step 3p: split effect-scope dispatch state out of marker dispatch.
+    - [x] Step 3q: introduce marker shared dispatch input snapshots.
+    - [x] Step 3r: replace backdrop-source-group reserved-target stack `Vec` with `SmallVec`.
+    - [x] Step 3s: move effect-scope push/pop helpers onto `EffectScopeDispatchState`.
+    - [x] Step 3t: move backdrop-source-group push/pop helpers onto `BackdropSourceGroupDispatchState`.
+    - [x] Step 3u: move clip-path push/pop helpers onto `ClipPathDispatchState`.
+    - [x] Step 3v: move composite-group push/pop helpers onto `CompositeGroupDispatchState`.
+    - [x] Step 3w: wrap the compiler draw-scope stack in `DrawScopeStack`.
+    - [x] Step 3x: extract scoped intermediate target allocation budget filtering.
+    - [x] Step 3y: replace full marker shared-input copies with branch-specific borrowed snapshots.
+    - [x] Step 3z: split marker dispatch branch bodies into private methods.
+  - Landed (step 1): extracted target/budget helpers and their focused tests into
+    `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
+  - Landed (step 2): introduced `RenderPlanCompilerCtx` to own structural compiler outputs
+    (`passes`, `segments`, `degradations`, and segment id allocation) while preserving the
+    `compile_for_scene` entrypoint and `RenderPlan` IR shape.
+  - Landed (step 3a): moved clip-path push/pop planning into
+    `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs` while leaving the
+    main loop's marker ordering, `RenderPlan` IR shape, target allocation order, load ops, and
+    `ClipPathDisabled` degradation reasons unchanged.
+  - Landed (step 3b-1): moved composite-group push/pop planning into
+    `crates/fret-render-wgpu/src/renderer/render_plan_compiler/composite_group.rs` while leaving
+    marker ordering, `RenderPlan` IR shape, target allocation order, load ops, isolated opacity,
+    and `CompositeGroupBlendDegradedToOver` degradation reasons unchanged.
+  - Landed (step 3b-2a): moved backdrop-source-group push/pop planning into
+    `crates/fret-render-wgpu/src/renderer/render_plan_compiler/backdrop_source_group.rs` while
+    leaving the `compile_for_scene` entrypoint, `RenderPlan` IR shape, pass ordering, target
+    reservation/lifetime semantics, `reserved_bytes` accounting, and pyramid degradation counters
+    unchanged.
+  - Landed (step 3b-2b): moved effect-scope push/pop planning and effect-chain budget sampling
+    into `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs` while
+    leaving marker/pass ordering, FilterContent target lifetime, load-op behavior, Backdrop no-op
+    degradation, FilterContent disabled degradation, and backdrop-source-group context propagation
+    unchanged.
+  - Landed (step 3c): moved path MSAA batch planning into
+    `crates/fret-render-wgpu/src/renderer/render_plan_compiler/path_msaa.rs` while leaving
+    `cursor`/`scene_range_start` advancement, scene-range flush ordering, segment allocation,
+    `PathMsaaBatchPass` fields, load-op behavior, and marker boundaries unchanged.
+  - Landed (step 3d): moved `compile_for_scene` preflight and scene-target planning into
+    `crates/fret-render-wgpu/src/renderer/render_plan_compiler/preflight.rs` while leaving backdrop
+    effect enablement, postprocess fallback, scene target selection, and explicit sRGB encode
+    behavior unchanged.
+  - Landed (step 3e): moved effect-marker dispatch state and routing into
+    `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs` while leaving
+    `marker_ix` advancement in the main loop and preserving marker/pass ordering, scope stack
+    lifetimes, target reservation, budget stats, and degradation snapshots.
+  - Landed (step 3f): moved `DrawScope` and `take_scope_load_for_write` into
+    `crates/fret-render-wgpu/src/renderer/render_plan_compiler/draw_scope.rs` while preserving
+    scope-stack clear consumption, pass load-op ordering, target lifetime, and helper module
+    visibility within the RenderPlan compiler.
+  - Landed (step 3g): moved scissor-sized-intermediate eligibility into
+    `RenderPlanPreflight` so the main compiler loop no longer scans `EffectMarkerKind` directly
+    before marker dispatch.
+  - Landed (step 3h): moved effect-chain pass application and budget-stat accumulation into
+    `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_chain.rs` while keeping
+    effect-scope push/pop lifetime decisions in `effect_scope.rs`.
+  - Landed (step 3i): moved free intermediate target selection into
+    `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_selection.rs` while keeping
+    `Intermediate0..3` allocation order, reserved-target exclusion, active draw-scope exclusion,
+    scope lifetime, pass/load-op ordering, and existing degradation reason precedence unchanged.
+  - Landed (step 3j): moved clip-path `Mask0..2` target selection into
+    `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_selection.rs` while keeping
+    the mask target pool separate from intermediate targets, active clip-path scope exclusion,
+    mask allocation order, and `ClipPathDisabled` degradation reason precedence unchanged.
+  - Landed (step 3k): replaced the Backdrop effect push path's temporary active mask target
+    `Vec` with a fixed-size `ActiveMaskTargets` snapshot, preserving active clip-path mask target
+    order and the slice passed to effect-chain planning.
+  - Landed (step 3l): replaced effect-chain target deduplication's temporary `Vec` with
+    `SmallVec<[PlanTarget; 8]>`, preserving dedupe order while avoiding heap allocation.
+  - Landed (step 3m): moved backdrop-source-group dispatch state into
+    `BackdropSourceGroupDispatchState`, centralizing scopes, reserved targets, in-use bytes,
+    push/pop mutation, and current effect context access outside `marker_dispatch.rs`.
+  - Landed (step 3n): moved clip-path dispatch state into `ClipPathDispatchState`, centralizing
+    clip scopes, mask-in-use bytes, push/pop mutation, active mask target snapshots, and
+    clip-path helper visibility outside `marker_dispatch.rs`.
+  - Landed (step 3o): moved composite-group dispatch state into
+    `CompositeGroupDispatchState`, centralizing scopes, push/pop mutation, and helper visibility
+    outside `marker_dispatch.rs`.
+  - Landed (step 3p): moved effect-scope dispatch state into `EffectScopeDispatchState`,
+    centralizing effect scopes, effect-chain budget stats, degradation snapshots, blur-quality
+    snapshots, push/pop mutation, and the narrow backdrop-source-group degradation counter
+    mutation entrypoint outside `marker_dispatch.rs`.
+  - Landed (step 3q): introduced `MarkerSharedDispatchInputs` in `marker_dispatch.rs`,
+    centralizing the shared clip-path/backdrop-source-group inputs needed by effect, clip-path,
+    backdrop-source-group, and composite-group marker branches while keeping the snapshot owned to
+    avoid borrow conflicts with the per-branch mutable dispatch state.
+  - Landed (step 3r): replaced `BackdropSourceGroupDispatchState`'s reserved-target stack `Vec`
+    with `SmallVec<[PlanTarget; 4]>`, preserving the public reserved-target slice contract,
+    push/pop target order, and backdrop raw/pyramid budget/degradation accounting while avoiding
+    heap allocation for the bounded intermediate target pool.
+  - Landed (step 3s): moved the private effect-scope push/pop helper bodies onto
+    `EffectScopeDispatchState`, so effect scopes, budget stats, degradation snapshots, and
+    blur-quality snapshots are mutated through the owning dispatch state instead of being threaded
+    as multiple independent `&mut` parameters.
+  - Landed (step 3t): moved the private backdrop-source-group push/pop helper bodies onto
+    `BackdropSourceGroupDispatchState`, so scopes, reserved targets, and in-use bytes are mutated
+    through the owning dispatch state instead of being threaded as multiple independent `&mut`
+    parameters.
+  - Landed (step 3u): moved the private clip-path push/pop helper bodies onto
+    `ClipPathDispatchState`, so clip scopes and mask-in-use bytes are mutated through the owning
+    dispatch state instead of being threaded as multiple independent `&mut` parameters.
+  - Landed (step 3v): moved the private composite-group push/pop helper bodies onto
+    `CompositeGroupDispatchState`, so composite scopes and push/pop mutation are handled through
+    the owning dispatch state instead of threading `&mut scopes` through standalone helpers.
+  - Landed (step 3w): introduced `DrawScopeStack` for compiler draw-scope stack access, so
+    current-scope lookup, push/pop, live-target iteration, and load-op consumption are centralized
+    instead of passing a mutable `Vec<DrawScope>` across RenderPlan compiler modules.
+  - Landed (step 3x): extracted scoped intermediate target allocation budget filtering into
+    `target_selection`, so clip-path, effect-scope FilterContent, and composite-group push paths
+    share the same free-target evidence and budget filtering semantics while keeping their own
+    degradation records and scope lifetime decisions.
+  - Landed (step 3y): replaced the all-fields `MarkerSharedDispatchInputs` copy with
+    branch-specific borrowed snapshots in `marker_dispatch`, so marker branches only materialize
+    the clip-path/backdrop-source-group inputs they actually need and reserved targets stay borrowed
+    from `BackdropSourceGroupDispatchState`.
+  - Landed (step 3z): split `MarkerDispatchState::compile_marker` branch bodies into private
+    methods for effect scope, clip path, backdrop-source-group, and composite-group markers, keeping
+    `compile_marker` as the route-order-preserving dispatcher.
+  - Closed (stage 24): a final structure scan found no remaining Stage 24 blockers. The retained
+    compiler entrypoint is small, helper domains are module-scoped, dispatch state owns its mutable
+    stacks/snapshots, and remaining `compile_push`/`compile_pop` methods are intentional state
+    entrypoints rather than free helper plumbing.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
+      `compile_for_scene_inner`)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`
+      (`intermediate_budget_breakdown_for_chain`, `can_allocate_intermediate_bytes`,
+      `choose_backdrop_source_group_pyramid_choice`)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_selection.rs`
+      (`choose_free_intermediate_target`, `choose_free_clip_path_mask_target`,
+      `has_free_intermediate_target_except`, `choose_budgeted_intermediate_target`,
+      `budget_filter_intermediate_target`)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/context.rs`
+      (`RenderPlanCompilerCtx`, `alloc_segment`, `flush_scene_range`)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`
+      (`ClipPathDispatchState::{compile_push_inner,compile_pop_inner}`, `ActiveMaskTargets`)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_chain.rs`
+      (`apply_chain_in_place`, `SmallVec<[PlanTarget; 8]>` in-use target snapshot)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/composite_group.rs`
+      (`CompositeGroupDispatchState::{compile_push_inner,compile_pop_inner}`)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/backdrop_source_group.rs`
+      (`BackdropSourceGroupDispatchState::{compile_push_inner,compile_pop_inner}`,
+      `BackdropSourceGroupScope::effect_ctx`,
+      `SmallVec<[PlanTarget; 4]>` reserved-target stack)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
+      (`EffectScopeDispatchState::{compile_push_inner,compile_pop_inner}`,
+      effect-scope push/pop target lifetime)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_chain.rs`
+      (`apply_chain_in_place`, `EffectChainApplyCtx`, `EffectChainBudgetStats::apply_to_plan`)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/path_msaa.rs`
+      (`try_compile_path_msaa_batch`)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/preflight.rs`
+      (`RenderPlanPreflight`, `plan_render_targets`, scissor-sized-intermediate eligibility)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+      (`MarkerDispatchState`, `compile_marker`,
+      `MarkerDispatchState::{compile_effect_scope_push,compile_effect_scope_pop,compile_clip_path_push,compile_backdrop_source_group_push,compile_composite_group_push}`,
+      `effect_scope_push_inputs`, `clip_mask_and_backdrop_target_inputs`,
+      `backdrop_source_group_targets`, `into_parts`)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/draw_scope.rs`
+      (`DrawScope`, `DrawScopeStack`)
+    - `docs/workstreams/renderer-render-plan-semantics-audit-v1/renderer-render-plan-semantics-audit-v1.md`
+      (target lifetime, load-op, scissor/mask, and deterministic degradation invariants)
+  - Gates:
+    - `python3 tools/check_layering.py`
+    - `cargo test -p fret-render-wgpu --lib renderer::`
+    - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+    - `cargo test -p fret-render-wgpu render_plan_compiler::target_selection`
+    - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+    - Note: `cargo test -p fret-render-wgpu --lib` compiled but failed on unrelated
+      text/system-font environment tests in this Windows environment.
+
 ## M7 — Post-v1 semantic expansions (deferred backlog)
 
 These items are intentionally *not* part of the vNext refactor’s v1 closure. They are common UI

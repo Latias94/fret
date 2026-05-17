@@ -20,6 +20,7 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui::retained_bridge::{LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt as _, Widget};
 use fret_ui::{Theme, UiTree};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::facade as shadcn;
@@ -30,6 +31,20 @@ const DOCKING_DEMO_DRAG_ANCHOR_SIZE: Px = Px(12.0);
 
 const CMD_DOCK_DEMO_SPLIT_TOGGLE: &str = "dock_demo.split.toggle";
 const DEV_STATE_DOCKING_LAYOUT_KEY: &str = "docking.layout";
+
+fn docking_demo_list_row_text<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    decl_text::text_list_row_label(cx, text)
+}
+
+fn docking_demo_readout_text<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    decl_text::text_control_readout(cx, text)
+}
 
 #[derive(Debug, Default)]
 struct DockingDemoDevStateIncoming {
@@ -169,10 +184,10 @@ impl DockPanelFactory<App> for DemoDockPanelFactory {
                                         .on_click(CMD_DOCK_DEMO_SPLIT_TOGGLE)
                                         .test_id("dock-demo-split-toggle")
                                         .into_element(cx),
-                                    cx.text("Scene"),
-                                    cx.text("  • Camera"),
-                                    cx.text("  • Directional Light"),
-                                    cx.text("  • Player"),
+                                    docking_demo_list_row_text(cx, "Scene"),
+                                    docking_demo_list_row_text(cx, "Camera"),
+                                    docking_demo_list_row_text(cx, "Directional Light"),
+                                    docking_demo_list_row_text(cx, "Player"),
                                 ]
                             })
                             .gap(Space::N1)
@@ -190,9 +205,9 @@ impl DockPanelFactory<App> for DemoDockPanelFactory {
                             .into_element(cx),
                             shadcn::CardContent::new([ui::v_flex(|cx| {
                                 [
-                                    cx.text("Name: Player"),
-                                    cx.text("Position: (12.0, 3.0, -8.0)"),
-                                    cx.text("Rotation: (0.0, 90.0, 0.0)"),
+                                    docking_demo_readout_text(cx, "Name: Player"),
+                                    docking_demo_readout_text(cx, "Position: (12.0, 3.0, -8.0)"),
+                                    docking_demo_readout_text(cx, "Rotation: (0.0, 90.0, 0.0)"),
                                 ]
                             })
                             .gap(Space::N1)

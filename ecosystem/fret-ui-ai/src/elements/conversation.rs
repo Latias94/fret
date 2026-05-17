@@ -655,7 +655,7 @@ impl ConversationTranscript {
                 let prefix = debug_row_test_id_prefix.clone();
                 move |cx, index| {
                     let Some(msg) = messages.get(index) else {
-                        return cx.text("");
+                        return crate::elements::empty_placeholder(cx);
                     };
 
                     let content =

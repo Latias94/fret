@@ -5,6 +5,7 @@ use fret::{AppComponentCx, UiChild};
 use fret_core::{FontWeight, Px};
 use fret_icons::IconId;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
+use fret_ui::element::SpacerProps;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -468,7 +469,7 @@ fn project_groups(
     let sidebar_ctx = shadcn::use_sidebar(cx).expect("sidebar context");
     let collapsed = sidebar_ctx.device_shell_mode.is_desktop() && sidebar_ctx.collapsed();
     if collapsed {
-        return cx.text("");
+        return cx.spacer(SpacerProps::default());
     }
 
     let mut children = vec![

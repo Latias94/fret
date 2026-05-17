@@ -82,6 +82,17 @@ fn fill_shrinkable_single_line_layout() -> LayoutStyle {
     layout
 }
 
+fn fill_growing_single_line_layout() -> LayoutStyle {
+    fill_growing_zero_min_layout()
+}
+
+fn fill_growing_zero_min_layout() -> LayoutStyle {
+    let mut layout = fill_shrinkable_single_line_layout();
+    layout.flex.grow = 1.0;
+    layout.flex.basis = Length::Px(Px(0.0));
+    layout
+}
+
 /// Declarative text helper that matches Tailwind's `truncate` semantics:
 /// - `whitespace-nowrap`
 /// - `text-overflow: ellipsis`
@@ -252,6 +263,119 @@ pub fn text_button_label<H: UiHost>(
     )
 }
 
+/// Declarative text helper for compact control labels.
+///
+/// Use this for checkbox, radio, switch, combo, and slider captions that occupy remaining control
+/// row space. These labels fill available width, shrink to zero in flex rows, and truncate instead
+/// of increasing fixed control chrome height.
+pub fn text_control_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_sm_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: fill_growing_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
+/// Declarative text helper for compact section and chrome labels.
+///
+/// Use this for separator labels, panel-section headings, and similar fixed chrome. These labels
+/// should stay on one line and truncate under resize instead of increasing row height.
+pub fn text_section_chrome_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_sm_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
+/// Declarative text helper for compact chrome glyphs.
+///
+/// Use this for disclosure arrows and similar glyph-only chrome inside fixed-size slots. Glyphs
+/// stay single-line and clip instead of growing fixed chrome rows under resize.
+pub fn text_chrome_glyph<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_sm_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
+/// Declarative text helper for fill-width chrome titles.
+///
+/// Use this for window/panel title bars that occupy remaining chrome row space. It keeps the same
+/// section/chrome label style while opting into fill, grow, and `min-width: 0` layout.
+pub fn text_chrome_title<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_sm_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: fill_growing_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
 /// Declarative text helper that matches Tailwind's `text-xs` default usage in shadcn recipes.
 ///
 /// Themes can override this via:
@@ -342,6 +466,34 @@ pub fn text_paragraph_break_words<H: UiHost>(
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
     text_prose_break_words(cx, text)
+}
+
+/// Compact paragraph/body copy for dense editor surfaces.
+///
+/// This role is for explanatory copy that should wrap and may grow row height, but still needs
+/// fill-width, `min-width: 0` flex behavior inside dense panels.
+pub fn text_compact_paragraph<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_sm_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: fill_growing_zero_min_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
 }
 
 /// Bold variant of [`text_prose`], intended for typography table headers (`<th className="... font-bold">`).
@@ -468,10 +620,93 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_core::{
+        AppWindowId, MaterialDescriptor, MaterialId, MaterialRegistrationError, PathCommand,
+        PathConstraints, PathId, PathMetrics, PathService, Point, Rect, Size, SvgId, SvgService,
+        TextBlobId, TextConstraints, TextInput, TextMetrics, TextService,
+    };
     use fret_ui::element::ElementKind;
     use fret_ui::elements;
-    use fret_ui::{Theme, ThemeConfig};
+    use fret_ui::elements::GlobalElementId;
+    use fret_ui::{Theme, ThemeConfig, UiTree, declarative};
+
+    #[derive(Default)]
+    struct WrappingTextServices;
+
+    impl TextService for WrappingTextServices {
+        fn prepare(
+            &mut self,
+            input: &TextInput,
+            constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            let text = input.text();
+            let char_width = Px(7.0);
+            let line_height = Px(14.0);
+            let char_count = text.chars().count().max(1);
+            let unwrapped_width = Px(char_count as f32 * char_width.0);
+            let lines = match (constraints.wrap, constraints.max_width) {
+                (TextWrap::None, _) | (_, None) => 1usize,
+                (_, Some(max_width)) if max_width.0 <= char_width.0 => char_count,
+                (_, Some(max_width)) => {
+                    let chars_per_line = (max_width.0 / char_width.0).floor().max(1.0) as usize;
+                    char_count.div_ceil(chars_per_line)
+                }
+            };
+            let width = match (constraints.overflow, constraints.max_width) {
+                (TextOverflow::Ellipsis, Some(max_width)) => Px(unwrapped_width.0.min(max_width.0)),
+                (_, Some(max_width)) if constraints.wrap != TextWrap::None => {
+                    Px(unwrapped_width.0.min(max_width.0))
+                }
+                _ => unwrapped_width,
+            };
+
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(width, Px(lines as f32 * line_height.0)),
+                    baseline: Px(line_height.0 * 0.8),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for WrappingTextServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for WrappingTextServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for WrappingTextServices {
+        fn register_material(
+            &mut self,
+            _desc: MaterialDescriptor,
+        ) -> Result<MaterialId, MaterialRegistrationError> {
+            Err(MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: MaterialId) -> bool {
+            false
+        }
+    }
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -527,6 +762,55 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(320.0), Px(160.0)),
         )
+    }
+
+    fn narrow_bounds() -> Rect {
+        Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(96.0), Px(220.0)))
+    }
+
+    fn layout_text_role(
+        role_name: &'static str,
+        build: impl FnOnce(&mut ElementContext<'_, App>) -> AnyElement + 'static,
+    ) -> Rect {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let bounds = narrow_bounds();
+        let mut services = WrappingTextServices;
+        let text_id = std::sync::Arc::new(std::sync::Mutex::new(None::<GlobalElementId>));
+        let text_id_for_render = std::sync::Arc::clone(&text_id);
+
+        let root = declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            role_name,
+            move |cx| {
+                let text = build(cx);
+                *text_id_for_render.lock().unwrap() = Some(text.id);
+                vec![text]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let text_id = text_id.lock().unwrap().expect("text id");
+        elements::current_bounds_for_element(&mut app, window, text_id).expect("text bounds")
+    }
+
+    fn assert_single_line_text_role(
+        role_name: &'static str,
+        line_height: Px,
+        build: impl FnOnce(&mut ElementContext<'_, App>) -> AnyElement + 'static,
+    ) {
+        let bounds = layout_text_role(role_name, build);
+        assert!(
+            bounds.size.height.0 <= line_height.0 + 0.5,
+            "{role_name} should stay one measured line under narrow resize, got {bounds:?}"
+        );
     }
 
     #[test]
@@ -641,6 +925,33 @@ mod tests {
     }
 
     #[test]
+    fn compact_paragraph_text_uses_wrapping_fill_width_layout() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_compact_paragraph(cx, "Dense editor body copy wraps inside the available row")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_compact_paragraph(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
+    }
+
+    #[test]
     fn table_cell_text_uses_compact_single_line_truncation() {
         let window = AppWindowId::default();
         let mut app = test_app();
@@ -741,6 +1052,139 @@ mod tests {
         assert_eq!(
             el.inherited_text_style,
             Some(text_button_label_refinement(&theme))
+        );
+    }
+
+    #[test]
+    fn section_chrome_label_text_uses_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_section_chrome_label(cx, "Inspector section heading with a long name")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_section_chrome_label(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
+    }
+
+    #[test]
+    fn chrome_title_text_uses_fill_width_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_chrome_title(cx, "Floating diagnostics window title")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_chrome_title(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
+    }
+
+    #[test]
+    fn chrome_glyph_text_uses_fixed_slot_single_line_clip() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_chrome_glyph(cx, ">")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_chrome_glyph(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
+    }
+
+    #[test]
+    fn control_label_text_uses_fill_width_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_control_label(cx, "Long checkbox/radio label that should not wrap")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_control_label(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
+    }
+
+    #[test]
+    fn base_single_line_text_roles_stay_single_line_under_narrow_layout() {
+        let long = "Very long editor text role label that must truncate instead of wrapping";
+
+        assert_single_line_text_role("control-readout", Px(16.0), move |cx| {
+            text_control_readout(cx, long)
+        });
+        assert_single_line_text_role("button-label", Px(18.0), move |cx| {
+            text_button_label(cx, long)
+        });
+        assert_single_line_text_role("table-cell", Px(18.0), move |cx| text_table_cell(cx, long));
+        assert_single_line_text_role("code-block", Px(18.0), move |cx| {
+            text_code_block(cx, "fn main() { println!(\"a very long line\"); }")
+        });
+    }
+
+    #[test]
+    fn paragraph_text_role_measures_multiple_lines_under_narrow_layout() {
+        let bounds = layout_text_role("paragraph", |cx| {
+            text_paragraph(
+                cx,
+                "Paragraph text is allowed to wrap and the parent layout must account for it.",
+            )
+        });
+
+        assert!(
+            bounds.size.height.0 > 24.0,
+            "paragraph text should measure as multiple lines under narrow layout, got {bounds:?}"
         );
     }
 }

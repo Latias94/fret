@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use fret_core::Px;
 use fret_ui::UiHost;
-use fret_ui::element::{ContainerProps, Length, SemanticsDecoration, TextProps};
+use fret_ui::element::{ContainerProps, Length, SemanticsDecoration};
 use fret_ui::{ElementContext, Theme};
 
 use super::label_identity::parse_label_identity;
@@ -35,9 +35,7 @@ fn separator_text_element<H: UiHost>(
         .as_ref()
         .map(|base| Arc::from(format!("{base}.line")));
 
-    let mut label_props = TextProps::new(label);
-    label_props.layout.flex.shrink = 0.0;
-    let mut label = cx.text_props(label_props);
+    let mut label = crate::declarative::text::text_section_chrome_label(cx, label);
     if let Some(test_id) = label_test_id {
         label = label.attach_semantics(SemanticsDecoration::default().test_id(test_id));
     }

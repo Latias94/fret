@@ -49,6 +49,11 @@
     { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-command" } },
     {
       "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-command" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-command-docs-demo-content" } },
       "timeout_frames": 600
     },

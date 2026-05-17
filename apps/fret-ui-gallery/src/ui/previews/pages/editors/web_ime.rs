@@ -4,6 +4,13 @@ use fret::AppComponentCx;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
 
+fn debug_readout_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
+where
+    T: Into<Arc<str>>,
+{
+    doc_layout::control_readout_text(cx, text)
+}
+
 fn delete_last_char(text: &mut String) -> bool {
     let Some((start, _)) = text.char_indices().last() else {
         return false;
@@ -63,12 +70,20 @@ pub(in crate::ui) fn preview_web_ime_harness(
 
     let header = ui::v_flex(|cx| {
         vec![
-            cx.text("Goal: validate the wasm textarea IME bridge (ADR 0180)."),
-            cx.text(
+            doc_layout::paragraph_text(
+                cx,
+                "Goal: validate the wasm textarea IME bridge (ADR 0180).",
+            ),
+            doc_layout::paragraph_text(
+                cx,
                 "Try: CJK IME preedit → commit; ensure no double insert on compositionend + input.",
             ),
-            cx.text("Click inside the region to focus it (IME should enable)."),
-            cx.text(
+            doc_layout::paragraph_text(
+                cx,
+                "Click inside the region to focus it (IME should enable).",
+            ),
+            doc_layout::paragraph_text(
+                cx,
                 "Debug buttons below inject web-only beforeinput control intents without a physical keydown.",
             ),
         ]
@@ -89,7 +104,7 @@ pub(in crate::ui) fn preview_web_ime_harness(
         |cx| {
             let body = ui::v_flex(|cx: &mut AppComponentCx<'_>| {
                 vec![
-                    cx.text("Editable widgets (sanity check):"),
+                    doc_layout::control_readout_text(cx, "Editable widgets (sanity check):"),
                     shadcn::Input::new(text_input)
                         .a11y_label("Web IME input")
                         .placeholder("Type here (IME should work on web)")
@@ -323,7 +338,7 @@ pub(in crate::ui) fn preview_web_ime_harness(
                                                 )),
                                             LayoutRefinement::default(),
                                         ),
-                                        move |cx| vec![cx.text(label)],
+                                        move |cx| vec![doc_layout::button_label_text(cx, label)],
                                     );
                                     vec![body]
                                 },
@@ -358,18 +373,18 @@ pub(in crate::ui) fn preview_web_ime_harness(
 
                         let mut lines = vec![
                             controls,
-                            cx.text(format!(
+                            debug_readout_text(cx, format!(
                                 "harness_region_ime_enabled={harness_region_ime_enabled}"
                             )),
-                            cx.text(format!(
+                            debug_readout_text(cx, format!(
                                 "desired_ime_cursor_area={:?}",
                                 desired_ime_cursor_area
                             )),
-                            cx.text(format!("preedit={preedit:?}")),
-                            cx.text(format!("committed_tail={committed_tail:?}")),
-                            cx.text(format!("last_event={:?}", st.last)),
-                            cx.text("Console logging: add ?ime_debug=1 or set window.__FRET_IME_DEBUG=true"),
-                            cx.text(format!(
+                            debug_readout_text(cx, format!("preedit={preedit:?}")),
+                            debug_readout_text(cx, format!("committed_tail={committed_tail:?}")),
+                            debug_readout_text(cx, format!("last_event={:?}", st.last)),
+                            debug_readout_text(cx, "Console logging: add ?ime_debug=1 or set window.__FRET_IME_DEBUG=true"),
+                            debug_readout_text(cx, format!(
                                 "counts: text_input={} ime_commit={} ime_preedit={} ime_delete_surrounding={} enabled={} disabled={}",
                                 st.text_input_count,
                                 st.ime_commit_count,
@@ -388,21 +403,21 @@ pub(in crate::ui) fn preview_web_ime_harness(
                             })
                             .cloned()
                         {
-                            lines.push(cx.text("window_text_input_snapshot:"));
-                            lines.push(cx.text(format!(
+                            lines.push(debug_readout_text(cx, "window_text_input_snapshot:"));
+                            lines.push(debug_readout_text(cx, format!(
                                 "  focus_is_text_input={} is_composing={}",
                                 snapshot.focus_is_text_input as u8, snapshot.is_composing as u8
                             )));
-                            lines.push(cx.text(format!(
+                            lines.push(debug_readout_text(cx, format!(
                                 "  text_len_utf16={} selection_utf16={:?} marked_utf16={:?}",
                                 snapshot.text_len_utf16, snapshot.selection_utf16, snapshot.marked_utf16
                             )));
-                            lines.push(cx.text(format!(
+                            lines.push(debug_readout_text(cx, format!(
                                 "  ime_cursor_area={:?}",
                                 snapshot.ime_cursor_area
                             )));
                         } else {
-                            lines.push(cx.text("window_text_input_snapshot: <unavailable>"));
+                            lines.push(debug_readout_text(cx, "window_text_input_snapshot: <unavailable>"));
                         }
 
                         if let Some(input_ctx) = cx
@@ -413,19 +428,19 @@ pub(in crate::ui) fn preview_web_ime_harness(
                             })
                             .cloned()
                         {
-                            lines.push(cx.text("window_input_context_snapshot:"));
-                            lines.push(cx.text(format!(
+                            lines.push(debug_readout_text(cx, "window_input_context_snapshot:"));
+                            lines.push(debug_readout_text(cx, format!(
                                 "  focus_is_text_input={} text_boundary_mode={:?}",
                                 input_ctx.focus_is_text_input as u8, input_ctx.text_boundary_mode
                             )));
                         } else {
-                            lines.push(cx.text("window_input_context_snapshot: <unavailable>"));
+                            lines.push(debug_readout_text(cx, "window_input_context_snapshot: <unavailable>"));
                         }
 
                         if let Some(key) = cx.app.global::<fret_runtime::TextFontStackKey>() {
-                            lines.push(cx.text(format!("text_font_stack_key={}", key.0)));
+                            lines.push(debug_readout_text(cx, format!("text_font_stack_key={}", key.0)));
                         } else {
-                            lines.push(cx.text("text_font_stack_key: <unavailable>"));
+                            lines.push(debug_readout_text(cx, "text_font_stack_key: <unavailable>"));
                         }
 
                         if let Some(cfg) = cx.app.global::<fret_core::TextFontFamilyConfig>().cloned()
@@ -438,16 +453,16 @@ pub(in crate::ui) fn preview_web_ime_harness(
                                     format!("[{head}] (len={})", v.len())
                                 }
                             };
-                            lines.push(cx.text("text_font_families:"));
-                            lines.push(cx.text(format!("  ui_sans={}", fmt(&cfg.ui_sans))));
-                            lines.push(cx.text(format!("  ui_serif={}", fmt(&cfg.ui_serif))));
-                            lines.push(cx.text(format!("  ui_mono={}", fmt(&cfg.ui_mono))));
-                            lines.push(cx.text(format!(
+                            lines.push(debug_readout_text(cx, "text_font_families:"));
+                            lines.push(debug_readout_text(cx, format!("  ui_sans={}", fmt(&cfg.ui_sans))));
+                            lines.push(debug_readout_text(cx, format!("  ui_serif={}", fmt(&cfg.ui_serif))));
+                            lines.push(debug_readout_text(cx, format!("  ui_mono={}", fmt(&cfg.ui_mono))));
+                            lines.push(debug_readout_text(cx, format!(
                                 "  common_fallback={}",
                                 fmt(&cfg.common_fallback)
                             )));
                         } else {
-                            lines.push(cx.text("text_font_families: <unavailable>"));
+                            lines.push(debug_readout_text(cx, "text_font_families: <unavailable>"));
                         }
 
                         if let Some(catalog) = cx.app.global::<fret_runtime::FontCatalog>().cloned()
@@ -459,17 +474,17 @@ pub(in crate::ui) fn preview_web_ime_harness(
                                 .cloned()
                                 .collect::<Vec<_>>()
                                 .join(", ");
-                            lines.push(cx.text("font_catalog:"));
-                            lines.push(cx.text(format!(
+                            lines.push(debug_readout_text(cx, "font_catalog:"));
+                            lines.push(debug_readout_text(cx, format!(
                                 "  revision={} families_len={}",
                                 catalog.revision,
                                 catalog.families.len()
                             )));
                             if !catalog.families.is_empty() {
-                                lines.push(cx.text(format!("  head=[{head}]")));
+                                lines.push(debug_readout_text(cx, format!("  head=[{head}]")));
                             }
                         } else {
-                            lines.push(cx.text("font_catalog: <unavailable>"));
+                            lines.push(debug_readout_text(cx, "font_catalog: <unavailable>"));
                         }
 
                         let snapshot = cx
@@ -477,53 +492,53 @@ pub(in crate::ui) fn preview_web_ime_harness(
                             .global::<fret_core::input::WebImeBridgeDebugSnapshot>()
                             .cloned();
                         if let Some(snapshot) = snapshot {
-                            lines.push(cx.text("bridge_debug_snapshot (wasm textarea):"));
-                            lines.push(cx.text(format!(
+                            lines.push(debug_readout_text(cx, "bridge_debug_snapshot (wasm textarea):"));
+                            lines.push(debug_readout_text(cx, format!(
                                 "  enabled={} composing={} suppress_next_input={}",
                                 snapshot.enabled as u8,
                                 snapshot.composing as u8,
                                 snapshot.suppress_next_input as u8
                             )));
-                            lines.push(cx.text(format!(
+                            lines.push(debug_readout_text(cx, format!(
                                 "  last_preedit_text={:?} preedit_cursor_utf16={:?}",
                                 snapshot.last_preedit_text.as_deref(),
                                 snapshot.last_preedit_cursor_utf16
                             )));
-                            lines.push(cx.text(format!(
+                            lines.push(debug_readout_text(cx, format!(
                                 "  last_commit_text={:?}",
                                 snapshot.last_commit_text.as_deref()
                             )));
-                            lines.push(cx.text(format!(
+                            lines.push(debug_readout_text(cx, format!(
                                 "  position_mode={:?} mount_kind={:?} dpr={:?}",
                                 snapshot.position_mode.as_deref(),
                                 snapshot.mount_kind.as_deref(),
                                 snapshot.device_pixel_ratio,
                             )));
-                            lines.push(cx.text(format!(
+                            lines.push(debug_readout_text(cx, format!(
                                 "  textarea_has_focus={:?} active_element_tag={:?}",
                                 snapshot.textarea_has_focus, snapshot.active_element_tag
                             )));
-                            lines.push(cx.text(format!(
+                            lines.push(debug_readout_text(cx, format!(
                                 "  last_input_type={:?}",
                                 snapshot.last_input_type.as_deref()
                             )));
-                            lines.push(cx.text(format!(
+                            lines.push(debug_readout_text(cx, format!(
                                 "  last_beforeinput_data={:?}",
                                 snapshot.last_beforeinput_data.as_deref()
                             )));
-                            lines.push(cx.text(format!(
+                            lines.push(debug_readout_text(cx, format!(
                                 "  last_input_data={:?}",
                                 snapshot.last_input_data.as_deref()
                             )));
-                            lines.push(cx.text(format!(
+                            lines.push(debug_readout_text(cx, format!(
                                 "  last_key_code={:?} last_cursor_area={:?}",
                                 snapshot.last_key_code, snapshot.last_cursor_area
                             )));
-                            lines.push(cx.text(format!(
+                            lines.push(debug_readout_text(cx, format!(
                                 "  last_cursor_anchor_px={:?}",
                                 snapshot.last_cursor_anchor_px
                             )));
-                            lines.push(cx.text(format!(
+                            lines.push(debug_readout_text(cx, format!(
                                 "  counts: beforeinput={} input={} suppressed={} comp_start={} comp_update={} comp_end={} cursor_area_set={}",
                                 snapshot.beforeinput_seen,
                                 snapshot.input_seen,
@@ -533,7 +548,7 @@ pub(in crate::ui) fn preview_web_ime_harness(
                                 snapshot.composition_end_seen,
                                 snapshot.cursor_area_set_seen,
                             )));
-                            lines.push(cx.text(format!(
+                            lines.push(debug_readout_text(cx, format!(
                                 "  textarea: chars={:?} sel_utf16={:?}..{:?} client={:?}x{:?} scroll={:?}x{:?}",
                                 snapshot.textarea_value_chars,
                                 snapshot.textarea_selection_start_utf16,
@@ -545,13 +560,13 @@ pub(in crate::ui) fn preview_web_ime_harness(
                             )));
 
                             if !snapshot.recent_events.is_empty() {
-                                lines.push(cx.text("  recent_events:"));
+                                lines.push(debug_readout_text(cx, "  recent_events:"));
                                 for e in snapshot.recent_events.iter().rev().take(10) {
-                                    lines.push(cx.text(format!("    {e}")));
+                                    lines.push(debug_readout_text(cx, format!("    {e}")));
                                 }
                             }
                         } else {
-                            lines.push(cx.text("bridge_debug_snapshot: <unavailable>"));
+                            lines.push(debug_readout_text(cx, "bridge_debug_snapshot: <unavailable>"));
                         }
 
                         lines

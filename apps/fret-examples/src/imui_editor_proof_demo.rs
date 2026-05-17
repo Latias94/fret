@@ -45,6 +45,7 @@ use fret_ui_editor::controls::{
 use fret_ui_editor::imui as editor_imui;
 use fret_ui_editor::primitives::{EditSessionOutcome, EditorCompactReadoutStyle, EditorTokenKeys};
 use fret_ui_editor::theme::EditorThemePresetV1;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::headless::text_assist::{
     TextAssistItem, TextAssistMatch, TextAssistMatchMode, controller_with_active_item_id,
     input_owned_text_assist_expanded,
@@ -268,6 +269,33 @@ fn proof_compact_readout<H: UiHost>(
     el.a11y_label(readout)
 }
 
+fn proof_compact_readout_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    readout: impl Into<Arc<str>>,
+    test_id: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    let readout = readout.into();
+    let mut el = decl_text::text_control_readout(cx, readout.clone()).test_id(test_id.into());
+    el = el.a11y_label(readout);
+    el
+}
+
+fn proof_empty_state_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: &'static str,
+    test_id: &'static str,
+) -> fret_ui::element::AnyElement {
+    proof_compact_readout_element(cx, Arc::<str>::from(text), Arc::<str>::from(test_id))
+}
+
+fn proof_section_chrome_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: &'static str,
+    test_id: &'static str,
+) -> fret_ui::element::AnyElement {
+    decl_text::text_section_chrome_label(cx, text).test_id(test_id)
+}
+
 fn color_hex_readout(color: Option<Color>) -> String {
     color
         .map(|color| format!("#{:06X}", color.to_srgb_hex_rgb()))
@@ -415,11 +443,14 @@ fn proof_drag_preview_card<H: UiHost>(
         props.border_color = Some(theme.color_token("border"));
         props.corner_radii = Corners::all(Px(8.0));
 
-        let text = subtitle
-            .as_ref()
-            .map(|subtitle| format!("{title}\n{subtitle}"))
-            .unwrap_or_else(|| title.as_ref().to_string());
-        out.push(cx.container(props, move |cx| vec![cx.text(text)]));
+        out.push(cx.container(props, move |cx| {
+            let mut children = Vec::new();
+            children.push(decl_text::text_section_chrome_label(cx, title.clone()));
+            if let Some(subtitle) = subtitle.as_ref() {
+                children.push(decl_text::text_control_readout(cx, subtitle.clone()));
+            }
+            children
+        }));
     })
 }
 
@@ -1052,7 +1083,7 @@ where
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new(),
-                                                        |cx| cx.text("Name"),
+                                                        |cx| row_cx.label_text(cx, "Name"),
                                                         |cx| {
                                                             TextField::new(
                                                                 editor_name_model.clone(),
@@ -1080,7 +1111,7 @@ where
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new(),
-                                                        |cx| cx.text("Inline rename"),
+                                                        |cx| row_cx.label_text(cx, "Inline rename"),
                                                         |cx| {
                                                             let outcome_model =
                                                                 editor_inline_rename_outcome_model
@@ -1134,7 +1165,9 @@ where
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new(),
-                                                        |cx| cx.text("Rename committed"),
+                                                        |cx| {
+                                                            row_cx.label_text(cx, "Rename committed")
+                                                        },
                                                         move |cx| {
                                                             proof_compact_readout(
                                                                 cx,
@@ -1153,7 +1186,9 @@ where
                                                         rows.push(row_cx.row_with(
                                                             cx,
                                                             PropertyRow::new(),
-                                                            |cx| cx.text("Rename outcome"),
+                                                            |cx| {
+                                                                row_cx.label_text(cx, "Rename outcome")
+                                                            },
                                                             move |cx| {
                                                                 let outcome =
                                                                     inline_rename_outcome.clone();
@@ -1172,7 +1207,7 @@ where
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new(),
-                                                        |cx| cx.text("Buffered name"),
+                                                        |cx| row_cx.label_text(cx, "Buffered name"),
                                                         |cx| {
                                                             TextField::new(
                                                                 editor_buffered_name_model
@@ -1202,7 +1237,7 @@ where
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new(),
-                                                        |cx| cx.text("Password"),
+                                                        |cx| row_cx.label_text(cx, "Password"),
                                                         |cx| {
                                                             let outcome_model =
                                                                 editor_password_outcome_model
@@ -1252,7 +1287,7 @@ where
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new(),
-                                                        |cx| cx.text("Secret length"),
+                                                        |cx| row_cx.label_text(cx, "Secret length"),
                                                         move |cx| {
                                                             let readout =
                                                                 committed_char_count_label(
@@ -1275,7 +1310,9 @@ where
                                                         rows.push(row_cx.row_with(
                                                             cx,
                                                             PropertyRow::new(),
-                                                            |cx| cx.text("Password outcome"),
+                                                            |cx| {
+                                                                row_cx.label_text(cx, "Password outcome")
+                                                            },
                                                             move |cx| {
                                                                 let outcome =
                                                                     password_outcome.clone();
@@ -1294,7 +1331,7 @@ where
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new(),
-                                                        |cx| cx.text("Committed"),
+                                                        |cx| row_cx.label_text(cx, "Committed"),
                                                         |cx| {
                                                             let committed = editor_string_model_readout(
                                                                 cx,
@@ -1314,7 +1351,7 @@ where
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new(),
-                                                        |cx| cx.text("Name assist"),
+                                                        |cx| row_cx.label_text(cx, "Name assist"),
                                                         |cx| {
                                                             render_editor_name_assist_surface(
                                                                 cx,
@@ -1349,7 +1386,7 @@ where
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new(),
-                                                        |cx| cx.text("Assist state"),
+                                                        |cx| row_cx.label_text(cx, "Assist state"),
                                                         move |cx| {
                                                             let state = name_assist_state.clone();
                                                             proof_compact_readout(
@@ -1366,7 +1403,7 @@ where
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new(),
-                                                        |cx| cx.text("Active assist"),
+                                                        |cx| row_cx.label_text(cx, "Active assist"),
                                                         move |cx| {
                                                             let active_label =
                                                                 name_assist_active.clone();
@@ -1384,7 +1421,7 @@ where
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new(),
-                                                        |cx| cx.text("Accepted assist"),
+                                                        |cx| row_cx.label_text(cx, "Accepted assist"),
                                                         |cx| {
                                                             let accepted = editor_string_model_readout(
                                                                 cx,
@@ -1409,7 +1446,7 @@ where
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new(),
-                                                        |cx| cx.text("Notes"),
+                                                        |cx| row_cx.label_text(cx, "Notes"),
                                                         |cx| {
                                                             let outcome_model =
                                                                 editor_notes_outcome_model.clone();
@@ -1458,7 +1495,9 @@ where
                                                     rows.push(row_cx.row_with(
                                                         cx,
                                                         PropertyRow::new(),
-                                                        |cx| cx.text("Notes committed"),
+                                                        |cx| {
+                                                            row_cx.label_text(cx, "Notes committed")
+                                                        },
                                                         move |cx| {
                                                             let readout =
                                                                 committed_line_count_label(
@@ -1480,7 +1519,9 @@ where
                                                         rows.push(row_cx.row_with(
                                                             cx,
                                                             PropertyRow::new(),
-                                                            |cx| cx.text("Notes outcome"),
+                                                            |cx| {
+                                                                row_cx.label_text(cx, "Notes outcome")
+                                                            },
                                                             move |cx| {
                                                                 let outcome =
                                                                     notes_outcome.clone();
@@ -1556,7 +1597,7 @@ where
                                                                         },
                                                                     ),
                                                                 )),
-                                                            |cx| cx.text("Opacity"),
+                                                            |cx| row_cx.label_text(cx, "Opacity"),
                                                             |cx| {
                                                                 let outcome_model =
                                                                     editor_drag_value_outcome_model
@@ -1651,7 +1692,7 @@ where
                                                                         },
                                                                     ),
                                                                 )),
-                                                            |cx| cx.text("Roughness"),
+                                                            |cx| row_cx.label_text(cx, "Roughness"),
                                                             |cx| {
                                                                 Slider::from_presentation(
                                                                     editor_roughness_model.clone(),
@@ -1710,7 +1751,7 @@ where
                                                                         },
                                                                     ),
                                                                 )),
-                                                            |cx| cx.text("Metallic"),
+                                                            |cx| row_cx.label_text(cx, "Metallic"),
                                                             |cx| {
                                                                 Slider::from_presentation(
                                                                     editor_metallic_model.clone(),
@@ -1744,7 +1785,7 @@ where
                                                     if show_base_color {
                                                         rows.push(row_cx.row(
                                                             cx,
-                                                            |cx| cx.text("Base color"),
+                                                            |cx| row_cx.label_text(cx, "Base color"),
                                                             |cx| {
                                                                 ColorEdit::new(
                                                                     editor_base_color_model
@@ -1775,7 +1816,7 @@ where
 
                                                         rows.push(row_cx.row(
                                                             cx,
-                                                            |cx| cx.text("Shading model"),
+                                                            |cx| row_cx.label_text(cx, "Shading model"),
                                                             |cx| {
                                                                 EnumSelect::new(
                                                                     editor_shading_model.clone(),
@@ -1805,7 +1846,7 @@ where
                                                     if show_alpha_clip {
                                                         rows.push(row_cx.row(
                                                             cx,
-                                                            |cx| cx.text("Alpha clip"),
+                                                            |cx| row_cx.label_text(cx, "Alpha clip"),
                                                             |cx| {
                                                                 Checkbox::new(
                                                                     editor_alpha_clip_model.clone(),
@@ -1829,7 +1870,7 @@ where
                                                     if show_cast_shadows {
                                                         rows.push(row_cx.row(
                                                             cx,
-                                                            |cx| cx.text("Cast shadows"),
+                                                            |cx| row_cx.label_text(cx, "Cast shadows"),
                                                             |cx| {
                                                                 Checkbox::new_optional(
                                                                     editor_cast_shadows_model.clone(),
@@ -1851,11 +1892,11 @@ where
                                                     }
 
                                                     if rows.is_empty() {
-                                                        rows.push(
-                                                            cx.text("No matches").test_id(
-                                                                "imui-editor-proof.editor.material.no-matches",
-                                                            ),
-                                                        );
+                                                        rows.push(proof_empty_state_text(
+                                                            cx,
+                                                            "No matches",
+                                                            "imui-editor-proof.editor.material.no-matches",
+                                                        ));
                                                     }
 
                                                     rows
@@ -2043,7 +2084,7 @@ where
                                                                         },
                                                                     ),
                                                                 )),
-                                                            |cx| cx.text("Position"),
+                                                            |cx| row_cx.label_text(cx, "Position"),
                                                             |cx| {
                                                                 let outcome_model =
                                                                     editor_position_outcome_model
@@ -2153,7 +2194,7 @@ where
                                                                             },
                                                                         ),
                                                                 )),
-                                                            |cx| cx.text("Transform"),
+                                                            |cx| row_cx.label_text(cx, "Transform"),
                                                             |cx| {
                                                                 let outcome_model =
                                                                     editor_transform_outcome_model
@@ -2243,7 +2284,7 @@ where
                                                                     },
                                                                 ),
                                                             )),
-                                                            |cx| cx.text("Iterations"),
+                                                            |cx| row_cx.label_text(cx, "Iterations"),
                                                             |cx| {
                                                                 DragValue::new(
                                                                     editor_iterations_model.clone(),
@@ -2295,7 +2336,7 @@ where
                                                                     },
                                                                 ),
                                                             )),
-                                                            |cx| cx.text("Exposure"),
+                                                            |cx| row_cx.label_text(cx, "Exposure"),
                                                             |cx| {
                                                                 NumericInput::from_presentation(
                                                                     editor_exposure_model.clone(),
@@ -2315,11 +2356,11 @@ where
                                                     }
 
                                                     if rows.is_empty() {
-                                                        rows.push(
-                                                            cx.text("No matches").test_id(
-                                                                "imui-editor-proof.editor.advanced.no-matches",
-                                                            ),
-                                                        );
+                                                        rows.push(proof_empty_state_text(
+                                                            cx,
+                                                            "No matches",
+                                                            "imui-editor-proof.editor.advanced.no-matches",
+                                                        ));
                                                     }
 
                                                     rows
@@ -2330,10 +2371,11 @@ where
                             );
 
                             if !panel_cx.is_query_empty() && !any_match {
-                                out.push(
-                                    cx.text("No matches")
-                                        .test_id("imui-editor-proof.editor.no-matches"),
-                                );
+                                out.push(proof_empty_state_text(
+                                    cx,
+                                    "No matches",
+                                    "imui-editor-proof.editor.no-matches",
+                                ));
                             }
 
                             out
@@ -2536,44 +2578,51 @@ fn render_authoring_parity_shared_state(
         let numeric_line_row = numeric_line.clone();
         out.push(
             fret_ui_kit::ui::h_flex_build(move |cx, out| {
-                out.push(
-                    cx.text(name_line_row)
-                        .test_id("imui-editor-proof.authoring.shared.name"),
-                );
-                out.push(
-                    cx.text(value_line_row)
-                        .test_id("imui-editor-proof.authoring.shared.value"),
-                );
-                out.push(
-                    cx.text(numeric_line_row)
-                        .test_id("imui-editor-proof.authoring.shared.numeric"),
-                );
+                out.push(proof_compact_readout_element(
+                    cx,
+                    name_line_row,
+                    "imui-editor-proof.authoring.shared.name",
+                ));
+                out.push(proof_compact_readout_element(
+                    cx,
+                    value_line_row,
+                    "imui-editor-proof.authoring.shared.value",
+                ));
+                out.push(proof_compact_readout_element(
+                    cx,
+                    numeric_line_row,
+                    "imui-editor-proof.authoring.shared.numeric",
+                ));
             })
             .gap(fret_ui_kit::Space::N3)
             .into_element(cx),
         );
         out.push(
             fret_ui_kit::ui::h_flex_build(move |cx, out| {
-                out.push(
-                    cx.text(blend_line)
-                        .test_id("imui-editor-proof.authoring.shared.blend"),
-                );
-                out.push(
-                    cx.text(enabled_line)
-                        .test_id("imui-editor-proof.authoring.shared.enabled"),
-                );
-                out.push(
-                    cx.text(shading_line)
-                        .test_id("imui-editor-proof.authoring.shared.mode"),
-                );
+                out.push(proof_compact_readout_element(
+                    cx,
+                    blend_line,
+                    "imui-editor-proof.authoring.shared.blend",
+                ));
+                out.push(proof_compact_readout_element(
+                    cx,
+                    enabled_line,
+                    "imui-editor-proof.authoring.shared.enabled",
+                ));
+                out.push(proof_compact_readout_element(
+                    cx,
+                    shading_line,
+                    "imui-editor-proof.authoring.shared.mode",
+                ));
             })
             .gap(fret_ui_kit::Space::N3)
             .into_element(cx),
         );
-        out.push(
-            cx.text(gradient_line)
-                .test_id("imui-editor-proof.authoring.shared.gradient"),
-        );
+        out.push(proof_compact_readout_element(
+            cx,
+            gradient_line,
+            "imui-editor-proof.authoring.shared.gradient",
+        ));
     })
     .gap(fret_ui_kit::Space::N1)
     .into_element(cx)
@@ -2617,7 +2666,7 @@ fn render_authoring_parity_declarative_group(
                         rows.push(row_cx.row_with(
                             cx,
                             PropertyRow::new(),
-                            |cx| cx.text("Name"),
+                            |cx| row_cx.label_text(cx, "Name"),
                             |cx| {
                                 TextField::new(name_model.clone())
                                     .options(TextFieldOptions {
@@ -2640,7 +2689,7 @@ fn render_authoring_parity_declarative_group(
                         rows.push(row_cx.row_with(
                             cx,
                             PropertyRow::new(),
-                            |cx| cx.text("Drag value"),
+                            |cx| row_cx.label_text(cx, "Drag value"),
                             |cx| {
                                 DragValue::from_presentation(
                                     drag_value_model.clone(),
@@ -2659,7 +2708,7 @@ fn render_authoring_parity_declarative_group(
                         rows.push(row_cx.row_with(
                             cx,
                             PropertyRow::new(),
-                            |cx| cx.text("Typed numeric"),
+                            |cx| row_cx.label_text(cx, "Typed numeric"),
                             |cx| {
                                 NumericInput::from_presentation(
                                     numeric_input_model.clone(),
@@ -2678,7 +2727,7 @@ fn render_authoring_parity_declarative_group(
                         rows.push(row_cx.row_with(
                             cx,
                             PropertyRow::new(),
-                            |cx| cx.text("Blend slider"),
+                            |cx| row_cx.label_text(cx, "Blend slider"),
                             |cx| {
                                 Slider::from_presentation(
                                     slider_model.clone(),
@@ -2706,7 +2755,7 @@ fn render_authoring_parity_declarative_group(
                         rows.push(row_cx.row_with(
                             cx,
                             PropertyRow::new(),
-                            |cx| cx.text("Enabled"),
+                            |cx| row_cx.label_text(cx, "Enabled"),
                             |cx| {
                                 Checkbox::new(enabled_model.clone())
                                     .options(fret_ui_editor::controls::CheckboxOptions {
@@ -2723,7 +2772,7 @@ fn render_authoring_parity_declarative_group(
                         rows.push(row_cx.row_with(
                             cx,
                             PropertyRow::new(),
-                            |cx| cx.text("Mode"),
+                            |cx| row_cx.label_text(cx, "Mode"),
                             |cx| {
                                 EnumSelect::new(shading_model.clone(), shading_items.clone())
                                     .options(EnumSelectOptions {
@@ -2748,8 +2797,11 @@ fn render_authoring_parity_declarative_group(
 
                         rows
                     }),
-                    cx.text("Gradient editor")
-                        .test_id("imui-editor-proof.authoring.declarative.gradient.label"),
+                    proof_section_chrome_label(
+                        cx,
+                        "Gradient editor",
+                        "imui-editor-proof.authoring.declarative.gradient.label",
+                    ),
                     build_authoring_parity_gradient_editor(
                         cx,
                         gradient_angle_model.clone(),
@@ -2804,7 +2856,7 @@ fn render_authoring_parity_imui_group(
 
                         rows.push(row_cx.row(
                             cx,
-                            |cx| cx.text("Name"),
+                            |cx| row_cx.label_text(cx, "Name"),
                             |cx| {
                                 render_authoring_parity_imui_host(cx, move |ui| {
                                     editor_imui::text_field(
@@ -2831,7 +2883,7 @@ fn render_authoring_parity_imui_group(
 
                         rows.push(row_cx.row(
                             cx,
-                            |cx| cx.text("Drag value"),
+                            |cx| row_cx.label_text(cx, "Drag value"),
                             |cx| {
                                 let value_presentation = value_presentation.clone();
                                 render_authoring_parity_imui_host(cx, move |ui| {
@@ -2856,7 +2908,7 @@ fn render_authoring_parity_imui_group(
                         rows.push(row_cx.row_with(
                             cx,
                             PropertyRow::new(),
-                            |cx| cx.text("Typed numeric"),
+                            |cx| row_cx.label_text(cx, "Typed numeric"),
                             |cx| {
                                 let value_presentation = value_presentation.clone();
                                 render_authoring_parity_imui_host(cx, move |ui| {
@@ -2882,7 +2934,7 @@ fn render_authoring_parity_imui_group(
                         rows.push(row_cx.row_with(
                             cx,
                             PropertyRow::new(),
-                            |cx| cx.text("Blend slider"),
+                            |cx| row_cx.label_text(cx, "Blend slider"),
                             |cx| {
                                 let blend_presentation = blend_presentation.clone();
                                 render_authoring_parity_imui_host(cx, move |ui| {
@@ -2920,7 +2972,7 @@ fn render_authoring_parity_imui_group(
 
                         rows.push(row_cx.row(
                             cx,
-                            |cx| cx.text("Enabled"),
+                            |cx| row_cx.label_text(cx, "Enabled"),
                             |cx| {
                                 render_authoring_parity_imui_host(cx, move |ui| {
                                     editor_imui::checkbox(
@@ -2941,7 +2993,7 @@ fn render_authoring_parity_imui_group(
 
                         rows.push(row_cx.row(
                             cx,
-                            |cx| cx.text("Mode"),
+                            |cx| row_cx.label_text(cx, "Mode"),
                             |cx| {
                                 render_authoring_parity_imui_host(cx, move |ui| {
                                     editor_imui::enum_select(
@@ -4198,6 +4250,27 @@ fn before_close_window(app: &mut KernelApp, closing_window: AppWindowId) -> bool
 mod tests {
     use super::*;
 
+    use fret_app::App;
+    use fret_core::{AppWindowId, TextWrap};
+    use fret_ui::element::ElementKind;
+    use fret_ui::elements;
+
+    fn test_bounds() -> Rect {
+        Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(96.0)))
+    }
+
+    fn collect_text_props<'a>(
+        element: &'a fret_ui::element::AnyElement,
+        out: &mut Vec<&'a fret_ui::element::TextProps>,
+    ) {
+        if let ElementKind::Text(props) = &element.kind {
+            out.push(props);
+        }
+        for child in &element.children {
+            collect_text_props(child, out);
+        }
+    }
+
     #[test]
     fn authoring_parity_blend_slider_uses_formatter_percent_without_extra_suffix() {
         let presentation = authoring_parity_blend_presentation();
@@ -4360,5 +4433,31 @@ mod tests {
             proof_outliner_order_line(&items),
             "Order: Camera -> Post FX -> Cube -> Key light"
         );
+    }
+
+    #[test]
+    fn proof_drag_preview_card_uses_single_line_text_roles() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let card = elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+            proof_drag_preview_card(
+                Arc::from("Material asset"),
+                Some(Arc::from("assets/materials/brushed-metal.mat")),
+            )
+            .into_element(cx)
+        });
+
+        let mut text_props = Vec::new();
+        collect_text_props(&card, &mut text_props);
+        assert_eq!(text_props.len(), 2);
+        assert_eq!(text_props[0].text.as_ref(), "Material asset");
+        assert_eq!(
+            text_props[1].text.as_ref(),
+            "assets/materials/brushed-metal.mat"
+        );
+        for props in text_props {
+            assert_eq!(props.wrap, TextWrap::None);
+            assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        }
     }
 }

@@ -76,6 +76,50 @@
     {
       "type": "assert",
       "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-small-add-icon" },
+        "min_w_px": 13.0,
+        "min_h_px": 13.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-small-add-icon" },
+        "max_w_px": 15.0,
+        "max_h_px": 15.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-button-group-size-small-add-icon" },
+        "b": { "kind": "test_id", "id": "ui-gallery-button-group-size-small-add" },
+        "metric": "center_x",
+        "comparison": "eq",
+        "value_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-button-group-size-small-add-icon" },
+        "b": { "kind": "test_id", "id": "ui-gallery-button-group-size-small-add" },
+        "metric": "center_y",
+        "comparison": "eq",
+        "value_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
         "kind": "bounds_within_window",
         "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-medium-add" },
         "padding_px": 8.0,
@@ -95,6 +139,50 @@
     {
       "type": "assert",
       "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-medium-add-icon" },
+        "min_w_px": 15.0,
+        "min_h_px": 15.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-medium-add-icon" },
+        "max_w_px": 17.0,
+        "max_h_px": 17.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-button-group-size-medium-add-icon" },
+        "b": { "kind": "test_id", "id": "ui-gallery-button-group-size-medium-add" },
+        "metric": "center_x",
+        "comparison": "eq",
+        "value_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-button-group-size-medium-add-icon" },
+        "b": { "kind": "test_id", "id": "ui-gallery-button-group-size-medium-add" },
+        "metric": "center_y",
+        "comparison": "eq",
+        "value_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
         "kind": "bounds_within_window",
         "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-large-add" },
         "padding_px": 8.0,
@@ -108,6 +196,50 @@
         "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-large-add" },
         "min_w_px": 32.0,
         "min_h_px": 32.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-large-add-icon" },
+        "min_w_px": 15.0,
+        "min_h_px": 15.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-large-add-icon" },
+        "max_w_px": 17.0,
+        "max_h_px": 17.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-button-group-size-large-add-icon" },
+        "b": { "kind": "test_id", "id": "ui-gallery-button-group-size-large-add" },
+        "metric": "center_x",
+        "comparison": "eq",
+        "value_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-button-group-size-large-add-icon" },
+        "b": { "kind": "test_id", "id": "ui-gallery-button-group-size-large-add" },
+        "metric": "center_y",
+        "comparison": "eq",
+        "value_px": 0.0,
         "eps_px": 1.0
       }
     },
@@ -162,6 +294,50 @@
     {
       "type": "assert",
       "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-small-add-icon" },
+        "min_w_px": 13.0,
+        "min_h_px": 13.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-small-add-icon" },
+        "max_w_px": 15.0,
+        "max_h_px": 15.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-button-group-size-small-add-icon" },
+        "b": { "kind": "test_id", "id": "ui-gallery-button-group-size-small-add" },
+        "metric": "center_x",
+        "comparison": "eq",
+        "value_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-button-group-size-small-add-icon" },
+        "b": { "kind": "test_id", "id": "ui-gallery-button-group-size-small-add" },
+        "metric": "center_y",
+        "comparison": "eq",
+        "value_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
         "kind": "bounds_within_window",
         "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-medium-add" },
         "padding_px": 8.0,
@@ -181,6 +357,50 @@
     {
       "type": "assert",
       "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-medium-add-icon" },
+        "min_w_px": 15.0,
+        "min_h_px": 15.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-medium-add-icon" },
+        "max_w_px": 17.0,
+        "max_h_px": 17.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-button-group-size-medium-add-icon" },
+        "b": { "kind": "test_id", "id": "ui-gallery-button-group-size-medium-add" },
+        "metric": "center_x",
+        "comparison": "eq",
+        "value_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-button-group-size-medium-add-icon" },
+        "b": { "kind": "test_id", "id": "ui-gallery-button-group-size-medium-add" },
+        "metric": "center_y",
+        "comparison": "eq",
+        "value_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
         "kind": "bounds_within_window",
         "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-large-add" },
         "padding_px": 8.0,
@@ -194,6 +414,50 @@
         "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-large-add" },
         "min_w_px": 32.0,
         "min_h_px": 32.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-large-add-icon" },
+        "min_w_px": 15.0,
+        "min_h_px": 15.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-size-large-add-icon" },
+        "max_w_px": 17.0,
+        "max_h_px": 17.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-button-group-size-large-add-icon" },
+        "b": { "kind": "test_id", "id": "ui-gallery-button-group-size-large-add" },
+        "metric": "center_x",
+        "comparison": "eq",
+        "value_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-button-group-size-large-add-icon" },
+        "b": { "kind": "test_id", "id": "ui-gallery-button-group-size-large-add" },
+        "metric": "center_y",
+        "comparison": "eq",
+        "value_px": 0.0,
         "eps_px": 1.0
       }
     },

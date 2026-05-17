@@ -41,6 +41,7 @@ usvg.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
+smallvec.workspace = true
 naga = { workspace = true, features = ["wgsl-in"] }
 pollster.workspace = true
 

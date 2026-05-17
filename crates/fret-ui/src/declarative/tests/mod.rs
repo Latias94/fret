@@ -216,4 +216,5 @@ mod svg_image;
 mod text_cache;
 mod text_style_inheritance;
 mod view_cache;
+mod view_cache_lifecycle_harness;
 mod virtual_list;

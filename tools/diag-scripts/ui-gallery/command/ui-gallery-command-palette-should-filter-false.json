@@ -136,7 +136,7 @@
         "id": "ui-gallery-command-demo-filter-input",
         "kind": "test_id"
       },
-      "type": "click"
+      "type": "click_stable"
     },
     {
       "predicate": {
@@ -150,11 +150,21 @@
       "type": "wait_until"
     },
     {
+      "padding_px": 4.0,
       "target": {
         "id": "ui-gallery-command-demo-disable-filtering",
         "kind": "test_id"
       },
-      "type": "click"
+      "timeout_frames": 600,
+      "type": "ensure_visible",
+      "within_window": true
+    },
+    {
+      "target": {
+        "id": "ui-gallery-command-demo-disable-filtering",
+        "kind": "test_id"
+      },
+      "type": "click_stable"
     },
     {
       "predicate": {

@@ -327,7 +327,7 @@ impl AiConversationTranscript {
                 }
 
                 let Some(msg) = messages.get(index) else {
-                    return cx.text("");
+                    return crate::elements::empty_placeholder(cx);
                 };
 
                 let mut bubble = MessageParts::new(msg.role, msg.parts.clone());

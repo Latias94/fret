@@ -147,6 +147,58 @@ fn timer_dispatch_resolves_live_attached_element_target_over_stale_detached_seed
 }
 
 #[test]
+fn timer_dispatch_ignores_target_on_hidden_overlay_layer() {
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let visible_hits = Arc::new(AtomicUsize::new(0));
+    let hidden_hits = Arc::new(AtomicUsize::new(0));
+    let hidden_element = crate::elements::GlobalElementId(5252);
+
+    let visible_root = ui.create_node(TimerCounter {
+        hits: visible_hits.clone(),
+    });
+    ui.set_root(visible_root);
+
+    let hidden_root = ui.create_node_for_element(
+        hidden_element,
+        TimerCounter {
+            hits: hidden_hits.clone(),
+        },
+    );
+    let hidden_layer = ui.push_overlay_root(hidden_root, false);
+    ui.set_layer_visible(hidden_layer, false);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let token = fret_runtime::TimerToken(11);
+    crate::elements::record_timer_target(&mut app, window, token, hidden_element);
+
+    ui.dispatch_event(&mut app, &mut services, &Event::Timer { token });
+
+    assert_eq!(
+        hidden_hits.load(Ordering::SeqCst),
+        0,
+        "hidden overlay timer targets must not receive targeted timer dispatch"
+    );
+    assert_eq!(
+        visible_hits.load(Ordering::SeqCst),
+        1,
+        "a hidden timer target should be treated like a missing target so visible timer listeners still receive the timer"
+    );
+}
+
+#[test]
 fn final_layout_frame_syncs_hovered_pressable_node_to_live_attached_element() {
     use crate::elements::NodeEntry;
 

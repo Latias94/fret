@@ -5,6 +5,7 @@ use fret_ui::{ElementContext, Invalidation};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
+use super::text_roles;
 use crate::spec::{
     BISECT_SIMPLE_CONTENT, BISECT_SIMPLE_SIDEBAR, PAGE_INTRO, PageContentCachePolicy,
     page_content_cache_contain_layout_when_bounds_known, page_content_cache_policy,
@@ -46,7 +47,7 @@ pub(super) fn sidebar_view(
                                 .h_full()
                                 .flex_shrink_0(),
                         ),
-                        |cx| vec![cx.text("Sidebar (disabled)")],
+                        |cx| vec![text_roles::chrome_readout_text(cx, "Sidebar (disabled)")],
                     )
                 } else {
                     ui::sidebar_view(
@@ -92,7 +93,7 @@ pub(super) fn sidebar_view(
                                 .h_full()
                                 .flex_shrink_0(),
                         ),
-                        |cx| vec![cx.text("Sidebar (disabled)")],
+                        |cx| vec![text_roles::chrome_readout_text(cx, "Sidebar (disabled)")],
                     )
                 } else {
                     ui::sidebar_view(
@@ -126,7 +127,7 @@ pub(super) fn sidebar_view(
                             .h_full()
                             .flex_shrink_0(),
                     ),
-                    |cx| vec![cx.text("Sidebar (disabled)")],
+                    |cx| vec![text_roles::chrome_readout_text(cx, "Sidebar (disabled)")],
                 )
             } else {
                 ui::sidebar_view(
@@ -197,7 +198,7 @@ pub(super) fn content_view(
                                     .p(Space::N6),
                                 LayoutRefinement::default().w_full().h_full(),
                             ),
-                            |cx| vec![cx.text("Content (disabled)")],
+                            |cx| vec![text_roles::chrome_readout_text(cx, "Content (disabled)")],
                         )
                     } else {
                         ui::content_view(cx, theme, selected.as_ref(), models)
@@ -217,7 +218,7 @@ pub(super) fn content_view(
                                 .p(Space::N6),
                             LayoutRefinement::default().w_full().h_full(),
                         ),
-                        |cx| vec![cx.text("Content (disabled)")],
+                        |cx| vec![text_roles::chrome_readout_text(cx, "Content (disabled)")],
                     )
                 } else {
                     ui::content_view(cx, theme, selected.as_ref(), models)
