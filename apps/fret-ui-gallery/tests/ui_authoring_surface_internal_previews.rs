@@ -606,6 +606,87 @@ fn code_editor_mvp_internal_helpers_prefer_ui_child_over_anyelement() {
         );
     }
 
+    let markdown_path = manifest_path("src/ui/previews/pages/editors/markdown.rs");
+    let markdown_source = read_path(&markdown_path);
+    let markdown_normalized = canonicalize_rust_fragment(&markdown_source);
+    assert!(
+        markdown_source.contains("use fret::AppComponentCx;"),
+        "{} should use the shared helper context alias",
+        markdown_path.display(),
+    );
+    for marker in [
+        "doc_layout::paragraph_text(cx,\"Goal:validateaminimalMarkdownsourceeditormilestone.\")",
+        "doc_layout::control_readout_text(cx,ifsoft_wrap_enabled{",
+        "doc_layout::control_readout_text(cx,iffolds_enabled{",
+        "doc_layout::control_readout_text(cx,ifinlays_enabled{",
+        "doc_layout::button_label_text(cx,\"Preedit:inject\")",
+        "doc_layout::button_label_text(cx,\"Preedit:clear\")",
+        "doc_layout::control_readout_text(cx,format!(\"Interaction:{mode_label}\"))",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            markdown_normalized.contains(&marker),
+            "{} is missing marker `{marker}`",
+            markdown_path.display(),
+        );
+    }
+    for forbidden in [
+        "cx.text(\"Goal: validate a minimal Markdown source editor milestone.\")",
+        "cx.text(if soft_wrap_enabled {",
+        "cx.text(if folds_enabled {",
+        "cx.text(if inlays_enabled {",
+        "cx.text(\"Preedit: inject\")",
+        "cx.text(\"Preedit: clear\")",
+        "cx.text(format!(\"Interaction: {mode_label}\"))",
+    ] {
+        assert!(
+            !markdown_normalized.contains(forbidden),
+            "{} reintroduced bare markdown editor text: {forbidden}",
+            markdown_path.display(),
+        );
+    }
+
+    let web_ime_path = manifest_path("src/ui/previews/pages/editors/web_ime.rs");
+    let web_ime_source = read_path(&web_ime_path);
+    let web_ime_normalized = canonicalize_rust_fragment(&web_ime_source);
+    assert!(
+        web_ime_source.contains("use fret::AppComponentCx;"),
+        "{} should use the shared helper context alias",
+        web_ime_path.display(),
+    );
+    for marker in [
+        "fn debug_readout_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+        "doc_layout::paragraph_text(cx,\"Goal:validatethewasmtextareaIMEbridge(ADR0180).\")",
+        "doc_layout::paragraph_text(cx,\"Try:CJKIMEpreedit→commit;ensureno doubleinsertoncompositionend+input.\")",
+        "doc_layout::button_label_text(cx,label)",
+        "doc_layout::control_readout_text(cx,\"Editablewidgets(sanitycheck):\")",
+        "debug_readout_text(cx,format!(\"harness_region_ime_enabled={harness_region_ime_enabled}\"))",
+        "debug_readout_text(cx,\"window_text_input_snapshot:\")",
+        "debug_readout_text(cx,\"bridge_debug_snapshot(wasmtextarea):\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            web_ime_normalized.contains(&marker),
+            "{} is missing marker `{marker}`",
+            web_ime_path.display(),
+        );
+    }
+    for forbidden in [
+        "cx.text(\"Goal: validate the wasm textarea IME bridge (ADR 0180).\")",
+        "cx.text(\"Click inside the region to focus it (IME should enable).\")",
+        "cx.text(\"Editable widgets (sanity check):\")",
+        "cx.text(label)",
+        "cx.text(format!(\"harness_region_ime_enabled={harness_region_ime_enabled}\"))",
+        "cx.text(\"window_text_input_snapshot:\")",
+        "cx.text(\"bridge_debug_snapshot (wasm textarea):\")",
+    ] {
+        assert!(
+            !web_ime_normalized.contains(forbidden),
+            "{} reintroduced bare web-ime text: {forbidden}",
+            web_ime_path.display(),
+        );
+    }
+
     let gates_path = manifest_path("src/ui/previews/pages/editors/code_editor/mvp/gates.rs");
     let gates_source = read_path(&gates_path);
     let gates_normalized = canonicalize_rust_fragment(&gates_source);

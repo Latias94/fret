@@ -405,6 +405,11 @@ Exit criteria:
   2026-05-17 gallery shell content/nav text result: page header title/source and sidebar group
   headings now use shared chrome/readout roles instead of hand-rolled `TextProps` in the gallery
   app shell.
+  2026-05-17 gallery editor preview text result: code-editor, Markdown, and Web IME preview
+  headers now use paragraph text for prose, control readout text for fixed status/debug values,
+  and button label text for custom pointer-region actions. The slice keeps editor-proof resize
+  text semantics in gallery/doc-layout helpers and the shared kit role vocabulary, not in
+  `fret-imui`.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

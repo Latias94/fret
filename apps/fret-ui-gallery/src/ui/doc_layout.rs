@@ -501,6 +501,13 @@ where
     decl_text::text_control_label(cx, text)
 }
 
+pub(in crate::ui) fn button_label_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
+where
+    T: Into<Arc<str>>,
+{
+    decl_text::text_button_label(cx, text)
+}
+
 pub(in crate::ui) fn paragraph_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
 where
     T: Into<Arc<str>>,

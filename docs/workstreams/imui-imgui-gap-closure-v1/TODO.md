@@ -434,6 +434,11 @@ Readiness order for the next locally testable review slices:
    2026-05-17 gallery shell content/nav text follow-up: the page header title/source and sidebar
    group headings now route through shared chrome/readout roles instead of local `TextProps`,
    keeping app-shell text policy centralized while staying outside `fret-imui`.
+   2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
+   headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
+   through `control_readout_text(...)`, and custom pointer-region labels through
+   `button_label_text(...)`. This keeps resize-sensitive editor proof chrome on the shared
+   role vocabulary without adding a public `TextRole` enum or moving policy into `fret-imui`.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
