@@ -14,6 +14,7 @@ mod marker_dispatch;
 mod path_msaa;
 mod preflight;
 mod target_budget;
+mod target_selection;
 
 use super::SceneEncoding;
 use super::render_plan_effects as effects;

@@ -4,6 +4,7 @@ use super::context::RenderPlanCompilerCtx;
 use super::draw_scope::{DrawScope, take_scope_load_for_write};
 use super::effect_chain::{EffectChainApplyCtx, EffectChainBudgetStats, apply_chain_in_place};
 use super::target_budget::can_allocate_intermediate_bytes;
+use super::target_selection;
 use crate::renderer::{
     BlurQualitySnapshot, CompositePremulPass, EffectDegradationSnapshot, PlanTarget,
     RenderPlanDegradation, RenderPlanDegradationKind, RenderPlanDegradationReason, RenderPlanPass,
@@ -57,46 +58,6 @@ pub(super) struct EffectScopePopCtx<'a> {
     pub(super) backdrop_source_group_in_use_bytes: u64,
 }
 
-fn has_free_intermediate_target(
-    draw_scopes: &[DrawScope],
-    excluded: PlanTarget,
-    reserved_targets: &[PlanTarget],
-) -> bool {
-    [
-        PlanTarget::Intermediate0,
-        PlanTarget::Intermediate1,
-        PlanTarget::Intermediate2,
-        PlanTarget::Intermediate3,
-    ]
-    .into_iter()
-    .any(|target| {
-        target != excluded
-            && !draw_scopes.iter().any(|scope| scope.target == target)
-            && !reserved_targets.contains(&target)
-    })
-}
-
-fn choose_free_intermediate_target(
-    draw_scopes: &[DrawScope],
-    reserved_targets: &[PlanTarget],
-) -> (Option<PlanTarget>, bool) {
-    for target in [
-        PlanTarget::Intermediate0,
-        PlanTarget::Intermediate1,
-        PlanTarget::Intermediate2,
-        PlanTarget::Intermediate3,
-    ] {
-        if draw_scopes.iter().any(|scope| scope.target == target)
-            || reserved_targets.contains(&target)
-        {
-            continue;
-        }
-        return (Some(target), true);
-    }
-
-    (None, false)
-}
-
 #[allow(clippy::too_many_arguments)]
 pub(super) fn compile_effect_scope_push(
     plan: &mut RenderPlanCompilerCtx,
@@ -115,10 +76,10 @@ pub(super) fn compile_effect_scope_push(
 
     match args.mode {
         fret_core::EffectMode::Backdrop => {
-            let had_free_scratch_target = has_free_intermediate_target(
+            let had_free_scratch_target = target_selection::has_free_intermediate_target_except(
                 draw_scopes,
-                parent_target,
                 args.backdrop_source_group_reserved_targets,
+                parent_target,
             );
             let before = plan.passes_len();
             let unavailable_mask_targets: Vec<PlanTarget> =
@@ -195,17 +156,18 @@ pub(super) fn compile_effect_scope_push(
             // requires a full-viewport content target (the postprocess passes themselves remain
             // scissored to `bounds`).
             let (content_origin, content_size) = ((0, 0), args.viewport_size);
-            let (mut content_target, had_free_target) =
-                if content_size.0 != 0 && content_size.1 != 0 {
-                    choose_free_intermediate_target(
-                        draw_scopes,
-                        args.backdrop_source_group_reserved_targets,
-                    )
-                } else {
-                    (None, false)
-                };
+            let mut target_selection = target_selection::TargetSelection {
+                target: None,
+                had_free_target: false,
+            };
+            if content_size.0 != 0 && content_size.1 != 0 {
+                target_selection = target_selection::choose_free_intermediate_target(
+                    draw_scopes,
+                    args.backdrop_source_group_reserved_targets,
+                );
+            }
 
-            if content_target.is_some()
+            if target_selection.target.is_some()
                 && !can_allocate_intermediate_bytes(
                     args.intermediate_budget_bytes,
                     draw_scopes,
@@ -215,9 +177,10 @@ pub(super) fn compile_effect_scope_push(
                     args.format,
                 )
             {
-                content_target = None;
+                target_selection.target = None;
             }
 
+            let content_target = target_selection.target;
             if let Some(content_target) = content_target {
                 draw_scopes.push(DrawScope {
                     target: content_target,
@@ -230,7 +193,7 @@ pub(super) fn compile_effect_scope_push(
                 plan.push_degradation(RenderPlanDegradation {
                     draw_ix,
                     kind: RenderPlanDegradationKind::FilterContentDisabled,
-                    reason: if !had_free_target {
+                    reason: if !target_selection.had_free_target {
                         RenderPlanDegradationReason::TargetExhausted
                     } else if args.intermediate_budget_bytes == 0 {
                         RenderPlanDegradationReason::BudgetZero
@@ -280,10 +243,10 @@ pub(super) fn compile_effect_scope_pop(
             content_target
         );
 
-        let had_free_scratch_target = has_free_intermediate_target(
+        let had_free_scratch_target = target_selection::has_free_intermediate_target_except(
             draw_scopes,
-            content_target,
             args.backdrop_source_group_reserved_targets,
+            content_target,
         );
         let chain_scissor = if scope.content_size == args.viewport_size {
             scope.scissor

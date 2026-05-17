@@ -5,6 +5,7 @@ use super::target_budget::{
     can_allocate_intermediate_bytes, choose_backdrop_source_group_pyramid_choice,
     estimate_in_use_intermediate_bytes,
 };
+use super::target_selection;
 use crate::renderer::{
     BackdropSourceGroupDegradationCounters, FullscreenBlitPass, LocalScissorRect, PlanTarget,
     RenderPlanPass, ScissorRect, estimate_texture_bytes,
@@ -74,21 +75,10 @@ pub(super) fn compile_backdrop_source_group_push(
     let parent_scope = draw_scopes.last().expect("draw scope");
     let parent_target = parent_scope.target;
 
-    let mut raw_target: Option<PlanTarget> = None;
-    let mut had_free_target = false;
-    for target in [
-        PlanTarget::Intermediate0,
-        PlanTarget::Intermediate1,
-        PlanTarget::Intermediate2,
-        PlanTarget::Intermediate3,
-    ] {
-        if draw_scopes.iter().any(|s| s.target == target) || reserved_targets.contains(&target) {
-            continue;
-        }
-        raw_target = Some(target);
-        had_free_target = true;
-        break;
-    }
+    let raw_selection =
+        target_selection::choose_free_intermediate_target(draw_scopes, reserved_targets);
+    let mut raw_target = raw_selection.target;
+    let had_free_target = raw_selection.had_free_target;
 
     let raw_bytes = estimate_texture_bytes(args.viewport_size, args.format, 1);
     let mut reserved_bytes: u64 = 0;

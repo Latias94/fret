@@ -617,6 +617,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - [x] Step 3g: move scissor-sized-intermediate eligibility into compile preflight.
     - [x] Step 3h: split effect-chain pass application and budget stats into a focused helper
       module.
+    - [x] Step 3i: split intermediate target selection into a focused helper module.
   - Landed (step 1): extracted target/budget helpers and their focused tests into
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
   - Landed (step 2): introduced `RenderPlanCompilerCtx` to own structural compiler outputs
@@ -662,12 +663,18 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Landed (step 3h): moved effect-chain pass application and budget-stat accumulation into
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_chain.rs` while keeping
     effect-scope push/pop lifetime decisions in `effect_scope.rs`.
+  - Landed (step 3i): moved free intermediate target selection into
+    `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_selection.rs` while keeping
+    `Intermediate0..3` allocation order, reserved-target exclusion, active draw-scope exclusion,
+    scope lifetime, pass/load-op ordering, and existing degradation reason precedence unchanged.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
       `compile_for_scene_inner`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`
       (`intermediate_budget_breakdown_for_chain`, `can_allocate_intermediate_bytes`,
       `choose_backdrop_source_group_pyramid_choice`)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_selection.rs`
+      (`choose_free_intermediate_target`, `has_free_intermediate_target_except`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/context.rs`
       (`RenderPlanCompilerCtx`, `alloc_segment`, `flush_scene_range`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`

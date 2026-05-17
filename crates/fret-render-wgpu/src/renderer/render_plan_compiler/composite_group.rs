@@ -1,5 +1,6 @@
 use super::context::RenderPlanCompilerCtx;
 use super::draw_scope::{DrawScope, take_scope_load_for_write};
+use super::target_selection;
 use crate::renderer::{
     CompositePremulPass, PlanTarget, RenderPlanDegradation, RenderPlanDegradationKind,
     RenderPlanDegradationReason, RenderPlanPass, ScissorRect, estimate_texture_bytes,
@@ -55,28 +56,17 @@ pub(super) fn compile_composite_group_push(
     } else {
         ((0, 0), args.viewport_size)
     };
-    let mut content_target: Option<PlanTarget> = None;
-    let mut had_free_target = false;
+    let mut target_selection = target_selection::TargetSelection {
+        target: None,
+        had_free_target: false,
+    };
     if content_size.0 != 0 && content_size.1 != 0 {
-        for target in [
-            PlanTarget::Intermediate0,
-            PlanTarget::Intermediate1,
-            PlanTarget::Intermediate2,
-            PlanTarget::Intermediate3,
-        ] {
-            if draw_scopes.iter().any(|s| s.target == target)
-                || args
-                    .backdrop_source_group_reserved_targets
-                    .contains(&target)
-            {
-                continue;
-            }
-            content_target = Some(target);
-            had_free_target = true;
-            break;
-        }
+        target_selection = target_selection::choose_free_intermediate_target(
+            draw_scopes,
+            args.backdrop_source_group_reserved_targets,
+        );
 
-        if content_target.is_some()
+        if target_selection.target.is_some()
             && !super::target_budget::can_allocate_intermediate_bytes(
                 args.intermediate_budget_bytes,
                 draw_scopes,
@@ -86,10 +76,11 @@ pub(super) fn compile_composite_group_push(
                 args.format,
             )
         {
-            content_target = None;
+            target_selection.target = None;
         }
     }
 
+    let content_target = target_selection.target;
     if let Some(content_target) = content_target {
         draw_scopes.push(DrawScope {
             target: content_target,
@@ -103,7 +94,7 @@ pub(super) fn compile_composite_group_push(
         plan.push_degradation(RenderPlanDegradation {
             draw_ix,
             kind: RenderPlanDegradationKind::CompositeGroupBlendDegradedToOver,
-            reason: if !had_free_target {
+            reason: if !target_selection.had_free_target {
                 RenderPlanDegradationReason::TargetExhausted
             } else if args.intermediate_budget_bytes == 0 {
                 RenderPlanDegradationReason::BudgetZero

@@ -1089,6 +1089,31 @@ Progress record (RenderPlan compiler effect-chain helper split):
   - `python3 tools/check_layering.py`
   - `git diff --check`
 
+Progress record (RenderPlan compiler target-selection helper split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3i; Stage 24 continues)
+- Objective:
+  - Split free intermediate target selection out of effect/composite/clip/backdrop-source-group
+    compiler paths without changing `Intermediate0..3` allocation order, reserved-target
+    exclusion, active draw-scope exclusion, scope lifetimes, pass/load-op behavior, or existing
+    degradation reason precedence.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_selection.rs`
+    (`choose_free_intermediate_target`, `has_free_intermediate_target_except`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/{effect_scope,composite_group,clip_path,backdrop_source_group}.rs`
+    (call sites keep their budget checks and degradation reason ordering)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`
+    (budget/degradation tests remain the focused semantic guard)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

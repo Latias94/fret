@@ -1,5 +1,6 @@
 use super::context::RenderPlanCompilerCtx;
 use super::draw_scope::{DrawScope, take_scope_load_for_write};
+use super::target_selection;
 use crate::renderer::{
     CompositePremulPass, MaskRef, PathClipMaskPass, PlanTarget, RenderPlanDegradation,
     RenderPlanDegradationKind, RenderPlanDegradationReason, RenderPlanPass, SceneEncoding,
@@ -53,9 +54,11 @@ pub(super) fn compile_clip_path_push(
     let parent_origin = parent_scope.origin;
     let parent_size = parent_scope.size;
 
-    let mut content_target: Option<PlanTarget> = None;
+    let mut content_selection = target_selection::TargetSelection {
+        target: None,
+        had_free_target: false,
+    };
     let mut mask_target: Option<PlanTarget> = None;
-    let mut had_free_content_target = false;
     let mut had_free_mask_target = false;
 
     let (content_origin, content_size) = if args.scissor_sized_intermediates {
@@ -69,23 +72,10 @@ pub(super) fn compile_clip_path_push(
     let mask_size = (args.scissor.w, args.scissor.h);
 
     if content_size.0 != 0 && content_size.1 != 0 && mask_size.0 != 0 && mask_size.1 != 0 {
-        for target in [
-            PlanTarget::Intermediate0,
-            PlanTarget::Intermediate1,
-            PlanTarget::Intermediate2,
-            PlanTarget::Intermediate3,
-        ] {
-            if draw_scopes.iter().any(|s| s.target == target)
-                || args
-                    .backdrop_source_group_reserved_targets
-                    .contains(&target)
-            {
-                continue;
-            }
-            content_target = Some(target);
-            had_free_content_target = true;
-            break;
-        }
+        content_selection = target_selection::choose_free_intermediate_target(
+            draw_scopes,
+            args.backdrop_source_group_reserved_targets,
+        );
 
         for target in [PlanTarget::Mask0, PlanTarget::Mask1, PlanTarget::Mask2] {
             if clip_path_scopes
@@ -99,7 +89,8 @@ pub(super) fn compile_clip_path_push(
             break;
         }
 
-        if let (Some(_content_target), Some(_mask_target)) = (content_target, mask_target) {
+        if let (Some(_content_target), Some(_mask_target)) = (content_selection.target, mask_target)
+        {
             let required_color = estimate_texture_bytes(content_size, args.format, 1);
             let required_mask = estimate_clip_mask_bytes(mask_size);
             if !super::target_budget::can_allocate_intermediate_bytes(
@@ -109,12 +100,13 @@ pub(super) fn compile_clip_path_push(
                 clip_path_mask_in_use_bytes.saturating_add(args.backdrop_source_group_in_use_bytes),
                 args.format,
             ) {
-                content_target = None;
+                content_selection.target = None;
                 mask_target = None;
             }
         }
     }
 
+    let content_target = content_selection.target;
     if (content_target.is_none() || mask_target.is_none())
         && content_size.0 != 0
         && content_size.1 != 0
@@ -123,7 +115,7 @@ pub(super) fn compile_clip_path_push(
     {
         let reason = if args.intermediate_budget_bytes == 0 {
             RenderPlanDegradationReason::BudgetZero
-        } else if !had_free_content_target || !had_free_mask_target {
+        } else if !content_selection.had_free_target || !had_free_mask_target {
             RenderPlanDegradationReason::TargetExhausted
         } else {
             RenderPlanDegradationReason::BudgetInsufficient
