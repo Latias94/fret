@@ -1305,7 +1305,7 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 
 - `cargo fmt -p fret-examples` passed.
 - `cargo check -p fret-examples` passed.
-- `cargo nextest run -p fret-examples --test components_gallery_surface components_gallery_table_torture_uses_text_roles --no-fail-fast` passed.
+- `cargo nextest run -p fret-examples --test components_gallery_surface components_gallery_table_torture_uses_text_roles components_gallery_chrome_and_controls_use_text_roles --no-fail-fast` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.

@@ -36,3 +36,43 @@ fn components_gallery_table_torture_uses_text_roles() {
         );
     }
 }
+
+#[test]
+fn components_gallery_chrome_and_controls_use_text_roles() {
+    let source = include_str!("../src/components_gallery.rs");
+    let source = compact(source);
+
+    for needle in [
+        "decl_text::text_chrome_title(cx,title)",
+        "decl_text::text_control_readout(cx,subtitle)",
+        "decl_text::text_control_label(cx,Arc::<str>::from(\"Theme:\"),)",
+        "decl_text::text_control_readout(cx,Arc::<str>::from(format!(\"Themeconfig:{}\",theme_name)),)",
+        "decl_text::text_control_label(cx,label,)",
+        "decl_text::text_control_readout(cx,format!(\"checkbox:{checkbox_value}\"),)",
+        "decl_text::text_control_readout(cx,format!(\"switch:{switch_value}\"),)",
+        "decl_text::text_control_readout(cx,format!(\"radio:{radio_label}\"),)",
+        "decl_text::text_control_readout(cx,format!(\"select:{select_label}\"),)",
+    ] {
+        assert!(
+            source.contains(needle),
+            "components gallery chrome/control text should stay on shared text roles; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "cx.text(title)",
+        "cx.text(subtitle)",
+        "cx.text(Arc::<str>::from(\"Theme:\"))",
+        "cx.text(Arc::<str>::from(format!(\"Themeconfig:{}\",theme_name)))",
+        "cx.text(label)",
+        "cx.text(format!(\"checkbox:{checkbox_value}\"))",
+        "cx.text(format!(\"switch:{switch_value}\"))",
+        "cx.text(format!(\"radio:{radio_label}\"))",
+        "cx.text(format!(\"select:{select_label}\"))",
+    ] {
+        assert!(
+            !source.contains(needle),
+            "components gallery fixed chrome/control text should not use bare text; unexpected `{needle}`"
+        );
+    }
+}

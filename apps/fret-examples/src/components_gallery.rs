@@ -542,8 +542,8 @@ impl ComponentsGalleryDriver {
 
                 vec![ui::v_flex(|cx: &mut ElementContext<'_, App>| {
                                  vec![
-                                     cx.text(title),
-                                     cx.text(subtitle),
+                                     decl_text::text_chrome_title(cx, title),
+                                     decl_text::text_control_readout(cx, subtitle),
                                      markdown::Markdown::new(markdown_sample.clone())
                                         .into_element(cx),
                                     cx.flex(
@@ -558,7 +558,10 @@ impl ComponentsGalleryDriver {
                                         },
                                         |cx| {
                                             vec![
-                                                cx.text(Arc::<str>::from("Theme:")),
+                                                decl_text::text_control_label(
+                                                    cx,
+                                                    Arc::<str>::from("Theme:"),
+                                                ),
                                                 shadcn::Select::new(theme_preset, theme_preset_open)
                                                     .a11y_label(
                                                         "Demo theme preset (shadcn new-york-v4)",
@@ -617,10 +620,10 @@ impl ComponentsGalleryDriver {
                                             ]
                                         },
                                     ),
-                                    cx.text(Arc::<str>::from(format!(
-                                        "Theme config: {}",
-                                        theme_name
-                                    ))),
+                                    decl_text::text_control_readout(
+                                        cx,
+                                        Arc::<str>::from(format!("Theme config: {}", theme_name)),
+                                    ),
                                     cx.flex(
                                         FlexProps {
                                             layout: LayoutStyle::default(),
@@ -677,7 +680,9 @@ impl ComponentsGalleryDriver {
                                                                     },
                                                                     |_cx| Vec::new(),
                                                                 ),
-                                                                cx.text(label),
+                                                                decl_text::text_control_label(
+                                                                    cx, label,
+                                                                ),
                                                             ]
                                                         },
                                                     )
@@ -980,11 +985,17 @@ impl ComponentsGalleryDriver {
                                                 shadcn::Checkbox::new(checkbox)
                                                     .a11y_label("Demo checkbox")
                                                     .into_element(cx),
-                                                cx.text(format!("checkbox: {checkbox_value}")),
+                                                decl_text::text_control_readout(
+                                                    cx,
+                                                    format!("checkbox: {checkbox_value}"),
+                                                ),
                                                 shadcn::Switch::new(switch)
                                                     .a11y_label("Demo switch")
                                                     .into_element(cx),
-                                                cx.text(format!("switch: {switch_value}")),
+                                                decl_text::text_control_readout(
+                                                    cx,
+                                                    format!("switch: {switch_value}"),
+                                                ),
                                             ]
                                         },
                                     ),
@@ -1000,7 +1011,10 @@ impl ComponentsGalleryDriver {
                                     },
                                     |cx| {
                                             vec![
-                                                cx.text(format!("radio: {radio_label}")),
+                                                decl_text::text_control_readout(
+                                                    cx,
+                                                    format!("radio: {radio_label}"),
+                                                ),
                                                 shadcn::RadioGroup::new(radio)
                                                     .a11y_label("Demo radio group")
                                                     .item(shadcn::RadioGroupItem::new("a", "Alpha"))
@@ -1037,7 +1051,10 @@ impl ComponentsGalleryDriver {
 	                                                    shadcn::SelectItem::new("cherry", "Cherry"),
 	                                                ])
                                                 .into_element(cx),
-                                            cx.text(format!("select: {select_label}")),
+                                            decl_text::text_control_readout(
+                                                cx,
+                                                format!("select: {select_label}"),
+                                            ),
                                         ]
                                     },
                                 ),
