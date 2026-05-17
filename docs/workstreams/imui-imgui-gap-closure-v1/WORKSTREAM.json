@@ -433,6 +433,8 @@
     "apps/fret-ui-gallery/src/driver/toaster.rs",
     "apps/fret-ui-gallery/src/driver/status_bar.rs",
     "apps/fret-ui-gallery/src/driver/text_roles.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/harness/ui_kit_list_torture.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/harness/virtual_list_torture.rs",
     "apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs",
     "apps/fret-ui-gallery/src/ui/previews/gallery/data/data_grid.rs",
     "apps/fret-ui-gallery/src/ui/previews/gallery/data/table_torture.rs",

@@ -3,6 +3,13 @@ use crate::ui::doc_layout::{self, DocSection};
 use fret::AppComponentCx;
 use fret_ui::element::ContainerProps;
 
+fn ui_kit_list_row_label_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
+where
+    T: Into<Arc<str>>,
+{
+    fret_ui_kit::declarative::text::text_list_row_label(cx, text)
+}
+
 pub(in crate::ui) fn preview_ui_kit_list_torture(
     cx: &mut AppComponentCx<'_>,
     theme: &Theme,
@@ -47,7 +54,7 @@ pub(in crate::ui) fn preview_ui_kit_list_torture(
                     |_i| None,
                     |cx, i| {
                         let mut out = Vec::new();
-                        let label = cx.text(format!("Item {i}"));
+                        let label = ui_kit_list_row_label_text(cx, format!("Item {i}"));
                         let label = if i == 0 {
                             label.attach_semantics(
                                 SemanticsDecoration::default()

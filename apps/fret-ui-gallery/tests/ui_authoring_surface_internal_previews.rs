@@ -995,3 +995,49 @@ fn gallery_inspector_torture_uses_fixed_row_text_roles() {
         );
     }
 }
+
+#[test]
+fn harness_virtual_list_torture_uses_fixed_row_text_roles() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/pages/harness/virtual_list_torture.rs",
+        &[
+            "fnvirtual_list_row_label_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "fret_ui_kit::declarative::text::text_list_row_label(cx,text)",
+            "fnvirtual_list_row_detail_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "doc_layout::control_readout_text(cx,text)",
+            "virtual_list_row_detail_text(cx,format!(\"Editingrow:{row}\"))",
+            "virtual_list_row_detail_text(cx,\"Editingrow:<none>\")",
+            "virtual_list_row_label_text(cx,format!(\"Row{index}\"))",
+            "virtual_list_row_detail_text(cx,format!(\"Details:index={index}seed={}repeat={}\"",
+        ],
+    );
+
+    for forbidden in [
+        "cx.text(format!(\"Editingrow:{row}\"))",
+        "cx.text(\"Editingrow:<none>\")",
+        "cx.text(format!(\"Row{index}\"))",
+        "cx.text(format!(\"Details:index={index}seed={}repeat={}\"",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "virtual_list_torture reintroduced bare fixed virtual-row text: {forbidden}"
+        );
+    }
+}
+
+#[test]
+fn harness_ui_kit_list_torture_uses_fixed_row_text_roles() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/pages/harness/ui_kit_list_torture.rs",
+        &[
+            "fnui_kit_list_row_label_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "fret_ui_kit::declarative::text::text_list_row_label(cx,text)",
+            "ui_kit_list_row_label_text(cx,format!(\"Item{i}\"))",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("cx.text(format!(\"Item{i}\"))"),
+        "ui_kit_list_torture reintroduced bare fixed list-row text"
+    );
+}

@@ -373,6 +373,10 @@ Readiness order for the next locally testable review slices:
    2026-05-17 gallery inspector torture text follow-up: the UI Gallery Inspector Torture page now
    routes fixed virtual-row property labels through `text_list_row_label(...)` and fixed row values
    through `control_readout_text(...)`.
+   2026-05-17 gallery virtual-list torture text follow-up: UI Gallery virtual-list harness row
+   labels now use `text_list_row_label(...)`, row detail/editing readouts use
+   `control_readout_text(...)`, and the UI Kit list torture custom row renderer also routes item
+   labels through `text_list_row_label(...)`.
    2026-05-17 virtual row fallback follow-up: tree and file-tree virtualizer out-of-range fallback
    paths now use spacer placeholders instead of empty text nodes, removing another fixed-row
    `Text` escape hatch.
