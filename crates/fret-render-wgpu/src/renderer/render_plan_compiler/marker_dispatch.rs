@@ -10,26 +10,20 @@ use crate::renderer::{
 };
 
 pub(super) struct MarkerDispatchState {
-    effect_scopes: Vec<effect_scope::EffectScope>,
+    effect_scope_state: effect_scope::EffectScopeDispatchState,
     composite_group_state: composite_group::CompositeGroupDispatchState,
     clip_path_dispatch_state: clip_path::ClipPathDispatchState,
     backdrop_source_group_state: backdrop_source_group::BackdropSourceGroupDispatchState,
-    effect_chain_budget_stats: EffectChainBudgetStats,
-    effect_degradations: EffectDegradationSnapshot,
-    effect_blur_quality: BlurQualitySnapshot,
 }
 
 impl MarkerDispatchState {
     pub(super) fn new() -> Self {
         Self {
-            effect_scopes: Vec::new(),
+            effect_scope_state: effect_scope::EffectScopeDispatchState::new(),
             composite_group_state: composite_group::CompositeGroupDispatchState::new(),
             clip_path_dispatch_state: clip_path::ClipPathDispatchState::new(),
             backdrop_source_group_state:
                 backdrop_source_group::BackdropSourceGroupDispatchState::new(),
-            effect_chain_budget_stats: EffectChainBudgetStats::default(),
-            effect_degradations: EffectDegradationSnapshot::default(),
-            effect_blur_quality: BlurQualitySnapshot::default(),
         }
     }
 
@@ -50,13 +44,9 @@ impl MarkerDispatchState {
                 chain,
                 quality,
             } => {
-                effect_scope::compile_effect_scope_push(
+                self.effect_scope_state.compile_push(
                     plan,
                     draw_scopes,
-                    &mut self.effect_scopes,
-                    &mut self.effect_chain_budget_stats,
-                    &mut self.effect_degradations,
-                    &mut self.effect_blur_quality,
                     draw_ix,
                     effect_scope::EffectScopePushCtx {
                         scissor,
@@ -86,13 +76,9 @@ impl MarkerDispatchState {
                 );
             }
             EffectMarkerKind::Pop => {
-                effect_scope::compile_effect_scope_pop(
+                self.effect_scope_state.compile_pop(
                     plan,
                     draw_scopes,
-                    &mut self.effect_scopes,
-                    &mut self.effect_chain_budget_stats,
-                    &mut self.effect_degradations,
-                    &mut self.effect_blur_quality,
                     draw_ix,
                     effect_scope::EffectScopePopCtx {
                         viewport_size: args.viewport_size,
@@ -150,7 +136,8 @@ impl MarkerDispatchState {
                 self.backdrop_source_group_state.compile_push(
                     plan,
                     draw_scopes,
-                    &mut self.effect_degradations.backdrop_source_groups,
+                    self.effect_scope_state
+                        .backdrop_source_group_degradations_mut(),
                     backdrop_source_group::BackdropSourceGroupPushCtx {
                         scissor,
                         pyramid,
@@ -214,11 +201,7 @@ impl MarkerDispatchState {
         BlurQualitySnapshot,
         EffectChainBudgetStats,
     ) {
-        (
-            self.effect_degradations,
-            self.effect_blur_quality,
-            self.effect_chain_budget_stats,
-        )
+        self.effect_scope_state.into_parts()
     }
 }
 

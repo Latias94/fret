@@ -624,6 +624,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - [x] Step 3m: split backdrop-source-group dispatch state out of marker dispatch.
     - [x] Step 3n: split clip-path dispatch state out of marker dispatch and pass active mask snapshots into effect-scope planning.
     - [x] Step 3o: split composite-group dispatch state out of marker dispatch.
+    - [x] Step 3p: split effect-scope dispatch state out of marker dispatch.
   - Landed (step 1): extracted target/budget helpers and their focused tests into
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
   - Landed (step 2): introduced `RenderPlanCompilerCtx` to own structural compiler outputs
@@ -691,6 +692,10 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Landed (step 3o): moved composite-group dispatch state into
     `CompositeGroupDispatchState`, centralizing scopes, push/pop mutation, and helper visibility
     outside `marker_dispatch.rs`.
+  - Landed (step 3p): moved effect-scope dispatch state into `EffectScopeDispatchState`,
+    centralizing effect scopes, effect-chain budget stats, degradation snapshots, blur-quality
+    snapshots, push/pop mutation, and the narrow backdrop-source-group degradation counter
+    mutation entrypoint outside `marker_dispatch.rs`.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
       `compile_for_scene_inner`)
@@ -712,8 +717,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
       (`compile_backdrop_source_group_push`, `compile_backdrop_source_group_pop`,
       `BackdropSourceGroupDispatchState`, `BackdropSourceGroupScope::effect_ctx`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
-      (`compile_effect_scope_push`, `compile_effect_scope_pop`,
-      effect-scope push/pop target lifetime)
+      (`EffectScopeDispatchState`, effect-scope push/pop target lifetime)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_chain.rs`
       (`apply_chain_in_place`, `EffectChainApplyCtx`, `EffectChainBudgetStats::apply_to_plan`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/path_msaa.rs`

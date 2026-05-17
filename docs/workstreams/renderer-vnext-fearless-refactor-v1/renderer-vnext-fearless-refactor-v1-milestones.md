@@ -1260,6 +1260,28 @@ Progress record (RenderPlan compiler composite-group dispatch state split):
   - `cargo test -p fret-render-wgpu render_plan_compiler::target_selection`
   - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
 
+Progress record (RenderPlan compiler effect-scope dispatch state split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3p; Stage 24 continues)
+- Objective:
+  - Move effect-scope dispatch state out of `marker_dispatch.rs`, centralizing effect scopes,
+    effect-chain budget stats, degradation snapshots, blur-quality snapshots, and effect push/pop
+    mutation behind `EffectScopeDispatchState` while preserving FilterContent target lifetimes,
+    Backdrop no-op degradation, FilterContent disabled degradation, effect-chain inputs, pass
+    ordering, and load-op behavior.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
+    (`EffectScopeDispatchState::{compile_push,compile_pop,backdrop_source_group_degradations_mut,into_parts}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (`MarkerDispatchState` owns one effect-scope dispatch-state field)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

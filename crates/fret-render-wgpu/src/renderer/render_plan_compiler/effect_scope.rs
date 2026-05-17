@@ -6,13 +6,13 @@ use super::effects;
 use super::target_budget::can_allocate_intermediate_bytes;
 use super::target_selection;
 use crate::renderer::{
-    BlurQualitySnapshot, CompositePremulPass, EffectDegradationSnapshot, PlanTarget,
-    RenderPlanDegradation, RenderPlanDegradationKind, RenderPlanDegradationReason, RenderPlanPass,
-    ScissorRect, estimate_texture_bytes,
+    BackdropSourceGroupDegradationCounters, BlurQualitySnapshot, CompositePremulPass,
+    EffectDegradationSnapshot, PlanTarget, RenderPlanDegradation, RenderPlanDegradationKind,
+    RenderPlanDegradationReason, RenderPlanPass, ScissorRect, estimate_texture_bytes,
 };
 
 #[derive(Clone, Copy, Debug)]
-pub(super) struct EffectScope {
+struct EffectScope {
     mode: fret_core::EffectMode,
     chain: fret_core::EffectChain,
     quality: fret_core::EffectQuality,
@@ -24,6 +24,78 @@ pub(super) struct EffectScope {
     content_target: Option<PlanTarget>,
     content_origin: (u32, u32),
     content_size: (u32, u32),
+}
+
+pub(super) struct EffectScopeDispatchState {
+    scopes: Vec<EffectScope>,
+    stats: EffectChainBudgetStats,
+    degradations: EffectDegradationSnapshot,
+    blur_quality: BlurQualitySnapshot,
+}
+
+impl EffectScopeDispatchState {
+    pub(super) fn new() -> Self {
+        Self {
+            scopes: Vec::new(),
+            stats: EffectChainBudgetStats::default(),
+            degradations: EffectDegradationSnapshot::default(),
+            blur_quality: BlurQualitySnapshot::default(),
+        }
+    }
+
+    pub(super) fn compile_push(
+        &mut self,
+        plan: &mut RenderPlanCompilerCtx,
+        draw_scopes: &mut Vec<DrawScope>,
+        draw_ix: usize,
+        args: EffectScopePushCtx<'_>,
+    ) {
+        compile_effect_scope_push(
+            plan,
+            draw_scopes,
+            &mut self.scopes,
+            &mut self.stats,
+            &mut self.degradations,
+            &mut self.blur_quality,
+            draw_ix,
+            args,
+        );
+    }
+
+    pub(super) fn compile_pop(
+        &mut self,
+        plan: &mut RenderPlanCompilerCtx,
+        draw_scopes: &mut Vec<DrawScope>,
+        draw_ix: usize,
+        args: EffectScopePopCtx<'_>,
+    ) {
+        compile_effect_scope_pop(
+            plan,
+            draw_scopes,
+            &mut self.scopes,
+            &mut self.stats,
+            &mut self.degradations,
+            &mut self.blur_quality,
+            draw_ix,
+            args,
+        );
+    }
+
+    pub(super) fn backdrop_source_group_degradations_mut(
+        &mut self,
+    ) -> &mut BackdropSourceGroupDegradationCounters {
+        &mut self.degradations.backdrop_source_groups
+    }
+
+    pub(super) fn into_parts(
+        self,
+    ) -> (
+        EffectDegradationSnapshot,
+        BlurQualitySnapshot,
+        EffectChainBudgetStats,
+    ) {
+        (self.degradations, self.blur_quality, self.stats)
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -58,7 +130,7 @@ pub(super) struct EffectScopePopCtx<'a> {
 }
 
 #[allow(clippy::too_many_arguments)]
-pub(super) fn compile_effect_scope_push(
+fn compile_effect_scope_push(
     plan: &mut RenderPlanCompilerCtx,
     draw_scopes: &mut Vec<DrawScope>,
     effect_scopes: &mut Vec<EffectScope>,
@@ -213,7 +285,7 @@ pub(super) fn compile_effect_scope_push(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub(super) fn compile_effect_scope_pop(
+fn compile_effect_scope_pop(
     plan: &mut RenderPlanCompilerCtx,
     draw_scopes: &mut Vec<DrawScope>,
     effect_scopes: &mut Vec<EffectScope>,
