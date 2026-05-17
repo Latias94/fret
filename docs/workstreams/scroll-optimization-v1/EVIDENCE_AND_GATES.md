@@ -1002,6 +1002,66 @@ TextInput side-effect boundary closeout (2026-05-17):
   - The next slice should either audit the sidebar `positioned_child / Stack` blocker or separately
     tackle content `Grid` / wrap-flex line-break stability.
 
+Sidebar `ScrollArea` absolute overlay closeout (2026-05-17):
+
+- Mechanism anchors:
+  - `crates/fret-ui/src/tree/layout/node.rs`
+    (`clean_absolute_px_inset_child_bounds`, `clean_inset_edge_px_or_auto`, and
+    `ElementInstance::Scrollbar` as a childless propagated leaf)
+  - `crates/fret-ui/src/declarative/tests/layout/layout_engine.rs`
+    (`clean_geometry_small_resize_skips_px_absolute_stack_overlay_child` and
+    `clean_geometry_small_resize_rejects_fraction_absolute_stack_overlay_inset`)
+  - `ecosystem/fret-ui-shadcn/src/scroll_area.rs`
+    (`ScrollAreaRoot::into_element`, root `Stack` at line 340, absolute scrollbar gates and corner)
+- Contract:
+  - The proof is for overlay chrome only: zero-margin absolute children whose inset edges are px or
+    auto, and whose axis sizes are either px or derivable from both px inset edges.
+  - Absolute children with fraction/fill inset or sizing remain on the authoritative solve path
+    because their percent basis is parent-size dependent and not proven by this slice.
+  - The `Scroll` viewport remains a side-effect boundary and still runs layout. This slice only lets
+    clean ancestors propagate the surrounding `Stack` / overlay geometry without a root Taffy solve.
+  - `Scrollbar` may participate only as a childless propagated leaf. Scrollbar runtime state,
+    events, and painting remain mechanism-owned by their existing host-widget paths.
+- Focused gates:
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_px_absolute_stack_overlay_child clean_geometry_small_resize_rejects_fraction_absolute_stack_overlay_inset --no-fail-fast`
+    - Result: `2/2` passed after the mechanism change. Before the change both tests failed: the
+      px-inset positive case still solved once, and the fraction-inset negative case reported the
+      broader `positioned_child` rejection.
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_px_absolute_stack_overlay_child clean_geometry_small_resize_rejects_fraction_absolute_stack_overlay_inset clean_geometry_small_resize_runs_text_input_layout_as_side_effect_boundary clean_geometry_small_resize_skips_barrier_root_engine_solve clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve clean_geometry_small_resize_reports_wrap_flex_rejection_reason clean_geometry_small_resize_skips_px_container_and_updates_child_bounds clean_geometry_small_resize_skips_fixed_horizontal_flex_children --no-fail-fast`
+    - Result: `8/8` passed.
+  - `cargo nextest run -p fret-ui layout_engine --no-fail-fast`
+    - Result: `40/40` passed.
+  - `cargo fmt --check`
+    - Result: passed.
+  - `cargo check -p fret-bootstrap --features ui-app-driver,diagnostics`
+    - Result: passed.
+  - `python3 tools/check_layering.py`
+    - Result: passed.
+- Local blocker evidence:
+  - Bundle:
+    `target/fret-diag/local-next-absolute-scrollarea-clean-geometry-20260517-r1/1779014851068/bundle.schema2.json`
+  - Stats:
+    `target/fret-diag/local-next-absolute-scrollarea-clean-geometry-20260517-r1/worst.stats.json`
+  - Result:
+    - Top frame total/layout/layout-engine-solve/prepaint/paint is `1219/598/265/246/375us` with
+      `4` layout-engine solves.
+    - Guardrails remain stable: view-cache reused `1`, view-cache needs-rerender `0`, row
+      replay/store `289/0`, row replay hit rate `100%`.
+    - The previous root `Stack` `positioned_child / Stack` blocker through
+      `ecosystem/fret-ui-shadcn/src/scroll_area.rs:340` is gone from the per-solve blockers.
+    - Remaining blockers:
+      - content `Semantics`: `Grid` with `wrap_nodes=1`, solve about `169-176us`;
+      - root `Stack`: generic app-shell root solve about `88-92us`;
+      - editor `PointerRegion`: `Canvas`, solve about `3-4us`;
+      - root `Scroll`: side-effect boundary.
+- Decision:
+  - Close the sidebar absolute chrome blocker as a narrow core layout contract. No shadcn authoring
+    change is needed for this blocker.
+  - Keep RTX4090 closeout as follow-up evidence.
+  - The next primary optimization should tackle content `Grid` / wrap-flex line-break stability as a
+    separate proof. `Canvas`, root `Scroll`, and the `measured_size: Size` sentinel refactor remain
+    separate follow-ups.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:

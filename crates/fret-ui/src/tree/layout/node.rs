@@ -1143,6 +1143,7 @@ impl<H: UiHost> UiTree<H> {
             | crate::declarative::frame::ElementInstance::SvgIcon(_)
             | crate::declarative::frame::ElementInstance::SvgImage(_)
             | crate::declarative::frame::ElementInstance::Spinner(_)
+            | crate::declarative::frame::ElementInstance::Scrollbar(_)
                 if children.is_empty() =>
             {
                 Ok(CleanGeometryNodeContract::propagated_leaf())
@@ -1179,6 +1180,28 @@ impl<H: UiHost> UiTree<H> {
         let mut out = Vec::with_capacity(children.len());
         for &child in children {
             let child_style = crate::declarative::frame::layout_style_for_node(app, window, child);
+            let prev_child = self
+                .nodes
+                .get(child)
+                .ok_or_else(|| {
+                    CleanGeometrySolveSkipRejection::new(
+                        CleanGeometrySolveSkipRejectionReason::MissingNode,
+                    )
+                    .at_node(child)
+                })?
+                .bounds;
+            if child_style.position == crate::element::PositionStyle::Absolute {
+                out.push((
+                    child,
+                    Self::clean_absolute_px_inset_child_bounds(
+                        child_style,
+                        bounds,
+                        prev_child,
+                        element_kind,
+                    )?,
+                ));
+                continue;
+            }
             if child_style.position != crate::element::PositionStyle::Static {
                 return Err(CleanGeometrySolveSkipRejection::for_kind(
                     CleanGeometrySolveSkipRejectionReason::PositionedChild,
@@ -1193,16 +1216,6 @@ impl<H: UiHost> UiTree<H> {
             }
             Self::clean_child_width_style_supported_for_width_delta(child_style, element_kind)?;
             Self::clean_child_height_style_supported_for_width_delta(child_style, element_kind)?;
-            let prev_child = self
-                .nodes
-                .get(child)
-                .ok_or_else(|| {
-                    CleanGeometrySolveSkipRejection::new(
-                        CleanGeometrySolveSkipRejectionReason::MissingNode,
-                    )
-                    .at_node(child)
-                })?
-                .bounds;
             let local_x = prev_child.origin.x.0 - prev_bounds.origin.x.0;
             let local_y = prev_child.origin.y.0 - prev_bounds.origin.y.0;
             let width = if (prev_child.size.width.0 - prev_bounds.size.width.0).abs() <= 0.01
@@ -1224,6 +1237,195 @@ impl<H: UiHost> UiTree<H> {
             ));
         }
         Ok(out)
+    }
+
+    fn clean_absolute_px_inset_child_bounds(
+        child_style: crate::element::LayoutStyle,
+        containing_bounds: Rect,
+        prev_child: Rect,
+        element_kind: &'static str,
+    ) -> Result<Rect, CleanGeometrySolveSkipRejection> {
+        if !Self::clean_margin_edges_are_zero_px(child_style.margin) {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::NonPxMargin,
+                element_kind,
+            ));
+        }
+        if child_style.aspect_ratio.is_some() {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::PositionedChild,
+                element_kind,
+            ));
+        }
+
+        let left = Self::clean_inset_edge_px_or_auto(child_style.inset.left, element_kind)?;
+        let right = Self::clean_inset_edge_px_or_auto(child_style.inset.right, element_kind)?;
+        let top = Self::clean_inset_edge_px_or_auto(child_style.inset.top, element_kind)?;
+        let bottom = Self::clean_inset_edge_px_or_auto(child_style.inset.bottom, element_kind)?;
+
+        let width = Self::clean_absolute_axis_size(
+            child_style.size.width,
+            left,
+            right,
+            containing_bounds.size.width,
+            element_kind,
+        )?;
+        let height = Self::clean_absolute_axis_size(
+            child_style.size.height,
+            top,
+            bottom,
+            containing_bounds.size.height,
+            element_kind,
+        )?;
+        Self::clean_absolute_axis_constraints_allow_size(
+            child_style.size.min_width,
+            child_style.size.max_width,
+            width,
+            element_kind,
+        )?;
+        Self::clean_absolute_axis_constraints_allow_size(
+            child_style.size.min_height,
+            child_style.size.max_height,
+            height,
+            element_kind,
+        )?;
+        let x = Self::clean_absolute_axis_origin(
+            containing_bounds.origin.x,
+            containing_bounds.size.width,
+            width,
+            left,
+            right,
+            element_kind,
+        )?;
+        let y = Self::clean_absolute_axis_origin(
+            containing_bounds.origin.y,
+            containing_bounds.size.height,
+            height,
+            top,
+            bottom,
+            element_kind,
+        )?;
+
+        if prev_child.size == Size::default() {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::MissingMeasuredSize,
+                element_kind,
+            ));
+        }
+
+        Ok(Rect::new(Point::new(x, y), Size::new(width, height)))
+    }
+
+    fn clean_inset_edge_px_or_auto(
+        edge: crate::element::InsetEdge,
+        element_kind: &'static str,
+    ) -> Result<Option<f32>, CleanGeometrySolveSkipRejection> {
+        match edge {
+            crate::element::InsetEdge::Px(px) if px.0.is_finite() && px.0 >= -0.01 => {
+                Ok(Some(px.0.max(0.0)))
+            }
+            crate::element::InsetEdge::Auto => Ok(None),
+            crate::element::InsetEdge::Px(_)
+            | crate::element::InsetEdge::Fill
+            | crate::element::InsetEdge::Fraction(_) => {
+                Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::NonPxSpacing,
+                    element_kind,
+                ))
+            }
+        }
+    }
+
+    fn clean_absolute_axis_size(
+        length: crate::element::Length,
+        start: Option<f32>,
+        end: Option<f32>,
+        containing_size: Px,
+        element_kind: &'static str,
+    ) -> Result<Px, CleanGeometrySolveSkipRejection> {
+        match length {
+            crate::element::Length::Px(px) if px.0.is_finite() && px.0 >= -0.01 => {
+                Ok(Px(px.0.max(0.0)))
+            }
+            crate::element::Length::Auto => {
+                let (Some(start), Some(end)) = (start, end) else {
+                    return Err(CleanGeometrySolveSkipRejection::for_kind(
+                        CleanGeometrySolveSkipRejectionReason::PositionedChild,
+                        element_kind,
+                    ));
+                };
+                Ok(Px((containing_size.0 - start - end).max(0.0)))
+            }
+            crate::element::Length::Px(_)
+            | crate::element::Length::Fill
+            | crate::element::Length::Fraction(_) => {
+                Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::FractionalChildSize,
+                    element_kind,
+                ))
+            }
+        }
+    }
+
+    fn clean_absolute_axis_constraints_allow_size(
+        min: Option<crate::element::Length>,
+        max: Option<crate::element::Length>,
+        size: Px,
+        element_kind: &'static str,
+    ) -> Result<(), CleanGeometrySolveSkipRejection> {
+        match min {
+            Some(crate::element::Length::Px(px)) if size.0 + 0.01 < px.0.max(0.0) => {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::PositionedChild,
+                    element_kind,
+                ));
+            }
+            Some(crate::element::Length::Fill | crate::element::Length::Fraction(_)) => {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::FractionalChildSize,
+                    element_kind,
+                ));
+            }
+            Some(crate::element::Length::Auto | crate::element::Length::Px(_)) | None => {}
+        }
+        match max {
+            Some(crate::element::Length::Px(px)) if size.0 - 0.01 > px.0.max(0.0) => {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::PositionedChild,
+                    element_kind,
+                ));
+            }
+            Some(crate::element::Length::Fill | crate::element::Length::Fraction(_)) => {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::FractionalChildSize,
+                    element_kind,
+                ));
+            }
+            Some(crate::element::Length::Auto | crate::element::Length::Px(_)) | None => {}
+        }
+        Ok(())
+    }
+
+    fn clean_absolute_axis_origin(
+        containing_origin: Px,
+        containing_size: Px,
+        child_size: Px,
+        start: Option<f32>,
+        end: Option<f32>,
+        element_kind: &'static str,
+    ) -> Result<Px, CleanGeometrySolveSkipRejection> {
+        if let Some(start) = start {
+            return Ok(Px(containing_origin.0 + start));
+        }
+        if let Some(end) = end {
+            return Ok(Px(containing_origin.0 + containing_size.0
+                - child_size.0
+                - end));
+        }
+        Err(CleanGeometrySolveSkipRejection::for_kind(
+            CleanGeometrySolveSkipRejectionReason::PositionedChild,
+            element_kind,
+        ))
     }
 
     fn clean_container_width_delta_child_bounds(
@@ -1843,6 +2045,14 @@ impl<H: UiHost> UiTree<H> {
             && matches!(margin.right, crate::element::MarginEdge::Px(_))
             && matches!(margin.top, crate::element::MarginEdge::Px(_))
             && matches!(margin.bottom, crate::element::MarginEdge::Px(_))
+    }
+
+    fn clean_margin_edges_are_zero_px(margin: crate::element::MarginEdges) -> bool {
+        let is_zero = |edge: crate::element::MarginEdge| matches!(edge, crate::element::MarginEdge::Px(px) if px.0.abs() <= 0.01);
+        is_zero(margin.left)
+            && is_zero(margin.right)
+            && is_zero(margin.top)
+            && is_zero(margin.bottom)
     }
 
     fn clean_engine_geometry_propagation_supported_element(

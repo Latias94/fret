@@ -406,6 +406,33 @@ Status: Active
   - Decision: close the `TextInput` blocker here. The next optimization should target the sidebar
     `positioned_child / Stack` blocker or the content `Grid` / wrap-flex line-break story as
     separate work; do not treat text input as a pure geometry leaf.
+- [x] Close the sidebar `ScrollArea` `positioned_child / Stack` blocker with a narrow absolute
+  overlay proof.
+  - Source conclusion: shadcn `ScrollArea` mounts the viewport as the only flow child under the root
+    `Stack`; vertical/horizontal scrollbar gates and the optional corner are absolute overlay chrome
+    with px/auto insets. Those overlays should not force the parent `Stack` root solve during a
+    clean width-only resize when their geometry can be derived from the containing block.
+  - Implemented mechanism proof: `Stack` clean-geometry propagation can derive absolute child bounds
+    only for zero-margin, px/auto-inset children whose axis sizes are either px or fully constrained
+    by start/end px insets. Percent/fill/fraction inset or sizing remains rejected.
+  - Guardrails locked:
+    - `clean_geometry_small_resize_skips_px_absolute_stack_overlay_child` proves px-inset absolute
+      overlay chrome no longer forces a root Taffy solve and that nested scrollbar bounds update.
+    - `clean_geometry_small_resize_rejects_fraction_absolute_stack_overlay_inset` keeps fraction
+      inset on the authoritative solve path with `non_px_spacing / Stack`.
+    - `Scrollbar` is only classified as a propagated clean leaf when it has no children.
+  - Local blocker-shift evidence:
+    `target/fret-diag/local-next-absolute-scrollarea-clean-geometry-20260517-r1/1779014851068/bundle.schema2.json`.
+  - Result: the previous root `Stack` `positioned_child / Stack` blocker through
+    `ecosystem/fret-ui-shadcn/src/scroll_area.rs:340` disappeared from the per-solve blockers.
+    Top frame total/layout/solve/prepaint/paint is `1219/598/265/246/375us` with `4` layout-engine
+    solves, view-cache reused `1`, needs-rerender `0`, and row replay/store remains `289/0`.
+    Remaining per-solve blockers are content `Semantics` `Grid/wrap_nodes=1` (`169-176us`), root
+    `Stack` generic app-shell solve (`88-92us`), editor `PointerRegion -> Canvas` (`3-4us`), and
+    root `Scroll` as a side-effect boundary.
+  - Decision: close the sidebar absolute chrome blocker here. The next meaningful optimization is
+    the content `Grid` / wrap-flex line-break stability story; keep `Canvas`, root `Scroll`, and
+    `measured_size: Option<Size>` as separate follow-ups.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 
