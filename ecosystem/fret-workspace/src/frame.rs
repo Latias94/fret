@@ -1,6 +1,7 @@
 use fret_core::{Color, Edges, Px};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, Overflow,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, HitTestGateProps, LayoutStyle, Length,
+    Overflow,
 };
 use fret_ui::{ElementContext, ElementContextAccess, Theme, UiHost};
 use fret_ui_kit::IntoUiElement;
@@ -49,6 +50,16 @@ fn no_shrink_layout() -> LayoutStyle {
     let mut layout = LayoutStyle::default();
     layout.flex.shrink = 0.0;
     layout
+}
+
+fn flex_fill_slot<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    cx.hit_test_gate_props(
+        HitTestGateProps {
+            layout: flex_grow_layout(),
+            hit_test: false,
+        },
+        |_cx| Vec::<AnyElement>::new(),
+    )
 }
 
 #[derive(Debug)]
@@ -384,7 +395,7 @@ impl WorkspaceTopBar {
                                 |_cx| self.center,
                             ));
                         } else {
-                            children.push(cx.spacer(Default::default()));
+                            children.push(flex_fill_slot(cx));
                         }
 
                         for child in self.right {
@@ -482,7 +493,7 @@ impl WorkspaceStatusBar {
                     |cx| {
                         let mut children = Vec::new();
                         children.extend(self.left);
-                        children.push(cx.spacer(Default::default()));
+                        children.push(flex_fill_slot(cx));
                         children.extend(self.right);
                         children
                     },

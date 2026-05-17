@@ -123,7 +123,13 @@ pub struct UiLayoutEngineSolveV1 {
 pub struct UiCleanGeometrySolveSkipRejectionV1 {
     pub reason: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub node: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub element_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -212,12 +218,16 @@ impl UiLayoutEngineSolveV1 {
                     flex_wrap_patch_skipped_no_wrap_descendant: p
                         .flex_wrap_patch_skipped_no_wrap_descendant,
                 }),
-            clean_geometry_solve_skip_rejection: s.clean_geometry_solve_skip_rejection.map(|r| {
-                UiCleanGeometrySolveSkipRejectionV1 {
+            clean_geometry_solve_skip_rejection: s
+                .clean_geometry_solve_skip_rejection
+                .as_ref()
+                .map(|r| UiCleanGeometrySolveSkipRejectionV1 {
                     reason: r.reason.to_string(),
+                    node: r.node.map(|id| id.data().as_ffi()),
+                    element: r.element.map(|id| id.0),
                     element_kind: r.element_kind.map(str::to_string),
-                }
-            }),
+                    element_path: r.element_path.clone(),
+                }),
             measure_calls: s.measure_calls,
             measure_cache_hits: s.measure_cache_hits,
             measure_time_us: s.measure_time.as_micros().min(u64::MAX as u128) as u64,

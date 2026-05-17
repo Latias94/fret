@@ -14,6 +14,7 @@ enum CleanGeometrySolveSkipDecision {
 #[derive(Debug, Clone, Copy)]
 struct CleanGeometrySolveSkipRejection {
     reason: CleanGeometrySolveSkipRejectionReason,
+    node: Option<NodeId>,
     element_kind: Option<&'static str>,
 }
 
@@ -21,6 +22,7 @@ impl CleanGeometrySolveSkipRejection {
     fn new(reason: CleanGeometrySolveSkipRejectionReason) -> Self {
         Self {
             reason,
+            node: None,
             element_kind: None,
         }
     }
@@ -28,8 +30,21 @@ impl CleanGeometrySolveSkipRejection {
     fn for_kind(reason: CleanGeometrySolveSkipRejectionReason, element_kind: &'static str) -> Self {
         Self {
             reason,
+            node: None,
             element_kind: Some(element_kind),
         }
+    }
+
+    fn at_node(mut self, node: NodeId) -> Self {
+        self.node = Some(node);
+        self
+    }
+
+    fn at_node_if_missing(mut self, node: NodeId) -> Self {
+        if self.node.is_none() {
+            self.node = Some(node);
+        }
+        self
     }
 }
 
@@ -711,7 +726,11 @@ impl<H: UiHost> UiTree<H> {
                 true
             }
             CleanGeometrySolveSkipDecision::Rejected(rejection) => {
-                self.debug_record_clean_geometry_solve_skip_rejection(root, rejection);
+                self.debug_record_clean_geometry_solve_skip_rejection(
+                    app,
+                    root,
+                    rejection.at_node_if_missing(root),
+                );
                 false
             }
         }
@@ -745,7 +764,7 @@ impl<H: UiHost> UiTree<H> {
             ));
         };
         if let Err(rejection) = self.clean_geometry_node_clean_result(root) {
-            return CleanGeometrySolveSkipDecision::Rejected(rejection);
+            return CleanGeometrySolveSkipDecision::Rejected(rejection.at_node_if_missing(root));
         }
         match self.clean_manual_geometry_subtree_supported_checked(
             app,
@@ -756,12 +775,15 @@ impl<H: UiHost> UiTree<H> {
             true,
         ) {
             Ok(()) => CleanGeometrySolveSkipDecision::Supported,
-            Err(rejection) => CleanGeometrySolveSkipDecision::Rejected(rejection),
+            Err(rejection) => {
+                CleanGeometrySolveSkipDecision::Rejected(rejection.at_node_if_missing(root))
+            }
         }
     }
 
     fn debug_record_clean_geometry_solve_skip_rejection(
         &mut self,
+        app: &mut H,
         root: NodeId,
         rejection: CleanGeometrySolveSkipRejection,
     ) {
@@ -782,11 +804,48 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats
                 .layout_clean_geometry_solve_skip_first_element_kind = rejection.element_kind;
         }
+        let rejected_node = rejection.node.unwrap_or(root);
+        let rejected_element = self
+            .nodes
+            .get(rejected_node)
+            .and_then(|entry| entry.element)
+            .or_else(|| {
+                self.window.and_then(|window| {
+                    crate::declarative::frame::element_record_for_node(app, window, rejected_node)
+                        .map(|record| record.element)
+                })
+            });
+        let rejected_element_kind = rejection.element_kind.or_else(|| {
+            self.window.and_then(|window| {
+                crate::declarative::frame::element_record_for_node(app, window, rejected_node)
+                    .map(|record| record.instance.kind_name())
+            })
+        });
+        let rejected_element_path = {
+            #[cfg(feature = "diagnostics")]
+            {
+                self.window.and_then(|window| {
+                    rejected_element.and_then(|element| {
+                        crate::elements::with_window_state(app, window, |st| {
+                            st.debug_path_for_element(element)
+                        })
+                    })
+                })
+            }
+            #[cfg(not(feature = "diagnostics"))]
+            {
+                let _ = rejected_element;
+                None
+            }
+        };
         self.debug_clean_geometry_solve_skip_rejections.insert(
             root,
             UiDebugCleanGeometrySolveSkipRejection {
                 reason: rejection.reason.as_str(),
-                element_kind: rejection.element_kind,
+                node: Some(rejected_node),
+                element: rejected_element,
+                element_kind: rejected_element_kind,
+                element_path: rejected_element_path,
             },
         );
     }
@@ -816,15 +875,18 @@ impl<H: UiHost> UiTree<H> {
                 CleanGeometrySolveSkipRejection::new(
                     CleanGeometrySolveSkipRejectionReason::MissingNode,
                 )
+                .at_node(node)
             })?;
-        let child_bounds = self.clean_manual_geometry_child_bounds_checked(
-            app,
-            window,
-            node,
-            &children,
-            bounds,
-            prev_bounds,
-        )?;
+        let child_bounds = self
+            .clean_manual_geometry_child_bounds_checked(
+                app,
+                window,
+                node,
+                &children,
+                bounds,
+                prev_bounds,
+            )
+            .map_err(|rejection| rejection.at_node_if_missing(node))?;
         for (child, child_bounds) in child_bounds {
             if self
                 .clean_geometry_boundary_layout_node_kind(app, window, child)
@@ -840,6 +902,7 @@ impl<H: UiHost> UiTree<H> {
                         CleanGeometrySolveSkipRejection::new(
                             CleanGeometrySolveSkipRejectionReason::MissingNode,
                         )
+                        .at_node(child)
                     })?;
             self.clean_manual_geometry_subtree_supported_checked(
                 app,
@@ -860,27 +923,32 @@ impl<H: UiHost> UiTree<H> {
         let Some(entry) = self.nodes.get(node) else {
             return Err(CleanGeometrySolveSkipRejection::new(
                 CleanGeometrySolveSkipRejectionReason::MissingNode,
-            ));
+            )
+            .at_node(node));
         };
         if entry.invalidation.layout {
             return Err(CleanGeometrySolveSkipRejection::new(
                 CleanGeometrySolveSkipRejectionReason::LayoutDirty,
-            ));
+            )
+            .at_node(node));
         }
         if self.node_subtree_layout_dirty(node) {
             return Err(CleanGeometrySolveSkipRejection::new(
                 CleanGeometrySolveSkipRejectionReason::SubtreeLayoutDirty,
-            ));
+            )
+            .at_node(node));
         }
         if entry.measured_size == Size::default() {
             return Err(CleanGeometrySolveSkipRejection::new(
                 CleanGeometrySolveSkipRejectionReason::MissingMeasuredSize,
-            ));
+            )
+            .at_node(node));
         }
         if entry.layout_dirty_children_suppressed {
             return Err(CleanGeometrySolveSkipRejection::new(
                 CleanGeometrySolveSkipRejectionReason::DirtyChildrenSuppressed,
-            ));
+            )
+            .at_node(node));
         }
         Ok(())
     }
@@ -947,16 +1015,19 @@ impl<H: UiHost> UiTree<H> {
                 CleanGeometrySolveSkipRejection::new(
                     CleanGeometrySolveSkipRejectionReason::MissingElementRecord,
                 )
+                .at_node(node)
             })?;
         let kind = record.instance.kind_name();
-        let contract = Self::clean_geometry_node_contract(&record.instance, children, kind)?;
+        let contract = Self::clean_geometry_node_contract(&record.instance, children, kind)
+            .map_err(|rejection| rejection.at_node_if_missing(node))?;
         match contract.layout_effect {
             CleanGeometryLayoutEffect::Pure => {}
             CleanGeometryLayoutEffect::SideEffectBoundary => {
-                Err(CleanGeometrySolveSkipRejection::for_kind(
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
                     CleanGeometrySolveSkipRejectionReason::SideEffectBoundary,
                     kind,
-                ))?
+                )
+                .at_node(node));
             }
         }
         match contract.size_stability {
@@ -966,7 +1037,8 @@ impl<H: UiHost> UiTree<H> {
                     return Err(CleanGeometrySolveSkipRejection::for_kind(
                         CleanGeometrySolveSkipRejectionReason::TextReflow,
                         kind,
-                    ));
+                    )
+                    .at_node(node));
                 }
             }
         }
@@ -1127,6 +1199,7 @@ impl<H: UiHost> UiTree<H> {
                     CleanGeometrySolveSkipRejection::new(
                         CleanGeometrySolveSkipRejectionReason::MissingNode,
                     )
+                    .at_node(child)
                 })?
                 .bounds;
             let local_x = prev_child.origin.x.0 - prev_bounds.origin.x.0;
@@ -1208,6 +1281,7 @@ impl<H: UiHost> UiTree<H> {
                     CleanGeometrySolveSkipRejection::new(
                         CleanGeometrySolveSkipRejectionReason::MissingNode,
                     )
+                    .at_node(child)
                 })?
                 .bounds;
             let local_x = prev_child.origin.x.0 - prev_inner_origin.x.0;
@@ -1331,6 +1405,7 @@ impl<H: UiHost> UiTree<H> {
                     CleanGeometrySolveSkipRejection::new(
                         CleanGeometrySolveSkipRejectionReason::MissingNode,
                     )
+                    .at_node(child)
                 })?
                 .bounds;
             let local_x = prev_child.origin.x.0 - prev_bounds.origin.x.0;
@@ -1446,6 +1521,7 @@ impl<H: UiHost> UiTree<H> {
                     CleanGeometrySolveSkipRejection::new(
                         CleanGeometrySolveSkipRejectionReason::MissingNode,
                     )
+                    .at_node(child)
                 })?
                 .bounds;
             let next_width = if let Some(next_width) =

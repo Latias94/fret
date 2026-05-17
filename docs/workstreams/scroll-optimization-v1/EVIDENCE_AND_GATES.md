@@ -754,6 +754,79 @@ RovingFlex trigger authoring closeout (2026-05-17):
     `missing_measured_size` path or separately prove the content `Grid` / wrap-flex line-break
     stability story.
 
+Root missing-measured-size attribution and workspace fill-slot closeout (2026-05-17):
+
+- Mechanism anchors:
+  - `crates/fret-ui/src/tree/layout/node.rs`
+    (`CleanGeometrySolveSkipRejection::node`,
+    `debug_record_clean_geometry_solve_skip_rejection`)
+  - `crates/fret-ui/src/tree/debug/layout.rs`
+    (`UiDebugCleanGeometrySolveSkipRejection`)
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics/layout_paint_hotspot_diagnostics.rs`
+    (`UiCleanGeometrySolveSkipRejectionV1`)
+  - `crates/fret-ui/src/declarative/tests/layout/layout_engine.rs`
+    (`clean_geometry_rejection_reports_descendant_node_attribution`,
+    `clean_geometry_small_resize_skips_horizontal_flex_empty_grow_container_slot`)
+  - `ecosystem/fret-workspace/src/frame.rs`
+    (`flex_fill_slot`)
+- Contract:
+  - Clean-geometry rejection diagnostics must identify the actual rejected node, not only the root
+    solve that attempted the skip. This keeps root-level blockers actionable when the first
+    rejection is a deep descendant.
+  - Diagnostics bundles now include `node`, `element`, `element_kind`, and `element_path` on
+    per-solve clean-geometry rejections when the data is available.
+  - Empty app-shell flex-fill slots should be authored as explicit basis-zero grow slots with no
+    hit-test participation, not as a default `Spacer`. A default `Spacer` can legitimately measure
+    to `0x0`, which collides with the current `Size::default()` missing-measure sentinel.
+- Pre-fix attribution evidence:
+  - Bundle:
+    `target/fret-diag/local-next-missing-measured-size-attribution-20260517-r1/1779005085651/bundle.schema2.json`
+  - Result:
+    - The root `Stack` solve reported `missing_measured_size`.
+    - The rejected descendant was a `Spacer` with a path through
+      `apps/fret-ui-gallery/src/driver/chrome.rs:87` and
+      `ecosystem/fret-workspace/src/frame.rs:353` / `frame.rs:387`.
+- Focused gates:
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve clean_geometry_rejection_reports_descendant_node_attribution clean_geometry_small_resize_reports_wrap_flex_rejection_reason clean_geometry_small_resize_skips_horizontal_flex_empty_grow_container_slot clean_geometry_small_resize_skips_horizontal_flex_auto_width_no_shrink_child clean_geometry_small_resize_skips_horizontal_roving_flex_auto_width_no_shrink_child clean_geometry_small_resize_rejects_horizontal_flex_auto_width_child_fractional_max_constraint --no-fail-fast`
+    - Result: `7/7` passed.
+  - `cargo check -p fret-bootstrap --features ui-app-driver,diagnostics`
+    - Result: passed.
+  - `cargo check -p fret-workspace`
+    - Result: passed.
+  - `cargo fmt --check`
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed.
+- Residual workspace test note:
+  - `cargo nextest run -p fret-workspace -E 'test(workspace_root_drop_after_tab_pointer_up_dispatches_split_and_move)' --no-fail-fast`
+    currently fails with `expected workspace tab drag to start after threshold`.
+  - The failing test does not reference `WorkspaceTopBar`, `WorkspaceStatusBar`, or `frame.rs`; it
+    is recorded as residual risk rather than evidence against the empty fill-slot fix.
+- Post-fix local blocker evidence:
+  - Bundle:
+    `target/fret-diag/local-next-workspace-fill-slot-clean-geometry-20260517-r1/1779006799472/bundle.schema2.json`
+  - Result:
+    - Top frame total/layout/layout-engine-solve is `1184/585/261us` with `4` layout-engine
+      solves.
+    - Guardrails remain stable: `top_view_cache_roots_reused=1`, row replay/store `289/0`.
+    - The root `Stack` per-solve blocker moved from `missing_measured_size / Spacer` to
+      `flex_main_align / Flex`.
+    - Remaining blockers:
+      - content `Semantics`: `unsupported_kind=Grid`, `wrap_nodes=1`;
+      - root `Stack`: `flex_main_align / Flex`, path through shadcn Button chrome;
+      - editor `PointerRegion`: `unsupported_kind=Canvas`, solve about `4us`;
+      - root `Scroll`: `side_effect_boundary / Scroll`, solve `0us`.
+- Architecture note:
+  - `measured_size: Size` still uses `Size::default()` as a not-measured sentinel, which is
+    ambiguous with a legal `0x0` measured box. A future `Option<Size>` refactor is likely the
+    cleaner data model, but it should be handled separately because it touches layout
+    early-return, viewport batching, paint cache, scroll seed, and test harness behavior.
+- Decision:
+  - Close the root `missing_measured_size` blocker as a diagnostics + authoring-policy fix.
+  - Keep RTX4090 closeout as follow-up evidence, not a local completion gate.
+  - The next proof should target either the new `flex_main_align / Flex` blocker or the content
+    `Grid` / wrap-flex line-break stability story, with separate evidence and gates.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:

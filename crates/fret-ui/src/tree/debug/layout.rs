@@ -67,10 +67,13 @@ pub struct UiDebugLayoutEngineSolve {
     pub top_measures: Vec<UiDebugLayoutEngineMeasureHotspot>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct UiDebugCleanGeometrySolveSkipRejection {
     pub reason: &'static str,
+    pub node: Option<NodeId>,
+    pub element: Option<GlobalElementId>,
     pub element_kind: Option<&'static str>,
+    pub element_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy)]

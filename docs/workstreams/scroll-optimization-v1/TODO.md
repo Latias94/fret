@@ -308,6 +308,38 @@ Status: Active
   - Decision: close the `RovingFlex` blocker here. The next optimization should either classify
     the root `missing_measured_size` path with better attribution or tackle the content
     `Grid`/wrap-flex line-break stability story as a separate proof.
+- [x] Attribute and remove the root `missing_measured_size` blocker.
+  - Implemented diagnostics fix: clean-geometry per-solve rejections now carry the rejected
+    descendant node id, element id, element kind, and diagnostics element path when available,
+    instead of only reporting the solve root and a reason/kind pair.
+  - Pre-fix attribution:
+    `target/fret-diag/local-next-missing-measured-size-attribution-20260517-r1/1779005085651/bundle.schema2.json`.
+    It showed the root `Stack` solve rejected with `missing_measured_size` on a `Spacer` reached
+    through `apps/fret-ui-gallery/src/driver/chrome.rs:87` and
+    `ecosystem/fret-workspace/src/frame.rs:353` / `frame.rs:387`.
+  - Implemented authoring fix: `WorkspaceTopBar` and `WorkspaceStatusBar` no longer use
+    `cx.spacer(Default::default())` as a flex-fill slot. They now use a hit-test-disabled empty
+    flex slot with explicit basis-zero grow layout, preserving the intended app-shell row semantics
+    without relying on a legal zero-size `Spacer` box.
+  - Focused guardrail:
+    `clean_geometry_small_resize_skips_horizontal_flex_empty_grow_container_slot` locks this empty
+    grow-slot shape so it does not trip the `Size::default()` measured-size sentinel again.
+  - Post-fix local no-4090 evidence:
+    `target/fret-diag/local-next-workspace-fill-slot-clean-geometry-20260517-r1/1779006799472/bundle.schema2.json`.
+  - Result: the root `Stack` blocker no longer reports `missing_measured_size`. Top summary is
+    total/layout/solve `1184/585/261us`, `layout_engine_solves=4`,
+    `top_view_cache_roots_reused=1`, and row replay/store remains `289/0`.
+  - Remaining blockers: content `Semantics` remains `unsupported_kind=Grid` with `wrap_nodes=1`;
+    root `Stack` now reports `flex_main_align / Flex` in shadcn Button chrome; editor `Canvas`
+    remains a small solve; root `Scroll` remains a `side_effect_boundary`.
+  - Architecture TODO: `measured_size: Size` still conflates "not measured yet" with a legal
+    `0x0` measured box through `Size::default()`. A future `Option<Size>` data-model refactor is
+    probably correct, but it crosses layout early-return, viewport batching, paint cache, scroll
+    seed, and test harness contracts; it should be a separate architecture slice, not part of this
+    blocker fix.
+  - Decision: close the root `missing_measured_size` blocker here. The next proof should target
+    the new `flex_main_align / Flex` blocker or the content `Grid` / wrap-flex line-break story,
+    but not both in the same patch.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

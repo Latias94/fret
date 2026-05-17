@@ -165,6 +165,10 @@
     {
       "name": "clean-root-solve-horizontal-auto-width-fixed-flex-geometry",
       "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_skips_horizontal_flex_auto_width_no_shrink_child clean_geometry_small_resize_rejects_horizontal_flex_auto_width_child_fractional_max_constraint clean_geometry_small_resize_skips_horizontal_flex_single_basis0_grow_child clean_geometry_small_resize_rejects_horizontal_flex_multiple_grow_children --no-fail-fast"
+    },
+    {
+      "name": "clean-root-solve-missing-measured-size-attribution",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve clean_geometry_rejection_reports_descendant_node_attribution clean_geometry_small_resize_reports_wrap_flex_rejection_reason clean_geometry_small_resize_skips_horizontal_flex_empty_grow_container_slot clean_geometry_small_resize_skips_horizontal_flex_auto_width_no_shrink_child clean_geometry_small_resize_skips_horizontal_roving_flex_auto_width_no_shrink_child clean_geometry_small_resize_rejects_horizontal_flex_auto_width_child_fractional_max_constraint --no-fail-fast"
     }
   ],
   "evidence": [
@@ -182,6 +186,7 @@
     "crates/fret-ui/src/tree/layout/entrypoints.rs",
     "crates/fret-ui/src/tree/debug/layout.rs",
     "crates/fret-ui/src/tree/ui_tree_debug/record.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/layout_paint_hotspot_diagnostics.rs",
     "crates/fret-ui/src/declarative/tests/virtual_list/caching.rs",
     "crates/fret-ui/src/tree/ui_tree_subtree_layout_dirty.rs",
     "crates/fret-ui/src/declarative/mount.rs",
@@ -200,6 +205,7 @@
     "crates/fret-ui/src/declarative/tests/interactions/pointer_regions.rs",
     "ecosystem/fret-bootstrap/src/ui_diagnostics.rs",
     "ecosystem/fret-bootstrap/src/ui_diagnostics/inspect_overlay.rs",
+    "ecosystem/fret-workspace/src/frame.rs",
     "ecosystem/fret-ui-kit/src/window_overlays/render.rs",
     "ecosystem/fret-ui-kit/src/window_overlays/tests/cached_requests.rs",
     "ecosystem/fret-ui-kit/src/declarative/table.rs",
@@ -208,6 +214,6 @@
   "adr_refs": [],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Current no-4090 resize-jitter evidence has landed the stable auto-height classification slice, the clean-geometry classification model refactor, the horizontal fixed Flex proof, the narrow single basis-zero grow Flex proof, app-shell/workspace authoring alignment to explicit basis-zero flex-1 semantics, the fixed auto-width no-shrink chrome proof, and the RovingFlex trigger authoring closeout. The previous nav Container flex_item_sizing / Flex blocker and the root Stack flex_item_sizing / RovingFlex blocker are gone from the top per-solve blockers. Remaining top blockers are content Semantics unsupported_kind=Grid with wrap_nodes=1, root Stack missing_measured_size, editor Canvas measured small, and root Scroll as a side-effect boundary. Keep RTX4090 closeout as follow-up evidence, not a local completion gate. Continue in this workstream with a separate proof for the root missing_measured_size path or the content Grid/wrap-flex line-break stability story; do not mix either into the completed RovingFlex trigger authoring patch."
+    "notes": "Current no-4090 resize-jitter evidence has landed the stable auto-height classification slice, the clean-geometry classification model refactor, the horizontal fixed Flex proof, the narrow single basis-zero grow Flex proof, app-shell/workspace authoring alignment to explicit basis-zero flex-1 semantics, the fixed auto-width no-shrink chrome proof, the RovingFlex trigger authoring closeout, and the root missing_measured_size attribution/fill-slot closeout. The previous nav Container flex_item_sizing / Flex blocker, root Stack flex_item_sizing / RovingFlex blocker, and root Stack missing_measured_size / Spacer blocker are gone from the top per-solve blockers. Remaining top blockers are content Semantics unsupported_kind=Grid with wrap_nodes=1, root Stack flex_main_align / Flex in shadcn Button chrome, editor Canvas measured small, and root Scroll as a side-effect boundary. Keep RTX4090 closeout as follow-up evidence, not a local completion gate. Continue in this workstream with a separate proof for root flex_main_align / Flex or the content Grid/wrap-flex line-break stability story; do not mix either into the completed missing_measured_size patch. Track measured_size Option<Size> as a separate architecture follow-up, not part of this local blocker fix."
   }
 }

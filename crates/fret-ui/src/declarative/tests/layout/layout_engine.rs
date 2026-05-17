@@ -1141,12 +1141,153 @@ fn clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve() {
         .expect("rejected root solve should carry its clean-geometry skip reason");
     let rejection = rejected_solve
         .clean_geometry_solve_skip_rejection
+        .as_ref()
         .expect("rejected solve should expose rejection details");
     assert_eq!(rejection.reason, "unsupported_kind");
     assert_eq!(rejection.element_kind, Some("ViewCache"));
     assert!(
+        rejection.node.is_some(),
+        "per-solve rejection attribution should expose the rejected node"
+    );
+    assert!(
+        rejection.element.is_some(),
+        "per-solve rejection attribution should expose the rejected element id"
+    );
+    assert!(
         rejected_solve.root_element_kind.is_some(),
         "per-solve rejection details should be attached to a concrete rejected root solve"
+    );
+}
+
+#[test]
+fn clean_geometry_rejection_reports_descendant_node_attribution() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(324.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-descendant-rejection-child",
+        |cx| {
+            let mut canvas = crate::element::CanvasProps::default();
+            canvas.layout.size.width = Length::Fill;
+            canvas.layout.size.height = Length::Fill;
+            vec![cx.stack_props(
+                crate::element::StackProps {
+                    layout: crate::element::LayoutStyle {
+                        size: crate::element::SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+                |cx| {
+                    vec![
+                        cx.canvas(canvas, |_paint| {})
+                            .test_id("clean-geometry-rejected-canvas"),
+                    ]
+                },
+            )]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(184.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    let rejected_canvas = ui
+        .debug_node_children(child)
+        .into_iter()
+        .next()
+        .and_then(|stack| ui.debug_node_children(stack).into_iter().next())
+        .expect("canvas descendant should be mounted");
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    let rejected_solve = ui
+        .debug_layout_engine_solves()
+        .iter()
+        .find(|solve| solve.root == child)
+        .expect("child root solve should be recorded");
+    let rejection = rejected_solve
+        .clean_geometry_solve_skip_rejection
+        .as_ref()
+        .expect("child root solve should expose rejection details");
+
+    assert_eq!(rejection.reason, "unsupported_kind");
+    assert_eq!(rejection.element_kind, Some("Canvas"));
+    assert_eq!(
+        rejection.node,
+        Some(rejected_canvas),
+        "descendant rejections should report the actual rejected node, not just the solve root"
+    );
+    assert!(
+        rejection.element.is_some(),
+        "descendant rejection attribution should expose the rejected element id"
+    );
+    assert_eq!(
+        rejection.element,
+        ui.debug_node_element(rejected_canvas),
+        "rejection element should match the rejected descendant node"
     );
 }
 
@@ -2285,6 +2426,155 @@ fn clean_geometry_small_resize_rejects_horizontal_flex_multiple_grow_children() 
             .layout_clean_geometry_solve_skip_first_element_kind,
         Some("Flex")
     );
+}
+
+#[test]
+fn clean_geometry_small_resize_skips_horizontal_flex_empty_grow_container_slot() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(316.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-horizontal-flex-empty-grow-container-slot",
+        |cx| {
+            let flex = crate::element::FlexProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                direction: fret_core::Axis::Horizontal,
+                gap: Px(8.0).into(),
+                align: crate::element::CrossAlign::Center,
+                ..Default::default()
+            };
+
+            vec![cx.flex(flex, |cx| {
+                let fixed = cx.spacer(crate::element::SpacerProps {
+                    layout: crate::element::LayoutStyle {
+                        size: crate::element::SizeStyle {
+                            width: Length::Px(Px(32.0)),
+                            height: Length::Px(Px(16.0)),
+                            ..Default::default()
+                        },
+                        flex: crate::element::FlexItemStyle {
+                            shrink: 0.0,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    min: Px(0.0),
+                });
+                let grow = cx.hit_test_gate_props(
+                    crate::element::HitTestGateProps {
+                        layout: crate::element::LayoutStyle {
+                            size: crate::element::SizeStyle {
+                                width: Length::Fill,
+                                min_width: Some(Length::Px(Px(0.0))),
+                                ..Default::default()
+                            },
+                            flex: crate::element::FlexItemStyle {
+                                grow: 1.0,
+                                shrink: 1.0,
+                                basis: Length::Px(Px(0.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        hit_test: false,
+                    },
+                    |_cx| Vec::<AnyElement>::new(),
+                );
+                vec![fixed, grow]
+            })]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(176.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    let flex_node = ui.children(child)[0];
+    let grow_node = ui.children(flex_node)[1];
+    let grow_before = ui.debug_node_bounds(grow_node).expect("grow bounds before");
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "single empty grow container slot should keep the app-shell flex path in clean geometry propagation"
+    );
+    assert_eq!(
+        ui.debug_stats().layout_clean_geometry_solve_skip_rejections,
+        0,
+        "the empty grow slot must not trip the missing_measured_size spacer sentinel"
+    );
+    let grow_after = ui.debug_node_bounds(grow_node).expect("grow bounds after");
+    assert_eq!(grow_after.origin, grow_before.origin);
+    assert_eq!(grow_after.size.height, grow_before.size.height);
+    assert!((grow_after.size.width.0 - (grow_before.size.width.0 - 4.0)).abs() < 0.01);
 }
 
 #[test]
