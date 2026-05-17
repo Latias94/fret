@@ -144,3 +144,17 @@ Status: Active
   track guardrail. Fresh no-4090 evidence moves the content blocker from `unsupported_kind=Grid` to
   `text_reflow / Text`; the root blocker is now `missing_measured_size / Stack` through sidebar
   nav `ScrollArea`, while `Canvas` and root `Scroll` remain separate follow-ups.
+
+## M12 — Absent zero overlay clean-geometry contract
+
+- Classify `text_reflow / Text` as an intentional stop condition until text computed-box /
+  line-break stability has a dedicated proof.
+- Keep sidebar nav `ScrollArea` authoring explicit as a flex-fill slot:
+  `w_full().h_full().flex_1().min_w_0().min_h_0()`.
+- Treat `present=false` `InteractivityGate` nodes as absent propagated leaves in clean-geometry
+  preflight, and allow explicit `0x0` absolute overlay geometry without reporting
+  `missing_measured_size`.
+- 2026-05-18 minimum slice landed: hidden `ScrollArea` scrollbar/corner gates no longer block the
+  parent `Stack` root solve as `missing_measured_size`. Fresh no-4090 evidence moves the root
+  blocker to `unsupported_kind / ViewCache`; content `Text`, editor `Canvas`, and root `Scroll`
+  remain separate follow-ups.

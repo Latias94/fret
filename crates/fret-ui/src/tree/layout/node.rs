@@ -865,6 +865,21 @@ impl<H: UiHost> UiTree<H> {
         prev_bounds: Rect,
         is_root: bool,
     ) -> Result<(), CleanGeometrySolveSkipRejection> {
+        if self.clean_geometry_absent_interactivity_gate_leaf(app, window, node) {
+            let Some(entry) = self.nodes.get(node) else {
+                return Err(CleanGeometrySolveSkipRejection::new(
+                    CleanGeometrySolveSkipRejectionReason::MissingNode,
+                )
+                .at_node(node));
+            };
+            if entry.invalidation.layout {
+                return Err(CleanGeometrySolveSkipRejection::new(
+                    CleanGeometrySolveSkipRejectionReason::LayoutDirty,
+                )
+                .at_node(node));
+            }
+            return Ok(());
+        }
         self.clean_geometry_node_clean_result(node)?;
         if !is_root
             && self
@@ -1108,6 +1123,11 @@ impl<H: UiHost> UiTree<H> {
         kind: &'static str,
     ) -> Result<CleanGeometryNodeContract, CleanGeometrySolveSkipRejection> {
         match instance {
+            crate::declarative::frame::ElementInstance::InteractivityGate(props)
+                if !props.present =>
+            {
+                Ok(CleanGeometryNodeContract::propagated_leaf())
+            }
             crate::declarative::frame::ElementInstance::Scroll(_)
             | crate::declarative::frame::ElementInstance::TextInput(_) => {
                 Ok(CleanGeometryNodeContract::side_effect_boundary())
@@ -1176,6 +1196,23 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    fn clean_geometry_absent_interactivity_gate_leaf(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        node: NodeId,
+    ) -> bool {
+        crate::declarative::frame::element_record_for_node(app, window, node).is_some_and(
+            |record| {
+                matches!(
+                    record.instance,
+                    crate::declarative::frame::ElementInstance::InteractivityGate(props)
+                        if !props.present
+                )
+            },
+        )
+    }
+
     fn clean_flex_child_bounds_strategy(
         props: crate::element::FlexProps,
     ) -> CleanGeometryChildBoundsStrategy {
@@ -1212,6 +1249,8 @@ impl<H: UiHost> UiTree<H> {
                 })?
                 .bounds;
             if child_style.position == crate::element::PositionStyle::Absolute {
+                let allow_zero_measured_size =
+                    self.clean_geometry_absent_interactivity_gate_leaf(app, window, child);
                 out.push((
                     child,
                     Self::clean_absolute_px_inset_child_bounds(
@@ -1219,6 +1258,7 @@ impl<H: UiHost> UiTree<H> {
                         bounds,
                         prev_child,
                         element_kind,
+                        allow_zero_measured_size,
                     )?,
                 ));
                 continue;
@@ -1265,6 +1305,7 @@ impl<H: UiHost> UiTree<H> {
         containing_bounds: Rect,
         prev_child: Rect,
         element_kind: &'static str,
+        allow_zero_measured_size: bool,
     ) -> Result<Rect, CleanGeometrySolveSkipRejection> {
         if !Self::clean_margin_edges_are_zero_px(child_style.margin) {
             return Err(CleanGeometrySolveSkipRejection::for_kind(
@@ -1327,14 +1368,17 @@ impl<H: UiHost> UiTree<H> {
             element_kind,
         )?;
 
-        if prev_child.size == Size::default() {
+        let computed_size = Size::new(width, height);
+        if prev_child.size == Size::default()
+            && !(allow_zero_measured_size && computed_size == Size::default())
+        {
             return Err(CleanGeometrySolveSkipRejection::for_kind(
                 CleanGeometrySolveSkipRejectionReason::MissingMeasuredSize,
                 element_kind,
             ));
         }
 
-        Ok(Rect::new(Point::new(x, y), Size::new(width, height)))
+        Ok(Rect::new(Point::new(x, y), computed_size))
     }
 
     fn clean_inset_edge_px_or_auto(

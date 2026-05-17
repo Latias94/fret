@@ -464,6 +464,40 @@ Status: Active
   - Decision: close the narrow `Grid` proof here. The next slice should first classify the
     `text_reflow / Text` and root `missing_measured_size / Stack` blockers rather than widening
     text or grid participation by name.
+- [x] Classify `text_reflow / Text` and close the sidebar `missing_measured_size / Stack` blocker.
+  - Text classification: the content `Semantics` blocker is the existing safe `text_reflow / Text`
+    stop condition at `apps/fret-ui-gallery/src/ui/content.rs:742`. Keep it on the authoritative
+    solve path; do not widen text participation without a line-break / computed-box stability
+    proof.
+  - Source audit: the sidebar nav `ScrollArea` is a remaining-space child in a vertical flex column.
+    It now spells that policy explicitly with `w_full().h_full().flex_1().min_w_0().min_h_0()`,
+    matching the content scroll authoring surface and locking the intent with a gallery source
+    guard.
+  - First local check showed authoring alone did not remove the root blocker:
+    `target/fret-diag/local-next-sidebar-nav-flex-fill-clean-geometry-20260518-r1/1779034426572/bundle.schema2.json`
+    still reported `missing_measured_size / Stack` through the sidebar `ScrollArea`.
+  - Implemented mechanism fix: absent `InteractivityGate` nodes are treated as clean propagated
+    leaves in the clean-geometry preflight, and explicit `0x0` absolute overlay chrome is no longer
+    confused with an unmeasured child. This matches `ScrollArea` hidden scrollbar/corner gates:
+    they are mounted but `present=false`, layout to `0x0`, and suppress hidden descendant dirty
+    work.
+  - Focused guardrail:
+    `clean_geometry_small_resize_skips_absent_zero_absolute_overlay_child` proves a hidden absolute
+    overlay gate with legal zero measured size does not force the `Stack` root solve or report
+    `missing_measured_size`.
+  - Local no-4090 evidence:
+    `target/fret-diag/local-next-absent-zero-overlay-clean-geometry-20260518-r1/1779035222170/bundle.schema2.json`.
+  - Result: the root `Stack` blocker moved from `missing_measured_size / Stack` through sidebar
+    `ScrollArea` to `unsupported_kind / ViewCache` at the gallery content shell. Top frame
+    total/layout/solve/prepaint/paint is `1343/671/287/270/402us` with `4` layout-engine solves;
+    view-cache reuse remains `1`, needs-rerender remains `0`, and row replay/store remains `289/0`.
+  - Remaining blockers: content `Semantics` remains `text_reflow / Text`; root `Stack` is now
+    `unsupported_kind / ViewCache`; editor `Canvas` remains small; root `Scroll` remains a
+    side-effect boundary.
+  - Decision: close the sidebar `missing_measured_size` blocker here. Do not start an
+    `Option<Size>` data-model refactor from this evidence alone; the sentinel issue was real but
+    narrow enough to address at the absent overlay contract. The next optimization should audit
+    `ViewCache` clean-geometry participation or explicitly stop at text/view-cache boundaries.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

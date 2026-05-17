@@ -1126,6 +1126,78 @@ Card-header-like `Grid` clean-geometry closeout (2026-05-17):
     classify the `text_reflow / Text` blocker and the remaining root `missing_measured_size / Stack`
     blocker before implementing another fast path or authoring cleanup.
 
+Sidebar absent-overlay `missing_measured_size` closeout (2026-05-18):
+
+- Source and contract conclusion:
+  - The content `text_reflow / Text` blocker is an intentional stop condition. The computed text
+    box changes under the width delta, so the content `Semantics` solve must stay authoritative
+    until a separate text/line-break stability proof exists.
+  - The sidebar nav `ScrollArea` should still be authored as an explicit flex-fill slot inside the
+    vertical sidebar column. It now uses
+    `w_full().h_full().flex_1().min_w_0().min_h_0()` and has a gallery source guard.
+  - Authoring alone was insufficient: the first local rerun still reported
+    `missing_measured_size / Stack` through the sidebar `ScrollArea`.
+  - The actual mechanism gap was narrower than an `Option<Size>` data-model refactor: hidden
+    `ScrollArea` scrollbar/corner gates are absent `InteractivityGate` nodes with legal explicit
+    `0x0` absolute geometry. The clean-geometry preflight was treating that legal zero measured
+    size as if the child had never been measured.
+- Mechanism anchors:
+  - `crates/fret-ui/src/tree/layout/node.rs`
+    (`clean_geometry_absent_interactivity_gate_leaf`,
+    `clean_absolute_px_inset_child_bounds`)
+  - `crates/fret-ui/src/declarative/tests/layout/layout_engine.rs`
+    (`clean_geometry_small_resize_skips_absent_zero_absolute_overlay_child`)
+  - `apps/fret-ui-gallery/src/ui/nav.rs`
+    (`sidebar_view` nav `ScrollArea` authoring)
+- Focused gates:
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_absent_zero_absolute_overlay_child --no-fail-fast`
+    - Result: `1/1` passed.
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_absent_zero_absolute_overlay_child clean_geometry_small_resize_skips_px_absolute_stack_overlay_child clean_geometry_small_resize_rejects_fraction_absolute_stack_overlay_inset clean_parent_geometry_skip_still_runs_scroll_layout_side_effects clean_geometry_small_resize_runs_text_input_layout_as_side_effect_boundary --no-fail-fast`
+    - Result: `5/5` passed.
+  - `cargo nextest run -p fret-ui layout_engine --no-fail-fast`
+    - Result: `43/43` passed.
+  - `cargo nextest run -p fret-ui scroll --no-fail-fast`
+    - Result: `153/153` passed.
+  - `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app gallery_sidebar_nav_scroll_is_explicit_flex_fill_slot -- --exact`
+    - Result: `1/1` passed.
+  - `cargo check -p fret-ui-gallery --features gallery-full`
+    - Result: passed.
+  - `cargo fmt --check`
+    - Result: passed.
+  - `python3 tools/check_layering.py`
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed.
+- Local blocker evidence:
+  - Authoring-only bundle:
+    `target/fret-diag/local-next-sidebar-nav-flex-fill-clean-geometry-20260518-r1/1779034426572/bundle.schema2.json`
+    - Result: top frame total/layout/solve/prepaint/paint was `1229/607/267/245/377us`, but the
+      root `Stack` blocker still reported `missing_measured_size / Stack` through
+      `apps/fret-ui-gallery/src/ui/nav.rs:252` and `ecosystem/fret-ui-shadcn/src/scroll_area.rs:340`.
+  - Mechanism-fix bundle:
+    `target/fret-diag/local-next-absent-zero-overlay-clean-geometry-20260518-r1/1779035222170/bundle.schema2.json`
+    - Result: top frame total/layout/layout-engine-solve/prepaint/paint is
+      `1343/671/287/270/402us` with `4` layout-engine solves.
+    - Guardrails remain stable: `top_view_cache_roots_reused=1`,
+      `top_view_cache_roots_needs_rerender=0`, row replay/store is `289/0`, row-scene replay hit
+      rate is `100%`, and renderer text prepare is `71us`.
+    - The previous sidebar `missing_measured_size / Stack` blocker is gone from per-solve
+      attribution.
+    - Remaining blockers:
+      - content `Semantics`: `text_reflow / Text` at
+        `apps/fret-ui-gallery/src/ui/content.rs:742`, solve about `179us`;
+      - root `Stack`: `unsupported_kind / ViewCache` at
+        `apps/fret-ui-gallery/src/driver/shell.rs:164`, solve about `91us`;
+      - editor `PointerRegion`: `unsupported_kind / Canvas`, solve about `4us`;
+      - root `Scroll`: `side_effect_boundary / Scroll`, solve `0us`.
+- Decision:
+  - Close the sidebar `missing_measured_size` blocker as a narrow absent-overlay clean-geometry
+    contract plus app authoring guard.
+  - Keep the broad `measured_size: Option<Size>` refactor as a future architecture lane only if
+    more evidence shows the sentinel ambiguity recurring outside absent `0x0` overlays.
+  - The next optimization candidate is `ViewCache` clean-geometry participation, not direct text
+    reflow skipping and not root `Scroll` layout skipping.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:
