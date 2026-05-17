@@ -17,18 +17,20 @@ aliases, and wrappers may be deleted when first-party callers are migrated.
 
 ## Active Task
 
-- Task ID: ASF-040
+- Task ID: ASF-041
 - Owner: unassigned
 - Files:
   - `ecosystem/fret`
   - `ecosystem/fret/src/lib.rs`
   - `ecosystem/fret/src/view.rs`
+  - `ecosystem/fret/src/actions.rs`
   - `ecosystem/fret/tests`
   - related docs/tests
 - Validation:
-  - public surface tests for the approved `fret::app::prelude::*` budget
+  - existing `fret` public surface tests
+  - targeted compile/tests for `LocalState`, typed actions, selector/query reads, and raw-model escape hatches
   - focused `cargo nextest run -p fret ...`
-  - `python tools/check_consumption_profiles.py` if feature/profile behavior changes
+  - `python tools/check_consumption_profiles.py` only if feature/profile behavior changes
 
 ## Decisions Since Last Update
 
@@ -60,6 +62,10 @@ aliases, and wrappers may be deleted when first-party callers are migrated.
   scaffold README guidance now says that generated mount applies the plan on the builder. The
   scaffold compile gate also flushed two stale template API uses (`cx.app` and `cx.text(...)` on
   `AppUi`), both migrated on the generated template surface.
+- ASF-040 closes the `fret::app::prelude::*` Golden Path budget in source-level public-surface
+  tests. Named prelude exports are limited to first-contact app authoring nouns, and anonymous
+  extension traits remain explicit budget entries. `docs/crate-usage-guide.md` now records that the
+  app prelude is not a staging area for new secondary surfaces.
 
 ## Blockers
 
@@ -67,6 +73,7 @@ aliases, and wrappers may be deleted when first-party callers are migrated.
 
 ## Next Recommended Action
 
-- Start ASF-040: define and enforce the narrow `fret::app::prelude::*` Golden Path budget.
-  Begin from existing source-level public-surface tests in `ecosystem/fret/src/lib.rs`, then delete
-  or move names that are outside the approved app-authoring import budget instead of adding aliases.
+- Start ASF-041: split the large view/action authoring implementation into deeper owner modules
+  without widening the public interface. Begin by mapping the current owners in `ecosystem/fret/src/view.rs`
+  and `ecosystem/fret/src/actions.rs`, then move one cohesive family at a time behind stable
+  re-exports guarded by the existing public-surface tests.

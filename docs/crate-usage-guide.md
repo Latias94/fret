@@ -187,6 +187,16 @@ intentionally empty. This bridge stays off `fret::app::prelude::*`; default app 
 only import it for truly activation-only custom/third-party widgets that have not yet graduated to
 their own app-facing action surface.
 
+`fret::app::prelude::*` is a closed Golden Path budget, not a staging area. Named exports are
+limited to first-contact app authoring nouns: `FretApp`, `App`, `AppRenderContext`, `AppRenderCx`,
+`AppUi`, `Ui`, `UiChild`, `WindowId`, `View`, `Px`, `ui`, and optional `shadcn`. Anonymous extension
+traits are also part of the budget: grouped app action/data helpers, `LocalState` observation,
+state query/mutation read helpers when their features are enabled, `.ui()` / `.into_element*()`,
+style refinement, and a11y/test-id/semantics refinements. New styling nouns, command IDs, assets,
+environment/adaptive helpers, router/docking/editor ecosystems, activation bridges, raw model
+hooks, and low-level mechanism types must stay on explicit modules unless the Golden Path budget is
+deliberately revised.
+
 When app code needs explicit styling or icon nouns, keep them off the default prelude and import
 them intentionally from `fret::style::{...}` and `fret::icons::{icon, IconId}`.
 When extracted app helpers need hover shells or attributed text leaves, prefer

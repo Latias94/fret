@@ -2704,6 +2704,15 @@ mod authoring_surface_policy_tests {
         exported
     }
 
+    fn pub_use_lines(source: &str) -> std::collections::BTreeSet<String> {
+        source
+            .lines()
+            .map(str::trim)
+            .filter(|line| line.starts_with("pub use "))
+            .map(str::to_owned)
+            .collect()
+    }
+
     fn markdown_table_row<'a>(doc: &'a str, label: &str) -> &'a str {
         doc.lines()
             .find(|line| line.starts_with('|') && line.contains(label))
@@ -3820,6 +3829,88 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("docking"));
         assert!(!app_prelude_exports_symbol("handle_dock_op"));
         assert!(!app_prelude_exports_symbol("InstallConfig"));
+    }
+
+    #[test]
+    fn app_prelude_pub_use_budget_is_curated_and_closed() {
+        let app_prelude = app_prelude_source();
+        let actual_lines = pub_use_lines(app_prelude);
+        let expected_lines = [
+            "pub use crate::FretApp;",
+            "pub use crate::app::App;",
+            "pub use crate::app::AppRenderContext;",
+            "pub use crate::app::AppRenderCx;",
+            "pub use crate::shadcn;",
+            "pub use crate::view::AppRenderActionsExt as _;",
+            "pub use crate::view::AppRenderDataExt as _;",
+            "pub use crate::view::MutationHandleReadLayoutExt as _;",
+            "pub use crate::view::QueryHandleReadLayoutExt as _;",
+            "pub use crate::view::TrackedStateExt as _;",
+            "pub use crate::view::View;",
+            "pub use crate::{AppUi, Ui, UiChild, WindowId};",
+            "pub use fret_core::Px;",
+            "pub use fret_ui_kit::IntoUiElement as _;",
+            "pub use fret_ui_kit::IntoUiElementInExt as _;",
+            "pub use fret_ui_kit::StyledExt as _;",
+            "pub use fret_ui_kit::UiExt as _;",
+            "pub use fret_ui_kit::declarative::AnyElementSemanticsExt as _;",
+            "pub use fret_ui_kit::declarative::UiElementA11yExt as _;",
+            "pub use fret_ui_kit::declarative::UiElementTestIdExt as _;",
+            "pub use fret_ui_kit::ui;",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect::<std::collections::BTreeSet<_>>();
+
+        assert_eq!(
+            actual_lines, expected_lines,
+            "app prelude pub-use statements should stay on the approved Golden Path budget"
+        );
+
+        let actual_symbols = exported_symbol_names(app_prelude);
+        let expected_symbols = [
+            "App",
+            "AppRenderContext",
+            "AppRenderCx",
+            "AppUi",
+            "FretApp",
+            "Px",
+            "Ui",
+            "UiChild",
+            "View",
+            "WindowId",
+            "shadcn",
+            "ui",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect::<std::collections::BTreeSet<_>>();
+
+        assert_eq!(
+            actual_symbols, expected_symbols,
+            "app prelude named exports should stay limited to first-contact app authoring nouns"
+        );
+
+        let compact = app_prelude.split_whitespace().collect::<String>();
+        assert!(compact.contains("#[cfg(feature=\"shadcn\")]pubusecrate::shadcn;"));
+        assert!(compact.contains(
+            "#[cfg(feature=\"state-mutation\")]pubusecrate::view::MutationHandleReadLayoutExtas_;"
+        ));
+        assert!(compact.contains(
+            "#[cfg(feature=\"state-query\")]pubusecrate::view::QueryHandleReadLayoutExtas_;"
+        ));
+
+        assert!(
+            CRATE_USAGE_GUIDE.contains("`fret::app::prelude::*` is a closed Golden Path budget")
+        );
+        assert!(CRATE_USAGE_GUIDE.contains("closed Golden Path budget"));
+        assert!(CRATE_USAGE_GUIDE.contains("first-contact app authoring nouns"));
+        assert!(CRATE_USAGE_GUIDE.contains("Anonymous extension"));
+        assert!(CRATE_USAGE_GUIDE.contains("traits are also part of the budget"));
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains("must stay on explicit modules unless the Golden Path budget is")
+        );
     }
 
     #[test]

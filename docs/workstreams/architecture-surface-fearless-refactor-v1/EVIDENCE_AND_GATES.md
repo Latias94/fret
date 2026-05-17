@@ -135,6 +135,25 @@ Disallowed dependency names for backend-free profiles unless explicitly reclassi
   - `python tools/check_layering.py`
   - `python tools/check_workstream_catalog.py`
 
+2026-05-17 result for ASF-040:
+
+- `fret::app::prelude::*` now has a source-level closed pub-use budget in
+  `ecosystem/fret/src/lib.rs`, covering both named exports and anonymous extension traits.
+- Named prelude exports are limited to first-contact app authoring nouns: `FretApp`, `App`,
+  `AppRenderContext`, `AppRenderCx`, `AppUi`, `Ui`, `UiChild`, `WindowId`, `View`, `Px`, `ui`, and
+  optional `shadcn`.
+- Extension-trait imports remain anonymous budget entries for grouped app action/data helpers,
+  tracked state observation, feature-gated query/mutation read helpers, element conversion, style
+  refinement, and a11y/test-id/semantics refinements.
+- `docs/crate-usage-guide.md` now states that the app prelude is a closed Golden Path budget rather
+  than a staging area; new styling, command, asset, environment/adaptive, router, docking, editor,
+  activation, raw model, and low-level mechanism surfaces must stay on explicit modules unless that
+  budget is deliberately revised.
+- Targeted checks passed:
+  - `cargo fmt --package fret`
+  - `cargo nextest run -p fret --locked app_prelude_pub_use_budget_is_curated_and_closed -j 1`
+  - `cargo nextest run -p fret --locked authoring_surface_policy_tests -j 1`
+
 ### Bootstrap Plan Gates
 
 ```bash

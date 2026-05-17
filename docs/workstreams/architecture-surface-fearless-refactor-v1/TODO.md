@@ -47,11 +47,11 @@ Last updated: 2026-05-17
 
 ## M3 — Public Facade Narrowing
 
-- [ ] ASF-040 [owner=unassigned] [deps=ASF-020] [scope=ecosystem/fret/src/lib.rs,ecosystem/fret/src/view.rs,ecosystem/fret/tests,docs]
+- [x] ASF-040 [owner=codex] [deps=ASF-020] [scope=ecosystem/fret/src/lib.rs,ecosystem/fret/src/view.rs,ecosystem/fret/tests,docs]
   Goal: Define and enforce the narrow `fret::app::prelude::*` Golden Path budget.
   Validation: surface tests assert the prelude contains only the approved app-authoring imports and excludes advanced/compatibility names.
-  Evidence: Updated public surface tests and docs.
-  Handoff: Names not in the budget should move to explicit modules or direct crates.
+  Evidence: `ecosystem/fret/src/lib.rs`; `docs/crate-usage-guide.md`.
+  Handoff: Completed on 2026-05-17; `fret::app::prelude::*` now has a source-level closed pub-use budget plus docs that describe named exports and anonymous extension traits.
 
 - [ ] ASF-041 [owner=unassigned] [deps=ASF-040] [scope=ecosystem/fret/src/view.rs,ecosystem/fret/src/actions.rs,ecosystem/fret/src/lib.rs]
   Goal: Split the large view/action authoring implementation into deeper owner modules without widening the public interface.
