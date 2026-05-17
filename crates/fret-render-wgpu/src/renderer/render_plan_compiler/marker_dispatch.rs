@@ -3,6 +3,7 @@ use super::clip_path;
 use super::composite_group;
 use super::context::RenderPlanCompilerCtx;
 use super::draw_scope::DrawScope;
+use super::effect_chain::EffectChainBudgetStats;
 use super::effect_scope;
 use crate::renderer::{
     BlurQualitySnapshot, EffectDegradationSnapshot, EffectMarker, EffectMarkerKind, SceneEncoding,
@@ -16,7 +17,7 @@ pub(super) struct MarkerDispatchState {
     backdrop_source_group_scopes: Vec<backdrop_source_group::BackdropSourceGroupScope>,
     backdrop_source_group_reserved_targets: Vec<super::super::PlanTarget>,
     backdrop_source_group_in_use_bytes: u64,
-    effect_chain_budget_stats: effect_scope::EffectChainBudgetStats,
+    effect_chain_budget_stats: EffectChainBudgetStats,
     effect_degradations: EffectDegradationSnapshot,
     effect_blur_quality: BlurQualitySnapshot,
 }
@@ -31,7 +32,7 @@ impl MarkerDispatchState {
             backdrop_source_group_scopes: Vec::new(),
             backdrop_source_group_reserved_targets: Vec::new(),
             backdrop_source_group_in_use_bytes: 0,
-            effect_chain_budget_stats: effect_scope::EffectChainBudgetStats::default(),
+            effect_chain_budget_stats: EffectChainBudgetStats::default(),
             effect_degradations: EffectDegradationSnapshot::default(),
             effect_blur_quality: BlurQualitySnapshot::default(),
         }
@@ -213,7 +214,7 @@ impl MarkerDispatchState {
     ) -> (
         EffectDegradationSnapshot,
         BlurQualitySnapshot,
-        effect_scope::EffectChainBudgetStats,
+        EffectChainBudgetStats,
     ) {
         (
             self.effect_degradations,

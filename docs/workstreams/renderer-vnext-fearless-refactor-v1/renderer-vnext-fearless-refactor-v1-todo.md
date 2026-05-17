@@ -615,6 +615,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
       module.
     - [x] Step 3f: split draw-scope stack and load-op consumption into a focused helper module.
     - [x] Step 3g: move scissor-sized-intermediate eligibility into compile preflight.
+    - [x] Step 3h: split effect-chain pass application and budget stats into a focused helper
+      module.
   - Landed (step 1): extracted target/budget helpers and their focused tests into
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
   - Landed (step 2): introduced `RenderPlanCompilerCtx` to own structural compiler outputs
@@ -657,6 +659,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Landed (step 3g): moved scissor-sized-intermediate eligibility into
     `RenderPlanPreflight` so the main compiler loop no longer scans `EffectMarkerKind` directly
     before marker dispatch.
+  - Landed (step 3h): moved effect-chain pass application and budget-stat accumulation into
+    `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_chain.rs` while keeping
+    effect-scope push/pop lifetime decisions in `effect_scope.rs`.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
       `compile_for_scene_inner`)
@@ -674,7 +679,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
       `BackdropSourceGroupScope::effect_ctx`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
       (`compile_effect_scope_push`, `compile_effect_scope_pop`,
-      `EffectChainBudgetStats::apply_to_plan`)
+      effect-scope push/pop target lifetime)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_chain.rs`
+      (`apply_chain_in_place`, `EffectChainApplyCtx`, `EffectChainBudgetStats::apply_to_plan`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/path_msaa.rs`
       (`try_compile_path_msaa_batch`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/preflight.rs`

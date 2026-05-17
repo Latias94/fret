@@ -8,6 +8,7 @@ mod clip_path;
 mod composite_group;
 mod context;
 mod draw_scope;
+mod effect_chain;
 mod effect_scope;
 mod marker_dispatch;
 mod path_msaa;

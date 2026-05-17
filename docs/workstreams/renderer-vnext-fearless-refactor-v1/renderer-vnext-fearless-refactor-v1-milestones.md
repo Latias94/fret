@@ -1064,6 +1064,31 @@ Progress record (RenderPlan compiler preflight eligibility consolidation):
   - `python3 tools/check_layering.py`
   - `git diff --check`
 
+Progress record (RenderPlan compiler effect-chain helper split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3h; Stage 24 continues)
+- Objective:
+  - Split effect-chain pass application and budget-stat accumulation out of the effect-scope
+    compiler without changing effect-scope push/pop target lifetimes, Backdrop no-op degradation,
+    FilterContent disabled degradation, effect degradation snapshots, blur quality snapshots, or
+    compile stats.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_chain.rs`
+    (`apply_chain_in_place`, `EffectChainApplyCtx`, `EffectChainBudgetStats::apply_to_plan`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
+    (push/pop lifetimes still pass original stats/degradation/blur handles into `effect_chain`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (`EffectChainBudgetStats` ownership moved to the effect-chain helper)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:
