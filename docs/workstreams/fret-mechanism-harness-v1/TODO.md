@@ -464,7 +464,7 @@ date: 2026-05-12
     sidecar, and runs inside the promoted `ui-gallery-select` suite. The first drafts found harness
     authoring defects in the start-section filter and `bounds_max_size` width oracle; no runtime
     Select placement defect was confirmed.
-- [ ] Add an overlay/listbox placement ownership runtime slice for Select or Combobox that
+- [x] Add an overlay/listbox placement ownership runtime slice for Select or Combobox that
   exercises scroll-container clipping, modal boundary choice, RTL direction, and viewport resize
   with placement/layout sidecar evidence.
   - Progress: the Select item-aligned resize sub-axis is now covered by
@@ -507,9 +507,14 @@ date: 2026-05-12
   - Result: `element_root_bounds_cache_rebuilds_on_view_cache_hit_after_viewport_move` now covers
     the same ownership move through retained render reuse when the cached subtree render function is
     not re-entered.
-  - Remaining: promote a runtime UI Gallery view-cache movement companion only if a real surface can
-    move cached overlay sources across viewport roots; otherwise continue to the next uncovered
-    mechanism axis.
+  - Result: this ownership axis is closed for v1. The runtime matrix now covers Select
+    item-aligned resize-close policy, Combobox anchored resize-reposition policy, scroll-container
+    clipping plus RTL ownership, modal/root-boundary ownership, synthetic cross-root coordinates,
+    and the Resizable multi-viewport runtime companion. It found and fixed the mechanism-layer
+    effective root-boundary cache defect where overlay placement used the OS window/owner root
+    instead of the source element's nearest layout viewport root. A view-cache movement companion
+    remains only as a future follow-on if a real Gallery surface can move cached overlay sources
+    across viewport roots.
 - [x] Add a diagnostics script lint/registry audit for long-page content clicks that use plain
   `click` without a nearby `scroll_into_view`, `bounds_within_window`, or `click_stable`
   precondition.

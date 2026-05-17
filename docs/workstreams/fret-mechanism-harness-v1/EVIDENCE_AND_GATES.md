@@ -2144,6 +2144,11 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - structured trace proof:
     `chosen_side=top`, `preferred_fits_without_main_clamp=false`, and
     `outer_collision=336x378@514.67,468.67`.
+  - ownership-close suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-resizable --dir target/fret-diag-resizable-suite-ownership-close-v1 --session-auto --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - ownership-close suite result:
+    `target/fret-diag-resizable-suite-ownership-close-v1/sessions/1778976095291-118960/suite.summary.json`
+    reports `status=passed`, 1/1 row, and zero lint errors/warnings.
 - Non-modal overlay underlay activation-status gates:
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-click-through-outside-press-focus-underlay.json`
   and
