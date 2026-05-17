@@ -1079,3 +1079,47 @@ fn gallery_tree_torture_uses_control_readout_for_status_text() {
         );
     }
 }
+
+#[test]
+fn gallery_overlay_status_text_uses_control_readout_roles() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/gallery/overlays/overlay/flags.rs",
+        &[
+            "fnoverlay_status_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "doc_layout::control_readout_text(cx,text)",
+            "overlay_status_text(cx,text).test_id(\"ui-gallery-overlay-last-action\")",
+            "overlay_status_text(cx,\"Popoverdismissed\")",
+            "overlay_status_text(cx,\"Dialogopen\").test_id(\"ui-gallery-dialog-open\")",
+            "overlay_status_text(cx,\"Dialog(Glass)open\")",
+            "overlay_status_text(cx,\"Underlayactivated\")",
+            "overlay_status_text(cx,\"AlertDialogopen\")",
+        ],
+    );
+
+    for forbidden in [
+        "cx.text(text).test_id(\"ui-gallery-overlay-last-action\")",
+        "cx.text(\"Popoverdismissed\")",
+        "cx.text(\"Dialogopen\")",
+        "cx.text(\"Dialog(Glass)open\")",
+        "cx.text(\"Underlayactivated\")",
+        "cx.text(\"AlertDialogopen\")",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "overlay flags reintroduced bare status text: {forbidden}"
+        );
+    }
+}
+
+#[test]
+fn gallery_menus_last_action_uses_control_readout_role() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/gallery/overlays/menus.rs",
+        &["doc_layout::control_readout_text(cx,format!(\"lastaction:{last}\"))"],
+    );
+
+    assert!(
+        !normalized.contains("cx.text(format!(\"lastaction:{last}\"))"),
+        "menus preview reintroduced bare last-action status text"
+    );
+}

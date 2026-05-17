@@ -436,6 +436,8 @@
     "apps/fret-ui-gallery/src/ui/previews/pages/harness/ui_kit_list_torture.rs",
     "apps/fret-ui-gallery/src/ui/previews/pages/harness/view_cache.rs",
     "apps/fret-ui-gallery/src/ui/previews/pages/harness/virtual_list_torture.rs",
+    "apps/fret-ui-gallery/src/ui/previews/gallery/overlays/menus.rs",
+    "apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/flags.rs",
     "apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs",
     "apps/fret-ui-gallery/src/ui/previews/gallery/data/data_grid.rs",
     "apps/fret-ui-gallery/src/ui/previews/gallery/data/table_torture.rs",

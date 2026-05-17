@@ -4,6 +4,13 @@ use fret::UiChild;
 
 use super::OverlayModels;
 
+fn overlay_status_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
+where
+    T: Into<Arc<str>>,
+{
+    doc_layout::control_readout_text(cx, text)
+}
+
 // Typed status helper: the label still reads preview-local models and attaches test ids, but the
 // landing stays explicit at the preview result-vector seam.
 pub(super) fn last_action_status(
@@ -16,7 +23,7 @@ pub(super) fn last_action_status(
         .get_cloned(&models.last_action)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
     let text = format!("last action: {last}");
-    cx.text(text).test_id("ui-gallery-overlay-last-action")
+    overlay_status_text(cx, text).test_id("ui-gallery-overlay-last-action")
 }
 
 // Intentional raw boundary: these flags are appended directly onto the overlay preview's concrete
@@ -28,7 +35,7 @@ pub(super) fn status_flags(cx: &mut AppComponentCx<'_>, models: &OverlayModels) 
             .unwrap_or_else(|| Arc::<str>::from("<none>"));
         if last.as_ref() == "popover:dismissed" {
             Some(
-                cx.text("Popover dismissed")
+                overlay_status_text(cx, "Popover dismissed")
                     .test_id("ui-gallery-popover-dismissed"),
             )
         } else {
@@ -41,7 +48,7 @@ pub(super) fn status_flags(cx: &mut AppComponentCx<'_>, models: &OverlayModels) 
             .get_model_copied(&models.dialog_open, Invalidation::Layout)
             .unwrap_or(false);
         if open {
-            Some(cx.text("Dialog open").test_id("ui-gallery-dialog-open"))
+            Some(overlay_status_text(cx, "Dialog open").test_id("ui-gallery-dialog-open"))
         } else {
             None
         }
@@ -53,7 +60,7 @@ pub(super) fn status_flags(cx: &mut AppComponentCx<'_>, models: &OverlayModels) 
             .unwrap_or(false);
         if open {
             Some(
-                cx.text("Dialog (Glass) open")
+                overlay_status_text(cx, "Dialog (Glass) open")
                     .test_id("ui-gallery-dialog-glass-open"),
             )
         } else {
@@ -67,7 +74,7 @@ pub(super) fn status_flags(cx: &mut AppComponentCx<'_>, models: &OverlayModels) 
             .unwrap_or(false);
         if activated {
             Some(
-                cx.text("Underlay activated")
+                overlay_status_text(cx, "Underlay activated")
                     .test_id("ui-gallery-overlay-underlay-activated"),
             )
         } else {
@@ -81,8 +88,7 @@ pub(super) fn status_flags(cx: &mut AppComponentCx<'_>, models: &OverlayModels) 
             .unwrap_or(false);
         if open {
             Some(
-                cx.text("AlertDialog open")
-                    .test_id("ui-gallery-alert-dialog-open"),
+                overlay_status_text(cx, "AlertDialog open").test_id("ui-gallery-alert-dialog-open"),
             )
         } else {
             None

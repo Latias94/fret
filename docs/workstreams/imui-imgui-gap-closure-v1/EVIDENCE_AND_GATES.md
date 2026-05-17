@@ -552,6 +552,11 @@ Run evidence:
   `doc_layout::control_readout_text(...)` instead of local muted/text-sm styling. Gate: `cargo
   nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews
   gallery_tree_torture_uses_control_readout_for_status_text --no-fail-fast`.
+- 2026-05-17: UI Gallery's overlay and menu last-action/status flags now route through
+  `doc_layout::control_readout_text(...)` instead of bare `cx.text(...)`. Gate: `cargo nextest run
+  -p fret-ui-gallery --test ui_authoring_surface_internal_previews
+  gallery_overlay_status_text_uses_control_readout_roles
+  gallery_menus_last_action_uses_control_readout_role --no-fail-fast`.
 - 2026-05-17: UI Gallery's status bar now routes metric, inspector-state, and last-action text
   through `driver::text_roles::chrome_readout_text(...)`, backed by
   `fret-ui-kit::declarative::text::text_control_readout(...)`. This keeps fixed status chrome on
@@ -1292,6 +1297,15 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 
 - `cargo fmt -p fret-ui-gallery` passed.
 - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_tree_torture_uses_control_readout_for_status_text --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery overlay status text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_overlay_status_text_uses_control_readout_roles gallery_menus_last_action_uses_control_readout_role --no-fail-fast` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.

@@ -61,6 +61,6 @@ pub(in crate::ui) fn preview_menus(
             .gap(Space::N2)
             .items_center()
             .into_element(cx),
-        cx.text(format!("last action: {last}")),
+        doc_layout::control_readout_text(cx, format!("last action: {last}")),
     ]
 }

@@ -382,6 +382,8 @@ Readiness order for the next locally testable review slices:
    2026-05-17 gallery tree torture status text follow-up: the UI Gallery Tree Torture dynamic
    target status now routes through `control_readout_text(...)` instead of carrying local
    muted/text-sm styling.
+   2026-05-17 gallery overlay status text follow-up: overlay and menu last-action/status flags now
+   route through `control_readout_text(...)` instead of bare `cx.text(...)`.
    2026-05-17 virtual row fallback follow-up: tree and file-tree virtualizer out-of-range fallback
    paths now use spacer placeholders instead of empty text nodes, removing another fixed-row
    `Text` escape hatch.
