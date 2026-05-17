@@ -79,7 +79,7 @@ pub(in crate::ui) fn preview_chrome_torture(
                                     .role(fret_core::SemanticsRole::TextField)
                                     .test_id("ui-gallery-chrome-text-input"),
                             );
-                            vec![cx.text("Text input"), input]
+                            vec![doc_layout::control_label_text(cx, "Text input"), input]
                         })
                         .gap(Space::N1)
                         .into_element(cx),
@@ -92,7 +92,7 @@ pub(in crate::ui) fn preview_chrome_torture(
                                     .role(fret_core::SemanticsRole::TextField)
                                     .test_id("ui-gallery-chrome-text-area"),
                             );
-                            vec![cx.text("Text area"), textarea]
+                            vec![doc_layout::control_label_text(cx, "Text area"), textarea]
                         })
                         .gap(Space::N1)
                         .into_element(cx),

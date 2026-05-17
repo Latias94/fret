@@ -384,6 +384,9 @@ Readiness order for the next locally testable review slices:
    muted/text-sm styling.
    2026-05-17 gallery overlay status text follow-up: overlay and menu last-action/status flags now
    route through `control_readout_text(...)` instead of bare `cx.text(...)`.
+   2026-05-17 gallery chrome torture control-label follow-up: the fixed text-input/textarea
+   labels now route through `control_label_text(...)`, backed by shared `text_control_label(...)`,
+   instead of bare `cx.text(...)`.
    2026-05-17 virtual row fallback follow-up: tree and file-tree virtualizer out-of-range fallback
    paths now use spacer placeholders instead of empty text nodes, removing another fixed-row
    `Text` escape hatch.

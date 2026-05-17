@@ -494,6 +494,13 @@ where
     decl_text::text_control_readout(cx, text)
 }
 
+pub(in crate::ui) fn control_label_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
+where
+    T: Into<Arc<str>>,
+{
+    decl_text::text_control_label(cx, text)
+}
+
 pub(in crate::ui) fn notes_block<I, T>(lines: I) -> impl IntoUiElement<fret_app::App> + use<I, T>
 where
     I: IntoIterator<Item = T>,

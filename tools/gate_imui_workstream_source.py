@@ -427,6 +427,7 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/driver/toaster.rs",
                 "apps/fret-ui-gallery/src/driver/status_bar.rs",
                 "apps/fret-ui-gallery/src/driver/text_roles.rs",
+                "apps/fret-ui-gallery/src/ui/previews/pages/torture/chrome_torture.rs",
                 "apps/fret-ui-gallery/src/ui/previews/pages/harness/ui_kit_list_torture.rs",
                 "apps/fret-ui-gallery/src/ui/previews/pages/harness/view_cache.rs",
                 "apps/fret-ui-gallery/src/ui/previews/pages/harness/virtual_list_torture.rs",
@@ -1472,12 +1473,25 @@ def main() -> None:
             required=[
                 "use fret_ui_kit::declarative::text as decl_text;",
                 "decl_text::text_control_readout(cx, text)",
+                "decl_text::text_control_label(cx, text)",
                 "decl_text::text_code_block(cx, code.clone())",
                 "control_readout_text_is_single_line_and_can_shrink_in_dense_rows",
             ],
             forbidden=[
                 "fn control_readout_text_props",
+                "fn control_label_text_props",
                 "let monospace = fret_core::TextStyle",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/previews/pages/torture/chrome_torture.rs"),
+            required=[
+                "doc_layout::control_label_text(cx, \"Text input\")",
+                "doc_layout::control_label_text(cx, \"Text area\")",
+            ],
+            forbidden=[
+                "cx.text(\"Text input\")",
+                "cx.text(\"Text area\")",
             ],
         ),
         SourceCheck(
@@ -1576,6 +1590,7 @@ def main() -> None:
                 "fn gallery_tree_torture_uses_control_readout_for_status_text()",
                 "fn gallery_overlay_status_text_uses_control_readout_roles()",
                 "fn gallery_menus_last_action_uses_control_readout_role()",
+                "fn page_chrome_torture_uses_control_label_roles()",
                 "fnretained_table_cell_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
                 "fndata_table_torture_cell_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
                 "fndata_grid_cell_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
@@ -1603,6 +1618,7 @@ def main() -> None:
                 "doc_layout::control_readout_text(cx,status.clone())",
                 "doc_layout::control_readout_text(cx,format!(\\\"lastaction:{last}\\\"))",
                 "overlay_status_text(cx,text).test_id(\\\"ui-gallery-overlay-last-action\\\")",
+                "doc_layout::control_label_text(cx,\\\"Textinput\\\")",
                 "retained_table_cell_text(cx,row.status.clone())",
                 "data_table_torture_cell_text(cx,row.status.clone())",
                 "data_grid_cell_text(cx,ifrow%3==0{\\\"Running\\\"}else{\\\"Idle\\\"})",

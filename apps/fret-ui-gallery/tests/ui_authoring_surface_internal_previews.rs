@@ -1123,3 +1123,33 @@ fn gallery_menus_last_action_uses_control_readout_role() {
         "menus preview reintroduced bare last-action status text"
     );
 }
+
+#[test]
+fn page_chrome_torture_uses_control_label_roles() {
+    let doc_layout = assert_normalized_markers_present(
+        "src/ui/doc_layout.rs",
+        &[
+            "pub(incrate::ui)fncontrol_label_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "decl_text::text_control_label(cx,text)",
+        ],
+    );
+    assert!(
+        !doc_layout.contains("fncontrol_label_text_props"),
+        "doc_layout should delegate control labels to the shared text role"
+    );
+
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/pages/torture/chrome_torture.rs",
+        &[
+            "doc_layout::control_label_text(cx,\"Textinput\")",
+            "doc_layout::control_label_text(cx,\"Textarea\")",
+        ],
+    );
+
+    for forbidden in ["cx.text(\"Textinput\")", "cx.text(\"Textarea\")"] {
+        assert!(
+            !normalized.contains(forbidden),
+            "chrome_torture reintroduced bare fixed control label text: {forbidden}"
+        );
+    }
+}
