@@ -231,10 +231,12 @@ and keep `packaged_entries(...)`, `packaged_bundle_entries(...)`, or
 remain the packaged lane because they already expose `ENTRIES`, `bundle_id()`, `Bundle`,
 `install(app)`, and `mount(builder)`.
 When you are on `fret-bootstrap` directly instead of `fret`, use the same startup contract from
-`fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` plus
-`BootstrapBuilder::with_asset_startup(...)`; keep file-backed native/package-dev inputs on
-`AssetStartupPlan::development_dir(...)` / `AssetStartupPlan::development_manifest(...)`, and use
-`AssetStartupPlan::packaged_entries(...)`, `AssetStartupPlan::packaged_bundle_entries(...)`, or
+`fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}`. That plan/default vocabulary is
+available under `fret-bootstrap --no-default-features`; applying it to
+`BootstrapBuilder::with_asset_startup(...)` requires the `launch` adapter feature. Keep file-backed
+native/package-dev inputs on `AssetStartupPlan::development_dir(...)` /
+`AssetStartupPlan::development_manifest(...)`, and use `AssetStartupPlan::packaged_entries(...)`,
+`AssetStartupPlan::packaged_bundle_entries(...)`, or
 `AssetStartupPlan::packaged_embedded_entries(...)` for packaged/web/mobile-friendly bytes.
 On native/package-dev lanes, `FileAssetManifestResolver::from_bundle_dir(...)` is the first-party
 generated-manifest convenience path when you want one directory to become one logical bundle
@@ -691,13 +693,15 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   Direct host registrations preserve order across `set_primary_resolver(...)`,
   `register_resolver(...)`, `register_bundle_entries(...)`, and `register_embedded_entries(...)`,
   so later registrations intentionally override earlier ones for the same logical locator.
-- **Apps using `fret-bootstrap` directly:** enable `fret-bootstrap/ui-assets` so `UiAppDriver` drives the caches from the event pipeline; optionally override
+- **Apps using `fret-bootstrap` directly:** enable `fret-bootstrap/ui-app-driver` plus
+  `fret-bootstrap/ui-assets` so `UiAppDriver` drives the caches from the event pipeline; optionally override
   budgets via `BootstrapBuilder::with_ui_assets_budgets(...)`. Keep logical asset identity on
   `fret_bootstrap::assets::{AssetBundleId, AssetLocator, AssetRequest, StaticAssetEntry, ...}`.
   For startup that needs one explicit development-vs-packaged switch, prefer
-  `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` plus
-  `BootstrapBuilder::with_asset_startup(...)`. Keep native/package-dev file-backed inputs on
-  `AssetStartupPlan::development_dir(...)` / `AssetStartupPlan::development_manifest(...)`, and
+  `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}`; applying that plan to
+  `BootstrapBuilder::with_asset_startup(...)` requires the `launch` adapter feature. Keep
+  native/package-dev file-backed inputs on `AssetStartupPlan::development_dir(...)` /
+  `AssetStartupPlan::development_manifest(...)`, and
   keep packaged bytes on `AssetStartupPlan::packaged_entries(...)`,
   `AssetStartupPlan::packaged_bundle_entries(...)`, or
   `AssetStartupPlan::packaged_embedded_entries(...)`.
@@ -719,13 +723,15 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 
 ### `fret-bootstrap`
 
-**What it is:** an opinionated bootstrap layer for apps (golden-path defaults) on top of `fret-launch`.
+**What it is:** an opinionated bootstrap layer for apps. Its default profile owns backend-free
+policy/defaults and logical asset vocabulary; the `launch` feature enables the concrete
+`fret-launch` / `fret-render` adapter layer.
 
 **Use it when:** you want:
 
 - layered settings/keymap loading,
-- the same named asset startup contract as `fret`, via
-  `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` and
+- the same named asset startup contract as `fret`, via backend-free
+  `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` and launch-enabled
   `BootstrapBuilder::with_asset_startup(...)`,
 - icon pack registration (built-in packs or custom),
 - optional UI app driver wiring,
@@ -733,8 +739,9 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 - optional diagnostics + tracing wiring.
 
 **Command palette note:** `fret-bootstrap/ui-app-command-palette` keeps the app-driver capability
-layer only. If you want the default shadcn `CommandDialog` presentation on top of that capability,
-enable `fret-bootstrap/ui-app-command-palette-shadcn` or use `fret`'s `command-palette` feature.
+layer only and therefore opts into the launch adapter lane. If you want the default shadcn
+`CommandDialog` presentation on top of that capability, enable
+`fret-bootstrap/ui-app-command-palette-shadcn` or use `fret`'s `command-palette` feature.
 
 **Diagnostics note:** `fret-bootstrap/diagnostics` now keeps the generic diagnostics/export path
 leaner. Enable `fret-bootstrap/diagnostics-canvas` only when you need retained canvas cache stats

@@ -5,30 +5,29 @@ Last updated: 2026-05-17
 
 ## Current State
 
-The workstream has been opened from an architecture surface audit. ASF-020 and ASF-021 are
-complete: the `fret` backend-free app-authoring profiles no longer pull the native
-launch/render/backend stack, the consumption profile script guards that dependency shape, and
-`FretApp` is now a backend-free authoring spec with desktop-only execution methods.
-
-`fret-bootstrap --no-default-features` still pulls launch/render/backend dependencies; that is now
-the next architectural split rather than part of the completed `fret` facade fix.
+The workstream has been opened from an architecture surface audit. ASF-020, ASF-021, and ASF-030
+are complete: the `fret` backend-free app-authoring profiles no longer pull the native
+launch/render/backend stack, `FretApp` is now a backend-free authoring spec with desktop-only
+execution methods, and `fret-bootstrap --no-default-features` now exposes bootstrap
+planning/default policy without pulling the concrete launch/render/backend stack.
 
 The user explicitly approved fearless refactoring with no compatibility burden: redundant old code,
 aliases, and wrappers may be deleted when first-party callers are migrated.
 
 ## Active Task
 
-- Task ID: ASF-030
+- Task ID: ASF-031
 - Owner: unassigned
 - Files:
   - `ecosystem/fret-bootstrap`
-  - `crates/fret-launch`
-  - `docs/adr/IMPLEMENTATION_ALIGNMENT.md`
+  - `ecosystem/fret`
+  - `apps/fretboard`
+  - related docs/templates
   - related docs/tests
 - Validation:
-  - `cargo tree -p fret-bootstrap --no-default-features -e normal --depth 4`
-  - `cargo check -p fret-bootstrap --no-default-features`
-  - focused checks for callers moved between bootstrap and launch
+  - focused `cargo check` for affected packages
+  - template/scaffold checks if call sites move
+  - `python tools/check_consumption_profiles.py`
 
 ## Decisions Since Last Update
 
@@ -47,6 +46,11 @@ aliases, and wrappers may be deleted when first-party callers are migrated.
 - ASF-021 made `FretApp` available in backend-free app-authoring profiles while keeping window,
   view-builder, asset-startup, command-palette, `UiAppBuilder`, and runner methods on the
   `desktop` lane.
+- ASF-030 split `fret-bootstrap`'s backend-free planning/default policy from the concrete
+  launch/render adapter surface. `fret-bootstrap --no-default-features` no longer pulls
+  `fret-launch`, `fret-render`, `wgpu`, `winit`, native platform, or runner crates. The public
+  backend-free asset planning surface is covered by
+  `ecosystem/fret-bootstrap/tests/backend_free_bootstrap_profile.rs`.
 
 ## Blockers
 
@@ -54,5 +58,5 @@ aliases, and wrappers may be deleted when first-party callers are migrated.
 
 ## Next Recommended Action
 
-- Start ASF-030: split backend-free bootstrap planning/default policy from concrete launch/render
-  adapters in `fret-bootstrap`.
+- Start ASF-031: migrate first-party callers/templates onto the new bootstrap/launch split and
+  delete displaced helper aliases where the target surface is now clear.

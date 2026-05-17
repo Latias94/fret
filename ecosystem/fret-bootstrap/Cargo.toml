@@ -12,8 +12,10 @@ description = "Golden-path bootstrap utilities and app defaults for the Fret UI 
 
 [features]
 default = []
+# Enable the concrete native launch/render adapter layer (`fret-launch` + `fret-render`).
+launch = ["dep:fret-launch", "dep:fret-render"]
 # Enable `preload_icon_svgs_on_gpu_ready`, which depends on `fret-ui-kit`.
-preload-icon-svgs = ["dep:fret-ui-kit", "fret-ui-kit/icons", "dep:fret-canvas"]
+preload-icon-svgs = ["launch", "dep:fret-ui-kit", "fret-ui-kit/icons", "dep:fret-canvas"]
 ui-assets = ["dep:fret-ui-assets", "fret-ui-assets/app-integration"]
 # Convenience icon pack installers (data-only).
 icons-lucide = ["dep:fret-icons-lucide", "fret-icons-lucide/app-integration"]
@@ -21,8 +23,9 @@ icons-radix = ["dep:fret-icons-radix", "fret-icons-radix/app-integration"]
 # Select a single provider for semantic `ui.*` icon aliases.
 icons-ui-semantic-lucide = ["icons-lucide", "fret-icons-lucide/semantic-ui"]
 icons-ui-semantic-radix = ["icons-radix", "fret-icons-radix/semantic-ui"]
-hotpatch-subsecond = ["fret-launch/hotpatch-subsecond", "dep:subsecond"]
+hotpatch-subsecond = ["launch", "fret-launch/hotpatch-subsecond", "dep:subsecond"]
 ui-app-driver = [
+  "launch",
   "dep:fret-perf",
   "dep:fret-ui",
   "fret-ui/diagnostics",
@@ -34,7 +37,7 @@ ui-app-command-palette-shadcn = ["ui-app-command-palette", "dep:fret-ui-shadcn"]
 window-style-profiles = ["dep:fret-window-style-profiles"]
 tracing = ["dep:tracing", "dep:tracing-subscriber"]
 tracy = ["tracing", "dep:tracing-tracy"]
-diagnostics = ["tracing", "fret-launch/diag-screenshots"]
+diagnostics = ["launch", "tracing", "fret-launch/diag-screenshots"]
 diagnostics-canvas = ["diagnostics", "dep:fret-canvas"]
 diagnostics-ws = ["diagnostics", "dep:fret-diag-ws"]
 
@@ -55,9 +58,9 @@ fret-i18n = { version = "0.1.0", path = "../../crates/fret-i18n" }
 fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime" }
 fret-window-style-profiles = { version = "0.1.0", path = "../fret-window-style-profiles", optional = true }
 fret-icons = { version = "0.1.0", path = "../fret-icons" }
-fret-launch = { version = "0.1.0", path = "../../crates/fret-launch" }
+fret-launch = { version = "0.1.0", path = "../../crates/fret-launch", optional = true }
 fret-perf = { version = "0.1.0", path = "../../crates/fret-perf", optional = true }
-fret-render = { version = "0.1.0", path = "../../crates/fret-render" }
+fret-render = { version = "0.1.0", path = "../../crates/fret-render", optional = true }
 fret-diag-protocol = { version = "0.1.0", path = "../../crates/fret-diag-protocol" }
 fret-ui = { version = "0.1.0", path = "../../crates/fret-ui", optional = true }
 fret-ui-app = { version = "0.1.0", path = "../../crates/fret-ui-app", optional = true }

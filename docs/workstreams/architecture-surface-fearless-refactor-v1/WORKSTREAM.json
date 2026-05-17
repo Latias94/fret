@@ -36,7 +36,9 @@
     "cargo check -p fret --no-default-features",
     "cargo check -p fret --no-default-features --features app",
     "cargo check -p fret --no-default-features --features app --test backend_free_app_authoring_profile",
-    "cargo tree -p fret-bootstrap --no-default-features -e normal --depth 4"
+    "cargo tree -p fret-bootstrap --no-default-features -e normal --depth 4",
+    "cargo check -p fret-bootstrap --no-default-features",
+    "cargo check -p fret-bootstrap --no-default-features --test backend_free_bootstrap_profile"
   ],
   "evidence": [
     {
@@ -62,6 +64,18 @@
     {
       "kind": "asf-021",
       "path": "ecosystem/fret/src/app_entry.rs"
+    },
+    {
+      "kind": "asf-030",
+      "path": "ecosystem/fret-bootstrap/src/assets.rs"
+    },
+    {
+      "kind": "asf-030",
+      "path": "ecosystem/fret-bootstrap/tests/backend_free_bootstrap_profile.rs"
+    },
+    {
+      "kind": "asf-030",
+      "path": "ecosystem/fret-bootstrap/Cargo.toml"
     }
   ],
   "adr_refs": [
@@ -74,6 +88,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue with ASF-020 first. Delete redundant compatibility surfaces when first-party callers can be migrated; do not preserve old interfaces by default."
+    "notes": "Continue with ASF-031 next. Delete redundant compatibility surfaces when first-party callers can be migrated; do not preserve old interfaces by default."
   }
 }

@@ -125,6 +125,27 @@ def main(argv: list[str]) -> int:
         ),
         banned_backend_packages,
     )
+    _assert_tree_excludes(
+        "bootstrap: fret-bootstrap --no-default-features",
+        _run_captured(
+            "bootstrap: fret-bootstrap --no-default-features tree",
+            [
+                "cargo",
+                "tree",
+                "-p",
+                "fret-bootstrap",
+                "--locked",
+                "--no-default-features",
+                "-e",
+                "normal",
+                "--depth",
+                "4",
+                "--prefix",
+                "none",
+            ],
+        ),
+        banned_backend_packages,
+    )
     _run_checked(
         "app-authoring: fret app check",
         ["cargo", "check", "-p", "fret", "--locked", "--no-default-features", "--features", "app"],
@@ -142,6 +163,23 @@ def main(argv: list[str]) -> int:
             "app",
             "--test",
             "backend_free_app_authoring_profile",
+        ],
+    )
+    _run_checked(
+        "bootstrap: fret-bootstrap no-default check",
+        ["cargo", "check", "-p", "fret-bootstrap", "--locked", "--no-default-features"],
+    )
+    _run_checked(
+        "bootstrap: fret-bootstrap no-default planning test check",
+        [
+            "cargo",
+            "check",
+            "-p",
+            "fret-bootstrap",
+            "--locked",
+            "--no-default-features",
+            "--test",
+            "backend_free_bootstrap_profile",
         ],
     )
 

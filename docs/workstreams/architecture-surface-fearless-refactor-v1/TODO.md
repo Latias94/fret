@@ -33,11 +33,11 @@ Last updated: 2026-05-17
 
 ## M2 — Bootstrap Plan vs Launch Adapter
 
-- [ ] ASF-030 [owner=unassigned] [deps=ASF-020] [scope=ecosystem/fret-bootstrap,crates/fret-launch,docs/adr/IMPLEMENTATION_ALIGNMENT.md]
+- [x] ASF-030 [owner=codex] [deps=ASF-020] [scope=ecosystem/fret-bootstrap,crates/fret-launch,docs/adr/IMPLEMENTATION_ALIGNMENT.md]
   Goal: Split backend-free bootstrap planning/default policy from concrete launch/render adapters.
   Validation: `cargo tree -p fret-bootstrap --no-default-features -e normal --depth 4` does not contain `wgpu`, `winit`, `fret-render`, or platform-native runner crates unless an explicitly named feature is enabled.
-  Evidence: `fret-bootstrap` tree output and tests for plan/default construction.
-  Handoff: Keep `fret-bootstrap` as a composition module, not a second runtime.
+  Evidence: `ecosystem/fret-bootstrap/src/assets.rs`; `ecosystem/fret-bootstrap/tests/backend_free_bootstrap_profile.rs`; `tools/check_consumption_profiles.py`; `docs/crate-usage-guide.md`; `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
+  Handoff: Completed on 2026-05-17; `fret-bootstrap --no-default-features` now exposes backend-free bootstrap asset/default policy, while `launch` owns the concrete `fret-launch` / `fret-render` adapter surface.
 
 - [ ] ASF-031 [owner=unassigned] [deps=ASF-030] [scope=ecosystem/fret-bootstrap,ecosystem/fret,apps/fretboard,docs]
   Goal: Migrate first-party app/template callers onto the new bootstrap/launch split and delete displaced helper aliases.

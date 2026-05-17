@@ -112,12 +112,41 @@ Disallowed dependency names for backend-free profiles unless explicitly reclassi
 ```bash
 cargo tree -p fret-bootstrap --no-default-features -e normal --depth 4
 cargo check -p fret-bootstrap --no-default-features
+cargo check -p fret-bootstrap --no-default-features --test backend_free_bootstrap_profile
 ```
 
 What this proves:
 
 - Backend-free bootstrap policy/default construction remains separate from concrete launch/render
   adapters.
+
+2026-05-17 result for ASF-030:
+
+- `fret-bootstrap --no-default-features` no longer pulls `fret-launch`, `fret-render`, `wgpu`,
+  `winit`, `fret-platform-native`, or `fret-runner-winit`.
+- `fret-bootstrap` now owns a backend-free `assets` planning/default vocabulary and converts it to
+  `fret-launch` only behind the explicit `launch` feature.
+- `BootstrapBuilder`, UI app driver, diagnostics, hotpatch, and preload-on-GPU helpers are on the
+  launch adapter lane; backend-free callers can still construct asset startup plans and reload
+  policy values.
+- `tools/check_consumption_profiles.py` now checks both the backend-free dependency tree and the
+  backend-free public planning test.
+- Targeted checks passed:
+  - `cargo fmt --package fret-bootstrap`
+  - `cargo check -p fret-bootstrap --locked --no-default-features`
+  - `cargo tree -p fret-bootstrap --locked --no-default-features -e normal --depth 4 --prefix none`
+  - `cargo check -p fret-bootstrap --locked --features launch`
+  - `cargo check -p fret-bootstrap --locked --features ui-app-driver`
+  - `cargo check -p fret-bootstrap --locked --all-features`
+  - `cargo check -p fret-bootstrap --locked --no-default-features --test backend_free_bootstrap_profile`
+  - `cargo nextest run -p fret-bootstrap --locked --no-default-features --test backend_free_bootstrap_profile`
+  - `cargo test -p fret-bootstrap --locked --doc --no-default-features`
+  - `cargo check -p fret-bootstrap --locked`
+  - `cargo check -p fret --locked`
+  - `python tools/check_consumption_profiles.py`
+  - `python tools/check_layering.py`
+  - `python tools/check_workstream_catalog.py`
+  - `git diff --check`
 
 ### Facade Surface Gates
 
