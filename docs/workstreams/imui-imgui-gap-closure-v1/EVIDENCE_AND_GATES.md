@@ -257,6 +257,15 @@ Run evidence:
   --features imui --test imui_table_smoke --no-fail-fast`, `cargo nextest run -p fret-imui
   table_column_visibility_menu_items_update_shared_visibility_state_and_filter_columns
   --no-fail-fast`, and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-17: added table header context-menu request reporting for sortable headers by extending
+  the shared active-trigger behavior in `fret-ui-kit::imui`. `TableHeaderResponse::response()` now
+  reports right-click context-menu requests with a pointer anchor, plus keyboard requests from the
+  ContextMenu key and Shift+F10, without adding automatic visibility-menu popup wiring or
+  persistence policy. Gates: `cargo nextest run -p fret-imui
+  table_sortable_header_reports_context_menu_request --no-fail-fast`, `cargo nextest run -p
+  fret-imui interaction_press interaction_menu_tabs --no-fail-fast`, and `cargo nextest run -p
+  fret-ui-kit --features imui --test imui_response_contract_smoke --test imui_table_smoke
+  --no-fail-fast`.
 - 2026-05-16: introduced `text_control_readout(...)` as the shared compact control-readout text
   role. The UI Gallery code-editor toolbar keeps its doc-layout helper, but that helper now
   delegates to `fret-ui-kit::declarative::text::text_control_readout(...)`, so dense status/readout

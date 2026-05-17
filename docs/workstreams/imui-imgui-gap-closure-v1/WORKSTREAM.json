@@ -394,6 +394,10 @@
       "command": "cargo nextest run -p fret-imui table_column_visibility_menu_items_update_shared_visibility_state_and_filter_columns --no-fail-fast"
     },
     {
+      "name": "fret-imui table header context-menu request tests",
+      "command": "cargo nextest run -p fret-imui table_sortable_header_reports_context_menu_request --no-fail-fast"
+    },
+    {
       "name": "diff check",
       "command": "git diff --check"
     }
