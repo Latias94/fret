@@ -56,6 +56,7 @@ enum CleanGeometrySolveSkipRejectionReason {
     FlexHeightDelta,
     NonPxSpacing,
     AutoChildHeight,
+    TextReflow,
     ContainerHeightDelta,
     FractionalChildSize,
 }
@@ -68,6 +69,8 @@ enum CleanGeometryNodeContract {
     PureVerticalFlex(crate::element::FlexProps),
     /// Box-sizing:border-box container subset with px insets and static children.
     PureContainer(crate::element::ContainerProps),
+    /// Leaf whose layout is stable only when its computed box size does not change.
+    StableSizeLeaf,
     /// Leaf whose layout result has no child geometry or layout side effects.
     SafeLeaf,
     /// Node whose own layout must still run, but whose parent may propagate resized bounds to it.
@@ -98,6 +101,7 @@ impl CleanGeometrySolveSkipRejectionReason {
             Self::FlexHeightDelta => "flex_height_delta",
             Self::NonPxSpacing => "non_px_spacing",
             Self::AutoChildHeight => "auto_child_height",
+            Self::TextReflow => "text_reflow",
             Self::ContainerHeightDelta => "container_height_delta",
             Self::FractionalChildSize => "fractional_child_size",
         }
@@ -915,6 +919,16 @@ impl<H: UiHost> UiTree<H> {
                     props,
                     kind,
                 ),
+            CleanGeometryNodeContract::StableSizeLeaf => {
+                if Self::clean_size_matches(bounds.size, prev_bounds.size) {
+                    Ok(Vec::new())
+                } else {
+                    Err(CleanGeometrySolveSkipRejection::for_kind(
+                        CleanGeometrySolveSkipRejectionReason::TextReflow,
+                        kind,
+                    ))
+                }
+            }
             CleanGeometryNodeContract::SafeLeaf => Ok(Vec::new()),
         }
     }
@@ -959,6 +973,11 @@ impl<H: UiHost> UiTree<H> {
             | crate::declarative::frame::ElementInstance::RovingFlex(
                 crate::element::RovingFlexProps { flex: props, .. },
             ) => Ok(CleanGeometryNodeContract::PureVerticalFlex(props)),
+            crate::declarative::frame::ElementInstance::Text(_)
+            | crate::declarative::frame::ElementInstance::StyledText(_)
+            | crate::declarative::frame::ElementInstance::SelectableText(_) => {
+                Ok(CleanGeometryNodeContract::StableSizeLeaf)
+            }
             crate::declarative::frame::ElementInstance::Spacer(_)
             | crate::declarative::frame::ElementInstance::Image(_)
             | crate::declarative::frame::ElementInstance::SvgIcon(_)
@@ -999,6 +1018,8 @@ impl<H: UiHost> UiTree<H> {
                     element_kind,
                 ));
             }
+            Self::clean_child_width_style_supported_for_width_delta(child_style, element_kind)?;
+            Self::clean_child_height_style_supported_for_width_delta(child_style, element_kind)?;
             let prev_child = self
                 .nodes
                 .get(child)
@@ -1077,27 +1098,8 @@ impl<H: UiHost> UiTree<H> {
                     element_kind,
                 ));
             }
-            if matches!(child_style.size.height, crate::element::Length::Auto) {
-                return Err(CleanGeometrySolveSkipRejection::for_kind(
-                    CleanGeometrySolveSkipRejectionReason::AutoChildHeight,
-                    element_kind,
-                ));
-            }
-            if matches!(child_style.size.width, crate::element::Length::Fraction(_))
-                || matches!(
-                    child_style.size.min_width,
-                    Some(crate::element::Length::Fill | crate::element::Length::Fraction(_))
-                )
-                || matches!(
-                    child_style.size.max_width,
-                    Some(crate::element::Length::Fill | crate::element::Length::Fraction(_))
-                )
-            {
-                return Err(CleanGeometrySolveSkipRejection::for_kind(
-                    CleanGeometrySolveSkipRejectionReason::FractionalChildSize,
-                    element_kind,
-                ));
-            }
+            Self::clean_child_height_style_supported_for_width_delta(child_style, element_kind)?;
+            Self::clean_child_width_style_supported_for_width_delta(child_style, element_kind)?;
 
             let prev_child = self
                 .nodes
@@ -1220,12 +1222,8 @@ impl<H: UiHost> UiTree<H> {
                     element_kind,
                 ));
             }
-            if matches!(child_style.size.height, crate::element::Length::Auto) {
-                return Err(CleanGeometrySolveSkipRejection::for_kind(
-                    CleanGeometrySolveSkipRejectionReason::AutoChildHeight,
-                    element_kind,
-                ));
-            }
+            Self::clean_child_height_style_supported_for_width_delta(child_style, element_kind)?;
+            Self::clean_child_width_style_supported_for_width_delta(child_style, element_kind)?;
             let prev_child = self
                 .nodes
                 .get(child)
@@ -1256,6 +1254,66 @@ impl<H: UiHost> UiTree<H> {
             ));
         }
         Ok(out)
+    }
+
+    fn clean_child_width_style_supported_for_width_delta(
+        child_style: crate::element::LayoutStyle,
+        element_kind: &'static str,
+    ) -> Result<(), CleanGeometrySolveSkipRejection> {
+        if matches!(child_style.size.width, crate::element::Length::Fraction(_))
+            || matches!(
+                child_style.size.min_width,
+                Some(crate::element::Length::Fill | crate::element::Length::Fraction(_))
+            )
+            || matches!(
+                child_style.size.max_width,
+                Some(crate::element::Length::Fill | crate::element::Length::Fraction(_))
+            )
+        {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::FractionalChildSize,
+                element_kind,
+            ));
+        }
+
+        Ok(())
+    }
+
+    fn clean_child_height_style_supported_for_width_delta(
+        child_style: crate::element::LayoutStyle,
+        element_kind: &'static str,
+    ) -> Result<(), CleanGeometrySolveSkipRejection> {
+        if !matches!(child_style.size.height, crate::element::Length::Auto) {
+            return Ok(());
+        }
+        if child_style.aspect_ratio.is_some()
+            || !Self::clean_optional_height_bound_stable_for_width_delta(
+                child_style.size.min_height,
+            )
+            || !Self::clean_optional_height_bound_stable_for_width_delta(
+                child_style.size.max_height,
+            )
+        {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::AutoChildHeight,
+                element_kind,
+            ));
+        }
+
+        Ok(())
+    }
+
+    fn clean_optional_height_bound_stable_for_width_delta(
+        length: Option<crate::element::Length>,
+    ) -> bool {
+        matches!(
+            length,
+            None | Some(crate::element::Length::Auto | crate::element::Length::Px(_))
+        )
+    }
+
+    fn clean_size_matches(a: Size, b: Size) -> bool {
+        (a.width.0 - b.width.0).abs() <= 0.01 && (a.height.0 - b.height.0).abs() <= 0.01
     }
 
     fn clean_spacing_px(length: crate::element::SpacingLength) -> Option<f32> {

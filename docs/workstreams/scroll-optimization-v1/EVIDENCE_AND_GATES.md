@@ -386,6 +386,63 @@ Conservative Container geometry contract slice (2026-05-17):
     genuinely width/reflow-dependent; the content `Semantics` root still contains wrap flex and must
     stay blocked until line-break stability is proven.
 
+Auto-height / size-stability classification slice (2026-05-17):
+
+- Mechanism anchors:
+  - `crates/fret-ui/src/tree/layout/node.rs`
+    (`CleanGeometryNodeContract::StableSizeLeaf`,
+    `clean_child_height_style_supported_for_width_delta`,
+    `clean_child_width_style_supported_for_width_delta`)
+  - `crates/fret-ui/src/declarative/tests/layout/layout_engine.rs`
+    (`clean_geometry_small_resize_skips_stable_auto_height_container_wrapper`,
+    `clean_geometry_small_resize_skips_stable_auto_height_vertical_flex_child`,
+    `clean_geometry_small_resize_rejects_auto_height_text_reflow`)
+- Contract:
+  - `height: Auto` is not enough by itself to reject a clean width-delta propagation. Stable
+    wrappers can continue only if recursive child-bound propagation proves the descendant geometry
+    remains stable.
+  - Text leaves are stable only when their computed box size is unchanged; otherwise they reject
+    with `text_reflow` so line-break and wrap-dependent height changes keep the authoritative solve.
+  - Fraction/fill width constraints, non-px margins, aspect-ratio height coupling, wrap flex, side
+    effect boundaries, and unsupported layout containers remain on the full solve path.
+- Classification audit:
+  - The current `CleanGeometryNodeContract` shape is acceptable for this local fast path, but it is
+    not the final architecture for all layout nodes. Before extending to `Grid`, horizontal flex,
+    retained/cache nodes, canvas/prepaint, layout queries, or transforms, split the model into
+    explicit axes: layout side effects, parent-derived child-bounds strategy, and width-delta size
+    stability.
+- Focused gates:
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_stable_auto_height_container_wrapper clean_geometry_small_resize_skips_stable_auto_height_vertical_flex_child clean_geometry_small_resize_rejects_auto_height_text_reflow --no-fail-fast`
+    - Result: `3/3` passed.
+  - `cargo nextest run -p fret-ui layout_engine --no-fail-fast`
+    - Result: `23/23` passed.
+  - `cargo nextest run -p fret-ui scroll --no-fail-fast`
+    - Result: `153/153` passed.
+- Local perf evidence:
+  - Bundle:
+    `target/fret-diag/local-next-auto-height-classification-20260517-r1/1778984176582/bundle.schema2.json`
+  - Stats:
+    `target/fret-diag/local-next-auto-height-classification-20260517-r1/worst.stats.json`
+  - Top frame total/layout/layout-roots/solve/prepaint/paint:
+    `1231/626/405/311/236/369us`.
+  - p95 total/layout/layout-roots/solve/prepaint/paint:
+    `1231/707/482/325/252/383us`.
+  - Guardrails remain stable: view-cache root reused `1`, needs-rerender `0`, row replay/store
+    `289/0`, renderer text prepare `62us`.
+  - Per-solve blocker shift:
+    - content `Semantics` solve `180/174/162us`: `unsupported_kind`, blocker `Grid`,
+      `wrap_nodes=1`;
+    - root `Stack` solve `139/133/128us`: `flex_direction`, blocker `Flex`, `wrap_nodes=0`;
+    - nav `Container` solve `29us`: `flex_direction`, blocker `Flex`;
+    - editor `PointerRegion` solve `4us`: `unsupported_kind`, blocker `Canvas`;
+    - root `Scroll` solve `0us`: `side_effect_boundary`, blocker `Scroll`.
+- Decision:
+  - Do not keep pushing `auto_child_height`; the useful classification has landed and the next
+    blocker moved.
+  - Do not start a broad node-classification rewrite solely from this evidence. Start the next slice
+    with either a proof-first `Grid` / horizontal `Flex` geometry contract or a small formal
+    classification-model refactor if those proofs cannot stay local.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:

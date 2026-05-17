@@ -163,10 +163,31 @@ Status: Active
     `auto_child_height` under `Flex` for the root `Stack` solve. The content `Semantics` root still
     reports one wrap-flex node, so the next step must classify auto-height/line-break stability
     before widening the proof.
-- [ ] Classify the `auto_child_height` blockers before another geometry-proof expansion.
+- [x] Classify the `auto_child_height` blockers before another geometry-proof expansion.
   - Separate fixed-height-but-auto-style wrappers from genuine width-dependent height/reflow.
   - Treat wrap flex as a hard blocker until a line-break stability proof exists.
   - Use per-solve rejection attribution rather than broad element-name whitelisting.
+  - Implemented classification: stable auto-height `Container` wrappers and stable auto-height
+    children in vertical no-wrap `Flex` can participate only when recursive geometry proof keeps
+    descendant sizes stable; text leaves whose computed box size changes reject with `text_reflow`.
+  - Focused guardrails:
+    `clean_geometry_small_resize_skips_stable_auto_height_container_wrapper`,
+    `clean_geometry_small_resize_skips_stable_auto_height_vertical_flex_child`, and
+    `clean_geometry_small_resize_rejects_auto_height_text_reflow`.
+  - Current classification is acceptable as a local clean-geometry contract, but should not grow
+    indefinitely as one enum whitelist. If the next slice covers `Grid`, horizontal flex rows,
+    `ViewCache`, `VirtualList`, `Canvas`, layout queries, or transforms, split the model into
+    explicit axes: layout side effects, parent-derived child-bounds strategy, and width-delta size
+    stability.
+  - Local no-4090 evidence:
+    `target/fret-diag/local-next-auto-height-classification-20260517-r1/1778984176582/bundle.schema2.json`.
+  - Result: `auto_child_height` is no longer the first blocker. Remaining top solve blockers are
+    content `Semantics` -> `unsupported_kind=Grid` with `wrap_nodes=1`, root `Stack` ->
+    `flex_direction=Flex`, editor `PointerRegion` -> `unsupported_kind=Canvas`, and root `Scroll`
+    remains a `side_effect_boundary`.
+  - Decision: do not start a broad node-classification rewrite yet. The next optimization candidate
+    is a proof-first `Grid` / horizontal `Flex` geometry contract or a formal classification-model
+    refactor if that proof cannot stay local and reviewable.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

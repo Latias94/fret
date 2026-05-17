@@ -151,8 +151,8 @@
       "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve clean_geometry_small_resize_reports_wrap_flex_rejection_reason --no-fail-fast"
     },
     {
-      "name": "clean-root-solve-container-geometry",
-      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_skips_px_container_and_updates_child_bounds clean_geometry_small_resize_rejects_container_fraction_padding --no-fail-fast"
+      "name": "clean-root-solve-stable-auto-height-geometry",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_skips_px_container_and_updates_child_bounds clean_geometry_small_resize_rejects_container_fraction_padding clean_geometry_small_resize_skips_stable_auto_height_container_wrapper clean_geometry_small_resize_skips_stable_auto_height_vertical_flex_child clean_geometry_small_resize_rejects_auto_height_text_reflow --no-fail-fast"
     }
   ],
   "evidence": [
@@ -196,6 +196,6 @@
   "adr_refs": [],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue this lane for mechanism-level scroll extent, deferred probe, post-layout observation, and resize apply-path churn. Keep contained view-cache-only dirty work on the contained relayout + nearest-scroll follow-up path. Current no-4090 resize-jitter evidence has landed the conservative Container geometry contract and now points to auto_child_height / line-break stability classification as the next candidate; keep RTX4090 closeout as follow-up evidence, not a local completion gate."
+    "notes": "Current no-4090 resize-jitter evidence has landed the stable auto-height classification slice. The next blocker is no longer auto_child_height; it is Grid under the content Semantics root and horizontal Flex under the app/nav shell, with Scroll still a side-effect boundary and Canvas too small to prioritize. Keep RTX4090 closeout as follow-up evidence, not a local completion gate. Before broadening beyond Grid/row-Flex, split clean-geometry classification into layout side-effect, child-bounds strategy, and width-delta size-stability axes."
   }
 }

@@ -100,3 +100,11 @@ Status: Active
 - Classify `auto_child_height` rejections before widening the clean-geometry proof.
 - Separate stable wrapper auto-height from width-dependent text/wrap/flex reflow.
 - Keep wrap flex blocked until line-break stability can be proven against previous geometry.
+- 2026-05-17 classification landed: stable auto-height `Container` wrappers and stable auto-height
+  children inside vertical no-wrap `Flex` can participate through recursive geometry proof, while
+  changing-size text leaves reject with `text_reflow`. Fresh no-4090 evidence moves the next
+  blockers to `Grid` and horizontal `Flex`; wrap flex remains visible under the content root, and
+  `Scroll` remains a side-effect boundary.
+- Do not treat the current enum as the final architecture if the next slice expands into grid,
+  row-flex, retained/cache, canvas, layout-query, or transform nodes. Split into separate
+  side-effect, child-bounds, and size-stability axes before that grows into an implicit whitelist.
