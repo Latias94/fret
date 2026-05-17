@@ -3,6 +3,7 @@
 // This module translates a SceneEncoding into a RenderPlan, choosing targets/passes and applying
 // deterministic budget-driven degradations.
 
+mod clip_path;
 mod context;
 mod target_budget;
 
@@ -12,19 +13,12 @@ use super::{
     LocalScissorRect, OrderedDraw, RenderPlanDegradation, RenderPlanDegradationKind,
     RenderPlanDegradationReason, RenderPlanPass, SceneEncoding, ScissorRect,
 };
-use crate::renderer::{estimate_clip_mask_bytes, estimate_texture_bytes};
+use crate::renderer::estimate_texture_bytes;
 use context::RenderPlanCompilerCtx;
 use target_budget::{
     can_allocate_intermediate_bytes, choose_backdrop_source_group_pyramid_choice,
     estimate_in_use_intermediate_bytes, intermediate_budget_breakdown_for_chain,
 };
-
-fn mix_u64(mut state: u64, value: u64) -> u64 {
-    state ^= value.wrapping_add(0x9E37_79B9_7F4A_7C15);
-    state = state.rotate_left(7);
-    state = state.wrapping_mul(0xD6E8_FEB8_6659_FD93);
-    state
-}
 
 #[derive(Clone, Copy, Debug)]
 struct DrawScope {
@@ -66,28 +60,27 @@ struct CompositeGroupScope {
 }
 
 #[derive(Clone, Copy, Debug)]
-#[allow(dead_code)]
-struct ClipPathScope {
-    scissor: ScissorRect,
-    uniform_index: u32,
-    mask_draw_index: u32,
-    parent_target: super::PlanTarget,
-    parent_origin: (u32, u32),
-    parent_size: (u32, u32),
-    content_target: Option<super::PlanTarget>,
-    content_origin: (u32, u32),
-    content_size: (u32, u32),
-    mask_target: Option<super::PlanTarget>,
-    mask_size: (u32, u32),
-}
-
-#[derive(Clone, Copy, Debug)]
 struct BackdropSourceGroupScope {
     scissor: ScissorRect,
     pyramid_choice: Option<effects::CustomV3PyramidChoice>,
     pyramid_pad_px: u32,
     raw_target: Option<super::PlanTarget>,
     reserved_bytes: u64,
+}
+
+fn take_scope_load_for_write(
+    draw_scopes: &mut Vec<DrawScope>,
+    dst: super::PlanTarget,
+) -> wgpu::LoadOp<wgpu::Color> {
+    let Some(index) = draw_scopes.iter().rposition(|s| s.target == dst) else {
+        return wgpu::LoadOp::Load;
+    };
+    if draw_scopes[index].needs_clear {
+        draw_scopes[index].needs_clear = false;
+        wgpu::LoadOp::Clear(draw_scopes[index].clear_color)
+    } else {
+        wgpu::LoadOp::Load
+    }
 }
 
 pub(super) fn compile_for_scene(
@@ -246,7 +239,7 @@ fn compile_for_scene_inner(
     }];
     let mut effect_scopes: Vec<EffectScope> = Vec::new();
     let mut composite_group_scopes: Vec<CompositeGroupScope> = Vec::new();
-    let mut clip_path_scopes: Vec<ClipPathScope> = Vec::new();
+    let mut clip_path_scopes: Vec<clip_path::ClipPathScope> = Vec::new();
     let mut clip_path_mask_in_use_bytes: u64 = 0;
     let mut backdrop_source_group_scopes: Vec<BackdropSourceGroupScope> = Vec::new();
     let mut backdrop_source_group_reserved_targets: Vec<super::PlanTarget> = Vec::new();
@@ -266,19 +259,6 @@ fn compile_for_scene_inner(
     let mut custom_effect_chain_base_required_full_targets_max: u32 = 0;
     let mut custom_effect_chain_optional_mask_max_bytes: u64 = 0;
     let mut custom_effect_chain_optional_pyramid_max_bytes: u64 = 0;
-
-    let take_scope_load_for_write =
-        |draw_scopes: &mut Vec<DrawScope>, dst: super::PlanTarget| -> wgpu::LoadOp<wgpu::Color> {
-            let Some(index) = draw_scopes.iter().rposition(|s| s.target == dst) else {
-                return wgpu::LoadOp::Load;
-            };
-            if draw_scopes[index].needs_clear {
-                draw_scopes[index].needs_clear = false;
-                wgpu::LoadOp::Clear(draw_scopes[index].clear_color)
-            } else {
-                wgpu::LoadOp::Load
-            }
-        };
 
     let mut apply_chain_in_place =
         |passes: &mut Vec<RenderPlanPass>,
@@ -427,10 +407,7 @@ fn compile_for_scene_inner(
 
                                 let before = ctx.passes_len();
                                 let unavailable_mask_targets: Vec<super::PlanTarget> =
-                                    clip_path_scopes
-                                        .iter()
-                                        .filter_map(|s| s.mask_target)
-                                        .collect();
+                                    clip_path::active_mask_targets(&clip_path_scopes).collect();
                                 let backdrop_source_group =
                                     backdrop_source_group_scopes.last().and_then(|s| {
                                         s.raw_target.map(|raw_target| {
@@ -671,189 +648,34 @@ fn compile_for_scene_inner(
                         uniform_index,
                         mask_draw_index,
                     } => {
-                        let parent_scope = draw_scopes.last().expect("draw scope");
-                        let parent_target = parent_scope.target;
-                        let parent_origin = parent_scope.origin;
-                        let parent_size = parent_scope.size;
-
-                        let mut content_target: Option<super::PlanTarget> = None;
-                        let mut mask_target: Option<super::PlanTarget> = None;
-                        let mut had_free_content_target = false;
-                        let mut had_free_mask_target = false;
-
-                        let (content_origin, content_size) = if scissor_sized_intermediates {
-                            ((scissor.x, scissor.y), (scissor.w, scissor.h))
-                        } else {
-                            ((0, 0), viewport_size)
-                        };
-                        let mask_size = (scissor.w, scissor.h);
-
-                        if content_size.0 != 0
-                            && content_size.1 != 0
-                            && mask_size.0 != 0
-                            && mask_size.1 != 0
-                        {
-                            for t in [
-                                super::PlanTarget::Intermediate0,
-                                super::PlanTarget::Intermediate1,
-                                super::PlanTarget::Intermediate2,
-                                super::PlanTarget::Intermediate3,
-                            ] {
-                                if draw_scopes.iter().any(|s| s.target == t)
-                                    || backdrop_source_group_reserved_targets.contains(&t)
-                                {
-                                    continue;
-                                }
-                                content_target = Some(t);
-                                had_free_content_target = true;
-                                break;
-                            }
-
-                            for t in [
-                                super::PlanTarget::Mask0,
-                                super::PlanTarget::Mask1,
-                                super::PlanTarget::Mask2,
-                            ] {
-                                if clip_path_scopes.iter().any(|s| s.mask_target == Some(t)) {
-                                    continue;
-                                }
-                                mask_target = Some(t);
-                                had_free_mask_target = true;
-                                break;
-                            }
-
-                            if let (Some(_content_target), Some(_mask_target)) =
-                                (content_target, mask_target)
-                            {
-                                let required_color =
-                                    estimate_texture_bytes(content_size, format, 1);
-                                let required_mask = estimate_clip_mask_bytes(mask_size);
-                                if !can_allocate_intermediate_bytes(
-                                    intermediate_budget_bytes,
-                                    &draw_scopes,
-                                    required_color.saturating_add(required_mask),
-                                    clip_path_mask_in_use_bytes
-                                        .saturating_add(backdrop_source_group_in_use_bytes),
-                                    format,
-                                ) {
-                                    content_target = None;
-                                    mask_target = None;
-                                }
-                            }
-                        }
-
-                        if (content_target.is_none() || mask_target.is_none())
-                            && content_size.0 != 0
-                            && content_size.1 != 0
-                            && mask_size.0 != 0
-                            && mask_size.1 != 0
-                        {
-                            let reason = if intermediate_budget_bytes == 0 {
-                                RenderPlanDegradationReason::BudgetZero
-                            } else if !had_free_content_target || !had_free_mask_target {
-                                RenderPlanDegradationReason::TargetExhausted
-                            } else {
-                                RenderPlanDegradationReason::BudgetInsufficient
-                            };
-                            ctx.push_degradation(RenderPlanDegradation {
-                                draw_ix: cursor,
-                                kind: RenderPlanDegradationKind::ClipPathDisabled,
-                                reason,
-                            });
-                        }
-
-                        if let (Some(content_target), Some(mask_target)) =
-                            (content_target, mask_target)
-                        {
-                            let mask_draw = encoding.clip_path_masks[mask_draw_index as usize];
-                            debug_assert_eq!(mask_draw.scissor, scissor);
-                            debug_assert_eq!(mask_draw.uniform_index, uniform_index);
-                            ctx.push_pass(RenderPlanPass::PathClipMask(super::PathClipMaskPass {
-                                dst: mask_target,
-                                dst_origin: (scissor.x, scissor.y),
-                                dst_size: mask_size,
-                                scissor: super::AbsoluteScissorRect(scissor),
+                        clip_path::compile_clip_path_push(
+                            &mut ctx,
+                            &mut draw_scopes,
+                            &mut clip_path_scopes,
+                            &mut clip_path_mask_in_use_bytes,
+                            encoding,
+                            cursor,
+                            clip_path::ClipPathPushCtx {
+                                scissor,
                                 uniform_index,
-                                first_vertex: mask_draw.first_vertex,
-                                vertex_count: mask_draw.vertex_count,
-                                cache_key: mix_u64(
-                                    mask_draw.cache_key,
-                                    (u64::from(mask_size.0) << 32) | u64::from(mask_size.1),
-                                ),
-                                load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-                            }));
-
-                            draw_scopes.push(DrawScope {
-                                target: content_target,
-                                origin: content_origin,
-                                size: content_size,
-                                needs_clear: true,
-                                clear_color: wgpu::Color::TRANSPARENT,
-                            });
-
-                            clip_path_mask_in_use_bytes = clip_path_mask_in_use_bytes
-                                .saturating_add(estimate_clip_mask_bytes(mask_size));
-                        }
-
-                        clip_path_scopes.push(ClipPathScope {
-                            scissor,
-                            uniform_index,
-                            mask_draw_index,
-                            parent_target,
-                            parent_origin,
-                            parent_size,
-                            content_target,
-                            content_origin,
-                            content_size,
-                            mask_target,
-                            mask_size,
-                        });
+                                mask_draw_index,
+                                viewport_size,
+                                scissor_sized_intermediates,
+                                format,
+                                intermediate_budget_bytes,
+                                backdrop_source_group_reserved_targets:
+                                    &backdrop_source_group_reserved_targets,
+                                backdrop_source_group_in_use_bytes,
+                            },
+                        );
                     }
                     EffectMarkerKind::ClipPathPop => {
-                        let Some(scope) = clip_path_scopes.pop() else {
-                            marker_ix += 1;
-                            continue;
-                        };
-
-                        if let (Some(content_target), Some(mask_target)) =
-                            (scope.content_target, scope.mask_target)
-                        {
-                            debug_assert_eq!(
-                                draw_scopes.last().expect("draw scope").target,
-                                content_target
-                            );
-
-                            ctx.push_pass(RenderPlanPass::CompositePremul(
-                                super::CompositePremulPass {
-                                    src: content_target,
-                                    src_origin: scope.content_origin,
-                                    dst: scope.parent_target,
-                                    src_size: scope.content_size,
-                                    dst_origin: scope.parent_origin,
-                                    dst_size: scope.parent_size,
-                                    dst_scissor: Some(super::AbsoluteScissorRect(scope.scissor)),
-                                    mask_uniform_index: Some(scope.uniform_index),
-                                    mask: Some(super::MaskRef {
-                                        target: mask_target,
-                                        size: scope.mask_size,
-                                        viewport_rect: scope.scissor,
-                                    }),
-                                    blend_mode: fret_core::BlendMode::Over,
-                                    opacity: 1.0,
-                                    load: take_scope_load_for_write(
-                                        &mut draw_scopes,
-                                        scope.parent_target,
-                                    ),
-                                },
-                            ));
-
-                            let _ = draw_scopes.pop();
-
-                            clip_path_mask_in_use_bytes = clip_path_mask_in_use_bytes
-                                .saturating_sub(estimate_clip_mask_bytes(scope.mask_size));
-                        } else {
-                            let _ = scope.mask_draw_index;
-                        }
+                        clip_path::compile_clip_path_pop(
+                            &mut ctx,
+                            &mut draw_scopes,
+                            &mut clip_path_scopes,
+                            &mut clip_path_mask_in_use_bytes,
+                        );
                     }
                     EffectMarkerKind::BackdropSourceGroupPush {
                         scissor,

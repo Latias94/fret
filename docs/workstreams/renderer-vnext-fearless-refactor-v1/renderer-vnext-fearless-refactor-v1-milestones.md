@@ -853,6 +853,28 @@ Progress record (RenderPlan compiler context boundary):
   - `cargo test -p fret-render-wgpu --lib` compiled, but failed on unrelated text/system-font
     environment tests in this Windows environment.
 
+Progress record (RenderPlan compiler clip-path helper split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3a; Stage 24 continues)
+- Objective:
+  - Split clip-path push/pop planning out of the main RenderPlan compiler loop without changing
+    marker ordering, target lifetime semantics, pass load ops, or `ClipPathDisabled` degradation
+    reasons.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`
+    (`compile_clip_path_push`, `compile_clip_path_pop`, `active_mask_targets`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (`EffectMarkerKind::ClipPathPush`, `EffectMarkerKind::ClipPathPop` delegate to the helper)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

@@ -602,13 +602,19 @@ When completing an item, prefer leaving 1–3 evidence anchors:
       compiler helper module.
     - [x] Step 2: introduce an explicit compiler context for pass/degradation/segment mutation
       after helper extraction has a green gate.
-    - [ ] Step 3: split clip-path, composite-group, effect-scope, and backdrop-source-group
-      compilation into focused modules only after the context boundary is stable.
+    - [x] Step 3a: split clip-path push/pop compilation into a focused helper module after
+      the context boundary is stable.
+    - [ ] Step 3b: split composite-group, effect-scope, and backdrop-source-group compilation
+      into focused modules.
   - Landed (step 1): extracted target/budget helpers and their focused tests into
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
   - Landed (step 2): introduced `RenderPlanCompilerCtx` to own structural compiler outputs
     (`passes`, `segments`, `degradations`, and segment id allocation) while preserving the
     `compile_for_scene` entrypoint and `RenderPlan` IR shape.
+  - Landed (step 3a): moved clip-path push/pop planning into
+    `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs` while leaving the
+    main loop's marker ordering, `RenderPlan` IR shape, target allocation order, load ops, and
+    `ClipPathDisabled` degradation reasons unchanged.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
       `compile_for_scene_inner`)
@@ -617,6 +623,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
       `choose_backdrop_source_group_pyramid_choice`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/context.rs`
       (`RenderPlanCompilerCtx`, `alloc_segment`, `flush_scene_range`)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`
+      (`compile_clip_path_push`, `compile_clip_path_pop`, `active_mask_targets`)
     - `docs/workstreams/renderer-render-plan-semantics-audit-v1/renderer-render-plan-semantics-audit-v1.md`
       (target lifetime, load-op, scissor/mask, and deterministic degradation invariants)
   - Gates:
