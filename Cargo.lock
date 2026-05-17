@@ -2751,6 +2751,7 @@ dependencies = [
  "serde",
  "serde_json",
  "slotmap",
+ "smallvec",
  "swash",
  "thiserror 2.0.18",
  "tracing",

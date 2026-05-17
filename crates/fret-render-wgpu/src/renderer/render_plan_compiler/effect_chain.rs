@@ -3,6 +3,7 @@ use super::draw_scope::DrawScope;
 use super::effects;
 use super::target_budget::intermediate_budget_breakdown_for_chain;
 use crate::renderer::{BlurQualitySnapshot, EffectDegradationSnapshot, PlanTarget, ScissorRect};
+use smallvec::SmallVec;
 
 #[derive(Clone, Copy, Debug)]
 pub(super) struct EffectChainBudgetStats {
@@ -137,7 +138,7 @@ pub(super) fn apply_chain_in_place(
             .max(breakdown.other_live_bytes);
     }
 
-    let mut in_use_targets: Vec<PlanTarget> = Vec::new();
+    let mut in_use_targets: SmallVec<[PlanTarget; 8]> = SmallVec::new();
     for scope in draw_scopes {
         if !in_use_targets.contains(&scope.target) {
             in_use_targets.push(scope.target);

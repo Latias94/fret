@@ -1161,6 +1161,30 @@ Progress record (RenderPlan compiler active mask target scratch cleanup):
   - `python3 tools/check_layering.py`
   - `git diff --check`
 
+Progress record (RenderPlan compiler effect-chain target scratch cleanup):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3l; Stage 24 continues)
+- Objective:
+  - Replace effect-chain in-use target deduplication's temporary `Vec` with
+    `SmallVec<[PlanTarget; 8]>`, avoiding heap allocation while preserving draw-scope-first
+    target order, reserved-target append order, and the exact slice passed into effect-chain
+    planning.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_chain.rs`
+    (`apply_chain_in_place` builds the in-use target slice with `SmallVec<[PlanTarget; 8]>`)
+  - `crates/fret-render-wgpu/Cargo.toml` + `Cargo.lock`
+    (`smallvec` workspace dependency enabled for `fret-render-wgpu`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_effects`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan::tests::compile_for_scene_backdrop_color_adjust_emits_mask_target_when_budget_allows`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:
