@@ -627,6 +627,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - [x] Step 3p: split effect-scope dispatch state out of marker dispatch.
     - [x] Step 3q: introduce marker shared dispatch input snapshots.
     - [x] Step 3r: replace backdrop-source-group reserved-target stack `Vec` with `SmallVec`.
+    - [x] Step 3s: move effect-scope push/pop helpers onto `EffectScopeDispatchState`.
   - Landed (step 1): extracted target/budget helpers and their focused tests into
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
   - Landed (step 2): introduced `RenderPlanCompilerCtx` to own structural compiler outputs
@@ -706,6 +707,10 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     with `SmallVec<[PlanTarget; 4]>`, preserving the public reserved-target slice contract,
     push/pop target order, and backdrop raw/pyramid budget/degradation accounting while avoiding
     heap allocation for the bounded intermediate target pool.
+  - Landed (step 3s): moved the private effect-scope push/pop helper bodies onto
+    `EffectScopeDispatchState`, so effect scopes, budget stats, degradation snapshots, and
+    blur-quality snapshots are mutated through the owning dispatch state instead of being threaded
+    as multiple independent `&mut` parameters.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
       `compile_for_scene_inner`)
@@ -728,7 +733,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
       `BackdropSourceGroupDispatchState`, `BackdropSourceGroupScope::effect_ctx`,
       `SmallVec<[PlanTarget; 4]>` reserved-target stack)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
-      (`EffectScopeDispatchState`, effect-scope push/pop target lifetime)
+      (`EffectScopeDispatchState::{compile_push_inner,compile_pop_inner}`,
+      effect-scope push/pop target lifetime)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_chain.rs`
       (`apply_chain_in_place`, `EffectChainApplyCtx`, `EffectChainBudgetStats::apply_to_plan`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/path_msaa.rs`

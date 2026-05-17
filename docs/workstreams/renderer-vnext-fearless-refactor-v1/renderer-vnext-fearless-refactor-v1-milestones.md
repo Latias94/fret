@@ -1336,6 +1336,35 @@ Progress record (RenderPlan compiler backdrop reserved-target stack cleanup):
   - `python3 tools/check_layering.py`
   - `git diff --check`
 
+Progress record (RenderPlan compiler effect-scope owner-method cleanup):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3s; Stage 24 continues)
+- Objective:
+  - Move the private effect-scope push/pop helper bodies onto `EffectScopeDispatchState`, removing
+    the need to thread `scopes`, effect-chain budget stats, degradation snapshots, and blur-quality
+    snapshots as independent mutable parameters.
+  - Preserve `EffectScopePushCtx`/`EffectScopePopCtx`, FilterContent and Backdrop push/pop
+    semantics, target lifetimes, pass/load-op ordering, degradation and blur-quality snapshots,
+    effect-chain budget stats, and marker dispatch call sites.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
+    (`EffectScopeDispatchState::{compile_push_inner,compile_pop_inner}`,
+    `EffectScopeDispatchState::{compile_push,compile_pop}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (unchanged call surface into `EffectScopeDispatchState`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_effects`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan::tests::compile_for_scene_backdrop_color_adjust_emits_mask_target_when_budget_allows`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:
