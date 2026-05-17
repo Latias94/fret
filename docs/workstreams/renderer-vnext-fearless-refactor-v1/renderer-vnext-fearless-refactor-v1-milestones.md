@@ -1546,6 +1546,32 @@ Progress record (RenderPlan compiler marker input snapshot cleanup):
   - `python3 tools/check_layering.py`
   - `git diff --check`
 
+Progress record (RenderPlan compiler marker dispatch branch split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3z; Stage 24 continues)
+- Objective:
+  - Split `MarkerDispatchState::compile_marker` branch bodies into private methods for effect
+    scope push/pop, clip-path push, backdrop-source-group push, and composite-group push.
+  - Preserve the `compile_marker` route order, marker variant mapping, dispatch state ownership,
+    branch-specific borrowed input snapshots, reserved target lifetimes, degradation counter
+    mutation, target lifetime, and pass/load-op ordering.
+  - Keep the public marker dispatch call surface unchanged for `compile_for_scene_inner`.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (`MarkerDispatchState::compile_marker`,
+    `MarkerDispatchState::{compile_effect_scope_push,compile_effect_scope_pop,compile_clip_path_push,compile_backdrop_source_group_push,compile_composite_group_push}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (`compile_for_scene_inner` unchanged call into `MarkerDispatchState::compile_marker`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:
