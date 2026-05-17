@@ -451,6 +451,8 @@ def main() -> None:
                 "apps/fret-examples/src/workspace_shell_demo.rs",
                 "apps/fret-examples/src/datatable_demo.rs",
                 "apps/fret-examples/tests/datatable_demo_surface.rs",
+                "apps/fret-examples/src/virtual_list_stress_demo.rs",
+                "apps/fret-examples/tests/virtual_list_stress_demo_surface.rs",
                 "apps/fret-examples/src/table_demo.rs",
                 "apps/fret-examples/src/table_stress_demo.rs",
                 "apps/fret-examples/tests/table_demo_surface.rs",
@@ -8435,6 +8437,24 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-examples/src/virtual_list_stress_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "fn virtual_list_stress_readout_text<H: fret_ui::UiHost>(",
+                "fn virtual_list_stress_row_label_text<H: fret_ui::UiHost>(",
+                "decl_text::text_control_readout(cx, text)",
+                "decl_text::text_list_row_label(cx, text)",
+                "virtual_list_stress_readout_text(cx, header)",
+                "let label = Arc::<str>::from(format!(",
+                "\"Row {id} (tall={tall_rows_enabled})\"",
+                "vec![virtual_list_stress_row_label_text(cx, label)]",
+            ],
+            forbidden=[
+                "cx.text(header)",
+                "vec![cx.text(Arc::<str>::from(",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-examples/src/table_stress_demo.rs"),
             required=[
                 "use fret_ui_kit::declarative::text as decl_text;",
@@ -8477,6 +8497,19 @@ def main() -> None:
                 'cx.text(Arc::from(format!(\\"DataTable|selected={selected}sort={sorting}\\")))',
                 '\\"id\\"=>cx.text(Arc::from(row.id.to_string()))',
                 '_=>cx.text(Arc::from(\\"\\"))',
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/tests/virtual_list_stress_demo_surface.rs"),
+            required=[
+                "fn virtual_list_stress_demo_keeps_fixed_row_text_on_roles()",
+                "fnvirtual_list_stress_readout_text<H:fret_ui::UiHost>(",
+                "fnvirtual_list_stress_row_label_text<H:fret_ui::UiHost>(",
+                "decl_text::text_control_readout(cx,text)",
+                "decl_text::text_list_row_label(cx,text)",
+                "cx.text(header)",
+                "vec![cx.text(Arc::<str>::from(format!(\\\"Row{id}(tall={tall_rows_enabled})\\\")))]",
             ],
             forbidden=[],
         ),

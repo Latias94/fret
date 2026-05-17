@@ -10,15 +10,30 @@ use fret_render::{Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{
-    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     VirtualListOptions,
 };
-use fret_ui::{Invalidation, UiTree, VirtualListScrollHandle};
+use fret_ui::{ElementContext, Invalidation, UiTree, VirtualListScrollHandle};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui_kit::declarative::text as decl_text;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 const LIST_LEN: usize = 100_000;
+
+fn virtual_list_stress_readout_text<H: fret_ui::UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_control_readout(cx, text)
+}
+
+fn virtual_list_stress_row_label_text<H: fret_ui::UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_list_row_label(cx, text)
+}
 
 fn try_println(args: std::fmt::Arguments<'_>) {
     use std::io::Write as _;
@@ -363,7 +378,7 @@ fn render(
                                     },
                             |cx| {
                                 vec![
-                                    cx.text(header),
+                                    virtual_list_stress_readout_text(cx, header),
                                     cx.container(
                                         ContainerProps {
                                             layout: list_slot,
@@ -429,9 +444,10 @@ fn render(
                                                         },
                                                         |cx| {
                                                             if id % 37 == 0 {
-                                                                vec![cx.text(Arc::<str>::from(
-                                                                    format!("Row {id} (tall={tall_rows_enabled})"),
-                                                                ))]
+                                                                let label = Arc::<str>::from(format!(
+                                                                    "Row {id} (tall={tall_rows_enabled})"
+                                                                ));
+                                                                vec![virtual_list_stress_row_label_text(cx, label)]
                                                             } else {
                                                                 Vec::new()
                                                             }
