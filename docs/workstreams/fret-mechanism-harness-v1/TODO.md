@@ -719,3 +719,9 @@ date: 2026-05-12
     sub-suite passed 5/5 with `focus_mismatch_total=0` and zero lint errors/warnings. No new
     Carousel mechanism or recipe defect was reproduced; the embla-engine suite now rejects future
     diagnostics lint drift for inertia, touch, resize reInit, and loop continuity/downgrade paths.
+- [x] Harden the Date Picker suite after strict lint exposed scroll/script precondition gaps.
+  - Result: the mobile Drawer script now uses a mobile-branch width that the Gallery content
+    viewport can actually contain, the range-roving script is independently runnable with its own
+    env defaults and scroll/click-stable preconditions, and `scroll_into_view` now classifies
+    impossible unscrollable-axis containment instead of falling through to a generic stuck result.
+    No Date Picker component or layout mechanism defect was reproduced in this slice.

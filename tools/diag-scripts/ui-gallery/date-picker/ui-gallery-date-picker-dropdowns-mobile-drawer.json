@@ -52,7 +52,7 @@
     { "type": "set_window_inner_size", "width_px": 1024.0, "height_px": 600.0 },
     { "type": "wait_frames", "n": 20 },
 
-    { "type": "set_window_inner_size", "width_px": 480.0, "height_px": 820.0 },
+    { "type": "set_window_inner_size", "width_px": 740.0, "height_px": 820.0 },
     { "type": "wait_frames", "n": 20 },
 
     {
@@ -61,6 +61,7 @@
       "target": { "kind": "test_id", "id": "ui-gallery-date-picker-dropdowns-trigger" },
       "delta_y": -420.0,
       "require_fully_within_container": true,
+      "require_fully_within_window": true,
       "padding_px": 16.0,
       "timeout_frames": 1800
     },

@@ -55,6 +55,90 @@ fn rects_close_with_epsilon(a: Rect, b: Rect, eps_px: f32) -> bool {
         && (a.size.height.0 - b.size.height.0).abs() <= eps
 }
 
+fn rect_needs_axis_scroll_to_fully_contain(
+    outer: Rect,
+    inner: Rect,
+    horizontal: bool,
+    eps_px: f32,
+) -> bool {
+    let eps = eps_px.max(0.0);
+    if horizontal {
+        let ox0 = outer.origin.x.0;
+        let ox1 = ox0 + outer.size.width.0.max(0.0);
+        let ix0 = inner.origin.x.0;
+        let ix1 = ix0 + inner.size.width.0.max(0.0);
+        ix0 + eps < ox0 || ix1 > ox1 + eps
+    } else {
+        let oy0 = outer.origin.y.0;
+        let oy1 = oy0 + outer.size.height.0.max(0.0);
+        let iy0 = inner.origin.y.0;
+        let iy1 = iy0 + inner.size.height.0.max(0.0);
+        iy0 + eps < oy0 || iy1 > oy1 + eps
+    }
+}
+
+fn scroll_into_view_unscrollable_axis_reason(
+    window_bounds: Rect,
+    container_bounds: Option<Rect>,
+    target_bounds: Option<Rect>,
+    require_fully_within_container: bool,
+    require_fully_within_window: bool,
+    delta_x: f32,
+    delta_y: f32,
+) -> Option<&'static str> {
+    let target_bounds = target_bounds?;
+    let can_scroll_x = delta_x.abs() > 0.01;
+    let can_scroll_y = delta_y.abs() > 0.01;
+
+    if require_fully_within_container && let Some(container_bounds) = container_bounds {
+        if !can_scroll_x
+            && rect_needs_axis_scroll_to_fully_contain(
+                container_bounds,
+                target_bounds,
+                true,
+                SCROLL_INTO_VIEW_VISIBILITY_EPS_PX,
+            )
+        {
+            return Some("scroll_into_view_impossible_unscrollable_x_for_container");
+        }
+        if !can_scroll_y
+            && rect_needs_axis_scroll_to_fully_contain(
+                container_bounds,
+                target_bounds,
+                false,
+                SCROLL_INTO_VIEW_VISIBILITY_EPS_PX,
+            )
+        {
+            return Some("scroll_into_view_impossible_unscrollable_y_for_container");
+        }
+    }
+
+    if require_fully_within_window {
+        if !can_scroll_x
+            && rect_needs_axis_scroll_to_fully_contain(
+                window_bounds,
+                target_bounds,
+                true,
+                SCROLL_INTO_VIEW_VISIBILITY_EPS_PX,
+            )
+        {
+            return Some("scroll_into_view_impossible_unscrollable_x_for_window");
+        }
+        if !can_scroll_y
+            && rect_needs_axis_scroll_to_fully_contain(
+                window_bounds,
+                target_bounds,
+                false,
+                SCROLL_INTO_VIEW_VISIBILITY_EPS_PX,
+            )
+        {
+            return Some("scroll_into_view_impossible_unscrollable_y_for_window");
+        }
+    }
+
+    None
+}
+
 fn scroll_into_view_visibility_satisfied(
     window_bounds: Rect,
     container_bounds: Option<Rect>,
@@ -493,6 +577,25 @@ pub(super) fn handle_scroll_into_view_step(
                     }
                 }
 
+                if let Some(reason) = scroll_into_view_unscrollable_axis_reason(
+                    window_bounds,
+                    Some(container_bounds),
+                    Some(target_bounds),
+                    require_fully_within_container,
+                    require_fully_within_window,
+                    effective_dx,
+                    effective_dy,
+                ) {
+                    *force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-scroll_into_view-impossible-unscrollable-axis"
+                    ));
+                    *stop_script = true;
+                    *failure_reason = Some(reason.to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                    return true;
+                }
+
                 let target_stable = state.last_target_bounds.is_some_and(|prev| {
                     rects_close_with_epsilon(prev, target_bounds, SCROLL_INTO_VIEW_PROGRESS_EPS_PX)
                 });
@@ -737,6 +840,46 @@ mod tests {
             rect(10.75, 20.0, 30.0, 40.0),
             0.5,
         ));
+    }
+
+    #[test]
+    fn scroll_unscrollable_axis_reports_impossible_container_containment() {
+        let window = rect(0.0, 0.0, 480.0, 840.0);
+        let container = rect(208.66667, 176.0, 247.33333, 640.0);
+        let target = rect(234.0, 764.0, 240.0, 36.0);
+
+        assert_eq!(
+            scroll_into_view_unscrollable_axis_reason(
+                window,
+                Some(container),
+                Some(target),
+                true,
+                false,
+                0.0,
+                -420.0,
+            ),
+            Some("scroll_into_view_impossible_unscrollable_x_for_container"),
+        );
+    }
+
+    #[test]
+    fn scroll_unscrollable_axis_allows_configured_horizontal_scroll() {
+        let window = rect(0.0, 0.0, 480.0, 840.0);
+        let container = rect(208.66667, 176.0, 247.33333, 640.0);
+        let target = rect(234.0, 764.0, 240.0, 36.0);
+
+        assert_eq!(
+            scroll_into_view_unscrollable_axis_reason(
+                window,
+                Some(container),
+                Some(target),
+                true,
+                false,
+                32.0,
+                -420.0,
+            ),
+            None,
+        );
     }
 
     #[test]

@@ -3050,6 +3050,54 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag-carousel-embla-engine-strict-v1/sessions/1778982359710-115076/suite.summary.json`
     reports `status=passed`, 5/5 rows, `scripts_with_evidence=5`,
     `focus_mismatch_total=0`, and zero lint errors/warnings for every row.
+- Date Picker strict diagnostics precondition hardening:
+  - invariant:
+    responsive and long-page Date Picker diagnostics should fail with actionable harness reasons,
+    not generic stuck scrolling, and promoted Date Picker scripts should be independently runnable
+    instead of depending on suite-only environment setup.
+  - findings:
+    the mobile Drawer script initially used a 480px window that selected the component's mobile
+    branch but left the desktop Gallery shell sidebar visible, so the remaining content viewport
+    was too narrow to fully contain the 240px trigger. The range-roving script also clicked an
+    offscreen trigger directly and depended on suite-injected environment variables when run alone.
+    These were diagnostics harness/script precondition gaps, not confirmed Date Picker component or
+    `fret-ui` layout mechanism defects.
+  - implementation anchors:
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_scroll.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/labels.rs`,
+    `tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-dropdowns-mobile-drawer.json`,
+    `tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-range-roving-skips-disabled.json`,
+    and `tools/diag-scripts/suites/ui-gallery-date-picker/suite.json`.
+  - focused harness gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics scroll_unscrollable_axis --no-fail-fast`
+  - focused harness result:
+    passed; Nextest run id `007a4bef-f826-4667-89bd-1a7cd5d41b12`.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - focused mobile Drawer gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-dropdowns-mobile-drawer.json --dir target/fret-diag-date-picker-mobile-drawer-fix-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused mobile Drawer result:
+    passed with run id `1778984155994`.
+  - first strict suite result:
+    `target/fret-diag-date-picker-strict-v2/sessions/1778984222427-88980/suite.summary.json`
+    failed only on `ui-gallery-date-picker-range-roving-skips-disabled`, proving the remaining
+    issue was a script precondition rather than the mobile Drawer path.
+  - focused range-roving gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-range-roving-skips-disabled.json --dir target/fret-diag-date-picker-range-roving-scroll-fix-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused range-roving result:
+    passed with run id `1778985968416`.
+  - full Date Picker suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-date-picker --dir target/fret-diag-date-picker-strict-v3 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - full Date Picker suite result:
+    `target/fret-diag-date-picker-strict-v3/sessions/1778986003617-126604/suite.summary.json`
+    reports `status=passed`, 4/4 rows.
+  - registry gates:
+    `python tools/test_check_diag_scripts_registry.py`
+    `python tools/check_diag_scripts_registry.py`
+  - registry results:
+    passed; registry self-tests ran 21 tests.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`
