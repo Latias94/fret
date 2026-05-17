@@ -96,6 +96,9 @@ Status:
   transitions now live in `fret-ui-headless::boolean_control`; `fret-ui-kit::primitives` retains
   only runtime/a11y/model facades for that family; shadcn, Material3, editor, gallery, and `fret`
   facade callers import the headless owner directly for pure state.
+- Complete through ASF-051 on 2026-05-17. `fret-ui-shadcn::carousel` now consumes the headless
+  carousel/Embla/snap-point engines directly from `fret-ui-headless`, proving a recipe surface does
+  not need broad kit shims for pure behavior.
 
 ## M5 — Shared Menu/Select Policy
 

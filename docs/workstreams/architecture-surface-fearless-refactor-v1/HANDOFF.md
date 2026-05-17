@@ -6,30 +6,30 @@ Last updated: 2026-05-17
 ## Current State
 
 The workstream has been opened from an architecture surface audit. ASF-020, ASF-021, ASF-030,
-ASF-031, ASF-040, ASF-041, and ASF-050 are complete: the `fret` backend-free app-authoring profiles
-no longer pull the native launch/render/backend stack, `FretApp` is now a backend-free authoring
-spec with desktop-only execution methods, `fret-bootstrap --no-default-features` now exposes
-bootstrap planning/default policy without pulling the concrete launch/render/backend stack,
+ASF-031, ASF-040, ASF-041, ASF-050, and ASF-051 are complete: the `fret` backend-free app-authoring
+profiles no longer pull the native launch/render/backend stack, `FretApp` is now a backend-free
+authoring spec with desktop-only execution methods, `fret-bootstrap --no-default-features` now
+exposes bootstrap planning/default policy without pulling the concrete launch/render/backend stack,
 first-party scaffold/template guidance now uses the new app-spec-recording vs
 desktop-builder-application split, the app prelude has a closed Golden Path budget, LocalState has
-a private owner module, and the boolean-control family now proves the headless/primitives/kit
-taxonomy.
+a private owner module, the boolean-control family now proves the headless/primitives/kit taxonomy,
+and the carousel recipe consumes headless engines directly instead of through kit shims.
 
 The user explicitly approved fearless refactoring with no compatibility burden: redundant old code,
 aliases, and wrappers may be deleted when first-party callers are migrated.
 
 ## Active Task
 
-- Task ID: ASF-051
+- Task ID: ASF-060
 - Owner: unassigned
 - Files:
+  - `ecosystem/fret-ui-headless`
   - `ecosystem/fret-ui-kit`
-  - `ecosystem/fret-ui-shadcn`
-  - `ecosystem/fret-ui-material3`
+  - `ecosystem/fret-ui-shadcn/src/{select.rs,dropdown_menu.rs,context_menu.rs,menubar.rs}`
 - Validation:
-  - package tests for the migrated recipe crate
+  - targeted `fret-ui-shadcn` tests for select/dropdown/context menu parity
+  - owner module unit tests for the extracted behavior
   - `python tools/check_layering.py`
-  - no new backend deps in ecosystem crates
 
 ## Decisions Since Last Update
 
@@ -75,6 +75,10 @@ aliases, and wrappers may be deleted when first-party callers are migrated.
   `fret-ui-kit::primitives::{checkbox,switch}` keep runtime/a11y/model facades only; shadcn,
   Material3, editor, gallery, and `fret` facade call sites import the headless owner directly for
   pure state. ADR 0154 alignment now records that `fret-ui-primitives` remains deleted for v1.
+- ASF-051 migrated the carousel recipe off broad kit headless shims:
+  `ecosystem/fret-ui-shadcn/src/carousel.rs` now imports
+  `fret_ui_headless::{carousel, embla, snap_points}` directly. This preserves `fret-ui-kit` as
+  runtime/design-system infrastructure rather than the owner for pure carousel engines.
 
 ## Blockers
 
@@ -82,7 +86,6 @@ aliases, and wrappers may be deleted when first-party callers are migrated.
 
 ## Next Recommended Action
 
-- Start ASF-051: migrate one recipe surface to consume the finalized taxonomy directly rather than
-  broad kit compatibility shims. The boolean-control recipe family is already migrated; a good next
-  slice is a nearby recipe that still imports shared behavior through `fret-ui-kit::headless` when a
-  direct `fret-ui-headless` import would be the clearer owner path.
+- Start ASF-060: extract one repeated menu/select behavior such as roving focus, typeahead,
+  submenu grace intent, dismissal, or entry focus into a shared owner module, then consume it from
+  at least two recipe surfaces.

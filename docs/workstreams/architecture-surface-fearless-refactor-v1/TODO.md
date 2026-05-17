@@ -67,11 +67,11 @@ Last updated: 2026-05-17
   Evidence: `ecosystem/fret-ui-headless/src/boolean_control.rs`; `ecosystem/fret-ui-kit/src/primitives/{checkbox.rs,switch.rs}`; `ecosystem/fret-ui-shadcn/src/{checkbox.rs,switch.rs}`; `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
   Handoff: Completed on 2026-05-17; the boolean-control family proves the split without reintroducing `fret-ui-primitives`: pure transitions live in `fret-ui-headless`, kit primitives keep runtime/a11y/model facades, and first-party recipes consume the headless owner directly.
 
-- [ ] ASF-051 [owner=unassigned] [deps=ASF-050] [scope=ecosystem/fret-ui-kit,ecosystem/fret-ui-shadcn,ecosystem/fret-ui-material3]
+- [x] ASF-051 [owner=codex] [deps=ASF-050] [scope=ecosystem/fret-ui-kit,ecosystem/fret-ui-shadcn,ecosystem/fret-ui-material3]
   Goal: Migrate at least one recipe surface to consume the finalized primitive taxonomy directly instead of depending on broad kit compatibility shims.
   Validation: package tests for the recipe crate and no new backend deps in ecosystem crates.
-  Evidence: Recipe imports demonstrate the target dependency path.
-  Handoff: Prefer a vertical proof over moving every primitive at once.
+  Evidence: `ecosystem/fret-ui-shadcn/src/carousel.rs`; `docs/audits/shadcn-carousel.md`; `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
+  Handoff: Completed on 2026-05-17; `fret-ui-shadcn::carousel` now imports `fret_ui_headless::{carousel, embla, snap_points}` directly instead of routing pure engines through `fret_ui_kit::headless`.
 
 ## M5 — Shared Menu/Select Policy
 

@@ -284,6 +284,21 @@ What this proves:
   was attempted first, but Windows refused to enumerate an unrelated integration-test binary with
   `os error 740`; the same owner tests were run through `cargo test --lib` instead.
 
+2026-05-17 result for ASF-051:
+
+- Chosen recipe surface: `fret-ui-shadcn::carousel`.
+- `ecosystem/fret-ui-shadcn/src/carousel.rs` now imports
+  `fret_ui_headless::{carousel, embla, snap_points}` directly instead of routing pure carousel
+  engines through `fret_ui_kit::headless`.
+- `docs/audits/shadcn-carousel.md` and `docs/adr/IMPLEMENTATION_ALIGNMENT.md` record the owner path.
+- Targeted checks passed:
+  - `cargo fmt --package fret-ui-shadcn`
+  - `cargo check -p fret-ui-shadcn --locked -j 1`
+  - `cargo test -p fret-ui-shadcn --locked --test carousel_loop_downgrade_without_embla_engine -j 1`
+  - `python tools/check_layering.py`
+  - `python tools/check_workstream_catalog.py`
+  - `git diff --check`
+
 ### Renderer Facade Gates
 
 The exact gate depends on the ASF-070 decision:

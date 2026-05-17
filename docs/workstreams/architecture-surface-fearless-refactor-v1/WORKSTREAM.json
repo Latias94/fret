@@ -128,6 +128,14 @@
     {
       "kind": "asf-050",
       "path": "ecosystem/fret-ui-shadcn/src/switch.rs"
+    },
+    {
+      "kind": "asf-051",
+      "path": "ecosystem/fret-ui-shadcn/src/carousel.rs"
+    },
+    {
+      "kind": "asf-051",
+      "path": "docs/audits/shadcn-carousel.md"
     }
   ],
   "adr_refs": [
@@ -140,6 +148,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue with ASF-051 next. Delete redundant compatibility surfaces when first-party callers can be migrated; do not preserve old interfaces by default."
+    "notes": "Continue with ASF-060 next. Delete redundant compatibility surfaces when first-party callers can be migrated; do not preserve old interfaces by default."
   }
 }
