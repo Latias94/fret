@@ -75,17 +75,17 @@ Last updated: 2026-05-17
 
 ## M5 — Shared Menu/Select Policy
 
-- [ ] ASF-060 [owner=unassigned] [deps=ASF-050] [scope=ecosystem/fret-ui-kit,ecosystem/fret-ui-headless,ecosystem/fret-ui-shadcn/src/{select.rs,dropdown_menu.rs,context_menu.rs,menubar.rs}]
+- [x] ASF-060 [owner=codex] [deps=ASF-050] [scope=ecosystem/fret-ui-kit,ecosystem/fret-ui-headless,ecosystem/fret-ui-shadcn/src/{select.rs,dropdown_menu.rs,context_menu.rs,menubar.rs}]
   Goal: Extract one shared menu/select interaction module covering a concrete behavior such as roving focus, typeahead, submenu grace intent, dismissal, or entry focus.
   Validation: targeted `fret-ui-shadcn` tests for select/dropdown/context menu parity, plus any new headless/primitive unit tests.
-  Evidence: One behavior is tested once at the owner module and consumed by multiple recipe files.
-  Handoff: Do not start by splitting files mechanically; extract behavior only where it creates locality.
+  Evidence: `ecosystem/fret-ui-headless/src/entry_focus.rs`; `ecosystem/fret-ui-kit/src/primitives/{menu/root.rs,select.rs}`; `ecosystem/fret-ui-shadcn/src/select.rs`; `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
+  Handoff: Completed on 2026-05-17; entry-focus target selection is now a headless owner consumed by menu and select runtime adapters. `cargo test -p fret-ui-shadcn --locked --test select_keyboard_navigation -j 1` exposed a pre-existing/adjacent expectation conflict around pointer-open ArrowDown selecting the first item; do not count that command as passed evidence.
 
-- [ ] ASF-061 [owner=unassigned] [deps=ASF-060] [scope=docs/workstreams/menu-surfaces-alignment-v1,docs/adr/IMPLEMENTATION_ALIGNMENT.md]
+- [x] ASF-061 [owner=codex] [deps=ASF-060] [scope=docs/workstreams/shadcn-menu-select-policy-followon-v1,docs/adr/IMPLEMENTATION_ALIGNMENT.md]
   Goal: Record whether the first extraction proves a broader menu/select cleanup lane or should remain a narrow fix.
   Validation: updated workstream note or follow-on split.
-  Evidence: documented decision with code/test anchors.
-  Handoff: Split a separate menu/select workstream if the surface becomes the main project.
+  Evidence: `docs/workstreams/shadcn-menu-select-policy-followon-v1/{WORKSTREAM.json,DESIGN.md,TODO.md,EVIDENCE_AND_GATES.md}`.
+  Handoff: Completed on 2026-05-17; ASF-060 remains the architecture-surface proof, while remaining shadcn select/menu semantics move to the narrow follow-on. The older `menu-surfaces-alignment-v1` lane stays completed historical OS/in-window menubar scope.
 
 ## M6 — Renderer Facade Decision
 

@@ -113,6 +113,15 @@ Primary gates:
 - targeted `cargo nextest run -p fret-ui-shadcn <menu-or-select-filter>`
 - targeted unit tests in the owner module.
 
+Status:
+
+- Complete through ASF-060 on 2026-05-17. Input-modality-gated entry-focus target selection now
+  lives in `fret-ui-headless::entry_focus`; menu and select primitives adapt runtime modality into
+  that owner, and shadcn select consumes the shared select adapter.
+- ASF-061 split remaining shadcn menu/select policy cleanup into
+  `docs/workstreams/shadcn-menu-select-policy-followon-v1/`; this lane keeps only the architecture
+  proof.
+
 ## M6 — Renderer Facade Decision
 
 Exit criteria:

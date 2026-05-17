@@ -6,30 +6,32 @@ Last updated: 2026-05-17
 ## Current State
 
 The workstream has been opened from an architecture surface audit. ASF-020, ASF-021, ASF-030,
-ASF-031, ASF-040, ASF-041, ASF-050, and ASF-051 are complete: the `fret` backend-free app-authoring
+ASF-031, ASF-040, ASF-041, ASF-050, ASF-051, and ASF-060 are complete: the `fret` backend-free app-authoring
 profiles no longer pull the native launch/render/backend stack, `FretApp` is now a backend-free
 authoring spec with desktop-only execution methods, `fret-bootstrap --no-default-features` now
 exposes bootstrap planning/default policy without pulling the concrete launch/render/backend stack,
 first-party scaffold/template guidance now uses the new app-spec-recording vs
 desktop-builder-application split, the app prelude has a closed Golden Path budget, LocalState has
 a private owner module, the boolean-control family now proves the headless/primitives/kit taxonomy,
-and the carousel recipe consumes headless engines directly instead of through kit shims.
+the carousel recipe consumes headless engines directly instead of through kit shims, and menu/select
+entry-focus target selection is now owned by a shared headless module.
 
 The user explicitly approved fearless refactoring with no compatibility burden: redundant old code,
 aliases, and wrappers may be deleted when first-party callers are migrated.
 
 ## Active Task
 
-- Task ID: ASF-060
+- Task ID: ASF-070
 - Owner: unassigned
 - Files:
-  - `ecosystem/fret-ui-headless`
-  - `ecosystem/fret-ui-kit`
-  - `ecosystem/fret-ui-shadcn/src/{select.rs,dropdown_menu.rs,context_menu.rs,menubar.rs}`
+  - `crates/fret-render`
+  - `crates/fret-render-core`
+  - `crates/fret-render-wgpu`
+  - `docs/workstreams/renderer-modularity-fearless-refactor-v1`
+  - `docs/adr/IMPLEMENTATION_ALIGNMENT.md`
 - Validation:
-  - targeted `fret-ui-shadcn` tests for select/dropdown/context menu parity
-  - owner module unit tests for the extracted behavior
-  - `python tools/check_layering.py`
+  - decision note for collapse vs deepen
+  - targeted compile gate for the chosen renderer profile
 
 ## Decisions Since Last Update
 
@@ -79,6 +81,16 @@ aliases, and wrappers may be deleted when first-party callers are migrated.
   `ecosystem/fret-ui-shadcn/src/carousel.rs` now imports
   `fret_ui_headless::{carousel, embla, snap_points}` directly. This preserves `fret-ui-kit` as
   runtime/design-system infrastructure rather than the owner for pure carousel engines.
+- ASF-060 extracted input-modality-gated entry-focus target selection into
+  `ecosystem/fret-ui-headless/src/entry_focus.rs`. `fret-ui-kit` menu/select primitives now adapt
+  runtime input modality into that owner, and shadcn select consumes the shared select adapter. A
+  failed `select_keyboard_navigation` integration run exposed an adjacent pointer-open ArrowDown
+  expectation conflict (`"apple"` vs expected `"banana"`); keep that as select follow-on evidence,
+  not as an ASF-060 pass/fail blocker.
+- ASF-061 split the remaining shadcn menu/select semantics into
+  `docs/workstreams/shadcn-menu-select-policy-followon-v1/`. The older
+  `docs/workstreams/menu-surfaces-alignment-v1/` lane remains completed historical OS/in-window
+  menubar scope and should not be silently reopened.
 
 ## Blockers
 
@@ -86,6 +98,6 @@ aliases, and wrappers may be deleted when first-party callers are migrated.
 
 ## Next Recommended Action
 
-- Start ASF-060: extract one repeated menu/select behavior such as roving focus, typeahead,
-  submenu grace intent, dismissal, or entry focus into a shared owner module, then consume it from
-  at least two recipe surfaces.
+- Start ASF-070: decide whether `fret-render` should be collapsed into the concrete wgpu renderer
+  facade or deepened into a real renderer interface. If this becomes more than a decision + compile
+  proof, split it into `renderer-modularity-fearless-refactor-v1` before large implementation.

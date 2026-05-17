@@ -299,6 +299,56 @@ What this proves:
   - `python tools/check_workstream_catalog.py`
   - `git diff --check`
 
+2026-05-17 result for ASF-060:
+
+- Chosen shared menu/select behavior: input-modality-gated entry focus.
+- `ecosystem/fret-ui-headless/src/entry_focus.rs` now owns the pure target-selection policy:
+  pointer-open resolves to content focus, menu keyboard-open uses the entry target only, and select
+  keyboard-open falls back to content focus when no entry target exists.
+- `ecosystem/fret-ui-kit/src/primitives/menu/root.rs` aliases the headless target type as
+  `MenuInitialFocusTargets` and adapts `fret-ui` input modality through `resolve_menu(...)`.
+- `ecosystem/fret-ui-kit/src/primitives/select.rs` aliases the same headless target type as
+  `SelectInitialFocusTargets` and exposes `select_resolve_initial_focus(...)` for the runtime
+  modality adapter.
+- `ecosystem/fret-ui-shadcn/src/select.rs` now consumes the shared select adapter instead of
+  resolving the target through a select-local struct method. Dropdown menu, context menu, menubar,
+  `fret` in-window menubar, and imui popup menu continue to consume the same menu adapter path.
+- ADR 0094 alignment now records `fret-ui-headless::entry_focus` as the policy owner.
+- Targeted checks passed:
+  - `cargo fmt --package fret-ui-headless --package fret-ui-kit --package fret-ui-shadcn`
+  - `cargo test -p fret-ui-headless --locked --lib entry_focus -j 1`
+  - `cargo test -p fret-ui-kit --locked --lib initial_focus -j 1`
+  - `cargo test -p fret-ui-kit --locked --lib select_initial_focus_targets_gate_by_input_modality -j 1`
+  - `cargo check -p fret-ui-shadcn --locked -j 1`
+  - `cargo test -p fret-ui-shadcn --locked --test dropdown_menu_keyboard_navigation -j 1`
+  - `cargo test -p fret-ui-shadcn --locked --test select_escape_dismiss_focus_restore -j 1`
+  - `cargo test -p fret-ui-shadcn --locked --test context_menu_keyboard_navigation -j 1`
+  - `python tools/check_layering.py`
+  - `python tools/check_consumption_profiles.py`
+  - `python tools/check_workstream_catalog.py`
+  - `git diff --check`
+- Non-passing observation:
+  - `cargo test -p fret-ui-shadcn --locked --lib pointer_open_focuses -j 1` timed out while
+    compiling/linking the large source-level shadcn test harness.
+  - `cargo test -p fret-ui-shadcn --locked --lib select_keyboard_open_focuses_selected_entry -j 1`
+    returned non-zero after printing only the compile line; no rustc diagnostic was emitted.
+  - `cargo test -p fret-ui-shadcn --locked --test select_keyboard_navigation -j 1` ran and failed:
+    after pointer-open + ArrowDown + Enter it selected `"apple"` while the test expected
+    `"banana"`. This appears adjacent to the existing select interaction contract: pointer-open
+    intentionally does not pre-highlight an entry, so ArrowDown lands on the first enabled option.
+    Treat this as follow-on select-lane evidence, not as passed ASF-060 evidence.
+
+2026-05-17 result for ASF-061:
+
+- Decision: keep ASF-060 as the architecture-surface proof and split remaining shadcn menu/select
+  policy work into a narrow follow-on:
+  `docs/workstreams/shadcn-menu-select-policy-followon-v1/`.
+- The completed historical `docs/workstreams/menu-surfaces-alignment-v1/` lane remains OS/in-window
+  menubar MVP scope and should not be reopened for shadcn recipe/select policy cleanup.
+- Follow-on baseline repro is
+  `cargo test -p fret-ui-shadcn --locked --test select_keyboard_navigation -j 1`, which currently
+  captures the pointer-open ArrowDown contract conflict observed during ASF-060.
+
 ### Renderer Facade Gates
 
 The exact gate depends on the ASF-070 decision:

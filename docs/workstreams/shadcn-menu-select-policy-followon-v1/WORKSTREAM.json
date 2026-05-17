@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "slug": "shadcn-menu-select-policy-followon-v1",
+  "title": "shadcn Menu/Select Policy Follow-on v1",
+  "status": "active",
+  "updated": "2026-05-17",
+  "scope_kind": "execution",
+  "follow_on_of": "architecture-surface-fearless-refactor-v1",
+  "problem": "ASF-060 proved a shared headless owner for menu/select entry focus, but shadcn menu/select recipes still have large, drift-prone policy surfaces for select ArrowDown semantics, roving/typeahead collection extraction, submenu intent, and dismissal/focus details.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/shadcn-menu-select-policy-followon-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/shadcn-menu-select-policy-followon-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/shadcn-menu-select-policy-followon-v1/EVIDENCE_AND_GATES.md"
+    }
+  ],
+  "repro": {
+    "summary": "Start from the select ArrowDown expectation conflict observed during ASF-060.",
+    "commands": [
+      "cargo test -p fret-ui-shadcn --locked --test select_keyboard_navigation -j 1"
+    ]
+  },
+  "gates": [
+    {
+      "name": "headless-entry-focus-owner",
+      "command": "cargo test -p fret-ui-headless --locked --lib entry_focus -j 1"
+    },
+    {
+      "name": "kit-initial-focus-adapters",
+      "command": "cargo test -p fret-ui-kit --locked --lib initial_focus -j 1"
+    },
+    {
+      "name": "shadcn-select-keyboard-navigation",
+      "command": "cargo test -p fret-ui-shadcn --locked --test select_keyboard_navigation -j 1"
+    },
+    {
+      "name": "layering",
+      "command": "python tools/check_layering.py"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/architecture-surface-fearless-refactor-v1/EVIDENCE_AND_GATES.md",
+    "ecosystem/fret-ui-headless/src/entry_focus.rs",
+    "ecosystem/fret-ui-kit/src/primitives/menu/root.rs",
+    "ecosystem/fret-ui-kit/src/primitives/select.rs",
+    "ecosystem/fret-ui-shadcn/src/select.rs",
+    "ecosystem/fret-ui-shadcn/tests/select_keyboard_navigation.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0094-menu-open-modality-and-entry-focus.md",
+    "docs/adr/0154-ecosystem-crate-taxonomy-glue-and-ui-kit-split-v1.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Keep this lane narrow: resolve the select ArrowDown contract first, then extract only shared policy that reduces drift across shadcn select/dropdown/context/menubar surfaces."
+  }
+}

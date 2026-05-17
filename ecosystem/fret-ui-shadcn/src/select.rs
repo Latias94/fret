@@ -4603,10 +4603,11 @@ fn select_impl<H: UiHost>(
                         on_dismiss_request.clone(),
                         overlay_children,
                     );
-                    request.initial_focus = radix_select::SelectInitialFocusTargets::new()
+                    let initial_focus = radix_select::SelectInitialFocusTargets::new()
                         .pointer_content_focus(Some(listbox_id_for_trigger))
-                        .keyboard_entry_focus(selected_item_id_for_request_cell.get())
-                        .resolve(cx, cx.window);
+                        .keyboard_entry_focus(selected_item_id_for_request_cell.get());
+                    request.initial_focus =
+                        radix_select::select_resolve_initial_focus(cx, cx.window, initial_focus);
                     radix_select::request_select(cx, request);
                 } else {
             let portal_ctx = portal_inherited::PortalInherited::capture(cx);
@@ -4641,10 +4642,11 @@ fn select_impl<H: UiHost>(
                         on_dismiss_request.clone(),
                         overlay_children,
                     );
-                    request.initial_focus = radix_select::SelectInitialFocusTargets::new()
+                    let initial_focus = radix_select::SelectInitialFocusTargets::new()
                         .pointer_content_focus(Some(listbox_id_for_trigger))
-                        .keyboard_entry_focus(None)
-                        .resolve(cx, cx.window);
+                        .keyboard_entry_focus(None);
+                    request.initial_focus =
+                        radix_select::select_resolve_initial_focus(cx, cx.window, initial_focus);
                     radix_select::request_select(cx, request);
                 }
             }

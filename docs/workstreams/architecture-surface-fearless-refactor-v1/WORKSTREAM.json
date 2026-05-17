@@ -136,6 +136,30 @@
     {
       "kind": "asf-051",
       "path": "docs/audits/shadcn-carousel.md"
+    },
+    {
+      "kind": "asf-060",
+      "path": "ecosystem/fret-ui-headless/src/entry_focus.rs"
+    },
+    {
+      "kind": "asf-060",
+      "path": "ecosystem/fret-ui-kit/src/primitives/menu/root.rs"
+    },
+    {
+      "kind": "asf-060",
+      "path": "ecosystem/fret-ui-kit/src/primitives/select.rs"
+    },
+    {
+      "kind": "asf-060",
+      "path": "ecosystem/fret-ui-shadcn/src/select.rs"
+    },
+    {
+      "kind": "asf-061",
+      "path": "docs/workstreams/shadcn-menu-select-policy-followon-v1/WORKSTREAM.json"
+    },
+    {
+      "kind": "asf-061",
+      "path": "docs/workstreams/shadcn-menu-select-policy-followon-v1/DESIGN.md"
     }
   ],
   "adr_refs": [
@@ -148,6 +172,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue with ASF-060 next. Delete redundant compatibility surfaces when first-party callers can be migrated; do not preserve old interfaces by default."
+    "notes": "Continue with ASF-070 next. Remaining shadcn menu/select policy cleanup is split to docs/workstreams/shadcn-menu-select-policy-followon-v1. Delete redundant compatibility surfaces when first-party callers can be migrated; do not preserve old interfaces by default."
   }
 }
