@@ -38,7 +38,10 @@ cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_primitiv
 ```
 
 Current layout primitive fixture coverage includes text measurement/paint agreement metrics for
-column wrap width, max-width row wrap width, and overflow/scale constraints.
+column wrap width, max-width row wrap width, and overflow/scale constraints. It also locks flex
+visual-order consistency: `FlexItemStyle.order` is now applied through the same ordered child
+sequence in layout and intrinsic measurement, including wrap-sensitive measurement cases
+(`b269764aa2`).
 
 ## Suite Lint Policy Gates
 

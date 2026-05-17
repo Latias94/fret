@@ -738,3 +738,8 @@ date: 2026-05-12
     truncation/chevron geometry, popup top/bottom placement, and responsive open/resize placement
     as a 7/7 zero-warning suite. No new Combobox recipe or overlay mechanism defect was
     reproduced.
+- [x] Add flex visual-order layout/measurement consistency coverage.
+  - Result: the layout primitive fixture exposed a real mechanism defect where
+    `FlexItemStyle.order` affected final layout but not intrinsic flex measurement. `fret-ui` now
+    shares the same visual-order child helper between layout and measurement, and the fixture locks
+    both final child positions and wrap-sensitive measured width.
