@@ -832,6 +832,27 @@ Progress record (RenderPlan compiler modularization):
   - `cargo test -p fret-render-wgpu --lib` compiled, but failed on unrelated text/system-font
     environment tests in this Windows environment.
 
+Progress record (RenderPlan compiler context boundary):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 2; Stage 24 continues)
+- Objective:
+  - Move structural compiler outputs behind an explicit context so pass/degradation/segment
+    mutation has one owner before extracting scope-specific compilers.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/context.rs`
+    (`RenderPlanCompilerCtx`, `alloc_segment`, `flush_scene_range`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (`compile_for_scene_inner` uses the context while preserving the entrypoint and IR shape)
+- Gates run:
+  - `python3 tools/check_layering.py`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `cargo test -p fret-render-wgpu --lib` compiled, but failed on unrelated text/system-font
+    environment tests in this Windows environment.
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

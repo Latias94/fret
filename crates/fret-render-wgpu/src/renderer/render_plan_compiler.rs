@@ -3,16 +3,17 @@
 // This module translates a SceneEncoding into a RenderPlan, choosing targets/passes and applying
 // deterministic budget-driven degradations.
 
+mod context;
 mod target_budget;
 
 use super::render_plan_effects as effects;
 use super::{
     BlurQualitySnapshot, EffectDegradationSnapshot, EffectMarkerKind, FullscreenBlitPass,
     LocalScissorRect, OrderedDraw, RenderPlanDegradation, RenderPlanDegradationKind,
-    RenderPlanDegradationReason, RenderPlanPass, SceneDrawRangePass, SceneEncoding, ScissorRect,
+    RenderPlanDegradationReason, RenderPlanPass, SceneEncoding, ScissorRect,
 };
 use crate::renderer::{estimate_clip_mask_bytes, estimate_texture_bytes};
-use slotmap::Key;
+use context::RenderPlanCompilerCtx;
 use target_budget::{
     can_allocate_intermediate_bytes, choose_backdrop_source_group_pyramid_choice,
     estimate_in_use_intermediate_bytes, intermediate_budget_breakdown_for_chain,
@@ -233,12 +234,7 @@ fn compile_for_scene_inner(
         EffectMarkerKind::Push { mode, .. } => mode == fret_core::EffectMode::Backdrop,
         _ => false,
     });
-
-    let mut segments: Vec<super::RenderPlanSegment> = Vec::new();
-    let mut next_segment_id: usize = 0;
-
-    let mut passes: Vec<RenderPlanPass> = Vec::new();
-    let mut degradations: Vec<RenderPlanDegradation> = Vec::new();
+    let mut ctx = RenderPlanCompilerCtx::new();
     let mut effect_degradations = EffectDegradationSnapshot::default();
     let mut effect_blur_quality = BlurQualitySnapshot::default();
     let mut draw_scopes: Vec<DrawScope> = vec![DrawScope {
@@ -270,122 +266,6 @@ fn compile_for_scene_inner(
     let mut custom_effect_chain_base_required_full_targets_max: u32 = 0;
     let mut custom_effect_chain_optional_mask_max_bytes: u64 = 0;
     let mut custom_effect_chain_optional_pyramid_max_bytes: u64 = 0;
-
-    let mut alloc_segment = |draw_range: std::ops::Range<usize>| -> super::SceneSegmentId {
-        let id = super::SceneSegmentId(next_segment_id);
-        next_segment_id += 1;
-
-        let start_uniform_index = draws.get(draw_range.start).map(|d| match d {
-            OrderedDraw::Quad(d) => d.uniform_index,
-            OrderedDraw::VertexColor(d) => d.uniform_index,
-            OrderedDraw::Viewport(d) => d.uniform_index,
-            OrderedDraw::Image(d) => d.uniform_index,
-            OrderedDraw::Mask(d) => d.uniform_index,
-            OrderedDraw::Text(d) => d.uniform_index,
-            OrderedDraw::Path(d) => d.uniform_index,
-        });
-
-        fn mix_fnv1a(mut hash: u64, value: u64) -> u64 {
-            hash ^= value;
-            hash = hash.wrapping_mul(1099511628211);
-            hash
-        }
-
-        let start_uniform_fingerprint = if let Some(start_uniform_index) = start_uniform_index
-            && let Some(uniform) = encoding.uniforms.get(start_uniform_index as usize)
-        {
-            let mut hash: u64 = 14695981039346656037;
-            hash = mix_fnv1a(hash, u64::from(uniform.clip_head));
-            hash = mix_fnv1a(hash, u64::from(uniform.clip_count));
-            hash = mix_fnv1a(hash, u64::from(uniform.mask_head));
-            hash = mix_fnv1a(hash, u64::from(uniform.mask_count));
-            hash = mix_fnv1a(hash, u64::from(uniform.mask_scope_head));
-            hash = mix_fnv1a(hash, u64::from(uniform.mask_scope_count));
-            hash = mix_fnv1a(hash, u64::from(uniform.output_is_srgb));
-            hash = mix_fnv1a(hash, u64::from(uniform.mask_viewport_origin[0].to_bits()));
-            hash = mix_fnv1a(hash, u64::from(uniform.mask_viewport_origin[1].to_bits()));
-            hash = mix_fnv1a(hash, u64::from(uniform.mask_viewport_size[0].to_bits()));
-            hash = mix_fnv1a(hash, u64::from(uniform.mask_viewport_size[1].to_bits()));
-
-            let mask_image = encoding
-                .uniform_mask_images
-                .get(start_uniform_index as usize)
-                .copied()
-                .flatten();
-            hash = mix_fnv1a(
-                hash,
-                mask_image.map(|sel| sel.image.data().as_ffi()).unwrap_or(0),
-            );
-            hash = mix_fnv1a(
-                hash,
-                mask_image
-                    .map(|sel| match sel.sampling {
-                        fret_core::scene::ImageSamplingHint::Default => 0,
-                        fret_core::scene::ImageSamplingHint::Linear => 1,
-                        fret_core::scene::ImageSamplingHint::Nearest => 2,
-                    })
-                    .unwrap_or(0),
-            );
-            hash
-        } else {
-            0
-        };
-
-        let mut flags = super::RenderPlanSegmentFlags::default();
-        for draw in draws.get(draw_range.start..draw_range.end).unwrap_or(&[]) {
-            match draw {
-                OrderedDraw::Quad(_) => flags.has_quad = true,
-                OrderedDraw::VertexColor(_) => flags.has_vertex_color = true,
-                OrderedDraw::Viewport(_) => flags.has_viewport = true,
-                OrderedDraw::Image(_) => flags.has_image = true,
-                OrderedDraw::Mask(_) => flags.has_mask = true,
-                OrderedDraw::Text(_) => flags.has_text = true,
-                OrderedDraw::Path(_) => flags.has_path = true,
-            }
-        }
-
-        segments.push(super::RenderPlanSegment {
-            id,
-            draw_range,
-            start_uniform_index,
-            start_uniform_fingerprint,
-            flags,
-        });
-
-        id
-    };
-
-    let flush_scene_range =
-        |end: usize,
-         passes: &mut Vec<RenderPlanPass>,
-         draw_scopes: &mut Vec<DrawScope>,
-         alloc_segment: &mut dyn FnMut(std::ops::Range<usize>) -> super::SceneSegmentId,
-         scene_range_start: &mut usize| {
-            let scope = draw_scopes.last_mut().expect("draw scope");
-            if scope.needs_clear {
-                let segment = alloc_segment(*scene_range_start..end);
-                passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
-                    segment,
-                    target: scope.target,
-                    target_origin: scope.origin,
-                    target_size: scope.size,
-                    load: wgpu::LoadOp::Clear(scope.clear_color),
-                    draw_range: *scene_range_start..end,
-                }));
-                scope.needs_clear = false;
-            } else if *scene_range_start < end {
-                let segment = alloc_segment(*scene_range_start..end);
-                passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
-                    segment,
-                    target: scope.target,
-                    target_origin: scope.origin,
-                    target_size: scope.size,
-                    load: wgpu::LoadOp::Load,
-                    draw_range: *scene_range_start..end,
-                }));
-            }
-            *scene_range_start = end;
-        };
 
     let take_scope_load_for_write =
         |draw_scopes: &mut Vec<DrawScope>, dst: super::PlanTarget| -> wgpu::LoadOp<wgpu::Color> {
@@ -508,11 +388,11 @@ fn compile_for_scene_inner(
             .unwrap_or(usize::MAX);
 
         if cursor == next_marker_at || cursor == draws.len() {
-            flush_scene_range(
+            ctx.flush_scene_range(
                 cursor,
-                &mut passes,
                 &mut draw_scopes,
-                &mut alloc_segment,
+                draws,
+                encoding,
                 &mut scene_range_start,
             );
 
@@ -545,7 +425,7 @@ fn compile_for_scene_inner(
                                         && !backdrop_source_group_reserved_targets.contains(&t)
                                 });
 
-                                let before = passes.len();
+                                let before = ctx.passes_len();
                                 let unavailable_mask_targets: Vec<super::PlanTarget> =
                                     clip_path_scopes
                                         .iter()
@@ -563,7 +443,7 @@ fn compile_for_scene_inner(
                                         })
                                     });
                                 apply_chain_in_place(
-                                    &mut passes,
+                                    ctx.passes_mut(),
                                     &draw_scopes,
                                     parent_target,
                                     mode,
@@ -580,7 +460,7 @@ fn compile_for_scene_inner(
                                     &mut effect_degradations,
                                     &mut effect_blur_quality,
                                 );
-                                if before == passes.len()
+                                if before == ctx.passes_len()
                                     && !chain.is_empty()
                                     && parent_target != super::PlanTarget::Output
                                     && scissor.w != 0
@@ -593,7 +473,7 @@ fn compile_for_scene_inner(
                                     } else {
                                         RenderPlanDegradationReason::BudgetInsufficient
                                     };
-                                    degradations.push(RenderPlanDegradation {
+                                    ctx.push_degradation(RenderPlanDegradation {
                                         draw_ix: cursor,
                                         kind: RenderPlanDegradationKind::BackdropEffectNoOp,
                                         reason,
@@ -662,7 +542,7 @@ fn compile_for_scene_inner(
                                         clear_color: wgpu::Color::TRANSPARENT,
                                     });
                                 } else if content_size.0 != 0 && content_size.1 != 0 {
-                                    degradations.push(RenderPlanDegradation {
+                                    ctx.push_degradation(RenderPlanDegradation {
                                         draw_ix: cursor,
                                         kind: RenderPlanDegradationKind::FilterContentDisabled,
                                         reason: if !had_free_target {
@@ -724,9 +604,9 @@ fn compile_for_scene_inner(
                                 ScissorRect::full(scope.content_size.0, scope.content_size.1)
                             };
 
-                            let before = passes.len();
+                            let before = ctx.passes_len();
                             apply_chain_in_place(
-                                &mut passes,
+                                ctx.passes_mut(),
                                 &draw_scopes,
                                 content_target,
                                 scope.mode,
@@ -743,12 +623,12 @@ fn compile_for_scene_inner(
                                 &mut effect_degradations,
                                 &mut effect_blur_quality,
                             );
-                            if before == passes.len()
+                            if before == ctx.passes_len()
                                 && !scope.chain.is_empty()
                                 && chain_scissor.w != 0
                                 && chain_scissor.h != 0
                             {
-                                degradations.push(RenderPlanDegradation {
+                                ctx.push_degradation(RenderPlanDegradation {
                                     draw_ix: cursor,
                                     kind: RenderPlanDegradationKind::FilterContentDisabled,
                                     reason: if intermediate_budget_bytes == 0 {
@@ -765,7 +645,7 @@ fn compile_for_scene_inner(
                                 || scope.content_size != viewport_size;
                             let load =
                                 take_scope_load_for_write(&mut draw_scopes, scope.parent_target);
-                            passes.push(RenderPlanPass::CompositePremul(
+                            ctx.push_pass(RenderPlanPass::CompositePremul(
                                 super::CompositePremulPass {
                                     src: content_target,
                                     src_origin: scope.content_origin,
@@ -875,7 +755,7 @@ fn compile_for_scene_inner(
                             } else {
                                 RenderPlanDegradationReason::BudgetInsufficient
                             };
-                            degradations.push(RenderPlanDegradation {
+                            ctx.push_degradation(RenderPlanDegradation {
                                 draw_ix: cursor,
                                 kind: RenderPlanDegradationKind::ClipPathDisabled,
                                 reason,
@@ -888,7 +768,7 @@ fn compile_for_scene_inner(
                             let mask_draw = encoding.clip_path_masks[mask_draw_index as usize];
                             debug_assert_eq!(mask_draw.scissor, scissor);
                             debug_assert_eq!(mask_draw.uniform_index, uniform_index);
-                            passes.push(RenderPlanPass::PathClipMask(super::PathClipMaskPass {
+                            ctx.push_pass(RenderPlanPass::PathClipMask(super::PathClipMaskPass {
                                 dst: mask_target,
                                 dst_origin: (scissor.x, scissor.y),
                                 dst_size: mask_size,
@@ -943,7 +823,7 @@ fn compile_for_scene_inner(
                                 content_target
                             );
 
-                            passes.push(RenderPlanPass::CompositePremul(
+                            ctx.push_pass(RenderPlanPass::CompositePremul(
                                 super::CompositePremulPass {
                                     src: content_target,
                                     src_origin: scope.content_origin,
@@ -1083,7 +963,7 @@ fn compile_for_scene_inner(
                                 }
                             });
 
-                            passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+                            ctx.push_pass(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
                                 src: parent_target,
                                 dst: raw_target,
                                 src_size: viewport_size,
@@ -1229,7 +1109,7 @@ fn compile_for_scene_inner(
                             && content_size.0 != 0
                             && content_size.1 != 0
                         {
-                            degradations.push(RenderPlanDegradation {
+                            ctx.push_degradation(RenderPlanDegradation {
                                 draw_ix: cursor,
                                 kind: RenderPlanDegradationKind::CompositeGroupBlendDegradedToOver,
                                 reason: if !had_free_target {
@@ -1270,7 +1150,7 @@ fn compile_for_scene_inner(
 
                             let load =
                                 take_scope_load_for_write(&mut draw_scopes, scope.parent_target);
-                            passes.push(RenderPlanPass::CompositePremul(
+                            ctx.push_pass(RenderPlanPass::CompositePremul(
                                 super::CompositePremulPass {
                                     src: content_target,
                                     src_origin: scope.content_origin,
@@ -1309,11 +1189,11 @@ fn compile_for_scene_inner(
         if path_samples > 1
             && let OrderedDraw::Path(first) = &draws[cursor]
         {
-            flush_scene_range(
+            ctx.flush_scene_range(
                 cursor,
-                &mut passes,
                 &mut draw_scopes,
-                &mut alloc_segment,
+                draws,
+                encoding,
                 &mut scene_range_start,
             );
 
@@ -1332,8 +1212,8 @@ fn compile_for_scene_inner(
 
             let scope = draw_scopes.last().expect("draw scope");
             let target = scope.target;
-            let segment = alloc_segment(cursor..end);
-            passes.push(RenderPlanPass::PathMsaaBatch(super::PathMsaaBatchPass {
+            let segment = ctx.alloc_segment(cursor..end, draws, encoding);
+            ctx.push_pass(RenderPlanPass::PathMsaaBatch(super::PathMsaaBatchPass {
                 segment,
                 target,
                 target_origin: scope.origin,
@@ -1352,6 +1232,7 @@ fn compile_for_scene_inner(
         cursor += 1;
     }
 
+    let (segments, passes, degradations) = ctx.into_parts();
     let mut plan = super::RenderPlan::finalize(
         segments,
         passes,

@@ -600,18 +600,23 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Step plan:
     - [x] Step 1: move intermediate target and budget accounting helpers into a dedicated
       compiler helper module.
-    - [ ] Step 2: introduce an explicit compiler context for pass/degradation/segment mutation
+    - [x] Step 2: introduce an explicit compiler context for pass/degradation/segment mutation
       after helper extraction has a green gate.
     - [ ] Step 3: split clip-path, composite-group, effect-scope, and backdrop-source-group
       compilation into focused modules only after the context boundary is stable.
   - Landed (step 1): extracted target/budget helpers and their focused tests into
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
+  - Landed (step 2): introduced `RenderPlanCompilerCtx` to own structural compiler outputs
+    (`passes`, `segments`, `degradations`, and segment id allocation) while preserving the
+    `compile_for_scene` entrypoint and `RenderPlan` IR shape.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
       `compile_for_scene_inner`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`
       (`intermediate_budget_breakdown_for_chain`, `can_allocate_intermediate_bytes`,
       `choose_backdrop_source_group_pyramid_choice`)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/context.rs`
+      (`RenderPlanCompilerCtx`, `alloc_segment`, `flush_scene_range`)
     - `docs/workstreams/renderer-render-plan-semantics-audit-v1/renderer-render-plan-semantics-audit-v1.md`
       (target lifetime, load-op, scissor/mask, and deterministic degradation invariants)
   - Gates:
