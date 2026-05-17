@@ -464,10 +464,11 @@ If you want UI render asset conveniences (not an editor/project asset pipeline):
 - Prefer generated `src/generated_assets.rs` modules plus `generated_assets::mount(builder)` for
   the default portable packaged lane; if startup needs one explicit development-vs-packaged
   contract, use `fret::assets::{AssetStartupPlan, AssetStartupMode}` with
-  `FretApp::asset_startup(...)`.
-- Keep file-backed development startup on `FretApp::asset_startup(...)` plus
-  `AssetStartupPlan::development_dir(...)` only when you intentionally want a native/package-dev
-  source on the builder path.
+  `FretApp::asset_startup(...)` to record the app spec or
+  `UiAppBuilder::with_asset_startup(...)` to apply it on the desktop builder path.
+- Keep file-backed development startup on `FretApp::asset_startup(...)` or generated
+  `mount(builder)` plus `AssetStartupPlan::development_dir(...)` only when you intentionally want
+  a native/package-dev source on the builder path.
 - Optionally call `.ui_assets_budgets(...)` on `FretApp` to override budgets.
 - If you want to call cache APIs directly (stats, keyed helpers), add an explicit dependency on
   `fret-ui-assets` and enable its `app-integration` feature.

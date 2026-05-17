@@ -5,29 +5,30 @@ Last updated: 2026-05-17
 
 ## Current State
 
-The workstream has been opened from an architecture surface audit. ASF-020, ASF-021, and ASF-030
+The workstream has been opened from an architecture surface audit. ASF-020, ASF-021, ASF-030, and ASF-031
 are complete: the `fret` backend-free app-authoring profiles no longer pull the native
 launch/render/backend stack, `FretApp` is now a backend-free authoring spec with desktop-only
-execution methods, and `fret-bootstrap --no-default-features` now exposes bootstrap
-planning/default policy without pulling the concrete launch/render/backend stack.
+execution methods, `fret-bootstrap --no-default-features` now exposes bootstrap planning/default
+policy without pulling the concrete launch/render/backend stack, and first-party scaffold/template
+guidance now uses the new app-spec-recording vs desktop-builder-application split.
 
 The user explicitly approved fearless refactoring with no compatibility burden: redundant old code,
 aliases, and wrappers may be deleted when first-party callers are migrated.
 
 ## Active Task
 
-- Task ID: ASF-031
+- Task ID: ASF-040
 - Owner: unassigned
 - Files:
-  - `ecosystem/fret-bootstrap`
   - `ecosystem/fret`
-  - `apps/fretboard`
-  - related docs/templates
+  - `ecosystem/fret/src/lib.rs`
+  - `ecosystem/fret/src/view.rs`
+  - `ecosystem/fret/tests`
   - related docs/tests
 - Validation:
-  - focused `cargo check` for affected packages
-  - template/scaffold checks if call sites move
-  - `python tools/check_consumption_profiles.py`
+  - public surface tests for the approved `fret::app::prelude::*` budget
+  - focused `cargo nextest run -p fret ...`
+  - `python tools/check_consumption_profiles.py` if feature/profile behavior changes
 
 ## Decisions Since Last Update
 
@@ -51,6 +52,14 @@ aliases, and wrappers may be deleted when first-party callers are migrated.
   `fret-launch`, `fret-render`, `wgpu`, `winit`, native platform, or runner crates. The public
   backend-free asset planning surface is covered by
   `ecosystem/fret-bootstrap/tests/backend_free_bootstrap_profile.rs`.
+- ASF-031 lets the `fret` `app` profile depend on backend-free `fret-bootstrap` planning types
+  without pulling launch/render/backend crates. `FretApp::asset_startup(...)` and
+  `FretApp::asset_reload_policy(...)` record startup specs in backend-free app-authoring profiles,
+  while `UiAppBuilder::with_asset_startup(...)` remains the desktop builder application surface.
+- `crates/fretboard` generated assets continue to mount via `generated_assets::mount(builder)?`;
+  scaffold README guidance now says that generated mount applies the plan on the builder. The
+  scaffold compile gate also flushed two stale template API uses (`cx.app` and `cx.text(...)` on
+  `AppUi`), both migrated on the generated template surface.
 
 ## Blockers
 
@@ -58,5 +67,6 @@ aliases, and wrappers may be deleted when first-party callers are migrated.
 
 ## Next Recommended Action
 
-- Start ASF-031: migrate first-party callers/templates onto the new bootstrap/launch split and
-  delete displaced helper aliases where the target surface is now clear.
+- Start ASF-040: define and enforce the narrow `fret::app::prelude::*` Golden Path budget.
+  Begin from existing source-level public-surface tests in `ecosystem/fret/src/lib.rs`, then delete
+  or move names that are outside the approved app-authoring import budget instead of adding aliases.

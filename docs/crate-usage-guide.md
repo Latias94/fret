@@ -222,9 +222,9 @@ Do the same for logical assets: import them intentionally from `fret::assets::{.
 `register_bundle_entries(...)` as the portable default story, and keep
 `AssetLocator::file(...)` / `AssetLocator::url(...)` as explicit capability-gated escape hatches.
 For startup that needs one explicit development-vs-packaged switch, prefer
-`AssetStartupPlan` + `AssetStartupMode` from `fret::assets::{AssetStartupPlan, AssetStartupMode}`
-plus
-`FretApp::asset_startup(...)` / `UiAppBuilder::with_asset_startup(...)`. Keep
+`AssetStartupPlan` + `AssetStartupMode` from `fret::assets::{AssetStartupPlan, AssetStartupMode}`.
+`FretApp::asset_startup(...)` records that backend-free startup spec on the app authoring surface;
+`UiAppBuilder::with_asset_startup(...)` applies it on the desktop builder surface. Keep
 `development_dir(...)` / `development_manifest(...)` for native/package-dev file-backed inputs,
 and keep `packaged_entries(...)`, `packaged_bundle_entries(...)`, or
 `packaged_embedded_entries(...)` for packaged/web/mobile-friendly bytes. Generated asset modules
@@ -257,10 +257,11 @@ that should be reviewed, versioned, or packaged directly.
 For a first-party manifest artifact command, use
 `fretboard assets manifest write --dir assets --out assets.manifest.json --app-bundle my-app`.
 If you are already on the `fret` builder path, keep both development and packaged startup on
-`FretApp::asset_startup(...)` / `UiAppBuilder::with_asset_startup(...)` with `AssetStartupPlan` +
-`AssetStartupMode`, so validation fails early during startup configuration instead of being buried
-in app-local setup glue. On the builder path, asset registrations preserve call order, so later
-registrations can intentionally override earlier ones for the same logical locator.
+`FretApp::asset_startup(...)` for spec recording or `UiAppBuilder::with_asset_startup(...)` for
+desktop builder application, both with `AssetStartupPlan` + `AssetStartupMode`, so validation fails
+early during startup configuration instead of being buried in app-local setup glue. On the builder
+path, asset registrations preserve call order, so later registrations can intentionally override
+earlier ones for the same logical locator.
 For package-owned or generated compile-time bytes, the same ordered builder surface now includes
 `FretApp::{asset_entries, bundle_asset_entries, embedded_asset_entries}` and
 `UiAppBuilder::{with_bundle_asset_entries, with_embedded_asset_entries}`.
@@ -322,7 +323,7 @@ authoring vocabulary through a hidden umbrella import.
   - Intentionally excludes: config files, UI asset caches, icon packs, icon preloading, command palette.
 - `app` with `default-features = false` = backend-free app-authoring baseline.
   - Includes: the default app vocabulary, shadcn authoring surface, `FretApp::new(...)` authoring
-    spec, setup bundles, and static asset registrations.
+    spec, setup bundles, static asset registrations, and asset startup planning values.
   - Excludes: `wgpu`, `winit`, `fret-launch`, `fret-render`, native platform crates, and runner
     crates.
   - Use this for reusable app-facing helpers or compile-test crates that should not own a native
@@ -357,8 +358,9 @@ fret = { path = "../path/to/fret/ecosystem/fret", default-features = false, feat
 ```
 
 This profile can compile app-facing helper crates that use `FretApp::new(...)`, `.setup(...)`,
-static asset entries, `View`, and `AppUi` without inheriting the native runner. The
-`.window(...).view::<V>()?.run()` chain is intentionally a `desktop` profile surface.
+static asset entries, `FretApp::asset_startup(...)`, `View`, and `AppUi` without inheriting the
+native runner. The `.window(...).view::<V>()?.run()` chain and `UiAppBuilder::with_asset_startup(...)`
+are intentionally `desktop` profile surfaces.
 
 Minimal / explicit native desktop profile (useful for apps that must avoid filesystem side effects):
 
@@ -676,8 +678,8 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   `fret`'s `ui-assets` feature when you want the default image/SVG caches driven from the event pipeline.
   App-owned resources should normally live under `AssetBundleId::app(...)`; ecosystem/package-owned
   shipped resources should normally live under `AssetBundleId::package(...)`.
-  On native/package-dev lanes, keep the builder path on `FretApp::asset_startup(...)` /
-  `UiAppBuilder::with_asset_startup(...)` with
+  On native/package-dev lanes, record app-level intent with `FretApp::asset_startup(...)` or keep
+  generated/module mounting on `UiAppBuilder::with_asset_startup(...)` with
   `AssetStartupPlan::{development_dir(...), development_manifest(...)}` before dropping to
   `FileAssetManifestResolver::{from_bundle_dir(...), from_manifest_path(...)}` plus
   `fret::assets::register_resolver(...)`.

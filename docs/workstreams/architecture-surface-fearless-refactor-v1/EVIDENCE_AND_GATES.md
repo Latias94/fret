@@ -107,6 +107,34 @@ Disallowed dependency names for backend-free profiles unless explicitly reclassi
   - `cargo nextest run -p fret --locked --no-default-features --features app --test backend_free_app_authoring_profile`
   - `cargo nextest run -p fret --locked authoring_surface_policy_tests`
 
+2026-05-17 result for ASF-031:
+
+- `fret --no-default-features --features app` now exposes backend-free asset startup planning
+  values through `fret::assets` and records them on `FretApp::asset_startup(...)` /
+  `FretApp::asset_reload_policy(...)` without pulling launch/render/native backend crates.
+- `desktop` remains an independent explicit runner/render opt-in; it can still apply the same
+  planning values through `UiAppBuilder::with_asset_startup(...)` without implying the `app`
+  feature or shadcn authoring baseline.
+- First-party scaffolded asset modules keep generated startup application on
+  `generated_assets::mount(builder)?`, which calls `UiAppBuilder::with_asset_startup(...)`; README
+  guidance now distinguishes app-spec recording from desktop-builder application.
+- The generated first-contact templates were migrated off stale `AppUi` call sites found by the
+  scaffold compile gate: `cx.app` field access became `cx.app()`, and the Todo filter item text now
+  uses `ui::text(...).into_element_in(cx)` instead of `cx.text(...)` on `AppUi`.
+- Targeted checks passed:
+  - `cargo fmt --package fret --package fretboard`
+  - `cargo check -p fret --locked --no-default-features -j 1`
+  - `cargo check -p fret --locked --no-default-features --features app -j 1`
+  - `cargo check -p fret --locked --no-default-features --features desktop -j 1`
+  - `cargo check -p fret --locked --no-default-features --features app --test backend_free_app_authoring_profile -j 1`
+  - `cargo nextest run -p fret --locked --no-default-features --features app --test backend_free_app_authoring_profile -j 1`
+  - `cargo nextest run -p fret --locked authoring_surface_policy_tests -j 1`
+  - `cargo nextest run -p fretboard --locked assets -j 1`
+  - `cargo nextest run -p fretboard --locked scaffold -j 1 --no-fail-fast`
+  - `python tools/check_consumption_profiles.py`
+  - `python tools/check_layering.py`
+  - `python tools/check_workstream_catalog.py`
+
 ### Bootstrap Plan Gates
 
 ```bash

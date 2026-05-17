@@ -93,9 +93,10 @@
 //!   default app story stays declarative-first
 //! - use `fret::assets::{AssetBundleId, AssetLocator, AssetRequest, StaticAssetEntry, ...}`
 //!   for logical bundle/embedded assets; prefer `AssetBundleId::app(...)` /
-//!   `AssetBundleId::package(...)` over raw global strings; keep app-facing startup on
-//!   `AssetStartupPlan` + `AssetStartupMode` through desktop-only `FretApp::asset_startup(...)` or
-//!   `UiAppBuilder::with_asset_startup(...)`; when host/bootstrap code intentionally installs
+//!   `AssetBundleId::package(...)` over raw global strings; `AssetStartupPlan` +
+//!   `AssetStartupMode` are backend-free authoring values, `FretApp::asset_startup(...)` records
+//!   them on the app spec, and desktop-only `UiAppBuilder::with_asset_startup(...)` applies them to
+//!   a concrete runner builder; when host/bootstrap code intentionally installs
 //!   file-backed resolver layers directly, construct
 //!   `FileAssetManifestResolver::from_bundle_dir(...)` /
 //!   `FileAssetManifestResolver::from_manifest_path(...)` and register the result with
@@ -294,7 +295,7 @@ pub mod assets {
         FileAssetManifestV1, ResolvedAssetBytes, ResolvedAssetReference, StaticAssetEntry,
         UrlPassthroughAssetResolver, asset_app_bundle_id, asset_package_bundle_id,
     };
-    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    #[cfg(any(feature = "app", feature = "desktop"))]
     pub use fret_bootstrap::{
         AssetReloadPolicy, AssetStartupMode, AssetStartupPlan, AssetStartupPlanError,
     };
@@ -367,13 +368,13 @@ pub(crate) enum AssetMount {
         owner: fret_assets::AssetBundleId,
         entries: Vec<fret_assets::StaticAssetEntry>,
     },
-    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    #[cfg(any(feature = "app", feature = "desktop"))]
     Startup {
         bundle: fret_assets::AssetBundleId,
         mode: fret_bootstrap::AssetStartupMode,
         plan: fret_bootstrap::AssetStartupPlan,
     },
-    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    #[cfg(any(feature = "app", feature = "desktop"))]
     ReloadPolicy {
         policy: fret_bootstrap::AssetReloadPolicy,
     },

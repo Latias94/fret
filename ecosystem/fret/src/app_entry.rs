@@ -163,14 +163,14 @@ impl FretApp {
     }
 }
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 impl FretApp {
-    /// Apply one explicit development-vs-packaged startup plan on the default app builder path.
+    /// Record one explicit development-vs-packaged startup plan on the app-authoring spec.
     ///
-    /// Use this when app/bootstrap code wants one named asset-publication decision instead of
-    /// manually branching between file-backed development inputs and packaged static entries at the
-    /// call site. Combine it with `asset_entries(...)`, `bundle_asset_entries(...)`, and
-    /// `embedded_asset_entries(...)` when startup intentionally layers additional static overrides.
+    /// This is a backend-free authoring value. Desktop execution applies it later through the
+    /// launch-enabled builder path. Combine it with `asset_entries(...)`,
+    /// `bundle_asset_entries(...)`, and `embedded_asset_entries(...)` when startup intentionally
+    /// layers additional static overrides.
+    #[cfg(any(feature = "app", feature = "desktop"))]
     pub fn asset_startup(
         mut self,
         mode: crate::assets::AssetStartupMode,
@@ -184,12 +184,18 @@ impl FretApp {
         self
     }
 
-    /// Enable development asset reload polling for file-backed startup mounts.
+    /// Record the development asset reload policy for file-backed startup mounts.
+    ///
+    /// This remains an app-authoring value until a launch-enabled runner applies it.
+    #[cfg(any(feature = "app", feature = "desktop"))]
     pub fn asset_reload_policy(mut self, policy: crate::assets::AssetReloadPolicy) -> Self {
         self.asset_mounts.push(AssetMount::ReloadPolicy { policy });
         self
     }
+}
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+impl FretApp {
     /// Enable the command palette (driver-handled command + UI) if available.
     ///
     /// This is intentionally opt-in in the `fret` facade.

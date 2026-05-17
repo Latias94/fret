@@ -39,11 +39,11 @@ Last updated: 2026-05-17
   Evidence: `ecosystem/fret-bootstrap/src/assets.rs`; `ecosystem/fret-bootstrap/tests/backend_free_bootstrap_profile.rs`; `tools/check_consumption_profiles.py`; `docs/crate-usage-guide.md`; `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
   Handoff: Completed on 2026-05-17; `fret-bootstrap --no-default-features` now exposes backend-free bootstrap asset/default policy, while `launch` owns the concrete `fret-launch` / `fret-render` adapter surface.
 
-- [ ] ASF-031 [owner=unassigned] [deps=ASF-030] [scope=ecosystem/fret-bootstrap,ecosystem/fret,apps/fretboard,docs]
+- [x] ASF-031 [owner=codex] [deps=ASF-030] [scope=ecosystem/fret-bootstrap,ecosystem/fret,crates/fretboard,docs]
   Goal: Migrate first-party app/template callers onto the new bootstrap/launch split and delete displaced helper aliases.
   Validation: focused `cargo check` for affected packages plus template tests if any are touched.
-  Evidence: First-party callers use the target surface only.
-  Handoff: Avoid carrying both old and new helper names in the default path.
+  Evidence: `ecosystem/fret/src/app_entry.rs`; `ecosystem/fret/tests/backend_free_app_authoring_profile.rs`; `crates/fretboard/src/scaffold/templates.rs`; `crates/fretboard/src/scaffold/mod.rs`; `docs/crate-usage-guide.md`; `docs/examples/todo-app-golden-path.md`.
+  Handoff: Completed on 2026-05-17; `FretApp::asset_startup(...)` records backend-free startup specs, generated templates apply plans through `generated_assets::mount(builder)?` / `UiAppBuilder::with_asset_startup(...)`, and stale generated-template `AppUi` call sites were migrated.
 
 ## M3 — Public Facade Narrowing
 

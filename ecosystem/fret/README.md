@@ -135,8 +135,10 @@ fret = { path = "../fret", default-features = false, features = ["app"] }
 
 This profile is useful for reusable app-facing helpers, docs checks, and compile tests that should
 not inherit the native runner stack. It keeps the backend-free `FretApp::new(...)` authoring spec,
-static asset registration, setup bundles, `View`, and `AppUi`; native `.window(...).view(...)?` and
-the returned `UiAppBuilder::run()` surface require `desktop`.
+static asset registration, setup bundles, `AssetStartupPlan` / `AssetStartupMode` planning values,
+`FretApp::asset_startup(...)`, `View`, and `AppUi`; native `.window(...).view(...)?`,
+`UiAppBuilder::with_asset_startup(...)`, and the returned `UiAppBuilder::run()` surface require
+`desktop`.
 
 ## Minimal app skeleton
 
@@ -205,11 +207,11 @@ For logical assets, use `fret::assets::{...}` and prefer `AssetBundleId::app(...
 `AssetBundleId::package(...)` plus `AssetLocator::bundle(...)` / `register_bundle_entries(...)`;
 keep `AssetLocator::file(...)` and `AssetLocator::url(...)` as capability-gated escape hatches.
 For startup that needs one explicit development-vs-packaged decision, use
-`AssetStartupPlan` + `AssetStartupMode` from `fret::assets::{AssetStartupPlan, AssetStartupMode}`
-plus
-`FretApp::asset_startup(...)` / `UiAppBuilder::with_asset_startup(...)`: keep native/package-dev
-inputs on `development_dir(...)` / `development_manifest(...)`, and keep packaged/web/mobile-ready
-bytes on `packaged_entries(...)`, `packaged_bundle_entries(...)`, or
+`AssetStartupPlan` + `AssetStartupMode` from `fret::assets::{AssetStartupPlan, AssetStartupMode}`.
+`FretApp::asset_startup(...)` records that backend-free startup spec on the app authoring surface;
+`UiAppBuilder::with_asset_startup(...)` applies it on the desktop builder surface. Keep
+native/package-dev inputs on `development_dir(...)` / `development_manifest(...)`, and keep
+packaged/web/mobile-ready bytes on `packaged_entries(...)`, `packaged_bundle_entries(...)`, or
 `packaged_embedded_entries(...)`. Generated modules still fit this packaged lane because they
 already expose `ENTRIES`, `bundle_id()`, `Bundle`, `install(app)`, and `mount(builder)`. Keep
 `FileAssetManifestResolver::from_bundle_dir(...)` /
@@ -226,10 +228,10 @@ loading. Keep `resolve_image_source_from_host_locator(...)` /
 `resolve_svg_source_from_host_locator(...)` as the lower-level UI-ready source seams, and use
 `fret::assets::resolve_reference(...)` / `resolve_locator_reference(...)` when a non-UI
 integration truly needs the raw external reference itself.
-On the app-facing builder path, prefer `FretApp::asset_startup(...)` /
-`UiAppBuilder::with_asset_startup(...)` when startup needs one explicit
-`AssetStartupMode` switch between development and packaged lanes, and layer additional packaged
-overrides with `FretApp::{asset_entries, bundle_asset_entries, embedded_asset_entries}` or
+On the app-facing spec path, prefer `FretApp::asset_startup(...)` when startup needs one explicit
+`AssetStartupMode` switch between development and packaged lanes; on the desktop builder path,
+prefer `UiAppBuilder::with_asset_startup(...)`. Layer additional packaged overrides with
+`FretApp::{asset_entries, bundle_asset_entries, embedded_asset_entries}` or
 `UiAppBuilder::{with_bundle_asset_entries, with_embedded_asset_entries}` when needed. On the host
 path,
 `set_primary_resolver(...)`,
@@ -246,8 +248,8 @@ The same ordered builder surface now also includes compile-time/static entries t
 - `desktop`: enable the native desktop runner/render stack (winit + wgpu) via
   `fret-framework/native-wgpu`, `fret-bootstrap`, and `fret-launch`.
 - `app`: backend-free app-authoring baseline (shadcn). This keeps the default app vocabulary
-  available, including the `FretApp` authoring spec, without compiling the native runner/render
-  stack.
+  available, including the `FretApp` authoring spec and asset startup planning values, without
+  compiling the native runner/render stack.
 - `state`: enable selector/query helpers on `AppUi` (`cx.data().selector_layout(...)` for
   LocalState-first derived values, raw `cx.data().selector(...)` for explicit signatures, and
   `cx.data().query(...)` plus `handle.read_layout(cx)` for the default query read path, plus
@@ -319,7 +321,7 @@ Advanced users do **not** need to drop to `fret-launch` immediately. The `fret` 
 following seams first-class:
 
 - `FretApp::{setup(...), view::<V>(), view_with_hooks::<V>()}`
-- `FretApp::asset_startup(...)` plus `fret::assets::{AssetStartupPlan, AssetStartupMode}`
+- `FretApp::asset_startup(...)` plus `fret::assets::{AssetStartupPlan, AssetStartupMode}` for recording startup specs
 - `FretApp::{asset_entries(...), bundle_asset_entries(...), embedded_asset_entries(...)}`
 - `UiAppBuilder::{configure(...), setup(...), setup_with(...), with_asset_startup(...), with_bundle_asset_entries(...), with_embedded_asset_entries(...)}`
 - `fret::assets::{FileAssetManifestResolver, register_resolver(...)}`

@@ -45,6 +45,13 @@ Exit criteria:
 - Concrete runner/render adapters are feature-gated or moved to the owning launch layer.
 - First-party templates and demos use the target path.
 
+Status:
+
+- Complete through ASF-031 on 2026-05-17. `fret-bootstrap --no-default-features` owns backend-free
+  planning/default vocabulary, `fret` consumes those planning types in its backend-free `app`
+  authoring profile without pulling launch/render/backend crates, and first-party generated asset
+  templates apply startup plans through the desktop builder mount path.
+
 Primary gates:
 
 - `cargo tree -p fret-bootstrap --no-default-features -e normal --depth 4`

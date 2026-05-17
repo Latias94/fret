@@ -76,6 +76,22 @@
     {
       "kind": "asf-030",
       "path": "ecosystem/fret-bootstrap/Cargo.toml"
+    },
+    {
+      "kind": "asf-031",
+      "path": "ecosystem/fret/tests/backend_free_app_authoring_profile.rs"
+    },
+    {
+      "kind": "asf-031",
+      "path": "crates/fretboard/src/scaffold/templates.rs"
+    },
+    {
+      "kind": "asf-031",
+      "path": "crates/fretboard/src/scaffold/mod.rs"
+    },
+    {
+      "kind": "asf-031",
+      "path": "docs/crate-usage-guide.md"
     }
   ],
   "adr_refs": [

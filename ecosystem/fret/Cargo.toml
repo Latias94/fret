@@ -39,6 +39,7 @@ batteries = [
 # - `preload-icon-svgs` (GPU-time cost; opt-in)
 # - `command-palette` (policy; opt-in)
 app = [
+    "dep:fret-bootstrap",
     "shadcn",
 ]
 
