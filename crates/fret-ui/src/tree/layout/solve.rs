@@ -241,6 +241,20 @@ impl<H: UiHost> UiTree<H> {
         if is_translation_only {
             return;
         }
+        let prev_bounds = node.bounds;
+        let engine_backed = self.layout_engine.layout_id_for_node(root).is_some();
+        if engine_backed
+            && !node.invalidation.layout
+            && self.can_skip_clean_geometry_engine_solve_for_resize(
+                app,
+                root,
+                root_bounds,
+                prev_bounds,
+            )
+        {
+            self.note_interactive_resize_cached_flow_reuse();
+            return;
+        }
 
         self.solve_barrier_flow_root(app, services, root, root_bounds, scale_factor);
     }
@@ -279,6 +293,19 @@ impl<H: UiHost> UiTree<H> {
                 && node.bounds.origin != root_bounds.origin
                 && node.measured_size != Size::default();
             if is_translation_only {
+                continue;
+            }
+            let engine_backed = self.layout_engine.layout_id_for_node(root).is_some();
+            if engine_backed
+                && !node.invalidation.layout
+                && self.can_skip_clean_geometry_engine_solve_for_resize(
+                    app,
+                    root,
+                    root_bounds,
+                    node.bounds,
+                )
+            {
+                self.note_interactive_resize_cached_flow_reuse();
                 continue;
             }
 

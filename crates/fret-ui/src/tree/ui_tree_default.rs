@@ -72,6 +72,7 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_paint_widget_exclusive_started: None,
             debug_layout_request_build_roots: Vec::new(),
             debug_layout_engine_solves: Vec::new(),
+            debug_clean_geometry_solve_skip_rejections: HashMap::new(),
             debug_layout_hotspots: Vec::new(),
             debug_layout_inclusive_hotspots: Vec::new(),
             debug_layout_stack: Vec::new(),

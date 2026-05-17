@@ -495,6 +495,9 @@ impl<H: UiHost> UiTree<H> {
         }
         // Keep bundles bounded: barrier layouts may solve many child roots in a single frame.
         const MAX_LAYOUT_ENGINE_SOLVES: usize = 16;
+        let clean_geometry_solve_skip_rejection = self
+            .debug_clean_geometry_solve_skip_rejections
+            .remove(&root);
         let record = UiDebugLayoutEngineSolve {
             root,
             root_element,
@@ -502,6 +505,7 @@ impl<H: UiHost> UiTree<H> {
             root_element_path,
             solve_time,
             solve_profile: solve_profile.map(Into::into),
+            clean_geometry_solve_skip_rejection,
             measure_calls,
             measure_cache_hits,
             measure_time,

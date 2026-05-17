@@ -257,7 +257,10 @@ pub(crate) fn sidebar_view(
                         .unwrap_or_else(|| theme.color_token("background")),
                 ))
                 .p(Space::N4),
-            LayoutRefinement::default().w_px(Px(280.0)).h_full(),
+            LayoutRefinement::default()
+                .w_px(Px(280.0))
+                .h_full()
+                .flex_shrink_0(),
         ),
         |cx| {
             [ui::v_flex(|_cx| [title_row, query_input, nav_scroll])

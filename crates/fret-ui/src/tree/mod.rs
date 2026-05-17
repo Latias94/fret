@@ -70,8 +70,8 @@ use debug::{
 };
 pub use debug::{
     PointerOcclusion, UiDebugBoundaryStats, UiDebugCacheRootReuseReason, UiDebugCacheRootStats,
-    UiDebugCommandAvailabilityHotspot, UiDebugDirtyView, UiDebugFrameStats,
-    UiDebugGlobalChangeHotspot, UiDebugGlobalChangeUnobserved, UiDebugHitTest,
+    UiDebugCleanGeometrySolveSkipRejection, UiDebugCommandAvailabilityHotspot, UiDebugDirtyView,
+    UiDebugFrameStats, UiDebugGlobalChangeHotspot, UiDebugGlobalChangeUnobserved, UiDebugHitTest,
     UiDebugHoverDeclarativeInvalidationHotspot, UiDebugInvalidationDetail,
     UiDebugInvalidationSource, UiDebugInvalidationWalk, UiDebugLayerInfo,
     UiDebugLayoutDirtyDescendant, UiDebugLayoutEngineMeasureChildHotspot,
@@ -341,6 +341,8 @@ pub struct UiTree<H: UiHost> {
     debug_paint_widget_exclusive_started: Option<Instant>,
     debug_layout_request_build_roots: Vec<UiDebugLayoutRequestBuildRoot>,
     debug_layout_engine_solves: Vec<UiDebugLayoutEngineSolve>,
+    debug_clean_geometry_solve_skip_rejections:
+        HashMap<NodeId, UiDebugCleanGeometrySolveSkipRejection>,
     debug_layout_hotspots: Vec<UiDebugLayoutHotspot>,
     debug_layout_inclusive_hotspots: Vec<UiDebugLayoutHotspot>,
     debug_layout_stack: Vec<DebugLayoutStackFrame>,

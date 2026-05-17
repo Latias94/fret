@@ -50,5 +50,14 @@ fn workspace_frame_center_row_does_not_fill_height() {
             props.layout.flex.grow > 0.0,
             "expected center row to flex-grow"
         );
+        assert!(
+            props.layout.flex.shrink > 0.0,
+            "expected center row to stay shrinkable"
+        );
+        assert_eq!(
+            props.layout.flex.basis,
+            Length::Px(Px(0.0)),
+            "expected center row to use explicit basis-zero flex-1 semantics"
+        );
     });
 }

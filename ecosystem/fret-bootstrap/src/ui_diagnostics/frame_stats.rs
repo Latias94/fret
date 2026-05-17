@@ -279,6 +279,12 @@ pub struct UiFrameStatsV1 {
     pub layout_engine_solves: u64,
     pub layout_engine_solve_time_us: u64,
     #[serde(default)]
+    pub layout_clean_geometry_solve_skip_rejections: u32,
+    #[serde(default)]
+    pub layout_clean_geometry_solve_skip_first_rejection: Option<String>,
+    #[serde(default)]
+    pub layout_clean_geometry_solve_skip_first_element_kind: Option<String>,
+    #[serde(default)]
     pub layout_engine_child_rect_queries: u64,
     #[serde(default)]
     pub layout_engine_child_rect_time_us: u64,
@@ -1033,6 +1039,14 @@ impl UiFrameStatsV1 {
             interaction_records: stats.interaction_records,
             layout_engine_solves: stats.layout_engine_solves,
             layout_engine_solve_time_us: stats.layout_engine_solve_time.as_micros() as u64,
+            layout_clean_geometry_solve_skip_rejections: stats
+                .layout_clean_geometry_solve_skip_rejections,
+            layout_clean_geometry_solve_skip_first_rejection: stats
+                .layout_clean_geometry_solve_skip_first_rejection
+                .map(str::to_owned),
+            layout_clean_geometry_solve_skip_first_element_kind: stats
+                .layout_clean_geometry_solve_skip_first_element_kind
+                .map(str::to_owned),
             layout_engine_child_rect_queries: stats.layout_engine_child_rect_queries,
             layout_engine_child_rect_time_us: stats.layout_engine_child_rect_time.as_micros()
                 as u64,
