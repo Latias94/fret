@@ -3,6 +3,7 @@
 // This module translates a SceneEncoding into a RenderPlan, choosing targets/passes and applying
 // deterministic budget-driven degradations.
 
+mod backdrop_source_group;
 mod clip_path;
 mod composite_group;
 mod context;
@@ -10,16 +11,13 @@ mod target_budget;
 
 use super::render_plan_effects as effects;
 use super::{
-    BlurQualitySnapshot, EffectDegradationSnapshot, EffectMarkerKind, FullscreenBlitPass,
-    LocalScissorRect, OrderedDraw, RenderPlanDegradation, RenderPlanDegradationKind,
-    RenderPlanDegradationReason, RenderPlanPass, SceneEncoding, ScissorRect,
+    BlurQualitySnapshot, EffectDegradationSnapshot, EffectMarkerKind, OrderedDraw,
+    RenderPlanDegradation, RenderPlanDegradationKind, RenderPlanDegradationReason, RenderPlanPass,
+    SceneEncoding, ScissorRect,
 };
 use crate::renderer::estimate_texture_bytes;
 use context::RenderPlanCompilerCtx;
-use target_budget::{
-    can_allocate_intermediate_bytes, choose_backdrop_source_group_pyramid_choice,
-    estimate_in_use_intermediate_bytes, intermediate_budget_breakdown_for_chain,
-};
+use target_budget::{can_allocate_intermediate_bytes, intermediate_budget_breakdown_for_chain};
 
 #[derive(Clone, Copy, Debug)]
 struct DrawScope {
@@ -43,15 +41,6 @@ struct EffectScope {
     content_target: Option<super::PlanTarget>,
     content_origin: (u32, u32),
     content_size: (u32, u32),
-}
-
-#[derive(Clone, Copy, Debug)]
-struct BackdropSourceGroupScope {
-    scissor: ScissorRect,
-    pyramid_choice: Option<effects::CustomV3PyramidChoice>,
-    pyramid_pad_px: u32,
-    raw_target: Option<super::PlanTarget>,
-    reserved_bytes: u64,
 }
 
 fn take_scope_load_for_write(
@@ -227,7 +216,8 @@ fn compile_for_scene_inner(
     let mut composite_group_scopes: Vec<composite_group::CompositeGroupScope> = Vec::new();
     let mut clip_path_scopes: Vec<clip_path::ClipPathScope> = Vec::new();
     let mut clip_path_mask_in_use_bytes: u64 = 0;
-    let mut backdrop_source_group_scopes: Vec<BackdropSourceGroupScope> = Vec::new();
+    let mut backdrop_source_group_scopes: Vec<backdrop_source_group::BackdropSourceGroupScope> =
+        Vec::new();
     let mut backdrop_source_group_reserved_targets: Vec<super::PlanTarget> = Vec::new();
     let mut backdrop_source_group_in_use_bytes: u64 = 0;
 
@@ -394,17 +384,9 @@ fn compile_for_scene_inner(
                                 let before = ctx.passes_len();
                                 let unavailable_mask_targets: Vec<super::PlanTarget> =
                                     clip_path::active_mask_targets(&clip_path_scopes).collect();
-                                let backdrop_source_group =
-                                    backdrop_source_group_scopes.last().and_then(|s| {
-                                        s.raw_target.map(|raw_target| {
-                                            effects::BackdropSourceGroupCtx {
-                                                raw_target,
-                                                pyramid: s.pyramid_choice,
-                                                scissor: s.scissor,
-                                                pyramid_pad_px: s.pyramid_pad_px,
-                                            }
-                                        })
-                                    });
+                                let backdrop_source_group = backdrop_source_group_scopes
+                                    .last()
+                                    .and_then(|s| s.effect_ctx());
                                 apply_chain_in_place(
                                     ctx.passes_mut(),
                                     &draw_scopes,
@@ -668,192 +650,31 @@ fn compile_for_scene_inner(
                         pyramid,
                         quality,
                     } => {
-                        let g = &mut effect_degradations.backdrop_source_groups;
-                        g.requested = g.requested.saturating_add(1);
-                        if pyramid.is_some() {
-                            g.pyramid_requested = g.pyramid_requested.saturating_add(1);
-                        }
-
-                        let pyramid_pad_px = pyramid
-                            .map(|req| {
-                                if !req.max_radius_px.0.is_finite()
-                                    || req.max_radius_px.0 <= 0.0
-                                    || !scale_factor.is_finite()
-                                    || scale_factor <= 0.0
-                                {
-                                    return 0u32;
-                                }
-                                let pad =
-                                    (req.max_radius_px.0 * scale_factor).ceil().max(0.0) as u32;
-                                pad.min(viewport_size.0.max(viewport_size.1))
-                            })
-                            .unwrap_or(0);
-
-                        let parent_scope = draw_scopes.last().expect("draw scope");
-                        let parent_target = parent_scope.target;
-
-                        let mut raw_target: Option<super::PlanTarget> = None;
-                        let mut had_free_target = false;
-                        for t in [
-                            super::PlanTarget::Intermediate0,
-                            super::PlanTarget::Intermediate1,
-                            super::PlanTarget::Intermediate2,
-                            super::PlanTarget::Intermediate3,
-                        ] {
-                            if draw_scopes.iter().any(|s| s.target == t)
-                                || backdrop_source_group_reserved_targets.contains(&t)
-                            {
-                                continue;
-                            }
-                            raw_target = Some(t);
-                            had_free_target = true;
-                            break;
-                        }
-
-                        let raw_bytes = estimate_texture_bytes(viewport_size, format, 1);
-                        let mut reserved_bytes: u64 = 0;
-                        let mut pyramid_choice: Option<effects::CustomV3PyramidChoice> = None;
-
-                        let can_afford_raw = had_free_target
-                            && can_allocate_intermediate_bytes(
-                                intermediate_budget_bytes,
-                                &draw_scopes,
-                                raw_bytes,
-                                clip_path_mask_in_use_bytes
-                                    .saturating_add(backdrop_source_group_in_use_bytes),
+                        backdrop_source_group::compile_backdrop_source_group_push(
+                            &mut ctx,
+                            &draw_scopes,
+                            &mut backdrop_source_group_scopes,
+                            &mut backdrop_source_group_reserved_targets,
+                            &mut backdrop_source_group_in_use_bytes,
+                            &mut effect_degradations.backdrop_source_groups,
+                            backdrop_source_group::BackdropSourceGroupPushCtx {
+                                scissor,
+                                pyramid,
+                                quality,
+                                scale_factor,
+                                viewport_size,
                                 format,
-                            );
-                        if !can_afford_raw {
-                            raw_target = None;
-                            if pyramid.is_some() {
-                                g.pyramid_skipped_raw_unavailable =
-                                    g.pyramid_skipped_raw_unavailable.saturating_add(1);
-                            }
-                            if !had_free_target {
-                                g.raw_degraded_target_exhausted =
-                                    g.raw_degraded_target_exhausted.saturating_add(1);
-                            } else if intermediate_budget_bytes == 0 {
-                                g.raw_degraded_budget_zero =
-                                    g.raw_degraded_budget_zero.saturating_add(1);
-                            } else {
-                                g.raw_degraded_budget_insufficient =
-                                    g.raw_degraded_budget_insufficient.saturating_add(1);
-                            }
-                        }
-
-                        if let Some(raw_target) = raw_target {
-                            g.applied_raw = g.applied_raw.saturating_add(1);
-
-                            let snapshot_scissor = pyramid.map(|_| {
-                                let max_w = viewport_size.0;
-                                let max_h = viewport_size.1;
-                                let x0 = scissor.x.saturating_sub(pyramid_pad_px).min(max_w);
-                                let y0 = scissor.y.saturating_sub(pyramid_pad_px).min(max_h);
-                                let x1 = scissor
-                                    .x
-                                    .saturating_add(scissor.w)
-                                    .saturating_add(pyramid_pad_px)
-                                    .min(max_w);
-                                let y1 = scissor
-                                    .y
-                                    .saturating_add(scissor.h)
-                                    .saturating_add(pyramid_pad_px)
-                                    .min(max_h);
-                                if x1 <= x0 || y1 <= y0 {
-                                    LocalScissorRect(scissor)
-                                } else {
-                                    LocalScissorRect(ScissorRect {
-                                        x: x0,
-                                        y: y0,
-                                        w: x1 - x0,
-                                        h: y1 - y0,
-                                    })
-                                }
-                            });
-
-                            ctx.push_pass(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
-                                src: parent_target,
-                                dst: raw_target,
-                                src_size: viewport_size,
-                                dst_size: viewport_size,
-                                dst_scissor: snapshot_scissor,
-                                encode_output_srgb: false,
-                                load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-                            }));
-
-                            reserved_bytes = reserved_bytes.saturating_add(raw_bytes);
-
-                            if let Some(req) = pyramid {
-                                let in_use_intermediate_bytes =
-                                    estimate_in_use_intermediate_bytes(&draw_scopes, format);
-
-                                let choice = choose_backdrop_source_group_pyramid_choice(
-                                    req,
-                                    viewport_size,
-                                    format,
-                                    intermediate_budget_bytes,
-                                    in_use_intermediate_bytes,
-                                    clip_path_mask_in_use_bytes,
-                                    backdrop_source_group_in_use_bytes,
-                                    raw_bytes,
-                                );
-
-                                if choice.levels >= 2 {
-                                    g.pyramid_applied_levels_ge2 =
-                                        g.pyramid_applied_levels_ge2.saturating_add(1);
-                                    reserved_bytes = reserved_bytes.saturating_add(
-                                        effects::estimate_custom_v3_pyramid_bytes(
-                                            viewport_size,
-                                            format,
-                                            choice.levels,
-                                        ),
-                                    );
-                                } else if let Some(reason) = choice.degraded_to_one {
-                                    match reason {
-                                        effects::CustomV3PyramidDegradeReason::BudgetZero => {
-                                            g.pyramid_degraded_to_one_budget_zero = g
-                                                .pyramid_degraded_to_one_budget_zero
-                                                .saturating_add(1);
-                                        }
-                                        effects::CustomV3PyramidDegradeReason::BudgetInsufficient => {
-                                            g.pyramid_degraded_to_one_budget_insufficient = g
-                                                .pyramid_degraded_to_one_budget_insufficient
-                                                .saturating_add(1);
-                                        }
-                                    }
-                                }
-                                pyramid_choice = Some(choice);
-                            }
-
-                            backdrop_source_group_reserved_targets.push(raw_target);
-                            let _ = quality;
-                        }
-
-                        backdrop_source_group_in_use_bytes =
-                            backdrop_source_group_in_use_bytes.saturating_add(reserved_bytes);
-                        backdrop_source_group_scopes.push(BackdropSourceGroupScope {
-                            scissor,
-                            pyramid_choice,
-                            pyramid_pad_px,
-                            raw_target,
-                            reserved_bytes,
-                        });
+                                intermediate_budget_bytes,
+                                clip_path_mask_in_use_bytes,
+                            },
+                        );
                     }
                     EffectMarkerKind::BackdropSourceGroupPop => {
-                        let Some(scope) = backdrop_source_group_scopes.pop() else {
-                            marker_ix += 1;
-                            continue;
-                        };
-
-                        backdrop_source_group_in_use_bytes =
-                            backdrop_source_group_in_use_bytes.saturating_sub(scope.reserved_bytes);
-
-                        if let Some(raw_target) = scope.raw_target {
-                            let popped = backdrop_source_group_reserved_targets.pop();
-                            debug_assert_eq!(popped, Some(raw_target));
-                        }
-
-                        let _ = scope.scissor;
+                        backdrop_source_group::compile_backdrop_source_group_pop(
+                            &mut backdrop_source_group_scopes,
+                            &mut backdrop_source_group_reserved_targets,
+                            &mut backdrop_source_group_in_use_bytes,
+                        );
                     }
                     EffectMarkerKind::CompositeGroupPush {
                         scissor,

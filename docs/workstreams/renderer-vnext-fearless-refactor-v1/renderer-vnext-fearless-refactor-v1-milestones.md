@@ -897,6 +897,31 @@ Progress record (RenderPlan compiler composite-group helper split):
   - `python3 tools/check_layering.py`
   - `git diff --check`
 
+Progress record (RenderPlan compiler backdrop-source-group helper split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3b-2a; Stage 24 continues)
+- Objective:
+  - Split backdrop-source-group push/pop planning out of the main RenderPlan compiler loop without
+    changing the `compile_for_scene` entrypoint, `RenderPlan` IR shape, pass ordering, target
+    reservation/lifetime semantics, `reserved_bytes` accounting, or pyramid choice/degradation
+    counters.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/backdrop_source_group.rs`
+    (`compile_backdrop_source_group_push`, `compile_backdrop_source_group_pop`,
+    `BackdropSourceGroupScope::effect_ctx`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (`EffectMarkerKind::BackdropSourceGroupPush`, `EffectMarkerKind::BackdropSourceGroupPop`
+    delegate to the helper; effect chains read the backdrop context via `effect_ctx`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:
