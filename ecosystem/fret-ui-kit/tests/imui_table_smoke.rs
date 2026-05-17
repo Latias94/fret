@@ -4,9 +4,10 @@ use fret_core::{Color, Px};
 use fret_ui::UiHost;
 use fret_ui_kit::imui::{
     ImUiTableColumnVisibilityState, MenuItemOptions, TableCellOptions, TableColumn,
-    TableColumnVisibilityMenuOptions, TableColumnWidth, TableOptions, TableRowOptions,
-    TableSortDirection, UiWriterImUiFacadeExt, table_column_visibility_menu_item,
-    table_column_visibility_menu_items,
+    TableColumnVisibilityHeaderContextMenuOptions, TableColumnVisibilityMenuOptions,
+    TableColumnWidth, TableOptions, TableResponse, TableRowOptions, TableSortDirection,
+    UiWriterImUiFacadeExt, table_column_visibility_header_context_menu,
+    table_column_visibility_menu_item, table_column_visibility_menu_items,
 };
 
 #[allow(dead_code)]
@@ -122,6 +123,37 @@ fn table_column_visibility_menu_items_api_compiles<H: UiHost>(
         let _ = item.clicked();
         let _ = item.changed();
     }
+}
+
+#[allow(dead_code)]
+fn table_column_visibility_header_context_menu_api_compiles<H: UiHost>(
+    ui: &mut impl UiWriterImUiFacadeExt<H>,
+    table: &TableResponse,
+    model: &fret_runtime::Model<ImUiTableColumnVisibilityState>,
+) {
+    let columns = [
+        TableColumn::fill("Name###asset-name").sortable(),
+        TableColumn::px("Status###asset-status", Px(96.0)),
+    ];
+
+    let response = table_column_visibility_header_context_menu(
+        ui,
+        "table.columns",
+        table,
+        &columns,
+        model,
+        TableColumnVisibilityHeaderContextMenuOptions {
+            menu: TableColumnVisibilityMenuOptions {
+                test_id_prefix: Some("table.columns.".into()),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    );
+
+    let _ = response.open();
+    let _ = response.changed();
+    let _ = response.items().item("asset-status");
 }
 
 #[test]

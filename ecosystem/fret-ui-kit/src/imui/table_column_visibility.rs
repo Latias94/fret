@@ -6,7 +6,10 @@ use fret_runtime::Model;
 use fret_ui::{ElementContext, UiHost};
 
 use super::label_identity::parse_label_identity;
-use super::{MenuItemOptions, ResponseExt, TableColumn, UiWriterImUiFacadeExt};
+use super::{
+    MenuItemOptions, PopupMenuOptions, ResponseExt, TableColumn, TableResponse,
+    UiWriterImUiFacadeExt,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct TableColumnVisibilityOverride {
@@ -17,8 +20,8 @@ struct TableColumnVisibilityOverride {
 /// Model state for runtime table-column visibility.
 ///
 /// This intentionally stays policy-only: it maps stable column ids to visible flags and then
-/// produces a new `TableColumn` list. Persistence, automatic header context-menu wiring, and
-/// freeze panes are separate table policies.
+/// produces a new `TableColumn` list. Persistence, freeze panes, and durable column storage are
+/// separate table policies.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ImUiTableColumnVisibilityState {
     overrides: Vec<TableColumnVisibilityOverride>,
@@ -33,10 +36,24 @@ pub struct TableColumnVisibilityMenuOptions {
     pub test_id_prefix: Option<Arc<str>>,
 }
 
+/// Options for wiring a table header context menu to table-column visibility items.
+#[derive(Debug, Clone)]
+pub struct TableColumnVisibilityHeaderContextMenuOptions {
+    pub popup: PopupMenuOptions,
+    pub menu: TableColumnVisibilityMenuOptions,
+}
+
 /// Aggregated response for a helper-composed table-column visibility menu section.
 #[derive(Debug, Clone, Default)]
 pub struct TableColumnVisibilityMenuResponse {
     items: Vec<TableColumnVisibilityMenuItemResponse>,
+}
+
+/// Response for helper-composed table header context-menu visibility policy.
+#[derive(Debug, Clone, Default)]
+pub struct TableColumnVisibilityHeaderContextMenuResponse {
+    open: bool,
+    items: TableColumnVisibilityMenuResponse,
 }
 
 /// Response for one generated table-column visibility menu item.
@@ -169,6 +186,32 @@ impl TableColumnVisibilityMenuResponse {
     }
 }
 
+impl TableColumnVisibilityHeaderContextMenuResponse {
+    pub fn open(&self) -> bool {
+        self.open
+    }
+
+    pub fn items(&self) -> &TableColumnVisibilityMenuResponse {
+        &self.items
+    }
+
+    pub fn changed(&self) -> bool {
+        self.items.changed()
+    }
+}
+
+impl Default for TableColumnVisibilityHeaderContextMenuOptions {
+    fn default() -> Self {
+        Self {
+            popup: PopupMenuOptions {
+                estimated_size: fret_core::Size::new(fret_core::Px(180.0), fret_core::Px(160.0)),
+                ..Default::default()
+            },
+            menu: TableColumnVisibilityMenuOptions::default(),
+        }
+    }
+}
+
 impl TableColumnVisibilityMenuItemResponse {
     pub fn column_id(&self) -> &str {
         self.column_id.as_ref()
@@ -189,6 +232,44 @@ impl TableColumnVisibilityMenuItemResponse {
     pub fn changed(&self) -> bool {
         self.response.changed()
     }
+}
+
+/// Opens and renders a table-column visibility context menu from table header context requests.
+///
+/// This is a kit-layer composition policy: callers still own the visibility model and decide when
+/// to apply it to their column list, while the helper wires table header context-menu requests to
+/// the existing popup/menu-item policy.
+pub fn table_column_visibility_header_context_menu<
+    H: UiHost,
+    W: UiWriterImUiFacadeExt<H> + ?Sized,
+>(
+    ui: &mut W,
+    id: &str,
+    table: &TableResponse,
+    columns: &[TableColumn],
+    model: &Model<ImUiTableColumnVisibilityState>,
+    options: TableColumnVisibilityHeaderContextMenuOptions,
+) -> TableColumnVisibilityHeaderContextMenuResponse {
+    let mut trigger = None;
+    let mut fallback_trigger = None;
+    for header in table.headers() {
+        let response = header.response();
+        if fallback_trigger.is_none() && response.id().is_some() {
+            fallback_trigger = Some(response);
+        }
+        if response.context_menu_requested() {
+            trigger = Some(response);
+            break;
+        }
+    }
+    let trigger = trigger.or(fallback_trigger).unwrap_or_default();
+
+    let mut items = TableColumnVisibilityMenuResponse::default();
+    let open = ui.begin_popup_context_menu_with_options(id, trigger, options.popup, |ui| {
+        items = table_column_visibility_menu_items(ui, columns, model, options.menu);
+    });
+
+    TableColumnVisibilityHeaderContextMenuResponse { open, items }
 }
 
 /// Returns a controllable visibility model for an immediate table column set.

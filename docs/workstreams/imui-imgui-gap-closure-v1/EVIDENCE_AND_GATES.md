@@ -231,9 +231,9 @@ Run evidence:
   table_helper_skips_hidden_columns_in_header_and_body --no-fail-fast`.
 - 2026-05-17: added runtime table-column visibility state through
   `ImUiTableColumnVisibilityState`. The helper stays in `fret-ui-kit::imui`, keeps storage opaque,
-  applies stable-id overrides to `TableColumn` lists before render, and intentionally does not add
-  persistence, header-menu policy, freeze panes, or a Dear ImGui-style mutable table runtime.
-  Gates: `cargo nextest run -p fret-ui-kit --features imui --lib
+  applies stable-id overrides to `TableColumn` lists before render, and intentionally leaves
+  persistence, freeze panes, and durable column storage outside the model helper. Gates: `cargo
+  nextest run -p fret-ui-kit --features imui --lib
   visibility_state_applies_runtime_overrides_by_stable_column_id
   visibility_state_leaves_unlisted_and_unidentified_columns_at_declared_visibility
   visibility_state_toggle_uses_current_override_or_default_visibility --no-fail-fast`, `cargo
@@ -244,28 +244,41 @@ Run evidence:
   tools/gate_imui_workstream_source.py`.
 - 2026-05-17: added a table column visibility menu-item bridge through
   `table_column_visibility_menu_item(...)`. The helper stays in `fret-ui-kit::imui`, reuses the
-  existing checkbox menu-item behavior, updates `ImUiTableColumnVisibilityState`, and intentionally
-  does not add automatic header context-menu popup wiring or persistence. Gates: `cargo nextest run
-  -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`, `cargo nextest run -p
-  fret-imui table_column_visibility_menu_item_updates_visibility_state --no-fail-fast`, and
-  `python tools/gate_imui_workstream_source.py`.
+  existing checkbox menu-item behavior, updates `ImUiTableColumnVisibilityState`, and remains
+  usable for custom popup/menu surfaces even after the default header context-menu helper below.
+  Gates: `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`,
+  `cargo nextest run -p fret-imui table_column_visibility_menu_item_updates_visibility_state
+  --no-fail-fast`, and `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: added a table column visibility menu-items group helper through
   `table_column_visibility_menu_items(...)`. The helper filters to stable-id, human-labeled
   columns, clones caller-owned item options, returns opaque/accessor-first per-column responses,
-  and intentionally does not add popup placement, automatic header context-menu wiring,
-  persistence, freeze panes, or old columns API shape. Gates: `cargo nextest run -p fret-ui-kit
-  --features imui --test imui_table_smoke --no-fail-fast`, `cargo nextest run -p fret-imui
+  and feeds both custom popup surfaces and the default header context-menu helper below. Gates:
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`,
+  `cargo nextest run -p fret-imui
   table_column_visibility_menu_items_update_shared_visibility_state_and_filter_columns
   --no-fail-fast`, and `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: added table header context-menu request reporting for sortable headers by extending
   the shared active-trigger behavior in `fret-ui-kit::imui`. `TableHeaderResponse::response()` now
   reports right-click context-menu requests with a pointer anchor, plus keyboard requests from the
-  ContextMenu key and Shift+F10, without adding automatic visibility-menu popup wiring or
-  persistence policy. Gates: `cargo nextest run -p fret-imui
+  ContextMenu key and Shift+F10; the helper below consumes this response signal for the default
+  visibility menu surface. Gates: `cargo nextest run -p fret-imui
   table_sortable_header_reports_context_menu_request --no-fail-fast`, `cargo nextest run -p
   fret-imui interaction_press interaction_menu_tabs --no-fail-fast`, and `cargo nextest run -p
   fret-ui-kit --features imui --test imui_response_contract_smoke --test imui_table_smoke
   --no-fail-fast`.
+- 2026-05-17: added automatic table header visibility-menu wiring through
+  `table_column_visibility_header_context_menu(...)`. The helper stays in `fret-ui-kit::imui`,
+  scans `TableResponse` header responses for context-menu requests, opens a popup menu with the
+  existing popup policy, renders `table_column_visibility_menu_items(...)`, and returns an
+  opaque/accessor-first response. `TableColumnVisibilityHeaderContextMenuOptions` exposes popup and
+  menu-item policy instead of hard-coding placement/sizing. Callers still own when to apply
+  `ImUiTableColumnVisibilityState` to their columns; persistence, freeze panes, and old columns API
+  shape remain separate follow-ons. Gates: `cargo nextest run -p fret-imui
+  table_column_visibility_header_context_menu_opens_and_updates_state
+  table_column_visibility_menu_items_update_shared_visibility_state_and_filter_columns
+  table_sortable_header_reports_context_menu_request --no-fail-fast`, `cargo nextest run -p
+  fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`, and `python
+  tools/gate_imui_workstream_source.py`.
 - 2026-05-16: introduced `text_control_readout(...)` as the shared compact control-readout text
   role. The UI Gallery code-editor toolbar keeps its doc-layout helper, but that helper now
   delegates to `fret-ui-kit::declarative::text::text_control_readout(...)`, so dense status/readout

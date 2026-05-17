@@ -398,6 +398,10 @@
       "command": "cargo nextest run -p fret-imui table_sortable_header_reports_context_menu_request --no-fail-fast"
     },
     {
+      "name": "fret-imui table header visibility menu wiring test",
+      "command": "cargo nextest run -p fret-imui table_column_visibility_header_context_menu_opens_and_updates_state --no-fail-fast"
+    },
+    {
       "name": "diff check",
       "command": "git diff --check"
     }

@@ -199,31 +199,36 @@ Exit criteria:
   in `TableRowOptions::background` and `TableCellOptions::background`, with scene-paint proof that
   cell overrides paint after row overrides. `ImUiTableRow::cell_text(...)` now uses the shared
   `text_table_cell(...)` role helper, so default table text no longer inherits paragraph wrapping
-  semantics. Freeze panes, persistence, header-menu policy, and old columns API remain
-  advanced-table candidates.
+  semantics. Freeze panes, persistence, and old columns API remain advanced-table candidates.
   2026-05-16 table header text result: sortable and plain table header labels also use
   `text_table_cell(...)`, preserving the same compact single-line ellipsis semantics as body cells.
   2026-05-16 static table column visibility result: `TableColumn::hidden()` and
   `TableColumn::with_visible(bool)` now cover author-declared hidden columns without copying Dear
   ImGui's mutable table runtime. Hidden columns still consume submitted row cells in declared order
   but skip header/body rendering and header responses; runtime hideable-column policy is covered
-  by the follow-up state helper below, while persistence and header-menu policy stay
-  candidate-only.
+  by the follow-up state/helper chain below, while persistence stays candidate-only.
   2026-05-17 runtime table column visibility result: `ImUiTableColumnVisibilityState` now covers
   runtime stable-id visibility overrides as a policy-layer helper in `fret-ui-kit::imui`. It
-  produces an adjusted `TableColumn` list and reuses the existing hidden-column render contract;
-  persistence, header-menu policy, freeze panes, and old columns API shape stay candidate-only. A
-  `fret-imui` composition gate proves the helper can drive table rendering while the runtime
-  facade remains policy-light.
+  produces an adjusted `TableColumn` list and reuses the existing hidden-column render contract.
+  Header menu policy is now covered by the helper chain below; persistence, freeze panes, and old
+  columns API shape stay candidate-only. A `fret-imui` composition gate proves the helper can drive
+  table rendering while the runtime facade remains policy-light.
   2026-05-17 table visibility menu-item result: `table_column_visibility_menu_item(...)` now
   bridges `TableColumn`, existing checkbox menu item behavior, and
-  `ImUiTableColumnVisibilityState`. Callers still own where that menu is presented; automatic
-  header context-menu popup wiring, persistence, freeze panes, and old columns API shape stay
-  candidate-only.
+  `ImUiTableColumnVisibilityState`. Callers can still own a custom menu surface; the default header
+  context-menu surface is covered by the helper below. Persistence, freeze panes, and old columns
+  API shape stay candidate-only.
   2026-05-17 table visibility menu-items group result:
   `table_column_visibility_menu_items(...)` now covers the repeated "show/hide columns" menu
   section for stable-id, human-labeled columns. The helper returns opaque/accessor-first item
-  responses and keeps popup placement plus automatic header-menu policy outside `fret-imui`.
+  responses and feeds the header context-menu helper below without moving popup/menu policy into
+  `fret-imui`.
+  2026-05-17 table header visibility menu wiring result:
+  `table_column_visibility_header_context_menu(...)` now bridges `TableResponse` header context
+  requests, popup placement, and column visibility menu items. It returns an opaque/accessor-first
+  response, exposes popup/menu policy through `TableColumnVisibilityHeaderContextMenuOptions`,
+  keeps the visibility model caller-owned, and leaves persistence, freeze panes, and old columns
+  API shape candidate-only.
   2026-05-16 control readout text role result: `text_control_readout(...)` now sits in
   `fret-ui-kit::declarative::text` beside `text_table_cell(...)`. The UI Gallery code-editor
   readouts still use the doc-layout app helper, but that helper delegates to the shared role, so
