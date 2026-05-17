@@ -1572,6 +1572,34 @@ Progress record (RenderPlan compiler marker dispatch branch split):
   - `python3 tools/check_layering.py`
   - `git diff --check`
 
+Progress record (RenderPlan compiler Stage 24 closeout scan):
+
+- Date: 2026-05-17
+- Status: Closed (Stage 24 complete)
+- Objective:
+  - Confirm that the RenderPlan compiler modularization target is met and that remaining internals
+    do not justify another Stage 24 slice.
+  - Keep semantic expansion work out of this closure; post-v1 renderer semantics remain tracked in
+    the deferred M7 backlog or future workstreams.
+- Evidence anchors:
+  - `docs/workstreams/renderer-vnext-fearless-refactor-v1/renderer-vnext-fearless-refactor-v1-todo.md`
+    (`REN-VNEXT-refactor-240` marked complete)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (`compile_for_scene`, `compile_for_scene_inner`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (`MarkerDispatchState::compile_marker` route-order-preserving dispatcher)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/draw_scope.rs`
+    (`DrawScopeStack`)
+- Scan notes:
+  - No remaining `MarkerSharedDispatchInputs`, `take_scope_load_for_write`, bare
+    `Vec<DrawScope>` threading outside `DrawScopeStack`, or standalone push/pop helper functions
+    were found.
+  - Remaining `compile_push`/`compile_pop` methods are dispatch-state entrypoints and are
+    intentionally retained.
+- Gates run:
+  - `rg -n "MarkerSharedDispatchInputs|shared_inputs\\(|take_scope_load_for_write|Vec<DrawScope>|&mut Vec<DrawScope>|fn compile_.*push\\(|fn compile_.*pop\\(|compile_.*_push\\(|compile_.*_pop\\(" crates/fret-render-wgpu/src/renderer/render_plan_compiler crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+  - `git status --short`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

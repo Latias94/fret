@@ -589,7 +589,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
-- [~] REN-VNEXT-refactor-240 Stage 24: modularize RenderPlan compiler internals.
+- [x] REN-VNEXT-refactor-240 Stage 24: modularize RenderPlan compiler internals.
   - Goal: make `render_plan_compiler.rs` reviewable by separating pure helper domains from the
     state-machine loop without changing pass order, target lifetimes, budget decisions, or
     degradation semantics.
@@ -742,6 +742,10 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Landed (step 3z): split `MarkerDispatchState::compile_marker` branch bodies into private
     methods for effect scope, clip path, backdrop-source-group, and composite-group markers, keeping
     `compile_marker` as the route-order-preserving dispatcher.
+  - Closed (stage 24): a final structure scan found no remaining Stage 24 blockers. The retained
+    compiler entrypoint is small, helper domains are module-scoped, dispatch state owns its mutable
+    stacks/snapshots, and remaining `compile_push`/`compile_pop` methods are intentional state
+    entrypoints rather than free helper plumbing.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
       `compile_for_scene_inner`)
