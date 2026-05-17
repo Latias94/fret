@@ -288,10 +288,10 @@ Readiness order for the next locally testable review slices:
    2026-05-17 floating close glyph follow-up: floating-window close button glyphs now reuse
    `text_chrome_glyph(...)` too, so fixed title-bar chrome no longer falls back to bare
    `cx.text(...)` default wrapping semantics.
-   2026-05-16 text role source-gate follow-up: `tools/gate_imui_workstream_source.py`
-   rejects direct `TextProps::new(...)` constructors under `fret-ui-kit::imui`, so new compact IMUI text
-   policy must route through the shared role vocabulary instead of gaining local text layout
-   exceptions.
+   2026-05-18 text role source-gate hardening follow-up: `tools/gate_imui_workstream_source.py`
+   rejects direct `TextProps` construction under `fret-ui-kit::imui`, including both
+   `TextProps::new(...)` and struct-literal forms, so new compact IMUI text policy must route
+   through the shared role vocabulary instead of gaining local text layout exceptions.
    2026-05-16 IMUI text item resize follow-up: `UiWriterImUiFacadeExt::text(...)` now follows Dear
    ImGui's default `Text()` posture by staying single-line, shrinkable, and ellipsis-truncated
    under narrow resize. `text_wrapped(...)` is the explicit opt-in path for explanatory copy that

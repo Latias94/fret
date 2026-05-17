@@ -430,9 +430,11 @@ Run evidence:
   fret-ui-kit --features imui --lib control_label_text_uses_fill_width_single_line_truncation
   imui_fill_text_is_single_line_and_shrinkable imui_control_text_uses_shared_button_label_role
   --no-fail-fast`.
-- 2026-05-16: hardened `tools/gate_imui_workstream_source.py` so direct
-  `TextProps::new(...)` constructors under `fret-ui-kit::imui` fail the source gate unless they
-  are moved into shared text roles with explicit evidence.
+- 2026-05-18: hardened `tools/gate_imui_workstream_source.py` so direct `TextProps`
+  construction under `fret-ui-kit::imui` fails the source gate unless it is moved into shared text
+  roles with explicit evidence. The check now covers both `TextProps::new(...)` and
+  `TextProps { ... }` struct literals, matching the editor allowlist scanner and closing the
+  remaining source-gate bypass for local IMUI text policy.
 - 2026-05-17: removed the last IMUI direct text constructor exception by routing
   `UiWriterImUiFacadeExt::text(...)` through the shared `text_section_chrome_label(...)` role.
   Gates: `cargo nextest run -p fret-ui-kit --features imui --lib

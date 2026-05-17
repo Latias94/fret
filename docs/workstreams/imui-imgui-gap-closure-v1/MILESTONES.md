@@ -289,10 +289,11 @@ Exit criteria:
   2026-05-17 chrome glyph text result: `text_chrome_glyph(...)` now owns compact fixed-slot
   chrome glyph text in `fret-ui-kit::declarative::text`. Disclosure/tree indicators use that
   shared role, so glyph-only chrome stays single-line and clipped without local `TextProps`.
-  2026-05-16 text role source-gate result: `tools/gate_imui_workstream_source.py` now freezes the
-  remaining direct `TextProps::new(...)` constructors under `fret-ui-kit::imui` behind an explicit
-  allowlist, forcing future compact text policy additions through the shared role vocabulary or an
-  intentional gate update.
+  2026-05-18 text role source-gate hardening result: `tools/gate_imui_workstream_source.py` now
+  freezes direct `TextProps` construction under `fret-ui-kit::imui` behind an explicit allowlist,
+  including both `TextProps::new(...)` and `TextProps { ... }` struct literals. Future compact
+  IMUI text policy additions must go through the shared role vocabulary or an intentional gate
+  update with evidence.
   2026-05-16 IMUI text item resize result: `UiWriterImUiFacadeExt::text(...)` now mirrors Dear
   ImGui's default `Text()` semantics by staying single-line and shrinkable with ellipsis under
   resize. `text_wrapped(...)` is the explicit wrapping escape hatch, and the editor/workspace proof

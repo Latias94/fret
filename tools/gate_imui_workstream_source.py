@@ -187,45 +187,12 @@ def check_fret_imui_runtime_dependencies(failures: list[str]) -> None:
 
 
 def check_imui_direct_text_props_allowlist(failures: list[str]) -> None:
-    actual: dict[Path, dict[str, int]] = {}
-    root = WORKSPACE_ROOT / "ecosystem/fret-ui-kit/src/imui"
-    for source_path in sorted(root.rglob("*.rs")):
-        path = source_path.relative_to(WORKSPACE_ROOT)
-        source = read_source(path)
-        for line in source.splitlines():
-            stripped = line.strip()
-            if "TextProps::new(" not in stripped:
-                continue
-            actual.setdefault(path, {})
-            actual[path][stripped] = actual[path].get(stripped, 0) + 1
-
-    for path, constructors in sorted(actual.items()):
-        allowed = IMUI_DIRECT_TEXT_PROPS_ALLOWED.get(path)
-        if allowed is None:
-            for constructor, count in sorted(constructors.items()):
-                failures.append(
-                    f"{path.as_posix()}: direct TextProps constructor is not in the text-role allowlist ({count}x {constructor})"
-                )
-            continue
-        for constructor, count in sorted(constructors.items()):
-            expected = allowed.get(constructor)
-            if expected is None:
-                failures.append(
-                    f"{path.as_posix()}: direct TextProps constructor is not allowed: {constructor}"
-                )
-            elif count != expected:
-                failures.append(
-                    f"{path.as_posix()}: direct TextProps constructor count changed for {constructor}: expected {expected}, found {count}"
-                )
-
-    for path, constructors in sorted(IMUI_DIRECT_TEXT_PROPS_ALLOWED.items()):
-        actual_for_path = actual.get(path, {})
-        for constructor, expected in sorted(constructors.items()):
-            count = actual_for_path.get(constructor, 0)
-            if count != expected:
-                failures.append(
-                    f"{path.as_posix()}: missing allowed direct TextProps constructor {constructor}: expected {expected}, found {count}"
-                )
+    check_direct_text_props_allowlist(
+        Path("ecosystem/fret-ui-kit/src/imui"),
+        IMUI_DIRECT_TEXT_PROPS_ALLOWED,
+        "IMUI",
+        failures,
+    )
 
 
 def check_direct_text_props_allowlist(
@@ -697,8 +664,9 @@ def main() -> None:
                 "disclosure/tree indicators route through",
                 "2026-05-17 control label text follow-up",
                 "labels in `fret-ui-kit::declarative::text`, and `control_chrome::fill_text(...)` routes through",
-                "2026-05-16 text role source-gate follow-up",
-                "rejects direct `TextProps::new(...)` constructors",
+                "2026-05-18 text role source-gate hardening follow-up",
+                "rejects direct `TextProps` construction under `fret-ui-kit::imui`",
+                "`TextProps::new(...)` and struct-literal forms",
                 "2026-05-17 IMUI text item role cleanup",
                 "`UiWriterImUiFacadeExt::text(...)` now delegates to the",
                 "shared `text_section_chrome_label(...)` role",
@@ -968,8 +936,9 @@ def main() -> None:
                 "role and routed disclosure/tree indicators through it",
                 "chrome_glyph_text_uses_fixed_slot_single_line_clip",
                 "disclosure_indicator_uses_shared_chrome_glyph_text_role",
-                "hardened `tools/gate_imui_workstream_source.py` so direct",
-                "`TextProps::new(...)` constructors under `fret-ui-kit::imui` fail",
+                "hardened `tools/gate_imui_workstream_source.py` so direct `TextProps`",
+                "construction under `fret-ui-kit::imui` fails",
+                "`TextProps { ... }` struct literals",
                 "removed the last IMUI direct text constructor exception",
                 "`UiWriterImUiFacadeExt::text(...)` through the shared",
                 "`text_section_chrome_label(...)` role",
@@ -992,6 +961,8 @@ def main() -> None:
                 "added `P3_TEXT_ROLE_MATRIX_2026-05-17.md` as the resize triage contract",
                 "requires wrapping paragraph/validation copy to have parent layout that accounts for",
                 "keeps `fret-imui` policy-light by rejecting a public `TextRole` enum",
+                "construction under `fret-ui-kit::imui` fails",
+                "covers both `TextProps::new(...)` and",
                 "tightened `UiWriterImUiFacadeExt::text(...)` to match Dear ImGui",
                 "`UiWriterImUiFacadeExt::text_wrapped(...)`",
                 "imui_text_item_is_single_line_and_shrinkable",
