@@ -334,6 +334,10 @@ Exit criteria:
   2026-05-17 retained table text result: `table_virtualized_retained_v0(...)` and grouped table
   row text now route retained header labels, grouped row labels, and aggregation values through
   `text_table_cell(...)` instead of bare `cx.text(...)` inside fixed table cells.
+  2026-05-17 gallery retained-table torture text result: the UI Gallery retained-table torture page
+  now uses `text_table_cell(...)` for fixed table cells and `control_readout_text(...)` for table
+  state readouts, so the visible retained-table stress surface no longer teaches bare fixed-cell
+  text under resize.
   2026-05-17 virtual row fallback result: tree and file-tree virtualizer out-of-range fallback
   paths now return spacer placeholders instead of empty text nodes, so fixed-row helpers no longer
   create meaningless `Text` elements for missing rows.

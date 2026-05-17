@@ -360,6 +360,10 @@ Readiness order for the next locally testable review slices:
    2026-05-17 retained table text follow-up: retained table headers plus grouped row label and
    aggregation text now route through `text_table_cell(...)`, keeping fixed table cells on the
    shared single-line ellipsis role outside the IMUI-specific table wrapper.
+   2026-05-17 gallery retained-table torture text follow-up: the UI Gallery retained-table torture
+   page now routes fixed cell text through `text_table_cell(...)` and table state/status readouts
+   through `control_readout_text(...)`, leaving only explicitly multi-line/paragraph copy as bare
+   prose.
    2026-05-17 virtual row fallback follow-up: tree and file-tree virtualizer out-of-range fallback
    paths now use spacer placeholders instead of empty text nodes, removing another fixed-row
    `Text` escape hatch.

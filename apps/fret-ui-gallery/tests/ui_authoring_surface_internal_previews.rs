@@ -861,6 +861,14 @@ fn gallery_table_retained_torture_uses_structured_table_debug_ids() {
     let normalized = assert_normalized_markers_present(
         "src/ui/previews/gallery/torture/table_retained_torture.rs",
         &[
+            "fnretained_table_cell_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "fret_ui_kit::declarative::text::text_table_cell(cx,text)",
+            "doc_layout::control_readout_text(cx,\"Keeppinnedrows\")",
+            "doc_layout::control_readout_text(cx,sorting_text.clone()).attach_semantics(",
+            "retained_table_cell_text(cx,row.name.clone())",
+            "retained_table_cell_text(cx,row.status.clone())",
+            "retained_table_cell_text(cx,format!(\"{}%\",row.cpu))",
+            "retained_table_cell_text(cx,format!(\"{}MB\",row.mem_mb))",
             "let table_debug_ids = fret_ui_kit::declarative::table::TableDebugIds {",
             "header_row_test_id: Some(Arc::<str>::from(\"ui-gallery-table-retained-header-row\")),",
             "header_cell_test_id_prefix: Some(Arc::<str>::from(\"ui-gallery-table-retained-header-\",)),",
@@ -873,6 +881,22 @@ fn gallery_table_retained_torture_uses_structured_table_debug_ids() {
         !normalized.contains("TableDebugIds::default()"),
         "table_retained_torture should not fall back to an empty default diagnostics contract"
     );
+    for forbidden in [
+        "cx.text(\"Keeppinnedrows\")",
+        "cx.text(sorting_text.as_ref()).attach_semantics(",
+        "cx.text(row_pinning_text.as_ref()).attach_semantics(",
+        "cx.text(keep_pinned_rows_text.as_ref()).attach_semantics(",
+        "cx.text(page_text.as_ref()).attach_semantics(",
+        "cx.text(row.name.as_ref())",
+        "cx.text(row.status.as_ref())",
+        "cx.text(format!(\"{}%\",row.cpu))",
+        "cx.text(format!(\"{}MB\",row.mem_mb))",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "table_retained_torture reintroduced bare fixed table/readout text: {forbidden}"
+        );
+    }
 }
 
 #[test]
