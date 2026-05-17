@@ -1021,6 +1021,126 @@ fn clean_geometry_small_resize_skips_barrier_root_engine_solve() {
 }
 
 #[test]
+fn clean_geometry_small_resize_runs_text_input_layout_as_side_effect_boundary() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(324.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+    let model = app.models_mut().insert(String::from("search"));
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-text-input-boundary-child",
+        |cx| {
+            let stack = crate::element::StackProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            };
+            let model = model.clone();
+            vec![cx.stack_props(stack, move |cx| {
+                let mut input = TextInputProps::new(model.clone());
+                input.layout.size.width = Length::Fill;
+                input.layout.size.height = Length::Fill;
+                vec![cx.text_input(input)]
+            })]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(184.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+    let prepare_calls_after_initial_layout = text.prepare_calls;
+    assert!(
+        prepare_calls_after_initial_layout > 0,
+        "initial text input layout should measure text"
+    );
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "TextInput should be a side-effect boundary that lets ancestors skip the Taffy solve"
+    );
+    assert_eq!(
+        ui.debug_stats().layout_clean_geometry_solve_skip_rejections,
+        0,
+        "accepted clean geometry skips should not leave rejection noise in frame stats"
+    );
+    assert!(
+        text.prepare_calls > prepare_calls_after_initial_layout,
+        "TextInput layout must still run so model/font/IME side effects stay authoritative"
+    );
+
+    let stack_node = ui.children(child)[0];
+    let input_node = ui.children(stack_node)[0];
+    let input_bounds = ui.debug_node_bounds(input_node).expect("input bounds");
+    assert!((input_bounds.size.width.0 - rect_b.size.width.0).abs() < 0.01);
+}
+
+#[test]
 fn clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve() {
     struct PrecomputeThenResize {
         child: NodeId,

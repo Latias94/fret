@@ -941,6 +941,67 @@ Gallery sidebar no-shrink authoring closeout (2026-05-17):
   - The next slice should audit either the `TextInput` blocker or the content `Grid` / wrap-flex
     line-break stability story as separate work.
 
+TextInput side-effect boundary closeout (2026-05-17):
+
+- Mechanism anchors:
+  - `crates/fret-ui/src/tree/layout/node.rs`
+    (`CleanGeometryNodeContract::side_effect_boundary` for `ElementInstance::TextInput`)
+  - `crates/fret-ui/src/declarative/tests/layout/layout_engine.rs`
+    (`clean_geometry_small_resize_runs_text_input_layout_as_side_effect_boundary`)
+  - `crates/fret-ui/src/text/input/bound.rs`
+    (`BoundTextInput::layout`)
+  - `crates/fret-ui/src/text/input/widget.rs`
+    (`TextInput::layout`)
+- Contract:
+  - `TextInput` is not a pure clean-geometry leaf. Its layout observes the bound text model and
+    font-stack globals, syncs model text, updates text metrics, and writes state consumed by IME /
+    selection / platform text-input snapshot behavior.
+  - Ancestors may treat `TextInput` as a side-effect boundary when proving a clean width-only
+    geometry skip. The ancestor can skip its own Taffy root solve, but `TextInput` itself must still
+    run layout when the propagated bounds change.
+  - `TextArea` and `TextInputRegion` remain outside this slice. They are still side-effectful text
+    surfaces and should get their own boundary proof before they participate in clean-geometry
+    ancestor skips.
+- Focused gates:
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_runs_text_input_layout_as_side_effect_boundary --no-fail-fast`
+    - Result: `1/1` passed.
+- Final gates:
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_runs_text_input_layout_as_side_effect_boundary clean_geometry_small_resize_skips_barrier_root_engine_solve clean_geometry_small_resize_rejects_horizontal_flex_fixed_px_default_shrink_child clean_geometry_small_resize_skips_horizontal_flex_single_basis0_grow_child clean_geometry_small_resize_skips_horizontal_flex_auto_width_no_shrink_child --no-fail-fast`
+    - Result: `5/5` passed.
+  - `cargo fmt --check`
+    - Result: passed.
+  - `cargo check -p fret-bootstrap --features ui-app-driver,diagnostics`
+    - Result: passed.
+  - `python3 tools/check_layering.py`
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed.
+- Local blocker evidence:
+  - Bundle:
+    `target/fret-diag/local-next-text-input-boundary-clean-geometry-20260517-r1/1779012516551/bundle.schema2.json`
+  - Stats:
+    `target/fret-diag/local-next-text-input-boundary-clean-geometry-20260517-r1/worst.stats.json`
+  - Result:
+    - Top frame total/layout/layout-engine-solve/prepaint/paint is `1275/618/267/252/405us` with
+      `4` layout-engine solves.
+    - Guardrails remain stable: `top_view_cache_roots_reused=1`,
+      `top_view_cache_roots_needs_rerender=0`, row replay/store `289/0`, row replay hit rate
+      `100%`.
+    - The previous root `Stack` `unsupported_kind=TextInput` blocker through
+      `ecosystem/fret-ui-shadcn/src/input.rs:514` is gone from the per-solve blockers.
+    - Remaining blockers:
+      - content `Semantics`: `unsupported_kind=Grid`, `wrap_nodes=1`, solve about `169-183us`;
+      - root `Stack`: `positioned_child / Stack`, path through the sidebar nav `ScrollArea`
+        wrapper at `ecosystem/fret-ui-shadcn/src/scroll_area.rs:340`, solve about `75-79us`;
+      - editor `PointerRegion`: `unsupported_kind=Canvas`, solve about `3-4us`;
+      - root `Scroll`: `side_effect_boundary / Scroll`, solve `0us`.
+- Decision:
+  - Close the `TextInput` blocker as a side-effect boundary contract, not as a pure leaf
+    propagation proof.
+  - Keep RTX4090 closeout as follow-up evidence.
+  - The next slice should either audit the sidebar `positioned_child / Stack` blocker or separately
+    tackle content `Grid` / wrap-flex line-break stability.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:
@@ -990,8 +1051,11 @@ Layout-side blacklist for apply skipping:
   transform during layout.
 - `Text`, `StyledText`, and `SelectableText`: observe font-stack globals and refresh text metrics /
   blobs / selectable text state from layout.
-- `TextInput`, `TextArea`, and `TextInputRegion`: remain excluded because they participate in
-  focusable text-input, IME, selection, accessibility, and platform text-input snapshot semantics.
+- `TextInput`: is a side-effect boundary for clean-geometry ancestor skips; its own layout must
+  still run because it participates in focusable text-input, IME, selection, accessibility, and
+  platform text-input snapshot semantics.
+- `TextArea` and `TextInputRegion`: remain excluded from clean-geometry ancestor skips until they
+  get dedicated side-effect boundary proofs.
 - `LayoutQueryRegion`: is a queryable-bounds primitive, so skipping layout cannot be assumed safe
   without a dedicated query-snapshot proof.
 - `RenderTransform` and `FractionalRenderTransform`: update retained `render_transform` state

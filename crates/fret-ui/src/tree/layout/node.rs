@@ -1092,7 +1092,8 @@ impl<H: UiHost> UiTree<H> {
         kind: &'static str,
     ) -> Result<CleanGeometryNodeContract, CleanGeometrySolveSkipRejection> {
         match instance {
-            crate::declarative::frame::ElementInstance::Scroll(_) => {
+            crate::declarative::frame::ElementInstance::Scroll(_)
+            | crate::declarative::frame::ElementInstance::TextInput(_) => {
                 Ok(CleanGeometryNodeContract::side_effect_boundary())
             }
             crate::declarative::frame::ElementInstance::Stack(_)

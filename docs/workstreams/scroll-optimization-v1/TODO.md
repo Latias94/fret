@@ -385,6 +385,27 @@ Status: Active
   - Decision: close the sidebar blocker here. The next optimization should audit `TextInput` as a
     side-effectful layout boundary / possible leaf contract, or separately tackle the content
     `Grid` / wrap-flex line-break stability story. Do not mix either with this authoring fix.
+- [x] Classify `TextInput` as a clean-geometry side-effect boundary.
+  - Source conclusion: `TextInput` layout must still run because it syncs the bound model, observes
+    font globals, refreshes text metrics, and updates state used by IME / platform text-input
+    snapshots. It is not a pure propagated leaf.
+  - Implemented mechanism fix: `TextInput` now uses the same clean-geometry side-effect boundary
+    classification shape as `Scroll`: ancestors may propagate its resized bounds and skip their
+    root Taffy solve, but `TextInput` itself still runs layout when its bounds change.
+  - Focused guardrail: a resize test proves the ancestor solve is skipped while `TextInput` layout
+    still measures text and receives the updated width.
+  - Local blocker-shift evidence:
+    `target/fret-diag/local-next-text-input-boundary-clean-geometry-20260517-r1/1779012516551/bundle.schema2.json`.
+  - Result: the root `Stack` `unsupported_kind=TextInput` blocker disappeared. Top frame
+    total/layout/solve is `1275/618/267us` with `4` layout-engine solves,
+    `top_view_cache_roots_reused=1`, `top_view_cache_roots_needs_rerender=0`, and row replay/store
+    remains `289/0`.
+  - Remaining blockers: content `Semantics` remains `unsupported_kind=Grid` with `wrap_nodes=1`;
+    root `Stack` is now `positioned_child / Stack` through the sidebar nav `ScrollArea`; editor
+    `Canvas` remains small, and root `Scroll` remains a side-effect boundary.
+  - Decision: close the `TextInput` blocker here. The next optimization should target the sidebar
+    `positioned_child / Stack` blocker or the content `Grid` / wrap-flex line-break story as
+    separate work; do not treat text input as a pure geometry leaf.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 
