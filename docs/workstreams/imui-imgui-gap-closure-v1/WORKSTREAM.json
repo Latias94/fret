@@ -214,6 +214,14 @@
       "command": "cargo check -p fret-examples"
     },
     {
+      "name": "examples table proof text roles",
+      "command": "cargo nextest run -p fret-examples --test table_demo_surface table_demo_keeps_fixed_table_text_on_roles --test table_stress_demo_surface table_stress_demo_keeps_fixed_table_text_on_roles --no-fail-fast"
+    },
+    {
+      "name": "examples table proof bin check",
+      "command": "cargo check -p fret-demo --bin table_demo --bin table_stress_demo"
+    },
+    {
       "name": "imui design surface editor anchors",
       "command": "rg -n \"EditorThemePresetV1|ImguiLikeDense|install_editor_theme_preset_v1|reapply_installed_editor_theme_preset_v1\" ecosystem/fret-ui-editor/src/theme.rs apps/fret-cookbook/examples/imui_editor_controls_basics.rs apps/fret-examples/src/imui_editor_proof_demo.rs"
     },
@@ -430,9 +438,13 @@
     "apps/fret-examples/src/docking_demo.rs",
     "apps/fret-examples/src/docking_arbitration_demo.rs",
     "apps/fret-examples/src/container_queries_docking_demo.rs",
+    "apps/fret-examples/src/table_demo.rs",
+    "apps/fret-examples/src/table_stress_demo.rs",
     "apps/fret-examples/tests/docking_demo_surface.rs",
     "apps/fret-examples/tests/docking_arbitration_surface.rs",
     "apps/fret-examples/tests/container_queries_docking_surface.rs",
+    "apps/fret-examples/tests/table_demo_surface.rs",
+    "apps/fret-examples/tests/table_stress_demo_surface.rs",
     "apps/fret-ui-gallery/src/driver/chrome.rs",
     "apps/fret-ui-gallery/src/driver/shell.rs",
     "apps/fret-ui-gallery/src/driver/settings_sheet.rs",

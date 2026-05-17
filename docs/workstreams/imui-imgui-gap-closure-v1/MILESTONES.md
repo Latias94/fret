@@ -334,6 +334,11 @@ Exit criteria:
   2026-05-17 retained table text result: `table_virtualized_retained_v0(...)` and grouped table
   row text now route retained header labels, grouped row labels, and aggregation values through
   `text_table_cell(...)` instead of bare `cx.text(...)` inside fixed table cells.
+  2026-05-17 examples table proof text result: `table_demo` and `table_stress_demo` now teach the
+  same shared text-role vocabulary as the retained/data-grid proof surfaces. Their long status
+  headers use `text_control_readout(...)`, while table headers and body cells use
+  `text_table_cell(...)`, with source tests preventing the old bare `cx.text(header/label/text)`
+  paths from returning.
   2026-05-17 gallery retained-table torture text result: the UI Gallery retained-table torture page
   now uses `text_table_cell(...)` for fixed table cells and `control_readout_text(...)` for table
   state readouts, so the visible retained-table stress surface no longer teaches bare fixed-cell
