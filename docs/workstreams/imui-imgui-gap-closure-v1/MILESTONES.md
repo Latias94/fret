@@ -417,6 +417,10 @@ Exit criteria:
   paragraph helper for Popover body copy and a local readout helper backed by
   `text_control_readout(...)` for state/debug status lines, keeping the docking proof on shared
   text roles without moving policy into `fret-imui`.
+  2026-05-17 docking/container-query panel text result: `docking_demo` and
+  `container_queries_docking_demo` now use local helpers over shared list-row, control-readout, and
+  button-label text roles for fixed panel text. This closes the simple docking demo resize escape
+  hatch while leaving docking topology/policy ownership unchanged.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

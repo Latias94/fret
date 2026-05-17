@@ -118,8 +118,12 @@ Last updated: 2026-05-17
   - `ecosystem/fret-ui-kit/src/recipes/imui_sortable.rs`
   - `ecosystem/fret-ui-kit/src/recipes/imui_drag_preview.rs`
   - `apps/fret-examples/src/editor_notes_demo.rs`
+  - `apps/fret-examples/src/docking_demo.rs`
   - `apps/fret-examples/src/docking_arbitration_demo.rs`
+  - `apps/fret-examples/src/container_queries_docking_demo.rs`
+  - `apps/fret-examples/tests/docking_demo_surface.rs`
   - `apps/fret-examples/tests/docking_arbitration_surface.rs`
+  - `apps/fret-examples/tests/container_queries_docking_surface.rs`
   - `apps/fret-ui-gallery/src/driver/toaster.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs`
   - `apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/mvp/gates.rs`
@@ -1356,6 +1360,13 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `cargo fmt -p fret-examples` passed.
 - `cargo nextest run -p fret-examples --test docking_arbitration_surface docking_arbitration_demo_keeps_body_and_state_text_on_roles --no-fail-fast` passed.
 - `cargo check -p fret-demo --bin docking_arbitration_demo` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+
+2026-05-17 docking/container-query panel text-role slice:
+
+- `cargo fmt -p fret-examples` passed.
+- `cargo check -p fret-demo --bin container_queries_docking_demo --bin docking_demo` passed.
+- `cargo nextest run -p fret-examples --test container_queries_docking_surface container_queries_docking_demo_keeps_fixed_panel_text_on_roles --test docking_demo_surface docking_demo_keeps_panel_text_on_roles --no-fail-fast` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 
 2026-05-17 gallery retained-table torture text-role slice:

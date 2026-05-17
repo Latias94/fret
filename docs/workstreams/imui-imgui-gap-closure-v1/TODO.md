@@ -447,6 +447,11 @@ Readiness order for the next locally testable review slices:
    Popover body copy through a local paragraph helper and state/debug status lines through a local
    readout helper backed by `text_control_readout(...)`. A source test and IMUI workstream source
    gate prevent the docking proof from returning to bare `cx.text(...)`.
+   2026-05-17 docking/container-query panel text follow-up: `docking_demo` and
+   `container_queries_docking_demo` now route fixed panel labels, readouts, and placeholders through
+   local helpers backed by shared list-row, control-readout, and button-label text roles. Focused
+   source tests plus the IMUI workstream source gate keep those resize-sensitive panel demos from
+   returning to bare `cx.text(...)`.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

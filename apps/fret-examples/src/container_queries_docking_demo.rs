@@ -23,6 +23,20 @@ use std::sync::Arc;
 const INITIAL_SPLIT_FRACTION_LEFT: f32 = 0.75;
 const SPLIT_ANCHOR_W: Px = Px(18.0);
 
+fn container_query_docking_readout_text<H: fret_ui::UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    fret_ui_kit::declarative::text::text_control_readout(cx, text)
+}
+
+fn container_query_docking_placeholder_text<H: fret_ui::UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    fret_ui_kit::declarative::text::text_button_label(cx, text)
+}
+
 struct SplitDragAnchor {
     test_id: &'static str,
 }
@@ -147,7 +161,12 @@ impl DemoDockPanelFactory {
                                     corner_radii: fret_core::Corners::all(Px(6.0)),
                                     ..Default::default()
                                 },
-                                move |cx| vec![cx.text(Arc::clone(&mode_text))],
+                                move |cx| {
+                                    vec![container_query_docking_readout_text(
+                                        cx,
+                                        Arc::clone(&mode_text),
+                                    )]
+                                },
                             )
                             .attach_semantics(
                                 SemanticsDecoration::default().test_id("cq-dock-demo-mode"),
@@ -166,7 +185,7 @@ impl DemoDockPanelFactory {
                                 corner_radii: fret_core::Corners::all(Px(6.0)),
                                 ..Default::default()
                             },
-                            |cx| vec![cx.text("Input stub")],
+                            |cx| vec![container_query_docking_placeholder_text(cx, "Input stub")],
                         );
 
                         let field = shadcn::Field::new([
@@ -224,7 +243,10 @@ impl DockPanelFactory<App> for DemoDockPanelFactory {
                         ),
                     ]
                 }
-                _ => vec![cx.text("Unregistered panel kind")],
+                _ => vec![container_query_docking_readout_text(
+                    cx,
+                    "Unregistered panel kind",
+                )],
             }
         }))
     }

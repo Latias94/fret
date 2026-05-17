@@ -185,6 +185,17 @@ Current promoted run:
 - packed artifact:
   `target/fret-diag/adaptive-panel-resize-promote/sessions/1775822919781-88694/share/1775822919993.zip`
 
+2026-05-17 maintenance note:
+
+- `container_queries_docking_demo` fixed-height panel text now routes through local helpers backed
+  by shared text roles instead of bare `cx.text(...)`, so the promoted panel-resize demo no longer
+  teaches wrapping default text inside fixed 28px/34px rows. Focused gates passed:
+  `cargo check -p fret-demo --bin container_queries_docking_demo --bin docking_demo`,
+  `cargo nextest run -p fret-examples --test container_queries_docking_surface
+  container_queries_docking_demo_keeps_fixed_panel_text_on_roles --test docking_demo_surface
+  docking_demo_keeps_panel_text_on_roles --no-fail-fast`, and
+  `python tools/gate_imui_workstream_source.py`.
+
 ### Workspace-shell editor-rail composition
 
 ```bash
