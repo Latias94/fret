@@ -68,28 +68,20 @@ impl CompositeGroupDispatchState {
         } else {
             ((0, 0), args.viewport_size)
         };
-        let mut target_selection = target_selection::TargetSelection {
-            target: None,
-            had_free_target: false,
-        };
+        let mut target_selection = target_selection::TargetSelection::none();
         if content_size.0 != 0 && content_size.1 != 0 {
-            target_selection = target_selection::choose_free_intermediate_target(
+            target_selection = target_selection::choose_budgeted_intermediate_target(
                 draw_scopes,
                 args.backdrop_source_group_reserved_targets,
-            );
-
-            if target_selection.target.is_some()
-                && !super::target_budget::can_allocate_intermediate_bytes(
-                    args.intermediate_budget_bytes,
-                    draw_scopes,
-                    estimate_texture_bytes(content_size, args.format, 1),
-                    args.clip_path_mask_in_use_bytes
+                target_selection::IntermediateAllocationBudget {
+                    intermediate_budget_bytes: args.intermediate_budget_bytes,
+                    required_bytes: estimate_texture_bytes(content_size, args.format, 1),
+                    extra_in_use_bytes: args
+                        .clip_path_mask_in_use_bytes
                         .saturating_add(args.backdrop_source_group_in_use_bytes),
-                    args.format,
-                )
-            {
-                target_selection.target = None;
-            }
+                    format: args.format,
+                },
+            );
         }
 
         let content_target = target_selection.target;

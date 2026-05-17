@@ -632,6 +632,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - [x] Step 3u: move clip-path push/pop helpers onto `ClipPathDispatchState`.
     - [x] Step 3v: move composite-group push/pop helpers onto `CompositeGroupDispatchState`.
     - [x] Step 3w: wrap the compiler draw-scope stack in `DrawScopeStack`.
+    - [x] Step 3x: extract scoped intermediate target allocation budget filtering.
   - Landed (step 1): extracted target/budget helpers and their focused tests into
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
   - Landed (step 2): introduced `RenderPlanCompilerCtx` to own structural compiler outputs
@@ -728,6 +729,10 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Landed (step 3w): introduced `DrawScopeStack` for compiler draw-scope stack access, so
     current-scope lookup, push/pop, live-target iteration, and load-op consumption are centralized
     instead of passing a mutable `Vec<DrawScope>` across RenderPlan compiler modules.
+  - Landed (step 3x): extracted scoped intermediate target allocation budget filtering into
+    `target_selection`, so clip-path, effect-scope FilterContent, and composite-group push paths
+    share the same free-target evidence and budget filtering semantics while keeping their own
+    degradation records and scope lifetime decisions.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
       `compile_for_scene_inner`)
@@ -736,7 +741,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
       `choose_backdrop_source_group_pyramid_choice`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_selection.rs`
       (`choose_free_intermediate_target`, `choose_free_clip_path_mask_target`,
-      `has_free_intermediate_target_except`)
+      `has_free_intermediate_target_except`, `choose_budgeted_intermediate_target`,
+      `budget_filter_intermediate_target`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/context.rs`
       (`RenderPlanCompilerCtx`, `alloc_segment`, `flush_scene_range`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`

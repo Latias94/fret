@@ -92,10 +92,7 @@ impl ClipPathDispatchState {
         let parent_origin = parent_scope.origin;
         let parent_size = parent_scope.size;
 
-        let mut content_selection = target_selection::TargetSelection {
-            target: None,
-            had_free_target: false,
-        };
+        let mut content_selection = target_selection::TargetSelection::none();
         let mut mask_target: Option<PlanTarget> = None;
         let mut had_free_mask_target = false;
 
@@ -126,16 +123,20 @@ impl ClipPathDispatchState {
             if let (Some(_content_target), Some(_mask_target)) =
                 (content_selection.target, mask_target)
             {
-                let required_color = estimate_texture_bytes(content_size, args.format, 1);
-                let required_mask = estimate_clip_mask_bytes(mask_size);
-                if !super::target_budget::can_allocate_intermediate_bytes(
-                    args.intermediate_budget_bytes,
+                content_selection = target_selection::budget_filter_intermediate_target(
+                    content_selection,
                     draw_scopes,
-                    required_color.saturating_add(required_mask),
-                    self.mask_in_use_bytes
-                        .saturating_add(args.backdrop_source_group_in_use_bytes),
-                    args.format,
-                ) {
+                    target_selection::IntermediateAllocationBudget {
+                        intermediate_budget_bytes: args.intermediate_budget_bytes,
+                        required_bytes: estimate_texture_bytes(content_size, args.format, 1)
+                            .saturating_add(estimate_clip_mask_bytes(mask_size)),
+                        extra_in_use_bytes: self
+                            .mask_in_use_bytes
+                            .saturating_add(args.backdrop_source_group_in_use_bytes),
+                        format: args.format,
+                    },
+                );
+                if content_selection.target.is_none() {
                     content_selection.target = None;
                     mask_target = None;
                 }

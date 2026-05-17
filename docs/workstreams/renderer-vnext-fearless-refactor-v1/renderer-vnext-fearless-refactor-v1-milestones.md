@@ -1481,6 +1481,40 @@ Progress record (RenderPlan compiler draw-scope stack wrapper):
   - `python3 tools/check_layering.py`
   - `git diff --check`
 
+Progress record (RenderPlan compiler scoped intermediate allocation helper):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3x; Stage 24 continues)
+- Objective:
+  - Extract the shared scoped intermediate target allocation budget filter used by clip-path
+    content targets, effect-scope FilterContent targets, and composite-group content targets.
+  - Preserve `Intermediate0..3` allocation order, reserved-target exclusion, live draw-scope
+    exclusion, `had_free_target` evidence, budget-zero vs budget-insufficient degradation reason
+    precedence, and each caller's own scope push/pop and degradation record behavior.
+  - Keep backdrop-source-group raw target budgeting separate because that path reserves a source
+    snapshot target rather than a pushed draw content scope.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_selection.rs`
+    (`IntermediateAllocationBudget`, `choose_budgeted_intermediate_target`,
+    `budget_filter_intermediate_target`,
+    `budgeted_intermediate_target_preserves_free_target_evidence_when_budget_blocks`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`
+    (`ClipPathDispatchState::compile_push_inner`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
+    (`EffectScopeDispatchState::compile_push_inner` FilterContent branch)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/composite_group.rs`
+    (`CompositeGroupDispatchState::compile_push_inner`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan::tests::compile_for_scene_composite_group_preserves_output_clear_guardrail`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

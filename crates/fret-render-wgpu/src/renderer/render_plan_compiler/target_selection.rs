@@ -1,4 +1,5 @@
 use super::draw_scope::DrawScopeStack;
+use super::target_budget::can_allocate_intermediate_bytes;
 use crate::renderer::PlanTarget;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -7,11 +8,59 @@ pub(super) struct TargetSelection {
     pub(super) had_free_target: bool,
 }
 
+impl TargetSelection {
+    pub(super) fn none() -> Self {
+        Self {
+            target: None,
+            had_free_target: false,
+        }
+    }
+}
+
 pub(super) fn choose_free_intermediate_target(
     draw_scopes: &DrawScopeStack,
     reserved_targets: &[PlanTarget],
 ) -> TargetSelection {
     choose_free_intermediate_target_except(draw_scopes, reserved_targets, None)
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(super) struct IntermediateAllocationBudget {
+    pub(super) intermediate_budget_bytes: u64,
+    pub(super) required_bytes: u64,
+    pub(super) extra_in_use_bytes: u64,
+    pub(super) format: wgpu::TextureFormat,
+}
+
+pub(super) fn choose_budgeted_intermediate_target(
+    draw_scopes: &DrawScopeStack,
+    reserved_targets: &[PlanTarget],
+    budget: IntermediateAllocationBudget,
+) -> TargetSelection {
+    budget_filter_intermediate_target(
+        choose_free_intermediate_target(draw_scopes, reserved_targets),
+        draw_scopes,
+        budget,
+    )
+}
+
+pub(super) fn budget_filter_intermediate_target(
+    mut selection: TargetSelection,
+    draw_scopes: &DrawScopeStack,
+    budget: IntermediateAllocationBudget,
+) -> TargetSelection {
+    if selection.target.is_some()
+        && !can_allocate_intermediate_bytes(
+            budget.intermediate_budget_bytes,
+            draw_scopes,
+            budget.required_bytes,
+            budget.extra_in_use_bytes,
+            budget.format,
+        )
+    {
+        selection.target = None;
+    }
+    selection
 }
 
 pub(super) fn choose_free_intermediate_target_except(
@@ -110,6 +159,27 @@ mod tests {
 
         assert_eq!(selection.target, Some(PlanTarget::Intermediate3));
         assert!(selection.had_free_target);
+    }
+
+    #[test]
+    fn budgeted_intermediate_target_preserves_free_target_evidence_when_budget_blocks() {
+        let draw_scopes = DrawScopeStack::new(scope(PlanTarget::Intermediate0));
+        let selection = choose_budgeted_intermediate_target(
+            &draw_scopes,
+            &[],
+            IntermediateAllocationBudget {
+                intermediate_budget_bytes: 0,
+                required_bytes: 1,
+                extra_in_use_bytes: 0,
+                format: wgpu::TextureFormat::Rgba8Unorm,
+            },
+        );
+
+        assert_eq!(selection.target, None);
+        assert!(
+            selection.had_free_target,
+            "budget filtering must not turn budget pressure into target exhaustion"
+        );
     }
 
     #[test]
