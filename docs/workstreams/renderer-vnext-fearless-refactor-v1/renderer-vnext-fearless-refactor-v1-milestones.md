@@ -1515,6 +1515,37 @@ Progress record (RenderPlan compiler scoped intermediate allocation helper):
   - `python3 tools/check_layering.py`
   - `git diff --check`
 
+Progress record (RenderPlan compiler marker input snapshot cleanup):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3y; Stage 24 continues)
+- Objective:
+  - Replace the all-fields `MarkerSharedDispatchInputs` copy with branch-specific borrowed input
+    snapshots for effect-scope, clip-path, backdrop-source-group, and composite-group marker
+    branches.
+  - Preserve marker routing order, dispatch-state ownership, backdrop-source-group reserved-target
+    lifetimes, clip-path active mask snapshot semantics, backdrop-source-group degradation counter
+    mutation, and all target allocation/degradation behavior.
+  - Avoid copying reserved targets into a per-marker `SmallVec`; branches now borrow the reserved
+    target slice from `BackdropSourceGroupDispatchState` when they need it.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (`BackdropSourceGroupTargetInputs`, `EffectScopePushInputs`,
+    `ClipMaskAndBackdropTargetInputs`, `effect_scope_push_inputs`,
+    `clip_mask_and_backdrop_target_inputs`, `backdrop_source_group_targets`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/backdrop_source_group.rs`
+    (`BackdropSourceGroupDispatchState::{reserved_targets,in_use_bytes,effect_ctx}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`
+    (`ClipPathDispatchState::{mask_in_use_bytes,active_mask_targets}`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

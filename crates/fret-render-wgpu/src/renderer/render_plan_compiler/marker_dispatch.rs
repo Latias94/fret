@@ -10,7 +10,6 @@ use crate::renderer::{
     BlurQualitySnapshot, EffectDegradationSnapshot, EffectMarker, EffectMarkerKind, PlanTarget,
     SceneEncoding,
 };
-use smallvec::SmallVec;
 
 pub(super) struct MarkerDispatchState {
     effect_scope_state: effect_scope::EffectScopeDispatchState,
@@ -47,7 +46,10 @@ impl MarkerDispatchState {
                 chain,
                 quality,
             } => {
-                let shared_inputs = self.shared_inputs();
+                let shared_inputs = effect_scope_push_inputs(
+                    &self.clip_path_dispatch_state,
+                    &self.backdrop_source_group_state,
+                );
                 self.effect_scope_state.compile_push(
                     plan,
                     draw_scopes,
@@ -65,16 +67,21 @@ impl MarkerDispatchState {
                         intermediate_budget_bytes: args.intermediate_budget_bytes,
                         clip_path_mask_in_use_bytes: shared_inputs.clip_path_mask_in_use_bytes,
                         clip_path_active_mask_targets: shared_inputs.clip_path_active_mask_targets,
-                        backdrop_source_group: shared_inputs.backdrop_source_group_effect_ctx,
-                        backdrop_source_group_reserved_targets: &shared_inputs
-                            .backdrop_source_group_reserved_targets,
+                        backdrop_source_group: shared_inputs.backdrop_source_group,
+                        backdrop_source_group_reserved_targets: shared_inputs
+                            .backdrop_source_group_targets
+                            .reserved_targets,
                         backdrop_source_group_in_use_bytes: shared_inputs
-                            .backdrop_source_group_in_use_bytes,
+                            .backdrop_source_group_targets
+                            .in_use_bytes,
                     },
                 );
             }
             EffectMarkerKind::Pop => {
-                let shared_inputs = self.shared_inputs();
+                let shared_inputs = clip_mask_and_backdrop_target_inputs(
+                    &self.clip_path_dispatch_state,
+                    &self.backdrop_source_group_state,
+                );
                 self.effect_scope_state.compile_pop(
                     plan,
                     draw_scopes,
@@ -86,10 +93,12 @@ impl MarkerDispatchState {
                         scale_factor: args.scale_factor,
                         intermediate_budget_bytes: args.intermediate_budget_bytes,
                         clip_path_mask_in_use_bytes: shared_inputs.clip_path_mask_in_use_bytes,
-                        backdrop_source_group_reserved_targets: &shared_inputs
-                            .backdrop_source_group_reserved_targets,
+                        backdrop_source_group_reserved_targets: shared_inputs
+                            .backdrop_source_group_targets
+                            .reserved_targets,
                         backdrop_source_group_in_use_bytes: shared_inputs
-                            .backdrop_source_group_in_use_bytes,
+                            .backdrop_source_group_targets
+                            .in_use_bytes,
                     },
                 );
             }
@@ -98,7 +107,8 @@ impl MarkerDispatchState {
                 uniform_index,
                 mask_draw_index,
             } => {
-                let shared_inputs = self.shared_inputs();
+                let backdrop_targets =
+                    backdrop_source_group_targets(&self.backdrop_source_group_state);
                 self.clip_path_dispatch_state.compile_push(
                     plan,
                     draw_scopes,
@@ -112,10 +122,8 @@ impl MarkerDispatchState {
                         scissor_sized_intermediates: args.scissor_sized_intermediates,
                         format: args.format,
                         intermediate_budget_bytes: args.intermediate_budget_bytes,
-                        backdrop_source_group_reserved_targets: &shared_inputs
-                            .backdrop_source_group_reserved_targets,
-                        backdrop_source_group_in_use_bytes: shared_inputs
-                            .backdrop_source_group_in_use_bytes,
+                        backdrop_source_group_reserved_targets: backdrop_targets.reserved_targets,
+                        backdrop_source_group_in_use_bytes: backdrop_targets.in_use_bytes,
                     },
                 );
             }
@@ -127,7 +135,7 @@ impl MarkerDispatchState {
                 pyramid,
                 quality,
             } => {
-                let shared_inputs = self.shared_inputs();
+                let clip_path_mask_in_use_bytes = self.clip_path_dispatch_state.mask_in_use_bytes();
                 self.backdrop_source_group_state.compile_push(
                     plan,
                     draw_scopes,
@@ -141,7 +149,7 @@ impl MarkerDispatchState {
                         viewport_size: args.viewport_size,
                         format: args.format,
                         intermediate_budget_bytes: args.intermediate_budget_bytes,
-                        clip_path_mask_in_use_bytes: shared_inputs.clip_path_mask_in_use_bytes,
+                        clip_path_mask_in_use_bytes,
                     },
                 );
             }
@@ -155,7 +163,10 @@ impl MarkerDispatchState {
                 quality,
                 opacity,
             } => {
-                let shared_inputs = self.shared_inputs();
+                let shared_inputs = clip_mask_and_backdrop_target_inputs(
+                    &self.clip_path_dispatch_state,
+                    &self.backdrop_source_group_state,
+                );
                 self.composite_group_state.compile_push(
                     plan,
                     draw_scopes,
@@ -171,31 +182,18 @@ impl MarkerDispatchState {
                         format: args.format,
                         intermediate_budget_bytes: args.intermediate_budget_bytes,
                         clip_path_mask_in_use_bytes: shared_inputs.clip_path_mask_in_use_bytes,
-                        backdrop_source_group_reserved_targets: &shared_inputs
-                            .backdrop_source_group_reserved_targets,
+                        backdrop_source_group_reserved_targets: shared_inputs
+                            .backdrop_source_group_targets
+                            .reserved_targets,
                         backdrop_source_group_in_use_bytes: shared_inputs
-                            .backdrop_source_group_in_use_bytes,
+                            .backdrop_source_group_targets
+                            .in_use_bytes,
                     },
                 );
             }
             EffectMarkerKind::CompositeGroupPop => {
                 self.composite_group_state.compile_pop(plan, draw_scopes);
             }
-        }
-    }
-
-    fn shared_inputs(&self) -> MarkerSharedDispatchInputs {
-        MarkerSharedDispatchInputs {
-            clip_path_mask_in_use_bytes: self.clip_path_dispatch_state.mask_in_use_bytes(),
-            clip_path_active_mask_targets: self.clip_path_dispatch_state.active_mask_targets(),
-            backdrop_source_group_reserved_targets: self
-                .backdrop_source_group_state
-                .reserved_targets()
-                .iter()
-                .copied()
-                .collect(),
-            backdrop_source_group_in_use_bytes: self.backdrop_source_group_state.in_use_bytes(),
-            backdrop_source_group_effect_ctx: self.backdrop_source_group_state.effect_ctx(),
         }
     }
 
@@ -210,13 +208,55 @@ impl MarkerDispatchState {
     }
 }
 
-#[derive(Clone, Debug)]
-struct MarkerSharedDispatchInputs {
+#[derive(Clone, Copy, Debug)]
+struct BackdropSourceGroupTargetInputs<'a> {
+    reserved_targets: &'a [PlanTarget],
+    in_use_bytes: u64,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct EffectScopePushInputs<'a> {
     clip_path_mask_in_use_bytes: u64,
     clip_path_active_mask_targets: clip_path::ActiveMaskTargets,
-    backdrop_source_group_reserved_targets: SmallVec<[PlanTarget; 8]>,
-    backdrop_source_group_in_use_bytes: u64,
-    backdrop_source_group_effect_ctx: Option<effects::BackdropSourceGroupCtx>,
+    backdrop_source_group_targets: BackdropSourceGroupTargetInputs<'a>,
+    backdrop_source_group: Option<effects::BackdropSourceGroupCtx>,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct ClipMaskAndBackdropTargetInputs<'a> {
+    clip_path_mask_in_use_bytes: u64,
+    backdrop_source_group_targets: BackdropSourceGroupTargetInputs<'a>,
+}
+
+fn backdrop_source_group_targets(
+    backdrop_source_group_state: &backdrop_source_group::BackdropSourceGroupDispatchState,
+) -> BackdropSourceGroupTargetInputs<'_> {
+    BackdropSourceGroupTargetInputs {
+        reserved_targets: backdrop_source_group_state.reserved_targets(),
+        in_use_bytes: backdrop_source_group_state.in_use_bytes(),
+    }
+}
+
+fn effect_scope_push_inputs<'a>(
+    clip_path_dispatch_state: &clip_path::ClipPathDispatchState,
+    backdrop_source_group_state: &'a backdrop_source_group::BackdropSourceGroupDispatchState,
+) -> EffectScopePushInputs<'a> {
+    EffectScopePushInputs {
+        clip_path_mask_in_use_bytes: clip_path_dispatch_state.mask_in_use_bytes(),
+        clip_path_active_mask_targets: clip_path_dispatch_state.active_mask_targets(),
+        backdrop_source_group_targets: backdrop_source_group_targets(backdrop_source_group_state),
+        backdrop_source_group: backdrop_source_group_state.effect_ctx(),
+    }
+}
+
+fn clip_mask_and_backdrop_target_inputs<'a>(
+    clip_path_dispatch_state: &clip_path::ClipPathDispatchState,
+    backdrop_source_group_state: &'a backdrop_source_group::BackdropSourceGroupDispatchState,
+) -> ClipMaskAndBackdropTargetInputs<'a> {
+    ClipMaskAndBackdropTargetInputs {
+        clip_path_mask_in_use_bytes: clip_path_dispatch_state.mask_in_use_bytes(),
+        backdrop_source_group_targets: backdrop_source_group_targets(backdrop_source_group_state),
+    }
 }
 
 #[derive(Clone, Copy, Debug)]

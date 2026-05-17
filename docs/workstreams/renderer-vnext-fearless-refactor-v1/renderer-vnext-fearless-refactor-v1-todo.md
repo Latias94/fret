@@ -633,6 +633,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - [x] Step 3v: move composite-group push/pop helpers onto `CompositeGroupDispatchState`.
     - [x] Step 3w: wrap the compiler draw-scope stack in `DrawScopeStack`.
     - [x] Step 3x: extract scoped intermediate target allocation budget filtering.
+    - [x] Step 3y: replace full marker shared-input copies with branch-specific borrowed snapshots.
   - Landed (step 1): extracted target/budget helpers and their focused tests into
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
   - Landed (step 2): introduced `RenderPlanCompilerCtx` to own structural compiler outputs
@@ -733,6 +734,10 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     `target_selection`, so clip-path, effect-scope FilterContent, and composite-group push paths
     share the same free-target evidence and budget filtering semantics while keeping their own
     degradation records and scope lifetime decisions.
+  - Landed (step 3y): replaced the all-fields `MarkerSharedDispatchInputs` copy with
+    branch-specific borrowed snapshots in `marker_dispatch`, so marker branches only materialize
+    the clip-path/backdrop-source-group inputs they actually need and reserved targets stay borrowed
+    from `BackdropSourceGroupDispatchState`.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
       `compile_for_scene_inner`)
@@ -765,8 +770,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/preflight.rs`
       (`RenderPlanPreflight`, `plan_render_targets`, scissor-sized-intermediate eligibility)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
-      (`MarkerDispatchState`, `MarkerSharedDispatchInputs`, `shared_inputs`, `compile_marker`,
-      `into_parts`)
+      (`MarkerDispatchState`, `compile_marker`, `effect_scope_push_inputs`,
+      `clip_mask_and_backdrop_target_inputs`, `backdrop_source_group_targets`, `into_parts`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/draw_scope.rs`
       (`DrawScope`, `DrawScopeStack`)
     - `docs/workstreams/renderer-render-plan-semantics-audit-v1/renderer-render-plan-semantics-audit-v1.md`
