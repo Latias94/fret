@@ -199,6 +199,7 @@ pub(in crate::ui) fn preview_data_table_torture(
         .column_filter("name")
         .column_filter_placeholder("Filter name...")
         .column_filter_a11y_label("Name filter")
+        .test_id_prefix("ui-gallery-data-table-torture-toolbar")
         .faceted_filter(
             "status",
             "Status",

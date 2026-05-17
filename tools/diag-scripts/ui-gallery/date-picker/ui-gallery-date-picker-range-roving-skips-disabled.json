@@ -3,7 +3,12 @@
   "meta": {
     "name": "UI Gallery: DateRangePicker roving skips disabled days",
     "tags": ["ui-gallery", "date-picker", "calendar", "roving"],
-    "required_capabilities": ["diag.script_v2"]
+    "required_capabilities": ["diag.script_v2"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "date_picker",
+      "FRET_UI_GALLERY_DIAG_CALENDAR_ROVING": "1",
+      "FRET_UI_GALLERY_FIXED_TODAY": "2024-02-01"
+    }
   },
   "steps": [
     { "type": "reset_diagnostics" },
@@ -16,8 +21,21 @@
       }
     },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-range" }
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-range" },
+      "delta_y": -420.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 1800
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-range" },
+      "stable_frames": 2,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
     },
     {
       "type": "wait_until",

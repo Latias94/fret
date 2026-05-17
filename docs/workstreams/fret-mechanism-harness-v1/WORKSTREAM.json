@@ -3,7 +3,7 @@
   "slug": "fret-mechanism-harness-v1",
   "title": "Fret Mechanism Harness v1",
   "status": "active",
-  "updated": "2026-05-16",
+  "updated": "2026-05-17",
   "scope_kind": "execution",
   "problem": "Self-drawn UI parity work needs a mechanism-first harness that can discover layout, invalidation, hit-test, overlay, and focus defects before they appear as manual component screenshots. This lane turns controlled mechanism fixtures plus UI Gallery or focused diagnostics gates into an end-to-end defect-finding loop.",
   "authoritative_docs": [
@@ -46,6 +46,10 @@
     {
       "role": "audit",
       "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-16.md"
+    },
+    {
+      "role": "audit",
+      "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-17.md"
     }
   ],
   "repro": {
@@ -53,6 +57,7 @@
     "commands": [
       "cargo test --profile dev-fast -p fret-mechanism-harness --lib mechanism_metrics_can_assert_non_geometry_facts -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_dirty_invalidation_matches_oracles -- --nocapture",
+      "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_view_cache_lifecycle_matches_oracles -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_scroll_handle_invalidation_matches_oracles -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_environment_view_cache_invalidation_matches_oracles -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_hit_test_routing_matches_oracles -- --nocapture",
@@ -147,6 +152,7 @@
       "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-scrollable-placement-boundary.json --dir target/fret-diag-select-scrollable-placement-boundary-v4 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe",
       "target/debug/fretboard-dev.exe diag suite ui-gallery-select --dir target/fret-diag-select-suite-scrollable-placement-boundary-v1 --session-auto --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe",
       "cargo nextest run -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_placement_ownership_scroll_rtl --no-fail-fast",
+      "cargo nextest run -p fret-diag-protocol script_v2_roundtrip_ui_gallery_scroll_area_expand_at_bottom --no-fail-fast",
       "cargo build -p fretboard-dev -p fret-ui-gallery",
       "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-placement-ownership-scroll-rtl.json --dir target/fret-diag-combobox-placement-ownership-scroll-rtl-v3 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe",
       "target/debug/fretboard-dev.exe diag suite ui-gallery-combobox --dir target/fret-diag-combobox-suite-placement-ownership-v1 --session-auto --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe",
@@ -172,6 +178,10 @@
     {
       "name": "layout-dirty-invalidation-fixture",
       "command": "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_dirty_invalidation_matches_oracles -- --nocapture"
+    },
+    {
+      "name": "view-cache-lifecycle-fixture",
+      "command": "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_view_cache_lifecycle_matches_oracles -- --nocapture"
     },
     {
       "name": "scroll-handle-invalidation-fixture",
@@ -746,6 +756,10 @@
       "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json --dir target/fret-diag-rtl-scroll-idle-stability-v2 --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe"
     },
     {
+      "name": "ui-gallery-scroll-area-expand-at-bottom-diag",
+      "command": "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-expand-at-bottom.json --dir target/fret-diag-scroll-area-expand-at-bottom-v1 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe"
+    },
+    {
       "name": "ui-gallery-scroll-area-rtl-idle-stability-diag",
       "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json --dir target/fret-diag-scroll-area-rtl-idle-stability --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe"
     },
@@ -881,12 +895,16 @@
     "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-14.md",
     "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-15.md",
     "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-16.md",
+    "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-17.md",
+    "crates/fret-ui/src/declarative/tests/fixtures/view_cache_lifecycle_v1.json",
+    "crates/fret-ui/src/declarative/tests/view_cache_lifecycle_harness.rs",
     "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-small-scroll-no-window-shifts.json",
     "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll.json",
     "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
     "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-collection-metadata-bounce.json",
     "tools/diag-scripts/ui-gallery-virtual-list-retained-collection-metadata-bounce.json",
     "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json",
+    "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-expand-at-bottom.json",
     "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json",
     "tools/diag-scripts/ui-gallery/table/ui-gallery-table-rtl-idle-stability.json",
     "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json",

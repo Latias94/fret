@@ -993,7 +993,11 @@ impl LayoutRefinement {
         self.justify_self(CrossAlign::Stretch)
     }
 
-    /// Tailwind-like `flex-1` shorthand: `grow=1`, `shrink=1`, `basis=0`.
+    /// Tailwind-like `flex-1` shorthand: `grow=1`, `shrink=1`, `basis=0%`.
+    ///
+    /// CSS `flex: 1 1 0%` uses a percent basis. In an indefinite main axis, that percent basis
+    /// resolves like content/auto instead of a hard `0px`, which keeps auto-sized vertical
+    /// compositions from collapsing content-bearing flex items.
     ///
     /// Tip: combine with [`Self::min_w_0`] when the child contains text that should be allowed to
     /// shrink/wrap instead of overflowing.
@@ -1002,7 +1006,7 @@ impl LayoutRefinement {
             let f = self.ensure_flex_item_mut();
             f.grow = Some(1.0);
             f.shrink = Some(1.0);
-            f.basis = Some(LengthRefinement::Px(Px(0.0).into()));
+            f.basis = Some(LengthRefinement::Fraction(0.0));
         }
         self
     }

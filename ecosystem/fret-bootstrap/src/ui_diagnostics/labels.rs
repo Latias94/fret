@@ -113,6 +113,18 @@ fn reason_code_for_script_failure(reason: &str) -> Option<&'static str> {
         "scroll_into_view_impossible_oversized_target_for_container" => {
             Some("scroll_into_view.impossible_oversized_target_for_container")
         }
+        "scroll_into_view_impossible_unscrollable_x_for_container" => {
+            Some("scroll_into_view.impossible_unscrollable_x_for_container")
+        }
+        "scroll_into_view_impossible_unscrollable_y_for_container" => {
+            Some("scroll_into_view.impossible_unscrollable_y_for_container")
+        }
+        "scroll_into_view_impossible_unscrollable_x_for_window" => {
+            Some("scroll_into_view.impossible_unscrollable_x_for_window")
+        }
+        "scroll_into_view_impossible_unscrollable_y_for_window" => {
+            Some("scroll_into_view.impossible_unscrollable_y_for_window")
+        }
         "scroll_into_view_stuck_no_progress" => Some("scroll_into_view.stuck_no_progress"),
         "scroll_into_view_container_not_found"
         | "scroll_into_view_target_not_found"

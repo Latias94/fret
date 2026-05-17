@@ -31,17 +31,57 @@ SUITES_DIR = SCRIPTS_DIR / "suites"
 PRELUDE_DIR = SCRIPTS_DIR / "_prelude"
 SUITE_MANIFEST_FILENAMES = ["suite.json", "_suite.json"]
 STRICT_CLICK_VISIBILITY_SUITES = {
+    "ui-gallery-command",
     "ui-gallery-combobox",
+    "ui-gallery-scroll-area",
     "ui-gallery-select",
     "ui-gallery-motion-pilot",
+    "ui-gallery-view-cache",
 }
 STRICT_UI_GALLERY_CONTENT_TEST_ID_PREFIXES = (
+    "ui-gallery-command-",
     "ui-gallery-combobox-",
+    "ui-gallery-scroll-area-",
+    "ui-gallery-scrollbar-",
     "ui-gallery-select-",
     "ui-gallery-sidebar-",
+    "ui-gallery-view-cache-",
 )
-STRICT_PAGE_ENTRY_SUITES = {"ui-gallery-motion-pilot", "ui-gallery-select", "ui-gallery-combobox"}
+POINTER_EVENT_STEPS = {
+    "move_pointer",
+    "pointer_cancel",
+    "pointer_down",
+    "pointer_move",
+    "pointer_up",
+}
+CURRENT_STATE_CONVERGENCE_PREDICATES = {
+    "captured_is",
+    "dock_viewport_capture_active_is",
+    "input_pointer_capture_active_is",
+}
+FIXED_FRAME_DELTA_ENV = "FRET_DIAG_FIXED_FRAME_DELTA_MS"
+FIXED_FRAME_DELTA_REQUIRED_NAME_PARTS = (
+    "fixed-frame-delta",
+    "trigger-delays",
+)
+STRICT_PAGE_ENTRY_SUITES = {
+    "ui-gallery-command",
+    "ui-gallery-motion-pilot",
+    "ui-gallery-select",
+    "ui-gallery-combobox",
+    "ui-gallery-data-table",
+    "ui-gallery-data-table-retained",
+    "ui-gallery-data-table-view-cache-torture",
+    "ui-gallery-view-cache",
+}
 UI_GALLERY_PAGE_ENTRY_RULES = {
+    "command": {
+        "page_id": "ui-gallery-page-command",
+        "entry_ids": ("ui-gallery-page-command", "ui-gallery-command-component"),
+        "content_prefixes": ("ui-gallery-command-",),
+        "start_page_values": ("command",),
+        "global_ids": (),
+    },
     "motion_presets": {
         "page_id": "ui-gallery-page-motion-presets",
         "content_prefixes": ("ui-gallery-motion-presets-",),
@@ -61,6 +101,28 @@ UI_GALLERY_PAGE_ENTRY_RULES = {
         "page_id": "ui-gallery-page-select",
         "content_prefixes": ("ui-gallery-select-",),
         "start_page_values": ("select",),
+        "global_ids": (),
+    },
+    "data_table": {
+        "page_id": "ui-gallery-data-table-component",
+        "entry_ids": (
+            "ui-gallery-data-table-component",
+            "ui-gallery-data-table-root",
+            "ui-gallery-data-table-default-root",
+            "ui-gallery-data-table-basic-root",
+            "ui-gallery-data-table-listlike-root",
+            "ui-gallery-data-table-reusable-root",
+            "ui-gallery-data-table-rtl-root",
+            "ui-gallery-data-table-torture-root",
+        ),
+        "content_prefixes": ("ui-gallery-data-table-", "data-table-"),
+        "start_page_values": ("data_table", "data_table_torture"),
+        "global_ids": (),
+    },
+    "view_cache": {
+        "page_id": "ui-gallery-page-view-cache",
+        "content_prefixes": ("ui-gallery-view-cache-",),
+        "start_page_values": ("view_cache",),
         "global_ids": (),
     },
 }
@@ -379,6 +441,16 @@ def is_page_scoped_test_id(test_id: str, rule: dict[str, Any]) -> bool:
     return isinstance(prefixes, tuple) and any(test_id.startswith(prefix) for prefix in prefixes)
 
 
+def page_entry_ids(rule: dict[str, Any]) -> tuple[str, ...]:
+    entry_ids = rule.get("entry_ids")
+    if isinstance(entry_ids, tuple):
+        return entry_ids
+    page_id = rule.get("page_id")
+    if isinstance(page_id, str):
+        return (page_id,)
+    return ()
+
+
 def start_pages_from_meta(obj: Any) -> set[str]:
     meta = obj.get("meta") if isinstance(obj, dict) else None
     if not isinstance(meta, dict):
@@ -390,6 +462,42 @@ def start_pages_from_meta(obj: Any) -> set[str]:
     if not isinstance(start_page, str) or not start_page.strip():
         return set()
     return {start_page.strip()}
+
+
+def script_meta(obj: Any) -> dict[str, Any]:
+    meta = obj.get("meta") if isinstance(obj, dict) else None
+    return meta if isinstance(meta, dict) else {}
+
+
+def script_name_from_entry(entry: dict[str, Any], obj: Any) -> str:
+    meta = script_meta(obj)
+    name = meta.get("name")
+    if isinstance(name, str) and name.strip():
+        return name.strip()
+    rel_path = entry.get("path")
+    if isinstance(rel_path, str) and rel_path.strip():
+        return Path(rel_path).stem
+    return ""
+
+
+def script_env_defaults(obj: Any) -> dict[str, Any]:
+    meta = script_meta(obj)
+    env_defaults = meta.get("env_defaults")
+    return env_defaults if isinstance(env_defaults, dict) else {}
+
+
+def requires_fixed_frame_delta_contract(name: str) -> bool:
+    lowered = name.lower()
+    return any(part in lowered for part in FIXED_FRAME_DELTA_REQUIRED_NAME_PARTS)
+
+
+def has_fixed_frame_delta_env_default(obj: Any) -> bool:
+    value = script_env_defaults(obj).get(FIXED_FRAME_DELTA_ENV)
+    if isinstance(value, str):
+        return value.strip() != ""
+    if isinstance(value, int):
+        return value > 0
+    return False
 
 
 def lint_strict_page_entry(repo_root: Path, registry: dict[str, Any]) -> list[str]:
@@ -440,8 +548,8 @@ def lint_strict_page_entry(repo_root: Path, registry: dict[str, Any]) -> list[st
             step_type = step.get("type")
             ids = collect_test_ids(step)
             for page_name, rule in UI_GALLERY_PAGE_ENTRY_RULES.items():
-                page_id = rule.get("page_id")
-                if isinstance(page_id, str) and page_id in ids:
+                entry_ids = page_entry_ids(rule)
+                if any(entry_id in ids for entry_id in entry_ids):
                     entered_pages.add(page_name)
 
                 if step_type in {
@@ -458,9 +566,15 @@ def lint_strict_page_entry(repo_root: Path, registry: dict[str, Any]) -> list[st
                             is_page_scoped_test_id(test_id, rule)
                             and page_name not in entered_pages
                         ):
+                            page_id = rule.get("page_id")
+                            page_hint = (
+                                page_id
+                                if isinstance(page_id, str)
+                                else ", ".join(entry_ids)
+                            )
                             violations.append(
                                 f"{rel_path}: step {index}: page-local selector `{test_id}` "
-                                f"requires a prior wait/assert for `{page_id}`"
+                                f"requires a prior wait/assert for `{page_hint}`"
                             )
                             break
 
@@ -527,6 +641,11 @@ def lint_strict_click_visibility(repo_root: Path, registry: dict[str, Any]) -> l
                     if target_id is not None and is_strict_ui_gallery_content_target(target_id):
                         visible_targets.add(target_id)
 
+            if step_type == "ensure_visible" and step.get("within_window") is True:
+                target_id = test_id_from_target_ref(step.get("target"))
+                if target_id is not None and is_strict_ui_gallery_content_target(target_id):
+                    visible_targets.add(target_id)
+
             if step_type == "click":
                 target_id = test_id_from_target_ref(step.get("target"))
                 if target_id is not None and is_strict_ui_gallery_content_target(target_id):
@@ -547,6 +666,92 @@ def lint_strict_click_visibility(repo_root: Path, registry: dict[str, Any]) -> l
                         "prior scroll_into_view(require_fully_within_window=true) or "
                         "bounds_within_window guard"
                     )
+
+    return violations
+
+
+def lint_pointer_current_state_convergence(repo_root: Path, registry: dict[str, Any]) -> list[str]:
+    """
+    Check promoted scripts for pointer-event steps followed by immediate current-state asserts.
+
+    Current-state diagnostics predicates read the latest debug snapshot, so pointer/capture state
+    should be observed with a bounded wait rather than an assertion in the event-adjacent step.
+    """
+    scripts = registry.get("scripts")
+    if not isinstance(scripts, list):
+        return ["registry scripts must be a list"]
+
+    violations: list[str] = []
+
+    for entry in scripts:
+        if not isinstance(entry, dict):
+            continue
+
+        rel_path = entry.get("path")
+        if not isinstance(rel_path, str) or not rel_path.strip():
+            continue
+
+        script_path = repo_root / Path(rel_path)
+        obj = read_json(script_path)
+        steps = obj.get("steps") if isinstance(obj, dict) else None
+        if not isinstance(steps, list):
+            continue
+
+        for index, step in enumerate(steps[:-1]):
+            if not isinstance(step, dict) or step.get("type") not in POINTER_EVENT_STEPS:
+                continue
+
+            next_step = steps[index + 1]
+            if not isinstance(next_step, dict) or next_step.get("type") != "assert":
+                continue
+
+            predicate = next_step.get("predicate")
+            if (
+                isinstance(predicate, dict)
+                and predicate.get("kind") in CURRENT_STATE_CONVERGENCE_PREDICATES
+            ):
+                violations.append(
+                    f"{rel_path}: step {index + 1}: current-state predicate "
+                    f"`{predicate.get('kind')}` immediately follows pointer step "
+                    f"{index} `{step.get('type')}`; use wait_until with a bounded timeout"
+                )
+
+    return violations
+
+
+def lint_fixed_frame_delta_contract(repo_root: Path, registry: dict[str, Any]) -> list[str]:
+    """
+    Check promoted scripts whose names declare a frame-time-sensitive contract.
+
+    Scripts that assert motion/delay outcomes with frame counts need a deterministic frame clock;
+    otherwise a "short" `wait_frames` step can take hundreds of wall-clock milliseconds under a
+    busy native runner and produce false component failures.
+    """
+    scripts = registry.get("scripts")
+    if not isinstance(scripts, list):
+        return ["registry scripts must be a list"]
+
+    violations: list[str] = []
+
+    for entry in scripts:
+        if not isinstance(entry, dict):
+            continue
+
+        rel_path = entry.get("path")
+        if not isinstance(rel_path, str) or not rel_path.strip():
+            continue
+
+        script_path = repo_root / Path(rel_path)
+        obj = read_json(script_path)
+        name = script_name_from_entry(entry, obj)
+        if not requires_fixed_frame_delta_contract(name):
+            continue
+
+        if not has_fixed_frame_delta_env_default(obj):
+            violations.append(
+                f"{rel_path}: `{name}` declares a frame-time-sensitive contract; "
+                f"add meta.env_defaults.{FIXED_FRAME_DELTA_ENV}"
+            )
 
     return violations
 
@@ -600,6 +805,26 @@ def main() -> None:
     if page_entry_violations:
         print("error: promoted diag scripts rely on implicit UI Gallery page entry:", file=sys.stderr)
         for violation in page_entry_violations:
+            print(f"- {violation}", file=sys.stderr)
+        raise SystemExit(2)
+
+    pointer_current_state_violations = lint_pointer_current_state_convergence(repo_root, expected)
+    if pointer_current_state_violations:
+        print(
+            "error: promoted diag scripts assert current pointer state without convergence:",
+            file=sys.stderr,
+        )
+        for violation in pointer_current_state_violations:
+            print(f"- {violation}", file=sys.stderr)
+        raise SystemExit(2)
+
+    fixed_frame_delta_violations = lint_fixed_frame_delta_contract(repo_root, expected)
+    if fixed_frame_delta_violations:
+        print(
+            "error: promoted diag scripts have frame-time-sensitive contracts without fixed frame delta:",
+            file=sys.stderr,
+        )
+        for violation in fixed_frame_delta_violations:
             print(f"- {violation}", file=sys.stderr)
         raise SystemExit(2)
 

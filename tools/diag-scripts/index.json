@@ -6274,6 +6274,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox",
+        "ui-gallery-combobox-geometry-placement",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -6360,7 +6361,8 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
-        "ui-gallery-combobox"
+        "ui-gallery-combobox",
+        "ui-gallery-combobox-geometry-placement"
       ],
       "tags": [
         "combobox",
@@ -6386,7 +6388,8 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
-        "ui-gallery-combobox"
+        "ui-gallery-combobox",
+        "ui-gallery-combobox-geometry-placement"
       ],
       "tags": [
         "bottom_room",
@@ -6412,7 +6415,8 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
-        "ui-gallery-combobox"
+        "ui-gallery-combobox",
+        "ui-gallery-combobox-geometry-placement"
       ],
       "tags": [
         "combobox",
@@ -6438,6 +6442,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox",
+        "ui-gallery-combobox-geometry-placement",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -6480,6 +6485,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-combobox",
+        "ui-gallery-combobox-geometry-placement",
         "ui-gallery-rtl-smoke",
         "ui-gallery-shadcn-conformance"
       ],
@@ -6530,7 +6536,8 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
-        "ui-gallery-combobox"
+        "ui-gallery-combobox",
+        "ui-gallery-combobox-geometry-placement"
       ],
       "tags": [
         "combobox",
@@ -7051,6 +7058,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "fret-mechanism-harness-overlay-focus",
+        "ui-gallery-context-menu",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -7076,6 +7084,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
+        "ui-gallery-context-menu",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [],
@@ -7944,6 +7953,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
+        "ui-gallery-dropdown-menu",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -8022,7 +8032,8 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
-        "fret-mechanism-harness-overlay-focus"
+        "fret-mechanism-harness-overlay-focus",
+        "ui-gallery-dropdown-menu"
       ],
       "tags": [
         "a11y",
@@ -8082,6 +8093,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery",
+        "ui-gallery-dropdown-menu",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -9177,6 +9189,7 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-menubar-placement",
         "ui-gallery-rtl-smoke",
         "ui-gallery-shadcn-conformance"
       ],
@@ -9204,6 +9217,7 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-menubar-placement",
         "ui-gallery-rtl-smoke",
         "ui-gallery-shadcn-conformance"
       ],
@@ -9231,6 +9245,7 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-menubar-placement",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -9860,7 +9875,8 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
-        "diag-hardening-smoke"
+        "diag-hardening-smoke",
+        "ui-gallery-scroll-area"
       ],
       "tags": [
         "extents",
@@ -11427,6 +11443,31 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-view-cache-model-mutation-through-cache",
+      "path": "tools/diag-scripts/ui-gallery/view-cache/ui-gallery-view-cache-model-mutation-through-cache.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-view-cache"
+      ],
+      "tags": [
+        "mechanism_harness",
+        "model",
+        "mutation",
+        "popover",
+        "runtime",
+        "ui_gallery",
+        "view_cache"
+      ],
+      "target_hints": [
+        "Drives the View Cache harness page through a cached-subtree counter mutation and controlled Popover state change.",
+        "Asserts the dedicated UI Gallery app snapshot view_cache payload instead of relying on visible text."
+      ]
     },
     {
       "id": "ui-gallery-view-cache-toggle-perf",

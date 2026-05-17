@@ -1,9 +1,7 @@
-use std::borrow::Cow;
-
 use crate::UiHost;
 use crate::declarative::frame::{
     ElementInstance, element_record_for_node, inherited_text_style_for_node, layout_style_for_node,
-    with_element_record_for_node,
+    ordered_flex_children, with_element_record_for_node,
 };
 use crate::layout_engine::TaffyLayoutEngine;
 use crate::tree::UiTree;
@@ -72,44 +70,6 @@ pub(crate) fn layout_children_from_engine_if_solved<H: UiHost>(
         let _ = cx.layout_in(child, bounds);
     }
     Some(cx.available)
-}
-
-fn ordered_flex_children<'a, H: UiHost>(
-    app: &mut H,
-    tree: &'a UiTree<H>,
-    window: AppWindowId,
-    node: NodeId,
-) -> Cow<'a, [NodeId]> {
-    let children = tree.children_ref(node);
-    if children.is_empty() {
-        return Cow::Borrowed(children);
-    }
-
-    let mut needs_sort = false;
-    for &child in children {
-        let child_style = layout_style_for_node(app, window, child);
-        if child_style.flex.order != 0 {
-            needs_sort = true;
-            break;
-        }
-    }
-
-    if !needs_sort {
-        return Cow::Borrowed(children);
-    }
-
-    let mut ordered: Vec<(i32, usize, NodeId)> = children
-        .iter()
-        .copied()
-        .enumerate()
-        .map(|(idx, child)| {
-            let child_style = layout_style_for_node(app, window, child);
-            (child_style.flex.order, idx, child)
-        })
-        .collect();
-    ordered.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
-
-    Cow::Owned(ordered.into_iter().map(|(_, _, child)| child).collect())
 }
 
 fn apply_container_insets(style: &mut Style, props: &crate::element::ContainerProps, sf: f32) {
@@ -465,7 +425,7 @@ fn build_flow_subtree_impl<H: UiHost>(
                 bottom: taffy_lp_from_spacing(sf, props.padding.bottom),
             };
 
-            let children = ordered_flex_children(app, tree, window, node);
+            let children = ordered_flex_children(app, window, tree.children_ref(node));
             engine.set_style(node, style);
             engine.set_children(node, children.as_ref());
             engine.set_measured(node, false);
@@ -521,7 +481,7 @@ fn build_flow_subtree_impl<H: UiHost>(
                 bottom: taffy_lp_from_spacing(sf, props.padding.bottom),
             };
 
-            let children = ordered_flex_children(app, tree, window, node);
+            let children = ordered_flex_children(app, window, tree.children_ref(node));
             engine.set_style(node, style);
             engine.set_children(node, children.as_ref());
             engine.set_measured(node, false);
@@ -577,7 +537,7 @@ fn build_flow_subtree_impl<H: UiHost>(
                 bottom: taffy_lp_from_spacing(sf, props.padding.bottom),
             };
 
-            let children = ordered_flex_children(app, tree, window, node);
+            let children = ordered_flex_children(app, window, tree.children_ref(node));
             engine.set_style(node, style);
             engine.set_children(node, children.as_ref());
             engine.set_measured(node, false);

@@ -85,11 +85,14 @@
       }
     },
     {
-      "type": "click",
+      "type": "click_stable",
       "target": {
         "kind": "test_id",
         "id": "ui-gallery-scroll-area-expand-at-bottom-toggle"
-      }
+      },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 2 },
     {

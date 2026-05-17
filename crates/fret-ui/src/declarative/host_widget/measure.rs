@@ -1,3 +1,4 @@
+use super::super::frame::ordered_flex_children;
 use super::super::frame::{ElementInstance, element_record_for_node, layout_style_for_node};
 use super::super::prelude::*;
 use super::ElementHostWidget;
@@ -143,6 +144,7 @@ fn fallback_measure_flex<H: UiHost>(
     cx: &mut MeasureCx<'_, H>,
     inner_available: LayoutSize<AvailableSpace>,
     props: &FlexProps,
+    ordered_children: &[NodeId],
     gap_main: f32,
     pad_w: f32,
     pad_h: f32,
@@ -152,7 +154,7 @@ fn fallback_measure_flex<H: UiHost>(
     let mut main = 0.0f32;
     let mut cross = 0.0f32;
 
-    for (i, &child) in cx.children.iter().enumerate() {
+    for (i, &child) in ordered_children.iter().enumerate() {
         let size = cx.measure_in(child, child_constraints);
         let (main_delta, cross_delta) = match props.direction {
             fret_core::Axis::Horizontal => (size.width.0.max(0.0), size.height.0.max(0.0)),
@@ -320,16 +322,46 @@ fn max_non_absolute_children<H: UiHost>(
     child_constraints: LayoutConstraints,
 ) -> Size {
     let mut max_child = Size::new(Px(0.0), Px(0.0));
+    let margin_basis = child_constraints.available.width.definite();
     for &child in cx.children {
         let layout_style = layout_style_for_node(cx.app, window, child);
         if layout_style.position == crate::element::PositionStyle::Absolute {
             continue;
         }
         let child_size = cx.measure_in(child, child_constraints);
+        let child_size = margin_box_size_for_measure(child_size, layout_style.margin, margin_basis);
         max_child.width = Px(max_child.width.0.max(child_size.width.0));
         max_child.height = Px(max_child.height.0.max(child_size.height.0));
     }
     max_child
+}
+
+fn margin_box_size_for_measure(
+    size: Size,
+    margin: crate::element::MarginEdges,
+    percentage_basis: Option<Px>,
+) -> Size {
+    let horizontal = margin_edge_px_for_measure(margin.left, percentage_basis)
+        + margin_edge_px_for_measure(margin.right, percentage_basis);
+    let vertical = margin_edge_px_for_measure(margin.top, percentage_basis)
+        + margin_edge_px_for_measure(margin.bottom, percentage_basis);
+
+    Size::new(
+        Px((size.width.0 + horizontal).max(0.0)),
+        Px((size.height.0 + vertical).max(0.0)),
+    )
+}
+
+fn margin_edge_px_for_measure(edge: crate::element::MarginEdge, basis: Option<Px>) -> f32 {
+    match edge {
+        crate::element::MarginEdge::Px(px) => px.0,
+        crate::element::MarginEdge::Fill => basis.map(|px| px.0.max(0.0)).unwrap_or(0.0),
+        crate::element::MarginEdge::Fraction(f) => {
+            let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+            basis.map(|px| px.0.max(0.0) * f).unwrap_or(0.0)
+        }
+        crate::element::MarginEdge::Auto => 0.0,
+    }
 }
 
 fn available_space_to_taffy(space: AvailableSpace) -> TaffyAvailableSpace {
@@ -1274,6 +1306,8 @@ impl ElementHostWidget {
             fret_core::Axis::Horizontal => gap_w,
             fret_core::Axis::Vertical => gap_h,
         };
+        let ordered_children = ordered_flex_children(cx.app, window, cx.children);
+        let ordered_children = ordered_children.as_ref();
 
         let root_style = TaffyStyle {
             display: Display::Flex,
@@ -1353,12 +1387,20 @@ impl ElementHostWidget {
             Ok(root) => root,
             Err(err) => {
                 warn_taffy_error_once("new_leaf(root)", err);
-                return fallback_measure_flex(cx, inner_available, &props, gap_main, pad_w, pad_h);
+                return fallback_measure_flex(
+                    cx,
+                    inner_available,
+                    &props,
+                    ordered_children,
+                    gap_main,
+                    pad_w,
+                    pad_h,
+                );
             }
         };
 
-        let mut child_nodes = Vec::with_capacity(cx.children.len());
-        for &child in cx.children {
+        let mut child_nodes = Vec::with_capacity(ordered_children.len());
+        for &child in ordered_children {
             let layout_style = layout_style_for_node(cx.app, window, child);
 
             let spacer_min = element_record_for_node(cx.app, window, child).and_then(|r| {
@@ -1516,6 +1558,7 @@ impl ElementHostWidget {
                         cx,
                         inner_available,
                         &props,
+                        ordered_children,
                         gap_main,
                         pad_w,
                         pad_h,
@@ -1526,7 +1569,15 @@ impl ElementHostWidget {
         }
         if let Err(err) = taffy.set_children(root, &child_nodes) {
             warn_taffy_error_once("set_children(root)", err);
-            return fallback_measure_flex(cx, inner_available, &props, gap_main, pad_w, pad_h);
+            return fallback_measure_flex(
+                cx,
+                inner_available,
+                &props,
+                ordered_children,
+                gap_main,
+                pad_w,
+                pad_h,
+            );
         }
 
         let mut measure_cache: std::collections::HashMap<
@@ -1573,14 +1624,30 @@ impl ElementHostWidget {
             })
         {
             warn_taffy_error_once("compute_layout_with_measure(root)", err);
-            return fallback_measure_flex(cx, inner_available, &props, gap_main, pad_w, pad_h);
+            return fallback_measure_flex(
+                cx,
+                inner_available,
+                &props,
+                ordered_children,
+                gap_main,
+                pad_w,
+                pad_h,
+            );
         }
 
         let root_layout = match taffy.layout(root) {
             Ok(layout) => layout,
             Err(err) => {
                 warn_taffy_error_once("layout(root)", err);
-                return fallback_measure_flex(cx, inner_available, &props, gap_main, pad_w, pad_h);
+                return fallback_measure_flex(
+                    cx,
+                    inner_available,
+                    &props,
+                    ordered_children,
+                    gap_main,
+                    pad_w,
+                    pad_h,
+                );
             }
         };
         let inner_size = Size::new(

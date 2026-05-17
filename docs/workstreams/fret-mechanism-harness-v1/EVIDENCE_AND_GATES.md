@@ -31,6 +31,44 @@ cargo test --profile dev-fast -p fret-ui-shadcn --test focus_restore_mechanism_h
 cargo test --profile dev-fast -p fret-ui-shadcn --test recipe_typeahead_mechanism_harness mechanism_harness_recipe_typeahead_cases_match_oracles -- --nocapture
 ```
 
+## Layout Primitives Expansion Gates
+
+```powershell
+cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_primitives_match_oracles -- --nocapture
+```
+
+Current layout primitive fixture coverage includes text measurement/paint agreement metrics for
+column wrap width, max-width row wrap width, and overflow/scale constraints. It also locks flex
+visual-order consistency: `FlexItemStyle.order` is now applied through the same ordered child
+sequence in layout and intrinsic measurement, including wrap-sensitive measurement cases
+(`b269764aa2`).
+
+The same fixture now also covers auto-sized container child margin accounting: max-content
+measurement for a margin-bearing child now matches the laid-out container bounds, so measurement
+and layout stay aligned for finite margins in the auto-container path.
+
+Evidence anchor:
+
+- `crates/fret-ui/src/declarative/host_widget/measure.rs`
+- `crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json`
+- `crates/fret-ui/src/declarative/tests/layout/mechanism_harness.rs`
+
+Run result:
+
+- `cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_primitives_match_oracles -- --nocapture`
+  - Result: passed.
+
+## Suite Lint Policy Gates
+
+```powershell
+cargo test --profile dev-fast -p fret-diag --lib suite_lint_policy -- --nocapture
+cargo test --profile dev-fast -p fret-diag --lib lint_warning_budget -- --nocapture
+cargo test --profile dev-fast -p fret-diag --lib maybe_run_suite_script_lint -- --nocapture
+cargo test --profile dev-fast -p fret-diag --lib finalize_suite_script_success_tail_records_row_when_lint_and_post_run_skip -- --nocapture
+python tools/check_diag_scripts_registry.py
+cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev
+```
+
 ## Core Overlay Placement Gates
 
 ```powershell
@@ -66,10 +104,63 @@ $env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib menubar_submenu_op
 
 ```powershell
 cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_dirty_invalidation_matches_oracles -- --nocapture
+cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_view_cache_lifecycle_matches_oracles -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib view_cache -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib scroll_contained_view_cache_dirty_does_not_force_direct_child_root_invalidation -- --nocapture
 cargo test --profile dev-fast -p fret-ui --lib layout_request_build_roots_classify_view_cache_layout_dirty_expansion -- --nocapture
 ```
+
+Current synthetic evidence anchors:
+
+- View-cache lifecycle fixture:
+  `crates/fret-ui/src/declarative/tests/fixtures/view_cache_lifecycle_v1.json`
+  - runner:
+    `crates/fret-ui/src/declarative/tests/view_cache_lifecycle_harness.rs`
+  - proof:
+    asserts clean cache-hit reuse, retained element state, cache-key misses, RAF invalidation,
+    model-observation preservation across cache-hit frames, unrelated model scoping,
+    inspection-mode bypass, and layout-query next-frame invalidation.
+  - current command:
+    `cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_view_cache_lifecycle_matches_oracles -- --nocapture`
+  - current result:
+    passed.
+
+## Timer Dispatch Lifecycle Gates
+
+```powershell
+cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_timer_dispatch_matches_oracles -- --nocapture
+cargo test --profile dev-fast -p fret-ui --lib timer_dispatch -- --nocapture
+cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev
+target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-typeahead-commit-banana.json --dir target/fret-diag-select-typeahead-input-snapshot-after-hidden-timer-target-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe
+target/dev-fast/fretboard-dev.exe diag suite ui-gallery-select --dir target/fret-diag-select-suite-after-hidden-timer-target-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe
+```
+
+Current evidence anchors:
+
+- Timer lifecycle fixture:
+  `crates/fret-ui/src/tree/tests/fixtures/timer_dispatch_v1.json`
+  - runner:
+    `crates/fret-ui/src/tree/tests/timer_dispatch_harness.rs`
+  - proof:
+    covers visible base targets, visible hit-test-inert transition overlay targets, hidden overlay
+    targets, and removed overlay targets.
+  - current command:
+    `cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_timer_dispatch_matches_oracles -- --nocapture`
+  - current result:
+    passed.
+- Focused timer family gate:
+  `cargo test --profile dev-fast -p fret-ui --lib timer_dispatch -- --nocapture`
+  - current result:
+    passed, 7 tests.
+- Runtime Select typeahead regression:
+  `target/fret-diag-select-typeahead-input-snapshot-after-hidden-timer-target-v2/sessions/1778963942817-47376/1778963951450/ai.packet`
+  - current result:
+    passed; `tooling_warnings=[]`; no `dispatch/chain`, `node missing from input snapshot`,
+    `layout.zero_size`, or underflow text found in the packet.
+- Runtime Select suite follow-up:
+  `target/fret-diag-select-suite-after-hidden-timer-target-v1/sessions/1778964075071-40956/suite.summary.json`
+  - current result:
+    passed.
 
 ## Scroll-Handle Window-Update Gates
 
@@ -93,6 +184,8 @@ target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/data-table
 $env:FRET_UI_GALLERY_VIEW_CACHE='1'
 target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json --dir target/fret-diag-datatable-view-cache-filter-shrink-inputs-change --session-auto --pack --ai-packet --launch -- target/debug/fret-ui-gallery.exe
 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json --dir target/fret-diag-rtl-scroll-idle-stability-v2 --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
+cargo nextest run -p fret-diag-protocol script_v2_roundtrip_ui_gallery_scroll_area_expand_at_bottom --no-fail-fast
+target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-expand-at-bottom.json --dir target/fret-diag-scroll-area-expand-at-bottom-v1 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe
 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json --dir target/fret-diag-scroll-area-rtl-idle-stability --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
 cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/table/ui-gallery-table-rtl-idle-stability.json --dir target/fret-diag-table-rtl-idle-stability --session-auto --pack --ai-packet --include-screenshots --launch -- target/release/fret-ui-gallery.exe
 target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-rtl-idle-stability.json --dir target/fret-diag-data-table-rtl-idle-stability --session-auto --pack --ai-packet --include-screenshots --launch -- target/debug/fret-ui-gallery.exe
@@ -198,6 +291,17 @@ Current runtime evidence anchors:
   - trace proof:
     `sample_count=45`, `required_samples=45`, `baseline_value=2495.999755859375`,
     `value=2495.999755859375`, `frame_delta=0.0`, `total_delta=0.0`.
+- ScrollArea content-growth extent gate:
+  `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-expand-at-bottom.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-scroll-area/suite.json`
+  - proof:
+    starts with `y_max=0`, clicks the dynamic content-growth toggle, waits for `y_max` to become
+    non-zero and stable, then wheels the grown viewport and asserts `y != 0`.
+  - evidence:
+    `target/fret-diag-scroll-area-expand-at-bottom-v1/sessions/1778953288892-97788/1778953292783`
+  - share pack:
+    `target/fret-diag-scroll-area-expand-at-bottom-v1/sessions/1778953288892-97788/share/1778953292783.zip`
 - ScrollArea RTL nested-scroll idle-stability gate:
   `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json`
   - suite membership:
@@ -2058,6 +2162,11 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - structured trace proof:
     `chosen_side=top`, `preferred_fits_without_main_clamp=false`, and
     `outer_collision=336x378@514.67,468.67`.
+  - ownership-close suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-resizable --dir target/fret-diag-resizable-suite-ownership-close-v1 --session-auto --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - ownership-close suite result:
+    `target/fret-diag-resizable-suite-ownership-close-v1/sessions/1778976095291-118960/suite.summary.json`
+    reports `status=passed`, 1/1 row, and zero lint errors/warnings.
 - Non-modal overlay underlay activation-status gates:
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-click-through-outside-press-focus-underlay.json`
   and
@@ -2347,8 +2456,25 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     promoted Select scripts had 0 page-entry violations; promoted Combobox scripts initially had
     36 under a page-root-only rule, but they had explicit
     `FRET_UI_GALLERY_START_PAGE=combobox` defaults, so start-page defaults now count as valid entry
-    evidence and Combobox is strict too. Promoted DataTable scripts still had 166 page-entry
-    violations and remain a follow-on cleanup lane rather than a strict-lint candidate.
+    evidence and Combobox is strict too.
+  - DataTable follow-up:
+    the first candidate audit reported 174 DataTable violations across 21 promoted scripts under a
+    single-root model. The actual gap was diagnostics rule expressiveness: promoted DataTable
+    scripts prove entry through several valid variant roots such as
+    `ui-gallery-data-table-default-root`, `ui-gallery-data-table-basic-root`,
+    `ui-gallery-data-table-listlike-root`, `ui-gallery-data-table-reusable-root`,
+    `ui-gallery-data-table-rtl-root`, and `ui-gallery-data-table-torture-root`. The page-entry
+    lint now supports `entry_ids`, strict DataTable page-entry is enabled for
+    `ui-gallery-data-table`, `ui-gallery-data-table-retained`, and
+    `ui-gallery-data-table-view-cache-torture`, and the candidate violation count is 0.
+  - current lint self-test gate:
+    `python tools/test_check_diag_scripts_registry.py`
+  - current lint self-test result:
+    passed, 11 tests.
+  - current registry gate:
+    `python tools/check_diag_scripts_registry.py`
+  - current registry result:
+    passed.
 - AlertAction component-slot marker gate:
   - invariant:
     recipe-internal slot classification must not use globally exported diagnostics `test_id`s.
@@ -2591,6 +2717,443 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - full-suite result:
     passed, 14/14 rows, `scripts_with_evidence=14`, `focus_mismatch_total=0`,
     `lint_error_total=0`, `lint_warning_total=0`.
+- Motion-pilot zero-warning suite policy:
+  - invariant:
+    a clean motion-pilot suite must mean the runtime scripts pass and each script's diagnostics
+    lint has `error_issues=0` and `warning_issues=0`.
+  - implementation anchors:
+    `crates/fret-diag/src/diag_suite.rs`,
+    `tools/diag-scripts/suites/ui-gallery-motion-pilot/suite.json`, and
+    `tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-toggle-fixed-frame-delta.json`.
+  - focused policy gates:
+    `cargo test --profile dev-fast -p fret-diag --lib suite_lint_policy -- --nocapture`,
+    `cargo test --profile dev-fast -p fret-diag --lib lint_warning_budget -- --nocapture`,
+    `cargo test --profile dev-fast -p fret-diag --lib maybe_run_suite_script_lint -- --nocapture`,
+    and
+    `cargo test --profile dev-fast -p fret-diag --lib finalize_suite_script_success_tail_records_row_when_lint_and_post_run_skip -- --nocapture`.
+  - focused Sidebar runtime gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-toggle-fixed-frame-delta.json --dir .fret/diag/runs/ui-gallery-sidebar-toggle-fixed-frame-delta-stable-entry-v1 --timeout-ms 300000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe`
+  - focused Sidebar runtime/lint result:
+    passed with run id `1778949248838`; focused lint reports `error_issues=0`,
+    `warning_issues=0`.
+  - full-suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-motion-pilot --dir .fret/diag/runs/ui-gallery-motion-pilot-lint-policy-v2 --timeout-ms 1200000 --session-auto --launch target/dev-fast/fret-ui-gallery.exe`
+  - full-suite result:
+    `.fret/diag/runs/ui-gallery-motion-pilot-lint-policy-v2/sessions/1778949363628-19720/suite.summary.json`
+    reports `status=passed`, 14/14 rows, `scripts_with_evidence=14`,
+    `focus_mismatch_total=0`, `lint_error_total=0`, `lint_warning_total=0`, and
+    `failed_policy=0`.
+- ScrollArea strict click-visibility and capture-state diagnostics:
+  - invariant:
+    promoted long-page content clicks must prove target visibility before pointer synthesis, and
+    current-state debug predicates must read the latest debug snapshot rather than a historical ring
+    aggregate. Promoted pointer/capture scripts must also wait for bounded current-state
+    convergence after pointer events instead of asserting the next step against a possibly stale
+    debug snapshot.
+  - findings:
+    ScrollArea had five promoted long-page content clicks that still used plain `click`; enabling
+    strict lint then exposed a diagnostics harness defect where `input_pointer_capture_active_is`
+    could match stale debug-snapshot ring entries. The multi-pointer ScrollArea script also used
+    immediate `assert` steps for cross-frame capture state and now waits for state convergence.
+    A follow-up promoted-registry audit found three remaining event-adjacent current-state
+    `assert` steps in the baseline and pointer-cancel ScrollArea scrollbar scripts; those scripts
+    now use bounded `wait_until` steps and the registry lint rejects future promoted regressions.
+  - implementation anchors:
+    `tools/check_diag_scripts_registry.py`,
+    `tools/test_check_diag_scripts_registry.py`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_predicates.rs`,
+    `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json`,
+    `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-pointer-cancel-release.json`,
+    and `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-multipointer-underlay-touch.json`.
+  - lint gates:
+    `python tools/test_check_diag_scripts_registry.py`,
+    `python tools/check_diag_scripts_registry.py`
+  - lint results:
+    passed; registry self-tests ran 15 tests. Structured promoted-registry audit reports
+    `immediate assert violations=0` and `adjacent wait_until convergence patterns=6`.
+  - focused predicate gate:
+    `cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics current_state_predicates_do_not_match_stale_ring_snapshots input_pointer_capture_active_predicate_reads_debug_snapshot --no-fail-fast`
+  - focused predicate result:
+    passed with Nextest run id `70f41d32-7ce9-4d1d-9ea9-680d61f909d3`.
+  - focused runtime gate:
+    `target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-multipointer-underlay-touch.json --dir target/fret-diag-scrollbar-drag-multipointer-underlay-touch-after-wait-until-v1 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe`
+  - focused runtime result:
+    passed with run id `1778955752839`.
+  - follow-up focused runtime gates:
+    `target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json --dir target/fret-diag-scrollbar-drag-baseline-content-growth-wait-until-v1 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe`
+    `target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-pointer-cancel-release.json --dir target/fret-diag-scrollbar-drag-pointer-cancel-release-wait-until-v1 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe`
+  - follow-up focused runtime results:
+    passed with run ids `1778956466823` and `1778956486039`.
+  - full-suite gate:
+    `target/debug/fretboard-dev.exe diag suite ui-gallery-scroll-area --dir target/fret-diag-scroll-area-suite-pointer-current-state-lint-v1 --session-auto --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe`
+  - full-suite result:
+    `target/fret-diag-scroll-area-suite-pointer-current-state-lint-v1/sessions/1778956501773-46724/suite.summary.json`
+    reports the suite passed.
+- Command strict diagnostics authoring:
+  - invariant:
+    promoted Command scripts must prove the owning Command page before using page-local
+    `ui-gallery-command-*` selectors, and long-page content clicks must use stable clicks with
+    target-level window visibility proof.
+  - findings:
+    enabling strict lint for the promoted Command suite found 4 missing page-entry proofs, 20 plain
+    long-page content clicks, and 6 stable-click targets that depended on nearby/root visibility
+    instead of target-level visibility. These were harness authoring gaps; the hardened Command
+    suite did not reproduce a new component or `fret-ui` mechanism defect.
+  - implementation anchors:
+    `tools/check_diag_scripts_registry.py`,
+    `tools/test_check_diag_scripts_registry.py`,
+    `tools/diag-scripts/suites/ui-gallery-command/suite.json`,
+    and promoted Command scripts under `tools/diag-scripts/ui-gallery/command/`.
+  - lint gates:
+    `python tools/test_check_diag_scripts_registry.py`,
+    `python tools/check_diag_scripts_registry.py`
+  - lint results:
+    passed; registry self-tests ran 18 tests.
+  - full-suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-command --dir target/fret-diag-command-suite-strict-authoring-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - full-suite result:
+    `target/fret-diag-command-suite-strict-authoring-v1/sessions/1778966586171-88944/suite.summary.json`
+    reports `status=passed`, 18/18 rows, `scripts_with_evidence=18`, and
+    `focus_mismatch_total=0`.
+- DataTable runtime semantics lint cleanup:
+  - invariant:
+    runtime evidence suites must catch visual-pass semantics drift: same-page recipe instances need
+    unique diagnostics ids, and interactive button action owners need accessible names on the action
+    node itself.
+  - findings:
+    `ui-gallery-shadcn-runtime-evidence` passed the DataTable pagination runtime assertions but
+    failed suite lint on duplicate `data-table-toolbar-column-filter-input` ids and missing labels
+    on table header sort buttons.
+  - implementation anchors:
+    `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs`,
+    `ecosystem/fret-ui-kit/src/declarative/table.rs`,
+    `ecosystem/fret-ui-shadcn/tests/data_table_toolbar_global_filter.rs`,
+    UI Gallery DataTable snippets under `apps/fret-ui-gallery/src/ui/snippets/data_table/`,
+    and retained/view-cache DataTable scripts under `tools/diag-scripts/ui-gallery/data-table/`.
+  - focused gates:
+    `cargo test --profile dev-fast -p fret-ui-shadcn --test data_table_toolbar_global_filter data_table_toolbar_test_id_prefix_scopes_owned_inputs -- --nocapture`,
+    `cargo test --profile dev-fast -p fret-ui-kit --lib table_virtualized_sort_header_button_exposes_accessible_label -- --nocapture`,
+    and
+    `cargo test --profile dev-fast -p fret-ui-kit --lib table_virtualized_retained_header_debug_ids_click_sort_actions -- --nocapture`.
+  - focused gate results:
+    passed.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - focused runtime gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-default-pagination-collection-metadata.json --dir target/fret-diag-data-table-default-pagination-lint-fix-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime result:
+    passed with run id `1778969776320`.
+  - suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target/fret-diag-shadcn-runtime-evidence-after-datatable-lint-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - suite result:
+    `target/fret-diag-shadcn-runtime-evidence-after-datatable-lint-v1/sessions/1778969813032-104196/suite.summary.json`
+    reports `status=passed`, 10/10 rows, `scripts_with_evidence=10`, and
+    `focus_mismatch_total=0`.
+- Fixed-frame-clock diagnostics contract:
+  - invariant:
+    promoted scripts that assert motion, transition, or delay outcomes with frame-count waits must
+    pin the diagnostics frame clock, otherwise native runner scheduling can turn a small
+    `wait_frames` interval into a different wall-clock contract.
+  - findings:
+    the HoverCard `trigger-delays` gate produced a false component signal because it relied on an
+    unpinned frame count for a millisecond delay contract.
+  - implementation anchors:
+    `tools/check_diag_scripts_registry.py`,
+    `tools/test_check_diag_scripts_registry.py`,
+    and `tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-trigger-delays.json`.
+  - lint gates:
+    `python tools/test_check_diag_scripts_registry.py`,
+    `python tools/check_diag_scripts_registry.py`
+  - lint results:
+    passed; registry self-tests ran 21 tests.
+  - focused runtime gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-trigger-delays.json --dir target/fret-diag-hover-card-trigger-delays-fixed-delta-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime result:
+    passed with run id `1778971779541`; launch env included
+    `FRET_DIAG_FIXED_FRAME_DELTA_MS`.
+  - suite follow-up:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-hover-card --dir target/fret-diag-hover-card-fixed-delta-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - suite follow-up result:
+    first three HoverCard rows passed, including `trigger-delays`; the remaining failure is a
+    separate `sides-placement` script authoring issue at
+    `target/fret-diag-hover-card-fixed-delta-suite-v1/sessions/1778971816718-107892/suite.summary.json`.
+- HoverCard sides placement oracle:
+  - invariant:
+    overlay placement scripts must encode the actual geometry precondition they create. If the
+    trigger is near a collision boundary, the oracle should assert the collision flip rather than a
+    preferred-side placement that cannot fit.
+  - findings:
+    `ui-gallery-hover-card-sides-placement.json` first failed because it moved the pointer to
+    absent `ui-gallery-status-last-action`; after switching to a stable leave target, the bottom
+    side check revealed an incorrect oracle. The bottom trigger had only ~43px of preferred-side
+    space for a 120px panel, so the correct outcome is `chosen_side=top`, `flipped=true`.
+  - implementation anchor:
+    `tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-sides-placement.json`.
+  - focused runtime gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-sides-placement.json --dir target/fret-diag-hover-card-sides-placement-flip-oracle-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime result:
+    passed with run id `1778972701843`.
+  - full-suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-hover-card --dir target/fret-diag-hover-card-suite-after-sides-placement-oracle-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - full-suite result:
+    `target/fret-diag-hover-card-suite-after-sides-placement-oracle-v1/sessions/1778972760323-23244/suite.summary.json`
+    reports `status=passed`, 6/6 rows, `scripts_with_evidence=6`, and
+    `focus_mismatch_total=0`.
+- Menubar submenu placement focused suite:
+  - invariant:
+    Menubar submenu placement must cover LTR physical-right placement, RTL physical-left placement,
+    and RTL tight-left collision flip behavior as a small independently runnable runtime gate.
+  - findings:
+    the three Menubar placement scripts were already useful, but only broad suites reached them.
+    This was a harness packaging gap rather than a recipe or mechanism defect.
+  - implementation anchors:
+    `tools/diag-scripts/suites/ui-gallery-menubar-placement/suite.json`,
+    `tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-submenu-placement-trace.json`,
+    `tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-rtl-submenu-placement-trace.json`,
+    and
+    `tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-rtl-submenu-tight-left-collision.json`.
+  - lint gates:
+    `python tools/test_check_diag_scripts_registry.py`,
+    `python tools/check_diag_scripts_registry.py`
+  - lint results:
+    passed; registry self-tests ran 21 tests.
+  - full-suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-menubar-placement --dir target/fret-diag-menubar-placement-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - full-suite result:
+    `target/fret-diag-menubar-placement-suite-v1/sessions/1778973313432-109176/suite.summary.json`
+    reports `status=passed`, 3/3 rows, `scripts_with_evidence=3`,
+    `focus_mismatch_total=0`, and zero lint errors/warnings for all rows.
+- DropdownMenu focused suite:
+  - invariant:
+    DropdownMenu runtime evidence should prove submenu placement, keyboard typeahead commit, and
+    disabled-but-focusable suppression without depending on optional status-bar UI.
+  - findings:
+    the first Basic typeahead run found harness issues rather than a recipe defect. The script let
+    the trigger sit at the window bottom edge before `click_stable`, and then used the optional
+    `ui-gallery-status-last-action` semantics node as the result oracle even though the app
+    snapshot already recorded `/shell/last_action = "menu.dropdown.orange"`.
+  - implementation anchors:
+    `tools/diag-scripts/suites/ui-gallery-dropdown-menu/suite.json`,
+    `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-submenu-open-smoke.json`,
+    `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-basic-typeahead-billing.json`,
+    and
+    `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression.json`.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - focused typeahead gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-basic-typeahead-billing.json --dir target/fret-diag-dropdown-typeahead-app-snapshot-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused typeahead result:
+    passed with run id `1778974969846`.
+  - full-suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-dropdown-menu --dir target/fret-diag-dropdown-menu-suite-v2 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - full-suite result:
+    `target/fret-diag-dropdown-menu-suite-v2/sessions/1778975019728-11100/suite.summary.json`
+    reports `status=passed`, 3/3 rows, `scripts_with_evidence=3`,
+    `focus_mismatch_total=0`, and zero lint errors/warnings for all rows.
+- ContextMenu focused suite:
+  - invariant:
+    ContextMenu runtime evidence should prove safe-corridor pointer movement and branch/corridor
+    submenu routing as a small independently runnable pointer-policy gate.
+  - findings:
+    the two ContextMenu corridor scripts were already useful, but only broad suites reached them.
+    This was a harness packaging gap rather than a ContextMenu recipe or hit-test mechanism defect.
+  - implementation anchors:
+    `tools/diag-scripts/suites/ui-gallery-context-menu/suite.json`,
+    `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-safe-corridor-sweep.json`,
+    and
+    `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-branch-corridor-routing.json`.
+  - lint gates:
+    `python tools/test_check_diag_scripts_registry.py`,
+    `python tools/check_diag_scripts_registry.py`
+  - lint results:
+    passed; registry self-tests ran 21 tests.
+  - full-suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-context-menu --dir target/fret-diag-context-menu-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - full-suite result:
+    `target/fret-diag-context-menu-suite-v1/sessions/1778975671673-115352/suite.summary.json`
+    reports `status=passed`, 2/2 rows, and zero lint errors/warnings for both rows.
+- ViewCache cached model mutation runtime companion:
+  - invariant:
+    ViewCache runtime evidence should prove model changes inside cached UI Gallery content through
+    structured app-snapshot state, and strict lint should catch semantics drift that a visual-only
+    assertion would miss.
+  - findings:
+    adding `/view_cache` snapshot fields and the focused `ui-gallery-view-cache` suite did not
+    reproduce a ViewCache invalidation defect. The first strict suite run instead exposed a real
+    shadcn Textarea recipe semantics defect: the pointer-only resize grip was exported as an
+    unlabeled visible Button. The fix keeps the TextArea label visible while hiding the resize grip
+    from the visible accessibility tree and removing it from Tab traversal.
+  - implementation anchors:
+    `apps/fret-ui-gallery/src/driver/runtime_driver.rs`,
+    `apps/fret-ui-gallery/src/driver/window_bootstrap.rs`,
+    `apps/fret-ui-gallery/src/driver/diag_snapshot.rs`,
+    `ecosystem/fret-ui-shadcn/src/textarea.rs`,
+    `tools/check_diag_scripts_registry.py`,
+    `tools/diag-scripts/ui-gallery/view-cache/ui-gallery-view-cache-model-mutation-through-cache.json`,
+    and
+    `tools/diag-scripts/suites/ui-gallery-view-cache/suite.json`.
+  - focused component semantics gate:
+    `cargo test --profile dev-fast -p fret-ui-shadcn --lib textarea_resize_handle_stays_out_of_visible_accessibility_tree -- --nocapture`
+  - focused component semantics result:
+    passed.
+  - lint gates:
+    `python tools/test_check_diag_scripts_registry.py`,
+    `python tools/check_diag_scripts_registry.py`
+  - lint results:
+    passed; registry self-tests ran 21 tests.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - full-suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-view-cache --dir target/fret-diag-view-cache-model-mutation-v2 --session-auto --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - full-suite result:
+    `target/fret-diag-view-cache-model-mutation-v2/sessions/1778978131681-113548/suite.summary.json`
+    reports `status=passed`, 1/1 row, `scripts_with_evidence=1`,
+    `focus_mismatch_total=0`, and zero lint errors/warnings.
+- Button Group strict diagnostics lint promotion:
+  - invariant:
+    The Button Group family already covers the originally reported visual/layout risk areas, so the
+    focused suite should also reject future accessibility, duplicate-id, zero-size, and related
+    diagnostics lint drift.
+  - findings:
+    the candidate strict run did not reproduce a new Button Group component or mechanism defect.
+    All 13 scripts passed with zero lint errors/warnings and no focus mismatches, so the suite is
+    now safe to run with `max_warning_issues=0`.
+  - implementation anchors:
+    `tools/diag-scripts/suites/ui-gallery-button-group/suite.json`
+  - lint gates:
+    `python tools/test_check_diag_scripts_registry.py`,
+    `python tools/check_diag_scripts_registry.py`
+  - lint results:
+    passed; registry self-tests ran 21 tests.
+  - candidate full-suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-button-group --dir target/fret-diag-button-group-strict-candidate-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - candidate full-suite result:
+    `target/fret-diag-button-group-strict-candidate-v1/sessions/1778978465500-116384/suite.summary.json`
+    reports `status=passed`, 13/13 rows, `scripts_with_evidence=13`,
+    `focus_mismatch_total=0`, and zero lint errors/warnings for every row.
+- Button Group size icon-only Add geometry hardening:
+  - invariant:
+    icon-only Add controls should not rely on screenshots alone; each icon must keep a stable size
+    and remain centered inside its button across the small, medium, and large variants.
+  - findings:
+    the first draft used the wrong selector assumption for the icon anchor. The real ids are
+    `*-add-icon`, so the geometry proof only became valid after aligning to the actual test ids.
+  - implementation anchors:
+    `tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-size-screenshots-zinc-light-dark.json`
+  - run results:
+    the focused geometry assertions passed inline with the existing Button Group family evidence;
+    no new component or mechanism defect was reproduced.
+- Carousel embla-engine strict diagnostics lint promotion:
+  - invariant:
+    carousel runtime evidence should be split into compact, independently runnable evidence units
+    rather than relying on one wide docs-parity suite. The embla-engine sub-suite should reject
+    future diagnostics lint drift for inertia, touch, resize reInit, loop continuity, and loop
+    downgrade behavior.
+  - findings:
+    the wide `ui-gallery-carousel-docs-parity` candidate run exceeded the outer command timeout
+    before writing a normal `suite.summary.json`, even though completed rows were clean and the
+    focused autoplay stop-on-last-snap script passed independently. This was a harness packaging
+    issue rather than a confirmed Carousel mechanism defect. The smaller
+    `ui-gallery-carousel-embla-engine` suite passed normally and is the durable evidence unit for
+    this slice.
+  - implementation anchors:
+    `tools/diag-scripts/suites/ui-gallery-carousel-embla-engine/suite.json`,
+    `tools/diag-scripts/ui-gallery-carousel-demo-inertia-pixels-changed.json`,
+    `tools/diag-scripts/ui-gallery-carousel-demo-inertia-touch-pixels-changed.json`,
+    `tools/diag-scripts/ui-gallery-carousel-demo-reinit-resize-gate.json`,
+    `tools/diag-scripts/ui-gallery-carousel-loop-continuity-touch-gate.json`,
+    and
+    `tools/diag-scripts/ui-gallery-carousel-loop-downgrade-cannot-loop-gate.json`.
+  - focused autoplay gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-stop-on-last-snap-gate.json --dir target/fret-diag-carousel-last-snap-candidate-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused autoplay result:
+    passed with run id `1778981149388`.
+  - candidate sub-suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-carousel-embla-engine --dir target/fret-diag-carousel-embla-engine-strict-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - candidate sub-suite result:
+    `target/fret-diag-carousel-embla-engine-strict-v1/sessions/1778982359710-115076/suite.summary.json`
+    reports `status=passed`, 5/5 rows, `scripts_with_evidence=5`,
+    `focus_mismatch_total=0`, and zero lint errors/warnings for every row.
+- Date Picker strict diagnostics precondition hardening:
+  - invariant:
+    responsive and long-page Date Picker diagnostics should fail with actionable harness reasons,
+    not generic stuck scrolling, and promoted Date Picker scripts should be independently runnable
+    instead of depending on suite-only environment setup.
+  - findings:
+    the mobile Drawer script initially used a 480px window that selected the component's mobile
+    branch but left the desktop Gallery shell sidebar visible, so the remaining content viewport
+    was too narrow to fully contain the 240px trigger. The range-roving script also clicked an
+    offscreen trigger directly and depended on suite-injected environment variables when run alone.
+    These were diagnostics harness/script precondition gaps, not confirmed Date Picker component or
+    `fret-ui` layout mechanism defects.
+  - implementation anchors:
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_scroll.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/labels.rs`,
+    `tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-dropdowns-mobile-drawer.json`,
+    `tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-range-roving-skips-disabled.json`,
+    and `tools/diag-scripts/suites/ui-gallery-date-picker/suite.json`.
+  - focused harness gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics scroll_unscrollable_axis --no-fail-fast`
+  - focused harness result:
+    passed; Nextest run id `007a4bef-f826-4667-89bd-1a7cd5d41b12`.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - focused mobile Drawer gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-dropdowns-mobile-drawer.json --dir target/fret-diag-date-picker-mobile-drawer-fix-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused mobile Drawer result:
+    passed with run id `1778984155994`.
+  - first strict suite result:
+    `target/fret-diag-date-picker-strict-v2/sessions/1778984222427-88980/suite.summary.json`
+    failed only on `ui-gallery-date-picker-range-roving-skips-disabled`, proving the remaining
+    issue was a script precondition rather than the mobile Drawer path.
+  - focused range-roving gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-range-roving-skips-disabled.json --dir target/fret-diag-date-picker-range-roving-scroll-fix-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused range-roving result:
+    passed with run id `1778985968416`.
+  - full Date Picker suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-date-picker --dir target/fret-diag-date-picker-strict-v3 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - full Date Picker suite result:
+    `target/fret-diag-date-picker-strict-v3/sessions/1778986003617-126604/suite.summary.json`
+    reports `status=passed`, 4/4 rows.
+  - registry gates:
+    `python tools/test_check_diag_scripts_registry.py`
+    `python tools/check_diag_scripts_registry.py`
+  - registry results:
+    passed; registry self-tests ran 21 tests.
+- Combobox geometry/placement focused suite:
+  - invariant:
+    Combobox visual-geometry and overlay-placement regressions should have a compact daily gate
+    that covers trigger chrome, long-text truncation, chevron/checkmark spacing, top/bottom popup
+    placement, and responsive resize placement without relying on the broad 24-script family suite.
+  - findings:
+    the broad `ui-gallery-combobox` candidate exceeded the outer command timeout before writing a
+    normal `suite.summary.json`, even after many geometry/placement rows had passed. This was a
+    harness packaging issue rather than a confirmed Combobox recipe or `fret-ui` overlay mechanism
+    defect. The compact focused suite passed normally and is the better evidence unit for the
+    layout questions that originally motivated the Combobox checks.
+  - implementation anchors:
+    `tools/diag-scripts/suites/ui-gallery-combobox-geometry-placement/suite.json` and
+    `tools/diag-scripts/index.json`.
+  - registry gates:
+    `python tools/test_check_diag_scripts_registry.py`
+    `python tools/check_diag_scripts_registry.py`
+  - registry results:
+    passed; registry self-tests ran 21 tests.
+  - focused suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-combobox-geometry-placement --dir target/fret-diag-combobox-geometry-placement-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused suite result:
+    `target/fret-diag-combobox-geometry-placement-v1/sessions/1778988226668-109764/suite.summary.json`
+    reports 7/7 passed rows, `scripts_with_evidence=7`, `focus_mismatch_total=0`, top placement
+    traces for 3 rows, bottom placement traces for 4 rows, and zero lint errors/warnings for every
+    row.
 - Text render instance binding fix:
   `crates/fret-render-wgpu/src/renderer/render_scene/recorders/scene_draw.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/text.rs`

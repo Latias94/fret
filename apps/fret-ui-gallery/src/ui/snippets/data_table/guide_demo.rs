@@ -286,6 +286,7 @@ fn guide_demo_content(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .column_filter("name")
         .column_filter_placeholder("Filter processes...")
         .column_filter_a11y_label("Name filter")
+        .test_id_prefix("ui-gallery-data-table-guide-toolbar")
         .faceted_filter_options(
             "status",
             "Status",
