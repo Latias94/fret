@@ -339,6 +339,10 @@ Exit criteria:
   headers use `text_control_readout(...)`, while table headers and body cells use
   `text_table_cell(...)`, with source tests preventing the old bare `cx.text(header/label/text)`
   paths from returning.
+  2026-05-17 datatable proof text result: `datatable_demo` now teaches the same contract at the
+  shadcn data-table layer. The compact selected/sort status readout uses
+  `text_control_readout(...)`, and body cells use `text_table_cell(...)`; source gates reject the
+  old bare `cx.text(...)` cell/readout paths.
   2026-05-17 gallery retained-table torture text result: the UI Gallery retained-table torture page
   now uses `text_table_cell(...)` for fixed table cells and `control_readout_text(...)` for table
   state readouts, so the visible retained-table stress surface no longer teaches bare fixed-cell

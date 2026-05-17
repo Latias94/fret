@@ -364,6 +364,10 @@ Readiness order for the next locally testable review slices:
    fixed header/status readouts through `text_control_readout(...)` and fixed table header/body
    cells through `text_table_cell(...)`, so the runnable table proof surfaces no longer teach bare
    default wrapping text inside fixed table rows.
+   2026-05-17 datatable proof text follow-up: `datatable_demo` now routes its compact selected/sort
+   status line through `text_control_readout(...)` and its DataTable body cells through
+   `text_table_cell(...)`, keeping the shadcn data-table proof aligned with the same fixed-row
+   text semantics as the lower-level table demos.
    2026-05-17 gallery retained-table torture text follow-up: the UI Gallery retained-table torture
    page now routes fixed cell text through `text_table_cell(...)` and table state/status readouts
    through `control_readout_text(...)`, leaving only explicitly multi-line/paragraph copy as bare
