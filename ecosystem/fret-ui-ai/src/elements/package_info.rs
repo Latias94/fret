@@ -677,7 +677,7 @@ impl PackageInfoName {
             .label
             .or_else(|| use_package_info_controller(cx).map(|c| c.name));
         let Some(label) = label else {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         };
 
         let icon = decl_icon::icon_with(cx, self.icon, Some(Px(16.0)), Some(ColorRef::Color(fg)));
@@ -751,10 +751,10 @@ impl PackageInfoChangeType {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_package_info_controller(cx) else {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         };
         let Some(change_type) = controller.change_type else {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         };
 
         let theme = Theme::global(&*cx.app).clone();
@@ -831,12 +831,12 @@ impl PackageInfoVersion {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_package_info_controller(cx) else {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         };
         let current = controller.current_version;
         let new = controller.new_version;
         if current.is_none() && new.is_none() {
-            return cx.text("");
+            return crate::elements::empty_placeholder(cx);
         }
 
         let theme = Theme::global(&*cx.app).clone();

@@ -122,6 +122,8 @@ Last updated: 2026-05-17
   - `apps/fret-ui-gallery/src/driver/toaster.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs`
   - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
+  - `ecosystem/fret-ui-ai/src/elements/mod.rs`
+  - `ecosystem/fret-ui-ai/src/surface_policy_tests.rs`
   - `tools/gate_imui_workstream_source.py`
   - `tools/diag_gate_imui_product_chain.py`
   - `tools/diag_gate_imui_p2_devtools_first_open.py`
@@ -508,6 +510,11 @@ Run evidence:
   empty text as layout placeholder plumbing. Gate: `cargo nextest run -p fret-ui-gallery --test
   ui_authoring_surface_default_app sidebar_app_collapsed_projects_do_not_emit_empty_text
   --no-fail-fast`.
+- 2026-05-17: `fret-ui-ai` now owns a crate-local `empty_placeholder(...)` helper for hidden or
+  missing-content AI element paths. The affected AI surfaces return spacer placeholders instead of
+  empty text nodes, keeping optional AI chrome out of text layout semantics without widening
+  `fret-imui`. Gate: `cargo nextest run -p fret-ui-ai
+  hidden_ai_element_paths_use_non_text_placeholder --no-fail-fast`.
 - 2026-05-16: tightened `UiWriterImUiFacadeExt::text(...)` to match Dear ImGui's default
   `Text()` posture: single-line, shrinkable, `min-width: 0`, and ellipsis-truncated under resize.
   Added `UiWriterImUiFacadeExt::text_wrapped(...)` as the explicit wrapping path for explanatory
@@ -1145,6 +1152,15 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 
 - `cargo fmt -p fret-ui-gallery` passed.
 - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app sidebar_app_collapsed_projects_do_not_emit_empty_text --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 fret-ui-ai empty placeholder helper slice:
+
+- `cargo fmt -p fret-ui-ai` passed.
+- `cargo nextest run -p fret-ui-ai hidden_ai_element_paths_use_non_text_placeholder --no-fail-fast` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.

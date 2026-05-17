@@ -369,6 +369,9 @@ Readiness order for the next locally testable review slices:
    2026-05-17 gallery app-sidebar collapsed placeholder follow-up: the copyable app-sidebar snippet
    now uses a spacer placeholder for collapsed project groups instead of teaching `cx.text("")` as
    a layout placeholder.
+   2026-05-17 fret-ui-ai empty placeholder follow-up: hidden/missing-content AI element fallbacks
+   now use a crate-local spacer helper instead of returning empty text nodes, without widening
+   `fret-imui`.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

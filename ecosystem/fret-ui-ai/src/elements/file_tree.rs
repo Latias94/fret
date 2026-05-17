@@ -376,10 +376,10 @@ impl FileTree {
                 let expanded_snapshot = Arc::clone(&expanded_snapshot);
                 move |cx, index| {
                     let Some(entry) = entries.get(index) else {
-                        return cx.text("");
+                        return crate::elements::empty_placeholder(cx);
                     };
                     let Some(payload) = rows_by_id.get(&entry.id).cloned() else {
-                        return cx.text("");
+                        return crate::elements::empty_placeholder(cx);
                     };
 
                     match payload {

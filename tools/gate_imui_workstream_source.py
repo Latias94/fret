@@ -426,6 +426,8 @@ def main() -> None:
                 "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
                 "apps/fret-ui-gallery/src/ui/doc_layout.rs",
                 "apps/fret-ui-gallery/tests/code_editor_control_readout_surface.rs",
+                "ecosystem/fret-ui-ai/src/elements/mod.rs",
+                "ecosystem/fret-ui-ai/src/surface_policy_tests.rs",
                 "apps/fret-examples/src/imui_editor_proof_demo/collection.rs",
                 "apps/fret-examples/src/workspace_shell_demo.rs",
                 "ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs",
@@ -690,6 +692,8 @@ def main() -> None:
                 "the UI Gallery disabled toaster",
                 "2026-05-17 gallery app-sidebar collapsed placeholder follow-up",
                 "copyable app-sidebar snippet",
+                "2026-05-17 fret-ui-ai empty placeholder follow-up",
+                "crate-local spacer helper",
             ],
             forbidden=[],
         ),
@@ -822,6 +826,8 @@ def main() -> None:
                 "`apps/fret-ui-gallery/src/driver/toaster.rs`",
                 "`apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs`",
                 "`apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`",
+                "`ecosystem/fret-ui-ai/src/elements/mod.rs`",
+                "`ecosystem/fret-ui-ai/src/surface_policy_tests.rs`",
                 "`ecosystem/fret-ui-editor/src/primitives/drag_value_core.rs`",
                 "`ecosystem/fret-ui-editor/src/composites/property_group.rs`",
                 "`ecosystem/fret-ui-editor/src/composites/property_row.rs`",
@@ -945,6 +951,8 @@ def main() -> None:
                 "gallery_driver_disabled_toaster_does_not_emit_empty_text",
                 "UI Gallery app-sidebar snippet collapsed-projects path now returns a spacer",
                 "sidebar_app_collapsed_projects_do_not_emit_empty_text",
+                "`fret-ui-ai` now owns a crate-local `empty_placeholder(...)` helper",
+                "hidden_ai_element_paths_use_non_text_placeholder",
                 "cargo check -p fret-examples",
             ],
             forbidden=[],
@@ -1202,6 +1210,44 @@ def main() -> None:
                 "state.is_visible(\"status\", column.visible)",
             ],
             forbidden=[],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-ai/src/elements/mod.rs"),
+            required=[
+                "pub(crate) fn empty_placeholder<H: UiHost>",
+                "cx.spacer(SpacerProps::default())",
+            ],
+            forbidden=[
+                "pub fn empty_placeholder",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-ai/src/surface_policy_tests.rs"),
+            required=[
+                "fn hidden_ai_element_paths_use_non_text_placeholder()",
+                "ELEMENTS_MOD_RS.contains(\"pub(crate) fn empty_placeholder<H: UiHost>\")",
+                "ELEMENTS_MOD_RS.contains(\"cx.spacer(SpacerProps::default())\")",
+                "return cx.text(\"\");",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-ai/src/elements/terminal.rs"),
+            required=[
+                "return crate::elements::empty_placeholder(cx);",
+            ],
+            forbidden=[
+                "return cx.text(\"\");",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-ai/src/elements/prompt_input.rs"),
+            required=[
+                "return crate::elements::empty_placeholder(cx);",
+            ],
+            forbidden=[
+                "return cx.text(\"\");",
+            ],
         ),
         SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs"),

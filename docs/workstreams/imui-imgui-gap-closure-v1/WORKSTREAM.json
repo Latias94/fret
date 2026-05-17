@@ -432,6 +432,8 @@
     "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
     "apps/fret-ui-gallery/src/ui/doc_layout.rs",
     "apps/fret-ui-gallery/tests/code_editor_control_readout_surface.rs",
+    "ecosystem/fret-ui-ai/src/elements/mod.rs",
+    "ecosystem/fret-ui-ai/src/surface_policy_tests.rs",
     "tools/gate_imui_workstream_source.py",
     "repo-ref/imgui/imgui.h",
     "repo-ref/imgui/imgui.cpp",
