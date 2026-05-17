@@ -386,6 +386,9 @@ Readiness order for the next locally testable review slices:
    `text_section_chrome_label(...)` and promise/last-action status through
    `text_control_readout(...)`, keeping toast proof chrome single-line and shrinkable under
    resize.
+   2026-05-17 echarts proof text follow-up: `echarts_demo` now routes its chart titles through
+   `text_section_chrome_label(...)`, keeping chart scaffold labels on the shared single-line
+   chrome role instead of bare default text.
    2026-05-17 components gallery table proof text follow-up: `components_gallery` now routes the
    retained table torture cell renderer through `text_table_cell(...)` and its explanatory table
    header through `text_paragraph(...)`. The same proof now routes its top chrome title, tree

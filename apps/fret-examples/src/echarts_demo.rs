@@ -5,6 +5,7 @@ use fret_ui::{ElementContext, Invalidation};
 
 use delinea::{ChartEngine, ChartSpec};
 use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel};
+use fret_ui_kit::declarative::text as decl_text;
 
 struct EchartsDemoChart {
     title: std::sync::Arc<str>,
@@ -108,7 +109,10 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut EchartsDemoState) -> Vi
 
     let mut out: Vec<AnyElement> = Vec::new();
     for chart in &st.charts {
-        out.push(cx.text(std::sync::Arc::clone(&chart.title)));
+        out.push(decl_text::text_section_chrome_label(
+            cx,
+            std::sync::Arc::clone(&chart.title),
+        ));
         let mut props = ChartCanvasPanelProps::new(chart.spec.clone());
         props.engine = Some(chart.engine.clone());
         out.push(chart_canvas_panel(cx, props));

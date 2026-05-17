@@ -360,6 +360,9 @@ Exit criteria:
   2026-05-17 sonner proof text result: `sonner_demo` now routes its fixed demo title through
   `text_section_chrome_label(...)` and promise/last-action status through
   `text_control_readout(...)`; source gates reject the old bare title/status `cx.text(...)` paths.
+  2026-05-17 echarts proof text result: `echarts_demo` chart titles now route through
+  `text_section_chrome_label(...)`; source gates reject the old bare chart-title `cx.text(...)`
+  path.
   2026-05-17 components gallery table proof text result: the runnable `components_gallery`
   retained table torture path now routes fixed cell renderers through `text_table_cell(...)` and
   the table explanation through `text_paragraph(...)`. The same proof now routes top chrome,

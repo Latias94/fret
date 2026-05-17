@@ -8526,6 +8526,17 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-examples/src/echarts_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(",
+                "std::sync::Arc::clone(&chart.title)",
+            ],
+            forbidden=[
+                "cx.text(std::sync::Arc::clone(&chart.title))",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-examples/src/components_gallery.rs"),
             required=[
                 "use fret_ui_kit::declarative::text as decl_text;",
@@ -8680,6 +8691,17 @@ def main() -> None:
                 "\\\"Sonner(shadcn/ui)demo\\\",",
                 "decl_text::text_control_readout(cx,format!(\\\"promiseactive:{promise_active}|lastaction:{last_action_value}\\\"))",
                 "cx.text(\\\"Sonner(shadcn/ui)demo\\\")",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/tests/echarts_demo_surface.rs"),
+            required=[
+                "fn echarts_demo_chart_titles_use_section_chrome_role()",
+                "usefret_ui_kit::declarative::textasdecl_text;",
+                "decl_text::text_section_chrome_label(",
+                "std::sync::Arc::clone(&chart.title)",
+                "cx.text(std::sync::Arc::clone(&chart.title))",
             ],
             forbidden=[],
         ),

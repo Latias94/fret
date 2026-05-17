@@ -123,11 +123,13 @@ Last updated: 2026-05-17
   - `apps/fret-examples/src/container_queries_docking_demo.rs`
   - `apps/fret-examples/src/form_demo.rs`
   - `apps/fret-examples/src/sonner_demo.rs`
+  - `apps/fret-examples/src/echarts_demo.rs`
   - `apps/fret-examples/tests/docking_demo_surface.rs`
   - `apps/fret-examples/tests/docking_arbitration_surface.rs`
   - `apps/fret-examples/tests/container_queries_docking_surface.rs`
   - `apps/fret-examples/tests/form_demo_surface.rs`
   - `apps/fret-examples/tests/sonner_demo_surface.rs`
+  - `apps/fret-examples/tests/echarts_demo_surface.rs`
   - `apps/fret-ui-gallery/src/driver/toaster.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs`
   - `apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/mvp/gates.rs`
@@ -1330,6 +1332,16 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `cargo fmt -p fret-examples` passed.
 - `cargo check -p fret-examples` passed.
 - `cargo nextest run -p fret-examples --test sonner_demo_surface sonner_demo_header_text_uses_fixed_chrome_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 echarts proof title text-role slice:
+
+- `cargo fmt -p fret-examples` passed.
+- `cargo check -p fret-examples` passed.
+- `cargo nextest run -p fret-examples --test echarts_demo_surface echarts_demo_chart_titles_use_section_chrome_role --no-fail-fast` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
