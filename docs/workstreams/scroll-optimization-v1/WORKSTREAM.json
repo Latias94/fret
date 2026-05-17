@@ -157,6 +157,10 @@
     {
       "name": "clean-root-solve-horizontal-fixed-flex-geometry",
       "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_skips_stable_auto_height_vertical_flex_child clean_geometry_small_resize_rejects_center_aligned_vertical_flex_child clean_geometry_small_resize_skips_fixed_horizontal_flex_children clean_geometry_small_resize_skips_center_aligned_fixed_horizontal_flex_children clean_geometry_small_resize_rejects_horizontal_flex_grow_children --no-fail-fast"
+    },
+    {
+      "name": "clean-root-solve-horizontal-basis-zero-grow-flex-geometry",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_skips_horizontal_flex_single_basis0_grow_child clean_geometry_small_resize_rejects_horizontal_flex_multiple_grow_children --no-fail-fast"
     }
   ],
   "evidence": [
@@ -200,6 +204,6 @@
   "adr_refs": [],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Current no-4090 resize-jitter evidence has landed the stable auto-height classification slice, the clean-geometry classification model refactor, and the horizontal fixed Flex proof. The model now separates layout side effects, child-bounds strategy, and width-delta size stability, so it no longer needs a broad node-classification rewrite before the next proof. The latest blocker-shift evidence removes flex_cross_align as the app-shell/nav blocker; the remaining root Stack/nav Container blocker is flex_item_sizing under horizontal Flex, while content Semantics remains unsupported_kind=Grid with wrap_nodes=1. Scroll remains a side-effect boundary and Canvas remains too small to prioritize. Keep RTX4090 closeout as follow-up evidence, not a local completion gate. Continue in this workstream with either a proof-first flex_item_sizing/main-axis distribution contract for horizontal Flex or a Grid proof that explicitly accounts for the visible wrap-flex context; do not broaden by element name."
+    "notes": "Current no-4090 resize-jitter evidence has landed the stable auto-height classification slice, the clean-geometry classification model refactor, the horizontal fixed Flex proof, and the narrow single basis-zero grow Flex proof. The model now separates layout side effects, child-bounds strategy, and width-delta size stability, so it no longer needs a broad node-classification rewrite before the next proof. The basis-zero grow proof is correct but does not solve the real app-shell/nav blocker: root Stack and nav Container still reject with flex_item_sizing under horizontal Flex, likely around basis=Auto + width=Fill + grow=1 + default shrink. Content Semantics remains unsupported_kind=Grid with wrap_nodes=1. Scroll remains a side-effect boundary and Canvas remains too small to prioritize. Keep RTX4090 closeout as follow-up evidence, not a local completion gate. Continue in this workstream by auditing/proving the real app-shell/nav main-axis distribution contract or by changing ecosystem/app-shell authoring to a basis-zero flex_1 semantic if that is the correct policy-layer expression; do not broaden by element name."
   }
 }

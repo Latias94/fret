@@ -563,6 +563,73 @@ Horizontal fixed Flex clean-geometry proof (2026-05-17):
   - Do not start `Grid` until the content `Semantics` root's wrap-flex context is handled or the
     Grid proof explicitly accounts for the visible `wrap_nodes=1` blocker.
 
+Horizontal basis-zero grow Flex proof (2026-05-17):
+
+- Mechanism anchors:
+  - `crates/fret-ui/src/tree/layout/node.rs`
+    (`clean_horizontal_fixed_flex_width_delta_child_bounds`,
+    `clean_horizontal_flex_basis0_grow_item_next_width`,
+    `clean_horizontal_fixed_flex_item_supported`)
+  - `crates/fret-ui/src/declarative/tests/layout/layout_engine.rs`
+    (`clean_geometry_small_resize_skips_horizontal_flex_single_basis0_grow_child`,
+    `clean_geometry_small_resize_rejects_horizontal_flex_multiple_grow_children`)
+- Contract:
+  - Horizontal no-wrap `Flex` can derive child bounds during small width-only resize when the row
+    has exactly one main-axis flexible child with `basis: 0px`, positive finite `grow`,
+    non-negative finite `shrink`, `width: Auto | Fill`, and px/auto min/max constraints that are
+    not crossed by the delta.
+  - All siblings must still satisfy the fixed main-axis subset from the previous proof. Their
+    widths stay unchanged, while siblings after the flexible child shift by the flexible child's
+    width delta.
+  - Multiple flexible children remain rejected because distribution requires proportional free-space
+    allocation and rounding/min/max proof. `basis=Auto`, non-zero basis, `width: Px + grow`,
+    fractional/fill max widths, wrapped flex, non-static children, and non-px spacing remain on the
+    authoritative solve path.
+  - The local Taffy audit confirms this cannot be generalized to default shrink behavior: negative
+    free-space distribution scales by `inner_flex_basis * flex_shrink`, so `basis=Auto +
+    width=Fill + grow=1 + shrink=1` needs a separate contract.
+- Focused gates:
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_horizontal_flex_single_basis0_grow_child clean_geometry_small_resize_rejects_horizontal_flex_multiple_grow_children --no-fail-fast`
+    - Result: `2/2` passed.
+  - `cargo nextest run -p fret-ui layout_engine --no-fail-fast`
+    - Result: `29/29` passed.
+  - `cargo nextest run -p fret-ui scroll --no-fail-fast`
+    - Result: `153/153` passed.
+  - `cargo check -p fret-bootstrap --features ui-app-driver,diagnostics`
+    - Result: passed.
+  - `cargo fmt`
+    - Result: passed.
+  - `cargo fmt --check`
+    - Result: passed.
+  - `python3 tools/check_layering.py`
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed.
+- Local blocker evidence:
+  - Bundle:
+    `target/fret-diag/local-next-horizontal-flex-basis0-grow-clean-geometry-20260517-r1/1778992910970/bundle.schema2.json`
+  - Command shape:
+    - `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
+    - repeat `1`, warmup `5`, `--reuse-launch`, standard prewarm/prelude hooks, overlay disabled,
+      view-cache shell enabled, code-editor paint perf enabled, scroll/layout/node profiling enabled.
+    - Launch command: `cargo run -p fret-ui-gallery --release --features gallery-full`.
+  - Result:
+    - Top frame total/layout/layout-engine-solve is `1307/757/350us` with `5` layout-engine solves.
+    - Guardrails remain stable: `top_view_cache_roots_reused=1`,
+      `top_view_cache_roots_needs_rerender=0`, row replay/store `289/0`.
+    - Per-solve blockers:
+      - content `Semantics`: `unsupported_kind=Grid`;
+      - root `Stack`: `flex_item_sizing / Flex`, solve about `130/128/141us`;
+      - nav `Container`: `flex_item_sizing / Flex`, solve about `35us`;
+      - editor `PointerRegion`: `unsupported_kind=Canvas`;
+      - root `Scroll`: `side_effect_boundary / Scroll`, solve `0us`.
+- Decision:
+  - Keep the proof because it is a correct, tested mechanism subset.
+  - Do not treat it as the app-shell/nav fix. The remaining blockers appear to use `basis=Auto +
+    width=Fill + grow=1 + default shrink`, so the next slice should explicitly audit and prove
+    that shape or update the ecosystem authoring contract to emit a basis-zero grow row when that is
+    the intended policy.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:

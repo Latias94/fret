@@ -231,6 +231,31 @@ Status: Active
     `Scroll` remains a `side_effect_boundary`.
   - Note: the r2 top frame had local scheduling/render variance (`top_total_time_us=3234`), so this
     sample is recorded as blocker-shift evidence rather than a perf-win claim.
+- [x] Prove the smallest horizontal `Flex` main-axis distribution subset before broader
+  `flex_item_sizing` work.
+  - Implemented proof: horizontal no-wrap flex can propagate clean geometry through a width-only
+    resize when exactly one child has `basis: 0px` and positive `grow`, all other siblings have
+    fixed main-axis sizes, and the single flexible child can absorb the inner-width delta without
+    crossing px min/max constraints.
+  - Guardrails locked: multiple grow children still reject with `flex_item_sizing`; `width: Px`
+    plus `grow`, non-zero basis, non-px min/max constraints, fill/fractional max widths, non-static
+    children, wrapped flex, `ViewCache`, `VirtualList`, `Canvas`, layout-query/transform nodes, and
+    root `Scroll` remain outside the fast path.
+  - Taffy audit note: negative free-space distribution uses
+    `inner_flex_basis * flex_shrink`, so default `basis=Auto` / `shrink=1` cases are not covered by
+    the basis-zero proof and need a separate proof or an authoring change.
+  - Local no-4090 evidence:
+    `target/fret-diag/local-next-horizontal-flex-basis0-grow-clean-geometry-20260517-r1/1778992910970/bundle.schema2.json`.
+  - Result: top frame total/layout/solve is `1307/757/350us`, `layout_engine_solves=5`,
+    view-cache remains reused, needs-rerender stays `0`, and row replay/store remains `289/0`.
+  - Real blocker conclusion: the app-shell root `Stack` and nav `Container` still reject with
+    `flex_item_sizing / Flex`. Source and Taffy behavior indicate those paths are shaped more like
+    `basis=Auto + width=Fill + grow=1 + default shrink`, not the proved `basis=0px` single-grow
+    subset.
+  - Decision: do not keep widening the helper speculatively. The next slice should either prove
+    the real app-shell/nav main-axis distribution contract or change the ecosystem/app-shell
+    authoring to a more explicit `flex_1` / `basis=0` semantic if that is the correct policy-layer
+    expression.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

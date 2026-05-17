@@ -1960,6 +1960,334 @@ fn clean_geometry_small_resize_skips_center_aligned_fixed_horizontal_flex_childr
 }
 
 #[test]
+fn clean_geometry_small_resize_skips_horizontal_flex_single_basis0_grow_child() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(316.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-horizontal-flex-single-grow-child",
+        |cx| {
+            let flex = crate::element::FlexProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                direction: fret_core::Axis::Horizontal,
+                align: crate::element::CrossAlign::Stretch,
+                gap: Px(4.0).into(),
+                padding: crate::element::SpacingEdges {
+                    left: Px(6.0).into(),
+                    right: Px(8.0).into(),
+                    top: Px(2.0).into(),
+                    bottom: Px(4.0).into(),
+                },
+                ..Default::default()
+            };
+
+            vec![cx.flex(flex, |cx| {
+                let fixed = cx.spacer(crate::element::SpacerProps {
+                    layout: crate::element::LayoutStyle {
+                        size: crate::element::SizeStyle {
+                            width: Length::Px(Px(48.0)),
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        flex: crate::element::FlexItemStyle {
+                            shrink: 0.0,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    min: Px(48.0),
+                });
+                let grow = cx.spacer(crate::element::SpacerProps {
+                    layout: crate::element::LayoutStyle {
+                        size: crate::element::SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            min_width: Some(Length::Px(Px(0.0))),
+                            ..Default::default()
+                        },
+                        flex: crate::element::FlexItemStyle {
+                            grow: 1.0,
+                            shrink: 1.0,
+                            basis: Length::Px(Px(0.0)),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    min: Px(0.0),
+                });
+                let trailing = cx.spacer(crate::element::SpacerProps {
+                    layout: crate::element::LayoutStyle {
+                        size: crate::element::SizeStyle {
+                            width: Length::Px(Px(16.0)),
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        flex: crate::element::FlexItemStyle {
+                            shrink: 0.0,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    min: Px(16.0),
+                });
+                vec![fixed, grow, trailing]
+            })]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(176.0), Px(140.0)),
+    );
+    let expected_delta = rect_b.size.width.0 - rect_a.size.width.0;
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    let flex_node = ui.children(child)[0];
+    let fixed_child = ui.children(flex_node)[0];
+    let grow_child = ui.children(flex_node)[1];
+    let trailing_child = ui.children(flex_node)[2];
+    let fixed_before = ui
+        .debug_node_bounds(fixed_child)
+        .expect("fixed child bounds before resize");
+    let grow_before = ui
+        .debug_node_bounds(grow_child)
+        .expect("grow child bounds before resize");
+    let trailing_before = ui
+        .debug_node_bounds(trailing_child)
+        .expect("trailing child bounds before resize");
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "single basis-0 grow child in a horizontal flex row should absorb a small width delta without a root solve; first rejection={:?}/{:?}",
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_rejection,
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_element_kind
+    );
+    assert_eq!(
+        ui.debug_stats().layout_clean_geometry_solve_skip_rejections,
+        0,
+        "accepted basis-0 grow horizontal flex geometry skips should not report rejection noise"
+    );
+
+    let fixed_after = ui
+        .debug_node_bounds(fixed_child)
+        .expect("fixed child bounds after resize");
+    let grow_after = ui
+        .debug_node_bounds(grow_child)
+        .expect("grow child bounds after resize");
+    let trailing_after = ui
+        .debug_node_bounds(trailing_child)
+        .expect("trailing child bounds after resize");
+    assert_eq!(fixed_after, fixed_before);
+    assert_eq!(grow_after.origin, grow_before.origin);
+    assert_eq!(grow_after.size.height, grow_before.size.height);
+    assert!((grow_after.size.width.0 - (grow_before.size.width.0 + expected_delta)).abs() < 0.01);
+    assert!(
+        (trailing_after.origin.x.0 - (trailing_before.origin.x.0 + expected_delta)).abs() < 0.01
+    );
+    assert_eq!(trailing_after.origin.y, trailing_before.origin.y);
+    assert_eq!(trailing_after.size, trailing_before.size);
+}
+
+#[test]
+fn clean_geometry_small_resize_rejects_horizontal_flex_multiple_grow_children() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(316.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-horizontal-flex-multiple-grow-children",
+        |cx| {
+            let flex = crate::element::FlexProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                direction: fret_core::Axis::Horizontal,
+                align: crate::element::CrossAlign::Stretch,
+                ..Default::default()
+            };
+
+            vec![cx.flex(flex, |cx| {
+                (0..2)
+                    .map(|_| {
+                        cx.spacer(crate::element::SpacerProps {
+                            layout: crate::element::LayoutStyle {
+                                size: crate::element::SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Fill,
+                                    min_width: Some(Length::Px(Px(0.0))),
+                                    ..Default::default()
+                                },
+                                flex: crate::element::FlexItemStyle {
+                                    grow: 1.0,
+                                    shrink: 1.0,
+                                    basis: Length::Px(Px(0.0)),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            min: Px(0.0),
+                        })
+                    })
+                    .collect::<Vec<_>>()
+            })]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(176.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert!(
+        ui.debug_stats().layout_engine_solves > 0,
+        "multiple horizontal flex grow children need a dedicated distribution proof"
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_rejection,
+        Some("flex_item_sizing")
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_element_kind,
+        Some("Flex")
+    );
+}
+
+#[test]
 fn clean_geometry_small_resize_rejects_horizontal_flex_grow_children() {
     struct PrecomputeThenResize {
         child: NodeId,
