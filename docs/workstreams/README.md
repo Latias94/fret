@@ -2241,7 +2241,7 @@ Rule:
 - `docs/workstreams/shadcn-parity-discovery-harness-v2/` — first 2026-05-11, latest 2026-05-11, 4 markdown docs (active coverage-driven follow-on for prioritized shadcn component/state/viewport sweeps and promotion of confirmed parity findings)
 - `docs/workstreams/shadcn-parity-harness-v1/` — first 2026-05-09, latest 2026-05-09, 1 markdown docs (active seed lane for Button Group UI Gallery parity fixes, stable selectors, render-flow assertions, and diagnostics evidence)
 - `docs/workstreams/shadcn-recipe-focus-and-builder-render-closure-v1/` — first 2026-04-01, latest 2026-04-01, 3 markdown docs
-- `docs/workstreams/shadcn-menu-select-policy-followon-v1/` — first 2026-05-17, latest 2026-05-17, 3 markdown docs (active follow-on for shadcn menu/select policy cleanup after ASF-060, starting with the select pointer-open ArrowDown contract conflict; includes `WORKSTREAM.json`)
+- `docs/workstreams/shadcn-menu-select-policy-followon-v1/` — first 2026-05-17, latest 2026-05-17, 4 markdown docs (closed follow-on for the shadcn Select pointer-open ArrowDown contract after ASF-060; broader menu/select policy cleanup should start as narrower future follow-ons; includes `WORKSTREAM.json`)
 - `docs/workstreams/shadcn-part-surface-alignment-v1/` — first 2026-03-01, latest 2026-03-11, 7 markdown docs
 - `docs/workstreams/shadcn-semantic-drift-sweep-v1/` — first 2026-02-24, latest 2026-02-26, 3 markdown docs
 - `docs/workstreams/shadcn-source-alignment-v1/` — first 2026-03-08, latest 2026-03-08, 3 markdown docs

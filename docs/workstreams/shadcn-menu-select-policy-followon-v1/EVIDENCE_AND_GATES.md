@@ -1,6 +1,6 @@
 # shadcn Menu/Select Policy Follow-on v1 — Evidence And Gates
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-17
 
 ## Baseline Observation
@@ -93,6 +93,32 @@ python tools/check_layering.py
 
 Use narrower gates while iterating, but record exact commands next to each shipped slice.
 
+## Closeout
+
+Status: Done
+
+Closeout decision:
+
+- `SMS-010` resolves the only concrete failing contract that opened this follow-on.
+- `SMS-020` is intentionally deferred because no additional shared policy owner was proven by fresh
+  cross-surface evidence in this lane.
+- Future roving/typeahead, submenu intent, or dismissal/focus-restore cleanup should open a narrower
+  follow-on with one source-backed repro and one focused gate.
+
+Final closeout gates:
+
+```bash
+cargo fmt --package fret-ui-shadcn
+cargo test -p fret-ui-shadcn --locked --test select_keyboard_navigation -j 1
+cargo test -p fret-ui-shadcn --locked --lib select_pointer_open_arrow_down_moves_active_descendant -j 1
+cargo test -p fret-ui-shadcn --locked --lib select_grouped_pointer_open_arrow_down_moves_active_descendant -j 1
+cargo test -p fret-ui-headless --locked --lib entry_focus -j 1
+cargo test -p fret-ui-kit --locked --lib initial_focus -j 1
+python tools/check_layering.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
 ## Evidence Anchors
 
 - `docs/workstreams/architecture-surface-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
@@ -102,3 +128,4 @@ Use narrower gates while iterating, but record exact commands next to each shipp
 - `ecosystem/fret-ui-shadcn/src/select.rs`
 - `ecosystem/fret-ui-shadcn/tests/select_keyboard_navigation.rs`
 - `docs/workstreams/shadcn-menu-select-policy-followon-v1/JOURNAL/2026-05-17-sms-010.md`
+- `docs/workstreams/shadcn-menu-select-policy-followon-v1/CLOSEOUT_AUDIT_2026-05-17.md`

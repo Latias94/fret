@@ -2,9 +2,9 @@
   "schema_version": 1,
   "slug": "shadcn-menu-select-policy-followon-v1",
   "title": "shadcn Menu/Select Policy Follow-on v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-05-17",
-  "scope_kind": "execution",
+  "scope_kind": "closeout",
   "follow_on_of": "architecture-surface-fearless-refactor-v1",
   "problem": "ASF-060 proved a shared headless owner for menu/select entry focus, but shadcn menu/select recipes still have large, drift-prone policy surfaces for select ArrowDown semantics, roving/typeahead collection extraction, submenu intent, and dismissal/focus details.",
   "authoritative_docs": [
@@ -19,6 +19,10 @@
     {
       "role": "execution",
       "path": "docs/workstreams/shadcn-menu-select-policy-followon-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/shadcn-menu-select-policy-followon-v1/CLOSEOUT_AUDIT_2026-05-17.md"
     }
   ],
   "repro": {
@@ -60,7 +64,8 @@
     "ecosystem/fret-ui-kit/src/primitives/select.rs",
     "ecosystem/fret-ui-shadcn/src/select.rs",
     "ecosystem/fret-ui-shadcn/tests/select_keyboard_navigation.rs",
-    "docs/workstreams/shadcn-menu-select-policy-followon-v1/JOURNAL/2026-05-17-sms-010.md"
+    "docs/workstreams/shadcn-menu-select-policy-followon-v1/JOURNAL/2026-05-17-sms-010.md",
+    "docs/workstreams/shadcn-menu-select-policy-followon-v1/CLOSEOUT_AUDIT_2026-05-17.md"
   ],
   "adr_refs": [
     "docs/adr/0094-menu-open-modality-and-entry-focus.md",
@@ -68,7 +73,7 @@
     "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "SMS-010 is resolved. Continue with SMS-030 closeout/split decision by default; run SMS-020 only if a concrete repeated policy owner across shadcn select/dropdown/context/menubar surfaces is worth extracting."
+    "default_action": "stay_closed",
+    "notes": "This narrow follow-on is closed after SMS-010 and SMS-030. Do not reopen it for broad menu/select cleanup; start a narrower follow-on only when a concrete cross-surface policy repro and gate exist."
   }
 }

@@ -1,6 +1,6 @@
 # shadcn Menu/Select Policy Follow-on v1 — TODO
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-17
 
 ## M0 — Contract Triage
@@ -13,15 +13,16 @@ Last updated: 2026-05-17
 
 ## M1 — Shared Policy Owners
 
-- [ ] SMS-020 [owner=unassigned] [deps=SMS-010] [scope=ecosystem/fret-ui-headless,ecosystem/fret-ui-kit/src/primitives,ecosystem/fret-ui-shadcn/src/{select.rs,dropdown_menu.rs,context_menu.rs,menubar.rs}]
+- [ ] SMS-020 [owner=unassigned] [status=deferred] [deps=SMS-010] [scope=ecosystem/fret-ui-headless,ecosystem/fret-ui-kit/src/primitives,ecosystem/fret-ui-shadcn/src/{select.rs,dropdown_menu.rs,context_menu.rs,menubar.rs}]
   Goal: Extract the next repeated policy only if SMS-010 shows drift across recipe surfaces.
   Validation: headless owner unit tests plus focused shadcn recipe gates.
-  Evidence: One shared behavior consumed by at least two surfaces.
-  Handoff: Candidate behaviors are roving/typeahead collection extraction, submenu grace/focus transfer, and dismissal/focus restore.
+  Evidence: Not executed in this lane; `SMS-010` resolved a Select-specific contract and did not provide enough fresh cross-surface evidence to justify another shared owner extraction.
+  Handoff: Future candidate behaviors are roving/typeahead collection extraction, submenu grace/focus transfer, and dismissal/focus restore. Open a narrower follow-on with a concrete failing gate instead of reopening this lane broadly.
 
 ## M2 — Closeout
 
-- [ ] SMS-030 [owner=planner] [deps=SMS-010] [scope=docs/workstreams/shadcn-menu-select-policy-followon-v1]
+- [x] SMS-030 [owner=codex] [deps=SMS-010] [scope=docs/workstreams/shadcn-menu-select-policy-followon-v1]
   Goal: Close this follow-on or split a smaller lane if the remaining work becomes a visual/parity campaign.
   Validation: `WORKSTREAM.json`, `TODO.md`, and `EVIDENCE_AND_GATES.md` agree.
-  Evidence: Closeout note or updated status.
+  Evidence: `docs/workstreams/shadcn-menu-select-policy-followon-v1/CLOSEOUT_AUDIT_2026-05-17.md`.
+  Handoff: Closed on 2026-05-17. Future menu/select policy cleanup should start from fresh source-backed repro evidence and a narrower owner.
