@@ -8,13 +8,11 @@ mod clip_path;
 mod composite_group;
 mod context;
 mod effect_scope;
+mod path_msaa;
 mod target_budget;
 
 use super::render_plan_effects as effects;
-use super::{
-    BlurQualitySnapshot, EffectDegradationSnapshot, EffectMarkerKind, OrderedDraw, RenderPlanPass,
-    SceneEncoding,
-};
+use super::{BlurQualitySnapshot, EffectDegradationSnapshot, EffectMarkerKind, SceneEncoding};
 use context::RenderPlanCompilerCtx;
 
 #[derive(Clone, Copy, Debug)]
@@ -397,46 +395,17 @@ fn compile_for_scene_inner(
             continue;
         }
 
-        if path_samples > 1
-            && let OrderedDraw::Path(first) = &draws[cursor]
-        {
-            ctx.flush_scene_range(
-                cursor,
-                &mut draw_scopes,
-                draws,
-                encoding,
-                &mut scene_range_start,
-            );
-
-            let batch_uniform_index = first.uniform_index;
-            let mut union = first.scissor;
-            let mut end = cursor + 1;
-            while end < draws.len() && end < next_marker_at {
-                match &draws[end] {
-                    OrderedDraw::Path(d) if d.uniform_index == batch_uniform_index => {
-                        union = super::union_scissor(union, d.scissor);
-                        end += 1;
-                    }
-                    _ => break,
-                }
-            }
-
-            let scope = draw_scopes.last().expect("draw scope");
-            let target = scope.target;
-            let segment = ctx.alloc_segment(cursor..end, draws, encoding);
-            ctx.push_pass(RenderPlanPass::PathMsaaBatch(super::PathMsaaBatchPass {
-                segment,
-                target,
-                target_origin: scope.origin,
-                target_size: scope.size,
-                draw_range: cursor..end,
-                union_scissor: super::AbsoluteScissorRect(union),
-                batch_uniform_index,
-                load: wgpu::LoadOp::Load,
-            }));
-
+        if let Some(end) = path_msaa::try_compile_path_msaa_batch(
+            &mut ctx,
+            &mut draw_scopes,
+            draws,
+            encoding,
+            cursor,
+            next_marker_at,
+            path_samples,
+            &mut scene_range_start,
+        ) {
             cursor = end;
-            scene_range_start = cursor;
             continue;
         }
 
