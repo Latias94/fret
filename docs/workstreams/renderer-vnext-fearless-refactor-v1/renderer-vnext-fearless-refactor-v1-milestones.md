@@ -1114,6 +1114,30 @@ Progress record (RenderPlan compiler target-selection helper split):
   - `python3 tools/check_layering.py`
   - `git diff --check`
 
+Progress record (RenderPlan compiler clip-path mask target-selection helper split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3j; Stage 24 continues)
+- Objective:
+  - Split clip-path `Mask0..2` target selection into the target-selection helper module while
+    keeping the mask target pool separate from intermediate targets, preserving active clip-path
+    scope exclusion, allocation order, content target selection, budget checks, and
+    `ClipPathDisabled` degradation reason precedence.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_selection.rs`
+    (`choose_free_clip_path_mask_target` plus focused order/exhaustion tests)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/clip_path.rs`
+    (`compile_clip_path_push` keeps budget and degradation checks local)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

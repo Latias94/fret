@@ -77,17 +77,13 @@ pub(super) fn compile_clip_path_push(
             args.backdrop_source_group_reserved_targets,
         );
 
-        for target in [PlanTarget::Mask0, PlanTarget::Mask1, PlanTarget::Mask2] {
-            if clip_path_scopes
+        let mask_selection = target_selection::choose_free_clip_path_mask_target(|target| {
+            clip_path_scopes
                 .iter()
                 .any(|scope| scope.mask_target == Some(target))
-            {
-                continue;
-            }
-            mask_target = Some(target);
-            had_free_mask_target = true;
-            break;
-        }
+        });
+        mask_target = mask_selection.target;
+        had_free_mask_target = mask_selection.had_free_target;
 
         if let (Some(_content_target), Some(_mask_target)) = (content_selection.target, mask_target)
         {
