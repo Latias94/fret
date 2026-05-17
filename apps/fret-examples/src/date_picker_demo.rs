@@ -11,15 +11,37 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 use fret_ui::declarative;
 use fret_ui::element::{
-    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
 };
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::headless::calendar::CalendarMonth;
 use fret_ui_kit::ui;
 use fret_ui_kit::{OverlayController, Space};
 use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
 use time::{OffsetDateTime, Weekday};
+
+fn date_picker_readout_text<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_control_readout(cx, text)
+}
+
+fn date_picker_control_label_text<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_control_label(cx, text)
+}
+
+fn date_picker_paragraph_text<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_paragraph(cx, text)
+}
 
 pub struct DemoWindowState {
     ui: UiTree<App>,
@@ -259,12 +281,15 @@ fn render(_driver: &mut DatePickerDemoDriver, context: WinitRenderContext<'_, De
                         .size(shadcn::ButtonSize::Sm)
                         .on_click(CommandId::from("date_picker_demo.clear"))
                         .into_element(cx),
-                    cx.text(Arc::from(format!(
-                        "DatePicker | open={} selected={} month={}",
-                        if open_value { "true" } else { "false" },
-                        selected_label.as_ref(),
-                        month_label.as_ref(),
-                    ))),
+                    date_picker_readout_text(
+                        cx,
+                        Arc::from(format!(
+                            "DatePicker | open={} selected={} month={}",
+                            if open_value { "true" } else { "false" },
+                            selected_label.as_ref(),
+                            month_label.as_ref(),
+                        )),
+                    ),
                 ]
             })
             .gap(Space::N2)
@@ -283,23 +308,23 @@ fn render(_driver: &mut DatePickerDemoDriver, context: WinitRenderContext<'_, De
                 },
                 |cx| {
                     vec![
-                        cx.text("week start monday"),
+                        date_picker_control_label_text(cx, "week start monday"),
                         shadcn::Switch::new(&week_start_monday)
                             .a11y_label("Week starts on Monday")
                             .into_element(cx),
-                        cx.text("show outside days"),
+                        date_picker_control_label_text(cx, "show outside days"),
                         shadcn::Switch::new(&show_outside_days)
                             .a11y_label("Show outside days")
                             .into_element(cx),
-                        cx.text("disable outside days"),
+                        date_picker_control_label_text(cx, "disable outside days"),
                         shadcn::Switch::new(&disable_outside_days)
                             .a11y_label("Disable outside days")
                             .into_element(cx),
-                        cx.text("disable weekends"),
+                        date_picker_control_label_text(cx, "disable weekends"),
                         shadcn::Switch::new(&disable_weekends)
                             .a11y_label("Disable weekends")
                             .into_element(cx),
-                        cx.text("disabled"),
+                        date_picker_control_label_text(cx, "disabled"),
                         shadcn::Switch::new(&disabled)
                             .a11y_label("Disable date picker")
                             .into_element(cx),
@@ -350,9 +375,12 @@ fn render(_driver: &mut DatePickerDemoDriver, context: WinitRenderContext<'_, De
                 cal.into_element(cx)
             };
 
-            let instructions = cx.text(Arc::from(
-                "Try: Tab to focus the picker, Enter/Space to open, Arrow keys to navigate days, Enter to select, Esc to close.",
-            ));
+            let instructions = date_picker_paragraph_text(
+                cx,
+                Arc::from(
+                    "Try: Tab to focus the picker, Enter/Space to open, Arrow keys to navigate days, Enter to select, Esc to close.",
+                ),
+            );
 
             let mut root_layout = LayoutStyle::default();
             root_layout.size.width = Length::Fill;

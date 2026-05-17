@@ -375,6 +375,10 @@ Readiness order for the next locally testable review slices:
    2026-05-17 canvas datagrid stress proof text follow-up: `canvas_datagrid_stress_demo` now routes
    its compact canvas grid stats header through `text_control_readout(...)`, so the retained-canvas
    grid stress proof no longer teaches bare default wrapping text above the fixed grid slot.
+   2026-05-17 date picker proof text follow-up: `date_picker_demo` now routes its compact
+   open/selected/month status through `text_control_readout(...)`, switch captions through
+   `text_control_label(...)`, and keyboard instructions through `text_paragraph(...)`, keeping the
+   proof aligned with the fixed-chrome-vs-prose text role split.
    2026-05-17 gallery retained-table torture text follow-up: the UI Gallery retained-table torture
    page now routes fixed cell text through `text_table_cell(...)` and table state/status readouts
    through `control_readout_text(...)`, leaving only explicitly multi-line/paragraph copy as bare

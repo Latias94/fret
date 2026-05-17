@@ -350,6 +350,10 @@ Exit criteria:
   2026-05-17 canvas datagrid stress proof text result: `canvas_datagrid_stress_demo` now routes its
   compact retained-canvas grid stats header through `text_control_readout(...)`, and source gates
   reject the old bare `cx.text(header)` path above the fixed grid slot.
+  2026-05-17 date picker proof text result: `date_picker_demo` now demonstrates the role split in
+  one surface: status readouts use `text_control_readout(...)`, switch captions use
+  `text_control_label(...)`, and keyboard instructions use `text_paragraph(...)`; source gates
+  reject the old bare status/label/instruction `cx.text(...)` paths.
   2026-05-17 gallery retained-table torture text result: the UI Gallery retained-table torture page
   now uses `text_table_cell(...)` for fixed table cells and `control_readout_text(...)` for table
   state readouts, so the visible retained-table stress surface no longer teaches bare fixed-cell
