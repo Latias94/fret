@@ -532,6 +532,12 @@ Run evidence:
   `doc_layout::control_readout_text(...)`. Gate: `cargo nextest run -p fret-ui-gallery --test
   ui_authoring_surface_internal_previews gallery_data_grid_uses_table_cell_text_roles
   --no-fail-fast`.
+- 2026-05-17: UI Gallery's DataGrid/DataTable/Tree Torture explanatory header copy now routes
+  through `doc_layout::paragraph_text(...)`, backed by shared `text_paragraph(...)`, instead of
+  default `cx.text(...)`. Gates: `cargo nextest run -p fret-ui-gallery --test
+  ui_authoring_surface_internal_previews gallery_data_grid_uses_table_cell_text_roles
+  gallery_data_table_torture_exposes_header_row_anchor
+  gallery_tree_torture_uses_control_readout_for_status_text --no-fail-fast`.
 - 2026-05-17: UI Gallery's Inspector Torture preview now routes fixed virtual-row property labels
   through a helper backed by `text_list_row_label(...)`, and fixed row values through
   `doc_layout::control_readout_text(...)`. Gate: `cargo nextest run -p fret-ui-gallery --test
@@ -1274,6 +1280,15 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 
 - `cargo fmt -p fret-ui-gallery` passed.
 - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_data_grid_uses_table_cell_text_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery data paragraph text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_data_grid_uses_table_cell_text_roles gallery_data_table_torture_exposes_header_row_anchor gallery_tree_torture_uses_control_readout_for_status_text --no-fail-fast` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.

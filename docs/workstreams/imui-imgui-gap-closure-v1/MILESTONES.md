@@ -344,6 +344,9 @@ Exit criteria:
   2026-05-17 gallery data-grid text result: the UI Gallery DataGrid preview now routes virtualized
   grid cells through `text_table_cell(...)` and the selected-row status line through
   `control_readout_text(...)`.
+  2026-05-17 gallery data paragraph text result: DataGrid/DataTable/Tree Torture explanatory
+  header copy now routes through `paragraph_text(...)`, backed by shared `text_paragraph(...)`,
+  instead of default `cx.text(...)`.
   2026-05-17 gallery inspector torture text result: the UI Gallery Inspector Torture virtual rows
   now route fixed property labels through `text_list_row_label(...)` and fixed values through
   `control_readout_text(...)`.

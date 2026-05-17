@@ -212,8 +212,8 @@ pub(in crate::ui) fn preview_data_table_torture(
 
     let header = ui::v_flex(move |cx| {
             vec![
-                cx.text("Goal: baseline perf harness for a virtualized business table (TanStack-aligned headless engine + VirtualList)."),
-                cx.text("Use scripted scroll + bundle stats to validate cache-root reuse and prepaint-driven windowing refactors."),
+                doc_layout::paragraph_text(cx, "Goal: baseline perf harness for a virtualized business table (TanStack-aligned headless engine + VirtualList)."),
+                doc_layout::paragraph_text(cx, "Use scripted scroll + bundle stats to validate cache-root reuse and prepaint-driven windowing refactors."),
                 doc_layout::control_readout_text(cx, sorting_text.clone()).attach_semantics(
                     SemanticsDecoration::default()
                         .role(fret_core::SemanticsRole::Text)

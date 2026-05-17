@@ -906,6 +906,8 @@ fn gallery_data_table_torture_exposes_header_row_anchor() {
         &[
             "fndata_table_torture_cell_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
             "fret_ui_kit::declarative::text::text_table_cell(cx,text)",
+            "doc_layout::paragraph_text(cx,\"Goal:baselineperfharnessforavirtualizedbusinesstable(TanStack-alignedheadlessengine+VirtualList).\")",
+            "doc_layout::paragraph_text(cx,\"Usescriptedscroll+bundlestatstovalidatecache-rootreuseandprepaint-drivenwindowingrefactors.\")",
             "doc_layout::control_readout_text(cx,sorting_text.clone()).attach_semantics(",
             "doc_layout::control_readout_text(cx,pinning_text.clone()).attach_semantics(",
             "doc_layout::control_readout_text(cx,global_filter_text.clone()).attach_semantics(",
@@ -925,6 +927,8 @@ fn gallery_data_table_torture_exposes_header_row_anchor() {
         "table_torture should keep the structured data-table header/body diagnostics prefixes alongside the header-row anchor"
     );
     for forbidden in [
+        "cx.text(\"Goal:baselineperfharnessforavirtualizedbusinesstable(TanStack-alignedheadlessengine+VirtualList).\")",
+        "cx.text(\"Usescriptedscroll+bundlestatstovalidatecache-rootreuseandprepaint-drivenwindowingrefactors.\")",
         "cx.text(sorting_text.as_ref()).attach_semantics(",
         "cx.text(pinning_text.as_ref()).attach_semantics(",
         "cx.text(global_filter_text.as_ref()).attach_semantics(",
@@ -953,6 +957,7 @@ fn gallery_data_grid_uses_table_cell_text_roles() {
             "data_grid_cell_text(cx,format!(\"Process{row}\"))",
             "data_grid_cell_text(cx,ifrow%3==0{\"Running\"}else{\"Idle\"})",
             "data_grid_cell_text(cx,((row*7)%100).to_string())",
+            "doc_layout::paragraph_text(cx,\"Virtualizedrows/colsviewport;clickarowtoselect(disabledevery17throw).\")",
             "doc_layout::control_readout_text(cx,format!(\"Selectedrow:{selected_text}\"))",
         ],
     );
@@ -962,6 +967,7 @@ fn gallery_data_grid_uses_table_cell_text_roles() {
         "cx.text(format!(\"Process{row}\"))",
         "cx.text(ifrow%3==0{\"Running\"}else{\"Idle\"})",
         "cx.text(((row*7)%100).to_string())",
+        "cx.text(\"Virtualizedrows/colsviewport;clickarowtoselect(disabledevery17throw).\")",
         "cx.text(format!(\"Selectedrow:{selected_text}\"))",
     ] {
         assert!(
@@ -1078,12 +1084,16 @@ fn gallery_tree_torture_uses_control_readout_for_status_text() {
     let normalized = assert_normalized_markers_present(
         "src/ui/previews/gallery/data/tree_torture.rs",
         &[
+            "doc_layout::paragraph_text(cx,\"Goal:baselineperfharnessforavirtualizedtree(expand/collapse+selection+scroll).\")",
+            "doc_layout::paragraph_text(cx,\"Usescriptedscroll+bundlestatstovalidatecache-rootreuseandprepaint-drivenwindowingrefactors.\")",
             "doc_layout::control_readout_text(cx,status.clone())",
             ".test_id(\"ui-gallery-tree-target-disabled-status\")",
         ],
     );
 
     for forbidden in [
+        "cx.text(\"Goal:baselineperfharnessforavirtualizedtree(expand/collapse+selection+scroll).\")",
+        "cx.text(\"Usescriptedscroll+bundlestatstovalidatecache-rootreuseandprepaint-drivenwindowingrefactors.\")",
         "ui::text(status.clone()).text_sm().text_color(",
         "cx.text(status.clone())",
     ] {

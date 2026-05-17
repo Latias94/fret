@@ -1118,6 +1118,8 @@ def main() -> None:
             required=[
                 "fn data_table_torture_cell_text",
                 "fret_ui_kit::declarative::text::text_table_cell(cx, text)",
+                "doc_layout::paragraph_text(cx, \"Goal: baseline perf harness for a virtualized business table (TanStack-aligned headless engine + VirtualList).\")",
+                "doc_layout::paragraph_text(cx, \"Use scripted scroll + bundle stats to validate cache-root reuse and prepaint-driven windowing refactors.\")",
                 "doc_layout::control_readout_text(cx, sorting_text.clone()).attach_semantics(",
                 "doc_layout::control_readout_text(cx, pinning_text.clone()).attach_semantics(",
                 "doc_layout::control_readout_text(cx, global_filter_text.clone()).attach_semantics(",
@@ -1129,6 +1131,8 @@ def main() -> None:
                 "data_table_torture_cell_text(cx, format!(\"{} MB\", row.mem_mb))",
             ],
             forbidden=[
+                "cx.text(\"Goal: baseline perf harness for a virtualized business table (TanStack-aligned headless engine + VirtualList).\")",
+                "cx.text(\"Use scripted scroll + bundle stats to validate cache-root reuse and prepaint-driven windowing refactors.\")",
                 "cx.text(sorting_text.as_ref()).attach_semantics(",
                 "cx.text(pinning_text.as_ref()).attach_semantics(",
                 "cx.text(global_filter_text.as_ref()).attach_semantics(",
@@ -1149,6 +1153,7 @@ def main() -> None:
                 "data_grid_cell_text(cx, format!(\"Process {row}\"))",
                 "data_grid_cell_text(cx, if row % 3 == 0 { \"Running\" } else { \"Idle\" })",
                 "data_grid_cell_text(cx, ((row * 7) % 100).to_string())",
+                "doc_layout::paragraph_text(\n            cx,\n            \"Virtualized rows/cols viewport; click a row to select (disabled every 17th row).\",\n        )",
                 "doc_layout::control_readout_text(cx, format!(\"Selected row: {selected_text}\"))",
             ],
             forbidden=[
@@ -1156,6 +1161,7 @@ def main() -> None:
                 "cx.text(format!(\"Process {row}\"))",
                 "cx.text(if row % 3 == 0 { \"Running\" } else { \"Idle\" })",
                 "cx.text(((row * 7) % 100).to_string())",
+                "cx.text(\"Virtualized rows/cols viewport; click a row to select (disabled every 17th row).\")",
                 "cx.text(format!(\"Selected row: {selected_text}\"))",
             ],
         ),
@@ -1229,10 +1235,14 @@ def main() -> None:
         SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/previews/gallery/data/tree_torture.rs"),
             required=[
+                "doc_layout::paragraph_text(cx, \"Goal: baseline perf harness for a virtualized tree (expand/collapse + selection + scroll).\")",
+                "doc_layout::paragraph_text(cx, \"Use scripted scroll + bundle stats to validate cache-root reuse and prepaint-driven windowing refactors.\")",
                 "doc_layout::control_readout_text(cx, status.clone())",
                 ".test_id(\"ui-gallery-tree-target-disabled-status\")",
             ],
             forbidden=[
+                "cx.text(\"Goal: baseline perf harness for a virtualized tree (expand/collapse + selection + scroll).\")",
+                "cx.text(\"Use scripted scroll + bundle stats to validate cache-root reuse and prepaint-driven windowing refactors.\")",
                 "ui::text(status.clone())",
                 ".text_color(status_color)",
                 "cx.text(status.clone())",
@@ -1500,6 +1510,7 @@ def main() -> None:
                 "use fret_ui_kit::declarative::text as decl_text;",
                 "decl_text::text_control_readout(cx, text)",
                 "decl_text::text_control_label(cx, text)",
+                "decl_text::text_paragraph(cx, text)",
                 "decl_text::text_code_block(cx, code.clone())",
                 "control_readout_text_is_single_line_and_can_shrink_in_dense_rows",
             ],
@@ -1630,6 +1641,7 @@ def main() -> None:
                 "fret_ui_kit::declarative::text::text_table_cell(cx,text)",
                 "fret_ui_kit::declarative::text::text_list_row_label(cx,text)",
                 "doc_layout::control_readout_text(cx,\\\"Keeppinnedrows\\\")",
+                "doc_layout::paragraph_text(cx,\\\"Virtualizedrows/colsviewport;clickarowtoselect(disabledevery17throw).\\\")",
                 "doc_layout::control_readout_text(cx,text)",
                 "doc_layout::control_readout_text(cx,format!(\\\"Selectedrow:{selected_text}\\\"))",
                 "doc_layout::control_readout_text(cx,sorting_text.clone()).attach_semantics(",

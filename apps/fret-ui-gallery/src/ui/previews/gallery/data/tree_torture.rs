@@ -111,8 +111,8 @@ pub(in crate::ui) fn preview_tree_torture(
 
     let header = ui::v_flex(|cx| {
             vec![
-                cx.text("Goal: baseline perf harness for a virtualized tree (expand/collapse + selection + scroll)."),
-                cx.text("Use scripted scroll + bundle stats to validate cache-root reuse and prepaint-driven windowing refactors."),
+                doc_layout::paragraph_text(cx, "Goal: baseline perf harness for a virtualized tree (expand/collapse + selection + scroll)."),
+                doc_layout::paragraph_text(cx, "Use scripted scroll + bundle stats to validate cache-root reuse and prepaint-driven windowing refactors."),
             ]
         })
             .layout(LayoutRefinement::default().w_full())

@@ -66,7 +66,10 @@ pub(in crate::ui) fn preview_data_grid(
     );
 
     vec![
-        cx.text("Virtualized rows/cols viewport; click a row to select (disabled every 17th row)."),
+        doc_layout::paragraph_text(
+            cx,
+            "Virtualized rows/cols viewport; click a row to select (disabled every 17th row).",
+        ),
         doc_layout::control_readout_text(cx, format!("Selected row: {selected_text}")),
         grid,
     ]

@@ -370,6 +370,9 @@ Readiness order for the next locally testable review slices:
    2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
    virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
    `control_readout_text(...)`.
+   2026-05-17 gallery data paragraph text follow-up: DataGrid/DataTable/Tree Torture explanatory
+   header copy now routes through `paragraph_text(...)`, backed by shared `text_paragraph(...)`,
+   instead of default `cx.text(...)`.
    2026-05-17 gallery inspector torture text follow-up: the UI Gallery Inspector Torture page now
    routes fixed virtual-row property labels through `text_list_row_label(...)` and fixed row values
    through `control_readout_text(...)`.
