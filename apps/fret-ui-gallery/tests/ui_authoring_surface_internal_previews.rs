@@ -970,3 +970,28 @@ fn gallery_data_grid_uses_table_cell_text_roles() {
         );
     }
 }
+
+#[test]
+fn gallery_inspector_torture_uses_fixed_row_text_roles() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/gallery/torture/inspector_torture.rs",
+        &[
+            "fninspector_row_label_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "fret_ui_kit::declarative::text::text_list_row_label(cx,text)",
+            "fninspector_row_value_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "doc_layout::control_readout_text(cx,text)",
+            "inspector_row_label_text(cx,format!(\"prop_{index}\"))",
+            "inspector_row_value_text(cx,format!(\"value{index}\"))",
+        ],
+    );
+
+    for forbidden in [
+        "cx.text(format!(\"prop_{index}\"))",
+        "cx.text(format!(\"value{index}\"))",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "inspector_torture reintroduced bare fixed inspector-row text: {forbidden}"
+        );
+    }
+}
