@@ -4,6 +4,13 @@ use fret::AppComponentCx;
 use fret_ui::VirtualListScrollHandle;
 use fret_ui::element::ContainerProps;
 
+fn view_cache_list_row_label_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
+where
+    T: Into<Arc<str>>,
+{
+    fret_ui_kit::declarative::text::text_list_row_label(cx, text)
+}
+
 pub(in crate::ui) fn preview_view_cache(
     cx: &mut AppComponentCx<'_>,
     theme: &Theme,
@@ -238,7 +245,7 @@ pub(in crate::ui) fn preview_view_cache(
                             0,
                             |i| i as u64,
                             |_i| None,
-                            |cx, i| vec![cx.text(format!("Row {i}"))],
+                            |cx, i| vec![view_cache_list_row_label_text(cx, format!("Row {i}"))],
                         ),
                     ]
                 },

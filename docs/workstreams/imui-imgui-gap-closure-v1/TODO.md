@@ -377,6 +377,8 @@ Readiness order for the next locally testable review slices:
    labels now use `text_list_row_label(...)`, row detail/editing readouts use
    `control_readout_text(...)`, and the UI Kit list torture custom row renderer also routes item
    labels through `text_list_row_label(...)`.
+   2026-05-17 gallery view-cache list text follow-up: the UI Gallery View Cache torture page now
+   routes its cached inner virtual-list row labels through `text_list_row_label(...)`.
    2026-05-17 virtual row fallback follow-up: tree and file-tree virtualizer out-of-range fallback
    paths now use spacer placeholders instead of empty text nodes, removing another fixed-row
    `Text` escape hatch.

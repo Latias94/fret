@@ -1041,3 +1041,20 @@ fn harness_ui_kit_list_torture_uses_fixed_row_text_roles() {
         "ui_kit_list_torture reintroduced bare fixed list-row text"
     );
 }
+
+#[test]
+fn harness_view_cache_uses_fixed_row_text_roles() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/pages/harness/view_cache.rs",
+        &[
+            "fnview_cache_list_row_label_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "fret_ui_kit::declarative::text::text_list_row_label(cx,text)",
+            "view_cache_list_row_label_text(cx,format!(\"Row{i}\"))",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("vec![cx.text(format!(\"Row{i}\"))]"),
+        "view_cache reintroduced bare fixed cached-list row text"
+    );
+}

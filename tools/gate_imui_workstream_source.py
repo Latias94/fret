@@ -428,6 +428,7 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/driver/status_bar.rs",
                 "apps/fret-ui-gallery/src/driver/text_roles.rs",
                 "apps/fret-ui-gallery/src/ui/previews/pages/harness/ui_kit_list_torture.rs",
+                "apps/fret-ui-gallery/src/ui/previews/pages/harness/view_cache.rs",
                 "apps/fret-ui-gallery/src/ui/previews/pages/harness/virtual_list_torture.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs",
                 "apps/fret-ui-gallery/src/ui/previews/gallery/data/data_grid.rs",
@@ -1200,6 +1201,17 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/previews/pages/harness/view_cache.rs"),
+            required=[
+                "fn view_cache_list_row_label_text",
+                "fret_ui_kit::declarative::text::text_list_row_label(cx, text)",
+                "view_cache_list_row_label_text(cx, format!(\"Row {i}\"))",
+            ],
+            forbidden=[
+                "vec![cx.text(format!(\"Row {i}\"))]",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs"),
             required=[
                 "crate::declarative::text::text_chrome_title(cx, title.clone())",
@@ -1515,6 +1527,7 @@ def main() -> None:
                 "fn gallery_inspector_torture_uses_fixed_row_text_roles()",
                 "fn harness_virtual_list_torture_uses_fixed_row_text_roles()",
                 "fn harness_ui_kit_list_torture_uses_fixed_row_text_roles()",
+                "fn harness_view_cache_uses_fixed_row_text_roles()",
                 "fnretained_table_cell_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
                 "fndata_table_torture_cell_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
                 "fndata_grid_cell_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
@@ -1523,6 +1536,7 @@ def main() -> None:
                 "fnvirtual_list_row_label_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
                 "fnvirtual_list_row_detail_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
                 "fnui_kit_list_row_label_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+                "fnview_cache_list_row_label_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
                 "fret_ui_kit::declarative::text::text_table_cell(cx,text)",
                 "fret_ui_kit::declarative::text::text_list_row_label(cx,text)",
                 "doc_layout::control_readout_text(cx,\\\"Keeppinnedrows\\\")",
@@ -1537,6 +1551,7 @@ def main() -> None:
                 "virtual_list_row_label_text(cx,format!(\\\"Row{index}\\\"))",
                 "virtual_list_row_detail_text(cx,format!(\\\"Editingrow:{row}\\\"))",
                 "ui_kit_list_row_label_text(cx,format!(\\\"Item{i}\\\"))",
+                "view_cache_list_row_label_text(cx,format!(\\\"Row{i}\\\"))",
                 "retained_table_cell_text(cx,row.status.clone())",
                 "data_table_torture_cell_text(cx,row.status.clone())",
                 "data_grid_cell_text(cx,ifrow%3==0{\\\"Running\\\"}else{\\\"Idle\\\"})",

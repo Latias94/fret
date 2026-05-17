@@ -351,6 +351,8 @@ Exit criteria:
   routes fixed custom row labels through `text_list_row_label(...)`, detail/editing readouts
   through `control_readout_text(...)`, and the UI Kit list torture custom row renderer through the
   shared list-row label role.
+  2026-05-17 gallery view-cache list text result: the UI Gallery View Cache torture page now routes
+  cached inner virtual-list row labels through `text_list_row_label(...)`.
   2026-05-17 virtual row fallback result: tree and file-tree virtualizer out-of-range fallback
   paths now return spacer placeholders instead of empty text nodes, so fixed-row helpers no longer
   create meaningless `Text` elements for missing rows.
