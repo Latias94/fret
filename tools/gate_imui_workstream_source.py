@@ -1001,10 +1001,14 @@ def main() -> None:
                 "crate::declarative::text::text_chrome_glyph(cx, glyph)",
                 "default_tree_row_label_uses_shared_list_row_text_role",
                 "tree_toggle_glyph_uses_shared_chrome_glyph_text_role",
+                "fn tree_missing_virtual_row_placeholder",
+                "tree_missing_virtual_row_placeholder(cx)",
+                "missing_tree_virtual_row_placeholder_is_not_text",
             ],
             forbidden=[
                 "crate::ui::text(entry.label.as_ref())",
                 "vec![cx.text(glyph.as_ref())]",
+                "return cx.text(\"\");",
             ],
         ),
         SourceCheck(
@@ -1016,10 +1020,14 @@ def main() -> None:
                 "crate::declarative::text::text_list_row_label(cx, label)",
                 "file_tree_row_icon_uses_shared_chrome_glyph_text_role",
                 "file_tree_row_label_uses_shared_list_row_text_role",
+                "fn file_tree_missing_virtual_row_placeholder",
+                "file_tree_missing_virtual_row_placeholder(cx)",
+                "missing_file_tree_virtual_row_placeholder_is_not_text",
             ],
             forbidden=[
                 "crate::ui::text(icon).flex_shrink_0()",
                 "crate::ui::text(entry.label.as_ref())",
+                "return cx.text(\"\");",
             ],
         ),
         SourceCheck(

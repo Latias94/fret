@@ -334,6 +334,9 @@ Exit criteria:
   2026-05-17 retained table text result: `table_virtualized_retained_v0(...)` and grouped table
   row text now route retained header labels, grouped row labels, and aggregation values through
   `text_table_cell(...)` instead of bare `cx.text(...)` inside fixed table cells.
+  2026-05-17 virtual row fallback result: tree and file-tree virtualizer out-of-range fallback
+  paths now return spacer placeholders instead of empty text nodes, so fixed-row helpers no longer
+  create meaningless `Text` elements for missing rows.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

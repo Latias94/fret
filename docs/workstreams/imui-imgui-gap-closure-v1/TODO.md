@@ -360,6 +360,9 @@ Readiness order for the next locally testable review slices:
    2026-05-17 retained table text follow-up: retained table headers plus grouped row label and
    aggregation text now route through `text_table_cell(...)`, keeping fixed table cells on the
    shared single-line ellipsis role outside the IMUI-specific table wrapper.
+   2026-05-17 virtual row fallback follow-up: tree and file-tree virtualizer out-of-range fallback
+   paths now use spacer placeholders instead of empty text nodes, removing another fixed-row
+   `Text` escape hatch.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

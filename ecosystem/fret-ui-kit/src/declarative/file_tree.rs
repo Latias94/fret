@@ -151,6 +151,12 @@ fn file_tree_row_label<H: UiHost>(
     crate::declarative::text::text_list_row_label(cx, label)
 }
 
+fn file_tree_missing_virtual_row_placeholder<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> AnyElement {
+    cx.spacer(fret_ui::element::SpacerProps::default())
+}
+
 #[track_caller]
 pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
@@ -231,7 +237,7 @@ pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
     let row_test_id_prefix = props.debug_row_test_id_prefix.clone();
     let row = move |cx: &mut ElementContext<'_, H>, i: usize| {
         let Some(entry) = entries_for_row.get(i).cloned() else {
-            return cx.text("");
+            return file_tree_missing_virtual_row_placeholder(cx);
         };
 
         let is_selected = selected_for_row == Some(entry.id);
@@ -427,5 +433,20 @@ mod tests {
         assert_eq!(props.layout.flex.shrink, 1.0);
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
+    }
+
+    #[test]
+    fn missing_file_tree_virtual_row_placeholder_is_not_text() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+                file_tree_missing_virtual_row_placeholder(cx)
+            });
+
+        let ElementKind::Spacer(props) = &element.kind else {
+            panic!("missing file tree virtual row placeholder should be a spacer");
+        };
+        assert_eq!(props.min, Px(0.0));
     }
 }

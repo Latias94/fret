@@ -78,6 +78,10 @@ fn tree_toggle_glyph<H: UiHost>(
     crate::declarative::text::text_chrome_glyph(cx, glyph)
 }
 
+fn tree_missing_virtual_row_placeholder<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    cx.spacer(SpacerProps::default())
+}
+
 impl<H: UiHost> TreeRowRenderer<H> for DefaultTreeRowRenderer {
     fn render_row(
         &mut self,
@@ -278,6 +282,21 @@ mod tests {
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Clip);
     }
+
+    #[test]
+    fn missing_tree_virtual_row_placeholder_is_not_text() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+                tree_missing_virtual_row_placeholder(cx)
+            });
+
+        let ElementKind::Spacer(props) = &element.kind else {
+            panic!("missing tree virtual row placeholder should be a spacer");
+        };
+        assert_eq!(props.min, Px(0.0));
+    }
 }
 
 /// A variant of [`tree_view_retained`] that allows opting into measured (variable-height) rows.
@@ -383,7 +402,7 @@ pub fn tree_view_with_renderer<H: UiHost>(
                 move |i| entries_for_key.get(i).map(|e| e.id).unwrap_or_default(),
                 |cx, i| {
                     let Some(entry) = entries_for_row.get(i).cloned() else {
-                        return cx.text("");
+                        return tree_missing_virtual_row_placeholder(cx);
                     };
 
                     let is_selected = selected == Some(entry.id);
@@ -596,7 +615,7 @@ fn tree_view_retained_impl<H: UiHost + 'static>(
             let row: Arc<RetainedTreeRowFn<H>> =
                 Arc::new(move |cx: &mut ElementContext<'_, H>, i| {
                     let Some(entry) = entries_for_row.get(i).cloned() else {
-                        return cx.text("");
+                        return tree_missing_virtual_row_placeholder(cx);
                     };
 
                     let is_selected = selected == Some(entry.id);
