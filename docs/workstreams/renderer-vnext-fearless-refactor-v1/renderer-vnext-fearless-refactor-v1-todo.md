@@ -630,6 +630,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - [x] Step 3s: move effect-scope push/pop helpers onto `EffectScopeDispatchState`.
     - [x] Step 3t: move backdrop-source-group push/pop helpers onto `BackdropSourceGroupDispatchState`.
     - [x] Step 3u: move clip-path push/pop helpers onto `ClipPathDispatchState`.
+    - [x] Step 3v: move composite-group push/pop helpers onto `CompositeGroupDispatchState`.
   - Landed (step 1): extracted target/budget helpers and their focused tests into
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
   - Landed (step 2): introduced `RenderPlanCompilerCtx` to own structural compiler outputs
@@ -720,6 +721,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Landed (step 3u): moved the private clip-path push/pop helper bodies onto
     `ClipPathDispatchState`, so clip scopes and mask-in-use bytes are mutated through the owning
     dispatch state instead of being threaded as multiple independent `&mut` parameters.
+  - Landed (step 3v): moved the private composite-group push/pop helper bodies onto
+    `CompositeGroupDispatchState`, so composite scopes and push/pop mutation are handled through
+    the owning dispatch state instead of threading `&mut scopes` through standalone helpers.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
       `compile_for_scene_inner`)
@@ -736,7 +740,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_chain.rs`
       (`apply_chain_in_place`, `SmallVec<[PlanTarget; 8]>` in-use target snapshot)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/composite_group.rs`
-      (`CompositeGroupDispatchState`)
+      (`CompositeGroupDispatchState::{compile_push_inner,compile_pop_inner}`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/backdrop_source_group.rs`
       (`BackdropSourceGroupDispatchState::{compile_push_inner,compile_pop_inner}`,
       `BackdropSourceGroupScope::effect_ctx`,

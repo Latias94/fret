@@ -1423,6 +1423,34 @@ Progress record (RenderPlan compiler clip-path owner-method cleanup):
   - `python3 tools/check_layering.py`
   - `git diff --check`
 
+Progress record (RenderPlan compiler composite-group owner-method cleanup):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3v; Stage 24 continues)
+- Objective:
+  - Move the private composite-group push/pop helper bodies onto
+    `CompositeGroupDispatchState`, removing the need to thread composite scopes as an independent
+    mutable parameter.
+  - Preserve `CompositeGroupPushCtx`, `CompositeGroupPush/Pop` pass ordering,
+    `Intermediate0..3` allocation order, scissor-sized content target selection,
+    `CompositeGroupBlendDegradedToOver` reason precedence, content target push/pop order,
+    marker dispatch call sites, and composite pass load-op behavior.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/composite_group.rs`
+    (`CompositeGroupDispatchState::{compile_push_inner,compile_pop_inner}`,
+    `CompositeGroupDispatchState::{compile_push,compile_pop}`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+    (unchanged call surface into `CompositeGroupDispatchState`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_selection`
+  - `cargo test -p fret-render-wgpu --lib renderer::render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:
