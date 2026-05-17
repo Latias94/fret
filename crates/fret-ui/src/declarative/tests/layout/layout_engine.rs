@@ -2471,6 +2471,195 @@ fn clean_geometry_small_resize_skips_horizontal_flex_auto_width_no_shrink_child(
 }
 
 #[test]
+fn clean_geometry_small_resize_skips_horizontal_roving_flex_auto_width_no_shrink_child() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(316.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-horizontal-roving-flex-auto-width-no-shrink-child",
+        |cx| {
+            let flex = crate::element::FlexProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                direction: fret_core::Axis::Horizontal,
+                align: crate::element::CrossAlign::Center,
+                gap: Px(4.0).into(),
+                ..Default::default()
+            };
+
+            vec![cx.roving_flex(
+                crate::element::RovingFlexProps {
+                    flex,
+                    ..Default::default()
+                },
+                |cx| {
+                    let fixed_auto = cx.container(
+                        crate::element::ContainerProps {
+                            layout: crate::element::LayoutStyle {
+                                size: crate::element::SizeStyle {
+                                    width: Length::Auto,
+                                    height: Length::Px(Px(20.0)),
+                                    min_width: Some(Length::Px(Px(24.0))),
+                                    ..Default::default()
+                                },
+                                flex: crate::element::FlexItemStyle {
+                                    shrink: 0.0,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        |cx| {
+                            vec![cx.spacer(crate::element::SpacerProps {
+                                layout: crate::element::LayoutStyle {
+                                    size: crate::element::SizeStyle {
+                                        width: Length::Px(Px(48.0)),
+                                        height: Length::Fill,
+                                        ..Default::default()
+                                    },
+                                    flex: crate::element::FlexItemStyle {
+                                        shrink: 0.0,
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                min: Px(48.0),
+                            })]
+                        },
+                    );
+                    let grow = cx.spacer(crate::element::SpacerProps {
+                        layout: crate::element::LayoutStyle {
+                            size: crate::element::SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Fill,
+                                min_width: Some(Length::Px(Px(0.0))),
+                                ..Default::default()
+                            },
+                            flex: crate::element::FlexItemStyle {
+                                grow: 1.0,
+                                shrink: 1.0,
+                                basis: Length::Px(Px(0.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        min: Px(0.0),
+                    });
+                    vec![fixed_auto, grow]
+                },
+            )]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(176.0), Px(140.0)),
+    );
+    let expected_delta = rect_b.size.width.0 - rect_a.size.width.0;
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    let roving_flex_node = ui.children(child)[0];
+    let fixed_child = ui.children(roving_flex_node)[0];
+    let grow_child = ui.children(roving_flex_node)[1];
+    let fixed_before = ui
+        .debug_node_bounds(fixed_child)
+        .expect("fixed auto-width child bounds before resize");
+    let grow_before = ui
+        .debug_node_bounds(grow_child)
+        .expect("grow child bounds before resize");
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "RovingFlex should use the same clean horizontal flex proof as Flex for auto-width no-shrink items; first rejection={:?}/{:?}",
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_rejection,
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_element_kind
+    );
+    assert_eq!(
+        ui.debug_stats().layout_clean_geometry_solve_skip_rejections,
+        0,
+        "accepted RovingFlex geometry skips should not report rejection noise"
+    );
+
+    let fixed_after = ui
+        .debug_node_bounds(fixed_child)
+        .expect("fixed auto-width child bounds after resize");
+    let grow_after = ui
+        .debug_node_bounds(grow_child)
+        .expect("grow child bounds after resize");
+    assert_eq!(fixed_after, fixed_before);
+    assert!((grow_after.size.width.0 - (grow_before.size.width.0 + expected_delta)).abs() < 0.01);
+}
+
+#[test]
 fn clean_geometry_small_resize_rejects_horizontal_flex_auto_width_child_fractional_max_constraint()
 {
     struct PrecomputeThenResize {

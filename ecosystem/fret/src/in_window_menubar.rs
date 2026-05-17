@@ -61,6 +61,12 @@ fn diag_test_id(prefix: &str, raw: &str) -> Arc<str> {
     Arc::<str>::from(format!("{prefix}-{}", diag_test_id_suffix(raw)))
 }
 
+fn menubar_trigger_layout() -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    layout.flex.shrink = 0.0;
+    layout
+}
+
 fn fnv1a_64(s: &str) -> u64 {
     const OFFSET_BASIS: u64 = 0xcbf29ce484222325;
     const PRIME: u64 = 0x00000100000001B3;
@@ -1129,7 +1135,7 @@ fn render_menu_from_runtime<H: UiHost>(
             };
 
             let props = PressableProps {
-                layout: LayoutStyle::default(),
+                layout: menubar_trigger_layout(),
                 enabled,
                 focusable: true,
                 key_activation: Default::default(),
@@ -1994,6 +2000,17 @@ mod tests {
             has_submenu: false,
             keep_if_empty_submenu: false,
         }
+    }
+
+    #[test]
+    fn menubar_trigger_layout_keeps_trigger_width_out_of_flex_shrink() {
+        let layout = menubar_trigger_layout();
+
+        assert_eq!(layout.size.width, Length::Auto);
+        assert_eq!(
+            layout.flex.shrink, 0.0,
+            "top-level menubar triggers are fixed auto-width items inside the horizontal roving row; their text content owns clipping"
+        );
     }
 
     #[test]

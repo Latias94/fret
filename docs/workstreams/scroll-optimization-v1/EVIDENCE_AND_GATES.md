@@ -696,6 +696,64 @@ App-shell Flex authoring and fixed auto-width chrome proof (2026-05-17):
     remaining root `RovingFlex` item-sizing shape or tackle content `Grid` with an explicit
     wrap-flex/line-break stability story.
 
+RovingFlex trigger authoring closeout (2026-05-17):
+
+- Mechanism anchors:
+  - `crates/fret-ui/src/declarative/tests/layout/layout_engine.rs`
+    (`clean_geometry_small_resize_skips_horizontal_roving_flex_auto_width_no_shrink_child`)
+  - `ecosystem/fret-ui-shadcn/src/context_menu.rs`
+    (`ContextMenu::trigger_region_layout`)
+  - `ecosystem/fret-workspace/src/tab_strip/mod.rs`
+    (`workspace_tab_item_layout`)
+  - `ecosystem/fret/src/in_window_menubar.rs`
+    (`menubar_trigger_layout`)
+- Contract:
+  - `RovingFlex` already uses the same clean horizontal flex proof as `Flex` for the proven
+    single basis-zero grow child plus fixed auto-width no-shrink item shape.
+  - Wrapper components that become the real flex item must preserve the caller's intended item
+    semantics. `ContextMenu` therefore exposes a trigger-region layout override instead of making
+    callers rely on the visible trigger child's layout after wrapping.
+  - Workspace tabs and top-level in-window menubar triggers are fixed auto-width chrome items in
+    horizontal roving rows. They opt out of default flex shrink; inner text/chrome owns clipping or
+    overflow, and the row/scroll surface owns overflow behavior.
+- Focused gates:
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_horizontal_roving_flex_auto_width_no_shrink_child --no-fail-fast`
+    - Result: `1/1` passed.
+  - `cargo test -p fret --lib menubar_trigger_layout_keeps_trigger_width_out_of_flex_shrink`
+    - Result: `1/1` passed.
+  - `cargo test -p fret-workspace --lib workspace_tab_item_layout_keeps_tab_width_out_of_flex_shrink`
+    - Result: `1/1` passed.
+  - `cargo test -p fret-ui-shadcn --lib context_menu_trigger_region_layout_can_forward_outer_flex_item_semantics`
+    - Result: `1/1` passed.
+  - `cargo fmt`
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed.
+- Local blocker evidence:
+  - Bundle:
+    `target/fret-diag/local-next-menubar-rovingflex-trigger-layout-20260517-r1/1779002779663/bundle.schema2.json`
+  - Stats:
+    `target/fret-diag/local-next-menubar-rovingflex-trigger-layout-20260517-r1/worst.stats.json`
+  - Result:
+    - Top frame total/layout/layout-engine-solve/prepaint/paint is `1274/609/269/269/396us` with
+      `4` layout-engine solves.
+    - Guardrails remain stable: `top_view_cache_roots_reused=1`,
+      `top_view_cache_roots_needs_rerender=0`, row replay/store `289/0`, row replay hit rate
+      `100%`, renderer text prepare `65us`.
+    - The root `Stack` per-solve blocker moved from `flex_item_sizing / RovingFlex` to
+      `missing_measured_size`.
+    - Remaining blockers:
+      - content `Semantics`: `unsupported_kind=Grid`, `wrap_nodes=1`, solve `183us`;
+      - root `Stack`: `missing_measured_size`, solve `88us`;
+      - editor `PointerRegion`: `unsupported_kind=Canvas`, solve `4us`;
+      - root `Scroll`: `side_effect_boundary / Scroll`, solve `0us`.
+- Decision:
+  - Close the `RovingFlex` item-sizing blocker as an authoring-policy correction, not a broader
+    mechanism expansion.
+  - Do not fold the next blocker into this patch. The next slice should first classify the root
+    `missing_measured_size` path or separately prove the content `Grid` / wrap-flex line-break
+    stability story.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:

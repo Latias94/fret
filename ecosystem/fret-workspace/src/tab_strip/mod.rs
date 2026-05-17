@@ -100,6 +100,15 @@ use fret_ui_shadcn::facade::{
 
 const WORKSPACE_TAB_DRAG_ACTIVATION_THRESHOLD_PX: f32 = 6.0;
 
+fn workspace_tab_item_layout() -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    layout.size.height = Length::Fill;
+    layout.size.width = Length::Auto;
+    layout.size.min_width = Some(Length::Px(Px(0.0)));
+    layout.flex.shrink = 0.0;
+    layout
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum WorkspaceTabDragActivationDecision {
     Pending,
@@ -729,16 +738,7 @@ impl WorkspaceTabStrip {
                                                 let tab_dirty_test_id = tab_test_id
                                                     .as_ref()
                                                     .map(|id| Arc::<str>::from(format!("{id}.dirty")));
-                                                let tab_layout = {
-                                                    let mut layout = LayoutStyle::default();
-                                                    layout.size.height = Length::Fill;
-                                                    layout.size.width = Length::Auto;
-                                                    // Allow tabs to shrink so long titles don't push later tabs
-                                                    // fully off-screen (ellipsis needs min-width: 0 behavior).
-                                                    layout.size.min_width = Some(Length::Px(Px(0.0)));
-                                                    layout.flex.shrink = 1.0;
-                                                    layout
-                                                };
+                                                let tab_layout = workspace_tab_item_layout();
                                                 let tab_element = cx.pressable_with_id(
                                                     PressableProps {
                                                         layout: tab_layout,
@@ -1845,7 +1845,9 @@ impl WorkspaceTabStrip {
 	                                                    let menu_test_id_base = tab_test_id
 	                                                        .as_ref()
 	                                                        .map(|id| Arc::<str>::from(format!("{id}.menu")));
-	                                                    ContextMenu::from_open(open).into_element(
+	                                                    ContextMenu::from_open(open)
+                                                            .trigger_region_layout(workspace_tab_item_layout())
+                                                            .into_element(
 	                                                        cx,
 	                                                        |_cx| tab_element,
 	                                                        move |_cx| {
@@ -3049,6 +3051,19 @@ impl WorkspaceTabStrip {
 mod tests {
     use super::*;
     use fret_core::{PointerId, Rect, Size};
+
+    #[test]
+    fn workspace_tab_item_layout_keeps_tab_width_out_of_flex_shrink() {
+        let layout = workspace_tab_item_layout();
+
+        assert_eq!(layout.size.width, Length::Auto);
+        assert_eq!(layout.size.height, Length::Fill);
+        assert_eq!(layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(
+            layout.flex.shrink, 0.0,
+            "workspace tabs live in a horizontal scroll row; the text child owns ellipsis, while the tab item itself must not join row shrink distribution"
+        );
+    }
 
     #[test]
     fn workspace_tab_drag_activation_uses_distance_fallback_when_sensor_is_pending() {

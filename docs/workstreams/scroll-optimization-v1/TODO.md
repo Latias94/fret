@@ -285,6 +285,29 @@ Status: Active
   - Decision: stop this patch here. The next slice should target the root `RovingFlex` item-sizing
     shape or the content `Grid`/wrap-flex blocker with separate proof; do not mix those into this
     app-shell authoring and fixed-auto-width contract.
+- [x] Resolve the remaining root `RovingFlex` item-sizing blocker as an authoring-policy issue.
+  - Focused mechanism test showed `RovingFlex` already follows the same horizontal clean-geometry
+    proof as `Flex` for the proven `auto + shrink=0` fixed item plus single basis-zero grow item
+    shape.
+  - Implemented authoring fixes:
+    - `ContextMenu` can now forward an explicit trigger-region layout so wrappers do not erase
+      the outer row's flex item semantics.
+    - `WorkspaceTabStrip` tab items now use an explicit `auto + min-width:0 + shrink=0` item
+      layout; text/chrome inside the tab owns clipping while the scroll row owns overflow.
+    - In-window menubar top-level triggers now opt out of default flex shrink, matching their
+      fixed auto-width trigger semantics inside the horizontal roving row.
+  - Local no-4090 evidence:
+    `target/fret-diag/local-next-menubar-rovingflex-trigger-layout-20260517-r1/1779002779663/bundle.schema2.json`.
+  - Result: the root `Stack` per-solve blocker no longer reports
+    `flex_item_sizing / RovingFlex`; it now reports `missing_measured_size`. Top frame
+    total/layout/solve is `1274/609/269us`, view-cache remains reused, needs-rerender stays `0`,
+    and row replay/store remains `289/0`.
+  - Remaining blockers: content `Semantics` is still `unsupported_kind=Grid` with `wrap_nodes=1`;
+    root `Stack` is now `missing_measured_size`; editor `Canvas` remains small, and root `Scroll`
+    remains a side-effect boundary.
+  - Decision: close the `RovingFlex` blocker here. The next optimization should either classify
+    the root `missing_measured_size` path with better attribution or tackle the content
+    `Grid`/wrap-flex line-break stability story as a separate proof.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 
