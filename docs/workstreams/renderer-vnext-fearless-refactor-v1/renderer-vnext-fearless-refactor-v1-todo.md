@@ -614,6 +614,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - [x] Step 3e: split marker dispatch state and effect-marker routing into a focused helper
       module.
     - [x] Step 3f: split draw-scope stack and load-op consumption into a focused helper module.
+    - [x] Step 3g: move scissor-sized-intermediate eligibility into compile preflight.
   - Landed (step 1): extracted target/budget helpers and their focused tests into
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
   - Landed (step 2): introduced `RenderPlanCompilerCtx` to own structural compiler outputs
@@ -653,6 +654,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/draw_scope.rs` while preserving
     scope-stack clear consumption, pass load-op ordering, target lifetime, and helper module
     visibility within the RenderPlan compiler.
+  - Landed (step 3g): moved scissor-sized-intermediate eligibility into
+    `RenderPlanPreflight` so the main compiler loop no longer scans `EffectMarkerKind` directly
+    before marker dispatch.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
       `compile_for_scene_inner`)
@@ -674,7 +678,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/path_msaa.rs`
       (`try_compile_path_msaa_batch`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/preflight.rs`
-      (`plan_render_targets`)
+      (`RenderPlanPreflight`, `plan_render_targets`, scissor-sized-intermediate eligibility)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
       (`MarkerDispatchState`, `compile_marker`, `into_parts`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/draw_scope.rs`

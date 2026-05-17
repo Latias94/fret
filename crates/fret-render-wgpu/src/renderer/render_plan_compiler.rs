@@ -14,8 +14,8 @@ mod path_msaa;
 mod preflight;
 mod target_budget;
 
+use super::SceneEncoding;
 use super::render_plan_effects as effects;
-use super::{EffectMarkerKind, SceneEncoding};
 use context::RenderPlanCompilerCtx;
 use draw_scope::DrawScope;
 
@@ -47,6 +47,7 @@ pub(super) fn compile_for_scene(
         preflight.postprocess,
         intermediate_budget_bytes,
         preflight.scene_target,
+        preflight.scissor_sized_intermediates,
     )
 }
 
@@ -60,13 +61,10 @@ fn compile_for_scene_inner(
     postprocess: super::DebugPostprocess,
     intermediate_budget_bytes: u64,
     scene_target: super::PlanTarget,
+    scissor_sized_intermediates: bool,
 ) -> super::RenderPlan {
     let draws = &encoding.ordered_draws;
     let markers = &encoding.effect_markers;
-    let scissor_sized_intermediates = !markers.iter().any(|m| match m.kind {
-        EffectMarkerKind::Push { mode, .. } => mode == fret_core::EffectMode::Backdrop,
-        _ => false,
-    });
     let mut ctx = RenderPlanCompilerCtx::new();
     let mut draw_scopes: Vec<DrawScope> = vec![DrawScope {
         target: scene_target,

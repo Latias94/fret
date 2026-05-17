@@ -5,6 +5,7 @@ use crate::renderer::{DebugPostprocess, EffectMarkerKind, PlanTarget, SceneEncod
 pub(super) struct RenderPlanPreflight {
     pub(super) postprocess: DebugPostprocess,
     pub(super) scene_target: PlanTarget,
+    pub(super) scissor_sized_intermediates: bool,
 }
 
 pub(super) fn plan_render_targets(
@@ -16,6 +17,7 @@ pub(super) fn plan_render_targets(
 ) -> RenderPlanPreflight {
     let mut postprocess = postprocess;
     let output_transfer_needed = super::super::output_requires_explicit_srgb_encode(format);
+    let scissor_sized_intermediates = scissor_sized_intermediates_enabled(encoding);
 
     let needs_intermediate =
         backdrop_effect_enabled(encoding, viewport_size, format, intermediate_budget_bytes)
@@ -49,7 +51,18 @@ pub(super) fn plan_render_targets(
     RenderPlanPreflight {
         postprocess,
         scene_target,
+        scissor_sized_intermediates,
     }
+}
+
+fn scissor_sized_intermediates_enabled(encoding: &SceneEncoding) -> bool {
+    !encoding
+        .effect_markers
+        .iter()
+        .any(|marker| match marker.kind {
+            EffectMarkerKind::Push { mode, .. } => mode == fret_core::EffectMode::Backdrop,
+            _ => false,
+        })
 }
 
 fn backdrop_effect_enabled(

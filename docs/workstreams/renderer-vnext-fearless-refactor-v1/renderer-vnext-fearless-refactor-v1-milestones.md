@@ -1041,6 +1041,29 @@ Progress record (RenderPlan compiler draw-scope helper split):
   - `python3 tools/check_layering.py`
   - `git diff --check`
 
+Progress record (RenderPlan compiler preflight eligibility consolidation):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3g; Stage 24 continues)
+- Objective:
+  - Move scissor-sized-intermediate eligibility into compile preflight so the main RenderPlan
+    compiler loop no longer scans `EffectMarkerKind` directly before marker dispatch, without
+    changing target selection, `RenderPlan` IR shape, marker/pass ordering, load-op behavior, or
+    degradation snapshots.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/preflight.rs`
+    (`RenderPlanPreflight`, `plan_render_targets`, scissor-sized-intermediate eligibility)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (`compile_for_scene` passes the preflight result into `compile_for_scene_inner`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:
