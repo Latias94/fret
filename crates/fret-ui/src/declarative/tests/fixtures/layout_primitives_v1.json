@@ -457,6 +457,63 @@
       }
     },
     {
+      "id": "flex-order-affects-layout-position",
+      "scenario": { "kind": "flex_order_affects_layout_position" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "flex-order-b" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 40.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "flex-order-c" },
+            "expected": {
+              "origin": { "x": 40.0, "y": 0.0 },
+              "size": { "width": 20.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "flex-order-a" },
+            "expected": {
+              "origin": { "x": 60.0, "y": 0.0 },
+              "size": { "width": 30.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "flex-order-wrap-measure-uses-visual-order",
+      "scenario": { "kind": "flex_order_wrap_measure_uses_visual_order" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "flex_order.wrap.measured_width",
+            "comparison": "eq",
+            "value": 100.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "flex_order.wrap.measured_height",
+            "comparison": "eq",
+            "value": 20.0,
+            "eps": 0.01
+          }
+        ]
+      }
+    },
+    {
       "id": "visual-vs-hit-bounds-follow-render-transform",
       "scenario": { "kind": "visual_vs_hit_bounds_follow_render_transform" },
       "oracle": {

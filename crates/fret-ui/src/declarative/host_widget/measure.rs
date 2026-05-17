@@ -1,3 +1,4 @@
+use super::super::frame::ordered_flex_children;
 use super::super::frame::{ElementInstance, element_record_for_node, layout_style_for_node};
 use super::super::prelude::*;
 use super::ElementHostWidget;
@@ -143,6 +144,7 @@ fn fallback_measure_flex<H: UiHost>(
     cx: &mut MeasureCx<'_, H>,
     inner_available: LayoutSize<AvailableSpace>,
     props: &FlexProps,
+    ordered_children: &[NodeId],
     gap_main: f32,
     pad_w: f32,
     pad_h: f32,
@@ -152,7 +154,7 @@ fn fallback_measure_flex<H: UiHost>(
     let mut main = 0.0f32;
     let mut cross = 0.0f32;
 
-    for (i, &child) in cx.children.iter().enumerate() {
+    for (i, &child) in ordered_children.iter().enumerate() {
         let size = cx.measure_in(child, child_constraints);
         let (main_delta, cross_delta) = match props.direction {
             fret_core::Axis::Horizontal => (size.width.0.max(0.0), size.height.0.max(0.0)),
@@ -1274,6 +1276,8 @@ impl ElementHostWidget {
             fret_core::Axis::Horizontal => gap_w,
             fret_core::Axis::Vertical => gap_h,
         };
+        let ordered_children = ordered_flex_children(cx.app, window, cx.children);
+        let ordered_children = ordered_children.as_ref();
 
         let root_style = TaffyStyle {
             display: Display::Flex,
@@ -1353,12 +1357,20 @@ impl ElementHostWidget {
             Ok(root) => root,
             Err(err) => {
                 warn_taffy_error_once("new_leaf(root)", err);
-                return fallback_measure_flex(cx, inner_available, &props, gap_main, pad_w, pad_h);
+                return fallback_measure_flex(
+                    cx,
+                    inner_available,
+                    &props,
+                    ordered_children,
+                    gap_main,
+                    pad_w,
+                    pad_h,
+                );
             }
         };
 
-        let mut child_nodes = Vec::with_capacity(cx.children.len());
-        for &child in cx.children {
+        let mut child_nodes = Vec::with_capacity(ordered_children.len());
+        for &child in ordered_children {
             let layout_style = layout_style_for_node(cx.app, window, child);
 
             let spacer_min = element_record_for_node(cx.app, window, child).and_then(|r| {
@@ -1516,6 +1528,7 @@ impl ElementHostWidget {
                         cx,
                         inner_available,
                         &props,
+                        ordered_children,
                         gap_main,
                         pad_w,
                         pad_h,
@@ -1526,7 +1539,15 @@ impl ElementHostWidget {
         }
         if let Err(err) = taffy.set_children(root, &child_nodes) {
             warn_taffy_error_once("set_children(root)", err);
-            return fallback_measure_flex(cx, inner_available, &props, gap_main, pad_w, pad_h);
+            return fallback_measure_flex(
+                cx,
+                inner_available,
+                &props,
+                ordered_children,
+                gap_main,
+                pad_w,
+                pad_h,
+            );
         }
 
         let mut measure_cache: std::collections::HashMap<
@@ -1573,14 +1594,30 @@ impl ElementHostWidget {
             })
         {
             warn_taffy_error_once("compute_layout_with_measure(root)", err);
-            return fallback_measure_flex(cx, inner_available, &props, gap_main, pad_w, pad_h);
+            return fallback_measure_flex(
+                cx,
+                inner_available,
+                &props,
+                ordered_children,
+                gap_main,
+                pad_w,
+                pad_h,
+            );
         }
 
         let root_layout = match taffy.layout(root) {
             Ok(layout) => layout,
             Err(err) => {
                 warn_taffy_error_once("layout(root)", err);
-                return fallback_measure_flex(cx, inner_available, &props, gap_main, pad_w, pad_h);
+                return fallback_measure_flex(
+                    cx,
+                    inner_available,
+                    &props,
+                    ordered_children,
+                    gap_main,
+                    pad_w,
+                    pad_h,
+                );
             }
         };
         let inner_size = Size::new(

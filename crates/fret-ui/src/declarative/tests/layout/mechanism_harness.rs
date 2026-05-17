@@ -31,6 +31,8 @@ enum LayoutPrimitiveScenario {
     TransparentWrapperPreservesFill,
     ChromeContainerStretchKeepsOuterBox,
     GridFrAutoTrackNegotiation,
+    FlexOrderAffectsLayoutPosition,
+    FlexOrderWrapMeasureUsesVisualOrder,
     VisualVsHitBoundsFollowRenderTransform,
 }
 
@@ -84,7 +86,7 @@ fn observe_case(
     }
 
     let post_layout_scalar_metrics =
-        observe_post_layout_scalar_metrics(&ui, &services, root, &case.scenario)?;
+        observe_post_layout_scalar_metrics(&mut ui, &mut app, &mut services, root, &case.scenario)?;
     let snapshot = ui
         .semantics_snapshot()
         .cloned()
@@ -222,8 +224,9 @@ fn observe_pre_layout_scalar_metrics(
 }
 
 fn observe_post_layout_scalar_metrics(
-    ui: &UiTree<TestHost>,
-    services: &LayoutPrimitiveServices,
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut LayoutPrimitiveServices,
     root: NodeId,
     scenario: &LayoutPrimitiveScenario,
 ) -> Result<Vec<(&'static str, f32)>, ScenarioObserveError> {
@@ -309,6 +312,22 @@ fn observe_post_layout_scalar_metrics(
                     "text_measure_paint.overflow_scale.overflow_same",
                     bool_metric(measured.overflow == prepared.overflow),
                 ),
+            ])
+        }
+        LayoutPrimitiveScenario::FlexOrderWrapMeasureUsesVisualOrder => {
+            let flex = child_at(ui, root, 0, "flex-order wrap row")?;
+            let constraints = crate::layout_constraints::LayoutConstraints::new(
+                crate::layout_constraints::LayoutSize::new(None, None),
+                crate::layout_constraints::LayoutSize::new(
+                    crate::layout_constraints::AvailableSpace::Definite(Px(100.0)),
+                    crate::layout_constraints::AvailableSpace::MaxContent,
+                ),
+            );
+            let measured = ui.measure_in(app, &mut *services, flex, constraints, 1.0);
+
+            Ok(vec![
+                ("flex_order.wrap.measured_width", measured.width.0),
+                ("flex_order.wrap.measured_height", measured.height.0),
             ])
         }
         _ => Ok(Vec::new()),
@@ -836,6 +855,79 @@ fn build_scenario(
                         .test_id("grid-auto-cell"),
                 ]
             })]
+        }
+        LayoutPrimitiveScenario::FlexOrderAffectsLayoutPosition => {
+            let row = crate::element::FlexProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Px(Px(100.0)),
+                        height: Length::Px(Px(10.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                direction: fret_core::Axis::Horizontal,
+                align: CrossAlign::Start,
+                ..Default::default()
+            };
+
+            let child = |order: i32, width: f32| {
+                let mut props = crate::element::ContainerProps::default();
+                props.layout.flex.order = order;
+                props.layout.size.width = Length::Px(Px(width));
+                props.layout.size.height = Length::Px(Px(10.0));
+                props
+            };
+
+            vec![cx.flex(row, |cx| {
+                vec![
+                    cx.container(child(2, 30.0), |_cx| Vec::new())
+                        .test_id("flex-order-a"),
+                    cx.container(child(0, 40.0), |_cx| Vec::new())
+                        .test_id("flex-order-b"),
+                    cx.container(child(1, 20.0), |_cx| Vec::new())
+                        .test_id("flex-order-c"),
+                ]
+            })]
+        }
+        LayoutPrimitiveScenario::FlexOrderWrapMeasureUsesVisualOrder => {
+            let row = crate::element::FlexProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Px(Px(100.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                direction: fret_core::Axis::Horizontal,
+                align: CrossAlign::Start,
+                wrap: true,
+                ..Default::default()
+            };
+
+            let child = |order: i32, width: f32| {
+                let mut props = crate::element::ContainerProps::default();
+                props.layout.flex.order = order;
+                props.layout.size.width = Length::Px(Px(width));
+                props.layout.size.height = Length::Px(Px(10.0));
+                props
+            };
+
+            vec![
+                cx.flex(row, |cx| {
+                    vec![
+                        cx.container(child(0, 60.0), |_cx| Vec::new())
+                            .test_id("flex-order-wrap-a"),
+                        cx.container(child(2, 60.0), |_cx| Vec::new())
+                            .test_id("flex-order-wrap-b"),
+                        cx.container(child(1, 40.0), |_cx| Vec::new())
+                            .test_id("flex-order-wrap-c"),
+                        cx.container(child(3, 40.0), |_cx| Vec::new())
+                            .test_id("flex-order-wrap-d"),
+                    ]
+                })
+                .test_id("flex-order-wrap-row"),
+            ]
         }
         LayoutPrimitiveScenario::VisualVsHitBoundsFollowRenderTransform => {
             let transform = Transform2D::translation(Point::new(Px(40.0), Px(0.0)));
