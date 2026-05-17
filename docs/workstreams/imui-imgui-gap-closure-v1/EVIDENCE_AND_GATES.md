@@ -580,6 +580,10 @@ Run evidence:
   helper backed by `text_list_row_label(...)` instead of bare `cx.text(...)`. Gate: `cargo nextest
   run -p fret-ui-gallery --test ui_authoring_surface_internal_previews
   gallery_overlay_scroll_rows_use_list_row_roles --no-fail-fast`.
+- 2026-05-17: UI Gallery's HoverCard and Popover body copy now route through
+  `doc_layout::paragraph_text(...)` instead of bare `cx.text(...)`. Gate: `cargo nextest run -p
+  fret-ui-gallery --test ui_authoring_surface_internal_previews
+  gallery_overlay_body_copy_uses_paragraph_roles --no-fail-fast`.
 - 2026-05-17: UI Gallery's chrome torture text-input/textarea labels now route through
   `doc_layout::control_label_text(...)`, backed by shared
   `fret-ui-kit::declarative::text::text_control_label(...)`, instead of bare `cx.text(...)`. Gate:
@@ -1370,6 +1374,15 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 
 - `cargo fmt -p fret-ui-gallery` passed.
 - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_overlay_scroll_rows_use_list_row_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery overlay body prose slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_overlay_body_copy_uses_paragraph_roles --no-fail-fast` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.

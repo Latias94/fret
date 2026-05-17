@@ -1223,6 +1223,31 @@ fn gallery_overlay_scroll_rows_use_list_row_roles() {
 }
 
 #[test]
+fn gallery_overlay_body_copy_uses_paragraph_roles() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/gallery/overlays/overlay/widgets.rs",
+        &[
+            "doc_layout::paragraph_text(cx,\"HoverCardcontent(overlay-root)\")",
+            "doc_layout::paragraph_text(cx,\"Movepointerfromtriggertocontent.\")",
+            "doc_layout::paragraph_text(cx,\"Popovercontent(placement+clamp)\")",
+            "doc_layout::paragraph_text(cx,\"Wheel-scrolltheviewportwhileopen.\")",
+        ],
+    );
+
+    for forbidden in [
+        "cx.text(\"HoverCardcontent(overlay-root)\")",
+        "cx.text(\"Movepointerfromtriggertocontent.\")",
+        "cx.text(\"Popovercontent(placement+clamp)\")",
+        "cx.text(\"Wheel-scrolltheviewportwhileopen.\")",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "overlay body copy reintroduced bare paragraph text: {forbidden}"
+        );
+    }
+}
+
+#[test]
 fn page_chrome_torture_uses_control_label_roles() {
     let doc_layout = assert_normalized_markers_present(
         "src/ui/doc_layout.rs",

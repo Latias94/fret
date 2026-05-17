@@ -368,6 +368,8 @@ Exit criteria:
   route through `control_readout_text(...)` instead of bare `cx.text(...)`.
   2026-05-17 gallery overlay scroll-row text result: dialog/sheet/portal scroll filler rows now
   route through `text_list_row_label(...)` instead of bare `cx.text(...)`.
+  2026-05-17 gallery overlay body prose result: HoverCard and Popover body copy now route
+  through `paragraph_text(...)` instead of bare `cx.text(...)`.
   2026-05-17 gallery chrome torture control-label result: fixed text-input/textarea labels now
   route through `control_label_text(...)`, backed by shared `text_control_label(...)`, instead of
   bare `cx.text(...)`.

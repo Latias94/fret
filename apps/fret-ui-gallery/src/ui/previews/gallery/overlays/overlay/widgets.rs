@@ -256,8 +256,8 @@ pub(super) fn hover_card(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     use std::time::Duration;
 
     let hover_card_content = shadcn::HoverCardContent::new(vec![
-        cx.text("HoverCard content (overlay-root)"),
-        cx.text("Move pointer from trigger to content."),
+        doc_layout::paragraph_text(cx, "HoverCard content (overlay-root)"),
+        doc_layout::paragraph_text(cx, "Move pointer from trigger to content."),
     ])
     .test_id("ui-gallery-hovercard-content")
     .into_element(cx);
@@ -620,8 +620,8 @@ pub(super) fn portal_geometry(
                     .into_element(cx);
 
                 shadcn::PopoverContent::new(vec![
-                    cx.text("Popover content (placement + clamp)"),
-                    cx.text("Wheel-scroll the viewport while open."),
+                    doc_layout::paragraph_text(cx, "Popover content (placement + clamp)"),
+                    doc_layout::paragraph_text(cx, "Wheel-scroll the viewport while open."),
                     close,
                 ])
                 .refine_layout(LayoutRefinement::default().w_px(Px(360.0)).h_px(Px(220.0)))
