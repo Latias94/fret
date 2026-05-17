@@ -1020,6 +1020,18 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs"),
+            required=[
+                "row.layout.size.height = fixed_height.map_or(Length::Auto, Length::Px);",
+                "if fixed_height.is_some()",
+                "row.layout.overflow = Overflow::Clip;",
+                "fn fixed_virtual_list_rows_clip_content_to_row_height",
+                "fn known_virtual_list_rows_clip_content_to_known_row_height",
+                "fn measured_virtual_list_rows_keep_content_overflow_visible_for_measurement",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-kit/src/declarative/text.rs"),
             required=[
                 "pub fn text_table_cell",
@@ -5230,6 +5242,15 @@ def main() -> None:
                 "wrap: TextWrap::None,",
                 "overflow: TextOverflow::Ellipsis,",
             ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/composition/layout_collections.rs"),
+            required=[
+                "fn virtual_list_fixed_rows_clip_oversized_row_content",
+                "debug_node_clips_hit_test(row_node)",
+                "fixed virtual-list row should clip oversized row contents",
+            ],
+            forbidden=[],
         ),
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/composites/inspector_panel.rs"),

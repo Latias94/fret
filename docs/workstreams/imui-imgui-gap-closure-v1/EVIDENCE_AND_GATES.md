@@ -1387,6 +1387,16 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
 - `git diff --check` passed.
 
+2026-05-18 IMUI virtual-list fixed-row clip slice:
+
+- `cargo fmt --package fret-imui --package fret-ui-kit` passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib fixed_virtual_list_rows_clip_content_to_row_height known_virtual_list_rows_clip_content_to_known_row_height measured_virtual_list_rows_keep_content_overflow_visible_for_measurement --no-fail-fast` passed.
+- `cargo nextest run -p fret-imui virtual_list_fixed_rows_clip_oversized_row_content --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
 2026-05-17 canvas datagrid stress proof text-role slice:
 
 - `cargo fmt -p fret-examples` passed.

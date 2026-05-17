@@ -531,6 +531,11 @@ Readiness order for the next locally testable review slices:
    through `control_readout_text(...)`, and custom pointer-region labels through
    `button_label_text(...)`. This keeps resize-sensitive editor proof chrome on the shared
    role vocabulary without adding a public `TextRole` enum or moving policy into `fret-imui`.
+   2026-05-18 IMUI virtual-list fixed-row clip follow-up: fixed/known-height IMUI virtual-list
+   rows now set `Overflow::Clip` on the row container, while measured rows keep visible overflow for
+   runtime measurement. This closes the container side of the text-resize failure mode where a
+   caller accidentally submits oversized/wrapping content into a fixed row; the fix stays in
+   `fret-ui-kit::imui` and does not add a mutable list runtime to `fret-imui`.
    2026-05-17 code-editor IME gate button-label follow-up: code-editor MVP IME gate actions now
    route their custom pointer-region labels through `button_label_text(...)`, and both the gallery
    source test and IMUI workstream source gate forbid those fixed action labels from returning to

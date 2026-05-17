@@ -166,6 +166,10 @@
       "command": "cargo nextest run -p fret-ui-kit --features imui --lib imui_text_item_is_single_line_and_shrinkable imui_text_wrapped_is_explicit_wrapping_text compact_paragraph_text_uses_wrapping_fill_width_layout bullet_text_uses_shared_compact_paragraph_role --no-fail-fast"
     },
     {
+      "name": "imui virtual-list fixed-row clipping semantics",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --lib fixed_virtual_list_rows_clip_content_to_row_height known_virtual_list_rows_clip_content_to_known_row_height measured_virtual_list_rows_keep_content_overflow_visible_for_measurement --no-fail-fast && cargo nextest run -p fret-imui virtual_list_fixed_rows_clip_oversized_row_content --no-fail-fast"
+    },
+    {
       "name": "imui control chrome fill text semantics",
       "command": "cargo nextest run -p fret-ui-kit --features imui --lib control_label_text_uses_fill_width_single_line_truncation imui_fill_text_is_single_line_and_shrinkable imui_control_text_uses_shared_button_label_role --no-fail-fast"
     },
@@ -599,6 +603,7 @@
     "ecosystem/fret-imui/src/tests/interaction_shortcuts/mod.rs",
     "ecosystem/fret-imui/src/tests/label_identity/mod.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs",
     "ecosystem/fret-ui-kit/tests/imui_table_smoke.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
     "ecosystem/fret-imui/src/tests/floating/mod.rs",
