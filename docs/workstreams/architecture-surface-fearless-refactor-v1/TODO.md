@@ -1,6 +1,6 @@
 # Architecture Surface Fearless Refactor v1 — TODO
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-17
 
 ## M0 — Scope And Evidence Freeze
@@ -97,8 +97,8 @@ Last updated: 2026-05-17
 
 ## M7 — Closeout
 
-- [ ] ASF-080 [owner=planner] [deps=ASF-020,ASF-030,ASF-040,ASF-050,ASF-060,ASF-070] [scope=docs/workstreams/architecture-surface-fearless-refactor-v1]
+- [x] ASF-080 [owner=planner] [deps=ASF-020,ASF-030,ASF-040,ASF-050,ASF-060,ASF-070] [scope=docs/workstreams/architecture-surface-fearless-refactor-v1]
   Goal: Close the lane or split remaining work into narrower follow-ons.
   Validation: `EVIDENCE_AND_GATES.md` contains final gate results and `WORKSTREAM.json` status is updated.
-  Evidence: closeout audit or final status note.
-  Handoff: Remaining open work must be owned by a narrower lane.
+  Evidence: `docs/workstreams/architecture-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-05-17.md`.
+  Handoff: Completed on 2026-05-17; the lane is closed. Remaining shadcn menu/select policy work is owned by `docs/workstreams/shadcn-menu-select-policy-followon-v1/`; future renderer semantic/capability work should open a renderer-specific follow-on.

@@ -1,6 +1,6 @@
 # Architecture Surface Fearless Refactor v1
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-17
 
 ## Why This Lane Exists
@@ -159,3 +159,8 @@ This lane can close when:
   extraction is explicitly rejected with evidence,
 - the renderer facade decision is recorded and implemented or split into a renderer-specific lane,
 - `docs/adr/IMPLEMENTATION_ALIGNMENT.md` and relevant docs reflect shipped behavior.
+
+## Closeout
+
+Closed on 2026-05-17. Closeout details and residual follow-ons are recorded in
+`docs/workstreams/architecture-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-05-17.md`.

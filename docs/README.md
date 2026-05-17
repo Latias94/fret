@@ -83,7 +83,7 @@ Unless a document says otherwise:
 - Examples redesign (Flutter-like ladder + cookbook + labs + gates): `docs/workstreams/example-suite-fearless-refactor-v1/design.md`
 - Open source readiness (README + examples + defaults polish): [docs/workstreams/open-source-readiness-fearless-refactor-v1/DESIGN.md](./workstreams/open-source-readiness-fearless-refactor-v1/DESIGN.md)
 - Framework modularity (Bevy-like consumption profiles): `docs/workstreams/framework-modularity-fearless-refactor-v1/design.md`
-- Architecture surface fearless refactor (active lane for narrowing `fret` / `fret-bootstrap`
+- Architecture surface fearless refactor (closed lane for narrowing `fret` / `fret-bootstrap`
   feature boundaries, ecosystem taxonomy, menu/select policy ownership, and renderer facade
   ownership): `docs/workstreams/architecture-surface-fearless-refactor-v1/DESIGN.md`
 - Shell composition fearless refactor (window bootstrap vs page shell vs workspace shell ownership): `docs/workstreams/shell-composition-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/shell-composition-fearless-refactor-v1/TODO.md`, and `docs/workstreams/shell-composition-fearless-refactor-v1/MILESTONES.md`

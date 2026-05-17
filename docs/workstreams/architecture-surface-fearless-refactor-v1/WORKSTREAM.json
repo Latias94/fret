@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slug": "architecture-surface-fearless-refactor-v1",
   "title": "Architecture Surface Fearless Refactor v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-05-17",
   "scope_kind": "execution",
   "problem": "Fret's hard layering gates pass, but public app-authoring, bootstrap, ecosystem, and renderer facade surfaces have grown too wide and sometimes imply backend-free consumption while pulling backend stacks.",
@@ -26,6 +26,10 @@
     {
       "role": "handoff",
       "path": "docs/workstreams/architecture-surface-fearless-refactor-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/architecture-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-05-17.md"
     }
   ],
   "gates": [
@@ -180,6 +184,10 @@
     {
       "kind": "asf-070",
       "path": "docs/workstreams/renderer-modularity-fearless-refactor-v1/CLOSEOUT_AUDIT.md"
+    },
+    {
+      "kind": "asf-080",
+      "path": "docs/workstreams/architecture-surface-fearless-refactor-v1/CLOSEOUT_AUDIT_2026-05-17.md"
     }
   ],
   "adr_refs": [
@@ -191,7 +199,7 @@
     "docs/adr/0154-ecosystem-crate-taxonomy-glue-and-ui-kit-split-v1.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue with ASF-080 closeout next. Remaining shadcn menu/select policy cleanup is split to docs/workstreams/shadcn-menu-select-policy-followon-v1. The renderer facade decision is complete: keep fret-render as the curated default facade and open a renderer-specific follow-on for future semantic/capability goals. Delete redundant compatibility surfaces when first-party callers can be migrated; do not preserve old interfaces by default."
+    "default_action": "closed",
+    "notes": "This lane is closed. Continue menu/select cleanup in docs/workstreams/shadcn-menu-select-policy-followon-v1. Future renderer semantic/capability goals should open a renderer-specific follow-on rather than reopening this architecture-surface lane."
   }
 }

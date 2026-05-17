@@ -1,6 +1,6 @@
 # Architecture Surface Fearless Refactor v1 — Milestones
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-17
 
 ## M0 — Scope And Evidence Freeze
@@ -148,3 +148,10 @@ Exit criteria:
 - Final gates are recorded in `EVIDENCE_AND_GATES.md`.
 - Remaining tasks are completed, explicitly deferred, or split into narrower workstreams.
 - `WORKSTREAM.json` status reflects the lane state.
+
+Status:
+
+- Complete through ASF-080 on 2026-05-17. The lane is closed with all architecture-surface tasks
+  complete. Remaining shadcn menu/select policy cleanup is owned by
+  `docs/workstreams/shadcn-menu-select-policy-followon-v1/`; renderer semantic/capability goals
+  should open a renderer-specific follow-on.

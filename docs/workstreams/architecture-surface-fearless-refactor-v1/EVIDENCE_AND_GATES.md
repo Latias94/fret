@@ -1,6 +1,6 @@
 # Architecture Surface Fearless Refactor v1 — Evidence And Gates
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-17
 
 ## Baseline Observations
@@ -391,6 +391,27 @@ What this proves:
   capability work should open a renderer-specific follow-on.
 - Validation results are recorded in
   `docs/workstreams/architecture-surface-fearless-refactor-v1/JOURNAL/2026-05-17-asf-070.md`.
+
+## Closeout Gates
+
+2026-05-17 result for ASF-080:
+
+- All task-specific gates for ASF-020 through ASF-070 are recorded above or in the referenced
+  journal notes.
+- The remaining shadcn menu/select behavior work is split to
+  `docs/workstreams/shadcn-menu-select-policy-followon-v1/`.
+- No remaining architecture-surface task is left open in this lane.
+
+Final closeout commands:
+
+```bash
+python tools/check_layering.py
+python tools/check_consumption_profiles.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+All four commands passed on 2026-05-17 for ASF-080.
 
 ## Evidence Anchors
 

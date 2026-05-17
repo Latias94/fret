@@ -1,6 +1,6 @@
 # Architecture Surface Fearless Refactor v1 — Handoff
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-17
 
 ## Current State
@@ -23,15 +23,14 @@ aliases, and wrappers may be deleted when first-party callers are migrated.
 
 ## Active Task
 
-- Task ID: ASF-080
-- Owner: unassigned
+- Task ID: none
+- Owner: none
 - Files:
   - `docs/workstreams/architecture-surface-fearless-refactor-v1`
   - `docs/workstreams/README.md`
   - `docs/todo-tracker.md`
 - Validation:
-  - final evidence audit
-  - closeout note or narrower follow-on split
+  - closeout complete
   - workstream catalog check
 
 ## Decisions Since Last Update
@@ -97,6 +96,7 @@ aliases, and wrappers may be deleted when first-party callers are migrated.
   `crates/fret-render` as a curated default facade with explicit v1 buckets, compile-fail guards for
   backend-only diagnostics, and host-provided GPU topology coverage. Future renderer semantic or
   capability work belongs in a renderer-specific follow-on, not in this architecture-surface lane.
+- ASF-080 closed this lane. No remaining architecture-surface task is open here.
 
 ## Blockers
 
@@ -104,6 +104,7 @@ aliases, and wrappers may be deleted when first-party callers are migrated.
 
 ## Next Recommended Action
 
-- Start ASF-080: close this architecture-surface lane or split any remaining work into narrower
-  follow-ons. Do not reopen `renderer-modularity-fearless-refactor-v1` or
-  `menu-surfaces-alignment-v1`; both are historical/closed for their original scopes.
+- Continue with a narrower active lane:
+  `docs/workstreams/shadcn-menu-select-policy-followon-v1/` is the next recorded follow-on for
+  menu/select policy cleanup. Future renderer semantic/capability work should open a separate
+  renderer-specific follow-on instead of reopening this lane.
