@@ -142,8 +142,8 @@ pub(in crate::ui) fn preview_view_cache(
 
     let header = ui::v_flex(|cx| {
             vec![
-                cx.text("Goal: validate cached-subtree correctness under real interaction."),
-                cx.text(format!(
+                doc_layout::paragraph_text(cx, "Goal: validate cached-subtree correctness under real interaction."),
+                doc_layout::control_readout_text(cx, format!(
                     "Current settings: view_cache={} shell_cache={} content_cache={} inner_cache={} continuous={}",
                     enabled as u8,
                     cache_shell as u8,

@@ -227,10 +227,10 @@ pub(in crate::ui) fn preview_table_retained_torture(
 
     let header = ui::v_flex(|cx| {
             vec![
-                cx.text(
+                doc_layout::paragraph_text(cx,
                     "Goal: baseline harness for `fret-ui-kit::declarative::table` running on the virt-003 retained host path.",
                 ),
-                cx.text(
+                doc_layout::paragraph_text(cx,
                     "Use scripted sort/selection + scroll to validate reconcile deltas under view-cache reuse (no notify-based dirty views).",
                 ),
                 doc_layout::control_readout_text(cx, sorting_text.clone()).attach_semantics(

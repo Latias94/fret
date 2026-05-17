@@ -354,6 +354,10 @@ Exit criteria:
   routes fixed custom row labels through `text_list_row_label(...)`, detail/editing readouts
   through `control_readout_text(...)`, and the UI Kit list torture custom row renderer through the
   shared list-row label role.
+  2026-05-17 gallery harness header text result: retained-table, hit-test, UI Kit list,
+  virtual-list, and view-cache harness headers now route explanatory copy through
+  `paragraph_text(...)` and mode/status lines through `control_readout_text(...)` instead of bare
+  `cx.text(...)`.
   2026-05-17 gallery view-cache list text result: the UI Gallery View Cache torture page now routes
   cached inner virtual-list row labels through `text_list_row_label(...)`.
   2026-05-17 gallery view-cache control-label result: fixed switch labels now route through

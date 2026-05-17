@@ -190,18 +190,18 @@ pub(in crate::ui) fn preview_virtual_list_torture(
 
     let header = ui::v_flex(|cx| {
             let mut out = vec![
-                cx.text("Goal: deterministic virtualization torture surface (10k rows + scroll-to-item + inline edit)."),
-                cx.text(if retained_host {
+                doc_layout::paragraph_text(cx, "Goal: deterministic virtualization torture surface (10k rows + scroll-to-item + inline edit)."),
+                doc_layout::control_readout_text(cx, if retained_host {
                     "Mode: retained host (virt-003 prototype; item subtrees can reattach without rerendering the parent cache root)."
                 } else {
                     "Mode: render-driven (baseline; visible items update requires rerender when the window changes)."
                 }),
-                cx.text(if known_heights {
+                doc_layout::control_readout_text(cx, if known_heights {
                     "Mode: known row heights (no measure pass; better for perf baselines)."
                 } else {
                     "Mode: measured row heights (baseline)."
                 }),
-                cx.text(if keep_alive > 0 {
+                doc_layout::control_readout_text(cx, if keep_alive > 0 {
                     format!("Mode: keep-alive enabled (budget={keep_alive}).")
                 } else {
                     "Mode: keep-alive disabled (budget=0).".to_string()
@@ -209,7 +209,7 @@ pub(in crate::ui) fn preview_virtual_list_torture(
             ];
 
             if minimal_harness {
-                out.push(cx.text("Harness: minimal (no focusable controls; reduces RAF/notify noise in perf bundles)."));
+                out.push(doc_layout::paragraph_text(cx, "Harness: minimal (no focusable controls; reduces RAF/notify noise in perf bundles)."));
             } else {
                 if let Some(controls) = controls {
                     out.push(controls);

@@ -550,6 +550,15 @@ Run evidence:
   --test ui_authoring_surface_internal_previews
   harness_virtual_list_torture_uses_fixed_row_text_roles
   harness_ui_kit_list_torture_uses_fixed_row_text_roles --no-fail-fast`.
+- 2026-05-17: UI Gallery's retained-table, hit-test, UI Kit list, virtual-list, and view-cache
+  harness headers now route explanatory copy through `doc_layout::paragraph_text(...)` and
+  mode/status lines through `doc_layout::control_readout_text(...)` instead of bare `cx.text(...)`.
+  Gates: `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews
+  gallery_table_retained_torture_uses_structured_table_debug_ids
+  harness_hit_test_torture_uses_header_text_roles
+  harness_virtual_list_torture_uses_fixed_row_text_roles
+  harness_ui_kit_list_torture_uses_fixed_row_text_roles
+  harness_view_cache_uses_fixed_row_text_roles --no-fail-fast`.
 - 2026-05-17: UI Gallery's View Cache torture page now routes cached inner virtual-list row labels
   through a helper backed by `text_list_row_label(...)`. Gate: `cargo nextest run -p
   fret-ui-gallery --test ui_authoring_surface_internal_previews
@@ -1307,6 +1316,15 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 
 - `cargo fmt -p fret-ui-gallery` passed.
 - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews harness_virtual_list_torture_uses_fixed_row_text_roles harness_ui_kit_list_torture_uses_fixed_row_text_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 gallery harness header text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_table_retained_torture_uses_structured_table_debug_ids harness_hit_test_torture_uses_header_text_roles harness_virtual_list_torture_uses_fixed_row_text_roles harness_ui_kit_list_torture_uses_fixed_row_text_roles harness_view_cache_uses_fixed_row_text_roles --no-fail-fast` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.

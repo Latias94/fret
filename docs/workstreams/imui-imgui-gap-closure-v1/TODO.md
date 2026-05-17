@@ -380,6 +380,10 @@ Readiness order for the next locally testable review slices:
    labels now use `text_list_row_label(...)`, row detail/editing readouts use
    `control_readout_text(...)`, and the UI Kit list torture custom row renderer also routes item
    labels through `text_list_row_label(...)`.
+   2026-05-17 gallery harness header text follow-up: retained-table, hit-test, UI Kit list,
+   virtual-list, and view-cache harness headers now route explanatory copy through
+   `paragraph_text(...)` and mode/status lines through `control_readout_text(...)` instead of bare
+   `cx.text(...)`.
    2026-05-17 gallery view-cache list text follow-up: the UI Gallery View Cache torture page now
    routes its cached inner virtual-list row labels through `text_list_row_label(...)`.
    2026-05-17 gallery view-cache control-label follow-up: fixed switch labels now route through

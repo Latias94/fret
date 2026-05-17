@@ -215,6 +215,29 @@ fn harness_preview_shells_prefer_ui_cx_on_the_internal_gallery_surface() {
 }
 
 #[test]
+fn harness_hit_test_torture_uses_header_text_roles() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/pages/harness/hit_test_torture.rs",
+        &[
+            "doc_layout::paragraph_text(cx,\"Goal:makehit-testameasurablehotspotsobounds-treevsfallbacktraversalA/Bismeaningful.\")",
+            "doc_layout::control_readout_text(cx,format!(\"Shape:{stripes}stripes({}pxeach)plus{noise}1x1noiseregions.\",",
+            "doc_layout::control_readout_text(cx,\"Env:FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES/FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE\")",
+        ],
+    );
+
+    for forbidden in [
+        "cx.text(\"Goal:makehit-testameasurablehotspotsobounds-treevsfallbacktraversalA/Bismeaningful.\")",
+        "cx.text(format!(\"Shape:{stripes}stripes({}pxeach)plus{noise}1x1noiseregions.\",",
+        "cx.text(\"Env:FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES/FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE\")",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "hit_test_torture reintroduced bare header text: {forbidden}"
+        );
+    }
+}
+
+#[test]
 fn wrap_preview_page_callers_land_the_typed_preview_shell_explicitly() {
     let normalized = assert_normalized_markers_present(
         "src/ui/doc_layout.rs",
@@ -863,6 +886,8 @@ fn gallery_table_retained_torture_uses_structured_table_debug_ids() {
         &[
             "fnretained_table_cell_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
             "fret_ui_kit::declarative::text::text_table_cell(cx,text)",
+            "doc_layout::paragraph_text(cx,\"Goal:baselineharnessfor`fret-ui-kit::declarative::table`runningonthevirt-003retainedhostpath.\")",
+            "doc_layout::paragraph_text(cx,\"Usescriptedsort/selection+scrolltovalidatereconciledeltasunderview-cachereuse(nonotify-baseddirtyviews).\")",
             "doc_layout::control_readout_text(cx,\"Keeppinnedrows\")",
             "doc_layout::control_readout_text(cx,sorting_text.clone()).attach_semantics(",
             "retained_table_cell_text(cx,row.name.clone())",
@@ -882,6 +907,8 @@ fn gallery_table_retained_torture_uses_structured_table_debug_ids() {
         "table_retained_torture should not fall back to an empty default diagnostics contract"
     );
     for forbidden in [
+        "cx.text(\"Goal:baselineharnessfor`fret-ui-kit::declarative::table`runningonthevirt-003retainedhostpath.\")",
+        "cx.text(\"Usescriptedsort/selection+scrolltovalidatereconciledeltasunderview-cachereuse(nonotify-baseddirtyviews).\")",
         "cx.text(\"Keeppinnedrows\")",
         "cx.text(sorting_text.as_ref()).attach_semantics(",
         "cx.text(row_pinning_text.as_ref()).attach_semantics(",
@@ -1011,6 +1038,11 @@ fn harness_virtual_list_torture_uses_fixed_row_text_roles() {
             "fret_ui_kit::declarative::text::text_list_row_label(cx,text)",
             "fnvirtual_list_row_detail_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
             "doc_layout::control_readout_text(cx,text)",
+            "doc_layout::paragraph_text(cx,\"Goal:deterministicvirtualizationtorturesurface(10krows+scroll-to-item+inlineedit).\")",
+            "doc_layout::control_readout_text(cx,ifretained_host{",
+            "doc_layout::control_readout_text(cx,ifknown_heights{",
+            "doc_layout::control_readout_text(cx,ifkeep_alive>0{",
+            "doc_layout::paragraph_text(cx,\"Harness:minimal(nofocusablecontrols;reducesRAF/notifynoiseinperfbundles).\")",
             "virtual_list_row_detail_text(cx,format!(\"Editingrow:{row}\"))",
             "virtual_list_row_detail_text(cx,\"Editingrow:<none>\")",
             "virtual_list_row_label_text(cx,format!(\"Row{index}\"))",
@@ -1023,6 +1055,11 @@ fn harness_virtual_list_torture_uses_fixed_row_text_roles() {
         "cx.text(\"Editingrow:<none>\")",
         "cx.text(format!(\"Row{index}\"))",
         "cx.text(format!(\"Details:index={index}seed={}repeat={}\"",
+        "cx.text(\"Goal:deterministicvirtualizationtorturesurface(10krows+scroll-to-item+inlineedit).\")",
+        "cx.text(ifretained_host{",
+        "cx.text(ifknown_heights{",
+        "cx.text(ifkeep_alive>0{",
+        "cx.text(\"Harness:minimal(nofocusablecontrols;reducesRAF/notifynoiseinperfbundles).\")",
     ] {
         assert!(
             !normalized.contains(forbidden),
@@ -1038,14 +1075,22 @@ fn harness_ui_kit_list_torture_uses_fixed_row_text_roles() {
         &[
             "fnui_kit_list_row_label_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
             "fret_ui_kit::declarative::text::text_list_row_label(cx,text)",
+            "doc_layout::paragraph_text(cx,\"Goal:validatefret-ui-kitlistvirtualizationunderview-cache+shellreuse(ADR0177).\")",
+            "doc_layout::paragraph_text(cx,\"Expect:scrollboundaryshiftsreconcilewithoutscroll-windowdirtyviews.\")",
             "ui_kit_list_row_label_text(cx,format!(\"Item{i}\"))",
         ],
     );
 
-    assert!(
-        !normalized.contains("cx.text(format!(\"Item{i}\"))"),
-        "ui_kit_list_torture reintroduced bare fixed list-row text"
-    );
+    for forbidden in [
+        "cx.text(format!(\"Item{i}\"))",
+        "cx.text(\"Goal:validatefret-ui-kitlistvirtualizationunderview-cache+shellreuse(ADR0177).\")",
+        "cx.text(\"Expect:scrollboundaryshiftsreconcilewithoutscroll-windowdirtyviews.\")",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "ui_kit_list_torture reintroduced bare header/list text: {forbidden}"
+        );
+    }
 }
 
 #[test]
@@ -1056,6 +1101,8 @@ fn harness_view_cache_uses_fixed_row_text_roles() {
             "fnview_cache_list_row_label_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
             "fret_ui_kit::declarative::text::text_list_row_label(cx,text)",
             "view_cache_list_row_label_text(cx,format!(\"Row{i}\"))",
+            "doc_layout::paragraph_text(cx,\"Goal:validatecached-subtreecorrectnessunderrealinteraction.\")",
+            "doc_layout::control_readout_text(cx,format!(\"Currentsettings:view_cache={}shell_cache={}content_cache={}inner_cache={}continuous={}\"",
             "doc_layout::control_label_text(cx,\"Enableview-cachemode(globalUiTreeflag)\")",
             "doc_layout::control_label_text(cx,\"Cacheshell(sidebar/contentwrappers)\")",
             "doc_layout::control_label_text(cx,\"Cachecontentroot(requires'Cacheshell')\")",
@@ -1066,6 +1113,8 @@ fn harness_view_cache_uses_fixed_row_text_roles() {
 
     for forbidden in [
         "vec![cx.text(format!(\"Row{i}\"))]",
+        "cx.text(\"Goal:validatecached-subtreecorrectnessunderrealinteraction.\")",
+        "cx.text(format!(\"Currentsettings:view_cache={}shell_cache={}content_cache={}inner_cache={}continuous={}\"",
         "cx.text(\"Enableview-cachemode(globalUiTreeflag)\")",
         "cx.text(\"Cacheshell(sidebar/contentwrappers)\")",
         "cx.text(\"Cachecontentroot(requires'Cacheshell')\")",

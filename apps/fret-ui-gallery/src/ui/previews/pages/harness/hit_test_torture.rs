@@ -50,12 +50,12 @@ pub(in crate::ui) fn preview_hit_test_torture(
 
     let header = ui::v_flex(|cx| {
         vec![
-            cx.text("Goal: make hit-test a measurable hotspot so bounds-tree vs fallback traversal A/B is meaningful."),
-            cx.text(format!(
+            doc_layout::paragraph_text(cx, "Goal: make hit-test a measurable hotspot so bounds-tree vs fallback traversal A/B is meaningful."),
+            doc_layout::control_readout_text(cx, format!(
                 "Shape: {stripes} stripes ({} px each) plus {noise} 1x1 noise regions.",
                 stripe_w.0
             )),
-            cx.text(
+            doc_layout::control_readout_text(cx,
                 "Env: FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES / FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE",
             ),
         ]
