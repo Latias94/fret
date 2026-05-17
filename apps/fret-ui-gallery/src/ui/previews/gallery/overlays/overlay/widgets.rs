@@ -5,6 +5,13 @@ use fret::UiChild;
 use super::OverlayModels;
 use fret_core::Color;
 
+fn overlay_scroll_row_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
+where
+    T: Into<Arc<str>>,
+{
+    fret_ui_kit::declarative::text::text_list_row_label(cx, text)
+}
+
 // Typed helper shells: these helpers may still lower to overlay/provider roots internally because
 // the current shadcn root APIs land concrete elements, but the gallery preview no longer stores a
 // landed widget inventory just to lay them out.
@@ -353,7 +360,12 @@ pub(super) fn dialog(_cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> im
                 {
                     let body = ui::v_flex(|cx| {
                         (0..64)
-                            .map(|i| cx.text(format!("Scrollable content line {}", i + 1)))
+                            .map(|i| {
+                                overlay_scroll_row_text(
+                                    cx,
+                                    format!("Scrollable content line {}", i + 1),
+                                )
+                            })
                             .collect::<Vec<_>>()
                     })
                     .gap(Space::N2)
@@ -430,7 +442,12 @@ pub(super) fn dialog_glass(
                 {
                     let body = ui::v_flex(|cx| {
                         (0..64)
-                            .map(|i| cx.text(format!("Scrollable content line {}", i + 1)))
+                            .map(|i| {
+                                overlay_scroll_row_text(
+                                    cx,
+                                    format!("Scrollable content line {}", i + 1),
+                                )
+                            })
                             .collect::<Vec<_>>()
                     })
                     .gap(Space::N2)
@@ -532,7 +549,9 @@ pub(super) fn sheet(_cx: &mut AppComponentCx<'_>, models: &OverlayModels) -> imp
                 {
                     let body = ui::v_flex(|cx| {
                         (0..96)
-                            .map(|i| cx.text(format!("Sheet body line {}", i + 1)))
+                            .map(|i| {
+                                overlay_scroll_row_text(cx, format!("Sheet body line {}", i + 1))
+                            })
                             .collect::<Vec<_>>()
                     })
                     .gap(Space::N2)
@@ -615,7 +634,7 @@ pub(super) fn portal_geometry(
         );
 
     let items = (1..=48)
-        .map(|i| cx.text(format!("Scroll item {i:02}")))
+        .map(|i| overlay_scroll_row_text(cx, format!("Scroll item {i:02}")))
         .collect::<Vec<_>>();
 
     let body = ui::v_stack(|_cx| {

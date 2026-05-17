@@ -386,6 +386,8 @@ Readiness order for the next locally testable review slices:
    muted/text-sm styling.
    2026-05-17 gallery overlay status text follow-up: overlay and menu last-action/status flags now
    route through `control_readout_text(...)` instead of bare `cx.text(...)`.
+   2026-05-17 gallery overlay scroll-row text follow-up: dialog/sheet/portal scroll filler rows
+   now route through `text_list_row_label(...)` instead of bare `cx.text(...)`.
    2026-05-17 gallery chrome torture control-label follow-up: the fixed text-input/textarea
    labels now route through `control_label_text(...)`, backed by shared `text_control_label(...)`,
    instead of bare `cx.text(...)`.

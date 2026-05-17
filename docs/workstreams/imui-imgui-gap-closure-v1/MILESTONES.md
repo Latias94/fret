@@ -359,6 +359,8 @@ Exit criteria:
   status now routes through `control_readout_text(...)` instead of local text-sm/muted styling.
   2026-05-17 gallery overlay status text result: overlay and menu last-action/status flags now
   route through `control_readout_text(...)` instead of bare `cx.text(...)`.
+  2026-05-17 gallery overlay scroll-row text result: dialog/sheet/portal scroll filler rows now
+  route through `text_list_row_label(...)` instead of bare `cx.text(...)`.
   2026-05-17 gallery chrome torture control-label result: fixed text-input/textarea labels now
   route through `control_label_text(...)`, backed by shared `text_control_label(...)`, instead of
   bare `cx.text(...)`.

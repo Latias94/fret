@@ -1139,6 +1139,31 @@ fn gallery_menus_last_action_uses_control_readout_role() {
 }
 
 #[test]
+fn gallery_overlay_scroll_rows_use_list_row_roles() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/gallery/overlays/overlay/widgets.rs",
+        &[
+            "fnoverlay_scroll_row_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
+            "fret_ui_kit::declarative::text::text_list_row_label(cx,text)",
+            "overlay_scroll_row_text(cx,format!(\"Scrollablecontentline{}\",i+1))",
+            "overlay_scroll_row_text(cx,format!(\"Sheetbodyline{}\",i+1))",
+            "overlay_scroll_row_text(cx,format!(\"Scrollitem{i:02}\"))",
+        ],
+    );
+
+    for forbidden in [
+        "cx.text(format!(\"Scrollablecontentline{}\",i+1))",
+        "cx.text(format!(\"Sheetbodyline{}\",i+1))",
+        "cx.text(format!(\"Scrollitem{i:02}\"))",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "overlay widgets reintroduced bare scroll-row text: {forbidden}"
+        );
+    }
+}
+
+#[test]
 fn page_chrome_torture_uses_control_label_roles() {
     let doc_layout = assert_normalized_markers_present(
         "src/ui/doc_layout.rs",

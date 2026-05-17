@@ -433,6 +433,7 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/previews/pages/harness/virtual_list_torture.rs",
                 "apps/fret-ui-gallery/src/ui/previews/gallery/overlays/menus.rs",
                 "apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/flags.rs",
+                "apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/widgets.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs",
                 "apps/fret-ui-gallery/src/ui/previews/gallery/data/data_grid.rs",
                 "apps/fret-ui-gallery/src/ui/previews/gallery/data/table_torture.rs",
@@ -1268,6 +1269,21 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/widgets.rs"),
+            required=[
+                "fn overlay_scroll_row_text",
+                "fret_ui_kit::declarative::text::text_list_row_label(cx, text)",
+                "overlay_scroll_row_text(\n                                    cx,\n                                    format!(\"Scrollable content line {}\", i + 1),\n                                )",
+                "overlay_scroll_row_text(cx, format!(\"Sheet body line {}\", i + 1))",
+                "overlay_scroll_row_text(cx, format!(\"Scroll item {i:02}\"))",
+            ],
+            forbidden=[
+                "cx.text(format!(\"Scrollable content line {}\", i + 1))",
+                "cx.text(format!(\"Sheet body line {}\", i + 1))",
+                "cx.text(format!(\"Scroll item {i:02}\"))",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs"),
             required=[
                 "crate::declarative::text::text_chrome_title(cx, title.clone())",
@@ -1600,6 +1616,7 @@ def main() -> None:
                 "fn gallery_tree_torture_uses_control_readout_for_status_text()",
                 "fn gallery_overlay_status_text_uses_control_readout_roles()",
                 "fn gallery_menus_last_action_uses_control_readout_role()",
+                "fn gallery_overlay_scroll_rows_use_list_row_roles()",
                 "fn page_chrome_torture_uses_control_label_roles()",
                 "fnretained_table_cell_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
                 "fndata_table_torture_cell_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
@@ -1629,6 +1646,7 @@ def main() -> None:
                 "doc_layout::control_readout_text(cx,status.clone())",
                 "doc_layout::control_readout_text(cx,format!(\\\"lastaction:{last}\\\"))",
                 "overlay_status_text(cx,text).test_id(\\\"ui-gallery-overlay-last-action\\\")",
+                "overlay_scroll_row_text(cx,format!(\\\"Scrollitem{i:02}\\\"))",
                 "doc_layout::control_label_text(cx,\\\"Textinput\\\")",
                 "retained_table_cell_text(cx,row.status.clone())",
                 "data_table_torture_cell_text(cx,row.status.clone())",
