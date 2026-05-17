@@ -139,9 +139,10 @@ pub use response::{
 };
 pub use tab_family_controls::ImUiTabBar;
 pub use table_column_visibility::{
-    ImUiTableColumnVisibilityState, TableColumnVisibilityHeaderContextMenuOptions,
-    TableColumnVisibilityHeaderContextMenuResponse, TableColumnVisibilityMenuItemResponse,
-    TableColumnVisibilityMenuOptions, TableColumnVisibilityMenuResponse,
+    ImUiTableColumnVisibilityState, TableColumnVisibilityEntry,
+    TableColumnVisibilityHeaderContextMenuOptions, TableColumnVisibilityHeaderContextMenuResponse,
+    TableColumnVisibilityMenuItemResponse, TableColumnVisibilityMenuOptions,
+    TableColumnVisibilityMenuResponse, TableColumnVisibilitySnapshot,
     table_column_visibility_header_context_menu, table_column_visibility_menu_item,
     table_column_visibility_menu_items, table_column_visibility_use_model,
 };

@@ -285,6 +285,19 @@ Run evidence:
   table_sortable_header_reports_context_menu_request --no-fail-fast`, `cargo nextest run -p
   fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`, and `python
   tools/gate_imui_workstream_source.py`.
+- 2026-05-17: added the narrow persistence seam for runtime table-column visibility through
+  `TableColumnVisibilitySnapshot` and `TableColumnVisibilityEntry`. The public data shape
+  serializes stable column ids as `id` and visible flags as `visible`, while
+  `ImUiTableColumnVisibilityState::snapshot()`, `from_snapshot(...)`, and
+  `replace_from_snapshot(...)` keep runtime storage opaque and caller-owned. Restore ignores empty
+  ids and duplicate entries use last-entry-wins. This does not add file storage, schema registry,
+  freeze panes, or a mutable table runtime to `fret-imui`. Gates: `cargo nextest run -p
+  fret-ui-kit --features imui --lib visibility_state_snapshot_roundtrips_stable_column_ids
+  visibility_state_snapshot_restore_ignores_empty_ids_and_last_entry_wins --no-fail-fast`,
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke
+  table_column_visibility_snapshot_api_compiles_and_roundtrips
+  table_column_visibility_snapshot_entries_are_public_data_shape --no-fail-fast`, and `python
+  tools/gate_imui_workstream_source.py`.
 - 2026-05-16: introduced `text_control_readout(...)` as the shared compact control-readout text
   role. The UI Gallery code-editor toolbar keeps its doc-layout helper, but that helper now
   delegates to `fret-ui-kit::declarative::text::text_control_readout(...)`, so dense status/readout

@@ -233,6 +233,14 @@ Exit criteria:
   It returns an opaque/accessor-first response, exposes popup/menu policy through
   `TableColumnVisibilityHeaderContextMenuOptions`, keeps the visibility model caller-owned, and
   leaves persistence, freeze panes, and old columns API shape candidate-only.
+  2026-05-17 table visibility snapshot result:
+  `TableColumnVisibilitySnapshot` and `TableColumnVisibilityEntry` now close the narrow
+  persistence seam for runtime column visibility without introducing a table-state runtime.
+  `ImUiTableColumnVisibilityState::snapshot()`, `from_snapshot(...)`, and
+  `replace_from_snapshot(...)` round-trip stable column ids and visible flags through a serde data
+  shape. Empty ids are ignored on restore and duplicate ids use last-entry-wins; applications still
+  own storage, schema placement, and when to apply restored state. Freeze panes and old columns API
+  shape remain candidate-only.
   2026-05-16 control readout text role result: `text_control_readout(...)` now sits in
   `fret-ui-kit::declarative::text` beside `text_table_cell(...)`. The UI Gallery code-editor
   readouts still use the doc-layout app helper, but that helper delegates to the shared role, so

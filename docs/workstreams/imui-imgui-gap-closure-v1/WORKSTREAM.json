@@ -402,6 +402,14 @@
       "command": "cargo nextest run -p fret-imui table_column_visibility_header_context_menu_opens_from_plain_header table_column_visibility_header_context_menu_opens_and_updates_state --no-fail-fast"
     },
     {
+      "name": "fret-ui-kit table visibility snapshot tests",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --lib visibility_state_snapshot_roundtrips_stable_column_ids visibility_state_snapshot_restore_ignores_empty_ids_and_last_entry_wins --no-fail-fast"
+    },
+    {
+      "name": "fret-ui-kit table visibility snapshot smoke",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke table_column_visibility_snapshot_api_compiles_and_roundtrips table_column_visibility_snapshot_entries_are_public_data_shape --no-fail-fast"
+    },
+    {
       "name": "diff check",
       "command": "git diff --check"
     }

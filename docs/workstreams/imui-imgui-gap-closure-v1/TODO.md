@@ -229,6 +229,12 @@ Readiness order for the next locally testable review slices:
    `fret-ui-kit::imui`. `TableColumnVisibilityHeaderContextMenuOptions` exposes popup/menu policy
    knobs. Callers still own applying the visibility model to their column list, and `fret-imui`
    stays policy-light.
+   2026-05-17 table visibility snapshot follow-up:
+   `TableColumnVisibilitySnapshot` / `TableColumnVisibilityEntry` now provide the persistence seam
+   for `ImUiTableColumnVisibilityState`. The snapshot stores only stable column ids plus visible
+   flags, round-trips through serde, ignores empty ids on restore, and uses last-entry-wins for
+   duplicate ids. Apps/editors still own storage, schema placement, and when to apply the restored
+   state; freeze panes and old columns API shape remain separate follow-ons.
    2026-05-16 control readout text role follow-up: `text_control_readout(...)` now lives beside
    `text_table_cell(...)` in `fret-ui-kit::declarative::text`, and the UI Gallery code-editor
    toolbar readouts route through that shared role instead of carrying app-local text layout policy.

@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use fret_runtime::Model;
 use fret_ui::{ElementContext, UiHost};
+use serde::{Deserialize, Serialize};
 
 use super::label_identity::parse_label_identity;
 use super::{
@@ -25,6 +26,25 @@ struct TableColumnVisibilityOverride {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ImUiTableColumnVisibilityState {
     overrides: Vec<TableColumnVisibilityOverride>,
+}
+
+/// Persistence-friendly snapshot of runtime table-column visibility overrides.
+///
+/// This is only a data shape. Callers own where and when it is stored, and the IMUI helper keeps
+/// using caller-owned `ImUiTableColumnVisibilityState` models at runtime.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct TableColumnVisibilitySnapshot {
+    #[serde(default)]
+    pub columns: Vec<TableColumnVisibilityEntry>,
+}
+
+/// One stable column visibility override inside [`TableColumnVisibilitySnapshot`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TableColumnVisibilityEntry {
+    #[serde(rename = "id")]
+    pub column_id: String,
+    #[serde(rename = "visible")]
+    pub is_visible: bool,
 }
 
 /// Options for composing a group of table-column visibility menu items.
@@ -146,6 +166,35 @@ impl ImUiTableColumnVisibilityState {
         self.overrides.clear();
     }
 
+    pub fn snapshot(&self) -> TableColumnVisibilitySnapshot {
+        TableColumnVisibilitySnapshot {
+            columns: self
+                .overrides
+                .iter()
+                .filter(|entry| !entry.id.is_empty())
+                .map(|entry| TableColumnVisibilityEntry {
+                    column_id: entry.id.to_string(),
+                    is_visible: entry.visible,
+                })
+                .collect(),
+        }
+    }
+
+    pub fn from_snapshot(snapshot: TableColumnVisibilitySnapshot) -> Self {
+        let mut state = Self::default();
+        for entry in snapshot.columns {
+            state.set_visible(entry.column_id, entry.is_visible);
+        }
+        state
+    }
+
+    pub fn replace_from_snapshot(&mut self, snapshot: TableColumnVisibilitySnapshot) {
+        self.clear();
+        for entry in snapshot.columns {
+            self.set_visible(entry.column_id, entry.is_visible);
+        }
+    }
+
     pub fn apply_to_columns(&self, columns: &[TableColumn]) -> Vec<TableColumn> {
         columns
             .iter()
@@ -159,6 +208,56 @@ impl ImUiTableColumnVisibilityState {
                 column
             })
             .collect()
+    }
+}
+
+impl TableColumnVisibilitySnapshot {
+    pub fn new<I, S>(columns: I) -> Self
+    where
+        I: IntoIterator<Item = (S, bool)>,
+        S: Into<String>,
+    {
+        let mut snapshot = Self::default();
+        for (id, visible) in columns {
+            let id = id.into();
+            if id.is_empty() {
+                continue;
+            }
+            snapshot.columns.push(TableColumnVisibilityEntry {
+                column_id: id,
+                is_visible: visible,
+            });
+        }
+        snapshot
+    }
+
+    pub fn columns(&self) -> &[TableColumnVisibilityEntry] {
+        &self.columns
+    }
+
+    pub fn len(&self) -> usize {
+        self.columns.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.columns.is_empty()
+    }
+}
+
+impl TableColumnVisibilityEntry {
+    pub fn new(id: impl Into<String>, visible: bool) -> Self {
+        Self {
+            column_id: id.into(),
+            is_visible: visible,
+        }
+    }
+
+    pub fn id(&self) -> &str {
+        self.column_id.as_str()
+    }
+
+    pub fn visible(&self) -> bool {
+        self.is_visible
     }
 }
 
@@ -455,6 +554,47 @@ mod tests {
         assert_eq!(state.visibility_for("status"), Some(true));
         assert_eq!(state.remove("status"), Some(true));
         assert!(state.visibility_for("status").is_none());
+    }
+
+    #[test]
+    fn visibility_state_snapshot_roundtrips_stable_column_ids() {
+        let state = ImUiTableColumnVisibilityState::new([
+            (Arc::from("status"), false),
+            (Arc::from("owner"), true),
+        ]);
+
+        let snapshot = state.snapshot();
+        let encoded = serde_json::to_string(&snapshot).expect("snapshot should serialize");
+        let decoded: TableColumnVisibilitySnapshot =
+            serde_json::from_str(&encoded).expect("snapshot should deserialize");
+        let restored = ImUiTableColumnVisibilityState::from_snapshot(decoded);
+
+        assert_eq!(snapshot.columns().len(), 2);
+        assert_eq!(snapshot.columns()[0].id(), "status");
+        assert!(!snapshot.columns()[0].visible());
+        assert_eq!(restored.visibility_for("status"), Some(false));
+        assert_eq!(restored.visibility_for("owner"), Some(true));
+    }
+
+    #[test]
+    fn visibility_state_snapshot_restore_ignores_empty_ids_and_last_entry_wins() {
+        let snapshot = TableColumnVisibilitySnapshot {
+            columns: vec![
+                TableColumnVisibilityEntry::new("", false),
+                TableColumnVisibilityEntry::new("status", false),
+                TableColumnVisibilityEntry::new("status", true),
+                TableColumnVisibilityEntry::new("owner", false),
+            ],
+        };
+
+        let mut state = ImUiTableColumnVisibilityState::new([("stale", false)]);
+        state.replace_from_snapshot(snapshot);
+
+        assert_eq!(state.len(), 2);
+        assert!(state.visibility_for("").is_none());
+        assert!(state.visibility_for("stale").is_none());
+        assert_eq!(state.visibility_for("status"), Some(true));
+        assert_eq!(state.visibility_for("owner"), Some(false));
     }
 
     #[test]

@@ -4,10 +4,11 @@ use fret_core::{Color, Px};
 use fret_ui::UiHost;
 use fret_ui_kit::imui::{
     ImUiTableColumnVisibilityState, MenuItemOptions, TableCellOptions, TableColumn,
-    TableColumnVisibilityHeaderContextMenuOptions, TableColumnVisibilityMenuOptions,
-    TableColumnWidth, TableOptions, TableResponse, TableRowOptions, TableSortDirection,
-    UiWriterImUiFacadeExt, table_column_visibility_header_context_menu,
-    table_column_visibility_menu_item, table_column_visibility_menu_items,
+    TableColumnVisibilityEntry, TableColumnVisibilityHeaderContextMenuOptions,
+    TableColumnVisibilityMenuOptions, TableColumnVisibilitySnapshot, TableColumnWidth,
+    TableOptions, TableResponse, TableRowOptions, TableSortDirection, UiWriterImUiFacadeExt,
+    table_column_visibility_header_context_menu, table_column_visibility_menu_item,
+    table_column_visibility_menu_items,
 };
 
 #[allow(dead_code)]
@@ -248,6 +249,48 @@ fn table_column_visibility_state_applies_runtime_visibility_by_column_id() {
     assert!(applied[2].visible);
     assert_eq!(state.visibility_for("asset-status"), Some(false));
     assert!(state.is_visible("asset-owner", false));
+}
+
+#[test]
+fn table_column_visibility_snapshot_api_compiles_and_roundtrips() {
+    let snapshot =
+        TableColumnVisibilitySnapshot::new([("asset-status", false), ("asset-owner", true)]);
+    let encoded = serde_json::to_string(&snapshot).expect("snapshot should serialize");
+    let decoded: TableColumnVisibilitySnapshot =
+        serde_json::from_str(&encoded).expect("snapshot should deserialize");
+
+    let state = ImUiTableColumnVisibilityState::from_snapshot(decoded);
+    let roundtrip = state.snapshot();
+
+    assert_eq!(roundtrip.len(), 2);
+    assert_eq!(roundtrip.columns()[0].id(), "asset-status");
+    assert!(!roundtrip.columns()[0].visible());
+    assert_eq!(state.visibility_for("asset-owner"), Some(true));
+}
+
+#[test]
+fn table_column_visibility_snapshot_entries_are_public_data_shape() {
+    let mut state = ImUiTableColumnVisibilityState::default();
+    state.replace_from_snapshot(TableColumnVisibilitySnapshot {
+        columns: vec![
+            TableColumnVisibilityEntry {
+                column_id: String::new(),
+                is_visible: false,
+            },
+            TableColumnVisibilityEntry {
+                column_id: "asset-status".to_string(),
+                is_visible: false,
+            },
+            TableColumnVisibilityEntry {
+                column_id: "asset-status".to_string(),
+                is_visible: true,
+            },
+        ],
+    });
+
+    assert_eq!(state.len(), 1);
+    assert_eq!(state.visibility_for("asset-status"), Some(true));
+    assert!(state.visibility_for("").is_none());
 }
 
 #[test]
