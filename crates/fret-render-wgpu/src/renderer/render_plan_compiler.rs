@@ -8,12 +8,13 @@ mod clip_path;
 mod composite_group;
 mod context;
 mod effect_scope;
+mod marker_dispatch;
 mod path_msaa;
 mod preflight;
 mod target_budget;
 
 use super::render_plan_effects as effects;
-use super::{BlurQualitySnapshot, EffectDegradationSnapshot, EffectMarkerKind, SceneEncoding};
+use super::{EffectMarkerKind, SceneEncoding};
 use context::RenderPlanCompilerCtx;
 
 #[derive(Clone, Copy, Debug)]
@@ -89,8 +90,6 @@ fn compile_for_scene_inner(
         _ => false,
     });
     let mut ctx = RenderPlanCompilerCtx::new();
-    let mut effect_degradations = EffectDegradationSnapshot::default();
-    let mut effect_blur_quality = BlurQualitySnapshot::default();
     let mut draw_scopes: Vec<DrawScope> = vec![DrawScope {
         target: scene_target,
         origin: (0, 0),
@@ -98,15 +97,7 @@ fn compile_for_scene_inner(
         needs_clear: true,
         clear_color: clear,
     }];
-    let mut effect_scopes: Vec<effect_scope::EffectScope> = Vec::new();
-    let mut composite_group_scopes: Vec<composite_group::CompositeGroupScope> = Vec::new();
-    let mut clip_path_scopes: Vec<clip_path::ClipPathScope> = Vec::new();
-    let mut clip_path_mask_in_use_bytes: u64 = 0;
-    let mut backdrop_source_group_scopes: Vec<backdrop_source_group::BackdropSourceGroupScope> =
-        Vec::new();
-    let mut backdrop_source_group_reserved_targets: Vec<super::PlanTarget> = Vec::new();
-    let mut backdrop_source_group_in_use_bytes: u64 = 0;
-    let mut effect_chain_budget_stats = effect_scope::EffectChainBudgetStats::default();
+    let mut marker_dispatch_state = marker_dispatch::MarkerDispatchState::new();
 
     let mut scene_range_start: usize = 0;
     let mut cursor: usize = 0;
@@ -129,166 +120,21 @@ fn compile_for_scene_inner(
 
             while marker_ix < markers.len() && markers[marker_ix].draw_ix == cursor {
                 let marker = markers[marker_ix];
-                match marker.kind {
-                    EffectMarkerKind::Push {
-                        scissor,
-                        uniform_index,
-                        mode,
-                        chain,
-                        quality,
-                    } => {
-                        effect_scope::compile_effect_scope_push(
-                            &mut ctx,
-                            &mut draw_scopes,
-                            &mut effect_scopes,
-                            &mut effect_chain_budget_stats,
-                            &mut effect_degradations,
-                            &mut effect_blur_quality,
-                            cursor,
-                            effect_scope::EffectScopePushCtx {
-                                scissor,
-                                uniform_index,
-                                mode,
-                                chain,
-                                quality,
-                                viewport_size,
-                                format,
-                                clear,
-                                scale_factor,
-                                intermediate_budget_bytes,
-                                clip_path_mask_in_use_bytes,
-                                clip_path_scopes: &clip_path_scopes,
-                                backdrop_source_group_scopes: &backdrop_source_group_scopes,
-                                backdrop_source_group_reserved_targets:
-                                    &backdrop_source_group_reserved_targets,
-                                backdrop_source_group_in_use_bytes,
-                            },
-                        );
-                    }
-                    EffectMarkerKind::Pop => {
-                        effect_scope::compile_effect_scope_pop(
-                            &mut ctx,
-                            &mut draw_scopes,
-                            &mut effect_scopes,
-                            &mut effect_chain_budget_stats,
-                            &mut effect_degradations,
-                            &mut effect_blur_quality,
-                            cursor,
-                            effect_scope::EffectScopePopCtx {
-                                viewport_size,
-                                format,
-                                clear,
-                                scale_factor,
-                                intermediate_budget_bytes,
-                                clip_path_mask_in_use_bytes,
-                                backdrop_source_group_reserved_targets:
-                                    &backdrop_source_group_reserved_targets,
-                                backdrop_source_group_in_use_bytes,
-                            },
-                        );
-                    }
-                    EffectMarkerKind::ClipPathPush {
-                        scissor,
-                        uniform_index,
-                        mask_draw_index,
-                    } => {
-                        clip_path::compile_clip_path_push(
-                            &mut ctx,
-                            &mut draw_scopes,
-                            &mut clip_path_scopes,
-                            &mut clip_path_mask_in_use_bytes,
-                            encoding,
-                            cursor,
-                            clip_path::ClipPathPushCtx {
-                                scissor,
-                                uniform_index,
-                                mask_draw_index,
-                                viewport_size,
-                                scissor_sized_intermediates,
-                                format,
-                                intermediate_budget_bytes,
-                                backdrop_source_group_reserved_targets:
-                                    &backdrop_source_group_reserved_targets,
-                                backdrop_source_group_in_use_bytes,
-                            },
-                        );
-                    }
-                    EffectMarkerKind::ClipPathPop => {
-                        clip_path::compile_clip_path_pop(
-                            &mut ctx,
-                            &mut draw_scopes,
-                            &mut clip_path_scopes,
-                            &mut clip_path_mask_in_use_bytes,
-                        );
-                    }
-                    EffectMarkerKind::BackdropSourceGroupPush {
-                        scissor,
-                        pyramid,
-                        quality,
-                    } => {
-                        backdrop_source_group::compile_backdrop_source_group_push(
-                            &mut ctx,
-                            &draw_scopes,
-                            &mut backdrop_source_group_scopes,
-                            &mut backdrop_source_group_reserved_targets,
-                            &mut backdrop_source_group_in_use_bytes,
-                            &mut effect_degradations.backdrop_source_groups,
-                            backdrop_source_group::BackdropSourceGroupPushCtx {
-                                scissor,
-                                pyramid,
-                                quality,
-                                scale_factor,
-                                viewport_size,
-                                format,
-                                intermediate_budget_bytes,
-                                clip_path_mask_in_use_bytes,
-                            },
-                        );
-                    }
-                    EffectMarkerKind::BackdropSourceGroupPop => {
-                        backdrop_source_group::compile_backdrop_source_group_pop(
-                            &mut backdrop_source_group_scopes,
-                            &mut backdrop_source_group_reserved_targets,
-                            &mut backdrop_source_group_in_use_bytes,
-                        );
-                    }
-                    EffectMarkerKind::CompositeGroupPush {
-                        scissor,
-                        uniform_index,
-                        mode,
-                        quality,
-                        opacity,
-                    } => {
-                        composite_group::compile_composite_group_push(
-                            &mut ctx,
-                            &mut draw_scopes,
-                            &mut composite_group_scopes,
-                            cursor,
-                            composite_group::CompositeGroupPushCtx {
-                                scissor,
-                                uniform_index,
-                                mode,
-                                quality,
-                                opacity,
-                                viewport_size,
-                                scissor_sized_intermediates,
-                                format,
-                                intermediate_budget_bytes,
-                                clip_path_mask_in_use_bytes,
-                                backdrop_source_group_reserved_targets:
-                                    &backdrop_source_group_reserved_targets,
-                                backdrop_source_group_in_use_bytes,
-                            },
-                        );
-                    }
-                    EffectMarkerKind::CompositeGroupPop => {
-                        composite_group::compile_composite_group_pop(
-                            &mut ctx,
-                            &mut draw_scopes,
-                            &mut composite_group_scopes,
-                        );
-                    }
-                }
+                marker_dispatch_state.compile_marker(
+                    &mut ctx,
+                    &mut draw_scopes,
+                    encoding,
+                    cursor,
+                    marker,
+                    marker_dispatch::MarkerDispatchCtx {
+                        viewport_size,
+                        scissor_sized_intermediates,
+                        format,
+                        clear,
+                        scale_factor,
+                        intermediate_budget_bytes,
+                    },
+                );
 
                 marker_ix += 1;
             }
@@ -317,6 +163,8 @@ fn compile_for_scene_inner(
         cursor += 1;
     }
 
+    let (effect_degradations, effect_blur_quality, effect_chain_budget_stats) =
+        marker_dispatch_state.into_parts();
     let (segments, passes, degradations) = ctx.into_parts();
     let mut plan = super::RenderPlan::finalize(
         segments,

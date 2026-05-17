@@ -611,6 +611,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - [x] Step 3c: split path MSAA batch planning into a focused helper module.
     - [x] Step 3d: split compile preflight and scene-target planning into a focused helper
       module.
+    - [x] Step 3e: split marker dispatch state and effect-marker routing into a focused helper
+      module.
   - Landed (step 1): extracted target/budget helpers and their focused tests into
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
   - Landed (step 2): introduced `RenderPlanCompilerCtx` to own structural compiler outputs
@@ -642,6 +644,10 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/preflight.rs` while leaving backdrop
     effect enablement, postprocess fallback, scene target selection, and explicit sRGB encode
     behavior unchanged.
+  - Landed (step 3e): moved effect-marker dispatch state and routing into
+    `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs` while leaving
+    `marker_ix` advancement in the main loop and preserving marker/pass ordering, scope stack
+    lifetimes, target reservation, budget stats, and degradation snapshots.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
       `compile_for_scene_inner`)
@@ -664,6 +670,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
       (`try_compile_path_msaa_batch`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/preflight.rs`
       (`plan_render_targets`)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/marker_dispatch.rs`
+      (`MarkerDispatchState`, `compile_marker`, `into_parts`)
     - `docs/workstreams/renderer-render-plan-semantics-audit-v1/renderer-render-plan-semantics-audit-v1.md`
       (target lifetime, load-op, scissor/mask, and deterministic degradation invariants)
   - Gates:
