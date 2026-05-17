@@ -628,6 +628,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - [x] Step 3q: introduce marker shared dispatch input snapshots.
     - [x] Step 3r: replace backdrop-source-group reserved-target stack `Vec` with `SmallVec`.
     - [x] Step 3s: move effect-scope push/pop helpers onto `EffectScopeDispatchState`.
+    - [x] Step 3t: move backdrop-source-group push/pop helpers onto `BackdropSourceGroupDispatchState`.
   - Landed (step 1): extracted target/budget helpers and their focused tests into
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
   - Landed (step 2): introduced `RenderPlanCompilerCtx` to own structural compiler outputs
@@ -711,6 +712,10 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     `EffectScopeDispatchState`, so effect scopes, budget stats, degradation snapshots, and
     blur-quality snapshots are mutated through the owning dispatch state instead of being threaded
     as multiple independent `&mut` parameters.
+  - Landed (step 3t): moved the private backdrop-source-group push/pop helper bodies onto
+    `BackdropSourceGroupDispatchState`, so scopes, reserved targets, and in-use bytes are mutated
+    through the owning dispatch state instead of being threaded as multiple independent `&mut`
+    parameters.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
       `compile_for_scene_inner`)
@@ -729,8 +734,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/composite_group.rs`
       (`CompositeGroupDispatchState`)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/backdrop_source_group.rs`
-      (`compile_backdrop_source_group_push`, `compile_backdrop_source_group_pop`,
-      `BackdropSourceGroupDispatchState`, `BackdropSourceGroupScope::effect_ctx`,
+      (`BackdropSourceGroupDispatchState::{compile_push_inner,compile_pop_inner}`,
+      `BackdropSourceGroupScope::effect_ctx`,
       `SmallVec<[PlanTarget; 4]>` reserved-target stack)
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
       (`EffectScopeDispatchState::{compile_push_inner,compile_pop_inner}`,
