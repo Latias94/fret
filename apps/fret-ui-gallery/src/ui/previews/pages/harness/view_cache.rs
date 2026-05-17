@@ -48,7 +48,10 @@ pub(in crate::ui) fn preview_view_cache(
                         .a11y_label("Enable view-cache mode")
                         .test_id("ui-gallery-view-cache-enabled")
                         .into_element(cx),
-                    cx.text("Enable view-cache mode (global UiTree flag)"),
+                    doc_layout::control_label_text(
+                        cx,
+                        "Enable view-cache mode (global UiTree flag)",
+                    ),
                 ]
             })
             .gap(Space::N2)
@@ -60,7 +63,7 @@ pub(in crate::ui) fn preview_view_cache(
                         .a11y_label("Cache the gallery shell")
                         .test_id("ui-gallery-view-cache-cache-shell")
                         .into_element(cx),
-                    cx.text("Cache shell (sidebar/content wrappers)"),
+                    doc_layout::control_label_text(cx, "Cache shell (sidebar/content wrappers)"),
                 ]
             })
             .gap(Space::N2)
@@ -72,7 +75,10 @@ pub(in crate::ui) fn preview_view_cache(
                         .a11y_label("Cache the gallery content root")
                         .test_id("ui-gallery-view-cache-cache-content")
                         .into_element(cx),
-                    cx.text("Cache content root (requires 'Cache shell')"),
+                    doc_layout::control_label_text(
+                        cx,
+                        "Cache content root (requires 'Cache shell')",
+                    ),
                 ]
             })
             .gap(Space::N2)
@@ -84,7 +90,10 @@ pub(in crate::ui) fn preview_view_cache(
                         .a11y_label("Enable inner ViewCache boundary")
                         .test_id("ui-gallery-view-cache-inner-cache")
                         .into_element(cx),
-                    cx.text("Enable inner ViewCache boundary (torture subtree)"),
+                    doc_layout::control_label_text(
+                        cx,
+                        "Enable inner ViewCache boundary (torture subtree)",
+                    ),
                 ]
             })
             .gap(Space::N2)
@@ -96,7 +105,10 @@ pub(in crate::ui) fn preview_view_cache(
                         .a11y_label("Request continuous frames")
                         .test_id("ui-gallery-view-cache-continuous")
                         .into_element(cx),
-                    cx.text("Continuous frames (cache-hit should still keep state alive)"),
+                    doc_layout::control_label_text(
+                        cx,
+                        "Continuous frames (cache-hit should still keep state alive)",
+                    ),
                 ]
             })
             .gap(Space::N2)

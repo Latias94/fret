@@ -1050,13 +1050,27 @@ fn harness_view_cache_uses_fixed_row_text_roles() {
             "fnview_cache_list_row_label_text<T>(cx:&mutAppComponentCx<'_>,text:T)->AnyElement",
             "fret_ui_kit::declarative::text::text_list_row_label(cx,text)",
             "view_cache_list_row_label_text(cx,format!(\"Row{i}\"))",
+            "doc_layout::control_label_text(cx,\"Enableview-cachemode(globalUiTreeflag)\")",
+            "doc_layout::control_label_text(cx,\"Cacheshell(sidebar/contentwrappers)\")",
+            "doc_layout::control_label_text(cx,\"Cachecontentroot(requires'Cacheshell')\")",
+            "doc_layout::control_label_text(cx,\"EnableinnerViewCacheboundary(torturesubtree)\")",
+            "doc_layout::control_label_text(cx,\"Continuousframes(cache-hitshouldstillkeepstatealive)\")",
         ],
     );
 
-    assert!(
-        !normalized.contains("vec![cx.text(format!(\"Row{i}\"))]"),
-        "view_cache reintroduced bare fixed cached-list row text"
-    );
+    for forbidden in [
+        "vec![cx.text(format!(\"Row{i}\"))]",
+        "cx.text(\"Enableview-cachemode(globalUiTreeflag)\")",
+        "cx.text(\"Cacheshell(sidebar/contentwrappers)\")",
+        "cx.text(\"Cachecontentroot(requires'Cacheshell')\")",
+        "cx.text(\"EnableinnerViewCacheboundary(torturesubtree)\")",
+        "cx.text(\"Continuousframes(cache-hitshouldstillkeepstatealive)\")",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "view_cache reintroduced bare fixed control/list text: {forbidden}"
+        );
+    }
 }
 
 #[test]
