@@ -16,6 +16,7 @@ pub(super) struct ActiveTriggerBehavior {
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct ActiveTriggerBehaviorOptions {
+    pub(super) primary_active: bool,
     pub(super) request_focus_on_press: bool,
     pub(super) clear_pointer_move: bool,
 }
@@ -23,6 +24,7 @@ pub(super) struct ActiveTriggerBehaviorOptions {
 impl Default for ActiveTriggerBehaviorOptions {
     fn default() -> Self {
         Self {
+            primary_active: true,
             request_focus_on_press: true,
             clear_pointer_move: false,
         }
@@ -57,6 +59,7 @@ pub(super) fn install_active_trigger_behavior<H: UiHost>(
     let lifecycle_model_for_up = lifecycle_model.clone();
     let context_anchor_model = super::context_menu_anchor_model_for(cx, id);
     let context_anchor_model_for_up = context_anchor_model.clone();
+    let primary_active = options.primary_active;
     let request_focus_on_press = options.request_focus_on_press;
 
     cx.key_on_key_down_for(
@@ -75,35 +78,39 @@ pub(super) fn install_active_trigger_behavior<H: UiHost>(
     );
 
     cx.pressable_on_pointer_down(std::sync::Arc::new(move |host, acx, down| {
-        super::mark_lifecycle_activated_on_left_pointer_down(
-            host,
-            acx,
-            down.button,
-            &lifecycle_model_for_down,
-        );
-        super::mark_active_item_on_left_pointer_down(
-            host,
-            acx,
-            down.button,
-            &active_item_model_for_down,
-            request_focus_on_press,
-        );
+        if primary_active {
+            super::mark_lifecycle_activated_on_left_pointer_down(
+                host,
+                acx,
+                down.button,
+                &lifecycle_model_for_down,
+            );
+            super::mark_active_item_on_left_pointer_down(
+                host,
+                acx,
+                down.button,
+                &active_item_model_for_down,
+                request_focus_on_press,
+            );
+        }
         PressablePointerDownResult::Continue
     }));
 
     cx.pressable_on_pointer_up(std::sync::Arc::new(move |host, acx, up| {
-        super::mark_lifecycle_deactivated_on_left_pointer_up(
-            host,
-            acx,
-            up.button,
-            &lifecycle_model_for_up,
-        );
-        super::clear_active_item_on_left_pointer_up(
-            host,
-            acx,
-            up.button,
-            &active_item_model_for_up,
-        );
+        if primary_active {
+            super::mark_lifecycle_deactivated_on_left_pointer_up(
+                host,
+                acx,
+                up.button,
+                &lifecycle_model_for_up,
+            );
+            super::clear_active_item_on_left_pointer_up(
+                host,
+                acx,
+                up.button,
+                &active_item_model_for_up,
+            );
+        }
         if up.is_click && up.button == MouseButton::Right {
             let _ = host.update_model(&context_anchor_model_for_up, |value| {
                 *value = Some(up.position)

@@ -394,6 +394,7 @@ fn switch_model_with_options_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Siz
                 cx,
                 id,
                 super::active_trigger_behavior::ActiveTriggerBehaviorOptions {
+                    primary_active: true,
                     request_focus_on_press: false,
                     clear_pointer_move: true,
                 },

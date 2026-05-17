@@ -257,23 +257,29 @@ Run evidence:
   `cargo nextest run -p fret-imui
   table_column_visibility_menu_items_update_shared_visibility_state_and_filter_columns
   --no-fail-fast`, and `python tools/gate_imui_workstream_source.py`.
-- 2026-05-17: added table header context-menu request reporting for sortable headers by extending
-  the shared active-trigger behavior in `fret-ui-kit::imui`. `TableHeaderResponse::response()` now
-  reports right-click context-menu requests with a pointer anchor, plus keyboard requests from the
-  ContextMenu key and Shift+F10; the helper below consumes this response signal for the default
-  visibility menu surface. Gates: `cargo nextest run -p fret-imui
+- 2026-05-17: added table header context-menu request reporting for sortable and plain headers
+  through a shared private header trigger surface in `fret-ui-kit::imui`. Sortable headers still
+  own button-like primary activation/click lifecycle, while plain headers only expose context-menu
+  request signals. `TableHeaderResponse::response()` now reports right-click context-menu requests
+  with a pointer anchor, plus keyboard requests from the ContextMenu key and Shift+F10; the helper
+  below consumes this response signal for the default visibility menu surface. Gates: `cargo
+  nextest run -p fret-imui table_plain_header_left_click_does_not_activate_or_click
+  table_plain_header_reports_context_menu_request_from_keyboard_without_clicking
+  table_column_visibility_header_context_menu_opens_from_plain_header
   table_sortable_header_reports_context_menu_request --no-fail-fast`, `cargo nextest run -p
   fret-imui interaction_press interaction_menu_tabs --no-fail-fast`, and `cargo nextest run -p
   fret-ui-kit --features imui --test imui_response_contract_smoke --test imui_table_smoke
   --no-fail-fast`.
 - 2026-05-17: added automatic table header visibility-menu wiring through
   `table_column_visibility_header_context_menu(...)`. The helper stays in `fret-ui-kit::imui`,
-  scans `TableResponse` header responses for context-menu requests, opens a popup menu with the
-  existing popup policy, renders `table_column_visibility_menu_items(...)`, and returns an
-  opaque/accessor-first response. `TableColumnVisibilityHeaderContextMenuOptions` exposes popup and
-  menu-item policy instead of hard-coding placement/sizing. Callers still own when to apply
-  `ImUiTableColumnVisibilityState` to their columns; persistence, freeze panes, and old columns API
-  shape remain separate follow-ons. Gates: `cargo nextest run -p fret-imui
+  scans `TableResponse` header responses from both sortable and plain headers for context-menu
+  requests, opens a popup menu with the existing popup policy, renders
+  `table_column_visibility_menu_items(...)`, and returns an opaque/accessor-first response.
+  `TableColumnVisibilityHeaderContextMenuOptions` exposes popup and menu-item policy instead of
+  hard-coding placement/sizing. Callers still own when to apply `ImUiTableColumnVisibilityState` to
+  their columns; persistence, freeze panes, and old columns API shape remain separate follow-ons.
+  Gates: `cargo nextest run -p fret-imui
+  table_column_visibility_header_context_menu_opens_from_plain_header
   table_column_visibility_header_context_menu_opens_and_updates_state
   table_column_visibility_menu_items_update_shared_visibility_state_and_filter_columns
   table_sortable_header_reports_context_menu_request --no-fail-fast`, `cargo nextest run -p

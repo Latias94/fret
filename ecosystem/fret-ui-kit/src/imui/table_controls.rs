@@ -6,7 +6,7 @@ use fret_core::{Color, Corners, CursorIcon, Edges, Px, SemanticsRole};
 use fret_ui::action::ActivateReason;
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PointerRegionProps, PressableA11y,
-    PressableProps, PressableState, SemanticsDecoration, SemanticsProps,
+    PressableKeyActivation, PressableProps, PressableState, SemanticsDecoration, SemanticsProps,
 };
 use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 
@@ -215,18 +215,15 @@ fn render_table<H: UiHost>(
                             &mut resize,
                         )
                     } else {
-                        BuiltHeaderCell {
-                            element: wrap_plain_header_cell(
-                                cx,
-                                column,
-                                index,
-                                visible_label,
-                                test_id,
-                                &options,
-                                &mut resize,
-                            ),
-                            trigger: ResponseExt::default(),
-                        }
+                        wrap_plain_header_cell(
+                            cx,
+                            column,
+                            index,
+                            visible_label,
+                            test_id,
+                            &options,
+                            &mut resize,
+                        )
                     };
                     header_responses.push(TableHeaderResponse {
                         column_index: index,
@@ -504,7 +501,6 @@ fn wrap_sortable_header_cell<H: UiHost>(
     options: &TableOptions,
     resize_response: &mut TableColumnResizeResponse,
 ) -> BuiltHeaderCell {
-    let mut trigger = ResponseExt::default();
     let column_key = column
         .id
         .clone()
@@ -512,7 +508,57 @@ fn wrap_sortable_header_cell<H: UiHost>(
     let sort_direction = column.sort_direction;
     let a11y_label = sortable_header_a11y_label(column, visible_label.as_ref(), column_index);
 
-    let trigger_element = cx.keyed(("sortable-header-cell", column_key), |cx| {
+    let BuiltHeaderTrigger {
+        element: trigger_element,
+        trigger,
+    } = header_trigger_surface(
+        cx,
+        ("sortable-header-cell", column_key),
+        Some(a11y_label),
+        true,
+        move |cx, enabled, state| {
+            vec![sortable_header_visual(
+                cx,
+                visible_label.clone(),
+                sort_direction,
+                enabled,
+                state,
+            )]
+        },
+    );
+
+    let element = wrap_table_header_cell(
+        cx,
+        column,
+        column_index,
+        trigger_element,
+        test_id,
+        options,
+        resize_response,
+    );
+
+    BuiltHeaderCell { element, trigger }
+}
+
+struct BuiltHeaderTrigger {
+    element: AnyElement,
+    trigger: ResponseExt,
+}
+
+fn header_trigger_surface<H, K, F>(
+    cx: &mut ElementContext<'_, H>,
+    key: K,
+    a11y_label: Option<Arc<str>>,
+    activates_on_primary: bool,
+    render: F,
+) -> BuiltHeaderTrigger
+where
+    H: UiHost,
+    K: std::hash::Hash + Eq + Clone + 'static,
+    F: Fn(&mut ElementContext<'_, H>, bool, PressableState) -> Vec<AnyElement> + 'static,
+{
+    let mut trigger = ResponseExt::default();
+    let trigger_element = cx.keyed(key, |cx| {
         let trigger = &mut trigger;
         let enabled = !super::imui_is_disabled(cx);
         let mut props = PressableProps::default();
@@ -521,9 +567,16 @@ fn wrap_sortable_header_cell<H: UiHost>(
         props.layout.size.width = Length::Fill;
         props.layout.flex.grow = 1.0;
         props.layout.flex.shrink = 1.0;
+        if !activates_on_primary {
+            props.key_activation = PressableKeyActivation::None;
+        }
         props.a11y = PressableA11y {
-            role: Some(SemanticsRole::Button),
-            label: Some(a11y_label.clone()),
+            role: Some(if activates_on_primary {
+                SemanticsRole::Button
+            } else {
+                SemanticsRole::Group
+            }),
+            label: a11y_label.clone(),
             ..Default::default()
         };
 
@@ -531,11 +584,14 @@ fn wrap_sortable_header_cell<H: UiHost>(
             let behavior = super::active_trigger_behavior::install_active_trigger_behavior(
                 cx,
                 element_id,
-                super::active_trigger_behavior::ActiveTriggerBehaviorOptions::default(),
+                super::active_trigger_behavior::ActiveTriggerBehaviorOptions {
+                    primary_active: activates_on_primary,
+                    ..Default::default()
+                },
             );
             let lifecycle_model_for_activate = behavior.lifecycle_model.clone();
 
-            if enabled {
+            if enabled && activates_on_primary {
                 cx.pressable_on_activate(crate::on_activate(move |host, acx, reason| {
                     if reason == ActivateReason::Keyboard {
                         super::mark_lifecycle_instant_if_inactive(
@@ -550,7 +606,12 @@ fn wrap_sortable_header_cell<H: UiHost>(
                 }));
             }
 
-            let clicked = cx.take_transient_for(element_id, super::KEY_CLICKED);
+            let clicked = if activates_on_primary {
+                cx.take_transient_for(element_id, super::KEY_CLICKED)
+            } else {
+                let _ = cx.take_transient_for(element_id, super::KEY_CLICKED);
+                false
+            };
             super::active_trigger_behavior::populate_active_trigger_response(
                 cx,
                 element_id,
@@ -565,27 +626,14 @@ fn wrap_sortable_header_cell<H: UiHost>(
                 trigger,
             );
 
-            vec![sortable_header_visual(
-                cx,
-                visible_label.clone(),
-                sort_direction,
-                enabled,
-                state,
-            )]
+            render(cx, enabled, state)
         })
     });
 
-    let element = wrap_table_header_cell(
-        cx,
-        column,
-        column_index,
-        trigger_element,
-        test_id,
-        options,
-        resize_response,
-    );
-
-    BuiltHeaderCell { element, trigger }
+    BuiltHeaderTrigger {
+        element: trigger_element,
+        trigger,
+    }
 }
 
 fn sortable_header_visual<H: UiHost>(
@@ -644,20 +692,44 @@ fn wrap_plain_header_cell<H: UiHost>(
     test_id: Option<Arc<str>>,
     options: &TableOptions,
     resize_response: &mut TableColumnResizeResponse,
-) -> AnyElement {
-    let content = visible_label
-        .map(|label| table_header_label_text(cx, label))
-        .unwrap_or_else(|| empty_cell(cx));
-    let content = table_header_content_box(cx, content);
-    wrap_table_header_cell(
+) -> BuiltHeaderCell {
+    let column_key = column
+        .id
+        .clone()
+        .unwrap_or_else(|| Arc::from(column_index.to_string()));
+    let a11y_label = visible_label
+        .clone()
+        .or_else(|| column.id.clone())
+        .or_else(|| Some(Arc::from(format!("Column {}", column_index + 1))));
+
+    let BuiltHeaderTrigger {
+        element: trigger_element,
+        trigger,
+    } = header_trigger_surface(
+        cx,
+        ("plain-header-cell", column_key),
+        a11y_label,
+        false,
+        move |cx, _enabled, _state| {
+            let content = visible_label
+                .clone()
+                .map(|label| table_header_label_text(cx, label))
+                .unwrap_or_else(|| empty_cell(cx));
+            vec![table_header_content_box(cx, content)]
+        },
+    );
+
+    let element = wrap_table_header_cell(
         cx,
         column,
         column_index,
-        content,
+        trigger_element,
         test_id,
         options,
         resize_response,
-    )
+    );
+
+    BuiltHeaderCell { element, trigger }
 }
 
 fn table_header_content_box<H: UiHost>(

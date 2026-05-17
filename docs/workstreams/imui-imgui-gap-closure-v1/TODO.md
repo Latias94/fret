@@ -216,16 +216,19 @@ Readiness order for the next locally testable review slices:
    stable-id, human-labeled table columns and returns accessor-first per-column responses. It still
    leaves popup presentation to the helper below and keeps persistence, freeze panes, and old
    columns API shape outside `fret-imui`.
-   2026-05-17 table header context-menu request follow-up: sortable table header responses now
-   report right-click, ContextMenu-key, and Shift+F10 context-menu requests through the shared
-   active-trigger behavior. That trigger signal is now consumed by the visibility menu helper
-   below; persistence, freeze panes, and old columns API shape remain separate follow-ons.
+   2026-05-17 table header context-menu request follow-up: sortable and plain table header
+   responses now report context-menu requests through a shared header trigger surface. Sortable
+   headers keep their primary activation/click lifecycle; plain headers expose right-click,
+   ContextMenu-key, and Shift+F10 requests without reporting left-click activation. That trigger
+   signal is now consumed by the visibility menu helper below; persistence, freeze panes, and old
+   columns API shape remain separate follow-ons.
    2026-05-17 table header visibility menu wiring follow-up:
    `table_column_visibility_header_context_menu(...)` now composes table header context-menu
-   requests, popup placement, and `table_column_visibility_menu_items(...)` into a narrow
-   accessor-first helper in `fret-ui-kit::imui`. `TableColumnVisibilityHeaderContextMenuOptions`
-   exposes popup/menu policy knobs. Callers still own applying the visibility model to their column
-   list, and `fret-imui` stays policy-light.
+   requests from both sortable and plain headers, popup placement, and
+   `table_column_visibility_menu_items(...)` into a narrow accessor-first helper in
+   `fret-ui-kit::imui`. `TableColumnVisibilityHeaderContextMenuOptions` exposes popup/menu policy
+   knobs. Callers still own applying the visibility model to their column list, and `fret-imui`
+   stays policy-light.
    2026-05-16 control readout text role follow-up: `text_control_readout(...)` now lives beside
    `text_table_cell(...)` in `fret-ui-kit::declarative::text`, and the UI Gallery code-editor
    toolbar readouts route through that shared role instead of carrying app-local text layout policy.

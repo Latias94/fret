@@ -394,12 +394,12 @@
       "command": "cargo nextest run -p fret-imui table_column_visibility_menu_items_update_shared_visibility_state_and_filter_columns --no-fail-fast"
     },
     {
-      "name": "fret-imui table header context-menu request tests",
-      "command": "cargo nextest run -p fret-imui table_sortable_header_reports_context_menu_request --no-fail-fast"
+      "name": "fret-imui table header trigger surface tests",
+      "command": "cargo nextest run -p fret-imui table_plain_header_left_click_does_not_activate_or_click table_plain_header_reports_context_menu_request_from_keyboard_without_clicking table_column_visibility_header_context_menu_opens_from_plain_header table_sortable_header_reports_context_menu_request --no-fail-fast"
     },
     {
-      "name": "fret-imui table header visibility menu wiring test",
-      "command": "cargo nextest run -p fret-imui table_column_visibility_header_context_menu_opens_and_updates_state --no-fail-fast"
+      "name": "fret-imui table header visibility menu wiring tests",
+      "command": "cargo nextest run -p fret-imui table_column_visibility_header_context_menu_opens_from_plain_header table_column_visibility_header_context_menu_opens_and_updates_state --no-fail-fast"
     },
     {
       "name": "diff check",

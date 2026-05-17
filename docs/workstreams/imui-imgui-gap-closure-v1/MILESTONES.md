@@ -223,12 +223,16 @@ Exit criteria:
   section for stable-id, human-labeled columns. The helper returns opaque/accessor-first item
   responses and feeds the header context-menu helper below without moving popup/menu policy into
   `fret-imui`.
+  2026-05-17 table header trigger surface result: sortable and plain table headers now share the
+  same private header trigger surface. Sortable headers keep button-like primary activation, while
+  plain headers expose context-menu request signals without reporting left-click click/activation
+  lifecycle.
   2026-05-17 table header visibility menu wiring result:
   `table_column_visibility_header_context_menu(...)` now bridges `TableResponse` header context
-  requests, popup placement, and column visibility menu items. It returns an opaque/accessor-first
-  response, exposes popup/menu policy through `TableColumnVisibilityHeaderContextMenuOptions`,
-  keeps the visibility model caller-owned, and leaves persistence, freeze panes, and old columns
-  API shape candidate-only.
+  requests from both sortable and plain headers, popup placement, and column visibility menu items.
+  It returns an opaque/accessor-first response, exposes popup/menu policy through
+  `TableColumnVisibilityHeaderContextMenuOptions`, keeps the visibility model caller-owned, and
+  leaves persistence, freeze panes, and old columns API shape candidate-only.
   2026-05-16 control readout text role result: `text_control_readout(...)` now sits in
   `fret-ui-kit::declarative::text` beside `text_table_cell(...)`. The UI Gallery code-editor
   readouts still use the doc-layout app helper, but that helper delegates to the shared role, so
