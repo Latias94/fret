@@ -7,17 +7,15 @@ mod backdrop_source_group;
 mod clip_path;
 mod composite_group;
 mod context;
+mod effect_scope;
 mod target_budget;
 
 use super::render_plan_effects as effects;
 use super::{
-    BlurQualitySnapshot, EffectDegradationSnapshot, EffectMarkerKind, OrderedDraw,
-    RenderPlanDegradation, RenderPlanDegradationKind, RenderPlanDegradationReason, RenderPlanPass,
-    SceneEncoding, ScissorRect,
+    BlurQualitySnapshot, EffectDegradationSnapshot, EffectMarkerKind, OrderedDraw, RenderPlanPass,
+    SceneEncoding,
 };
-use crate::renderer::estimate_texture_bytes;
 use context::RenderPlanCompilerCtx;
-use target_budget::{can_allocate_intermediate_bytes, intermediate_budget_breakdown_for_chain};
 
 #[derive(Clone, Copy, Debug)]
 struct DrawScope {
@@ -26,21 +24,6 @@ struct DrawScope {
     size: (u32, u32),
     needs_clear: bool,
     clear_color: wgpu::Color,
-}
-
-#[derive(Clone, Copy, Debug)]
-struct EffectScope {
-    mode: fret_core::EffectMode,
-    chain: fret_core::EffectChain,
-    quality: fret_core::EffectQuality,
-    scissor: ScissorRect,
-    uniform_index: u32,
-    parent_target: super::PlanTarget,
-    parent_origin: (u32, u32),
-    parent_size: (u32, u32),
-    content_target: Option<super::PlanTarget>,
-    content_origin: (u32, u32),
-    content_size: (u32, u32),
 }
 
 fn take_scope_load_for_write(
@@ -212,7 +195,7 @@ fn compile_for_scene_inner(
         needs_clear: true,
         clear_color: clear,
     }];
-    let mut effect_scopes: Vec<EffectScope> = Vec::new();
+    let mut effect_scopes: Vec<effect_scope::EffectScope> = Vec::new();
     let mut composite_group_scopes: Vec<composite_group::CompositeGroupScope> = Vec::new();
     let mut clip_path_scopes: Vec<clip_path::ClipPathScope> = Vec::new();
     let mut clip_path_mask_in_use_bytes: u64 = 0;
@@ -220,118 +203,7 @@ fn compile_for_scene_inner(
         Vec::new();
     let mut backdrop_source_group_reserved_targets: Vec<super::PlanTarget> = Vec::new();
     let mut backdrop_source_group_in_use_bytes: u64 = 0;
-
-    let mut effect_chain_budget_samples: u64 = 0;
-    let mut effect_chain_effective_budget_min_bytes: u64 = u64::MAX;
-    let mut effect_chain_effective_budget_max_bytes: u64 = 0;
-    let mut effect_chain_other_live_max_bytes: u64 = 0;
-
-    let mut custom_effect_chain_budget_samples: u64 = 0;
-    let mut custom_effect_chain_effective_budget_min_bytes: u64 = u64::MAX;
-    let mut custom_effect_chain_effective_budget_max_bytes: u64 = 0;
-    let mut custom_effect_chain_other_live_max_bytes: u64 = 0;
-    let mut custom_effect_chain_base_required_max_bytes: u64 = 0;
-    let mut custom_effect_chain_optional_required_max_bytes: u64 = 0;
-    let mut custom_effect_chain_base_required_full_targets_max: u32 = 0;
-    let mut custom_effect_chain_optional_mask_max_bytes: u64 = 0;
-    let mut custom_effect_chain_optional_pyramid_max_bytes: u64 = 0;
-
-    let mut apply_chain_in_place =
-        |passes: &mut Vec<RenderPlanPass>,
-         draw_scopes: &[DrawScope],
-         srcdst: super::PlanTarget,
-         mode: fret_core::EffectMode,
-         chain: fret_core::EffectChain,
-         quality: fret_core::EffectQuality,
-         ctx_viewport_size: (u32, u32),
-         scissor: ScissorRect,
-         mask_uniform_index: Option<u32>,
-         extra_in_use_bytes: u64,
-         unavailable_mask_targets: &[super::PlanTarget],
-         reserved_targets: &[super::PlanTarget],
-         backdrop_source_group: Option<effects::BackdropSourceGroupCtx>,
-         effect_degradations: &mut EffectDegradationSnapshot,
-         effect_blur_quality: &mut BlurQualitySnapshot| {
-            if srcdst == super::PlanTarget::Output || scissor.w == 0 || scissor.h == 0 {
-                return;
-            }
-
-            let breakdown = intermediate_budget_breakdown_for_chain(
-                intermediate_budget_bytes,
-                draw_scopes,
-                srcdst,
-                format,
-                extra_in_use_bytes,
-            );
-            let effective_budget_bytes = breakdown.effective_budget_bytes;
-
-            if !chain.is_empty() {
-                effect_chain_budget_samples = effect_chain_budget_samples.saturating_add(1);
-                effect_chain_effective_budget_min_bytes =
-                    effect_chain_effective_budget_min_bytes.min(effective_budget_bytes);
-                effect_chain_effective_budget_max_bytes =
-                    effect_chain_effective_budget_max_bytes.max(effective_budget_bytes);
-                effect_chain_other_live_max_bytes =
-                    effect_chain_other_live_max_bytes.max(breakdown.other_live_bytes);
-            }
-
-            let mut in_use_targets: Vec<super::PlanTarget> = Vec::new();
-            for s in draw_scopes {
-                if !in_use_targets.contains(&s.target) {
-                    in_use_targets.push(s.target);
-                }
-            }
-            for &t in reserved_targets {
-                if !in_use_targets.contains(&t) {
-                    in_use_targets.push(t);
-                }
-            }
-            let custom_evidence = effects::apply_chain_in_place(
-                passes,
-                &in_use_targets,
-                srcdst,
-                mode,
-                chain,
-                quality,
-                scissor,
-                mask_uniform_index,
-                unavailable_mask_targets,
-                effect_degradations,
-                effect_blur_quality,
-                effects::EffectCompileCtx {
-                    viewport_size: ctx_viewport_size,
-                    format,
-                    intermediate_budget_bytes: effective_budget_bytes,
-                    clear,
-                    scale_factor,
-                },
-                backdrop_source_group,
-            );
-
-            if let Some(e) = custom_evidence {
-                custom_effect_chain_budget_samples =
-                    custom_effect_chain_budget_samples.saturating_add(1);
-                let effective_budget_bytes = e.effective_budget_bytes;
-                custom_effect_chain_effective_budget_min_bytes =
-                    custom_effect_chain_effective_budget_min_bytes.min(effective_budget_bytes);
-                custom_effect_chain_effective_budget_max_bytes =
-                    custom_effect_chain_effective_budget_max_bytes.max(effective_budget_bytes);
-                custom_effect_chain_other_live_max_bytes =
-                    custom_effect_chain_other_live_max_bytes.max(breakdown.other_live_bytes);
-                custom_effect_chain_base_required_max_bytes =
-                    custom_effect_chain_base_required_max_bytes.max(e.base_required_bytes);
-                custom_effect_chain_optional_required_max_bytes =
-                    custom_effect_chain_optional_required_max_bytes
-                        .max(e.optional_required_bytes());
-                custom_effect_chain_base_required_full_targets_max =
-                    custom_effect_chain_base_required_full_targets_max
-                        .max(e.base_required_full_targets);
-                custom_effect_chain_optional_mask_max_bytes =
-                    custom_effect_chain_optional_mask_max_bytes.max(e.optional_mask_bytes);
-                custom_effect_chain_optional_pyramid_max_bytes =
-                    custom_effect_chain_optional_pyramid_max_bytes.max(e.optional_pyramid_bytes);
-            }
-        };
+    let mut effect_chain_budget_stats = effect_scope::EffectChainBudgetStats::default();
 
     let mut scene_range_start: usize = 0;
     let mut cursor: usize = 0;
@@ -362,254 +234,55 @@ fn compile_for_scene_inner(
                         chain,
                         quality,
                     } => {
-                        let parent_scope = draw_scopes.last().expect("draw scope");
-                        let parent_target = parent_scope.target;
-                        let parent_origin = parent_scope.origin;
-                        let parent_size = parent_scope.size;
-                        match mode {
-                            fret_core::EffectMode::Backdrop => {
-                                let had_free_scratch_target = [
-                                    super::PlanTarget::Intermediate0,
-                                    super::PlanTarget::Intermediate1,
-                                    super::PlanTarget::Intermediate2,
-                                    super::PlanTarget::Intermediate3,
-                                ]
-                                .into_iter()
-                                .any(|t| {
-                                    t != parent_target
-                                        && !draw_scopes.iter().any(|s| s.target == t)
-                                        && !backdrop_source_group_reserved_targets.contains(&t)
-                                });
-
-                                let before = ctx.passes_len();
-                                let unavailable_mask_targets: Vec<super::PlanTarget> =
-                                    clip_path::active_mask_targets(&clip_path_scopes).collect();
-                                let backdrop_source_group = backdrop_source_group_scopes
-                                    .last()
-                                    .and_then(|s| s.effect_ctx());
-                                apply_chain_in_place(
-                                    ctx.passes_mut(),
-                                    &draw_scopes,
-                                    parent_target,
-                                    mode,
-                                    chain,
-                                    quality,
-                                    parent_size,
-                                    scissor,
-                                    Some(uniform_index),
-                                    clip_path_mask_in_use_bytes
-                                        .saturating_add(backdrop_source_group_in_use_bytes),
-                                    &unavailable_mask_targets,
+                        effect_scope::compile_effect_scope_push(
+                            &mut ctx,
+                            &mut draw_scopes,
+                            &mut effect_scopes,
+                            &mut effect_chain_budget_stats,
+                            &mut effect_degradations,
+                            &mut effect_blur_quality,
+                            cursor,
+                            effect_scope::EffectScopePushCtx {
+                                scissor,
+                                uniform_index,
+                                mode,
+                                chain,
+                                quality,
+                                viewport_size,
+                                format,
+                                clear,
+                                scale_factor,
+                                intermediate_budget_bytes,
+                                clip_path_mask_in_use_bytes,
+                                clip_path_scopes: &clip_path_scopes,
+                                backdrop_source_group_scopes: &backdrop_source_group_scopes,
+                                backdrop_source_group_reserved_targets:
                                     &backdrop_source_group_reserved_targets,
-                                    backdrop_source_group,
-                                    &mut effect_degradations,
-                                    &mut effect_blur_quality,
-                                );
-                                if before == ctx.passes_len()
-                                    && !chain.is_empty()
-                                    && parent_target != super::PlanTarget::Output
-                                    && scissor.w != 0
-                                    && scissor.h != 0
-                                {
-                                    let reason = if intermediate_budget_bytes == 0 {
-                                        RenderPlanDegradationReason::BudgetZero
-                                    } else if !had_free_scratch_target {
-                                        RenderPlanDegradationReason::TargetExhausted
-                                    } else {
-                                        RenderPlanDegradationReason::BudgetInsufficient
-                                    };
-                                    ctx.push_degradation(RenderPlanDegradation {
-                                        draw_ix: cursor,
-                                        kind: RenderPlanDegradationKind::BackdropEffectNoOp,
-                                        reason,
-                                    });
-                                }
-
-                                effect_scopes.push(EffectScope {
-                                    mode,
-                                    chain,
-                                    quality,
-                                    scissor,
-                                    uniform_index,
-                                    parent_target,
-                                    parent_origin,
-                                    parent_size,
-                                    content_target: None,
-                                    content_origin: (0, 0),
-                                    content_size: (0, 0),
-                                });
-                            }
-                            fret_core::EffectMode::FilterContent => {
-                                // `bounds` are computation bounds (ADR 0117), not an implicit clip.
-                                // FilterContent therefore must preserve unfiltered content outside
-                                // `bounds`, which requires a full-viewport content target (the
-                                // postprocess passes themselves remain scissored to `bounds`).
-                                let (content_origin, content_size) = ((0, 0), viewport_size);
-                                let mut content_target: Option<super::PlanTarget> = None;
-                                let mut had_free_target = false;
-                                if content_size.0 != 0 && content_size.1 != 0 {
-                                    for t in [
-                                        super::PlanTarget::Intermediate0,
-                                        super::PlanTarget::Intermediate1,
-                                        super::PlanTarget::Intermediate2,
-                                        super::PlanTarget::Intermediate3,
-                                    ] {
-                                        if draw_scopes.iter().any(|s| s.target == t)
-                                            || backdrop_source_group_reserved_targets.contains(&t)
-                                        {
-                                            continue;
-                                        }
-                                        content_target = Some(t);
-                                        had_free_target = true;
-                                        break;
-                                    }
-
-                                    if content_target.is_some()
-                                        && !can_allocate_intermediate_bytes(
-                                            intermediate_budget_bytes,
-                                            &draw_scopes,
-                                            estimate_texture_bytes(content_size, format, 1),
-                                            clip_path_mask_in_use_bytes
-                                                .saturating_add(backdrop_source_group_in_use_bytes),
-                                            format,
-                                        )
-                                    {
-                                        content_target = None;
-                                    }
-                                }
-
-                                if let Some(content_target) = content_target {
-                                    draw_scopes.push(DrawScope {
-                                        target: content_target,
-                                        origin: content_origin,
-                                        size: content_size,
-                                        needs_clear: true,
-                                        clear_color: wgpu::Color::TRANSPARENT,
-                                    });
-                                } else if content_size.0 != 0 && content_size.1 != 0 {
-                                    ctx.push_degradation(RenderPlanDegradation {
-                                        draw_ix: cursor,
-                                        kind: RenderPlanDegradationKind::FilterContentDisabled,
-                                        reason: if !had_free_target {
-                                            RenderPlanDegradationReason::TargetExhausted
-                                        } else if intermediate_budget_bytes == 0 {
-                                            RenderPlanDegradationReason::BudgetZero
-                                        } else {
-                                            RenderPlanDegradationReason::BudgetInsufficient
-                                        },
-                                    });
-                                }
-
-                                effect_scopes.push(EffectScope {
-                                    mode,
-                                    chain,
-                                    quality,
-                                    scissor,
-                                    uniform_index,
-                                    parent_target,
-                                    parent_origin,
-                                    parent_size,
-                                    content_target,
-                                    content_origin,
-                                    content_size,
-                                });
-                            }
-                        }
+                                backdrop_source_group_in_use_bytes,
+                            },
+                        );
                     }
                     EffectMarkerKind::Pop => {
-                        let Some(scope) = effect_scopes.pop() else {
-                            marker_ix += 1;
-                            continue;
-                        };
-
-                        if scope.mode == fret_core::EffectMode::FilterContent
-                            && let Some(content_target) = scope.content_target
-                        {
-                            debug_assert_eq!(
-                                draw_scopes.last().expect("draw scope").target,
-                                content_target
-                            );
-
-                            let had_free_scratch_target = [
-                                super::PlanTarget::Intermediate0,
-                                super::PlanTarget::Intermediate1,
-                                super::PlanTarget::Intermediate2,
-                                super::PlanTarget::Intermediate3,
-                            ]
-                            .into_iter()
-                            .any(|t| {
-                                t != content_target
-                                    && !draw_scopes.iter().any(|s| s.target == t)
-                                    && !backdrop_source_group_reserved_targets.contains(&t)
-                            });
-
-                            let chain_scissor = if scope.content_size == viewport_size {
-                                scope.scissor
-                            } else {
-                                ScissorRect::full(scope.content_size.0, scope.content_size.1)
-                            };
-
-                            let before = ctx.passes_len();
-                            apply_chain_in_place(
-                                ctx.passes_mut(),
-                                &draw_scopes,
-                                content_target,
-                                scope.mode,
-                                scope.chain,
-                                scope.quality,
-                                scope.content_size,
-                                chain_scissor,
-                                None,
-                                clip_path_mask_in_use_bytes
-                                    .saturating_add(backdrop_source_group_in_use_bytes),
-                                &[],
-                                &backdrop_source_group_reserved_targets,
-                                None,
-                                &mut effect_degradations,
-                                &mut effect_blur_quality,
-                            );
-                            if before == ctx.passes_len()
-                                && !scope.chain.is_empty()
-                                && chain_scissor.w != 0
-                                && chain_scissor.h != 0
-                            {
-                                ctx.push_degradation(RenderPlanDegradation {
-                                    draw_ix: cursor,
-                                    kind: RenderPlanDegradationKind::FilterContentDisabled,
-                                    reason: if intermediate_budget_bytes == 0 {
-                                        RenderPlanDegradationReason::BudgetZero
-                                    } else if !had_free_scratch_target {
-                                        RenderPlanDegradationReason::TargetExhausted
-                                    } else {
-                                        RenderPlanDegradationReason::BudgetInsufficient
-                                    },
-                                });
-                            }
-
-                            let cropped = scope.content_origin != (0, 0)
-                                || scope.content_size != viewport_size;
-                            let load =
-                                take_scope_load_for_write(&mut draw_scopes, scope.parent_target);
-                            ctx.push_pass(RenderPlanPass::CompositePremul(
-                                super::CompositePremulPass {
-                                    src: content_target,
-                                    src_origin: scope.content_origin,
-                                    dst: scope.parent_target,
-                                    src_size: scope.content_size,
-                                    dst_origin: scope.parent_origin,
-                                    dst_size: scope.parent_size,
-                                    dst_scissor: cropped
-                                        .then_some(super::AbsoluteScissorRect(scope.scissor)),
-                                    mask_uniform_index: Some(scope.uniform_index),
-                                    mask: None,
-                                    blend_mode: fret_core::BlendMode::Over,
-                                    opacity: 1.0,
-                                    load,
-                                },
-                            ));
-
-                            let _ = draw_scopes.pop();
-                        }
+                        effect_scope::compile_effect_scope_pop(
+                            &mut ctx,
+                            &mut draw_scopes,
+                            &mut effect_scopes,
+                            &mut effect_chain_budget_stats,
+                            &mut effect_degradations,
+                            &mut effect_blur_quality,
+                            cursor,
+                            effect_scope::EffectScopePopCtx {
+                                viewport_size,
+                                format,
+                                clear,
+                                scale_factor,
+                                intermediate_budget_bytes,
+                                clip_path_mask_in_use_bytes,
+                                backdrop_source_group_reserved_targets:
+                                    &backdrop_source_group_reserved_targets,
+                                backdrop_source_group_in_use_bytes,
+                            },
+                        );
                     }
                     EffectMarkerKind::ClipPathPush {
                         scissor,
@@ -783,41 +456,7 @@ fn compile_for_scene_inner(
         effect_blur_quality,
     );
 
-    if effect_chain_budget_samples > 0 {
-        plan.compile_stats.effect_chain_budget_samples = effect_chain_budget_samples;
-        plan.compile_stats.effect_chain_effective_budget_min_bytes =
-            effect_chain_effective_budget_min_bytes;
-        plan.compile_stats.effect_chain_effective_budget_max_bytes =
-            effect_chain_effective_budget_max_bytes;
-        plan.compile_stats.effect_chain_other_live_max_bytes = effect_chain_other_live_max_bytes;
-    }
-
-    if custom_effect_chain_budget_samples > 0 {
-        plan.compile_stats.custom_effect_chain_budget_samples = custom_effect_chain_budget_samples;
-        plan.compile_stats
-            .custom_effect_chain_effective_budget_min_bytes =
-            custom_effect_chain_effective_budget_min_bytes;
-        plan.compile_stats
-            .custom_effect_chain_effective_budget_max_bytes =
-            custom_effect_chain_effective_budget_max_bytes;
-        plan.compile_stats.custom_effect_chain_other_live_max_bytes =
-            custom_effect_chain_other_live_max_bytes;
-        plan.compile_stats
-            .custom_effect_chain_base_required_max_bytes =
-            custom_effect_chain_base_required_max_bytes;
-        plan.compile_stats
-            .custom_effect_chain_optional_required_max_bytes =
-            custom_effect_chain_optional_required_max_bytes;
-        plan.compile_stats
-            .custom_effect_chain_base_required_full_targets_max =
-            custom_effect_chain_base_required_full_targets_max;
-        plan.compile_stats
-            .custom_effect_chain_optional_mask_max_bytes =
-            custom_effect_chain_optional_mask_max_bytes;
-        plan.compile_stats
-            .custom_effect_chain_optional_pyramid_max_bytes =
-            custom_effect_chain_optional_pyramid_max_bytes;
-    }
+    effect_chain_budget_stats.apply_to_plan(&mut plan);
 
     plan
 }

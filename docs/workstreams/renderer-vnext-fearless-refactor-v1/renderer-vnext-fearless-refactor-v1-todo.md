@@ -607,7 +607,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - [x] Step 3b-1: split composite-group push/pop compilation into a focused helper module.
     - [x] Step 3b-2a: split backdrop-source-group push/pop compilation into a focused helper
       module.
-    - [ ] Step 3b-2b: split effect-scope compilation into a focused helper module.
+    - [x] Step 3b-2b: split effect-scope compilation into a focused helper module.
   - Landed (step 1): extracted target/budget helpers and their focused tests into
     `crates/fret-render-wgpu/src/renderer/render_plan_compiler/target_budget.rs`.
   - Landed (step 2): introduced `RenderPlanCompilerCtx` to own structural compiler outputs
@@ -626,6 +626,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     leaving the `compile_for_scene` entrypoint, `RenderPlan` IR shape, pass ordering, target
     reservation/lifetime semantics, `reserved_bytes` accounting, and pyramid degradation counters
     unchanged.
+  - Landed (step 3b-2b): moved effect-scope push/pop planning and effect-chain budget sampling
+    into `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs` while
+    leaving marker/pass ordering, FilterContent target lifetime, load-op behavior, Backdrop no-op
+    degradation, FilterContent disabled degradation, and backdrop-source-group context propagation
+    unchanged.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`compile_for_scene`,
       `compile_for_scene_inner`)
@@ -641,6 +646,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/backdrop_source_group.rs`
       (`compile_backdrop_source_group_push`, `compile_backdrop_source_group_pop`,
       `BackdropSourceGroupScope::effect_ctx`)
+    - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
+      (`compile_effect_scope_push`, `compile_effect_scope_pop`,
+      `EffectChainBudgetStats::apply_to_plan`)
     - `docs/workstreams/renderer-render-plan-semantics-audit-v1/renderer-render-plan-semantics-audit-v1.md`
       (target lifetime, load-op, scissor/mask, and deterministic degradation invariants)
   - Gates:

@@ -922,6 +922,31 @@ Progress record (RenderPlan compiler backdrop-source-group helper split):
   - `python3 tools/check_layering.py`
   - `git diff --check`
 
+Progress record (RenderPlan compiler effect-scope helper split):
+
+- Date: 2026-05-17
+- Status: Landed (Stage 24 step 3b-2b; Stage 24 continues)
+- Objective:
+  - Split effect-scope push/pop planning and effect-chain budget sampling out of the main
+    RenderPlan compiler loop without changing the `compile_for_scene` entrypoint, `RenderPlan` IR
+    shape, marker/pass ordering, FilterContent target lifetime, load-op behavior, Backdrop no-op
+    degradation, FilterContent disabled degradation, or backdrop-source-group context propagation.
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler/effect_scope.rs`
+    (`compile_effect_scope_push`, `compile_effect_scope_pop`,
+    `EffectChainBudgetStats::apply_to_plan`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`
+    (`EffectMarkerKind::Push`, `EffectMarkerKind::Pop` delegate to the helper; finalize applies
+    effect-chain budget stats after `RenderPlan::finalize`)
+- Gates run:
+  - `cargo fmt -p fret-render-wgpu`
+  - `cargo test -p fret-render-wgpu --lib renderer::`
+  - `cargo test -p fret-render-wgpu render_plan_compiler::target_budget`
+  - `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+  - `python3 tools/check_layering.py`
+  - `git diff --check`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:
