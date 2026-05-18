@@ -757,12 +757,15 @@ Current evidence anchors:
     `target/fret-diag-combobox-long-text-geometry-renderer-trace-v4/sessions/1779077868548-173912/script.result.json`,
     `target/fret-diag-combobox-long-text-geometry-renderer-trace-v4/sessions/1779077868548-173912/1779077880731/ai.packet`,
     `target/fret-diag-combobox-long-text-geometry-renderer-trace-v4/sessions/1779077868548-173912/share/1779077880731.zip`
-- Combobox RTL long-text trigger/option geometry gate:
+- Combobox RTL long-text trigger/option geometry and renderer font-trace gate:
   `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-geometry.json`
   - asserts trigger label width budget, physical-left RTL chevron inset, label-after-chevron
     spacing, chrome-relative vertical centering, content-shell top collision flip with
     `side_offset_px=6`, option label width budget, physical-right RTL checkmark inset, and
     label-before-checkmark spacing.
+  - now also enables `FRET_TEXT_FONT_TRACE_ALL=1` and asserts at least one renderer font trace
+    entry for the selected "Enterprise Observability" label with `font=ui`, `wrap=none`,
+    `overflow=ellipsis`, and `missing_glyphs=0`.
   - suite membership:
     `tools/diag-scripts/suites/ui-gallery-combobox/suite.json`,
     `tools/diag-scripts/suites/ui-gallery-rtl-smoke/suite.json`, and
@@ -775,6 +778,16 @@ Current evidence anchors:
     `target/fret-diag-combobox-rtl-long-text-audit/sessions/1778747708234-13552/1778747713455-ui-gallery-combobox-rtl-long-text-open.layout/layout.taffy.v1.json`
   - current audit screenshot:
     `target/fret-diag-combobox-rtl-long-text-audit/sessions/1778747708234-13552/screenshots/1778747713519-ui-gallery-combobox-rtl-long-text-open/window-4294967297-tick-34-frame-34.png`
+  - renderer font-trace script roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_rtl_long_text_geometry --no-fail-fast --no-capture`
+    passed with Nextest run id `23514d59-c3bc-4985-8c8f-d1047d32e6aa`.
+  - renderer font-trace runtime evidence:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-geometry.json --dir target/fret-diag-combobox-rtl-long-text-renderer-trace-v1 --session-auto --pack --ai-packet --include-screenshots --launch -- target/dev-fast/fret-ui-gallery.exe`
+    passed with run id `1779078285665`.
+  - renderer font-trace runtime artifacts:
+    `target/fret-diag-combobox-rtl-long-text-renderer-trace-v1/sessions/1779078273314-137596/script.result.json`,
+    `target/fret-diag-combobox-rtl-long-text-renderer-trace-v1/sessions/1779078273314-137596/1779078285665/ai.packet`,
+    `target/fret-diag-combobox-rtl-long-text-renderer-trace-v1/sessions/1779078273314-137596/share/1779078285665.zip`
 - Popover first-open explicit-width center alignment gate:
   `ecosystem/fret-ui-shadcn/src/popover.rs`
   - test: `popover_first_open_center_alignment_uses_explicit_width_for_x`

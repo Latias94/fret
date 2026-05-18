@@ -919,3 +919,9 @@ date: 2026-05-12
     prove the selected label is prepared with `font=ui`, `wrap=none`, `overflow=ellipsis`, and
     `missing_glyphs=0`. The first runtime drafts found a static-page `wait_frames` stall in the
     script, not a Combobox or renderer defect; the corrected gate uses semantic convergence waits.
+- [x] Add the RTL Combobox renderer font-trace companion.
+  - Result: `ui-gallery-combobox-rtl-long-text-geometry.json` now uses the same renderer trace
+    predicate as the LTR gate, proving the selected RTL long label is prepared with `font=ui`,
+    `wrap=none`, `overflow=ellipsis`, and `missing_glyphs=0` while keeping the existing RTL
+    chevron/checkmark geometry and top-flip placement oracles. No new Combobox or renderer defect
+    was reproduced.

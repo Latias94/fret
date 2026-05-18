@@ -1624,3 +1624,20 @@ long-text gate.
   `88d1c4cf-a5e7-4b17-91bd-998df1857420` and
   `4ec491be-913d-47fa-b1e3-d7e756594342`.
 - The runtime diagnostics gate passes with run id `1779077880731`.
+
+## M93: RTL Combobox Renderer Font Trace Companion
+
+Status: complete for renderer text-preparation evidence on the RTL Combobox long-text gate.
+
+- Promoted `ui-gallery-combobox-rtl-long-text-geometry.json` from geometry-only RTL long-text
+  evidence to renderer-backed evidence by enabling `FRET_TEXT_FONT_TRACE_ALL=1` and asserting the
+  selected RTL long label is prepared with `font=ui`, `wrap=none`, `overflow=ellipsis`, and
+  `missing_glyphs=0`.
+- Removed bare static-page `wait_frames` steps from the RTL script and used bounded predicate
+  convergence, matching the LTR gate's failure mode hardening.
+- No new Combobox recipe, RTL layout, or renderer defect was reproduced. The existing physical-left
+  chevron, physical-right checkmark, top-flip placement, layout sidecar, screenshot, and bundle
+  evidence remain intact.
+- The RTL script roundtrip gate passes with Nextest run id
+  `23514d59-c3bc-4985-8c8f-d1047d32e6aa`.
+- The runtime diagnostics gate passes with run id `1779078285665`.

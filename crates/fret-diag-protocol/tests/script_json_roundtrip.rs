@@ -352,6 +352,13 @@ fn script_v2_roundtrip_ui_gallery_combobox_long_text_geometry() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_combobox_rtl_long_text_geometry() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-combobox-rtl-long-text-geometry.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_combobox_auto_highlight_disabled_none_on_open() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-combobox-auto-highlight-disabled-none-on-open.json"
