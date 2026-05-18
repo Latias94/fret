@@ -22,6 +22,8 @@ enum HitTestRoutingScenario {
     NonHitTestableGateSuppressesChildHit,
     MaskLayerBoundsDoNotClipHitTestingByDefault,
     MaskLayerOverflowClipSuppressesEscapedChildHit,
+    EffectLayerBoundsDoNotClipHitTestingByDefault,
+    EffectLayerOverflowClipSuppressesEscapedChildHit,
     OverlayRootZOrderWins,
     ModalBarrierRootSuppressesUnderlay,
 }
@@ -171,6 +173,16 @@ fn observe_declarative_case(
                 &ui,
                 &snapshot,
                 "mask-escaped-child-area",
+                Point::new(Px(wrapper.origin.x.0 + 34.0), Px(wrapper.origin.y.0 + 10.0)),
+            ));
+        }
+        HitTestRoutingScenario::EffectLayerBoundsDoNotClipHitTestingByDefault
+        | HitTestRoutingScenario::EffectLayerOverflowClipSuppressesEscapedChildHit => {
+            let wrapper = bounds_for_test_id(&observed, "effect-wrapper", BoundsSpace::Layout)?;
+            observed.push_hit_test_sample(hit_sample(
+                &ui,
+                &snapshot,
+                "effect-escaped-child-area",
                 Point::new(Px(wrapper.origin.x.0 + 34.0), Px(wrapper.origin.y.0 + 10.0)),
             ));
         }
@@ -395,6 +407,18 @@ fn build_declarative_scenario(
                 crate::element::Overflow::Clip,
             )]
         }
+        HitTestRoutingScenario::EffectLayerBoundsDoNotClipHitTestingByDefault => {
+            vec![effect_layer_with_escaped_pressable(
+                cx,
+                crate::element::Overflow::Visible,
+            )]
+        }
+        HitTestRoutingScenario::EffectLayerOverflowClipSuppressesEscapedChildHit => {
+            vec![effect_layer_with_escaped_pressable(
+                cx,
+                crate::element::Overflow::Clip,
+            )]
+        }
         HitTestRoutingScenario::OverlayRootZOrderWins
         | HitTestRoutingScenario::ModalBarrierRootSuppressesUnderlay => unreachable!(),
     }
@@ -525,6 +549,32 @@ fn mask_layer_with_escaped_pressable(
         )]
     })
     .test_id("mask-wrapper")
+}
+
+fn effect_layer_with_escaped_pressable(
+    cx: &mut ElementContext<'_, TestHost>,
+    overflow: crate::element::Overflow,
+) -> AnyElement {
+    let mut layout = absolute_layout(0.0, 0.0, 20.0, 20.0);
+    layout.overflow = overflow;
+    let props = crate::element::EffectLayerProps {
+        layout,
+        mode: fret_core::EffectMode::FilterContent,
+        chain: fret_core::EffectChain::from_steps(&[fret_core::EffectStep::Pixelate { scale: 2 }]),
+        quality: fret_core::EffectQuality::Auto,
+    };
+
+    cx.effect_layer_props(props, |cx| {
+        vec![absolute_pressable(
+            cx,
+            "effect-escaped-child",
+            30.0,
+            0.0,
+            20.0,
+            20.0,
+        )]
+    })
+    .test_id("effect-wrapper")
 }
 
 fn absolute_layout(x: f32, y: f32, w: f32, h: f32) -> crate::element::LayoutStyle {

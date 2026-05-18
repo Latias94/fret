@@ -446,6 +446,20 @@ Current runtime evidence:
   - JSON validation:
     `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\hit_test_routing_v1.json`
     passed.
+- EffectLayer computation-bound hit-testing fixture:
+  `crates/fret-ui/src/declarative/tests/fixtures/hit_test_routing_v1.json`
+  - proof:
+    `effect-layer-bounds-do-not-clip-hit-testing-by-default` proves an offset escaped child
+    remains targetable outside `EffectLayer` bounds when the wrapper uses default visible
+    overflow. `effect-layer-overflow-clip-suppresses-escaped-child-hit` proves the same escaped
+    child is suppressed when the wrapper opts into `Overflow::Clip`.
+  - current command:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_hit_test_routing_matches_oracles --no-fail-fast --no-capture`
+  - current result:
+    passed with Nextest run id `c31f8473-555a-4b65-996c-0648d8f85b75`.
+  - JSON validation:
+    `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\hit_test_routing_v1.json`
+    passed.
 - Scrollbar drag pointer-capture lifecycle and owner:
   `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json`
   - asserts `input_pointer_capture_active_is active=true` after `pointer_down` on

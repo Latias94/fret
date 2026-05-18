@@ -1736,3 +1736,20 @@ Status: complete for MaskLayer bounds versus hit-test clipping semantics.
   with Nextest run id `a72e3112-544e-405a-957d-d4d00dfad034`.
 - JSON fixture validation passes:
   `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\hit_test_routing_v1.json`.
+
+## M99: EffectLayer Computation-Bound Hit-Test Fixture
+
+Status: complete for EffectLayer bounds versus hit-test clipping semantics.
+
+- Added `effect-layer-bounds-do-not-clip-hit-testing-by-default` and
+  `effect-layer-overflow-clip-suppresses-escaped-child-hit` to the hit-test routing fixture.
+- The cases lock ADR 0117/0118 semantics: effect bounds are computation bounds, not an implicit
+  hit-test clip, while explicit `Overflow::Clip` on the `EffectLayer` wrapper still clips escaped
+  descendants.
+- No new mechanism defect was reproduced. The existing `fret-ui` runtime already keeps effect
+  bounds separate from hit-testing and routes clipping through the explicit overflow contract.
+- The gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_hit_test_routing_matches_oracles --no-fail-fast --no-capture`
+  with Nextest run id `c31f8473-555a-4b65-996c-0648d8f85b75`.
+- JSON fixture validation passes:
+  `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\hit_test_routing_v1.json`.

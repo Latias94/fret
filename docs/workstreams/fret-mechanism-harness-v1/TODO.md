@@ -926,6 +926,11 @@ date: 2026-05-12
     into overflow clipping. No new mechanism defect was reproduced; the first red run exposed a
     fixture-oracle mistake that tried to prove escaped hit-testing with a width-overflow child
     whose layout was legitimately constrained to the wrapper width.
+- [x] Add EffectLayer computation-bound hit-test contract coverage.
+  - Result: `hit_test_routing_v1.json` now covers `EffectLayer` bounds versus hit-testing in both
+    default computation-bound and explicit `Overflow::Clip` modes. An escaped child remains
+    targetable outside the effect bounds by default, while the same child is suppressed when the
+    wrapper opts into overflow clipping. No new mechanism defect was reproduced.
 - [x] Add renderer-level font trace predicates to the Combobox long-text gate.
   - Result: diagnostics could already capture renderer font trace bundles, but scripts could not
     assert the text-preparation facts directly. The new
