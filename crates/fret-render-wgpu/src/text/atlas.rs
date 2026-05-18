@@ -1,11 +1,12 @@
-#[cfg(not(target_arch = "wasm32"))]
-use super::DebugGlyphAtlasLookup;
 use fret_core::RendererGlyphAtlasPerfSnapshot;
 use fret_render_text::FontFaceKey;
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
 };
+
+#[cfg(not(target_arch = "wasm32"))]
+mod debug;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum GlyphQuadKind {
@@ -86,20 +87,6 @@ impl GlyphKey {
 
     pub(super) fn is_subpixel(self) -> bool {
         matches!(self.kind, GlyphQuadKind::Subpixel)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    pub(super) fn kind_label(self) -> &'static str {
-        if self.is_mask() {
-            "mask"
-        } else if self.is_color() {
-            "color"
-        } else if self.is_subpixel() {
-            "subpixel"
-        } else {
-            debug_assert!(false, "unknown glyph quad kind");
-            "mask"
-        }
     }
 
     pub(super) fn bytes_per_pixel_for_image_content(
@@ -779,11 +766,6 @@ impl GlyphAtlas {
         self.revision
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
-    pub(super) fn dimensions(&self) -> (u32, u32) {
-        (self.width, self.height)
-    }
-
     pub(super) fn touch_bounds_for_key(
         &mut self,
         key: GlyphKey,
@@ -816,38 +798,6 @@ impl GlyphAtlas {
         let u1 = (entry.x.saturating_add(entry.w) as f32) / w;
         let v1 = (entry.y.saturating_add(entry.h) as f32) / h;
         Some((entry.page, [u0, v0, u1, v1]))
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    pub(super) fn debug_lookup_entry(
-        &self,
-        page: u16,
-        x: u32,
-        y: u32,
-        w: u32,
-        h: u32,
-    ) -> Option<DebugGlyphAtlasLookup> {
-        let key = self.find_key_for_bounds(page, x, y, w, h)?;
-        Some(DebugGlyphAtlasLookup::new(
-            key.font.font_data_id(),
-            key.font.face_index(),
-            key.font.variation_key(),
-            key.font.synthesis_embolden(),
-            key.font.synthesis_skew_degrees(),
-            key.glyph_id,
-            key.size_bits,
-            key.x_bin,
-            key.y_bin,
-            key.kind_label(),
-        ))
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    fn find_key_for_bounds(&self, page: u16, x: u32, y: u32, w: u32, h: u32) -> Option<GlyphKey> {
-        self.glyphs.iter().find_map(|(key, entry)| {
-            (entry.page == page && entry.x == x && entry.y == y && entry.w == w && entry.h == h)
-                .then_some(*key)
-        })
     }
 
     pub(super) fn contains_key(&self, key: GlyphKey) -> bool {
