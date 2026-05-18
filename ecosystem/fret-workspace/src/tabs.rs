@@ -95,6 +95,10 @@ impl WorkspaceTabs {
         self
     }
 
+    pub fn set_cycle_mode(&mut self, mode: TabCycleMode) {
+        self.cycle_mode = mode;
+    }
+
     pub fn tabs(&self) -> &[Arc<str>] {
         &self.tabs
     }

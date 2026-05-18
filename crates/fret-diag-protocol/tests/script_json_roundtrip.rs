@@ -112,6 +112,13 @@ fn script_v2_roundtrip_ui_gallery_platform_preferences_runtime_environment_mutat
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_workspace_tabstrip_overflow_select_command() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/workspace-tabstrip/ui-gallery-workspace-tabstrip-overflow-select-command.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_set_window_preferences_defaults() {
     assert_script_v2_roundtrip(
         r#"{

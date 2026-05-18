@@ -1085,3 +1085,13 @@ date: 2026-05-12
     `output_model.tooltip_lines_count=2` after scripted drag/wheel. This converts the previous
     supplemental output counters into a hard runtime gate for paint-published axis-window and
     tooltip payload freshness.
+- [x] Promote UI Gallery workspace tabstrip overflow selection into the workspace shell runtime
+  suite.
+  - Result: `ui-gallery-workspace-tabstrip-overflow-select-command.json` now starts the Gallery in
+    workspace-shell mode, forces tabstrip overflow at `900 x 720`, selects the hidden Command tab
+    through the overflow menu, and asserts overflow/visibility diagnostics plus selected-page
+    state. The suite also caught a real UI Gallery policy drift: runtime
+    `WorkspaceCommandScope` tab shortcuts used the workspace crate's default MRU cycling while the
+    Gallery driver and script expected visible-order cycling. UI Gallery now sets its single-pane
+    workspace layout to `TabCycleMode::InOrder`, and the workspace shell suite passes with the new
+    overflow gate included.

@@ -11860,9 +11860,35 @@
         "workspace_shell"
       ],
       "target_hints": [
-        "Boots ui_gallery with the workspace_shell diag profile so the shell starts on the overlay page under zinc/dark with the tab strip enabled.",
+        "Boots ui_gallery with the workspace_shell diag profile so the tab strip is enabled.",
+        "Selects the Field tab explicitly so the command smoke is independent of launch-time start-page routing.",
         "Focuses the workspace content surface, then exercises next/previous/close tab commands from the workspace command scope.",
         "Asserts the single-pane workspace layout mirror updates the selected tab and removes the closed tab."
+      ]
+    },
+    {
+      "id": "ui-gallery-workspace-tabstrip-overflow-select-command",
+      "path": "tools/diag-scripts/ui-gallery/workspace-tabstrip/ui-gallery-workspace-tabstrip-overflow-select-command.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-workspace-shell"
+      ],
+      "tags": [
+        "gate",
+        "overflow",
+        "ui_gallery",
+        "workspace",
+        "workspace_shell",
+        "workspace_tabstrip"
+      ],
+      "target_hints": [
+        "Boots UI Gallery with the workspace_shell diag profile so the workspace tabstrip is visible.",
+        "Shrinks the window to force tabstrip overflow.",
+        "Selects the hidden Command tab through the overflow menu.",
+        "Asserts workspace tabstrip diagnostics report overflow/visibility and the selected tab/page state updates."
       ]
     },
     {

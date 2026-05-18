@@ -4,7 +4,9 @@
     "name": "UI gallery: workspace shell chrome under shadcn preset (screenshot)",
     "tags": ["screenshots", "shadcn", "ui-gallery", "workspace", "workspace_shell"],
     "env_defaults": {
-      "FRET_UI_GALLERY_DIAG_PROFILE": "workspace_shell"
+      "FRET_UI_GALLERY_DIAG_PROFILE": "workspace_shell",
+      "FRET_UI_GALLERY_START_PAGE": "overlay",
+      "FRET_UI_GALLERY_STATUS_BAR": "1"
     },
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
     "target_hints": [

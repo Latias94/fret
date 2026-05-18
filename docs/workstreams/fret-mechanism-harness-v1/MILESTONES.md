@@ -2112,3 +2112,34 @@ Status: complete for Chart Torture paint-published output payload assertions.
   `python tools/check_diag_scripts_registry.py`; and
   `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-chart-torture --dir target/fret-diag-chart-torture-suite-tooltip-output-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
   with run id `1779132056758`.
+
+## M117: Workspace Shell Tabstrip Overflow Selection Gate
+
+Status: complete for workspace shell tabstrip overflow selection and visible-order tab command
+runtime coverage.
+
+- Added `ui-gallery-workspace-tabstrip-overflow-select-command.json` and promoted it into the
+  `ui-gallery-workspace-shell` suite.
+- The script starts UI Gallery with `FRET_UI_GALLERY_DIAG_PROFILE=workspace_shell`, keeps the
+  selected page at Overlay, resizes the window to `900 x 720` so the tabstrip overflows without
+  collapsing the top-bar center column, opens the overflow menu, selects the hidden Command tab,
+  and asserts `workspace_tab_strip_active_overflow_is`, active visible state, tab selection, and
+  `/selected_page == "command"`.
+- The full suite exposed a UI Gallery policy drift: keyboard/runtime tab commands handled by
+  `WorkspaceCommandScope` used the workspace crate's default MRU tab cycle while the Gallery
+  driver fallback and existing command smoke expected visible-order cycling. UI Gallery now
+  configures its single-pane workspace layout with `TabCycleMode::InOrder`, while the workspace
+  crate default remains MRU for editor-style consumers.
+- Added a focused UI Gallery regression test for the runtime layout-command path:
+  `workspace_layout_tab_next_uses_gallery_visible_order`.
+- Gates pass:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery workspace_layout_tab_next_uses_gallery_visible_order --no-fail-fast --no-capture`
+  with Nextest run id `c7040c5e-c9cd-4bdc-a4f4-62fc939cffd2`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-workspace tabs::tests::mru_next_toggles_between_two_most_recent --no-fail-fast --no-capture`
+  with Nextest run id `f11787fb-15b0-488b-951c-2fc272c9f5ee`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_workspace_tabstrip_overflow_select_command --no-fail-fast --no-capture`
+  with Nextest run id `9d9ea3d1-66b3-4db3-9a57-cde718d027b0`;
+  `python tools/test_check_diag_scripts_registry.py`;
+  `python tools/check_diag_scripts_registry.py`; and
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-workspace-shell --dir target/fret-diag-workspace-shell-suite-after-overflow-inorder-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  with run ids `1779136173632`, `1779136260333`, `1779136295210`, and `1779136342864`.

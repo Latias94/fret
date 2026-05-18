@@ -4508,3 +4508,55 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - sampling-window post-run companion:
     `target/fret-diag-chart-torture-suite-tooltip-output-v1/sessions/1779132036567-82724/check.chart_sampling_window_shifts_min.json`
     records `total_actions=3`, `distinct_key_count=2`, and two unique nonzero sampling keys.
+
+## Workspace Shell Tabstrip Overflow Selection Gate
+
+- invariant:
+  workspace shell tabstrip overflow must remain keyboard/mouse reachable under constrained window
+  widths, and selecting a hidden tab through the overflow menu must update the active tab mirror and
+  UI Gallery selected page. Keyboard tab commands handled by the workspace command scope must use
+  the same visible-order policy as the Gallery driver fallback.
+- finding:
+  the new overflow script passed once the test window was widened from `420 x 720` to `900 x 720`;
+  the narrower width collapsed the top-bar center/tabstrip area to zero, so no overflow button was
+  reachable. The full workspace shell suite then exposed a real UI Gallery policy drift:
+  `workspace.tab.next` handled by `WorkspaceCommandScope` used the default MRU cycle and returned
+  from Field to Overlay, while the Gallery driver fallback and command smoke expected Field to
+  advance to Command in visible order.
+- implementation anchors:
+  `ecosystem/fret-workspace/src/tabs.rs`,
+  `apps/fret-ui-gallery/src/driver/workspace_nav.rs`,
+  `apps/fret-ui-gallery/src/driver/render_flow.rs`,
+  `tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-tab-commands-smoke.json`,
+  `tools/diag-scripts/ui-gallery/workspace-tabstrip/ui-gallery-workspace-tabstrip-overflow-select-command.json`,
+  `tools/diag-scripts/suites/ui-gallery-workspace-shell/suite.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- failed-suite evidence before the policy fix:
+  `target/fret-diag-workspace-tabstrip-overflow-select-command-v3/sessions/1779133658058-86264/suite.summary.json`
+  and
+  `target/fret-diag-workspace-shell-tab-commands-smoke-single-v2/sessions/1779134778213-66612/1779134873251-script-step-0016-wait_until-timeout/bundle.schema2.json`
+  showed `workspace.tab.next handled=true handled_by_scope=widget` while
+  `app_snapshot.selected_page == "overlay"` and the active tab remained Overlay.
+- focused gates:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery workspace_layout_tab_next_uses_gallery_visible_order --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `c7040c5e-c9cd-4bdc-a4f4-62fc939cffd2`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-workspace tabs::tests::mru_next_toggles_between_two_most_recent --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `f11787fb-15b0-488b-951c-2fc272c9f5ee`; this keeps the
+    workspace crate default MRU behavior locked for editor-style consumers.
+- protocol and registry gates:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_workspace_tabstrip_overflow_select_command --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `9d9ea3d1-66b3-4db3-9a57-cde718d027b0`.
+  `python tools/test_check_diag_scripts_registry.py`
+  - result: passed; 39 tests.
+  `python tools/check_diag_scripts_registry.py`
+  - result: passed; registry is up to date.
+- runtime diagnostics:
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/workspace-shell/ui-gallery-workspace-shell-tab-commands-smoke.json --dir target/fret-diag-workspace-shell-tab-commands-smoke-after-inorder-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed; run id `1779136113786`; AI packet
+    `target/fret-diag-workspace-shell-tab-commands-smoke-after-inorder-v1/sessions/1779136037789-106088/1779136113786/ai.packet`.
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-workspace-shell --dir target/fret-diag-workspace-shell-suite-after-overflow-inorder-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed; suite summary
+    `target/fret-diag-workspace-shell-suite-after-overflow-inorder-v1/sessions/1779136163498-100640/suite.summary.json`.
+  - script run ids:
+    chrome screenshot `1779136173632`, focus command scope `1779136260333`, tab commands smoke
+    `1779136295210`, and tabstrip overflow select command `1779136342864`.

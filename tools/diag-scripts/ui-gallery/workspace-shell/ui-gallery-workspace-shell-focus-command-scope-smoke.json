@@ -4,7 +4,8 @@
     "name": "UI gallery: workspace shell focus/command scope smoke",
     "tags": ["focus", "keyboard", "smoke", "ui-gallery", "workspace", "workspace_shell"],
     "env_defaults": {
-      "FRET_UI_GALLERY_DIAG_PROFILE": "workspace_shell"
+      "FRET_UI_GALLERY_DIAG_PROFILE": "workspace_shell",
+      "FRET_UI_GALLERY_START_PAGE": "overlay"
     },
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
@@ -53,7 +54,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-dialog" }
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-overlay" }
       },
       "timeout_frames": 240
     },
