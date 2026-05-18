@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "slug": "view-cache-resize-jitter-attribution-v1",
+  "title": "ViewCache Resize-Jitter Attribution v1",
+  "status": "active",
+  "updated": "2026-05-18",
+  "scope_kind": "attribution",
+  "follow_on_of": "pressable-clean-geometry-propagation-v1",
+  "problem": "Fresh UI Gallery resize-jitter evidence moved Pressable off the worst-frame layout hotspot list and surfaced ViewCache as the top remaining retained layout owner, but ViewCache is a cache-boundary side-effect primitive and needs source-backed phase attribution before any runtime optimization.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/view-cache-resize-jitter-attribution-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/view-cache-resize-jitter-attribution-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/view-cache-resize-jitter-attribution-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/view-cache-resize-jitter-attribution-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/view-cache-resize-jitter-attribution-v1/HANDOFF.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/pressable-clean-geometry-propagation-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/pressable-clean-geometry-propagation-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    }
+  ],
+  "repro": {
+    "summary": "UI Gallery code-editor resize-jitter perf evidence with view-cache enabled, followed by source-backed ViewCache phase attribution.",
+    "commands": [
+      "target/release/fretboard-dev diag stats target/fret-diag/pressable-clean-geometry-propagation-v1-pgp050-after/1779088062238/bundle.schema2.json --sort time --top 20",
+      "rg -n \"ViewCache|view_cache|ViewBoundaryKind::ViewCacheRoot|contained_relayout|cache_root\" crates/fret-ui/src/element.rs crates/fret-ui/src/elements/runtime.rs crates/fret-ui/src/tree/view_boundary.rs crates/fret-ui/src/tree/layout -S"
+    ]
+  },
+  "gates": [
+    {
+      "name": "workstream-state-json",
+      "command": "python3 -m json.tool docs/workstreams/view-cache-resize-jitter-attribution-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    },
+    {
+      "name": "mechanism-boundary",
+      "command": "python3 tools/check_layering.py"
+    },
+    {
+      "name": "format-check",
+      "command": "cargo fmt --check"
+    },
+    {
+      "name": "source-audit",
+      "command": "rg -n \"ViewCache|view_cache|ViewBoundaryKind::ViewCacheRoot|contained_relayout|cache_root\" crates/fret-ui/src/element.rs crates/fret-ui/src/elements/runtime.rs crates/fret-ui/src/tree/view_boundary.rs crates/fret-ui/src/tree/layout -S"
+    },
+    {
+      "name": "focused-view-cache-proof-placeholder",
+      "command": "cargo nextest run -p fret-ui view_cache layout_engine --no-fail-fast"
+    },
+    {
+      "name": "perf-attribution",
+      "command": "target/release/fretboard-dev diag stats <bundle.schema2.json> --sort time --top 20"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/view-cache-resize-jitter-attribution-v1/DESIGN.md",
+    "docs/workstreams/view-cache-resize-jitter-attribution-v1/TODO.md",
+    "docs/workstreams/view-cache-resize-jitter-attribution-v1/MILESTONES.md",
+    "docs/workstreams/view-cache-resize-jitter-attribution-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/view-cache-resize-jitter-attribution-v1/HANDOFF.md",
+    "docs/workstreams/pressable-clean-geometry-propagation-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/pressable-clean-geometry-propagation-v1/CLOSEOUT_AUDIT_2026-05-18.md",
+    "target/fret-diag/pressable-clean-geometry-propagation-v1-pgp050-after/1779088062238/bundle.schema2.json",
+    "target/fret-diag/pressable-clean-geometry-propagation-v1-pgp050-after/layout.perf.summary.v1.json",
+    "crates/fret-ui/src/tree/layout/clean_geometry.rs",
+    "crates/fret-ui/src/element.rs",
+    "crates/fret-ui/src/elements/runtime.rs",
+    "crates/fret-ui/src/tree/view_boundary.rs",
+    "crates/fret-ui/src/tree/layout/entrypoints.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0076-declarative-layout-performance-hardening.md",
+    "docs/adr/0176-view-cache-root-liveness-contract.md",
+    "docs/adr/0216-cache-root-tracing-contract-v1.md",
+    "docs/adr/0224-view-cache-subtree-reuse-and-state-retention.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue_here",
+    "notes": "Continue with VCRJ-020 source attribution before any runtime optimization. Split Scroll or diagnostics attribution into separate lanes only with fresh evidence."
+  }
+}

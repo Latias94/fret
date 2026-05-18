@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 414
+- Dedicated directories: 415
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2294,6 +2294,7 @@ Rule:
 - `docs/workstreams/uicx-compat-alias-release-retirement-v1/` — first n/a, latest n/a, 6 markdown docs
 - `docs/workstreams/unified-authoring-builder-v1/` — first 2026-01-20, latest 2026-03-12, 2 markdown docs
 - `docs/workstreams/view-locals-authoring-fearless-refactor-v1/` — first 2026-03-20, latest 2026-03-20, 5 markdown docs
+- `docs/workstreams/view-cache-resize-jitter-attribution-v1/` — first n/a, latest n/a, 6 markdown docs (active narrow follow-on for attributing the remaining `ViewCache` UI Gallery resize-jitter layout hotspot before any cache-boundary runtime optimization; includes `WORKSTREAM.json`)
 - `docs/workstreams/webview-wry-v1/` — first 2026-02-11, latest 2026-02-16, 2 markdown docs
 - `docs/workstreams/wgpu-backdrop-effects-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating backdrop effect WGPU conformance tests onto the shared readback/render harness)
 - `docs/workstreams/wgpu-backdrop-warp-v2-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow image-registration-aware follow-on for migrating BackdropWarpV2 WGPU conformance onto the shared readback/render harness)
