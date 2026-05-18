@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 408
+- Dedicated directories: 409
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2309,6 +2309,7 @@ Rule:
 - `docs/workstreams/wgpu-paint-gradient-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating paint-gradient WGPU conformance tests onto the shared readback/render harness)
 - `docs/workstreams/wgpu-path-msaa-composite-vulkan-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating Vulkan path-MSAA composite raw readback onto shared support while preserving local BGRA sampling)
 - `docs/workstreams/wgpu-renderer-dead-code-prune-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for pruning production dead-code residue from fret-render-wgpu while preserving test-only allowances)
+- `docs/workstreams/wgpu-renderer-wasm-guardrail-test-cleanup-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for moving the wasm-only renderer guardrail shader into wasm-only scope and fixing wgpu 29 test API drift)
 - `docs/workstreams/wgpu-standard-effects-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating standard effect/postprocess WGPU conformance tests onto the shared readback/render harness)
 - `docs/workstreams/wgpu-stroke-dash-shadow-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating stroke, dash, and shadow WGPU conformance tests onto the shared readback/render harness)
 - `docs/workstreams/wgpu-text-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating text paint/outline WGPU conformance tests onto the shared readback/render harness)

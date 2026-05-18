@@ -272,6 +272,7 @@ mod tests {
                 src_pyramid: PlanTarget::Intermediate1,
                 pyramid_levels: 3,
                 pyramid_build_scissor: None,
+                #[cfg(not(target_arch = "wasm32"))]
                 raw_wanted: true,
                 pyramid_wanted: true,
                 common: custom_effect_common(PlanTarget::Output),
@@ -287,6 +288,7 @@ mod tests {
                 src_pyramid: PlanTarget::Intermediate2,
                 pyramid_levels: 1,
                 pyramid_build_scissor: None,
+                #[cfg(not(target_arch = "wasm32"))]
                 raw_wanted: false,
                 pyramid_wanted: false,
                 common: custom_effect_common(PlanTarget::Intermediate3),
