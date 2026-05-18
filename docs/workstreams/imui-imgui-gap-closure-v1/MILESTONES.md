@@ -439,6 +439,10 @@ Exit criteria:
   2026-05-17 gallery data-table torture text result: the UI Gallery DataTable torture page now
   routes fixed cells through `text_table_cell(...)` in both retained and non-retained render paths,
   and table sorting/filter/pinning status lines through `control_readout_text(...)`.
+  2026-05-18 data-table snippet table-cell text result: the copyable DataTable snippets now route
+  fixed status/name/email/CPU/memory/fallback cells through a directory-local helper backed by
+  `text_table_cell(...)`. The amount columns intentionally keep their existing tabular numeric text
+  styling until numeric table-cell semantics are split as a separate role.
   2026-05-17 gallery data-grid text result: the UI Gallery DataGrid preview now routes virtualized
   grid cells through `text_table_cell(...)` and the selected-row status line through
   `control_readout_text(...)`.

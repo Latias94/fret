@@ -392,10 +392,10 @@ fn guide_demo_content(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                                     .into_element(cx)
                             })
                         }
-                        "name" => cx.text(row.name.as_ref()),
-                        "status" => cx.text(row.status.as_ref()),
-                        "cpu%" => cx.text(format!("{}%", row.cpu)),
-                        "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
+                        "name" => super::table_cell_text(cx, row.name.clone()),
+                        "status" => super::table_cell_text(cx, row.status.clone()),
+                        "cpu%" => super::table_cell_text(cx, format!("{}%", row.cpu)),
+                        "mem_mb" => super::table_cell_text(cx, format!("{} MB", row.mem_mb)),
                         "actions" => {
                             cx.keyed(("ui-gallery-data-table-row-actions", row.id), |cx| {
                                 let open = cx.local_model(|| false);
@@ -450,7 +450,7 @@ fn guide_demo_content(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                                 align_end(menu).into_element(cx)
                             })
                         }
-                        _ => cx.text("?"),
+                        _ => super::table_cell_text(cx, "?"),
                     };
 
                     if matches!(col_id.as_ref(), "actions" | "select") {
@@ -508,11 +508,11 @@ fn guide_demo_content(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 |row, _index, _parent| fret_ui_headless::table::RowKey(row.id),
                 |col| col.id.clone(),
                 move |cx, col, row| match col.id.as_ref() {
-                    "name" => cx.text(row.name.as_ref()),
-                    "status" => cx.text(row.status.as_ref()),
-                    "cpu%" => cx.text(format!("{}%", row.cpu)),
-                    "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
-                    _ => cx.text("?"),
+                    "name" => super::table_cell_text(cx, row.name.clone()),
+                    "status" => super::table_cell_text(cx, row.status.clone()),
+                    "cpu%" => super::table_cell_text(cx, format!("{}%", row.cpu)),
+                    "mem_mb" => super::table_cell_text(cx, format!("{} MB", row.mem_mb)),
+                    _ => super::table_cell_text(cx, "?"),
                 },
             )
             .test_id("ui-gallery-data-table-listlike-root");

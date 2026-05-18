@@ -589,6 +589,14 @@ Run evidence:
   backed by `text_control_readout(...)`, and inline rename explanatory copy opts into
   `text_wrapped(...)`. Focused source tests and the IMUI source gate reject those fixed collection
   paths drifting back to bare `ui.text(...)`.
+- 2026-05-18: moved the UI Gallery app-facing DataTable snippets onto the shared table-cell text
+  role. `apps/fret-ui-gallery/src/ui/snippets/data_table/mod.rs` now owns a narrow
+  `table_cell_text(...)` helper over `text_table_cell(...)`, and the default/basic/guide/RTL/reusable
+  snippets use it for fixed body cells plus fallback cells instead of bare `cx.text(...)`. Amount
+  columns remain on the existing tabular numeric formatting path pending a separate numeric-cell
+  role. Gates: `cargo nextest run -p fret-ui-gallery --test data_table_docs_surface
+  data_table_snippets_keep_fixed_cell_text_on_table_role --no-fail-fast` and
+  `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: migrated `imui_editor_proof_demo` drag-preview cards away from a newline-joined bare
   text blob. Preview titles now use `text_section_chrome_label(...)`, optional subtitles use
   `text_control_readout(...)`, and `proof_drag_preview_card_uses_single_line_text_roles` locks the
@@ -1703,6 +1711,15 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 
 - `cargo fmt -p fret-ui-gallery` passed.
 - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_data_table_torture_exposes_header_row_anchor --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 data-table snippet table-cell text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test data_table_docs_surface data_table_snippets_keep_fixed_cell_text_on_table_role --no-fail-fast` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.

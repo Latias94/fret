@@ -1298,6 +1298,83 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/data_table/mod.rs"),
+            required=[
+                "pub(super) fn table_cell_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement",
+                "fret_ui_kit::declarative::text::text_table_cell(cx, text)",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/data_table/default_demo.rs"),
+            required=[
+                "super::table_cell_text(cx, row.status.clone())",
+                "super::table_cell_text(cx, row.customer_email.clone())",
+                "super::table_cell_text(cx, \"?\")",
+            ],
+            forbidden=[
+                "cx.text(row.status.as_ref())",
+                "cx.text(row.customer_email.as_ref())",
+                "cx.text(\"?\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/data_table/basic_demo.rs"),
+            required=[
+                "super::table_cell_text(cx, row.status.clone())",
+                "super::table_cell_text(cx, row.email.clone())",
+                "super::table_cell_text(cx, \"?\")",
+            ],
+            forbidden=[
+                "cx.text(row.status.as_ref())",
+                "cx.text(row.email.as_ref())",
+                "cx.text(\"?\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/data_table/guide_demo.rs"),
+            required=[
+                "super::table_cell_text(cx, row.name.clone())",
+                "super::table_cell_text(cx, row.status.clone())",
+                "super::table_cell_text(cx, format!(\"{}%\", row.cpu))",
+                "super::table_cell_text(cx, format!(\"{} MB\", row.mem_mb))",
+                "super::table_cell_text(cx, \"?\")",
+            ],
+            forbidden=[
+                "cx.text(row.name.as_ref())",
+                "cx.text(row.status.as_ref())",
+                "cx.text(format!(\"{}%\", row.cpu))",
+                "cx.text(format!(\"{} MB\", row.mem_mb))",
+                "cx.text(\"?\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/data_table/rtl_demo.rs"),
+            required=[
+                "super::table_cell_text(cx, row.status.clone())",
+                "super::table_cell_text(cx, row.email.clone())",
+                "super::table_cell_text(cx, \"?\")",
+            ],
+            forbidden=[
+                "cx.text(row.status.as_ref())",
+                "cx.text(row.email.as_ref())",
+                "cx.text(\"?\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/data_table/code_outline.rs"),
+            required=[
+                "super::table_cell_text(cx, row.status.clone())",
+                "super::table_cell_text(cx, row.email.clone())",
+                "super::table_cell_text(cx, \"?\")",
+            ],
+            forbidden=[
+                ".text(row.status.as_ref())",
+                ".text(row.email.as_ref())",
+                "cx.text(\"?\")",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/previews/gallery/torture/inspector_torture.rs"),
             required=[
                 "fn inspector_row_label_text",
