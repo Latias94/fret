@@ -2092,3 +2092,23 @@ Status: complete for Chart Torture shared-engine dataZoom state assertions.
   `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-chart,gallery-dev`; and
   `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-chart-torture --dir target/fret-diag-chart-torture-suite-output-oracle-v2 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
   with run id `1779131647234`.
+
+## M116: Chart Torture Tooltip and Axis Output Oracle
+
+Status: complete for Chart Torture paint-published output payload assertions.
+
+- Promoted the `ChartCanvasOutput` counters from supplemental evidence into hard script waits after
+  pan/zoom interaction.
+- `ui-gallery-chart-torture-pan-zoom.json` now asserts:
+  `x_axis_output_window.present=true`,
+  `output_model.domain_windows_count=2`, and
+  `output_model.tooltip_lines_count=2`.
+- This locks a stronger chart-specific runtime contract: after shared-engine pan/zoom, the
+  paint-published output model must expose both domain windows and tooltip/axis-pointer text.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\perf\ui-gallery-chart-torture-pan-zoom.json`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_chart_torture_pan_zoom --no-fail-fast --no-capture`
+  with Nextest run id `2a111ce6-47bf-4c4d-8a1c-4f18abfb29a2`;
+  `python tools/check_diag_scripts_registry.py`; and
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-chart-torture --dir target/fret-diag-chart-torture-suite-tooltip-output-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  with run id `1779132056758`.

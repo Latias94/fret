@@ -105,6 +105,33 @@
       "timeout_frames": 600
     },
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/x_axis_output_window/present",
+        "value": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/output_model/domain_windows_count",
+        "value": 2
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/output_model/tooltip_lines_count",
+        "value": 2
+      },
+      "timeout_frames": 600
+    },
+    {
       "type": "capture_bundle",
       "label": "ui-gallery-chart-torture-pan-zoom-after"
     },

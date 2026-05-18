@@ -4475,3 +4475,36 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - sampling-window post-run companion:
     `target/fret-diag-chart-torture-suite-output-oracle-v2/sessions/1779131582955-88188/check.chart_sampling_window_shifts_min.json`
     records `total_actions=3`, `distinct_key_count=2`, and two unique nonzero sampling keys.
+
+## Chart Torture Tooltip and Axis Output Runtime Oracle
+
+- invariant:
+  after scripted Chart Torture pan/zoom, the paint-published chart output must expose a current X
+  axis output window and tooltip/axis-pointer text payload. A dataZoom state change alone is not
+  enough if the output model remains stale.
+- finding:
+  no new chart mechanism defect was reproduced. The existing shared-engine Chart Torture path
+  publishes the expected output model after interaction: two domain windows and two tooltip lines.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-chart-torture-pan-zoom.json`,
+  `apps/fret-ui-gallery/src/driver/diag_snapshot.rs`, and
+  `apps/fret-ui-gallery/src/ui/previews/pages/torture/chart_torture.rs`.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_chart_torture_pan_zoom --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `2a111ce6-47bf-4c4d-8a1c-4f18abfb29a2`.
+- registry:
+  `python tools/check_diag_scripts_registry.py`
+  - result: passed; registry is up to date.
+- runtime diagnostics:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-chart-torture --dir target/fret-diag-chart-torture-suite-tooltip-output-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  - result: passed; suite summary
+    `target/fret-diag-chart-torture-suite-tooltip-output-v1/sessions/1779132036567-82724/suite.summary.json`;
+    run id `1779132056758`.
+  - app snapshot proof:
+    final snapshots in
+    `target/fret-diag-chart-torture-suite-tooltip-output-v1/sessions/1779132036567-82724/1779132056758/bundle.schema2.json`
+    record `x_axis_output_window.present=true`, `output_model.domain_windows_count=2`, and
+    `output_model.tooltip_lines_count=2`.
+  - sampling-window post-run companion:
+    `target/fret-diag-chart-torture-suite-tooltip-output-v1/sessions/1779132036567-82724/check.chart_sampling_window_shifts_min.json`
+    records `total_actions=3`, `distinct_key_count=2`, and two unique nonzero sampling keys.

@@ -1079,3 +1079,9 @@ date: 2026-05-12
     exposed an oracle design issue: `ChartCanvasOutput` is paint-published, so ViewCache replay can
     keep the output model at revision `0` before interaction. The final oracle reads the shared
     engine state and keeps `ChartCanvasOutput` as supplemental snapshot evidence.
+- [x] Add a Chart Torture tooltip/axis-output runtime oracle.
+  - Result: the promoted Chart Torture pan/zoom script now waits for
+    `x_axis_output_window.present=true`, `output_model.domain_windows_count=2`, and
+    `output_model.tooltip_lines_count=2` after scripted drag/wheel. This converts the previous
+    supplemental output counters into a hard runtime gate for paint-published axis-window and
+    tooltip payload freshness.
