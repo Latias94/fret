@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("showcase.rs");
 
 // region: example
-use fret::{UiChild, AppComponentCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -25,7 +26,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         [
             shadcn::AccordionItem::new(
                 "notifications",
-                shadcn::AccordionTrigger::new(vec![cx.text("Notifications")])
+                shadcn::AccordionTrigger::new(vec![decl_text::text_button_label(
+                    cx,
+                    "Notifications",
+                )])
                     .test_id("ui-gallery-accordion-showcase-multiple-trigger-notifications"),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
@@ -35,7 +39,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             ),
             shadcn::AccordionItem::new(
                 "security",
-                shadcn::AccordionTrigger::new(vec![cx.text("Security")])
+                shadcn::AccordionTrigger::new(vec![decl_text::text_button_label(cx, "Security")])
                     .test_id("ui-gallery-accordion-showcase-multiple-trigger-security"),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
@@ -51,7 +55,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let disabled = shadcn::accordion_single_uncontrolled(cx, Some("item-1"), |cx| {
         [shadcn::AccordionItem::new(
             "item-1",
-            shadcn::AccordionTrigger::new(vec![cx.text("Disabled")]).disabled(true),
+            shadcn::AccordionTrigger::new(vec![decl_text::text_button_label(cx, "Disabled")])
+                .disabled(true),
             shadcn::AccordionContent::new(ui::children![
                 cx;
                 shadcn::raw::typography::p("This item is disabled and should not be interactive.")
@@ -66,7 +71,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         let accordion = shadcn::accordion_single_uncontrolled(cx, Some("item-1"), |cx| {
             [shadcn::AccordionItem::new(
                 "item-1",
-                shadcn::AccordionTrigger::new(vec![cx.text("Borders")]),
+                shadcn::AccordionTrigger::new(vec![decl_text::text_button_label(cx, "Borders")]),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
                     shadcn::raw::typography::p(
@@ -98,7 +103,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             [
                 shadcn::AccordionItem::new(
                     "plans",
-                    shadcn::AccordionTrigger::new(vec![cx.text(
+                    shadcn::AccordionTrigger::new(vec![decl_text::text_button_label(
+                        cx,
                         "What subscription plans do you offer?",
                     )]),
                     shadcn::AccordionContent::new(ui::children![
@@ -110,7 +116,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 ),
                 shadcn::AccordionItem::new(
                     "billing",
-                    shadcn::AccordionTrigger::new(vec![cx.text("How does billing work?")]),
+                    shadcn::AccordionTrigger::new(vec![decl_text::text_button_label(
+                        cx,
+                        "How does billing work?",
+                    )]),
                     shadcn::AccordionContent::new(ui::children![
                         cx;
                         shadcn::raw::typography::p(
@@ -147,7 +156,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         shadcn::accordion_single_uncontrolled(cx, Some("item-1"), |cx| {
             [shadcn::AccordionItem::new(
                 "item-1",
-                shadcn::AccordionTrigger::new(vec![cx.text("RTL")])
+                shadcn::AccordionTrigger::new(vec![decl_text::text_button_label(cx, "RTL")])
                     .test_id("ui-gallery-accordion-showcase-rtl-trigger"),
                 shadcn::AccordionContent::new(ui::children![
                     cx;

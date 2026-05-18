@@ -652,6 +652,10 @@ Readiness order for the next locally testable review slices:
    last-action/count/active-value status through `text_control_readout(...)`, short subsection
    headings through section-chrome text, and desktop-only/prose copy through paragraph text. The
    retained active-descendant command snippet remains an explicit text-input capability surface.
+   2026-05-18 gallery Accordion trigger text follow-up: copyable Accordion examples now route
+   trigger labels through `text_button_label(...)` instead of bare `cx.text(...)`, keeping those
+   button-like trigger rows single-line/shrinkable under resize while leaving shadcn component
+   internals and upstream parity tests untouched.
    2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
    headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
    through `control_readout_text(...)`, and custom pointer-region labels through

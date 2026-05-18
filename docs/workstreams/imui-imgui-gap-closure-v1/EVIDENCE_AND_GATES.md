@@ -135,6 +135,16 @@ Last updated: 2026-05-18
   - `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/command/behavior_demos.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/command/composable_shell.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/accordion/basic.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/accordion/borders.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/accordion/card.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/accordion/demo.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/accordion/disabled.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/accordion/focusable_disabled.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/accordion/multiple.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/accordion/rtl.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/accordion/showcase.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/accordion/usage.rs`
   - `apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/mvp/gates.rs`
   - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
   - `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs`
@@ -2064,6 +2074,20 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
   command_snippet_chrome_text_uses_shared_roles --no-fail-fast` passed.
 - `python tools/gate_imui_workstream_source.py` passed.
+
+2026-05-18 gallery Accordion trigger text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ui_authoring_surface_default_app` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  accordion_snippet_trigger_text_uses_button_label_role --no-fail-fast` passed.
+- First `python tools/gate_imui_workstream_source.py` failed because the source marker required
+  single-line `decl_text::text_button_label(cx, ...)` calls while rustfmt expanded several long
+  labels. After loosening the marker to the stable helper call, the gate passed.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
 
 2026-05-18 AI Checkpoint visible snippet text-role slice:
 

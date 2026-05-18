@@ -3084,6 +3084,31 @@ def main() -> None:
                 "cx.text(\"Missing use_sidebar example content.\")",
             ],
         ),
+        *[
+            SourceCheck(
+                Path(path),
+                required=[
+                    "use fret_ui_kit::declarative::text as decl_text;",
+                    "decl_text::text_button_label(",
+                ],
+                forbidden=[
+                    "shadcn::AccordionTrigger::new(vec![cx.text(",
+                    "shadcn::AccordionTriggerPart::new(vec![cx.text(",
+                ],
+            )
+            for path in [
+                "apps/fret-ui-gallery/src/ui/snippets/accordion/basic.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/accordion/borders.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/accordion/card.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/accordion/demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/accordion/disabled.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/accordion/focusable_disabled.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/accordion/multiple.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/accordion/rtl.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/accordion/showcase.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/accordion/usage.rs",
+            ]
+        ],
         SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/command/composable_shell.rs"),
             required=[
@@ -3146,6 +3171,7 @@ def main() -> None:
                 "fn sidebar_app_collapsed_projects_do_not_emit_empty_text()",
                 "fn sidebar_snippet_chrome_text_uses_shared_roles()",
                 "fn command_snippet_chrome_text_uses_shared_roles()",
+                "fn accordion_snippet_trigger_text_uses_button_label_role()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",
             ],

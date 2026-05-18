@@ -10223,6 +10223,34 @@ fn accordion_usage_snippet_keeps_the_composable_advanced_seam() {
 }
 
 #[test]
+fn accordion_snippet_trigger_text_uses_button_label_role() {
+    for relative_path in [
+        "src/ui/snippets/accordion/basic.rs",
+        "src/ui/snippets/accordion/borders.rs",
+        "src/ui/snippets/accordion/card.rs",
+        "src/ui/snippets/accordion/demo.rs",
+        "src/ui/snippets/accordion/disabled.rs",
+        "src/ui/snippets/accordion/focusable_disabled.rs",
+        "src/ui/snippets/accordion/multiple.rs",
+        "src/ui/snippets/accordion/rtl.rs",
+        "src/ui/snippets/accordion/showcase.rs",
+        "src/ui/snippets/accordion/usage.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_button_label(cx,",
+            ],
+            &[
+                "shadcn::AccordionTrigger::new(vec![cx.text(",
+                "shadcn::AccordionTriggerPart::new(vec![cx.text(",
+            ],
+        );
+    }
+}
+
+#[test]
 fn accordion_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/accordion.rs",
