@@ -73,10 +73,15 @@ fn build_hit_test_trace_entry_for_selector(
         .unwrap_or_default();
 
     let includes_intended = intended.map(|target| {
+        if let (Some(snapshot), Some(hit)) = (semantics_snapshot, hit_semantics) {
+            let index = SemanticsIndex::new(snapshot);
+            return semantics_hit_matches_intended(&index, hit, target);
+        }
         if let Some(hit_id) = hit_semantics_node_id
-            && hit_id == target.id.data().as_ffi() {
-                return true;
-            }
+            && hit_id == target.id.data().as_ffi()
+        {
+            return true;
+        }
         if let (Some(want), Some(got)) =
             (target.test_id.as_deref(), hit_semantics_test_id.as_deref())
         {

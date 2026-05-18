@@ -847,6 +847,17 @@ pub enum UiActionStepV2 {
         #[serde(default)]
         repeat: bool,
     },
+    /// Inject a sequence of key down/up pairs in one script turn.
+    ///
+    /// Use this for component-owned typeahead buffers where per-step script latency can exceed the
+    /// widget's typeahead timeout.
+    PressKeys {
+        keys: Vec<String>,
+        #[serde(default)]
+        modifiers: UiKeyModifiersV1,
+        #[serde(default)]
+        repeat: bool,
+    },
     PressShortcut {
         shortcut: String,
         #[serde(default)]
@@ -1956,6 +1967,15 @@ pub enum UiSemanticsRelationV1 {
     Controls,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiRenderTextFontTraceFamilyClassV1 {
+    Requested,
+    CommonFallback,
+    SystemFallback,
+    Unknown,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum UiPredicateV1 {
@@ -2276,6 +2296,29 @@ pub enum UiPredicateV1 {
     /// This predicate is meant to keep "tofu regressions" debuggable: if missing glyphs happen,
     /// the diagnostics bundle should contain an audit trail of the selected families.
     RenderTextFontTraceCapturedWhenMissingGlyphs,
+    /// True when the current renderer font trace has at least `min` entries matching all provided
+    /// filters.
+    ///
+    /// This lets runtime scripts prove that visible text gates are backed by renderer-level text
+    /// preparation facts, e.g. "this constrained label was prepared with `overflow=ellipsis` and
+    /// no missing glyphs" rather than relying on layout bounds or screenshots alone.
+    RenderTextFontTraceEntriesMatchingGe {
+        min: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        text_contains: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        font: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        wrap: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        overflow: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        missing_glyphs: Option<u32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        family_contains: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        family_class: Option<UiRenderTextFontTraceFamilyClassV1>,
+    },
     /// True when the runner-owned `TextFontStackKey` has not changed for `stable_frames`
     /// consecutive frames.
     ///
@@ -4994,6 +5037,42 @@ mod tests {
                 )
             ));
         }
+    }
+
+    #[test]
+    fn predicate_render_text_font_trace_entries_matching_ge_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::RenderTextFontTraceEntriesMatchingGe {
+            min: 2,
+            text_contains: Some("Enterprise Observability".to_string()),
+            font: Some("ui".to_string()),
+            wrap: Some("none".to_string()),
+            overflow: Some("ellipsis".to_string()),
+            missing_glyphs: Some(0),
+            family_contains: Some("Inter".to_string()),
+            family_class: Some(UiRenderTextFontTraceFamilyClassV1::Requested),
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "render_text_font_trace_entries_matching_ge",
+                "min": 2,
+                "text_contains": "Enterprise Observability",
+                "font": "ui",
+                "wrap": "none",
+                "overflow": "ellipsis",
+                "missing_glyphs": 0,
+                "family_contains": "Inter",
+                "family_class": "requested"
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::RenderTextFontTraceEntriesMatchingGe { .. }
+        ));
     }
 
     #[test]

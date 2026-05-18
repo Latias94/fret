@@ -1,5 +1,5 @@
 use super::super::ElementHostWidget;
-use crate::declarative::frame::layout_style_for_node;
+use crate::declarative::frame::{layout_style_for_node, ordered_flex_children};
 use crate::declarative::layout_helpers::clamp_to_constraints;
 use crate::declarative::prelude::*;
 use crate::layout_constraints::AvailableSpace as RuntimeAvailableSpace;
@@ -98,16 +98,18 @@ impl ElementHostWidget {
         let is_in_flow = |style: &crate::element::LayoutStyle| {
             style.position != crate::element::PositionStyle::Absolute
         };
+        let ordered_children = ordered_flex_children(cx.app, window, cx.children);
+        let children = ordered_children.as_ref();
 
         let mut ml_auto_tail_group_start: Option<usize> = None;
         let mut ml_auto_tail_shift_x = 0.0f32;
         let mut mt_auto_tail_group_start: Option<usize> = None;
         let mut mt_auto_tail_shift_y = 0.0f32;
-        if props.direction == fret_core::Axis::Horizontal && cx.children.len() > 1 {
-            for (idx, &child) in cx.children.iter().enumerate() {
+        if props.direction == fret_core::Axis::Horizontal && children.len() > 1 {
+            for (idx, &child) in children.iter().enumerate() {
                 let child_style = layout_style_for_node(cx.app, window, child);
                 if matches!(child_style.margin.left, crate::element::MarginEdge::Auto) {
-                    if cx.children[idx + 1..]
+                    if children[idx + 1..]
                         .iter()
                         .copied()
                         .any(|next| is_in_flow(&layout_style_for_node(cx.app, window, next)))
@@ -118,11 +120,11 @@ impl ElementHostWidget {
                 }
             }
         }
-        if props.direction == fret_core::Axis::Vertical && cx.children.len() > 1 {
-            for (idx, &child) in cx.children.iter().enumerate() {
+        if props.direction == fret_core::Axis::Vertical && children.len() > 1 {
+            for (idx, &child) in children.iter().enumerate() {
                 let child_style = layout_style_for_node(cx.app, window, child);
                 if matches!(child_style.margin.top, crate::element::MarginEdge::Auto) {
-                    if cx.children[idx + 1..]
+                    if children[idx + 1..]
                         .iter()
                         .copied()
                         .any(|next| is_in_flow(&layout_style_for_node(cx.app, window, next)))
@@ -136,7 +138,7 @@ impl ElementHostWidget {
 
         if let Some(start) = ml_auto_tail_group_start {
             let mut tail_right = 0.0f32;
-            for &child in &cx.children[start..] {
+            for &child in &children[start..] {
                 let child_style = layout_style_for_node(cx.app, window, child);
                 if !is_in_flow(&child_style) {
                     continue;
@@ -158,7 +160,7 @@ impl ElementHostWidget {
         }
         if let Some(start) = mt_auto_tail_group_start {
             let mut tail_bottom = 0.0f32;
-            for &child in &cx.children[start..] {
+            for &child in &children[start..] {
                 let child_style = layout_style_for_node(cx.app, window, child);
                 if !is_in_flow(&child_style) {
                     continue;
@@ -179,12 +181,12 @@ impl ElementHostWidget {
             mt_auto_tail_shift_y = (auto_margin_inner_size.height.0 - tail_bottom).max(0.0);
         }
 
-        for (child_index, &child) in cx.children.iter().enumerate() {
+        for (child_index, &child) in children.iter().enumerate() {
             let Some(layout) = cx.tree.layout_engine_child_local_rect(cx.node, child) else {
                 continue;
             };
             let child_style = layout_style_for_node(cx.app, window, child);
-            let single_child = cx.children.len() == 1;
+            let single_child = children.len() == 1;
 
             // The layout engine reports child rects in the parent's local coordinate space.
             // The auto-margin adjustment logic below is expressed relative to the parent's inner
@@ -214,7 +216,7 @@ impl ElementHostWidget {
                         // Preserve the explicit `gap` between the auto-margin item and the next
                         // sibling. Some layout-engine outcomes collapse that gap when `ml-auto`
                         // is present, but web flexbox keeps it intact.
-                        if let Some(next_child) = cx.children[child_index + 1..]
+                        if let Some(next_child) = children[child_index + 1..]
                             .iter()
                             .copied()
                             .find(|next| is_in_flow(&layout_style_for_node(cx.app, window, *next)))
@@ -300,7 +302,7 @@ impl ElementHostWidget {
                     if mt_auto_tail_group_start == Some(child_index) {
                         // Preserve the explicit `gap` between the auto-margin item and the next
                         // sibling when `margin-top: auto` aligns a trailing group to the bottom.
-                        if let Some(next_child) = cx.children[child_index + 1..]
+                        if let Some(next_child) = children[child_index + 1..]
                             .iter()
                             .copied()
                             .find(|next| is_in_flow(&layout_style_for_node(cx.app, window, *next)))

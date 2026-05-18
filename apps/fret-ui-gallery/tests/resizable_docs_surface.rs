@@ -12,11 +12,21 @@ fn resizable_page_documents_source_axes_and_children_api_decision() {
         "Unlike `slider` or `progress`, there is no direct `Resizable` primitive in Radix Primitives or Base UI; those libraries still inform general headless/mechanism decisions, but the concrete source axis here is shadcn plus the runtime panel-group contract.",
         "`resizable_panel_group(cx, model, |cx| ..)` is already the composable children-equivalent lane for Fret",
         "A generic composable children / `compose()` API is not warranted here",
-        "The Fret-only follow-up below intentionally keeps one fixed-window splitter proof on the first-party docs surface so `panel width` remains visibly distinct from `viewport width` in review and diagnostics.",
-        "Preview mirrors the shadcn/Base UI Resizable docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `About`, `Usage`, `Vertical`, `Handle`, `RTL`, and `API Reference`. `Adaptive Panel Proof` is the explicit Fret follow-up",
+        "The Fret-only follow-ups below keep fixed-window splitter, viewport-root overlay ownership, and cached-source movement proofs diagnostics opt-in",
+        "FRET_UI_GALLERY_RESIZABLE_ADAPTIVE_PANEL",
+        "FRET_UI_GALLERY_RESIZABLE_MULTI_VIEWPORT_COMBOBOX",
+        "FRET_UI_GALLERY_RESIZABLE_MOVING_CACHED_COMBOBOX",
+        "section_focus_filters",
+        "should_build_resizable_section",
+        "adaptive_panel_enabled",
+        "multi_viewport_combobox_enabled",
+        "moving_cached_combobox_enabled",
+        "Preview mirrors the shadcn/Base UI Resizable docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `About`, `Usage`, `Vertical`, `Handle`, `RTL`, and `API Reference`. `Adaptive Panel Proof`, `Multi-Viewport Combobox`, and `Moving Cached Combobox` are diagnostics opt-in follow-ups",
         "DocSection::build(cx, \"About\", about)",
         "DocSection::build(cx, \"API Reference\", api_reference)",
         "DocSection::build(cx, \"Adaptive Panel Proof\", adaptive_panel)",
+        "Multi-Viewport Combobox",
+        "Moving Cached Combobox",
     ] {
         assert!(
             source.contains(needle),
@@ -25,14 +35,53 @@ fn resizable_page_documents_source_axes_and_children_api_decision() {
     }
 
     let normalized = normalize_ws(source);
-    let ordered_sections = normalize_ws(
-        r#"
-        vec![demo, about, usage, vertical, handle, rtl, api_reference, adaptive_panel, notes,]
-        "#,
+    assert!(
+        normalized.contains(&normalize_ws(
+            "let focus_filters = doc_layout::section_focus_filters();"
+        )),
+        "resizable page should read doc-section focus before building snippet previews",
     );
     assert!(
-        normalized.contains(&ordered_sections),
-        "resizable page should keep the docs-path sections before the fixed-window proof and the final `Notes` follow-up",
+        normalized.contains(&normalize_ws(
+            r#"should_build_resizable_section( focus_filters.as_deref(), "Demo", "ui-gallery-resizable-demo", )"#
+        )),
+        "resizable page should keep the default docs-path sections build-gated by focus filters",
+    );
+    assert!(
+        normalized.contains(&normalize_ws(
+            r#"if adaptive_panel_enabled && should_build_resizable_section( focus_filters.as_deref(), "Adaptive Panel Proof", "ui-gallery-resizable-adaptive-panel-proof", ) { let adaptive_panel = snippets::adaptive_panel::render(cx);"#
+        )),
+        "resizable page should keep the fixed-window container-query proof diagnostics opt-in",
+    );
+    assert!(
+        normalized.contains(&normalize_ws("sections.push(adaptive_panel);")),
+        "resizable page should append the opt-in adaptive panel proof before Notes",
+    );
+    assert!(
+        normalized.contains(&normalize_ws(
+            r#"if multi_viewport_combobox_enabled && should_build_resizable_section( focus_filters.as_deref(), "Multi-Viewport Combobox", "ui-gallery-resizable-multi-viewport-combobox-docsec", ) { let multi_viewport_combobox = snippets::multi_viewport_combobox::render(cx);"#
+        )),
+        "resizable page should keep the viewport-root overlay ownership surface diagnostics opt-in",
+    );
+    assert!(
+        normalized.contains(&normalize_ws("sections.push(multi_viewport_combobox);")),
+        "resizable page should append the opt-in multi-viewport Combobox section before Notes",
+    );
+    assert!(
+        normalized.contains(&normalize_ws(
+            r#"if moving_cached_combobox_enabled && should_build_resizable_section( focus_filters.as_deref(), "Moving Cached Combobox", "ui-gallery-resizable-view-cache-moving-combobox-docsec", ) { let moving_cached_combobox = snippets::moving_cached_combobox::render(cx);"#
+        )),
+        "resizable page should keep the deeper cached-source movement surface diagnostics opt-in",
+    );
+    assert!(
+        normalized.contains(&normalize_ws("sections.push(moving_cached_combobox);")),
+        "resizable page should append the opt-in cached-source movement section before Notes",
+    );
+    assert!(
+        normalized.contains(&normalize_ws(
+            r#"should_build_resizable_section( focus_filters.as_deref(), "Notes", "ui-gallery-resizable-notes", )"#
+        )),
+        "resizable page should keep Notes last after default and opt-in follow-up sections",
     );
 }
 
@@ -43,6 +92,10 @@ fn resizable_snippets_stay_copyable_and_docs_aligned() {
     let handle = include_str!("../src/ui/snippets/resizable/handle.rs");
     let rtl = include_str!("../src/ui/snippets/resizable/rtl.rs");
     let adaptive_panel = include_str!("../src/ui/snippets/resizable/adaptive_panel.rs");
+    let multi_viewport_combobox =
+        include_str!("../src/ui/snippets/resizable/multi_viewport_combobox.rs");
+    let moving_cached_combobox =
+        include_str!("../src/ui/snippets/resizable/moving_cached_combobox.rs");
     let notes = include_str!("../src/ui/snippets/resizable/notes.rs");
 
     for needle in [
@@ -114,9 +167,36 @@ fn resizable_snippets_stay_copyable_and_docs_aligned() {
     }
 
     for needle in [
+        "ui-gallery-resizable-multi-viewport-combobox",
+        "shadcn::Combobox::new(value.clone(), open.clone())",
+        ".side_offset_px(Px(6.0))",
+        ".test_id_prefix(TEST_ID_PREFIX)",
+    ] {
+        assert!(
+            multi_viewport_combobox.contains(needle),
+            "resizable multi-viewport Combobox snippet should keep the viewport-root placement fixture; missing `{needle}`",
+        );
+    }
+
+    for needle in [
+        "ui-gallery-resizable-view-cache-moving-combobox",
+        "cx.cached_subtree_with(",
+        "Move source right",
+        "The source element keeps one callsite identity while the parent panel changes.",
+        "source_panel(cx, \"right\", source)",
+    ] {
+        assert!(
+            moving_cached_combobox.contains(needle),
+            "resizable moving cached Combobox snippet should keep the cached-source movement fixture; missing `{needle}`",
+        );
+    }
+
+    for needle in [
         "Adaptive Panel Proof",
         "tools/diag-scripts/ui-gallery/resizable/",
         "ui-gallery-resizable-adaptive-panel-proof.json",
+        "ui-gallery-resizable-multi-viewport-combobox-placement.json",
+        "ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json",
         "No extra generic children API is planned unless a real authoring cliff appears",
     ] {
         assert!(

@@ -20,6 +20,8 @@ enum HitTestRoutingScenario {
     OverflowClipSuppressesEscapedChildHit,
     TransparentWrapperPreservesChildHit,
     NonHitTestableGateSuppressesChildHit,
+    MaskLayerBoundsDoNotClipHitTestingByDefault,
+    MaskLayerOverflowClipSuppressesEscapedChildHit,
     OverlayRootZOrderWins,
     ModalBarrierRootSuppressesUnderlay,
 }
@@ -160,6 +162,16 @@ fn observe_declarative_case(
                 &snapshot,
                 "gate-center",
                 rect_center(gate),
+            ));
+        }
+        HitTestRoutingScenario::MaskLayerBoundsDoNotClipHitTestingByDefault
+        | HitTestRoutingScenario::MaskLayerOverflowClipSuppressesEscapedChildHit => {
+            let wrapper = bounds_for_test_id(&observed, "mask-wrapper", BoundsSpace::Layout)?;
+            observed.push_hit_test_sample(hit_sample(
+                &ui,
+                &snapshot,
+                "mask-escaped-child-area",
+                Point::new(Px(wrapper.origin.x.0 + 34.0), Px(wrapper.origin.y.0 + 10.0)),
             ));
         }
         HitTestRoutingScenario::OverlayRootZOrderWins
@@ -371,6 +383,18 @@ fn build_declarative_scenario(
                     .test_id("hit-test-gate"),
             ]
         }
+        HitTestRoutingScenario::MaskLayerBoundsDoNotClipHitTestingByDefault => {
+            vec![mask_layer_with_escaped_pressable(
+                cx,
+                crate::element::Overflow::Visible,
+            )]
+        }
+        HitTestRoutingScenario::MaskLayerOverflowClipSuppressesEscapedChildHit => {
+            vec![mask_layer_with_escaped_pressable(
+                cx,
+                crate::element::Overflow::Clip,
+            )]
+        }
         HitTestRoutingScenario::OverlayRootZOrderWins
         | HitTestRoutingScenario::ModalBarrierRootSuppressesUnderlay => unreachable!(),
     }
@@ -473,6 +497,34 @@ fn fill_pressable(cx: &mut ElementContext<'_, TestHost>, test_id: &'static str) 
     props.layout.size.height = Length::Fill;
     cx.pressable(props, |_cx, _state| Vec::new())
         .test_id(test_id)
+}
+
+fn mask_layer_with_escaped_pressable(
+    cx: &mut ElementContext<'_, TestHost>,
+    overflow: crate::element::Overflow,
+) -> AnyElement {
+    let mut layout = absolute_layout(0.0, 0.0, 20.0, 20.0);
+    layout.overflow = overflow;
+    let props = crate::element::MaskLayerProps {
+        layout,
+        mask: fret_core::scene::Mask::Image {
+            image: fret_core::ImageId::default(),
+            uv: fret_core::scene::UvRect::FULL,
+            sampling: fret_core::scene::ImageSamplingHint::Default,
+        },
+    };
+
+    cx.mask_layer_props(props, |cx| {
+        vec![absolute_pressable(
+            cx,
+            "mask-escaped-child",
+            30.0,
+            0.0,
+            20.0,
+            20.0,
+        )]
+    })
+    .test_id("mask-wrapper")
 }
 
 fn absolute_layout(x: f32, y: f32, w: f32, h: f32) -> crate::element::LayoutStyle {

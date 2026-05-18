@@ -1670,7 +1670,19 @@ fn try_layout_children_from_engine_or_manual_absolute<H: UiHost>(
     if cx.children.is_empty() {
         return None;
     }
-    if let Some(size) = crate::layout_engine::layout_children_from_engine_if_solved(cx) {
+    let has_absolute_child = cx.children.iter().copied().any(|child| {
+        layout_style_for_node(cx.app, window, child).position
+            == crate::element::PositionStyle::Absolute
+    });
+    let auto_absolute_envelope = has_absolute_child
+        && cx.available == base_for_absolute.size
+        && cx.children.iter().copied().any(|child| {
+            layout_style_for_node(cx.app, window, child).position
+                != crate::element::PositionStyle::Absolute
+        });
+    if !auto_absolute_envelope
+        && let Some(size) = crate::layout_engine::layout_children_from_engine_if_solved(cx)
+    {
         return Some(size);
     }
     try_layout_children_from_engine_with_manual_absolute(cx, window, base_for_absolute)
@@ -1692,9 +1704,6 @@ fn try_layout_children_from_engine_with_manual_absolute<H: UiHost>(
     for &child in cx.children {
         let style = layout_style_for_node(cx.app, window, child);
         if style.position == crate::element::PositionStyle::Absolute {
-            if cx.layout_engine_child_bounds(child).is_some() {
-                any_engine_child = true;
-            }
             absolute.push((child, style.inset));
             continue;
         }
@@ -1705,21 +1714,58 @@ fn try_layout_children_from_engine_with_manual_absolute<H: UiHost>(
     }
 
     if !any_engine_child {
-        return None;
+        if absolute.is_empty() {
+            return None;
+        }
+
+        let mut probe_constraints = cx.probe_constraints_for_size(base_for_absolute.size);
+        if base_for_absolute.size.width.0 <= 0.0 {
+            probe_constraints.available.width = AvailableSpace::MaxContent;
+        }
+        if base_for_absolute.size.height.0 <= 0.0 {
+            probe_constraints.available.height = AvailableSpace::MaxContent;
+        }
+        let mut desired = Size::new(Px(0.0), Px(0.0));
+        for (child, inset) in absolute.iter().copied() {
+            let child_size = cx.measure_in(child, probe_constraints);
+            let required = absolute_child_envelope_size(child_size, inset);
+            desired.width = Px(desired.width.0.max(required.width.0));
+            desired.height = Px(desired.height.0.max(required.height.0));
+        }
+
+        let base = Rect::new(base_for_absolute.origin, desired);
+        for (child, inset) in absolute {
+            layout_absolute_child_with_probe_bounds(cx, child, base, base, inset);
+        }
+
+        return Some(desired);
     }
+
+    let mut desired = base_for_absolute.size;
+    let mut probe_constraints = cx.probe_constraints_for_size(base_for_absolute.size);
+    if desired.width.0 <= 0.0 {
+        probe_constraints.available.width = AvailableSpace::MaxContent;
+    }
+    if desired.height.0 <= 0.0 {
+        probe_constraints.available.height = AvailableSpace::MaxContent;
+    }
+
+    for (child, inset) in absolute.iter().copied() {
+        let child_size = cx.measure_in(child, probe_constraints);
+        let required = absolute_child_envelope_size(child_size, inset);
+        desired.width = Px(desired.width.0.max(required.width.0));
+        desired.height = Px(desired.height.0.max(required.height.0));
+    }
+
+    let base = Rect::new(base_for_absolute.origin, desired);
 
     for (child, bounds) in non_absolute {
         let _ = cx.layout_in(child, bounds);
     }
 
     for (child, inset) in absolute {
-        layout_positioned_child(
-            cx,
-            child,
-            base_for_absolute,
-            PositionedLayoutStyle::Absolute(inset),
-        );
+        layout_positioned_child(cx, child, base, PositionedLayoutStyle::Absolute(inset));
     }
 
-    Some(cx.available)
+    Some(desired)
 }

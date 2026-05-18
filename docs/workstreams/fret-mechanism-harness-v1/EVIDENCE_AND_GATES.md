@@ -47,6 +47,19 @@ The same fixture now also covers auto-sized container child margin accounting: m
 measurement for a margin-bearing child now matches the laid-out container bounds, so measurement
 and layout stay aligned for finite margins in the auto-container path.
 
+The layout primitive fixture now includes `render-transform-mixed-flow-absolute-envelope-matches-visual-hit`.
+It reuses the mixed Pressable flow/absolute envelope case under a `RenderTransform` and proves the
+`34 x 12` layout/measurement envelope is preserved while visual and hit spaces translate together.
+The layout-space near-edge sample misses the absolute child, while the translated visual-space
+near-edge sample hits the absolute child. No new mechanism fix was required.
+
+The same fixture now also includes
+`fractional-render-transform-derives-visual-hit-from-layout-size`. It proves
+`FractionalRenderTransform` computes a size-derived `40 x 10` translation from a `20 x 20`
+interactive child while keeping layout bounds authoritative and moving visual/hit spaces together.
+The layout-space center misses the target, and the translated visual-space center hits it. No new
+mechanism fix was required.
+
 Evidence anchor:
 
 - `crates/fret-ui/src/declarative/host_widget/measure.rs`
@@ -55,7 +68,9 @@ Evidence anchor:
 
 Run result:
 
-- `cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_primitives_match_oracles -- --nocapture`
+- `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+  - Result: passed; Nextest run id `8a831141-fd89-4656-be5b-59a3d206bdef`.
+- `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\layout_primitives_v1.json`
   - Result: passed.
 
 ## Suite Lint Policy Gates
@@ -124,6 +139,29 @@ Current synthetic evidence anchors:
     `cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_view_cache_lifecycle_matches_oracles -- --nocapture`
   - current result:
     passed.
+- Moving mixed flow/absolute wrapper focused gate:
+  `crates/fret-ui/src/declarative/tests/view_cache.rs`
+  - proof:
+    `view_cache_hit_moving_mixed_absolute_wrapper_updates_bounds_and_hit_test` keeps the ViewCache
+    child render closure clean while a parent spacer moves a mixed flow/absolute `Pressable`
+    subtree. It asserts moved layout bounds, moved element visual bounds, moved absolute-child
+    bounds, fallback hit-testing, and runtime routing via `debug_hit_test_routing`.
+  - first red command:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui view_cache_hit_moving_mixed_absolute_wrapper_updates_bounds_and_hit_test --no-fail-fast --no-capture`
+  - first red result:
+    failed with Nextest run id `ff29d5c0-ec02-45d7-bc41-63956a5020fb`; the harness expected the
+    old point to hit nothing, but it legitimately hit the expanded outer row after spacer
+    insertion. The stale absolute-child hit condition did not reproduce.
+  - current focused command:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui view_cache_hit_moving_mixed_absolute_wrapper_updates_bounds_and_hit_test --no-fail-fast --no-capture`
+  - current focused result:
+    passed with Nextest run id `7e88f25a-7ea4-42c2-96d6-781f9da9482d`.
+  - family command:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui view_cache --no-fail-fast`
+  - family result:
+    passed, 66/66 tests, with Nextest run id `a49ebb69-7e9a-4b66-bc83-7f5f52d35a0e`.
+  - formatting:
+    `cargo fmt -p fret-ui --check` passed.
 
 ## Timer Dispatch Lifecycle Gates
 
@@ -279,6 +317,23 @@ Current runtime evidence anchors:
     `target/fret-diag-datatable-view-cache-filter-shrink-inputs-change/sessions/1778745510540-145220/1778745514577`
   - share pack:
     `target/fret-diag-datatable-view-cache-filter-shrink-inputs-change/sessions/1778745510540-145220/share/1778745514577.zip`
+- Retained Table runtime suite:
+  `tools/diag-scripts/suites/ui-gallery-table-retained/suite.json`
+  - proof:
+    runs the retained Table torture surface across keyboard typeahead, multi-sort, row pinning with
+    `keep_pinned_rows` true and false, descending sort, sort/select/scroll, and a retained
+    window-boundary scroll bounce that asserts both row-window movement and aggregate retained
+    reconcile telemetry.
+  - focused evidence:
+    `target/fret-diag-table-retained-window-boundary-scroll-focused-v4/sessions/1779037981653-160576/1779038066334/ai.packet`
+  - suite evidence:
+    `target/fret-diag-table-retained-suite-candidate-v4/sessions/1779038155054-118992/suite.summary.json`
+  - suite result:
+    passed, 7/7 rows, `scripts_with_evidence=6`, `focus_mismatch_total=0`, zero lint
+    errors/warnings.
+  - companion harness gates:
+    `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics history_predicates_can_match_stale_latest_snapshot retained_virtual_list_reconciles_matching_predicate_counts_ring_snapshots no_frame_keepalive_does_not_consume_wait_frames --no-fail-fast`
+    passed with latest Nextest run id `3e4a180a-2670-4a6d-a826-ec84d196fdec`.
 - Checkbox RTL post-scroll idle-stability gate:
   `tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json`
   - suite membership:
@@ -372,6 +427,25 @@ target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/overlay/ui
 
 Current runtime evidence:
 
+- MaskLayer paint-only hit-testing fixture:
+  `crates/fret-ui/src/declarative/tests/fixtures/hit_test_routing_v1.json`
+  - proof:
+    `mask-layer-bounds-do-not-clip-hit-testing-by-default` proves an offset escaped child remains
+    targetable outside `MaskLayer` bounds when the wrapper uses default visible overflow.
+    `mask-layer-overflow-clip-suppresses-escaped-child-hit` proves the same escaped child is
+    suppressed when the wrapper opts into `Overflow::Clip`.
+  - first red command:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_hit_test_routing_matches_oracles --no-fail-fast --no-capture`
+  - first red result:
+    failed with Nextest run id `54d2868e-b176-42cb-a6e2-ad01ce63b497`; the initial oracle used a
+    width-overflow child that the layout contract legitimately constrained to wrapper width.
+  - current command:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_hit_test_routing_matches_oracles --no-fail-fast --no-capture`
+  - current result:
+    passed with Nextest run id `a72e3112-544e-405a-957d-d4d00dfad034`.
+  - JSON validation:
+    `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\hit_test_routing_v1.json`
+    passed.
 - Scrollbar drag pointer-capture lifecycle and owner:
   `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json`
   - asserts `input_pointer_capture_active_is active=true` after `pointer_down` on
@@ -685,23 +759,41 @@ Current evidence anchors:
     `target/fret-diag-combobox-popup-bottom-room-label-checkmark/sessions/1778616793292-16876/script.result.json`
   - bottom-room bundle with item child anchors:
     `target/fret-diag-combobox-popup-bottom-room-label-checkmark/sessions/1778616793292-16876/1778616796767-ui-gallery-combobox-popup-trigger-bottom-room-open/bundle.schema2.json`
-- Combobox long-text trigger/option geometry gate:
+- Combobox long-text trigger/option geometry and renderer font-trace gate:
   `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-long-text-geometry.json`
   - asserts trigger label width budget, label-before-chevron right delta, chrome-relative vertical
     centering, popup placement, option label width budget, option label/checkmark insets, and
     option label vertical centering.
+  - now also enables `FRET_TEXT_FONT_TRACE_ALL=1` and asserts at least one renderer font trace
+    entry for the selected "Enterprise Observability" label with `font=ui`, `wrap=none`,
+    `overflow=ellipsis`, and `missing_glyphs=0`.
   - focused test:
     `combobox_trigger_long_label_stays_before_chevron`
   - evidence:
     `target/fret-diag-combobox-long-text-geometry-v4/sessions/1778619498565-104108/script.result.json`
   - bundle with long-text child anchors:
     `target/fret-diag-combobox-long-text-geometry-v4/sessions/1778619498565-104108/1778619501160-ui-gallery-combobox-long-text-open/bundle.schema2.json`
-- Combobox RTL long-text trigger/option geometry gate:
+  - renderer font-trace predicate protocol/evaluator gates:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_render_text_font_trace_entries_matching_ge_serializes_and_deserializes script_v2_roundtrip_ui_gallery_combobox_long_text_geometry --no-fail-fast --no-capture`
+    passed with Nextest run id `88d1c4cf-a5e7-4b17-91bd-998df1857420`.
+    `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics render_text_font_trace_matching_predicate_matches_renderer_text_facts --no-fail-fast --no-capture`
+    passed with Nextest run id `4ec491be-913d-47fa-b1e3-d7e756594342`.
+  - renderer font-trace runtime evidence:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-long-text-geometry.json --dir target/fret-diag-combobox-long-text-geometry-renderer-trace-v4 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe`
+    passed with run id `1779077880731`.
+  - renderer font-trace runtime artifacts:
+    `target/fret-diag-combobox-long-text-geometry-renderer-trace-v4/sessions/1779077868548-173912/script.result.json`,
+    `target/fret-diag-combobox-long-text-geometry-renderer-trace-v4/sessions/1779077868548-173912/1779077880731/ai.packet`,
+    `target/fret-diag-combobox-long-text-geometry-renderer-trace-v4/sessions/1779077868548-173912/share/1779077880731.zip`
+- Combobox RTL long-text trigger/option geometry and renderer font-trace gate:
   `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-geometry.json`
   - asserts trigger label width budget, physical-left RTL chevron inset, label-after-chevron
     spacing, chrome-relative vertical centering, content-shell top collision flip with
     `side_offset_px=6`, option label width budget, physical-right RTL checkmark inset, and
     label-before-checkmark spacing.
+  - now also enables `FRET_TEXT_FONT_TRACE_ALL=1` and asserts at least one renderer font trace
+    entry for the selected "Enterprise Observability" label with `font=ui`, `wrap=none`,
+    `overflow=ellipsis`, and `missing_glyphs=0`.
   - suite membership:
     `tools/diag-scripts/suites/ui-gallery-combobox/suite.json`,
     `tools/diag-scripts/suites/ui-gallery-rtl-smoke/suite.json`, and
@@ -714,6 +806,16 @@ Current evidence anchors:
     `target/fret-diag-combobox-rtl-long-text-audit/sessions/1778747708234-13552/1778747713455-ui-gallery-combobox-rtl-long-text-open.layout/layout.taffy.v1.json`
   - current audit screenshot:
     `target/fret-diag-combobox-rtl-long-text-audit/sessions/1778747708234-13552/screenshots/1778747713519-ui-gallery-combobox-rtl-long-text-open/window-4294967297-tick-34-frame-34.png`
+  - renderer font-trace script roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_rtl_long_text_geometry --no-fail-fast --no-capture`
+    passed with Nextest run id `23514d59-c3bc-4985-8c8f-d1047d32e6aa`.
+  - renderer font-trace runtime evidence:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-geometry.json --dir target/fret-diag-combobox-rtl-long-text-renderer-trace-v1 --session-auto --pack --ai-packet --include-screenshots --launch -- target/dev-fast/fret-ui-gallery.exe`
+    passed with run id `1779078285665`.
+  - renderer font-trace runtime artifacts:
+    `target/fret-diag-combobox-rtl-long-text-renderer-trace-v1/sessions/1779078273314-137596/script.result.json`,
+    `target/fret-diag-combobox-rtl-long-text-renderer-trace-v1/sessions/1779078273314-137596/1779078285665/ai.packet`,
+    `target/fret-diag-combobox-rtl-long-text-renderer-trace-v1/sessions/1779078273314-137596/share/1779078285665.zip`
 - Popover first-open explicit-width center alignment gate:
   `ecosystem/fret-ui-shadcn/src/popover.rs`
   - test: `popover_first_open_center_alignment_uses_explicit_width_for_x`
@@ -1142,6 +1244,9 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - asserts bounded input/root geometry, trailing-control non-overlap, IME cursor area inside the
     input, text-input horizontal overflow, offset range, and visible text inside the padded content
     viewport
+  - now also enables `FRET_TEXT_FONT_TRACE_ALL=1` and asserts a renderer font trace entry for the
+    long grouped-input value with `font=ui`, `wrap=none`, `overflow=clip`, and
+    `missing_glyphs=0`.
   - suite redirect:
     `tools/diag-scripts/ui-gallery-button-group-input-group-long-text.json`
   - diagnostics catalog entry:
@@ -1157,6 +1262,35 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - visual proof:
     content width `625.2627`, viewport width `326.0`, offset/max offset `299.2627`, visible text
     bounds inside viewport `x=335.33334..661.33337`
+  - first renderer-trace runtime draft:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-long-text.json --dir target/fret-diag-button-group-input-group-long-text-renderer-trace-v1 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+    failed at step 7 with `wait_until_timeout` on
+    `bounds_within_window(ui-gallery-button-group-input-group-control)`.
+  - first-draft triage:
+    `target/fret-diag-button-group-input-group-long-text-renderer-trace-v1/sessions/1779082623510-152148/1779082638377/ai.packet/slice.failed_step.7.test_id.ui-gallery-button-group-input-group-control.json`
+    showed a unique `text_field` match for `ui-gallery-button-group-input-group-control` with
+    pre-mutation bounds `0 x 0`, so the failure was a script precondition issue. The final script
+    waits on the owning Button Group root before mutating the direct control and keeps the
+    post-mutation control-size assertions.
+  - renderer font-trace focused roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_button_group_input_group_long_text --no-fail-fast --no-capture`
+    passed with Nextest run id `d656b55e-a80c-4a53-8cb0-98a8c2307872`.
+  - renderer font-trace full roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip --no-fail-fast`
+    passed with Nextest run id `72429701-d2a0-4d9f-9742-563fc421a36f`.
+  - registry gates:
+    `python tools/check_diag_scripts_registry.py` and
+    `python tools/test_check_diag_scripts_registry.py` passed after refreshing
+    `tools/diag-scripts/index.json`.
+  - renderer font-trace runtime evidence:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-long-text.json --dir target/fret-diag-button-group-input-group-long-text-renderer-trace-v2 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+    passed with run id `1779082851147`.
+  - renderer font-trace runtime artifacts:
+    `target/fret-diag-button-group-input-group-long-text-renderer-trace-v2/sessions/1779082839430-157148/script.result.json`,
+    `target/fret-diag-button-group-input-group-long-text-renderer-trace-v2/sessions/1779082839430-157148/1779082851147/ai.packet`,
+    `target/fret-diag-button-group-input-group-long-text-renderer-trace-v2/sessions/1779082839430-157148/share/1779082851147.zip`,
+    `target/fret-diag-button-group-input-group-long-text-renderer-trace-v2/sessions/1779082839430-157148/1779082919330-ui-gallery-button-group-input-group-long-text.layout/layout.taffy.v1.json`, and
+    `target/fret-diag-button-group-input-group-long-text-renderer-trace-v2/sessions/1779082839430-157148/screenshots/1779082919566-ui-gallery-button-group-input-group-long-text/window-4294967297-tick-6-frame-6.png`.
 - Combobox Input Group long-query visible-text gate:
   `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-input-group-long-query-text.json`
   - asserts the searchable combobox input with an inline search addon keeps long-query text within
@@ -1181,6 +1315,9 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - asserts the cmdk-style Command search input keeps long-query text inside its viewport, clamps
     horizontal offset, reports overflow, keeps the IME cursor inside bounds, and covers the measured
     text height
+  - now also enables `FRET_TEXT_FONT_TRACE_ALL=1` and asserts at least one renderer font trace
+    entry for the long query with `font=ui`, `wrap=none`, `overflow=clip`, and
+    `missing_glyphs=0`.
   - suite redirect:
     `tools/diag-scripts/ui-gallery-command-docs-demo-long-query-text.json`
   - diagnostics catalog entry:
@@ -1196,6 +1333,21 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag/codex-command-long-query-rerun/sessions/1778634588632-102660/share/1778634605262.zip`
   - current screenshot:
     `target/fret-diag/codex-command-long-query-rerun/sessions/1778634588632-102660/screenshots/1778634607431-ui-gallery-command-docs-demo-long-query-text/window-4294967297-tick-80-frame-80.png`
+  - renderer font-trace focused roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_command_docs_demo_long_query_text --no-fail-fast --no-capture`
+    passed with Nextest run id `347bc280-0e4c-4f1d-beed-062fd2e4903f`.
+  - renderer font-trace full roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip --no-fail-fast`
+    passed with Nextest run id `9f94f99d-86c7-417b-9b0f-5f29e4ca5797`.
+  - renderer font-trace runtime evidence:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-long-query-text.json --dir target/fret-diag-command-docs-demo-long-query-renderer-trace-v6 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+    passed with run id `1779080299508`.
+  - renderer font-trace runtime artifacts:
+    `target/fret-diag-command-docs-demo-long-query-renderer-trace-v6/sessions/1779080286919-178616/script.result.json`,
+    `target/fret-diag-command-docs-demo-long-query-renderer-trace-v6/sessions/1779080286919-178616/1779080299508/ai.packet`,
+    `target/fret-diag-command-docs-demo-long-query-renderer-trace-v6/sessions/1779080286919-178616/share/1779080299508.zip`,
+    `target/fret-diag-command-docs-demo-long-query-renderer-trace-v6/sessions/1779080286919-178616/1779080386435-ui-gallery-command-docs-demo-long-query-text.layout/layout.taffy.v1.json`, and
+    `target/fret-diag-command-docs-demo-long-query-renderer-trace-v6/sessions/1779080286919-178616/screenshots/1779080386835-ui-gallery-command-docs-demo-long-query-text/window-4294967297-tick-7-frame-7.png`.
 - Composite active-descendant runtime gates:
   `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-auto-highlight-disabled-none-on-open.json`,
   `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-auto-highlight-first-match.json`,
@@ -1584,6 +1736,9 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - asserts a plain Input and the file-composition Input both expose direct editable text-field
     semantics, accept long values, report horizontal overflow, keep offset in range, keep visible
     text inside the viewport, keep the IME cursor inside bounds, and cover measured text height
+  - now also starts directly on the Input page with `FRET_UI_GALLERY_START_PAGE=input`, enables
+    `FRET_TEXT_FONT_TRACE_ALL=1`, and asserts renderer font trace entries for both long values
+    with `font=ui`, `wrap=none`, `overflow=clip`, and `missing_glyphs=0`.
   - suite redirect:
     `tools/diag-scripts/ui-gallery-input-basic-and-file-long-text.json`
   - diagnostics catalog entry:
@@ -1604,6 +1759,25 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag/codex-input-basic-file-long-text-builder-fixed/sessions/1778636295426-16732/1778636303293-ui-gallery-input-basic-and-file-long-text/slice.ui-gallery-input-file-control.json`
   - current screenshot:
     `target/fret-diag/codex-input-basic-file-long-text-builder-fixed/sessions/1778636295426-16732/screenshots/1778636303293-ui-gallery-input-basic-and-file-long-text/window-4294967297-tick-65-frame-65.png`
+  - renderer font-trace focused roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_input_basic_and_file_long_text --no-fail-fast --no-capture`
+    passed with Nextest run id `4fc33be1-73de-4abd-b44e-1372c97cbe10`.
+  - renderer font-trace full roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip --no-fail-fast`
+    passed with Nextest run id `29fe790a-4b52-4b96-9d3c-0fb7677a8401`.
+  - registry gates:
+    `python tools/check_diag_scripts_registry.py` and
+    `python tools/test_check_diag_scripts_registry.py` passed after refreshing
+    `tools/diag-scripts/index.json`.
+  - renderer font-trace runtime evidence:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/input/ui-gallery-input-basic-and-file-long-text.json --dir target/fret-diag-input-basic-file-long-text-renderer-trace-v1 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+    passed with run id `1779081108865`.
+  - renderer font-trace runtime artifacts:
+    `target/fret-diag-input-basic-file-long-text-renderer-trace-v1/sessions/1779081088220-65512/script.result.json`,
+    `target/fret-diag-input-basic-file-long-text-renderer-trace-v1/sessions/1779081088220-65512/1779081108865/ai.packet`,
+    `target/fret-diag-input-basic-file-long-text-renderer-trace-v1/sessions/1779081088220-65512/share/1779081108865.zip`,
+    `target/fret-diag-input-basic-file-long-text-renderer-trace-v1/sessions/1779081088220-65512/1779081309030-ui-gallery-input-basic-and-file-long-text.layout/layout.taffy.v1.json`, and
+    `target/fret-diag-input-basic-file-long-text-renderer-trace-v1/sessions/1779081088220-65512/screenshots/1779081309581-ui-gallery-input-basic-and-file-long-text/window-4294967297-tick-23-frame-23.png`.
 - Text-control authoring-surface gate:
   `apps/fret-ui-gallery/tests/ui_snippets_text_control_test_id_surface.rs`
   - reads UI Gallery diagnostics scripts under `tools/diag-scripts/ui-gallery`
@@ -2167,6 +2341,58 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - ownership-close suite result:
     `target/fret-diag-resizable-suite-ownership-close-v1/sessions/1778976095291-118960/suite.summary.json`
     reports `status=passed`, 1/1 row, and zero lint errors/warnings.
+- Moving cached Combobox view-cache/root-boundary gate:
+  `tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json`
+  - invariant:
+    a cached Combobox source that moves between Resizable panels must keep paint, semantics,
+    hit-test routing, and overlay placement in the same coordinate space even when the source
+    subtree is reused through ViewCache rather than rerendered.
+  - implementation anchors:
+    `crates/fret-ui/src/tree/prepaint/mod.rs`,
+    `crates/fret-ui/src/tree/prepaint/interaction.rs`,
+    `crates/fret-ui/src/tree/tests/prepaint.rs`,
+    `apps/fret-ui-gallery/src/ui/snippets/resizable/moving_cached_combobox.rs`,
+    `apps/fret-ui-gallery/src/ui/pages/resizable.rs`,
+    `tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json`,
+    and `tools/diag-scripts/suites/ui-gallery-resizable/suite.json`.
+  - failed evidence before fix:
+    `target/fret-diag-resizable-moving-cached-combobox-v5/sessions/1779027102545-105712/script.result.json`
+  - failed result:
+    step 17 timed out waiting for `ui-gallery-resizable-view-cache-moving-combobox-input`; the
+    click trace had trigger semantics bounds in the right panel but hit routing resolved to the
+    right panel container because replayed interaction records retained their old absolute bounds.
+  - focused prepaint regression:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui prepaint_interaction_cache_replay_translates_records_when_cache_root_moves --no-capture`
+  - focused prepaint result:
+    passed, 1 test.
+  - prepaint family filter:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui prepaint --no-capture`
+  - prepaint family result:
+    passed, 20 tests.
+  - hit-test/view-cache transform guard:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui hit_test_works_with_view_cache_root_and_prepaint_reuse_under_render_transform --no-capture`
+  - hit-test/view-cache transform result:
+    passed, 1 test.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json --dir target/fret-diag-resizable-moving-cached-combobox-v6 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 420000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - runtime result:
+    passed; run id `1779027983606`.
+  - runtime evidence:
+    `target/fret-diag-resizable-moving-cached-combobox-v6/sessions/1779027970415-65904/script.result.json`
+  - AI packet:
+    `target/fret-diag-resizable-moving-cached-combobox-v6/sessions/1779027970415-65904/1779027983606/ai.packet`
+  - packed evidence:
+    `target/fret-diag-resizable-moving-cached-combobox-v6/sessions/1779027970415-65904/share/1779027983606.zip`
+  - promoted Resizable suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-resizable --dir target/fret-diag-resizable-suite-after-moving-cached-combobox-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - promoted Resizable suite result:
+    `target/fret-diag-resizable-suite-after-moving-cached-combobox-v1/sessions/1779029073205-16452/suite.summary.json`
+    reports `status=passed`, 2/2 rows, `scripts_with_evidence=2`,
+    `overlay_chosen_side_counts.top=2`, and zero lint errors/warnings.
 - Non-modal overlay underlay activation-status gates:
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-click-through-outside-press-focus-underlay.json`
   and
@@ -2424,6 +2650,16 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `.fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation-rerun/script.result.json`
   - packed evidence:
     `.fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation-rerun/share/1778922706072.zip`
+  - current runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json --dir target/fret-diag-platform-preferences-runtime-environment-mutation-v2 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - current runtime result:
+    passed; run id `1779029357027`.
+  - current runtime evidence:
+    `target/fret-diag-platform-preferences-runtime-environment-mutation-v2/sessions/1779029342505-133048/script.result.json`
+  - current AI packet:
+    `target/fret-diag-platform-preferences-runtime-environment-mutation-v2/sessions/1779029342505-133048/1779029357027/ai.packet`
+  - current packed evidence:
+    `target/fret-diag-platform-preferences-runtime-environment-mutation-v2/sessions/1779029342505-133048/share/1779029357027.zip`
 - Diagnostics authoring page-entry lint gate:
   `tools/check_diag_scripts_registry.py`
   - scope:
@@ -2901,6 +3137,37 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag-hover-card-suite-after-sides-placement-oracle-v1/sessions/1778972760323-23244/suite.summary.json`
     reports `status=passed`, 6/6 rows, `scripts_with_evidence=6`, and
     `focus_mismatch_total=0`.
+- HoverCard strict diagnostics authoring gate:
+  - invariant:
+    promoted HoverCard scripts should not rediscover page-entry or long-page click precondition
+    mistakes at runtime. Page-local `ui-gallery-hover-card-*` / `ui-gallery-hovercard-*` selectors
+    require an owning page proof or `FRET_UI_GALLERY_START_PAGE=hover_card`, and stable clicks on
+    those content targets require a prior visibility guard.
+  - finding:
+    dry-running the stricter registry rules over `ui-gallery-hover-card` found zero remaining
+    violations after the earlier fixed-frame-clock and sides-placement repairs. This slice turned
+    that clean state into a durable registry gate; no new HoverCard recipe or mechanism defect was
+    reproduced.
+  - implementation anchors:
+    `tools/check_diag_scripts_registry.py`,
+    `tools/test_check_diag_scripts_registry.py`, and
+    `tools/diag-scripts/suites/ui-gallery-hover-card/suite.json`.
+  - lint gates:
+    `python tools/test_check_diag_scripts_registry.py`
+    `python tools/check_diag_scripts_registry.py`
+  - lint results:
+    passed; registry self-tests ran 24 tests and the promoted registry is up to date.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - runtime suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-hover-card --dir target/fret-diag-hover-card-strict-authoring-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - runtime suite result:
+    `target/fret-diag-hover-card-strict-authoring-v1/sessions/1779002136522-139728/suite.summary.json`
+    reports `status=passed`, 6/6 rows, `scripts_with_evidence=6`,
+    `focus_mismatch_total=0`, `reason_code_counts={}`, zero lint errors/warnings for every row,
+    and overlay placement traces with chosen sides `left=3`, `right=1`, `top=5`.
 - Menubar submenu placement focused suite:
   - invariant:
     Menubar submenu placement must cover LTR physical-right placement, RTL physical-left placement,
@@ -2925,6 +3192,153 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag-menubar-placement-suite-v1/sessions/1778973313432-109176/suite.summary.json`
     reports `status=passed`, 3/3 rows, `scripts_with_evidence=3`,
     `focus_mismatch_total=0`, and zero lint errors/warnings for all rows.
+- Menubar Placement strict diagnostics authoring gate:
+  - invariant:
+    promoted Menubar Placement scripts should not rediscover page-entry or long-page click
+    precondition mistakes at runtime. Page-local `ui-gallery-menubar-*` selectors require an
+    owning page proof or `FRET_UI_GALLERY_START_PAGE=menubar`, and stable clicks on those content
+    targets require a prior visibility guard.
+  - finding:
+    dry-running the stricter registry rules over `ui-gallery-menubar-placement` found zero current
+    violations. The existing scripts already enter the Menubar page explicitly and guard their
+    content clicks. A parallel DropdownMenu candidate dry-run found two remaining click-visibility
+    gaps; those were handled separately in the DropdownMenu strict diagnostics authoring gate.
+  - implementation anchors:
+    `tools/check_diag_scripts_registry.py`,
+    `tools/test_check_diag_scripts_registry.py`, and
+    `tools/diag-scripts/suites/ui-gallery-menubar-placement/suite.json`.
+  - lint gates:
+    `python tools/test_check_diag_scripts_registry.py`
+    `python tools/check_diag_scripts_registry.py`
+  - lint results:
+    passed; registry self-tests ran 27 tests and the promoted registry is up to date.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - runtime suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-menubar-placement --dir target/fret-diag-menubar-placement-strict-authoring-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - runtime suite result:
+    `target/fret-diag-menubar-placement-strict-authoring-v1/sessions/1779003319016-117380/suite.summary.json`
+    reports `status=passed`, 3/3 rows, run ids `1779003333926`, `1779003389077`, and
+    `1779003426248`, with zero lint errors/warnings for every row.
+- DropdownMenu strict diagnostics authoring gate:
+  - invariant:
+    promoted DropdownMenu scripts should not rediscover page-entry or long-page click precondition
+    mistakes at runtime. Page-local `ui-gallery-dropdown-menu-*` selectors require an owning page
+    proof or `FRET_UI_GALLERY_START_PAGE=dropdown_menu`, and stable clicks on those content targets
+    require a prior visibility guard.
+  - findings:
+    the candidate strict dry-run found two click-visibility gaps. The focusable-disabled gate
+    clicked `ui-gallery-dropdown-menu-demo-trigger.chrome` without first proving window
+    containment, and the submenu smoke gate scrolled
+    `ui-gallery-dropdown-menu-submenu-trigger.chrome` without setting
+    `require_fully_within_window=true`. These were diagnostics authoring gaps, not DropdownMenu
+    recipe defects.
+  - implementation anchors:
+    `tools/check_diag_scripts_registry.py`,
+    `tools/test_check_diag_scripts_registry.py`,
+    `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression.json`,
+    `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-submenu-open-smoke.json`,
+    and `tools/diag-scripts/suites/ui-gallery-dropdown-menu/suite.json`.
+  - lint gates:
+    `python tools/test_check_diag_scripts_registry.py`
+    `python tools/check_diag_scripts_registry.py`
+  - lint results:
+    passed; registry self-tests ran 30 tests and the promoted registry is up to date.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - focused rerun after first suite stall:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-basic-typeahead-billing.json --dir target/fret-diag-dropdown-menu-basic-typeahead-strict-rerun-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused rerun result:
+    passed with run id `1779004715484`.
+  - runtime suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-dropdown-menu --dir target/fret-diag-dropdown-menu-strict-authoring-v2 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - runtime suite result:
+    `target/fret-diag-dropdown-menu-strict-authoring-v2/sessions/1779004799053-142764/suite.summary.json`
+    reports `status=passed`, 3/3 rows, `scripts_with_evidence=3`, `focus_mismatch_total=0`,
+    `reason_code_counts={}`, and zero lint errors/warnings for every row.
+  - first-attempt note:
+    `target/fret-diag-dropdown-menu-strict-authoring-v1/sessions/1779004410147-126432/suite.summary.json`
+    failed with `timeout.no_frames` in the Basic typeahead script after resize. Because the
+    focused rerun and the full v2 suite passed, this remains a harness/run stability observation
+    rather than a confirmed recipe or mechanism defect.
+- ContextMenu strict diagnostics authoring gate:
+  - invariant:
+    promoted ContextMenu scripts should not rediscover page-entry or long-page click precondition
+    mistakes at runtime. Page-local `ui-gallery-context-menu-*` selectors require an owning page
+    proof or `FRET_UI_GALLERY_START_PAGE=context_menu`, and stable clicks on those content targets
+    require a prior visibility guard.
+  - finding:
+    dry-running the stricter registry rules over `ui-gallery-context-menu` found zero current
+    violations. The two corridor scripts already provide an explicit ContextMenu page default,
+    assert `ui-gallery-page-context-menu`, and guard the submenu trigger with window containment
+    before `click_stable`.
+  - implementation anchors:
+    `tools/check_diag_scripts_registry.py`,
+    `tools/test_check_diag_scripts_registry.py`, and
+    `tools/diag-scripts/suites/ui-gallery-context-menu/suite.json`.
+  - lint gates:
+    `python tools/test_check_diag_scripts_registry.py`
+    `python tools/check_diag_scripts_registry.py`
+  - lint results:
+    passed; registry self-tests ran 33 tests and the promoted registry is up to date.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - runtime suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-context-menu --dir target/fret-diag-context-menu-strict-authoring-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - runtime suite result:
+    `target/fret-diag-context-menu-strict-authoring-v1/sessions/1779005731883-139360/suite.summary.json`
+    reports `status=passed`, 2/2 rows, `scripts_with_evidence=2`, `focus_mismatch_total=0`,
+    `reason_code_counts={}`, overlay `chosen_side_counts.right=2`, and zero lint errors/warnings
+    for every row.
+- Button Group strict diagnostics authoring gate:
+  - invariant:
+    promoted Button Group scripts should not rediscover page-entry or long-page click precondition
+    mistakes at runtime. Page-local `ui-gallery-button-group-*` selectors require an owning page
+    proof or `FRET_UI_GALLERY_START_PAGE=button_group`, and stable clicks on those content targets
+    require a prior visibility guard.
+  - findings:
+    the strict dry run found three unguarded Code-tab clicks in the Demo, Accessibility, and Select
+    screenshot scripts. After converting them to `bounds_within_window` plus `click_stable`, the
+    first runtime suite still failed the Select path because the Code tab selector was present but
+    off-window (`y=2522.6665` in a `720px` window). The Select script now scrolls the section into
+    the Gallery content viewport before both the Preview and Code captures.
+  - implementation anchors:
+    `tools/check_diag_scripts_registry.py`,
+    `tools/test_check_diag_scripts_registry.py`,
+    `tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-demo-screenshots.json`,
+    `tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-accessibility-screenshots.json`,
+    `tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-select-screenshots.json`, and
+    `tools/diag-scripts/suites/ui-gallery-button-group/suite.json`.
+  - lint gates:
+    `python tools/test_check_diag_scripts_registry.py`
+    `python tools/check_diag_scripts_registry.py`
+  - lint results:
+    passed; registry self-tests ran 36 tests and the promoted registry is up to date.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - build result:
+    passed.
+  - focused Select gate:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-select-screenshots.json --dir target/fret-diag-button-group-select-strict-authoring-rerun-v1 --session-auto --pack --ai-packet --timeout-ms 420000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused Select result:
+    passed with run id `1779008006425`; AI packet:
+    `target/fret-diag-button-group-select-strict-authoring-rerun-v1/sessions/1779007993048-40528/1779008006425/ai.packet`.
+  - first strict suite attempt:
+    `target/fret-diag-button-group-strict-authoring-v1/sessions/1779006929575-117696/suite.summary.json`
+    failed at step 15 in `ui-gallery-button-group-select-screenshots.json` with
+    `wait_until_timeout` on `ui-gallery-button-group-select-tabs-trigger-code`.
+  - runtime suite gate:
+    `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-button-group --dir target/fret-diag-button-group-strict-authoring-v2 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - runtime suite result:
+    `target/fret-diag-button-group-strict-authoring-v2/sessions/1779008052527-138688/suite.summary.json`
+    reports `status=passed`, 13/13 rows, `scripts_with_evidence=13`,
+    `focus_mismatch_total=0`, `reason_code_counts={}`, and zero lint errors/warnings for every row.
 - DropdownMenu focused suite:
   - invariant:
     DropdownMenu runtime evidence should prove submenu placement, keyboard typeahead commit, and
@@ -3197,3 +3611,333 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `crates/fret-ui/src/tree/tests/interactive_resize_flow_rebuild.rs`
 - Runtime script:
   `tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-demo-with-title-toggle-underflow.json`
+
+## Layout Primitive HoverRegion Absolute-Child Envelope Gate
+
+- invariant:
+  `HoverRegion` is a mechanism wrapper whose hover/hit-test envelope must include
+  absolute-positioned children; its intrinsic measurement path must not collapse to `0 x 0` when
+  the same final layout and hit-test paths keep the absolute child visible and targetable.
+- finding:
+  the tracer fixture first failed because the absolute child had visible bounds at `12,8 20x10`,
+  but the HoverRegion layout bounds and `measure_in(MaxContent)` metrics were both `0 x 0`.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/host_widget/measure.rs`,
+  `crates/fret-ui/src/declarative/tests/layout/mechanism_harness.rs`, and
+  `crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json`.
+- gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-capture`
+- result:
+  passed after adding the dedicated HoverRegion measurement path and a center hit-test assertion for
+  `hover-region-absolute-child` (latest run id:
+  `e3424dfe-3295-4819-8f1b-8e10f02eb77d`).
+
+## Layout Primitive HoverRegion Fractional-Inset Envelope Gate
+
+- invariant:
+  `HoverRegion` absolute-child hover/hit-test envelopes must account for fractional insets during
+  shrink-wrap sizing, not only fixed pixel insets.
+- finding:
+  the fractional tracer fixture first failed because the wrapper and `measure_in(MaxContent)` stayed
+  at the child size `20 x 10`, while final placement resolved `left: 25%` and `top: 10%` and pushed
+  the child outside the wrapper envelope.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/layout_helpers.rs`,
+  `crates/fret-ui/src/declarative/host_widget/layout/positioned_container.rs`,
+  `crates/fret-ui/src/declarative/host_widget/measure.rs`,
+  `crates/fret-ui/src/declarative/tests/layout/mechanism_harness.rs`, and
+  `crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json`.
+- gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-capture`
+- result:
+  passed after adding the shared conservative fractional envelope helper and a near-edge hit-test
+  assertion for `hover-region-fractional-child` (latest run id:
+  `b3093496-7227-441c-87d7-608cf7bd97c3`).
+- right/bottom companion:
+  real recipe surfaces place scrollbar chrome under HoverRegion wrappers with right/bottom absolute
+  insets (`ecosystem/fret-ui-shadcn/src/scroll_area.rs` and
+  `ecosystem/fret-code-view/src/code_block.rs`). The companion
+  `hover-region-right-bottom-inset-envelope-matches-layout` fixture locks the same layout/measure
+  envelope plus a near-edge hit-test sample. It passed without a new mechanism change with run id
+  `4ab0b09a-f343-4d37-89d9-646b00bf491c`.
+- adjacent regression gates:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui declarative::tests::layout::basics --no-capture`
+  passed 38/38 with run id `c394dc00-75ad-472c-8ac3-303eb9745667`, and
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui declarative::tests::layout::interactivity --no-capture`
+  passed 17/17 with run id `e3f5be40-3ea4-4665-ba08-0d412f1d792e`.
+- viewport-root wrapper regression gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui declarative::tests::layout::viewport_roots --no-capture`
+  passed 37/37 with run id `279a732e-d9da-4033-9701-3e3ccef1e05b`.
+
+## VirtualList Auto-Height Measured-Leaf and AI FileTree Runtime Gate
+
+- invariant:
+  an auto-height `VirtualList` used as a Taffy measured leaf must remeasure its parent layout when
+  layout-affecting VirtualList props such as `len` or `items_revision` change. Updated semantics
+  and child rows are not enough; following document sections must move out of the expanded list's
+  hit-test area.
+- finding:
+  the AI FileTree semantics/action-state suite found the expanded `file-lib` row in the semantics
+  tree, but the row was outside the stale FileTree root height and was overlapped by the next Basic
+  Usage doc section. This was a real `fret-ui` mechanism defect in measured-leaf dirtying, not a
+  retained-host defect, because AI FileTree uses `cx.virtual_list_keyed_with_layout`.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/mount.rs`,
+  `crates/fret-ui/src/layout/engine.rs`,
+  `crates/fret-ui/src/layout/engine/flow.rs`, and
+  `crates/fret-ui/src/declarative/tests/virtual_list/measurement.rs`.
+- diagnostics anchors:
+  `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-file-tree-demo-toggle.json`,
+  `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-file-tree-demo-actions.json`, and
+  `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-file-tree-large-scroll.json`.
+- focused regression gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui auto_height_virtual_list_len_growth_reflows_following_siblings --no-fail-fast --no-capture`
+  - result: passed.
+- VirtualList family gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui virtual_list --no-fail-fast`
+  - result: passed, 50/50 tests.
+- formatting gate:
+  `cargo fmt -p fret-ui --check`
+  - result: passed.
+- registry gates:
+  `python tools/check_diag_scripts_registry.py`
+  `python tools/test_check_diag_scripts_registry.py`
+  - result: passed; registry self-tests ran 36 tests.
+- runtime suite gate:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-ai-file-tree --dir target\fret-diag-ai-file-tree-semantics-action-state-after-vlist-measured-leaf-dirty-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev`
+  - result:
+    `target/fret-diag-ai-file-tree-semantics-action-state-after-vlist-measured-leaf-dirty-v1/sessions/1779041323318-52900/suite.summary.json`
+    reports `status=passed`, 4/4 rows.
+  - row run ids:
+    `toggle=1779041409356`,
+    `actions=1779041435085`,
+    `large-scroll=1779041463491`, and
+    `screenshot=1779041561485`.
+- strict zero-warning follow-up:
+  demo-only `0 x 0` state markers are now hidden semantics anchors, the scripts assert them through
+  `raw_semantics_hidden_is`, and `fret-diag` ignores visible-bounds/missing-label lint for
+  non-focused hidden nodes while preserving lint for visible zero-size test-id nodes.
+- focused lint regression:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag lint_ignores_hidden_state_anchors_for_visible_bounds_warnings --no-fail-fast --no-capture`
+  - result: passed.
+- rebuilt diagnostics/gallery binaries:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- strict runtime suite gate:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-ai-file-tree --dir target\fret-diag-ai-file-tree-zero-warning-hidden-markers-v2 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev`
+  - result:
+    `target/fret-diag-ai-file-tree-zero-warning-hidden-markers-v2/sessions/1779043283276-169328/suite.summary.json`
+    reports `status=passed`, 4/4 rows.
+  - lint result:
+    every row `check.lint.json` reports `error_issues=0`, `warning_issues=0`, and empty
+    `counts_by_code`.
+  - row run ids:
+    `toggle=1779043310053`,
+    `actions=1779043336823`,
+    `large-scroll=1779043363896`, and
+    `screenshot=1779043433309`.
+
+## Layout Primitive Grid Gap Measurement Gate
+
+- invariant:
+  grid `column_gap` and `row_gap` must affect both final child placement and intrinsic
+  `measure_in(MaxContent)` size. Otherwise auto-size parents and scroll extents can disagree with
+  the visual grid.
+- finding:
+  the new fixture did not reproduce a `fret-ui` mechanism defect. The first red run found an oracle
+  mistake: with first-row height `10` and `row_gap=6`, the second row starts at `y=16`, not `18`,
+  and total height is `28`.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/tests/layout/mechanism_harness.rs` and
+  `crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json`.
+- gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+- result:
+  passed after correcting the oracle; Nextest run id
+  `f1be5c37-82c6-4ffe-b55a-f7f19090fd33`.
+
+## Layout Primitive Flex Order Auto-Margin Gate
+
+- invariant:
+  flex `order` must define the visual child sequence for late flex layout post-processing as well
+  as for the engine solve and intrinsic measurement. Auto-margin trailing-group alignment must not
+  fall back to source-order siblings.
+- finding:
+  the `flex-order-auto-margin-uses-visual-order` fixture first failed because
+  `layout_flex_impl_engine` scanned `cx.children` in source order while the solved flex row used
+  visual order. In the row `A(order=2)`, `B(order=0, ml-auto)`, `C(order=1)`, child B landed at
+  `x=40` instead of `10`, and child C landed at `x=80` instead of `50`.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/host_widget/layout/flex.rs`,
+  `crates/fret-ui/src/declarative/tests/layout/mechanism_harness.rs`, and
+  `crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json`.
+- gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+- result:
+  passed after routing auto-margin tail detection, tail-size computation, gap preservation, shift
+  application, and final child layout iteration through `ordered_flex_children`; Nextest run id
+  `a53d39d8-f93e-4390-b859-28b233a843a1`.
+- formatting:
+  `cargo fmt -p fret-ui --check`
+  - result: passed.
+
+## Layout Primitive Flex Gap Measurement Gate
+
+- invariant:
+  flex `gap` must affect both final child placement and intrinsic `measure_in(MaxContent)` size.
+  Otherwise recipe rows/stacks can lay out correctly while auto-size parents or scroll extents use a
+  smaller measured envelope.
+- finding:
+  the new `flex-gap-measure-matches-layout` fixture did not reproduce a new mechanism defect. It
+  proves a two-child horizontal flex row with `gap=8` places child B at `x=28` and reports matching
+  final and measured envelope metrics of `58 x 12`.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/tests/layout/mechanism_harness.rs`,
+  `crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json`,
+  `crates/fret-ui/src/declarative/host_widget/measure.rs`, and
+  `crates/fret-ui/src/layout/engine/flow.rs`.
+- gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+- result:
+  passed; Nextest run id `4468bb08-582b-4be1-a09f-eb9e59149a41`.
+- formatting:
+  `cargo fmt -p fret-ui --check`
+  - result: passed.
+
+## Layout Primitive Flex Order Margin-Top Auto Gate
+
+- invariant:
+  `margin-top: auto` in a vertical flex column must use the visual child sequence when it aligns a
+  trailing group. Ordered vertical children must not regress to source-order tail detection.
+- finding:
+  the new `flex-order-margin-top-auto-uses-visual-order` fixture did not reproduce a new mechanism
+  defect. It closes the vertical companion to F166 for real recipe surfaces that use `mt_auto()`,
+  proving `B(order=0, mt-auto)`, `C(order=1)`, and `A(order=2)` land at `y=10`, `y=50`, and
+  `y=70` in a 100px column.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/tests/layout/mechanism_harness.rs`,
+  `crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json`,
+  `crates/fret-ui/src/declarative/tests/layout/basics.rs`,
+  `ecosystem/fret-ui-shadcn/src/sheet.rs`, and `ecosystem/fret-ui-shadcn/src/drawer.rs`.
+- gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+- result:
+  passed; Nextest run id `93063426-0c6d-4e44-bba0-fc0bb68de234`.
+- formatting:
+  `cargo fmt -p fret-ui --check`
+  - result: passed.
+
+## Layout Primitive Flex Order Margin-Right Auto Gate
+
+- invariant:
+  `margin-right: auto` must remain consistent with flex visual order when recipes use it as an RTL
+  logical auto margin. Combining `FlexItemStyle.order` with right-side auto margin must not leave
+  later visual siblings in source-order positions.
+- finding:
+  the new `flex-order-margin-right-auto-uses-visual-order` fixture did not reproduce a new
+  mechanism defect. It closes the right-side auto-margin companion to F166 and proves the current
+  row layout places `B(order=0, mr-auto)`, `C(order=1)`, and `A(order=2)` at `x=0`, `x=50`, and
+  `x=70` in a 100px row.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/tests/layout/mechanism_harness.rs`,
+  `crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json`,
+  `ecosystem/fret-ui-shadcn/src/rtl.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs`, and
+  `apps/fret-ui-gallery/src/ui/snippets/progress/rtl.rs`.
+- gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+- result:
+  passed; Nextest run id `7592ea5c-a8fa-4a11-8869-8533db84bdfb`.
+- formatting:
+  `cargo fmt -p fret-ui --check`
+  - result: passed.
+
+## Layout Primitive Flex Wrap Gap Measurement Gate
+
+- invariant:
+  wrapped flex `gap` must affect both final child placement and definite-width intrinsic
+  `measure_in(MaxContent)` size. Otherwise multi-line recipe stacks can draw with correct line
+  spacing while auto-size parents or scroll extents use a smaller measured envelope.
+- finding:
+  the new `flex-wrap-gap-measure-matches-layout` fixture did not reproduce a new mechanism defect.
+  It proves a 68px-wide wrapping row with `gap=8` places child B at `x=38`, places child C on the
+  second line at `y=20`, and reports matching final and measured envelope metrics of `68 x 34`.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/tests/layout/mechanism_harness.rs`,
+  `crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json`,
+  `crates/fret-ui/src/declarative/host_widget/measure.rs`, and
+  `crates/fret-ui/src/layout/engine/flow.rs`.
+- gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+- result:
+  passed; Nextest run id `0353a271-aaaf-49d0-9254-f770af9ba4c1`.
+- formatting:
+  `cargo fmt -p fret-ui --check`
+  - result: passed.
+
+## Layout Primitive Pressable Absolute-Only Wrapper Envelope Gate
+
+- invariant:
+  auto-sized behavioral passthrough wrappers with only absolute-positioned children must not
+  collapse to `0 x 0` when the absolute child defines the visible and hit-testable envelope.
+  Wrapper layout bounds, child placement, placeholder measurement, and hit-testing must agree.
+- finding:
+  `pressable-fractional-absolute-child-envelope-matches-layout` first failed because an auto/auto
+  `Pressable` with one absolute child was solved as a `0 x 0` flow item. The child could be placed
+  and hit-tested after manual absolute layout, but the parent wrapper's authoritative layout bounds
+  stayed collapsed. The expected envelope for `left: 25%`, `top: 10%`, and a `20 x 10` child is
+  `27 x 12`.
+- implementation anchors:
+  `crates/fret-ui/src/layout/engine/flow.rs`,
+  `crates/fret-ui/src/layout/engine.rs`,
+  `crates/fret-ui/src/declarative/host_widget/measure.rs`,
+  `crates/fret-ui/src/declarative/host_widget/layout.rs`,
+  `crates/fret-ui/src/declarative/layout_helpers.rs`,
+  `crates/fret-ui/src/declarative/tests/layout/mechanism_harness.rs`, and
+  `crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json`.
+- first red gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+  - result: failed; Nextest run id `9aab41b5-8444-4086-a1cb-38307cb1467b`.
+- fixed gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `cedf2113-d532-4c84-b69a-728b052ae6a0`.
+- formatting:
+  `cargo fmt -p fret-ui --check`
+  - result: passed.
+
+## Layout Primitive Pressable Mixed Flow/Absolute Wrapper Envelope Gate
+
+- invariant:
+  auto-sized behavioral passthrough wrappers with both flow children and absolute-positioned
+  children must size and hit-test against the union envelope. The flow child must keep its measured
+  size, while the absolute child must be placed against the same union envelope used for wrapper
+  bounds and placeholder measurement.
+- finding:
+  `pressable-mixed-flow-absolute-child-envelope-matches-layout` first failed because an auto/auto
+  `Pressable` with a `20 x 10` flow child and a fractional-inset `25 x 10` absolute child used the
+  flow child's envelope for wrapper layout and placeholder measurement. The absolute child was
+  placed at `(5, 1)` in a too-small containing block and a near-edge hit-test landed on the wrapper
+  instead of the absolute child. The correct union envelope is `34 x 12`, placing the absolute child
+  at `(8.5, 1.2)`.
+- implementation anchors:
+  `crates/fret-ui/src/layout/engine/flow.rs`,
+  `crates/fret-ui/src/declarative/host_widget/measure.rs`,
+  `crates/fret-ui/src/declarative/host_widget/layout.rs`,
+  `crates/fret-ui/src/declarative/host_widget/layout/positioned_container.rs`,
+  `crates/fret-ui/src/declarative/tests/layout/mechanism_harness.rs`, and
+  `crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json`.
+- first red gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+  - result: failed; Nextest run id `8ca82632-03d0-41b9-969b-127241a687c5`.
+- fixed gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `0f75010e-ebc0-4f4c-b835-aff6c0086b9d`.
+- companion layout gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui declarative::tests::layout::basics declarative::tests::layout::interactivity --no-fail-fast`
+  - result: passed, 55/55 tests.
+- formatting:
+  `cargo fmt -p fret-ui --check`
+  - result: passed.
+- scoped whitespace:
+  `git diff --check -- crates/fret-ui/src/declarative/host_widget/layout.rs crates/fret-ui/src/declarative/host_widget/layout/positioned_container.rs crates/fret-ui/src/declarative/host_widget/measure.rs crates/fret-ui/src/layout/engine/flow.rs crates/fret-ui/src/declarative/tests/layout/mechanism_harness.rs crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json`
+  - result: passed.

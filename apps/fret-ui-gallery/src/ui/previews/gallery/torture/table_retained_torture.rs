@@ -67,7 +67,16 @@ pub(in crate::ui) fn preview_table_retained_torture(
         |(data, columns)| (data.clone(), columns.clone()),
     );
 
-    let state = cx.local_model_keyed("state", TableState::default);
+    let default_page_size = std::env::var("FRET_UI_GALLERY_TABLE_RETAINED_PAGE_SIZE")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .filter(|v: &usize| *v > 0)
+        .unwrap_or_else(|| data.len().max(1));
+    let state = cx.local_model_keyed("state", move || {
+        let mut state = TableState::default();
+        state.pagination.page_size = default_page_size;
+        state
+    });
     let keep_pinned_rows = cx.local_model_keyed("keep_pinned_rows", || true);
 
     let sorting: Vec<fret_ui_kit::headless::table::SortSpec> = cx

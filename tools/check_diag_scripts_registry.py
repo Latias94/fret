@@ -33,14 +33,25 @@ SUITE_MANIFEST_FILENAMES = ["suite.json", "_suite.json"]
 STRICT_CLICK_VISIBILITY_SUITES = {
     "ui-gallery-command",
     "ui-gallery-combobox",
+    "ui-gallery-button-group",
+    "ui-gallery-context-menu",
+    "ui-gallery-dropdown-menu",
     "ui-gallery-scroll-area",
     "ui-gallery-select",
     "ui-gallery-motion-pilot",
     "ui-gallery-view-cache",
+    "ui-gallery-hover-card",
+    "ui-gallery-menubar-placement",
 }
 STRICT_UI_GALLERY_CONTENT_TEST_ID_PREFIXES = (
     "ui-gallery-command-",
     "ui-gallery-combobox-",
+    "ui-gallery-button-group-",
+    "ui-gallery-context-menu-",
+    "ui-gallery-dropdown-menu-",
+    "ui-gallery-hover-card-",
+    "ui-gallery-hovercard-",
+    "ui-gallery-menubar-",
     "ui-gallery-scroll-area-",
     "ui-gallery-scrollbar-",
     "ui-gallery-select-",
@@ -68,11 +79,16 @@ STRICT_PAGE_ENTRY_SUITES = {
     "ui-gallery-command",
     "ui-gallery-motion-pilot",
     "ui-gallery-select",
+    "ui-gallery-button-group",
     "ui-gallery-combobox",
+    "ui-gallery-context-menu",
+    "ui-gallery-dropdown-menu",
     "ui-gallery-data-table",
     "ui-gallery-data-table-retained",
     "ui-gallery-data-table-view-cache-torture",
     "ui-gallery-view-cache",
+    "ui-gallery-hover-card",
+    "ui-gallery-menubar-placement",
 }
 UI_GALLERY_PAGE_ENTRY_RULES = {
     "command": {
@@ -95,6 +111,24 @@ UI_GALLERY_PAGE_ENTRY_RULES = {
         "page_id": "ui-gallery-page-combobox",
         "content_prefixes": ("ui-gallery-combobox-",),
         "start_page_values": ("combobox",),
+        "global_ids": (),
+    },
+    "button_group": {
+        "page_id": "ui-gallery-page-button-group",
+        "content_prefixes": ("ui-gallery-button-group-",),
+        "start_page_values": ("button_group",),
+        "global_ids": (),
+    },
+    "context_menu": {
+        "page_id": "ui-gallery-page-context-menu",
+        "content_prefixes": ("ui-gallery-context-menu-",),
+        "start_page_values": ("context_menu",),
+        "global_ids": (),
+    },
+    "dropdown_menu": {
+        "page_id": "ui-gallery-page-dropdown-menu",
+        "content_prefixes": ("ui-gallery-dropdown-menu-",),
+        "start_page_values": ("dropdown_menu",),
         "global_ids": (),
     },
     "select": {
@@ -123,6 +157,18 @@ UI_GALLERY_PAGE_ENTRY_RULES = {
         "page_id": "ui-gallery-page-view-cache",
         "content_prefixes": ("ui-gallery-view-cache-",),
         "start_page_values": ("view_cache",),
+        "global_ids": (),
+    },
+    "hover_card": {
+        "page_id": "ui-gallery-page-hover-card",
+        "content_prefixes": ("ui-gallery-hover-card-", "ui-gallery-hovercard-"),
+        "start_page_values": ("hover_card",),
+        "global_ids": (),
+    },
+    "menubar": {
+        "page_id": "ui-gallery-page-menubar",
+        "content_prefixes": ("ui-gallery-menubar-",),
+        "start_page_values": ("menubar",),
         "global_ids": (),
     },
 }

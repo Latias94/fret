@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "ui-gallery-resizable-multi-viewport-combobox-placement",
+    "name": "ui-gallery-resizable-view-cache-moving-combobox-root-boundary",
     "required_capabilities": [
       "diag.script_v2",
       "diag.screenshot_png",
@@ -9,29 +9,31 @@
     ],
     "env_defaults": {
       "FRET_UI_GALLERY_START_PAGE": "resizable",
-      "FRET_UI_GALLERY_START_SECTION": "ui-gallery-resizable-multi-viewport-combobox-docsec",
-      "FRET_UI_GALLERY_RESIZABLE_MULTI_VIEWPORT_COMBOBOX": "1"
+      "FRET_UI_GALLERY_START_SECTION": "ui-gallery-resizable-view-cache-moving-combobox-docsec",
+      "FRET_UI_GALLERY_RESIZABLE_MOVING_CACHED_COMBOBOX": "1",
+      "FRET_UI_GALLERY_VIEW_CACHE": "1"
     },
     "tags": [
       "ui_gallery",
       "shadcn",
       "resizable",
       "combobox",
+      "view_cache",
       "multi_viewport",
       "overlay",
       "root_boundary"
     ],
     "target_hints": [
-      "Starts directly on the Resizable Multi-Viewport Combobox fixture.",
-      "Opens a Combobox trigger near the bottom of a Resizable panel viewport root.",
-      "The OS window has room below the trigger, but the panel viewport root does not; correct root-boundary ownership flips the anchored popover to the top."
+      "Starts directly on the diagnostics-only Resizable Moving Cached Combobox fixture.",
+      "Moves one cached Combobox source from the left Resizable panel viewport root to the right panel before opening the overlay.",
+      "Asserts the moved trigger and anchored content use the new right-panel root boundary, including the shadcn sideOffset=6 collision flip."
     ]
   },
   "steps": [
     { "type": "reset_diagnostics" },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
-    { "type": "set_window_inner_size", "width_px": 900.0, "height_px": 980.0 },
+    { "type": "set_window_inner_size", "width_px": 980.0, "height_px": 980.0 },
     { "type": "wait_frames", "n": 8 },
     {
       "type": "wait_until",
@@ -47,17 +49,29 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-resizable-multi-viewport-combobox-docsec-content"
+          "id": "ui-gallery-resizable-view-cache-moving-combobox-docsec-content"
         }
       },
       "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-view-cache-moving-combobox-source-root-state"
+        },
+        "text": "left"
+      },
+      "timeout_frames": 240
     },
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": {
         "kind": "test_id",
-        "id": "ui-gallery-resizable-multi-viewport-combobox-trigger"
+        "id": "ui-gallery-resizable-view-cache-moving-combobox-trigger"
       },
       "delta_y": -160.0,
       "require_fully_within_container": true,
@@ -71,7 +85,7 @@
         "kind": "bounds_within_window",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-resizable-multi-viewport-combobox-trigger"
+          "id": "ui-gallery-resizable-view-cache-moving-combobox-trigger"
         },
         "padding_px": 2.0,
         "eps_px": 0.5
@@ -81,20 +95,16 @@
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "bounds_metric_pair_delta",
+        "kind": "bounds_overlapping",
         "a": {
           "kind": "test_id",
-          "id": "ui-gallery-resizable-multi-viewport-combobox-trigger"
+          "id": "ui-gallery-resizable-view-cache-moving-combobox-trigger"
         },
         "b": {
           "kind": "test_id",
-          "id": "ui-gallery-resizable-multi-viewport-combobox-panel"
+          "id": "ui-gallery-resizable-view-cache-moving-combobox-left-panel"
         },
-        "a_metric": "bottom",
-        "b_metric": "bottom",
-        "comparison": "le",
-        "value_px": -24.0,
-        "eps_px": 1.0
+        "eps_px": 0.5
       },
       "timeout_frames": 240
     },
@@ -102,7 +112,62 @@
       "type": "click_stable",
       "target": {
         "kind": "test_id",
-        "id": "ui-gallery-resizable-multi-viewport-combobox-trigger"
+        "id": "ui-gallery-resizable-view-cache-moving-combobox-move-source"
+      },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-view-cache-moving-combobox-source-root-state"
+        },
+        "text": "right"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-view-cache-moving-combobox-trigger"
+        },
+        "b": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-view-cache-moving-combobox-left-panel"
+        },
+        "eps_px": 0.5
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_overlapping",
+        "a": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-view-cache-moving-combobox-trigger"
+        },
+        "b": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-view-cache-moving-combobox-right-panel"
+        },
+        "eps_px": 0.5
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-resizable-view-cache-moving-combobox-trigger"
       },
       "stable_frames": 3,
       "max_move_px": 1.0,
@@ -114,7 +179,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-resizable-multi-viewport-combobox-input"
+          "id": "ui-gallery-resizable-view-cache-moving-combobox-input"
         }
       },
       "timeout_frames": 240
@@ -125,7 +190,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-resizable-multi-viewport-combobox-content"
+          "id": "ui-gallery-resizable-view-cache-moving-combobox-content"
         }
       },
       "timeout_frames": 240
@@ -136,7 +201,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-resizable-multi-viewport-combobox-listbox"
+          "id": "ui-gallery-resizable-view-cache-moving-combobox-listbox"
         }
       },
       "timeout_frames": 240
@@ -145,8 +210,8 @@
       "type": "wait_overlay_placement_trace",
       "query": {
         "kind": "anchored_panel",
-        "anchor_test_id": "ui-gallery-resizable-multi-viewport-combobox-trigger",
-        "content_test_id": "ui-gallery-resizable-multi-viewport-combobox-content",
+        "anchor_test_id": "ui-gallery-resizable-view-cache-moving-combobox-trigger",
+        "content_test_id": "ui-gallery-resizable-view-cache-moving-combobox-content",
         "preferred_side": "bottom",
         "chosen_side": "top",
         "flipped": true,
@@ -161,11 +226,11 @@
         "kind": "bounds_metric_pair_delta",
         "a": {
           "kind": "test_id",
-          "id": "ui-gallery-resizable-multi-viewport-combobox-content"
+          "id": "ui-gallery-resizable-view-cache-moving-combobox-content"
         },
         "b": {
           "kind": "test_id",
-          "id": "ui-gallery-resizable-multi-viewport-combobox-trigger"
+          "id": "ui-gallery-resizable-view-cache-moving-combobox-trigger"
         },
         "a_metric": "bottom",
         "b_metric": "top",
@@ -181,11 +246,11 @@
         "kind": "bounds_metric_pair_delta",
         "a": {
           "kind": "test_id",
-          "id": "ui-gallery-resizable-multi-viewport-combobox-content"
+          "id": "ui-gallery-resizable-view-cache-moving-combobox-content"
         },
         "b": {
           "kind": "test_id",
-          "id": "ui-gallery-resizable-multi-viewport-combobox-panel"
+          "id": "ui-gallery-resizable-view-cache-moving-combobox-right-panel"
         },
         "a_metric": "top",
         "b_metric": "top",
@@ -201,7 +266,7 @@
         "kind": "bounds_within_window",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-resizable-multi-viewport-combobox-content"
+          "id": "ui-gallery-resizable-view-cache-moving-combobox-content"
         },
         "padding_px": 2.0,
         "eps_px": 0.5
@@ -214,12 +279,12 @@
         "kind": "semantics_relation_includes",
         "source": {
           "kind": "test_id",
-          "id": "ui-gallery-resizable-multi-viewport-combobox-input"
+          "id": "ui-gallery-resizable-view-cache-moving-combobox-input"
         },
         "relation": "controls",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-resizable-multi-viewport-combobox-listbox"
+          "id": "ui-gallery-resizable-view-cache-moving-combobox-listbox"
         }
       },
       "timeout_frames": 240
@@ -230,70 +295,27 @@
         "kind": "semantics_relation_includes",
         "source": {
           "kind": "test_id",
-          "id": "ui-gallery-resizable-multi-viewport-combobox-listbox"
+          "id": "ui-gallery-resizable-view-cache-moving-combobox-listbox"
         },
         "relation": "labelled_by",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-resizable-multi-viewport-combobox-input"
-        }
-      },
-      "timeout_frames": 240
-    },
-    {
-      "type": "click_stable",
-      "target": {
-        "kind": "test_id",
-        "id": "ui-gallery-resizable-multi-viewport-combobox-item-release"
-      },
-      "stable_frames": 3,
-      "max_move_px": 1.0,
-      "timeout_frames": 240
-    },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "not_exists",
-        "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-resizable-multi-viewport-combobox-listbox"
-        }
-      },
-      "timeout_frames": 240
-    },
-    {
-      "type": "click_stable",
-      "target": {
-        "kind": "test_id",
-        "id": "ui-gallery-resizable-multi-viewport-combobox-trigger"
-      },
-      "stable_frames": 3,
-      "max_move_px": 1.0,
-      "timeout_frames": 240
-    },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "selected_is",
-        "selected": true,
-        "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-resizable-multi-viewport-combobox-item-release"
+          "id": "ui-gallery-resizable-view-cache-moving-combobox-input"
         }
       },
       "timeout_frames": 240
     },
     {
       "type": "capture_layout_sidecar",
-      "label": "ui-gallery-resizable-multi-viewport-combobox-placement.layout"
+      "label": "ui-gallery-resizable-view-cache-moving-combobox-root-boundary.layout"
     },
     {
       "type": "capture_screenshot",
-      "label": "ui-gallery-resizable-multi-viewport-combobox-placement"
+      "label": "ui-gallery-resizable-view-cache-moving-combobox-root-boundary"
     },
     {
       "type": "capture_bundle",
-      "label": "ui-gallery-resizable-multi-viewport-combobox-placement"
+      "label": "ui-gallery-resizable-view-cache-moving-combobox-root-boundary"
     }
   ]
 }

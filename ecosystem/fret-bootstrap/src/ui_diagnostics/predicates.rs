@@ -18,6 +18,106 @@ fn redaction_aware_len_bytes(s: &str) -> usize {
     s.len()
 }
 
+fn font_trace_entry_matches(
+    entry: &fret_core::RendererTextFontTraceEntry,
+    text_contains: Option<&str>,
+    font: Option<&str>,
+    wrap: Option<&str>,
+    overflow: Option<&str>,
+    missing_glyphs: Option<u32>,
+    family_contains: Option<&str>,
+    family_class: Option<fret_diag_protocol::UiRenderTextFontTraceFamilyClassV1>,
+) -> bool {
+    if let Some(text_contains) = text_contains
+        && !entry.text_preview.contains(text_contains)
+    {
+        return false;
+    }
+    if let Some(font) = font
+        && !font_id_matches(&entry.font, font)
+    {
+        return false;
+    }
+    if let Some(wrap) = wrap
+        && text_wrap_as_str(entry.wrap) != wrap
+    {
+        return false;
+    }
+    if let Some(overflow) = overflow
+        && text_overflow_as_str(entry.overflow) != overflow
+    {
+        return false;
+    }
+    if let Some(missing_glyphs) = missing_glyphs
+        && entry.missing_glyphs != missing_glyphs
+    {
+        return false;
+    }
+
+    let family_matches = |family: &fret_core::RendererTextFontTraceFamilyUsage| {
+        if let Some(contains) = family_contains
+            && !family.family.contains(contains)
+        {
+            return false;
+        }
+        if let Some(class) = family_class
+            && !font_trace_family_class_matches(family.class, class)
+        {
+            return false;
+        }
+        true
+    };
+
+    if family_contains.is_some() || family_class.is_some() {
+        entry.families.iter().any(family_matches)
+    } else {
+        true
+    }
+}
+
+fn font_id_matches(font: &fret_core::FontId, want: &str) -> bool {
+    match font {
+        fret_core::FontId::Ui => want == "ui",
+        fret_core::FontId::Serif => want == "serif",
+        fret_core::FontId::Monospace => want == "monospace",
+        fret_core::FontId::Family(name) => {
+            want.strip_prefix("family:") == Some(name.as_str()) || want == name.as_str()
+        }
+    }
+}
+
+fn text_wrap_as_str(wrap: fret_core::TextWrap) -> &'static str {
+    match wrap {
+        fret_core::TextWrap::None => "none",
+        fret_core::TextWrap::Word => "word",
+        fret_core::TextWrap::Balance => "balance",
+        fret_core::TextWrap::WordBreak => "word_break",
+        fret_core::TextWrap::Grapheme => "grapheme",
+    }
+}
+
+fn text_overflow_as_str(overflow: fret_core::TextOverflow) -> &'static str {
+    match overflow {
+        fret_core::TextOverflow::Clip => "clip",
+        fret_core::TextOverflow::Ellipsis => "ellipsis",
+    }
+}
+
+fn font_trace_family_class_matches(
+    have: fret_core::RendererTextFontTraceFamilyClass,
+    want: fret_diag_protocol::UiRenderTextFontTraceFamilyClassV1,
+) -> bool {
+    use fret_core::RendererTextFontTraceFamilyClass as H;
+    use fret_diag_protocol::UiRenderTextFontTraceFamilyClassV1 as W;
+    matches!(
+        (have, want),
+        (H::Requested, W::Requested)
+            | (H::CommonFallback, W::CommonFallback)
+            | (H::SystemFallback, W::SystemFallback)
+            | (H::Unknown, W::Unknown)
+    )
+}
+
 fn dock_drag_window_under_cursor_source_is(
     have: fret_runtime::WindowUnderCursorSource,
     want: &str,
@@ -1191,6 +1291,37 @@ fn eval_predicate(
                 .entries
                 .iter()
                 .any(|e| e.missing_glyphs > 0 && !e.families.is_empty())
+        }
+        UiPredicateV1::RenderTextFontTraceEntriesMatchingGe {
+            min,
+            text_contains,
+            font,
+            wrap,
+            overflow,
+            missing_glyphs,
+            family_contains,
+            family_class,
+        } => {
+            let Some(trace) = render_text_font_trace else {
+                return false;
+            };
+            trace
+                .entries
+                .iter()
+                .filter(|entry| {
+                    font_trace_entry_matches(
+                        entry,
+                        text_contains.as_deref(),
+                        font.as_deref(),
+                        wrap.as_deref(),
+                        overflow.as_deref(),
+                        *missing_glyphs,
+                        family_contains.as_deref(),
+                        *family_class,
+                    )
+                })
+                .count() as u64
+                >= *min
         }
         UiPredicateV1::TextFontStackKeyStable { stable_frames } => {
             text_font_stack_key_stable_frames >= *stable_frames
@@ -3020,6 +3151,135 @@ mod predicate_tests {
             &UiPredicateV1::SemanticsLiveAtomicIs {
                 target,
                 live_atomic: false,
+            },
+        ));
+    }
+
+    #[test]
+    fn render_text_font_trace_matching_predicate_matches_renderer_text_facts() {
+        let window = window_id(1);
+        let mut root = semantics_node(1, "root", false);
+        root.role = SemanticsRole::Window;
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![root],
+        };
+        let trace = fret_core::RendererTextFontTraceSnapshot {
+            frame_id: fret_core::FrameId(10),
+            entries: vec![
+                fret_core::RendererTextFontTraceEntry {
+                    text_preview: "Enterprise Observability Platform With Long Label".to_string(),
+                    text_len_bytes: 55,
+                    font: fret_core::FontId::Ui,
+                    font_size: Px(14.0),
+                    scale_factor: 1.0,
+                    wrap: fret_core::TextWrap::None,
+                    overflow: fret_core::TextOverflow::Ellipsis,
+                    max_width: Some(Px(160.0)),
+                    locale_bcp47: None,
+                    missing_glyphs: 0,
+                    families: vec![fret_core::RendererTextFontTraceFamilyUsage {
+                        family: "Inter".to_string(),
+                        glyphs: 42,
+                        missing_glyphs: 0,
+                        class: fret_core::RendererTextFontTraceFamilyClass::Requested,
+                    }],
+                },
+                fret_core::RendererTextFontTraceEntry {
+                    text_preview: "Short".to_string(),
+                    text_len_bytes: 5,
+                    font: fret_core::FontId::Ui,
+                    font_size: Px(14.0),
+                    scale_factor: 1.0,
+                    wrap: fret_core::TextWrap::None,
+                    overflow: fret_core::TextOverflow::Clip,
+                    max_width: None,
+                    locale_bcp47: None,
+                    missing_glyphs: 0,
+                    families: Vec::new(),
+                },
+            ],
+        };
+
+        assert!(eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(&trace),
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::RenderTextFontTraceEntriesMatchingGe {
+                min: 1,
+                text_contains: Some("Enterprise Observability".to_string()),
+                font: Some("ui".to_string()),
+                wrap: Some("none".to_string()),
+                overflow: Some("ellipsis".to_string()),
+                missing_glyphs: Some(0),
+                family_contains: Some("Inter".to_string()),
+                family_class: Some(
+                    fret_diag_protocol::UiRenderTextFontTraceFamilyClassV1::Requested,
+                ),
+            },
+        ));
+        assert!(!eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(&trace),
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::RenderTextFontTraceEntriesMatchingGe {
+                min: 1,
+                text_contains: Some("Enterprise Observability".to_string()),
+                font: Some("ui".to_string()),
+                wrap: Some("none".to_string()),
+                overflow: Some("clip".to_string()),
+                missing_glyphs: Some(0),
+                family_contains: Some("Inter".to_string()),
+                family_class: Some(
+                    fret_diag_protocol::UiRenderTextFontTraceFamilyClassV1::Requested,
+                ),
             },
         ));
     }

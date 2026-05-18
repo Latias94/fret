@@ -1258,6 +1258,26 @@ impl TaffyLayoutEngine {
         }
     }
 
+    pub(crate) fn mark_measured_node_dirty(&mut self, node: NodeId) {
+        let Some(id) = self.layout_id_for_node(node).map(|id| id.0) else {
+            return;
+        };
+        let measured = self
+            .tree
+            .get_node_context(id)
+            .is_some_and(|ctx| ctx.measured);
+        if !measured {
+            return;
+        }
+
+        self.node_solved_stamp.remove(node);
+        self.root_solve_stamp.remove(node);
+        self.invalidate_solved_ancestors(node);
+        if let Err(err) = self.tree.mark_dirty(id) {
+            Self::warn_taffy_error_once("mark_dirty", err);
+        }
+    }
+
     pub fn set_measure_min_content_width_as_max(&mut self, node: NodeId, enabled: bool) {
         let Some(id) = self.request_layout_node(node).map(|id| id.0) else {
             return;

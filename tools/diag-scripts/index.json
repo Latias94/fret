@@ -4016,7 +4016,7 @@
       "target_hints": [
         "Starts on the Button Group Input Group fixture.",
         "Injects a long value into the grouped input through the SetValue path.",
-        "Asserts the input, trailing voice button, and IME/caret anchor remain bounded under long text."
+        "Asserts the input, trailing voice button, IME/caret anchor, visible viewport clipping, and renderer font trace facts under long text."
       ]
     },
     {
@@ -8504,9 +8504,9 @@
         "ui_gallery"
       ],
       "target_hints": [
-        "Navigates to the Input page through the stable UI Gallery nav path.",
+        "Starts directly on the Input page.",
         "Injects long values into a plain Input and the file-composition Input.",
-        "Asserts TextInput paint-time overflow, offset, visible viewport clipping, IME cursor bounds, and text-height coverage."
+        "Asserts TextInput paint-time overflow, offset, visible viewport clipping, IME cursor bounds, text-height coverage, and renderer font trace facts."
       ]
     },
     {
@@ -9868,6 +9868,34 @@
       ]
     },
     {
+      "id": "ui-gallery-resizable-view-cache-moving-combobox-root-boundary",
+      "path": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-resizable"
+      ],
+      "tags": [
+        "combobox",
+        "multi_viewport",
+        "overlay",
+        "resizable",
+        "root_boundary",
+        "shadcn",
+        "ui_gallery",
+        "view_cache"
+      ],
+      "target_hints": [
+        "Starts directly on the diagnostics-only Resizable Moving Cached Combobox fixture.",
+        "Moves one cached Combobox source from the left Resizable panel viewport root to the right panel before opening the overlay.",
+        "Asserts the moved trigger and anchored content use the new right-panel root boundary, including the shadcn sideOffset=6 collision flip."
+      ]
+    },
+    {
       "id": "ui-gallery-scroll-area-expand-at-bottom",
       "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-expand-at-bottom.json",
       "required_capabilities": [
@@ -10897,7 +10925,9 @@
       "id": "ui-gallery-table-retained-keyboard-typeahead",
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-keyboard-typeahead.json",
       "required_capabilities": [],
-      "required_launch_features": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-retained-measured",
         "ui-gallery-table-retained",
@@ -10910,7 +10940,9 @@
       "id": "ui-gallery-table-retained-multi-sort-shift-click",
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-multi-sort-shift-click.json",
       "required_capabilities": [],
-      "required_launch_features": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-table-retained",
         "ui-gallery-table-retained-measured"
@@ -10922,7 +10954,9 @@
       "id": "ui-gallery-table-retained-row-pinning-keep-pinned-false",
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-row-pinning-keep-pinned-false.json",
       "required_capabilities": [],
-      "required_launch_features": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-table-retained",
         "ui-gallery-table-retained-measured"
@@ -10934,7 +10968,9 @@
       "id": "ui-gallery-table-retained-row-pinning-keep-pinned-true",
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-row-pinning-keep-pinned-true.json",
       "required_capabilities": [],
-      "required_launch_features": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-table-retained",
         "ui-gallery-table-retained-measured"
@@ -10946,7 +10982,9 @@
       "id": "ui-gallery-table-retained-sort-desc",
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-sort-desc.json",
       "required_capabilities": [],
-      "required_launch_features": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-table-retained",
         "ui-gallery-table-retained-measured"
@@ -10958,7 +10996,9 @@
       "id": "ui-gallery-table-retained-sort-select-scroll",
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-sort-select-scroll.json",
       "required_capabilities": [],
-      "required_launch_features": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-retained-measured",
         "ui-gallery-table-retained",
@@ -10971,7 +11011,9 @@
       "id": "ui-gallery-table-retained-window-boundary-scroll",
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-window-boundary-scroll.json",
       "required_capabilities": [],
-      "required_launch_features": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-retained-measured",
         "ui-gallery-table-retained",

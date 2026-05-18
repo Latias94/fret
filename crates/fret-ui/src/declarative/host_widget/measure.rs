@@ -1,5 +1,6 @@
 use super::super::frame::ordered_flex_children;
 use super::super::frame::{ElementInstance, element_record_for_node, layout_style_for_node};
+use super::super::layout_helpers::absolute_child_envelope_size;
 use super::super::prelude::*;
 use super::ElementHostWidget;
 use crate::element::SizeStyle;
@@ -180,6 +181,76 @@ fn fallback_measure_flex<H: UiHost>(
     clamp_to_constraints_in_measure(desired, props.layout, cx.constraints)
 }
 
+fn measure_no_wrap_flex_intrinsic_main_axis<H: UiHost>(
+    cx: &mut MeasureCx<'_, H>,
+    window: AppWindowId,
+    inner_available: LayoutSize<AvailableSpace>,
+    props: &FlexProps,
+    ordered_children: &[NodeId],
+    gap_main: f32,
+    pad_w: f32,
+    pad_h: f32,
+    constraints: LayoutConstraints,
+) -> Size {
+    let child_available = match props.direction {
+        fret_core::Axis::Horizontal => LayoutSize::new(
+            inner_available.width,
+            match inner_available.height {
+                AvailableSpace::MinContent => AvailableSpace::MaxContent,
+                other => other,
+            },
+        ),
+        fret_core::Axis::Vertical => LayoutSize::new(
+            match inner_available.width {
+                AvailableSpace::MinContent => AvailableSpace::MaxContent,
+                other => other,
+            },
+            inner_available.height,
+        ),
+    };
+    let child_constraints = LayoutConstraints::new(LayoutSize::new(None, None), child_available);
+    let margin_basis = inner_available.width.definite();
+
+    let mut main = 0.0f32;
+    let mut cross = 0.0f32;
+    let mut in_flow_children = 0usize;
+
+    for &child in ordered_children {
+        let layout_style = layout_style_for_node(cx.app, window, child);
+        if layout_style.position == crate::element::PositionStyle::Absolute {
+            continue;
+        }
+
+        let child_size = cx.measure_in(child, child_constraints);
+        let child_size = margin_box_size_for_measure(child_size, layout_style.margin, margin_basis);
+        let (main_delta, cross_delta) = match props.direction {
+            fret_core::Axis::Horizontal => {
+                (child_size.width.0.max(0.0), child_size.height.0.max(0.0))
+            }
+            fret_core::Axis::Vertical => {
+                (child_size.height.0.max(0.0), child_size.width.0.max(0.0))
+            }
+        };
+
+        if in_flow_children > 0 {
+            main = (main + gap_main).max(0.0);
+        }
+        main = (main + main_delta).max(0.0);
+        cross = cross.max(cross_delta);
+        in_flow_children += 1;
+    }
+
+    let (inner_w, inner_h) = match props.direction {
+        fret_core::Axis::Horizontal => (main, cross),
+        fret_core::Axis::Vertical => (cross, main),
+    };
+    let desired = Size::new(
+        Px((inner_w + pad_w).max(0.0)),
+        Px((inner_h + pad_h).max(0.0)),
+    );
+    clamp_to_constraints_in_measure(desired, props.layout, constraints)
+}
+
 fn taffy_dimension_for_available(length: Length, available: AvailableSpace) -> Dimension {
     match length {
         Length::Auto => Dimension::auto(),
@@ -314,6 +385,57 @@ fn normalize_auto_layout_intrinsic_constraints(
     }
 
     constraints
+}
+
+fn child_available_axis_for_layout(
+    known: Option<Px>,
+    available: AvailableSpace,
+    length: Length,
+    inset: f32,
+) -> AvailableSpace {
+    let shrink = |px: Px| AvailableSpace::Definite(Px((px.0 - inset).max(0.0)));
+
+    if let Some(known) = known {
+        return shrink(known);
+    }
+
+    match length {
+        Length::Px(px) => shrink(px),
+        Length::Fill => available
+            .definite()
+            .map(shrink)
+            .unwrap_or_else(|| available.shrink_by(inset)),
+        Length::Fraction(f) => available
+            .definite()
+            .map(|px| {
+                let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                AvailableSpace::Definite(Px(((px.0 * f) - inset).max(0.0)))
+            })
+            .unwrap_or_else(|| available.shrink_by(inset)),
+        Length::Auto => available.shrink_by(inset),
+    }
+}
+
+fn child_available_for_layout(
+    constraints: LayoutConstraints,
+    layout: LayoutStyle,
+    inset_w: f32,
+    inset_h: f32,
+) -> LayoutSize<AvailableSpace> {
+    LayoutSize::new(
+        child_available_axis_for_layout(
+            constraints.known.width,
+            constraints.available.width,
+            layout.size.width,
+            inset_w,
+        ),
+        child_available_axis_for_layout(
+            constraints.known.height,
+            constraints.available.height,
+            layout.size.height,
+            inset_h,
+        ),
+    )
 }
 
 fn max_non_absolute_children<H: UiHost>(
@@ -506,7 +628,7 @@ impl ElementHostWidget {
                 self.measure_passthrough_box(cx, window, props.layout)
             }
             ElementInstance::HoverRegion(props) => {
-                self.measure_passthrough_box(cx, window, props.layout)
+                self.measure_hover_region(cx, window, props.layout)
             }
             ElementInstance::WheelRegion(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
@@ -596,32 +718,45 @@ impl ElementHostWidget {
     ) -> Size {
         let measure_constraints =
             normalize_auto_layout_intrinsic_constraints(cx.constraints, layout.size);
+        let child_available = child_available_for_layout(measure_constraints, layout, 0.0, 0.0);
         let child_constraints =
-            LayoutConstraints::new(LayoutSize::new(None, None), measure_constraints.available);
+            LayoutConstraints::new(LayoutSize::new(None, None), child_available);
         let mut max_child = max_non_absolute_children(cx, window, child_constraints);
 
         // During intrinsic sizing, parents may pass `available = 0` as a placeholder for
-        // "unknown". A passthrough box with only absolute-positioned children would otherwise
-        // collapse to zero (because absolute children are ignored for sizing), breaking hit
-        // testing for overflow-visible overlays.
+        // "unknown", or ask directly for min/max-content. A passthrough box with only
+        // absolute-positioned children would otherwise collapse to zero (because absolute children
+        // are ignored for sizing), breaking hit testing for overflow-visible overlays.
         let placeholder_width = cx.constraints.known.width.is_none()
             && cx.constraints.available.width.definite() == Some(Px(0.0));
         let placeholder_height = cx.constraints.known.height.is_none()
             && cx.constraints.available.height.definite() == Some(Px(0.0));
+        let intrinsic_width = cx.constraints.known.width.is_none()
+            && !matches!(cx.constraints.available.width, AvailableSpace::Definite(_));
+        let intrinsic_height = cx.constraints.known.height.is_none()
+            && !matches!(cx.constraints.available.height, AvailableSpace::Definite(_));
+        let auto_width = matches!(layout.size.width, crate::element::Length::Auto);
+        let auto_height = matches!(layout.size.height, crate::element::Length::Auto);
+        let envelope_width = auto_width || placeholder_width || intrinsic_width;
+        let envelope_height = auto_height || placeholder_height || intrinsic_height;
 
-        if (placeholder_width || placeholder_height)
-            && (max_child.width.0 <= 0.0 || max_child.height.0 <= 0.0)
-        {
-            let has_absolute_child = cx.children.iter().copied().any(|child| {
+        let absolute_only = !cx.children.is_empty()
+            && cx.children.iter().copied().all(|child| {
                 layout_style_for_node(cx.app, window, child).position
                     == crate::element::PositionStyle::Absolute
             });
+        if absolute_only || envelope_width || envelope_height {
+            let has_absolute_child = absolute_only
+                || cx.children.iter().copied().any(|child| {
+                    layout_style_for_node(cx.app, window, child).position
+                        == crate::element::PositionStyle::Absolute
+                });
             if has_absolute_child {
                 let mut abs_constraints = child_constraints;
-                if placeholder_width {
+                if absolute_only || envelope_width {
                     abs_constraints.available.width = AvailableSpace::MaxContent;
                 }
-                if placeholder_height {
+                if absolute_only || envelope_height {
                     abs_constraints.available.height = AvailableSpace::MaxContent;
                 }
 
@@ -631,35 +766,13 @@ impl ElementHostWidget {
                         continue;
                     }
                     let child_size = cx.measure_in(child, abs_constraints);
-                    let px = |edge: crate::element::InsetEdge| match edge {
-                        crate::element::InsetEdge::Px(px) => Some(px.0),
-                        crate::element::InsetEdge::Auto
-                        | crate::element::InsetEdge::Fill
-                        | crate::element::InsetEdge::Fraction(_) => None,
-                    };
-                    let left = px(style.inset.left);
-                    let right = px(style.inset.right);
-                    let top = px(style.inset.top);
-                    let bottom = px(style.inset.bottom);
+                    let required = absolute_child_envelope_size(child_size, style.inset);
 
-                    let required_w = match (left, right) {
-                        (Some(l), Some(r)) => Px(l + r + child_size.width.0),
-                        (Some(l), None) => Px(l + child_size.width.0),
-                        (None, Some(r)) => Px(r + child_size.width.0),
-                        (None, None) => child_size.width,
-                    };
-                    let required_h = match (top, bottom) {
-                        (Some(t), Some(b)) => Px(t + b + child_size.height.0),
-                        (Some(t), None) => Px(t + child_size.height.0),
-                        (None, Some(b)) => Px(b + child_size.height.0),
-                        (None, None) => child_size.height,
-                    };
-
-                    if placeholder_width {
-                        max_child.width = Px(max_child.width.0.max(required_w.0));
+                    if absolute_only || envelope_width {
+                        max_child.width = Px(max_child.width.0.max(required.width.0));
                     }
-                    if placeholder_height {
-                        max_child.height = Px(max_child.height.0.max(required_h.0));
+                    if absolute_only || envelope_height {
+                        max_child.height = Px(max_child.height.0.max(required.height.0));
                     }
                 }
             }
@@ -673,6 +786,33 @@ impl ElementHostWidget {
             clamp_constraints.available.height = AvailableSpace::MaxContent;
         }
         clamp_to_constraints_in_measure(max_child, layout, clamp_constraints)
+    }
+
+    fn measure_hover_region<H: UiHost>(
+        &mut self,
+        cx: &mut MeasureCx<'_, H>,
+        window: AppWindowId,
+        layout: LayoutStyle,
+    ) -> Size {
+        let measure_constraints =
+            normalize_auto_layout_intrinsic_constraints(cx.constraints, layout.size);
+        let child_constraints =
+            LayoutConstraints::new(LayoutSize::new(None, None), measure_constraints.available);
+
+        let mut max_child = Size::new(Px(0.0), Px(0.0));
+        for &child in cx.children {
+            let child_style = layout_style_for_node(cx.app, window, child);
+            let child_size = cx.measure_in(child, child_constraints);
+            let child_size = if child_style.position == crate::element::PositionStyle::Absolute {
+                absolute_child_envelope_size(child_size, child_style.inset)
+            } else {
+                child_size
+            };
+            max_child.width = Px(max_child.width.0.max(child_size.width.0));
+            max_child.height = Px(max_child.height.0.max(child_size.height.0));
+        }
+
+        clamp_to_constraints_in_measure(max_child, layout, measure_constraints)
     }
 
     fn measure_container<H: UiHost>(
@@ -699,10 +839,7 @@ impl ElementHostWidget {
 
         let child_constraints = LayoutConstraints::new(
             LayoutSize::new(None, None),
-            LayoutSize::new(
-                measure_constraints.available.width.shrink_by(pad_w),
-                measure_constraints.available.height.shrink_by(pad_h),
-            ),
+            child_available_for_layout(measure_constraints, props.layout, pad_w, pad_h),
         );
         let max_child = max_non_absolute_children(cx, window, child_constraints);
 
@@ -1308,6 +1445,42 @@ impl ElementHostWidget {
         };
         let ordered_children = ordered_flex_children(cx.app, window, cx.children);
         let ordered_children = ordered_children.as_ref();
+        let intrinsic_main_axis_probe = match props.direction {
+            fret_core::Axis::Horizontal => {
+                matches!(
+                    inner_available.width,
+                    AvailableSpace::MinContent | AvailableSpace::MaxContent
+                )
+            }
+            fret_core::Axis::Vertical => {
+                matches!(
+                    inner_available.height,
+                    AvailableSpace::MinContent | AvailableSpace::MaxContent
+                )
+            }
+        };
+        let intrinsic_axis_probe = intrinsic_main_axis_probe
+            || matches!(
+                inner_available.width,
+                AvailableSpace::MinContent | AvailableSpace::MaxContent
+            )
+            || matches!(
+                inner_available.height,
+                AvailableSpace::MinContent | AvailableSpace::MaxContent
+            );
+        if intrinsic_axis_probe && !props.wrap {
+            return measure_no_wrap_flex_intrinsic_main_axis(
+                cx,
+                window,
+                inner_available,
+                &props,
+                ordered_children,
+                gap_main,
+                pad_w,
+                pad_h,
+                constraints,
+            );
+        }
 
         let root_style = TaffyStyle {
             display: Display::Flex,
@@ -1452,20 +1625,6 @@ impl ElementHostWidget {
             //
             // In Fret, `LayoutRefinement::min_w_0()` / `min_h_0()` is the explicit opt-in to allow
             // shrinking below that intrinsic min size (Tailwind `min-w-0`).
-            let intrinsic_main_axis_probe = match props.direction {
-                fret_core::Axis::Horizontal => {
-                    matches!(
-                        inner_available.width,
-                        AvailableSpace::MinContent | AvailableSpace::MaxContent
-                    )
-                }
-                fret_core::Axis::Vertical => {
-                    matches!(
-                        inner_available.height,
-                        AvailableSpace::MinContent | AvailableSpace::MaxContent
-                    )
-                }
-            };
             if (props.wrap || intrinsic_main_axis_probe)
                 && layout_style.position != crate::element::PositionStyle::Absolute
             {

@@ -36,6 +36,16 @@
       "timeout_frames": 600
     },
     {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-trigger.chrome" },
+      "delta_y": -240.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 1200
+    },
+    {
       "type": "click_stable",
       "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-trigger.chrome" },
       "button": "left",

@@ -38,6 +38,74 @@ fn prepaint_interaction_cache_replays_for_clean_view_cache_root() {
     assert!(stats.interaction_cache_replayed_records > 0);
 }
 
+#[test]
+fn prepaint_interaction_cache_replay_translates_records_when_cache_root_moves() {
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let cache_root = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
+    ui.set_root(root);
+    ui.add_child(root, cache_root);
+    ui.add_child(cache_root, leaf);
+    ui.set_node_view_cache_flags(cache_root, true, false, false);
+
+    ui.nodes[root].bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(100.0)),
+    );
+    ui.nodes[cache_root].bounds =
+        Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(20.0), Px(20.0)));
+    ui.nodes[leaf].bounds = ui.nodes[cache_root].bounds;
+
+    let mut services = FakeUiServices;
+    let inputs = PrepaintAfterLayoutInputs::new(&mut services, 1.0);
+    ui.prepaint_after_layout(&mut app, inputs);
+    assert_eq!(ui.debug_stats().interaction_cache_hits, 0);
+    for node in [root, cache_root, leaf] {
+        ui.test_clear_node_invalidations(node);
+    }
+    assert_eq!(
+        ui.hit_test_layers_cached(&[root], Point::new(Px(10.0), Px(10.0))),
+        Some(leaf)
+    );
+
+    app.advance_frame();
+    ui.hit_test_path_cache = None;
+    let moved_bounds = Rect::new(
+        Point::new(Px(100.0), Px(0.0)),
+        Size::new(Px(20.0), Px(20.0)),
+    );
+    ui.nodes[cache_root].bounds = moved_bounds;
+    ui.nodes[leaf].bounds = moved_bounds;
+    for node in [root, cache_root, leaf] {
+        ui.test_clear_node_invalidations(node);
+    }
+
+    let inputs = PrepaintAfterLayoutInputs::new(&mut services, 1.0);
+    ui.prepaint_after_layout(&mut app, inputs);
+    let stats = ui.debug_stats();
+    assert!(
+        stats.interaction_cache_hits >= 1,
+        "expected clean cache root to reuse interaction records after an origin-only move (stats={stats:?})"
+    );
+
+    assert_eq!(
+        ui.hit_test_layers_cached(&[root], Point::new(Px(110.0), Px(10.0))),
+        Some(leaf),
+        "replayed interaction records must move with the cache root"
+    );
+    assert_eq!(
+        ui.hit_test_layers_cached(&[root], Point::new(Px(10.0), Px(10.0))),
+        Some(root),
+        "old cache-root position should no longer hit the moved cached subtree"
+    );
+}
+
 struct PrepaintCountStack {
     calls: std::sync::Arc<std::sync::atomic::AtomicUsize>,
 }

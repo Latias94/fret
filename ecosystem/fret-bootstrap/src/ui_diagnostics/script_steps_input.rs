@@ -69,6 +69,66 @@ pub(super) fn handle_keyboard_text_steps(
             }
             true
         }
+        UiActionStepV2::PressKeys {
+            keys,
+            modifiers,
+            repeat,
+        } => {
+            let mut events = Vec::with_capacity(keys.len().saturating_mul(2));
+            let mut parsed_keys = Vec::with_capacity(keys.len());
+            for key in &keys {
+                let Some(parsed) = parse_key_code(key) else {
+                    *force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-press_keys-unknown-key"
+                    ));
+                    *stop_script = true;
+                    *failure_reason = Some(format!("unknown_key: {key}"));
+                    output.request_redraw = true;
+                    return true;
+                };
+                parsed_keys.push(parsed);
+                events.extend(press_key_events(parsed, modifiers, repeat));
+            }
+
+            let note =
+                format!("press_keys keys={parsed_keys:?} mods={modifiers:?} repeat={repeat}");
+            record_focus_trace(
+                &mut active.focus_trace,
+                app,
+                window,
+                element_runtime,
+                semantics_snapshot,
+                ui,
+                step_index as u32,
+                None,
+                None,
+                note.as_str(),
+            );
+            record_web_ime_trace(
+                &mut active.web_ime_trace,
+                app,
+                step_index as u32,
+                note.as_str(),
+            );
+            record_overlay_placement_trace(
+                &mut active.overlay_placement_trace,
+                element_runtime,
+                semantics_snapshot,
+                window,
+                step_index as u32,
+                note.as_str(),
+            );
+            active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
+            output.events.extend(events);
+            active.wait_until = None;
+            active.screenshot_wait = None;
+            active.next_step = active.next_step.saturating_add(1);
+            output.request_redraw = true;
+            if svc.cfg.script_auto_dump {
+                *force_dump_label = Some(format!("script-step-{step_index:04}-press_keys"));
+            }
+            true
+        }
         UiActionStepV2::PressShortcut { shortcut, repeat } => {
             active.wait_until = None;
             active.screenshot_wait = None;

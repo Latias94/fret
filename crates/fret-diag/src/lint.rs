@@ -107,6 +107,17 @@ fn node_is_scrollable(node: &Value) -> bool {
     x_max > x_min + 0.5 || y_max > y_min + 0.5
 }
 
+fn node_is_hidden(node: &Value) -> bool {
+    node.get("flags")
+        .and_then(|v| v.get("hidden"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+        || node
+            .get("hidden")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+}
+
 fn role_requires_label(role: &str) -> bool {
     matches!(
         role,
@@ -284,8 +295,15 @@ fn lint_nodes_for_window(
             );
         }
 
+        let hidden = node_is_hidden(n);
+        let is_focused = focus == Some(id);
+        let skip_visible_semantics_lints = hidden && !is_focused;
+
         let role_str = role.as_deref().unwrap_or("");
-        if role_requires_label(role_str) && !has_accessible_name_source(n) {
+        if !skip_visible_semantics_lints
+            && role_requires_label(role_str)
+            && !has_accessible_name_source(n)
+        {
             push_finding(
                 findings,
                 LintLevel::Warning,
@@ -305,9 +323,7 @@ fn lint_nodes_for_window(
         };
         let eps = opts.eps_px.max(0.0) as f64;
 
-        let is_focused = focus == Some(id);
-
-        if !rect_is_non_empty(bounds, eps) {
+        if !skip_visible_semantics_lints && !rect_is_non_empty(bounds, eps) {
             let level = if is_focused {
                 LintLevel::Error
             } else {
@@ -329,7 +345,10 @@ fn lint_nodes_for_window(
             }
         }
 
-        if is_focused && !rects_intersect(bounds, window_bounds, eps) {
+        if !skip_visible_semantics_lints
+            && is_focused
+            && !rects_intersect(bounds, window_bounds, eps)
+        {
             push_finding(
                 findings,
                 LintLevel::Error,
@@ -347,7 +366,8 @@ fn lint_nodes_for_window(
             );
         }
 
-        if opts.all_test_ids_bounds
+        if !skip_visible_semantics_lints
+            && opts.all_test_ids_bounds
             && test_id.is_some()
             && !rects_intersect(bounds, window_bounds, eps)
         {
@@ -918,6 +938,80 @@ mod tests {
                 f.get("code").and_then(|v| v.as_str()) != Some("semantics.missing_label")
             }),
             "labelled_by should satisfy the accessible-name source check"
+        );
+    }
+
+    #[test]
+    fn lint_ignores_hidden_state_anchors_for_visible_bounds_warnings() {
+        let bundle = serde_json::json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 10,
+                            "window_bounds": { "x": 0.0, "y": 0.0, "w": 100.0, "h": 100.0 },
+                            "debug": {
+                                "semantics": {
+                                    "window": 1,
+                                    "focus": null,
+                                    "captured": null,
+                                    "nodes": [
+                                        {
+                                            "id": 1,
+                                            "parent": null,
+                                            "role": "group",
+                                            "bounds": { "x": 12.0, "y": 8.0, "w": 0.0, "h": 0.0 },
+                                            "flags": { "focused": false, "captured": false, "hidden": true },
+                                            "test_id": "state-anchor"
+                                        },
+                                        {
+                                            "id": 2,
+                                            "parent": null,
+                                            "role": "button",
+                                            "bounds": { "x": 12.0, "y": 16.0, "w": 0.0, "h": 0.0 },
+                                            "flags": { "focused": false, "captured": false, "hidden": false },
+                                            "test_id": "visible-bad-button",
+                                            "label": "Visible bad button"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let report = lint_bundle_from_json(
+            &bundle,
+            Path::new("bundle.json"),
+            0,
+            LintOptions {
+                all_test_ids_bounds: false,
+                eps_px: 0.5,
+            },
+        )
+        .expect("lint should succeed");
+
+        let findings = report
+            .payload
+            .get("findings")
+            .and_then(|v| v.as_array())
+            .expect("expected findings");
+        assert!(
+            findings
+                .iter()
+                .all(|f| { f.get("test_id").and_then(|v| v.as_str()) != Some("state-anchor") }),
+            "hidden state anchors should stay raw-observable without visible layout warnings"
+        );
+        assert!(
+            findings.iter().any(|f| {
+                f.get("test_id").and_then(|v| v.as_str()) == Some("visible-bad-button")
+                    && f.get("code").and_then(|v| v.as_str()) == Some("layout.zero_size")
+            }),
+            "visible zero-size test_id nodes should still be linted"
         );
     }
 
