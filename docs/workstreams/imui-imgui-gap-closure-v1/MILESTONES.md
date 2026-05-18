@@ -184,6 +184,10 @@ Exit criteria:
   `imui-child-region-resize-x-v1` are the closed proof lanes for axis-specific manual child-region
   resize. Height/width state stays app-owned through response helpers, and broader child-region
   behavior such as auto-resize, clipping-return, or nav-flattening remains candidate-only.
+  2026-05-18 child-region auto-height result: a focused `fret-imui` composition gate now proves the
+  Fret-native AutoResizeY-equivalent posture: width-constrained child regions with no explicit
+  height auto-size to measured content and push following siblings down. This keeps the current
+  layout contract explicit without adding a Dear ImGui `AutoResizeY` flag mirror.
   2026-05-16 selectable highlight result: `imui-selectable-highlight-policy-v1` is the closed proof
   lane for forced selectable highlight visuals. Keyboard-active picker rows now use highlighted
   policy instead of selected semantics, while broader selectable flags remain candidate-only.

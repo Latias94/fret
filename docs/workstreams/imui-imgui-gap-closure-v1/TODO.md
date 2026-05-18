@@ -632,8 +632,10 @@ Readiness order for the next locally testable review slices:
    keyed scrollable child areas, chrome, scroll handles, nested shell panes, and app-owned
    collection behavior. The closed `imui-child-region-resize-y-v1` and
    `imui-child-region-resize-x-v1` follow-ons now cover axis-specific manual resize with
-   app-owned size state; auto-resize, visibility-return, and nav-flattening remain
-   behavior-specific candidates. Do not open a generic `BeginChild()` flag-mirror lane.
+   app-owned size state; the height-unconstrained child-region path now has a focused AutoResizeY
+   composition gate, while visibility-return, nav-flattening, and more specific auto-resize
+   behavior remain behavior-specific candidates. Do not open a generic `BeginChild()` flag-mirror
+   lane.
 8. Multi-window parity: continue in `docking-multiwindow-imgui-parity`.
 9. Performance alignment: keep Dear ImGui-class smoothness pressure in the dedicated perf lanes and
    product-chain perf gates, not in a broad widget/API backlog.

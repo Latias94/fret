@@ -1599,6 +1599,12 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-imui/src/tests/composition/layout_collections.rs"),
             required=[
+                "fn child_region_without_height_constraint_auto_sizes_to_content()",
+                "\"imui-child-region.auto-height\"",
+                "\"imui-child-region.auto-height.viewport\"",
+                "\"imui-child-region.auto-height.after\"",
+                "auto-height child region should contain measured content",
+                "following siblings should be pushed below the auto-height child region",
                 "fn table_helper_skips_hidden_columns_in_header_and_body()",
                 "TableColumn::px(\"Status\", Px(96.0)).hidden()",
                 "\"imui-table-hidden-column.header.cell.status\"",
