@@ -459,6 +459,7 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/snippets/ai/message_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/terminal_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/artifact_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/artifact_code_display.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/code_block_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/sandbox_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/queue_demo.rs",
@@ -658,6 +659,22 @@ def main() -> None:
                 "cx.text(\"Artifact closed.\")",
                 "cx.text(\"Artifact (AI Elements)\")",
                 "cx.text(\"Close hides the artifact; reset re-mounts it.\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/artifact_code_display.rs"),
+            required=[
+                "use fret_ui::element::{AnyElement, Length, SemanticsDecoration, SpacerProps};",
+                "fn empty_spacer(cx: &mut AppComponentCx<'_>) -> AnyElement",
+                "fn status_marker(cx: &mut AppComponentCx<'_>, status_text: Arc<str>) -> AnyElement",
+                "role(fret_core::SemanticsRole::Generic)",
+                "label(format!(\"Status: {}\", status_text.as_ref()))",
+                "test_id(\"ui-ai-artifact-docs-status\")",
+                "empty_spacer(cx).attach_semantics(",
+            ],
+            forbidden=[
+                "cx.opacity(0.0",
+                "cx.text(format!(\"Status: {status_text}\"))",
             ],
         ),
         SourceCheck(

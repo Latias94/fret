@@ -561,6 +561,9 @@ Readiness order for the next locally testable review slices:
    2026-05-18 AI PromptInput referenced sources text-role follow-up: fixed referenced-sources
    title/body copy now routes through section-chrome and paragraph roles instead of bare
    `cx.text(...)`.
+   2026-05-18 AI Artifact code display status-marker follow-up: the docs status marker now keeps
+   the diagnostic `label_contains` contract on a generic semantics marker with a zero-size spacer
+   instead of an invisible bare text element.
    2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
    virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
    `control_readout_text(...)`.

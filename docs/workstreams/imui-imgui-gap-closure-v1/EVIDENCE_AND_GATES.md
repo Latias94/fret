@@ -729,6 +729,12 @@ Run evidence:
   of bare `cx.text(...)`; source chip state and PromptInput model behavior were intentionally left
   unchanged. Gates: `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
   --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: migrated the AI Artifact docs code-display status marker from an invisible
+  `cx.text(...)` node to a generic zero-size semantics marker with a diagnostic label. This keeps
+  the existing `ui-gallery-ai-artifact-docs-run-action` `label_contains` script contract while
+  removing the hidden text from text layout. Gates: `cargo nextest run -p fret-ui-gallery --test
+  ai_visible_text_role_surface --no-fail-fast`, `python tools/gate_imui_workstream_source.py`, and
+  `python -m json.tool tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-artifact-docs-run-action.json`.
 - 2026-05-18: `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
   --no-fail-fast` passed after the large/status snippet slice landed. `python
   tools/gate_imui_workstream_source.py`, `python -m py_compile
@@ -2220,4 +2226,15 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools/gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools/gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 AI Artifact code-display status-marker slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ai_visible_text_role_surface` passed.
+- `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `python -m json.tool tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-artifact-docs-run-action.json` passed.
 - `git diff --check` passed.

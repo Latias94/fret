@@ -106,6 +106,39 @@ fn ai_artifact_demo_visible_text_uses_shared_roles() {
 }
 
 #[test]
+fn ai_artifact_code_display_uses_non_text_status_marker() {
+    let source = include_str!("../src/ui/snippets/ai/artifact_code_display.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui::element::{AnyElement, Length, SemanticsDecoration, SpacerProps};",
+        "fn empty_spacer(cx: &mut AppComponentCx<'_>) -> AnyElement",
+        "fn status_marker(cx: &mut AppComponentCx<'_>, status_text: Arc<str>) -> AnyElement",
+        "role(fret_core::SemanticsRole::Generic)",
+        "label(format!(\"Status: {}\", status_text.as_ref()))",
+        "test_id(\"ui-ai-artifact-docs-status\")",
+        "empty_spacer(cx).attach_semantics",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "artifact_code_display should expose status as a non-text semantics marker; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "cx.opacity(0.0",
+        "cx.text(format!(\"Status: {status_text}\"))",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "artifact_code_display reintroduced hidden bare text status marker: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
 fn ai_code_block_demo_visible_text_and_state_marker_use_shared_roles() {
     let source = include_str!("../src/ui/snippets/ai/code_block_demo.rs");
     let canonical = canonicalize_rust_fragment(source);
