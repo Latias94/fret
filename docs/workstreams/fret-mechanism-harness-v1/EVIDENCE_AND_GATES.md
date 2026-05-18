@@ -427,6 +427,25 @@ target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/overlay/ui
 
 Current runtime evidence:
 
+- MaskLayer paint-only hit-testing fixture:
+  `crates/fret-ui/src/declarative/tests/fixtures/hit_test_routing_v1.json`
+  - proof:
+    `mask-layer-bounds-do-not-clip-hit-testing-by-default` proves an offset escaped child remains
+    targetable outside `MaskLayer` bounds when the wrapper uses default visible overflow.
+    `mask-layer-overflow-clip-suppresses-escaped-child-hit` proves the same escaped child is
+    suppressed when the wrapper opts into `Overflow::Clip`.
+  - first red command:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_hit_test_routing_matches_oracles --no-fail-fast --no-capture`
+  - first red result:
+    failed with Nextest run id `54d2868e-b176-42cb-a6e2-ad01ce63b497`; the initial oracle used a
+    width-overflow child that the layout contract legitimately constrained to wrapper width.
+  - current command:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_hit_test_routing_matches_oracles --no-fail-fast --no-capture`
+  - current result:
+    passed with Nextest run id `a72e3112-544e-405a-957d-d4d00dfad034`.
+  - JSON validation:
+    `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\hit_test_routing_v1.json`
+    passed.
 - Scrollbar drag pointer-capture lifecycle and owner:
   `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json`
   - asserts `input_pointer_capture_active_is active=true` after `pointer_down` on

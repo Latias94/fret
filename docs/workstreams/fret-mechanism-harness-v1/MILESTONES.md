@@ -1718,3 +1718,21 @@ Status: complete for size-derived render-transform visual and hit-space consiste
   with Nextest run id `8a831141-fd89-4656-be5b-59a3d206bdef`.
 - JSON fixture validation passes:
   `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\layout_primitives_v1.json`.
+
+## M98: MaskLayer Paint-Only Hit-Test Fixture
+
+Status: complete for MaskLayer bounds versus hit-test clipping semantics.
+
+- Added `mask-layer-bounds-do-not-clip-hit-testing-by-default` and
+  `mask-layer-overflow-clip-suppresses-escaped-child-hit` to the hit-test routing fixture.
+- The cases lock ADR 0239/0273 semantics: mask coverage is paint-only and mask bounds are not an
+  implicit hit-test clip, while explicit `Overflow::Clip` on the `MaskLayer` wrapper still clips
+  escaped descendants.
+- No new mechanism defect was reproduced. The first red run used a width-overflow child that was
+  legitimately constrained to the wrapper width, so the fixture now uses an offset escaped child to
+  isolate the hit-test contract.
+- The gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_hit_test_routing_matches_oracles --no-fail-fast --no-capture`
+  with Nextest run id `a72e3112-544e-405a-957d-d4d00dfad034`.
+- JSON fixture validation passes:
+  `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\hit_test_routing_v1.json`.

@@ -919,6 +919,13 @@ date: 2026-05-12
     `0,0 20 x 20` while visual and hit spaces move by `40 x 10`; the layout-space center misses
     the target and the translated visual-space center hits it. No new mechanism defect was
     reproduced.
+- [x] Add MaskLayer paint-only hit-test contract coverage.
+  - Result: `hit_test_routing_v1.json` now covers `MaskLayer` bounds versus hit-testing in both
+    default paint-only and explicit `Overflow::Clip` modes. An escaped child remains targetable
+    outside the mask bounds by default, while the same child is suppressed when the wrapper opts
+    into overflow clipping. No new mechanism defect was reproduced; the first red run exposed a
+    fixture-oracle mistake that tried to prove escaped hit-testing with a width-overflow child
+    whose layout was legitimately constrained to the wrapper width.
 - [x] Add renderer-level font trace predicates to the Combobox long-text gate.
   - Result: diagnostics could already capture renderer font trace bundles, but scripts could not
     assert the text-preparation facts directly. The new
