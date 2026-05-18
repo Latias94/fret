@@ -677,6 +677,10 @@ Readiness order for the next locally testable review slices:
    captions through button-label text, controlled-state status through control-readout text,
    body copy through paragraph text, repository identifiers through code-label text, and file-tree
    row labels through list-row text.
+   2026-05-18 gallery AlertDialog custom text follow-up: rich-content body copy now uses
+   paragraph text, rich-content action children use button-label text, and small/RTL custom title
+   and description children use section-chrome/paragraph roles instead of local wrap/overflow
+   policy. Rich attributed-title text remains an explicit text capability surface.
    2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
    headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
    through `control_readout_text(...)`, and custom pointer-region labels through

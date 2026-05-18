@@ -1213,6 +1213,45 @@ fn selected_parts_pages_mark_adapter_surfaces_as_advanced_not_default() {
 }
 
 #[test]
+fn alert_dialog_snippet_custom_text_uses_shared_roles() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/alert_dialog/rich_content.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_paragraph(cx, \"This removes the production project from all workspaces and revokes existing collaborator links.\")",
+            "decl_text::text_paragraph(cx, \"Export an audit archive and notify owners before continuing so the rollback plan is documented.\")",
+            "decl_text::text_button_label(cx, \"Back to safety\")",
+            "decl_text::text_button_label(cx, \"Delete project\")",
+            "cx.styled_text(rich_title_text())",
+        ],
+        &[
+            "ui::text(\"This removes the production project from all workspaces and revokes existing collaborator links.\")",
+            "ui::text(\"Export an audit archive and notify owners before continuing so the rollback plan is documented.\")",
+            "ui::text(\"Back to safety\")",
+            "ui::text(\"Delete project\")",
+        ],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/alert_dialog/small_with_media.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_section_chrome_label(cx, \"Allow accessory to connect?\")",
+            "decl_text::text_paragraph(cx, \"Do you want to allow the USB accessory to connect to this device?\")",
+        ],
+        &["ui::text(", "TextWrap", "TextOverflow"],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/alert_dialog/rtl.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_section_chrome_label(cx, \"السماح للملحق بالاتصال؟\")",
+            "decl_text::text_paragraph(cx, \"هل تريد السماح لملحق USB بالاتصال بهذا الجهاز؟\")",
+        ],
+        &["ui::text(", "TextWrap", "TextOverflow"],
+    );
+}
+
+#[test]
 fn menubar_page_distinguishes_compact_and_copyable_parts_lanes() {
     let menubar_page = read("src/ui/pages/menubar.rs");
     assert!(

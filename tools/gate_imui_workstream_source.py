@@ -3277,6 +3277,54 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/alert_dialog/rich_content.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph(",
+                "This removes the production project from all workspaces and revokes existing collaborator links.",
+                "Export an audit archive and notify owners before continuing so the rollback plan is documented.",
+                "decl_text::text_button_label(cx, \"Back to safety\")",
+                "decl_text::text_button_label(cx, \"Delete project\")",
+                ".styled_text(rich_title_text())",
+            ],
+            forbidden=[
+                "ui::text(\"Back to safety\")",
+                "ui::text(\"Delete project\")",
+                "ui::text(\n                        \"This removes the production project from all workspaces and revokes existing collaborator links.\",\n                    )",
+                "ui::text(\n                        \"Export an audit archive and notify owners before continuing so the rollback plan is documented.\",\n                    )",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/alert_dialog/small_with_media.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(",
+                "Allow accessory to connect?",
+                "decl_text::text_paragraph(",
+                "Do you want to allow the USB accessory to connect to this device?",
+            ],
+            forbidden=[
+                "ui::text(",
+                "TextWrap",
+                "TextOverflow",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/alert_dialog/rtl.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(",
+                "السماح للملحق بالاتصال؟",
+                "decl_text::text_paragraph(",
+                "هل تريد السماح لملحق USB بالاتصال بهذا الجهاز؟",
+            ],
+            forbidden=[
+                "ui::text(",
+                "TextWrap",
+                "TextOverflow",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/toggle/label.rs"),
             required=[
                 "decl_text::text_control_readout(cx, format!(\"Pressed: {pressed_now}\"))",
@@ -3353,6 +3401,7 @@ def main() -> None:
                 "fn button_children_snippet_text_uses_button_label_role()",
                 "fn tabs_snippet_custom_text_uses_shared_roles()",
                 "fn collapsible_snippet_text_uses_shared_roles()",
+                "fn alert_dialog_snippet_custom_text_uses_shared_roles()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",
             ],

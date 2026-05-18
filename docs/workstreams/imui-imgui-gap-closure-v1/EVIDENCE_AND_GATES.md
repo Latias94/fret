@@ -172,6 +172,9 @@ Last updated: 2026-05-18
   - `apps/fret-ui-gallery/src/ui/snippets/collapsible/file_tree.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/collapsible/rtl.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/collapsible/usage.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/alert_dialog/rich_content.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/alert_dialog/rtl.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/alert_dialog/small_with_media.rs`
   - `apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/mvp/gates.rs`
   - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
   - `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs`
@@ -2455,5 +2458,22 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   sidebar_snippet_chrome_text_uses_shared_roles --no-fail-fast` passed.
 - `python tools/gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 gallery AlertDialog custom text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- `cargo check -p fret-ui-gallery --test ui_authoring_surface_default_app` passed.
+- First `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  alert_dialog_snippet_custom_text_uses_shared_roles --no-fail-fast` failed before test execution:
+  `rustc-LLVM ERROR: IO failure on output stream: no space on device`.
+- `cargo clean -p fret-ui-gallery` removed 2726 generated build files, freeing about 6.2GiB.
+- `python tools/gate_imui_workstream_source.py` passed.
+- Retried after cleaning generated build artifacts:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  alert_dialog_snippet_custom_text_uses_shared_roles --no-fail-fast` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
 - `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
 - `git diff --check` passed.
