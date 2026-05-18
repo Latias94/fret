@@ -933,3 +933,8 @@ date: 2026-05-12
     drafts only exposed that this runner reports effective window heights 20px taller than the
     requested inner heights, matching the existing requested/effective viewport diagnostics
     contract.
+- [x] Add the plain Input/File renderer font-trace companion.
+  - Result: `ui-gallery-input-basic-and-file-long-text.json` now starts directly on the Input page,
+    removes navigation/static-frame waits, and proves both the Basic Input value and file-composed
+    Input value are renderer-prepared with `font=ui`, `wrap=none`, `overflow=clip`, and
+    `missing_glyphs=0`. No Input recipe or renderer defect was reproduced.

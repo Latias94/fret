@@ -6,11 +6,15 @@
       "diag.script_v2",
       "diag.screenshot_png"
     ],
+    "env_defaults": {
+      "FRET_TEXT_FONT_TRACE_ALL": "1",
+      "FRET_UI_GALLERY_START_PAGE": "input"
+    },
     "tags": ["ui_gallery", "shadcn", "input", "file", "text_input", "long_text"],
     "target_hints": [
-      "Navigates to the Input page through the stable UI Gallery nav path.",
+      "Starts directly on the Input page.",
       "Injects long values into a plain Input and the file-composition Input.",
-      "Asserts TextInput paint-time overflow, offset, visible viewport clipping, IME cursor bounds, and text-height coverage."
+      "Asserts TextInput paint-time overflow, offset, visible viewport clipping, IME cursor bounds, text-height coverage, and renderer font trace facts."
     ]
   },
   "steps": [
@@ -19,28 +23,21 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+        "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-trigger" }
       },
       "timeout_frames": 600
     },
     { "type": "set_window_inner_size", "width_px": 760.0, "height_px": 700.0 },
-    { "type": "wait_frames", "n": 20 },
     {
-      "type": "type_text_into",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
-      "text": "input",
-      "clear_before_type": true,
-      "timeout_frames": 600
+      "type": "wait_until",
+      "predicate": {
+        "kind": "window_inner_size_approx_equal",
+        "width_px": 760.0,
+        "height_px": 720.0,
+        "eps_px": 2.0
+      },
+      "timeout_frames": 240
     },
-    { "type": "wait_frames", "n": 2 },
-    {
-      "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-input" },
-      "delta_y": -240.0,
-      "timeout_frames": 600
-    },
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-input" } },
     {
       "type": "wait_until",
       "predicate": {
@@ -74,7 +71,19 @@
       "text": "plain-input-observability-contract-with-a-very-long-searchable-value",
       "timeout_frames": 600
     },
-    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "render_text_font_trace_entries_matching_ge",
+        "min": 1,
+        "text_contains": "plain-input-observability-contract",
+        "font": "ui",
+        "wrap": "none",
+        "overflow": "clip",
+        "missing_glyphs": 0
+      },
+      "timeout_frames": 240
+    },
     {
       "type": "assert",
       "predicate": {
@@ -145,7 +154,19 @@
       "text": "enterprise-observability-capture-session-with-render-snapshots-and-long-file-name.png",
       "timeout_frames": 600
     },
-    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "render_text_font_trace_entries_matching_ge",
+        "min": 1,
+        "text_contains": "enterprise-observability-capture-session",
+        "font": "ui",
+        "wrap": "none",
+        "overflow": "clip",
+        "missing_glyphs": 0
+      },
+      "timeout_frames": 240
+    },
     {
       "type": "assert",
       "predicate": {

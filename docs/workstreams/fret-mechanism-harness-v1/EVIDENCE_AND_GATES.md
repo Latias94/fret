@@ -1676,6 +1676,9 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - asserts a plain Input and the file-composition Input both expose direct editable text-field
     semantics, accept long values, report horizontal overflow, keep offset in range, keep visible
     text inside the viewport, keep the IME cursor inside bounds, and cover measured text height
+  - now also starts directly on the Input page with `FRET_UI_GALLERY_START_PAGE=input`, enables
+    `FRET_TEXT_FONT_TRACE_ALL=1`, and asserts renderer font trace entries for both long values
+    with `font=ui`, `wrap=none`, `overflow=clip`, and `missing_glyphs=0`.
   - suite redirect:
     `tools/diag-scripts/ui-gallery-input-basic-and-file-long-text.json`
   - diagnostics catalog entry:
@@ -1696,6 +1699,25 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag/codex-input-basic-file-long-text-builder-fixed/sessions/1778636295426-16732/1778636303293-ui-gallery-input-basic-and-file-long-text/slice.ui-gallery-input-file-control.json`
   - current screenshot:
     `target/fret-diag/codex-input-basic-file-long-text-builder-fixed/sessions/1778636295426-16732/screenshots/1778636303293-ui-gallery-input-basic-and-file-long-text/window-4294967297-tick-65-frame-65.png`
+  - renderer font-trace focused roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_input_basic_and_file_long_text --no-fail-fast --no-capture`
+    passed with Nextest run id `4fc33be1-73de-4abd-b44e-1372c97cbe10`.
+  - renderer font-trace full roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip --no-fail-fast`
+    passed with Nextest run id `29fe790a-4b52-4b96-9d3c-0fb7677a8401`.
+  - registry gates:
+    `python tools/check_diag_scripts_registry.py` and
+    `python tools/test_check_diag_scripts_registry.py` passed after refreshing
+    `tools/diag-scripts/index.json`.
+  - renderer font-trace runtime evidence:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/input/ui-gallery-input-basic-and-file-long-text.json --dir target/fret-diag-input-basic-file-long-text-renderer-trace-v1 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+    passed with run id `1779081108865`.
+  - renderer font-trace runtime artifacts:
+    `target/fret-diag-input-basic-file-long-text-renderer-trace-v1/sessions/1779081088220-65512/script.result.json`,
+    `target/fret-diag-input-basic-file-long-text-renderer-trace-v1/sessions/1779081088220-65512/1779081108865/ai.packet`,
+    `target/fret-diag-input-basic-file-long-text-renderer-trace-v1/sessions/1779081088220-65512/share/1779081108865.zip`,
+    `target/fret-diag-input-basic-file-long-text-renderer-trace-v1/sessions/1779081088220-65512/1779081309030-ui-gallery-input-basic-and-file-long-text.layout/layout.taffy.v1.json`, and
+    `target/fret-diag-input-basic-file-long-text-renderer-trace-v1/sessions/1779081088220-65512/screenshots/1779081309581-ui-gallery-input-basic-and-file-long-text/window-4294967297-tick-23-frame-23.png`.
 - Text-control authoring-surface gate:
   `apps/fret-ui-gallery/tests/ui_snippets_text_control_test_id_surface.rs`
   - reads UI Gallery diagnostics scripts under `tools/diag-scripts/ui-gallery`

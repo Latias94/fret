@@ -1661,3 +1661,21 @@ Status: complete for renderer text-preparation evidence on the embedded Command 
 - The full `script_json_roundtrip` gate passes with Nextest run id
   `9f94f99d-86c7-417b-9b0f-5f29e4ca5797`.
 - The runtime diagnostics gate passes with run id `1779080299508`.
+
+## M95: Input/File Long-Text Renderer Font Trace Companion
+
+Status: complete for renderer text-preparation evidence on the plain Input and file-composed Input
+long-text gate.
+
+- Promoted `ui-gallery-input-basic-and-file-long-text.json` from TextInput visual clipping evidence
+  to renderer-backed evidence by enabling `FRET_TEXT_FONT_TRACE_ALL=1` and asserting both long
+  values are prepared with `font=ui`, `wrap=none`, `overflow=clip`, and `missing_glyphs=0`.
+- Removed cross-page navigation and bare static waits from the script by starting directly on
+  `FRET_UI_GALLERY_START_PAGE=input`, waiting for the effective `760x720` diagnostic window after
+  requesting `760x700`, and using predicate convergence for the two text values.
+- No Input recipe, file-composition input, or renderer defect was reproduced.
+- The focused script roundtrip gate passes with Nextest run id
+  `4fc33be1-73de-4abd-b44e-1372c97cbe10`.
+- The full `script_json_roundtrip` gate passes with Nextest run id
+  `29fe790a-4b52-4b96-9d3c-0fb7677a8401`.
+- The runtime diagnostics gate passes with run id `1779081108865`.

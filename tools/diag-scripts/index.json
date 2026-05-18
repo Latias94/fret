@@ -8504,9 +8504,9 @@
         "ui_gallery"
       ],
       "target_hints": [
-        "Navigates to the Input page through the stable UI Gallery nav path.",
+        "Starts directly on the Input page.",
         "Injects long values into a plain Input and the file-composition Input.",
-        "Asserts TextInput paint-time overflow, offset, visible viewport clipping, IME cursor bounds, and text-height coverage."
+        "Asserts TextInput paint-time overflow, offset, visible viewport clipping, IME cursor bounds, text-height coverage, and renderer font trace facts."
       ]
     },
     {
