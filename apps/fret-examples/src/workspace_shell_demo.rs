@@ -1112,8 +1112,7 @@ impl WorkspaceShellDemoDriver {
                                                                 let mut layout =
                                                                     LayoutStyle::default();
                                                                 layout.size.width = Length::Fill;
-                                                                layout.size.height =
-                                                                    Length::Px(Px(28.0));
+                                                                layout.size.height = Length::Auto;
                                                                 layout.flex.shrink = 0.0;
                                                                 layout
                                                             },
@@ -1123,7 +1122,7 @@ impl WorkspaceShellDemoDriver {
                                                             ),
                                                             justify: MainAlign::Start,
                                                             align: CrossAlign::Center,
-                                                            wrap: false,
+                                                            wrap: true,
                                                             ..Default::default()
                                                         },
                                                         move |cx| {
@@ -1257,7 +1256,11 @@ impl WorkspaceShellDemoDriver {
                         frame
                     };
 
-                    vec![WorkspaceCommandScope::new(window_layout.clone(), out).into_element(cx)]
+                    vec![
+                        WorkspaceCommandScope::new(window_layout.clone(), out)
+                            .apply_workspace_model_commands(false)
+                            .into_element(cx),
+                    ]
                 });
     }
 }

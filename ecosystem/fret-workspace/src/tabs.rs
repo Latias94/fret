@@ -10,11 +10,12 @@ use crate::close_policy::{
 use crate::commands::{
     CMD_WORKSPACE_TAB_ACTIVATE_PREFIX, CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_LEFT,
     CMD_WORKSPACE_TAB_CLOSE_OTHERS, CMD_WORKSPACE_TAB_CLOSE_PREFIX, CMD_WORKSPACE_TAB_CLOSE_RIGHT,
-    CMD_WORKSPACE_TAB_COMMIT_PREVIEW, CMD_WORKSPACE_TAB_MOVE_AFTER_PREFIX,
+    CMD_WORKSPACE_TAB_COMMIT_PREVIEW, CMD_WORKSPACE_TAB_MOVE_AFTER_ID_PREFIX,
+    CMD_WORKSPACE_TAB_MOVE_AFTER_PREFIX, CMD_WORKSPACE_TAB_MOVE_BEFORE_ID_PREFIX,
     CMD_WORKSPACE_TAB_MOVE_BEFORE_PREFIX, CMD_WORKSPACE_TAB_MOVE_LEFT,
     CMD_WORKSPACE_TAB_MOVE_RIGHT, CMD_WORKSPACE_TAB_NEXT, CMD_WORKSPACE_TAB_OPEN_PREVIEW_PREFIX,
     CMD_WORKSPACE_TAB_PIN_PREFIX, CMD_WORKSPACE_TAB_PREV, CMD_WORKSPACE_TAB_TOGGLE_PIN,
-    CMD_WORKSPACE_TAB_UNPIN_PREFIX,
+    CMD_WORKSPACE_TAB_UNPIN_PREFIX, parse_tab_move_specific_payload,
 };
 
 #[cfg(feature = "serde")]
@@ -850,6 +851,30 @@ impl WorkspaceTabs {
             return WorkspaceApplyCommandOutcome::applied(self.move_active_relative_to(id, true));
         }
 
+        if let Some(payload) = command
+            .as_str()
+            .strip_prefix(CMD_WORKSPACE_TAB_MOVE_BEFORE_ID_PREFIX)
+        {
+            let Some((dragged, target)) = parse_tab_move_specific_payload(payload) else {
+                return WorkspaceApplyCommandOutcome::applied(false);
+            };
+            return WorkspaceApplyCommandOutcome::applied(
+                self.move_tab_relative_to(dragged, target, false),
+            );
+        }
+
+        if let Some(payload) = command
+            .as_str()
+            .strip_prefix(CMD_WORKSPACE_TAB_MOVE_AFTER_ID_PREFIX)
+        {
+            let Some((dragged, target)) = parse_tab_move_specific_payload(payload) else {
+                return WorkspaceApplyCommandOutcome::applied(false);
+            };
+            return WorkspaceApplyCommandOutcome::applied(
+                self.move_tab_relative_to(dragged, target, true),
+            );
+        }
+
         if let Some(id) = command
             .as_str()
             .strip_prefix(CMD_WORKSPACE_TAB_OPEN_PREVIEW_PREFIX)
@@ -932,12 +957,15 @@ impl WorkspaceTabs {
             return false;
         };
 
-        if active.as_ref() == target_id {
+        self.move_tab_relative_to(active.as_ref(), target_id, after)
+    }
+
+    fn move_tab_relative_to(&mut self, tab_id: &str, target_id: &str, after: bool) -> bool {
+        if self.tabs.len() <= 1 || tab_id == target_id {
             return false;
         }
 
-        let Some(active_index) = self.tabs.iter().position(|t| t.as_ref() == active.as_ref())
-        else {
+        let Some(tab_index) = self.tabs.iter().position(|t| t.as_ref() == tab_id) else {
             return false;
         };
 
@@ -946,19 +974,18 @@ impl WorkspaceTabs {
         }
 
         let pinned_count = self.pinned_count();
-        let active_is_pinned = active_index < pinned_count;
+        let tab_is_pinned = tab_index < pinned_count;
         let target_is_pinned = self
             .tabs
             .iter()
             .take(pinned_count)
             .any(|t| t.as_ref() == target_id);
-        if active_is_pinned != target_is_pinned {
+        if tab_is_pinned != target_is_pinned {
             return false;
         }
 
-        let item = self.tabs.remove(active_index);
+        let item = self.tabs.remove(tab_index);
 
-        // Recompute after removal to avoid index adjustment edge cases.
         let Some(mut target_index) = self.tabs.iter().position(|t| t.as_ref() == target_id) else {
             return false;
         };
@@ -1400,6 +1427,58 @@ mod tests {
         assert_eq!(
             state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
             vec!["a", "b", "c", "d"]
+        );
+    }
+
+    #[test]
+    fn move_specific_tab_before_after_does_not_depend_on_active_tab() {
+        use crate::commands::{tab_move_after_tab_command, tab_move_before_tab_command};
+
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["a", "b", "c", "d"]) {
+            state.open_and_activate(id);
+        }
+        assert_eq!(state.active().unwrap().as_ref(), "d");
+
+        let cmd = tab_move_after_tab_command("a", "c").unwrap();
+        assert!(state.apply_command(&cmd));
+        assert_eq!(state.active().unwrap().as_ref(), "d");
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["b", "c", "a", "d"]
+        );
+
+        let cmd = tab_move_before_tab_command("a", "b").unwrap();
+        assert!(state.apply_command(&cmd));
+        assert_eq!(state.active().unwrap().as_ref(), "d");
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["a", "b", "c", "d"]
+        );
+    }
+
+    #[test]
+    fn move_specific_tab_commands_do_not_cross_pinned_boundary() {
+        use crate::commands::tab_move_after_tab_command;
+
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["a", "b", "c", "d"]) {
+            state.open_and_activate(id);
+        }
+        state.set_pinned_count(2);
+
+        assert!(
+            !state.apply_command(&tab_move_after_tab_command("a", "c").unwrap()),
+            "expected pinned tab to stay in pinned segment"
+        );
+        assert!(
+            !state.apply_command(&tab_move_after_tab_command("c", "a").unwrap()),
+            "expected unpinned tab to stay in unpinned segment"
+        );
+        assert!(state.apply_command(&tab_move_after_tab_command("c", "d").unwrap()));
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["a", "b", "d", "c"]
         );
     }
 

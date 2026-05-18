@@ -5,8 +5,7 @@ use fret_runtime::CommandId;
 use fret_ui::action::UiActionHost;
 
 use crate::commands::{
-    tab_move_active_after_command, tab_move_active_before_command, tab_pin_command,
-    tab_unpin_command,
+    tab_move_after_tab_command, tab_move_before_tab_command, tab_pin_command, tab_unpin_command,
 };
 use crate::tab_drag::WorkspaceTabInsertionSide;
 
@@ -14,7 +13,8 @@ use crate::tab_drag::WorkspaceTabInsertionSide;
 pub(super) enum WorkspaceTabStripIntent {
     Activate(CommandId),
     Close(CommandId),
-    ReorderActive {
+    ReorderTab {
+        tab_id: Arc<str>,
         target_tab_id: Arc<str>,
         side: WorkspaceTabInsertionSide,
     },
@@ -34,16 +34,17 @@ pub(super) fn dispatch_intent<H: UiActionHost + ?Sized>(
         WorkspaceTabStripIntent::Activate(cmd) | WorkspaceTabStripIntent::Close(cmd) => {
             host.dispatch_command(Some(window), cmd);
         }
-        WorkspaceTabStripIntent::ReorderActive {
+        WorkspaceTabStripIntent::ReorderTab {
+            tab_id,
             target_tab_id,
             side,
         } => {
             let cmd = match side {
                 WorkspaceTabInsertionSide::Before => {
-                    tab_move_active_before_command(target_tab_id.as_ref())
+                    tab_move_before_tab_command(tab_id.as_ref(), target_tab_id.as_ref())
                 }
                 WorkspaceTabInsertionSide::After => {
-                    tab_move_active_after_command(target_tab_id.as_ref())
+                    tab_move_after_tab_command(tab_id.as_ref(), target_tab_id.as_ref())
                 }
             };
             if let Some(cmd) = cmd {

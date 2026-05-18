@@ -31,73 +31,6 @@
     },
     {
       "predicate": {
-        "kind": "exists",
-        "target": {
-          "id": "workspace-shell-pane-pane-a-tab-strip.overflow_button",
-          "kind": "test_id"
-        }
-      },
-      "timeout_frames": 240,
-      "type": "wait_until"
-    },
-    {
-      "target": {
-        "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
-        "kind": "test_id"
-      },
-      "type": "click"
-    },
-    {
-      "n": 10,
-      "type": "wait_frames"
-    },
-    {
-      "predicate": {
-        "kind": "selected_is",
-        "selected": true,
-        "target": {
-          "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
-          "kind": "test_id"
-        }
-      },
-      "timeout_frames": 240,
-      "type": "wait_until"
-    },
-    {
-      "target": {
-        "id": "workspace-shell-pane-pane-a-tab-strip.overflow_button",
-        "kind": "test_id"
-      },
-      "type": "click"
-    },
-    {
-      "n": 20,
-      "type": "wait_frames"
-    },
-    {
-      "predicate": {
-        "kind": "exists",
-        "target": {
-          "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-2",
-          "kind": "test_id"
-        }
-      },
-      "timeout_frames": 240,
-      "type": "wait_until"
-    },
-    {
-      "target": {
-        "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-2",
-        "kind": "test_id"
-      },
-      "type": "click"
-    },
-    {
-      "n": 20,
-      "type": "wait_frames"
-    },
-    {
-      "predicate": {
         "kind": "selected_is",
         "selected": true,
         "target": {
@@ -131,6 +64,78 @@
         "kind": "workspace_tab_strip_active_scroll_px_ge",
         "pane_id": "pane-a",
         "px": 1.0
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "id": "workspace-shell-pane-pane-a-tab-strip.overflow_button",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 20,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-0",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-0",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 20,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "selected_is",
+        "selected": true,
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "workspace_tab_strip_active_overflow_is",
+        "overflow": true,
+        "pane_id": "pane-a"
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "workspace_tab_strip_active_visible_is",
+        "pane_id": "pane-a",
+        "visible": true
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "workspace_tab_strip_active_scroll_px_le",
+        "pane_id": "pane-a",
+        "px": 2.0
       },
       "timeout_frames": 240,
       "type": "wait_until"

@@ -2143,3 +2143,51 @@ runtime coverage.
   `python tools/check_diag_scripts_registry.py`; and
   `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-workspace-shell --dir target/fret-diag-workspace-shell-suite-after-overflow-inorder-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
   with run ids `1779136173632`, `1779136260333`, `1779136295210`, and `1779136342864`.
+
+## M118: Workspace Shell Demo Tab Movement Ownership Gate
+
+Status: complete for workspace shell demo tab drag ownership, end-drop resolution, and overflow
+reorder runtime coverage.
+
+- Added specific-tab reorder command ids:
+  `workspace.tab.move_before_id.<dragged_len>:<dragged><target>` and
+  `workspace.tab.move_after_id.<dragged_len>:<dragged><target>`.
+- `WorkspaceTabs::move_tab_relative_to` now moves the dragged tab instead of assuming the active tab
+  is still the dragged tab when the command is applied. Focused tests lock active-tab independence
+  and pinned-boundary rejection.
+- Tab strip end-drop now resolves to a concrete canonical after-target before dispatch, so dropping
+  on the explicit `drop_end` surface records the same target semantics as dropping beside a visible
+  tab.
+- Local tab strip drag state and pane-tree tab drag state now use stable window/root model keys so
+  local state survives tabstrip subtree rebuilds during overflow/scroll/reorder frames.
+- The workspace shell demo row that hosts the tab strip now uses auto height and wrapping, keeping
+  overflow controls reachable under the `420 x 720` constrained runtime gate.
+- The final overflow-reorder runtime failure was a diagnostics authoring issue, not a runtime
+  reorder defect: `doc-a-0` was clipped, and dragging from its stale/clipped semantic bounds did
+  not hit the tab. The script now activates `doc-a-0` from the overflow menu, waits for the active
+  tab to become visible, and then drags it to `drop_end`.
+- The rebuilt suite also exposed an app-shell ownership defect: the demo runner applied
+  `workspace.*` commands to its app-owned model, then `WorkspaceCommandScope` replayed the same
+  command to that model. The demo now disables workspace-model command replay on the scope while
+  keeping focus-transfer hooks active.
+- Gates pass:
+  `rustfmt --edition 2024 --check apps/fret-examples/src/workspace_shell_demo.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs ecosystem/fret-workspace/src/command_scope.rs ecosystem/fret-workspace/src/commands.rs ecosystem/fret-workspace/src/panes.rs ecosystem/fret-workspace/src/tab_strip/drag_state.rs ecosystem/fret-workspace/src/tab_strip/intent.rs ecosystem/fret-workspace/src/tab_strip/mod.rs ecosystem/fret-workspace/src/tabs.rs`
+  passed;
+  `git diff --check` passed;
+  `cargo test --profile dev-fast -p fret-workspace --lib end_drop_release_resolves_to_specific_after_target -- --nocapture`
+  passed;
+  `cargo test --profile dev-fast -p fret-workspace --lib move_specific_tab_before_after_does_not_depend_on_active_tab -- --nocapture`
+  passed;
+  `cargo test --profile dev-fast -p fret-workspace --lib move_specific_tab_commands_do_not_cross_pinned_boundary -- --nocapture`
+  passed;
+  `cargo test --profile dev-fast -p fret-workspace --test workspace_command_scope_focus_tab_strip_from_outside_pane -- --nocapture`
+  passed;
+  `python tools/check_diag_scripts_registry.py` passed;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_workspace_shell_demo_tab_cross_pane_move_to_end script_v2_roundtrip_workspace_shell_demo_tab_overflow_activate_hidden_smoke --no-fail-fast --no-capture`
+  passed with Nextest run id `53b23aaa-eca2-43aa-8e4b-201a0ed6f152`;
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/workspace-shell-demo-tab-pin-commits-preview-smoke.json --dir target/fret-diag-workspace-shell-demo-pin-preview-after-scope-owner-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target/dev-fast/workspace_shell_demo.exe`
+  passed with run id `1779147052955`; and
+  `target/dev-fast/fretboard-dev.exe diag suite workspace-shell-demo --dir target/fret-diag-workspace-shell-demo-suite-after-scope-owner-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/workspace_shell_demo.exe`
+  passed with suite summary
+  `target/fret-diag-workspace-shell-demo-suite-after-scope-owner-v1/sessions/1779147074217-22776/suite.summary.json`
+  and overflow reorder run id `1779147195864`.

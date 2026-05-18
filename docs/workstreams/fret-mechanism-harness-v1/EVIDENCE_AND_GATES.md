@@ -4560,3 +4560,67 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - script run ids:
     chrome screenshot `1779136173632`, focus command scope `1779136260333`, tab commands smoke
     `1779136295210`, and tabstrip overflow select command `1779136342864`.
+
+## Workspace Shell Demo Tab Movement Ownership Gate
+
+- invariant:
+  workspace shell tab drag/drop must move the tab that started the drag, not whichever tab is active
+  by the time command dispatch reaches the app model. End-drop reorders must resolve to a concrete
+  tab target, local drag state must survive tabstrip subtree rebuilds, and overflow scripts must
+  start drags from visible hit-testable tab bounds.
+- finding:
+  the runtime reorder mechanism needed ownership hardening: tab strip intents still used
+  active-tab reorder commands, so focus/activation changes during drag could make the wrong tab the
+  subject of the move. The end-drop target was also a symbolic `End` target until late in the
+  path. After adding specific-tab move commands and resolving end-drop to a concrete after-target,
+  the overflow-reorder failure was a script authoring defect: the script dragged from a clipped
+  `doc-a-0` semantic bounds edge instead of first making that tab visible. A later rebuilt-suite
+  failure exposed a separate app-shell ownership defect: the demo runner applied the same
+  `workspace.*` command to the app model that `WorkspaceCommandScope` replayed afterward, so
+  non-idempotent commands such as `workspace.tab.toggle_pin` could run twice.
+- implementation anchors:
+  `ecosystem/fret-workspace/src/commands.rs`,
+  `ecosystem/fret-workspace/src/tabs.rs`,
+  `ecosystem/fret-workspace/src/tab_strip/intent.rs`,
+  `ecosystem/fret-workspace/src/tab_strip/mod.rs`,
+  `ecosystem/fret-workspace/src/tab_strip/drag_state.rs`,
+  `ecosystem/fret-workspace/src/command_scope.rs`,
+  `ecosystem/fret-workspace/tests/workspace_command_scope_focus_tab_strip_from_outside_pane.rs`,
+  `ecosystem/fret-workspace/src/panes.rs`,
+  `apps/fret-examples/src/workspace_shell_demo.rs`,
+  `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-overflow-activate-hidden-smoke.json`,
+  `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-reorder-first-to-end-overflow-smoke.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- focused gates:
+  `cargo test --profile dev-fast -p fret-workspace --lib end_drop_release_resolves_to_specific_after_target -- --nocapture`
+  - result: passed.
+  `cargo test --profile dev-fast -p fret-workspace --lib move_specific_tab_before_after_does_not_depend_on_active_tab -- --nocapture`
+  - result: passed.
+  `cargo test --profile dev-fast -p fret-workspace --lib move_specific_tab_commands_do_not_cross_pinned_boundary -- --nocapture`
+  - result: passed.
+  `cargo test --profile dev-fast -p fret-workspace --test workspace_command_scope_focus_tab_strip_from_outside_pane -- --nocapture`
+  - result: passed; proves `apply_workspace_model_commands(false)` suppresses generic model
+    command replay while preserving focus-transfer hooks.
+- protocol and registry gates:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_workspace_shell_demo_tab_cross_pane_move_to_end script_v2_roundtrip_workspace_shell_demo_tab_overflow_activate_hidden_smoke --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `53b23aaa-eca2-43aa-8e4b-201a0ed6f152`.
+  `python tools/check_diag_scripts_registry.py`
+  - result: passed; registry is up to date.
+- runtime diagnostics:
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/workspace-shell-demo-tab-pin-commits-preview-smoke.json --dir target/fret-diag-workspace-shell-demo-pin-preview-after-scope-owner-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target/dev-fast/workspace_shell_demo.exe`
+  - result: passed; run id `1779147052955`; AI packet
+    `target/fret-diag-workspace-shell-demo-pin-preview-after-scope-owner-v1/sessions/1779147049852-103016/1779147052955/ai.packet`.
+  `target/dev-fast/fretboard-dev.exe diag suite workspace-shell-demo --dir target/fret-diag-workspace-shell-demo-suite-after-scope-owner-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/workspace_shell_demo.exe`
+  - result: passed; suite summary
+    `target/fret-diag-workspace-shell-demo-suite-after-scope-owner-v1/sessions/1779147074217-22776/suite.summary.json`.
+  - script run ids:
+    cross-pane end-drop `1779147077239`, drag-and-scroll `1779147097134`,
+    drag-to-split-right `1779147109480`, overflow activate hidden `1779147140088`,
+    pin preview `1779147148834`, pinned boundary toggle `1779147156768`,
+    pinned cross-boundary drop `1779147168117`, preview commit keeps old tab `1779147179801`,
+    preview replaces existing `1779147187987`, and overflow reorder `1779147195864`.
+- static checks:
+  `rustfmt --edition 2024 --check apps/fret-examples/src/workspace_shell_demo.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs ecosystem/fret-workspace/src/command_scope.rs ecosystem/fret-workspace/src/commands.rs ecosystem/fret-workspace/src/panes.rs ecosystem/fret-workspace/src/tab_strip/drag_state.rs ecosystem/fret-workspace/src/tab_strip/intent.rs ecosystem/fret-workspace/src/tab_strip/mod.rs ecosystem/fret-workspace/src/tabs.rs`
+  - result: passed.
+  `git diff --check`
+  - result: passed.

@@ -35,6 +35,22 @@ pub const CMD_WORKSPACE_TAB_MOVE_BEFORE_PREFIX: &str = "workspace.tab.move_befor
 /// Shape: `workspace.tab.move_after.<target_tab_id>`
 pub const CMD_WORKSPACE_TAB_MOVE_AFTER_PREFIX: &str = "workspace.tab.move_after.";
 
+/// Prefix for "move a specific tab before another tab" commands.
+///
+/// Shape: `workspace.tab.move_before_id.<dragged_len>:<dragged_tab_id><target_tab_id>`
+///
+/// The length prefix keeps the command family deterministic for app-owned tab IDs that may contain
+/// dots or other separators.
+pub const CMD_WORKSPACE_TAB_MOVE_BEFORE_ID_PREFIX: &str = "workspace.tab.move_before_id.";
+
+/// Prefix for "move a specific tab after another tab" commands.
+///
+/// Shape: `workspace.tab.move_after_id.<dragged_len>:<dragged_tab_id><target_tab_id>`
+///
+/// The length prefix keeps the command family deterministic for app-owned tab IDs that may contain
+/// dots or other separators.
+pub const CMD_WORKSPACE_TAB_MOVE_AFTER_ID_PREFIX: &str = "workspace.tab.move_after_id.";
+
 pub const CMD_WORKSPACE_PANE_NEXT: &str = "workspace.pane.next";
 pub const CMD_WORKSPACE_PANE_PREV: &str = "workspace.pane.prev";
 
@@ -242,6 +258,52 @@ pub fn tab_move_active_after_command(target_id: &str) -> Option<CommandId> {
     Some(CommandId::new(Arc::<str>::from(format!(
         "{CMD_WORKSPACE_TAB_MOVE_AFTER_PREFIX}{id}"
     ))))
+}
+
+fn tab_move_specific_command(prefix: &str, dragged_id: &str, target_id: &str) -> Option<CommandId> {
+    let dragged = dragged_id.trim();
+    let target = target_id.trim();
+    if dragged.is_empty() || target.is_empty() {
+        return None;
+    }
+
+    Some(CommandId::new(Arc::<str>::from(format!(
+        "{prefix}{}:{dragged}{target}",
+        dragged.len()
+    ))))
+}
+
+pub fn tab_move_before_tab_command(dragged_id: &str, target_id: &str) -> Option<CommandId> {
+    tab_move_specific_command(
+        CMD_WORKSPACE_TAB_MOVE_BEFORE_ID_PREFIX,
+        dragged_id,
+        target_id,
+    )
+}
+
+pub fn tab_move_after_tab_command(dragged_id: &str, target_id: &str) -> Option<CommandId> {
+    tab_move_specific_command(
+        CMD_WORKSPACE_TAB_MOVE_AFTER_ID_PREFIX,
+        dragged_id,
+        target_id,
+    )
+}
+
+pub fn parse_tab_move_specific_payload(payload: &str) -> Option<(&str, &str)> {
+    let (len, rest) = payload.split_once(':')?;
+    let dragged_len = len.parse::<usize>().ok()?;
+    if dragged_len == 0 || dragged_len >= rest.len() || !rest.is_char_boundary(dragged_len) {
+        return None;
+    }
+
+    let (dragged, target) = rest.split_at(dragged_len);
+    let dragged = dragged.trim();
+    let target = target.trim();
+    if dragged.is_empty() || target.is_empty() {
+        return None;
+    }
+
+    Some((dragged, target))
 }
 
 pub fn pane_activate_command(id: &str) -> Option<CommandId> {

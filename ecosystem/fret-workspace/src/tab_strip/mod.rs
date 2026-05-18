@@ -63,7 +63,7 @@ use kernel::{
 };
 
 use consts::TAB_CHROME_PAD_RIGHT;
-use drag_state::{WorkspaceTabStripDragState, get_drag_model, read_drag_snapshot_for_pointer};
+use drag_state::{WorkspaceTabStripDragState, read_drag_snapshot_for_pointer};
 use geometry::{bounds_for_optional_element_id, collect_tab_hit_rects};
 use intent::{WorkspaceTabStripIntent, dispatch_intent};
 use interaction::{
@@ -160,6 +160,22 @@ fn workspace_tab_strip_release_claims_local_drop(
         || contains_release(state.scroll_right_control_rect)
 }
 
+fn workspace_tab_strip_resolve_end_drop_target(
+    drop_target: WorkspaceTabStripDropTarget,
+    pinned_by_id: &std::collections::HashMap<Arc<str>, bool>,
+    canonical_order: &[Arc<str>],
+    dragged: &str,
+) -> WorkspaceTabStripDropTarget {
+    match drop_target {
+        WorkspaceTabStripDropTarget::End => {
+            resolve_end_drop_target_in_canonical_order(pinned_by_id, canonical_order, dragged)
+                .map(|id| WorkspaceTabStripDropTarget::Tab(id, WorkspaceTabInsertionSide::After))
+                .unwrap_or(WorkspaceTabStripDropTarget::None)
+        }
+        other => other,
+    }
+}
+
 fn workspace_tab_strip_clear_cross_pane_drag_on_local_release(
     state: &mut WorkspaceTabDragState,
     pointer_id: fret_core::PointerId,
@@ -171,6 +187,38 @@ fn workspace_tab_strip_clear_cross_pane_drag_on_local_release(
     } else {
         false
     }
+}
+
+fn workspace_tab_strip_drag_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    pane_id: Option<&Arc<str>>,
+    root_test_id: Option<&Arc<str>>,
+) -> Model<WorkspaceTabStripDragState> {
+    let id_name = format!(
+        "fret-workspace.tab-strip-drag:{}:{}",
+        pane_id.map(|id| id.as_ref()).unwrap_or("<none>"),
+        root_test_id.map(|id| id.as_ref()).unwrap_or("<none>")
+    );
+    let id = fret_ui::elements::global_root(cx.window, &id_name);
+    cx.model_for(id, WorkspaceTabStripDragState::default)
+}
+
+fn workspace_tab_strip_local_drag_payload_from_shared_state(
+    state: &WorkspaceTabDragState,
+    pointer_id: fret_core::PointerId,
+    window: fret_core::AppWindowId,
+    pane_id: Option<&Arc<str>>,
+) -> Option<Arc<str>> {
+    if state.pointer != Some(pointer_id) || state.source_window != Some(window) {
+        return None;
+    }
+
+    let pane_id = pane_id?;
+    if state.source_pane.as_deref() != Some(pane_id.as_ref()) {
+        return None;
+    }
+
+    state.dragged_tab.clone()
 }
 
 #[derive(Debug, Clone)]
@@ -391,7 +439,8 @@ impl WorkspaceTabStrip {
             row_height
         };
 
-        let drag_model = get_drag_model(cx);
+        let drag_model =
+            workspace_tab_strip_drag_model(cx, pane_id.as_ref(), root_test_id.as_ref());
         cx.observe_model(&drag_model, Invalidation::Paint);
 
         let dnd = ui_dnd::dnd_service_model(cx);
@@ -946,20 +995,13 @@ impl WorkspaceTabStrip {
                                                                         scroll_right_control_rect,
                                                                         two_row_pinned,
                                                                     );
-                                                                if matches!(drop_target, WorkspaceTabStripDropTarget::End) {
-                                                                    drop_target = resolve_end_drop_target_in_canonical_order(
+                                                                drop_target = workspace_tab_strip_resolve_end_drop_target(
+                                                                    drop_target,
                                                                         pinned_by_id.as_ref(),
                                                                         canonical_tab_order.as_ref(),
                                                                         dragged.as_ref(),
-                                                                    )
-                                                                    .map(|id| {
-                                                                        WorkspaceTabStripDropTarget::Tab(
-                                                                            id,
-                                                                            WorkspaceTabInsertionSide::After,
-                                                                        )
-                                                                    })
-                                                                    .unwrap_or(WorkspaceTabStripDropTarget::None);
-                                                                } else if let WorkspaceTabStripDropTarget::Tab(target, _) =
+                                                                );
+                                                                if let WorkspaceTabStripDropTarget::Tab(target, _) =
                                                                     &drop_target
                                                                 {
                                                                     let dragged_is_pinned =
@@ -1215,23 +1257,14 @@ impl WorkspaceTabStrip {
                                                                                     );
                                                                             }
 
-                                                                            if matches!(
-                                                                                next_drop,
-                                                                                WorkspaceTabStripDropTarget::End
-                                                                            ) {
-                                                                                next_drop = resolve_end_drop_target_in_canonical_order(
+                                                                            next_drop =
+                                                                                workspace_tab_strip_resolve_end_drop_target(
+                                                                                    next_drop,
                                                                                     pinned_by_id.as_ref(),
                                                                                     canonical_tab_order.as_ref(),
                                                                                     dragged.as_ref(),
-                                                                                )
-                                                                                .map(|id| {
-                                                                                    WorkspaceTabStripDropTarget::Tab(
-                                                                                        id,
-                                                                                        WorkspaceTabInsertionSide::After,
-                                                                                    )
-                                                                                })
-                                                                                .unwrap_or(WorkspaceTabStripDropTarget::None);
-                                                                            } else if let WorkspaceTabStripDropTarget::Tab(target, _) =
+                                                                                );
+                                                                            if let WorkspaceTabStripDropTarget::Tab(target, _) =
                                                                                 &next_drop
                                                                             {
                                                                                 let dragged_is_pinned = pinned_by_id
@@ -1454,6 +1487,14 @@ impl WorkspaceTabStrip {
                                                                     }
                                                                 }
 
+                                                                maybe_drop =
+                                                                    workspace_tab_strip_resolve_end_drop_target(
+                                                                        maybe_drop,
+                                                                        pinned_by_id.as_ref(),
+                                                                        canonical_tab_order.as_ref(),
+                                                                        tab_id_for_pinned_boundary.as_ref(),
+                                                                    );
+
                                                                 match maybe_drop {
                                                                     WorkspaceTabStripDropTarget::None => {}
                                                                     WorkspaceTabStripDropTarget::Tab(target, side) => {
@@ -1465,7 +1506,8 @@ impl WorkspaceTabStrip {
                                                                         dispatch_intent(
                                                                             host,
                                                                             acx.window,
-                                                                            WorkspaceTabStripIntent::ReorderActive {
+                                                                            WorkspaceTabStripIntent::ReorderTab {
+                                                                                tab_id: tab_id_for_pinned_boundary.clone(),
                                                                                 target_tab_id: target,
                                                                                 side,
                                                                             },
@@ -2115,6 +2157,8 @@ impl WorkspaceTabStrip {
                             let end_drop_drag_model = drag_model.clone();
                             let end_drop_pinned_by_id = pinned_by_id.clone();
                             let end_drop_canonical_tab_order = canonical_tab_order.clone();
+                            let end_drop_tab_drag_model = tab_drag_model.clone();
+                            let end_drop_pane_id = pane_id.clone();
                             let end_drop = cx.keyed("workspace-tab-strip-drop-end", |cx| {
                                 let mut layout = LayoutStyle::default();
                                 layout.size.height = Length::Fill;
@@ -2125,6 +2169,8 @@ impl WorkspaceTabStrip {
                                 let drag_model = end_drop_drag_model.clone();
                                 let pinned_by_id = end_drop_pinned_by_id.clone();
                                 let canonical_tab_order = end_drop_canonical_tab_order.clone();
+                                let tab_drag_model = end_drop_tab_drag_model.clone();
+                                let pane_id = end_drop_pane_id.clone();
                                 let on_internal_drag: OnInternalDrag =
                                     Arc::new(move |host, acx, drag| {
                                         if !matches!(
@@ -2135,6 +2181,7 @@ impl WorkspaceTabStrip {
                                             return false;
                                         }
 
+                                        let mut intent: Option<(Arc<str>, Arc<str>)> = None;
                                         let _ = host.models_mut().update(&drag_model, |st| {
                                             if st.pointer != Some(drag.pointer_id) {
                                                 return;
@@ -2145,20 +2192,86 @@ impl WorkspaceTabStrip {
                                                 return;
                                             };
 
-                                            let next = resolve_end_drop_target_in_canonical_order(
+                                            let next = workspace_tab_strip_resolve_end_drop_target(
+                                                WorkspaceTabStripDropTarget::End,
                                                 pinned_by_id.as_ref(),
                                                 canonical_tab_order.as_ref(),
                                                 dragged.as_ref(),
-                                            )
-                                            .map(|id| {
+                                            );
+                                            if let (
+                                                fret_core::InternalDragKind::Drop,
                                                 WorkspaceTabStripDropTarget::Tab(
-                                                    id,
+                                                    target,
                                                     WorkspaceTabInsertionSide::After,
-                                                )
-                                            })
-                                            .unwrap_or(WorkspaceTabStripDropTarget::None);
+                                                ),
+                                            ) = (drag.kind, next.clone())
+                                            {
+                                                intent = Some((dragged.clone(), target));
+                                            }
                                             st.drop_target = next;
                                         });
+
+                                        if intent.is_none()
+                                            && matches!(
+                                                drag.kind,
+                                                fret_core::InternalDragKind::Drop
+                                            )
+                                            && let Some(model) = tab_drag_model.as_ref()
+                                        {
+                                            let _ = host.models_mut().read(model, |st| {
+                                                let Some(dragged) =
+                                                    workspace_tab_strip_local_drag_payload_from_shared_state(
+                                                        st,
+                                                        drag.pointer_id,
+                                                        acx.window,
+                                                        pane_id.as_ref(),
+                                                    )
+                                                else {
+                                                    return;
+                                                };
+                                                if let WorkspaceTabStripDropTarget::Tab(
+                                                    target,
+                                                    WorkspaceTabInsertionSide::After,
+                                                ) = workspace_tab_strip_resolve_end_drop_target(
+                                                    WorkspaceTabStripDropTarget::End,
+                                                    pinned_by_id.as_ref(),
+                                                    canonical_tab_order.as_ref(),
+                                                    dragged.as_ref(),
+                                                ) {
+                                                    intent = Some((dragged, target));
+                                                }
+                                            });
+                                        }
+
+                                        if let Some((dragged, target)) = intent {
+                                            if let Some(cmd) =
+                                                crate::commands::tab_activate_command(dragged.as_ref())
+                                            {
+                                                host.dispatch_command(Some(acx.window), cmd);
+                                            }
+                                            if let Some(cmd) =
+                                                crate::commands::tab_move_after_tab_command(
+                                                    dragged.as_ref(),
+                                                    target.as_ref(),
+                                                )
+                                            {
+                                                host.dispatch_command(Some(acx.window), cmd);
+                                            }
+                                            if let Some(model) = tab_drag_model.as_ref() {
+                                                let _ = host.models_mut().update(model, |st| {
+                                                    workspace_tab_strip_clear_cross_pane_drag_on_local_release(
+                                                        st,
+                                                        drag.pointer_id,
+                                                        acx.window,
+                                                    );
+                                                });
+                                            }
+                                            let _ = host.models_mut().update(&drag_model, |st| {
+                                                if st.pointer == Some(drag.pointer_id) {
+                                                    *st = WorkspaceTabStripDragState::default();
+                                                }
+                                            });
+                                        }
 
                                         host.request_redraw(acx.window);
                                         true
@@ -2277,9 +2390,12 @@ impl WorkspaceTabStrip {
                             // drag move can resolve drop targets immediately (no "first move has no
                             // rects" gap).
                             let should_sync_rects = true;
-                            let should_clear = drag_snapshot.dragged_tab.as_ref().is_some_and(|dragged| {
-                                !rects_for_hit.iter().any(|r| r.id.as_ref() == dragged.as_ref())
-                            });
+                            let should_clear =
+                                drag_snapshot.dragged_tab.as_ref().is_some_and(|dragged| {
+                                    !canonical_tab_order
+                                        .iter()
+                                        .any(|id| id.as_ref() == dragged.as_ref())
+                                });
                             let rects_changed = rects_for_hit != drag_snapshot.tab_rects;
                             let pinned_boundary_changed =
                                 pinned_boundary_rect_now != drag_snapshot.pinned_boundary_rect;
@@ -2376,21 +2492,12 @@ impl WorkspaceTabStrip {
                                             scroll_right_control_rect_now,
                                             use_separate_pinned_row,
                                         );
-                                    let next = match next {
-                                        WorkspaceTabStripDropTarget::End => resolve_end_drop_target_in_canonical_order(
-                                            pinned_by_id.as_ref(),
-                                            canonical_tab_order.as_ref(),
-                                            dragged,
-                                        )
-                                        .map(|id| {
-                                            WorkspaceTabStripDropTarget::Tab(
-                                                id,
-                                                WorkspaceTabInsertionSide::After,
-                                            )
-                                        })
-                                        .unwrap_or(WorkspaceTabStripDropTarget::None),
-                                        other => other,
-                                    };
+                                    let next = workspace_tab_strip_resolve_end_drop_target(
+                                        next,
+                                        pinned_by_id.as_ref(),
+                                        canonical_tab_order.as_ref(),
+                                        dragged,
+                                    );
                                     if next != drag_snapshot.drop_target {
                                         let _ = cx.app.models_mut().update(&drag_model, |st| {
                                             if st.pointer != Some(pointer_id) {
@@ -3114,6 +3221,29 @@ mod tests {
             Point::new(Px(200.0), Px(16.0)),
             &WorkspaceTabStripDropTarget::None,
         ));
+    }
+
+    #[test]
+    fn end_drop_release_resolves_to_specific_after_target() {
+        let canonical = vec![
+            Arc::<str>::from("doc-a-0"),
+            Arc::<str>::from("doc-a-1"),
+            Arc::<str>::from("doc-a-2"),
+        ];
+        let pinned_by_id = std::collections::HashMap::new();
+
+        assert_eq!(
+            workspace_tab_strip_resolve_end_drop_target(
+                WorkspaceTabStripDropTarget::End,
+                &pinned_by_id,
+                &canonical,
+                "doc-a-0",
+            ),
+            WorkspaceTabStripDropTarget::Tab(
+                Arc::<str>::from("doc-a-2"),
+                WorkspaceTabInsertionSide::After,
+            )
+        );
     }
 
     #[test]

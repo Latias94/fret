@@ -119,6 +119,20 @@ fn script_v2_roundtrip_ui_gallery_workspace_tabstrip_overflow_select_command() {
 }
 
 #[test]
+fn script_v2_roundtrip_workspace_shell_demo_tab_cross_pane_move_to_end() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/workspace-shell-demo-tab-cross-pane-move-to-end.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_workspace_shell_demo_tab_overflow_activate_hidden_smoke() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/workspace-shell-demo-tab-overflow-activate-hidden-smoke.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_set_window_preferences_defaults() {
     assert_script_v2_roundtrip(
         r#"{

@@ -1095,3 +1095,15 @@ date: 2026-05-12
     Gallery driver and script expected visible-order cycling. UI Gallery now sets its single-pane
     workspace layout to `TabCycleMode::InOrder`, and the workspace shell suite passes with the new
     overflow gate included.
+- [x] Promote workspace shell demo tab movement ownership into the runtime suite.
+  - Result: workspace tab strip drag/drop now dispatches specific-tab move commands instead of
+    relying on whichever tab is active at command-application time. The end-drop surface resolves
+    to a concrete `move_after_id` target, local and cross-pane drag state is keyed by stable
+    window/root identity, and the workspace shell demo suite covers cross-pane end-drop, overflow
+    activation, pinned-boundary rejection, preview preservation, and overflow reorder. The final
+    runtime failure in the overflow reorder script was an authoring issue: the script dragged from
+    a clipped `doc-a-0` bounds edge. It now activates `doc-a-0` through the overflow menu first,
+    waits until the active tab is visible, and then drops onto `drop_end`. The rebuilt suite then
+    exposed a command ownership defect: the demo runner and `WorkspaceCommandScope` both applied
+    non-idempotent workspace model commands. The demo now keeps scope-owned focus-transfer hooks but
+    disables scope replay of model commands already handled by the runner.

@@ -504,7 +504,10 @@ struct SplitResizeModelState {
 
 #[track_caller]
 fn get_tab_drag_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<WorkspaceTabDragState> {
-    cx.model_for(cx.root_id(), WorkspaceTabDragState::default)
+    cx.model_for(
+        fret_ui::elements::global_root(cx.window, "fret-workspace.pane-tree-tab-drag"),
+        WorkspaceTabDragState::default,
+    )
 }
 
 #[track_caller]
