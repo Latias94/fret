@@ -912,3 +912,10 @@ date: 2026-05-12
     via `debug_hit_test_routing`. No new mechanism defect was reproduced; the first red assertion
     was a harness-oracle issue because the old point legitimately hit the expanded outer row, not
     the moved absolute child.
+- [x] Add renderer-level font trace predicates to the Combobox long-text gate.
+  - Result: diagnostics could already capture renderer font trace bundles, but scripts could not
+    assert the text-preparation facts directly. The new
+    `render_text_font_trace_entries_matching_ge` predicate lets the LTR Combobox long-text gate
+    prove the selected label is prepared with `font=ui`, `wrap=none`, `overflow=ellipsis`, and
+    `missing_glyphs=0`. The first runtime drafts found a static-page `wait_frames` stall in the
+    script, not a Combobox or renderer defect; the corrected gate uses semantic convergence waits.

@@ -8,6 +8,7 @@
       "diag.screenshot_png"
     ],
     "env_defaults": {
+      "FRET_TEXT_FONT_TRACE_ALL": "1",
       "FRET_UI_GALLERY_START_PAGE": "combobox",
       "FRET_UI_GALLERY_START_SECTION": "Long Text"
     },
@@ -28,10 +29,20 @@
       },
       "timeout_frames": 600
     },
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "render_text_font_trace_entries_matching_ge",
+        "min": 1,
+        "text_contains": "Enterprise Observability",
+        "font": "ui",
+        "wrap": "none",
+        "overflow": "ellipsis",
+        "missing_glyphs": 0
+      },
+      "timeout_frames": 240
+    },
     { "type": "set_window_inner_size", "width_px": 900.0, "height_px": 760.0 },
-    { "type": "wait_frames", "n": 20 },
     {
       "type": "wait_until",
       "predicate": {

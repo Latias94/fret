@@ -1604,3 +1604,23 @@ Status: complete for clean-reuse ViewCache movement of a mixed flow plus absolut
   with Nextest run id `a49ebb69-7e9a-4b66-bc83-7f5f52d35a0e`.
 - Formatting passes:
   `cargo fmt -p fret-ui --check`.
+
+## M92: Renderer Font Trace Predicate for Combobox Long Text
+
+Status: complete for script-level renderer text-preparation evidence on the LTR Combobox
+long-text gate.
+
+- Added `render_text_font_trace_entries_matching_ge`, a diagnostics predicate that filters
+  renderer font trace entries by text preview, `FontId`, wrap mode, overflow mode, missing glyph
+  count, and optional family usage metadata.
+- Promoted `ui-gallery-combobox-long-text-geometry.json` from geometry-only long-text evidence to
+  renderer-backed evidence by enabling `FRET_TEXT_FONT_TRACE_ALL=1` and asserting the selected
+  long label is prepared with `font=ui`, `wrap=none`, `overflow=ellipsis`, and
+  `missing_glyphs=0`.
+- The first runtime drafts found a diagnostics script issue, not a Combobox or renderer defect:
+  bare `wait_frames` steps can stall on this static page. The corrected script uses bounded
+  predicate convergence instead.
+- Protocol and evaluator gates pass with Nextest run ids
+  `88d1c4cf-a5e7-4b17-91bd-998df1857420` and
+  `4ec491be-913d-47fa-b1e3-d7e756594342`.
+- The runtime diagnostics gate passes with run id `1779077880731`.

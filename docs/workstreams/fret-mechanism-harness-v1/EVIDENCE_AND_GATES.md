@@ -731,17 +731,32 @@ Current evidence anchors:
     `target/fret-diag-combobox-popup-bottom-room-label-checkmark/sessions/1778616793292-16876/script.result.json`
   - bottom-room bundle with item child anchors:
     `target/fret-diag-combobox-popup-bottom-room-label-checkmark/sessions/1778616793292-16876/1778616796767-ui-gallery-combobox-popup-trigger-bottom-room-open/bundle.schema2.json`
-- Combobox long-text trigger/option geometry gate:
+- Combobox long-text trigger/option geometry and renderer font-trace gate:
   `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-long-text-geometry.json`
   - asserts trigger label width budget, label-before-chevron right delta, chrome-relative vertical
     centering, popup placement, option label width budget, option label/checkmark insets, and
     option label vertical centering.
+  - now also enables `FRET_TEXT_FONT_TRACE_ALL=1` and asserts at least one renderer font trace
+    entry for the selected "Enterprise Observability" label with `font=ui`, `wrap=none`,
+    `overflow=ellipsis`, and `missing_glyphs=0`.
   - focused test:
     `combobox_trigger_long_label_stays_before_chevron`
   - evidence:
     `target/fret-diag-combobox-long-text-geometry-v4/sessions/1778619498565-104108/script.result.json`
   - bundle with long-text child anchors:
     `target/fret-diag-combobox-long-text-geometry-v4/sessions/1778619498565-104108/1778619501160-ui-gallery-combobox-long-text-open/bundle.schema2.json`
+  - renderer font-trace predicate protocol/evaluator gates:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_render_text_font_trace_entries_matching_ge_serializes_and_deserializes script_v2_roundtrip_ui_gallery_combobox_long_text_geometry --no-fail-fast --no-capture`
+    passed with Nextest run id `88d1c4cf-a5e7-4b17-91bd-998df1857420`.
+    `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics render_text_font_trace_matching_predicate_matches_renderer_text_facts --no-fail-fast --no-capture`
+    passed with Nextest run id `4ec491be-913d-47fa-b1e3-d7e756594342`.
+  - renderer font-trace runtime evidence:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-long-text-geometry.json --dir target/fret-diag-combobox-long-text-geometry-renderer-trace-v4 --session-auto --pack --ai-packet --launch -- target/dev-fast/fret-ui-gallery.exe`
+    passed with run id `1779077880731`.
+  - renderer font-trace runtime artifacts:
+    `target/fret-diag-combobox-long-text-geometry-renderer-trace-v4/sessions/1779077868548-173912/script.result.json`,
+    `target/fret-diag-combobox-long-text-geometry-renderer-trace-v4/sessions/1779077868548-173912/1779077880731/ai.packet`,
+    `target/fret-diag-combobox-long-text-geometry-renderer-trace-v4/sessions/1779077868548-173912/share/1779077880731.zip`
 - Combobox RTL long-text trigger/option geometry gate:
   `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-geometry.json`
   - asserts trigger label width budget, physical-left RTL chevron inset, label-after-chevron
