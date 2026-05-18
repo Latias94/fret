@@ -606,6 +606,8 @@
     "apps/fret-ui-gallery/src/ui/snippets/ai/test_results_large_demo.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/tool_demo.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/suggestions_demo.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/ai/queue_prompt_input_demo.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/ai/transcription_demo.rs",
     "apps/fret-ui-gallery/tests/ai_visible_text_role_surface.rs",
     "ecosystem/fret-ui-ai/src/elements/mod.rs",
     "ecosystem/fret-ui-ai/src/surface_policy_tests.rs",

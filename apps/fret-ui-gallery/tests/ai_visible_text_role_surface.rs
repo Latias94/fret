@@ -584,3 +584,90 @@ fn ai_tool_and_suggestions_use_shared_text_roles_and_non_text_markers() {
         );
     }
 }
+
+#[test]
+fn ai_queue_prompt_input_and_transcription_use_shared_text_roles_and_non_text_markers() {
+    for (name, source, title, body, marker_id) in [
+        (
+            "queue_prompt_input_demo",
+            include_str!("../src/ui/snippets/ai/queue_prompt_input_demo.rs"),
+            "Queue + PromptInput (AI Elements)",
+            "Docs-aligned composition: content-only QueueSection above PromptInput tools.",
+            "ui-ai-queue-prompt-input-sent-count-1",
+        ),
+        (
+            "transcription_demo",
+            include_str!("../src/ui/snippets/ai/transcription_demo.rs"),
+            "App-owned timeline + interactive transcript",
+            "Drag the scrubber or click a segment to seek. The transcript consumes app-owned current_time just like the official AI Elements example.",
+            "ui-ai-transcription-demo-time-zero",
+        ),
+    ] {
+        let canonical = canonicalize_rust_fragment(source);
+
+        for marker in [
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "fn state_marker",
+            "SemanticsRole::Generic",
+            "cx.spacer(SpacerProps",
+            marker_id,
+            "decl_text::text_section_chrome_label",
+            title,
+            "decl_text::text_paragraph",
+            body,
+        ] {
+            let marker = canonicalize_rust_fragment(marker);
+            assert!(
+                canonical.contains(&marker),
+                "{name} should route fixed visible text and state markers through shared non-bare roles; missing `{marker}`"
+            );
+        }
+
+        for forbidden in [
+            "role: fret_core::SemanticsRole::Text",
+            "cx.text(\"\")",
+            &format!("cx.text(\"{title}\")"),
+            &format!("cx.text(\"{body}\")"),
+        ] {
+            let forbidden = canonicalize_rust_fragment(forbidden);
+            assert!(
+                !canonical.contains(&forbidden),
+                "{name} reintroduced bare visible text/state marker text: `{forbidden}`"
+            );
+        }
+    }
+
+    let queue_prompt = canonicalize_rust_fragment(include_str!(
+        "../src/ui/snippets/ai/queue_prompt_input_demo.rs"
+    ));
+    for marker in [
+        "decl_text::text_button_label(cx, \"Search\")",
+        "state_marker(cx, \"ui-ai-queue-prompt-input-sent-count-1\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            queue_prompt.contains(&marker),
+            "queue_prompt_input_demo should route custom prompt-button text and sent marker through shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in ["ui::text(\"Search\")", "cx.text(\"Search\")"] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !queue_prompt.contains(&forbidden),
+            "queue_prompt_input_demo reintroduced a bare custom prompt-button label: `{forbidden}`"
+        );
+    }
+
+    let transcription =
+        canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/transcription_demo.rs"));
+    for marker in [
+        "ui-ai-transcription-demo-time-nonzero",
+        "ui-ai-transcription-demo-active-{active_index}",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            transcription.contains(&marker),
+            "transcription_demo should preserve diagnostics marker ids while keeping them non-text; missing `{marker}`"
+        );
+    }
+}

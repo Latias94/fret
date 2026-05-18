@@ -653,6 +653,13 @@ Run evidence:
   Suggestions custom-children content stays app-owned for a later custom-content semantics pass.
   Gates: `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
   --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: extended the AI visible text-role migration to QueuePromptInput and Transcription.
+  QueuePromptInput now uses a generic zero-size `SpacerProps` anchor for the sent-count diagnostics
+  marker, routes the custom Search button child through `text_button_label(...)`, and keeps fixed
+  outer title/body copy on shared section-chrome/paragraph roles. Transcription now uses generic
+  zero-size spacer markers for time/active diagnostics anchors while routing fixed title/body copy
+  through shared roles. Gates: `cargo nextest run -p fret-ui-gallery --test
+  ai_visible_text_role_surface --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
 - 2026-05-18: `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
   --no-fail-fast` passed after the large/status snippet slice landed. `python
   tools/gate_imui_workstream_source.py`, `python -m py_compile
@@ -2012,6 +2019,16 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   ai_visible_text_role_surface --no-fail-fast` passed.
 - `python tools/gate_imui_workstream_source.py` passed after replacing a rustfmt-sensitive
   CommitLarge marker check with stable split markers.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 AI queue-prompt/transcription text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ai_visible_text_role_surface` passed.
+- `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools/gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
 - `git diff --check` passed.

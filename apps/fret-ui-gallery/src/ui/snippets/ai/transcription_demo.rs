@@ -4,12 +4,36 @@ pub const SOURCE: &str = include_str!("transcription_demo.rs");
 use fret::{AppComponentCx, UiChild};
 use fret_ui::Invalidation;
 use fret_ui::Theme;
-use fret_ui::element::SemanticsProps;
+use fret_ui::element::{AnyElement, Length, SemanticsProps, SpacerProps};
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::typography;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
 use std::sync::Arc;
+
+fn state_marker(cx: &mut AppComponentCx<'_>, test_id: impl Into<Arc<str>>) -> AnyElement {
+    cx.semantics(
+        SemanticsProps {
+            role: fret_core::SemanticsRole::Generic,
+            test_id: Some(test_id.into()),
+            ..Default::default()
+        },
+        |cx| {
+            vec![cx.spacer(SpacerProps {
+                layout: fret_ui::element::LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: Length::Px(fret_core::Px(0.0)),
+                        height: Length::Px(fret_core::Px(0.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                min: fret_core::Px(0.0),
+            })]
+        },
+    )
+}
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let current_time = cx.local_model_keyed("current_time", || 0.0_f32);
@@ -43,17 +67,13 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .get_model_copied(&current_time, Invalidation::Paint)
         .unwrap_or(0.0);
 
-    let time_marker = cx.semantics(
-        SemanticsProps {
-            role: fret_core::SemanticsRole::Text,
-            test_id: Some(Arc::from(if time_now <= 0.0 {
-                "ui-ai-transcription-demo-time-zero"
-            } else {
-                "ui-ai-transcription-demo-time-nonzero"
-            })),
-            ..Default::default()
+    let time_marker = state_marker(
+        cx,
+        if time_now <= 0.0 {
+            "ui-ai-transcription-demo-time-zero"
+        } else {
+            "ui-ai-transcription-demo-time-nonzero"
         },
-        |cx| vec![cx.text("")],
     );
 
     let active_index = segments
@@ -63,14 +83,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .unwrap_or(0);
     let active_test_id: Arc<str> =
         Arc::from(format!("ui-ai-transcription-demo-active-{active_index}"));
-    let active_marker = cx.semantics(
-        SemanticsProps {
-            role: fret_core::SemanticsRole::Text,
-            test_id: Some(active_test_id),
-            ..Default::default()
-        },
-        |cx| vec![cx.text("")],
-    );
+    let active_marker = state_marker(cx, active_test_id);
 
     let theme = Theme::global(&*cx.app).clone();
     let transcript_style =
@@ -140,8 +153,9 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("App-owned timeline + interactive transcript"),
-            cx.text(
+            decl_text::text_section_chrome_label(cx, "App-owned timeline + interactive transcript"),
+            decl_text::text_paragraph(
+                cx,
                 "Drag the scrubber or click a segment to seek. The transcript consumes app-owned current_time just like the official AI Elements example.",
             ),
             transport,

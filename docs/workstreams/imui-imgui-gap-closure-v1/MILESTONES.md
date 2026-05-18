@@ -473,6 +473,11 @@ Exit criteria:
   Suggestions now keep fixed outer chrome/prose on shared roles. StackTraceLarge/TestResultsLarge
   diagnostics anchors and the Tool/Suggestions test markers now use generic zero-size spacers
   instead of empty `Text`; Tool's fixed state-section labels use section-chrome text.
+  2026-05-18 AI queue-prompt/transcription text-role result: QueuePromptInput now keeps its
+  sent-count diagnostics anchor out of text layout semantics, routes the custom Search button child
+  through `text_button_label(...)`, and keeps fixed outer title/body copy on shared roles.
+  Transcription now uses generic zero-size spacer markers for time/active diagnostics anchors while
+  routing fixed title/body copy through shared section-chrome/paragraph roles.
   2026-05-17 gallery data-grid text result: the UI Gallery DataGrid preview now routes virtualized
   grid cells through `text_table_cell(...)` and the selected-row status line through
   `control_readout_text(...)`.

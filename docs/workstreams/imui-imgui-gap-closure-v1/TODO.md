@@ -516,6 +516,11 @@ Readiness order for the next locally testable review slices:
    through shared section-chrome/paragraph roles. Tool's fixed state-section labels also use
    section-chrome text; Suggestions custom-children content stays app-owned for a later custom
    content semantics pass.
+   2026-05-18 AI queue-prompt/transcription text-role follow-up: QueuePromptInput now routes its
+   sent-count diagnostics marker through a generic zero-size spacer marker, its custom Search
+   button child through `text_button_label(...)`, and fixed outer title/body copy through shared
+   section-chrome/paragraph roles. Transcription now uses generic zero-size spacer markers for
+   time/active diagnostics anchors while keeping fixed title/body copy on shared roles.
    2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
    virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
    `control_readout_text(...)`.
