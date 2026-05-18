@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("nested.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -71,10 +72,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                             .into_element(cx),
                         ui::v_stack(move |cx| {
                             vec![
-                                ui::text(
+                                decl_text::text_paragraph(
+                                    cx,
                                     "Open the child drawer, then drag its handle. The child should track the drag while the parent remains stationary.",
                                 )
-                                .text_sm()
                                 .into_element(cx),
                                 child,
                             ]

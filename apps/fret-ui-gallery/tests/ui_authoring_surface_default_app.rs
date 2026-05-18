@@ -2922,6 +2922,44 @@ fn drawer_scroll_and_side_body_text_uses_shared_roles() {
 }
 
 #[test]
+fn drawer_remaining_custom_text_uses_shared_roles() {
+    for (relative_path, unit_label) in [
+        ("src/ui/snippets/drawer/demo.rs", "Calories/day"),
+        ("src/ui/snippets/drawer/rtl.rs", "سعرات حرارية/يوم"),
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, current_goal.to_string())",
+                &format!("decl_text::text_control_readout(cx, \"{unit_label}\")"),
+            ],
+            &["ui::text(current_goal.to_string())", "ui::text(\""],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/drawer/nested.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_paragraph(",
+            "Open the child drawer, then drag its handle. The child should track the drag while the parent remains stationary.",
+        ],
+        &["ui::text("],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/drawer/outside_press.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_paragraph(",
+            "The probe below exists only to make modal outside-press routing deterministic in the gallery and diag scripts.",
+            "decl_text::text_control_readout(cx, format!(\"Underlay activations: {probe_count}\"))",
+        ],
+        &["ui::text("],
+    );
+}
+
+#[test]
 fn drawer_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/drawer.rs",

@@ -645,6 +645,9 @@ Exit criteria:
   2026-05-19 gallery Drawer scroll/side text result: drawer scroll filler rows now use shared
   list-row label text, side body examples use paragraph text, and the scroll helper was renamed
   from `paragraph_block` to `scroll_rows` to match the fixed-row role.
+  2026-05-19 gallery Drawer goal/diagnostics text result: demo/RTL goal numbers and unit labels
+  now use shared control-readout text, nested drawer guidance uses paragraph text, and outside-press
+  probe copy/status no longer emits bare `ui::text`.
   2026-05-17 gallery editor preview text result: code-editor, Markdown, and Web IME preview
   headers now use paragraph text for prose, control readout text for fixed status/debug values,
   and button label text for custom pointer-region actions. The slice keeps editor-proof resize

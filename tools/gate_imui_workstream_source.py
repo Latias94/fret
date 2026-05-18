@@ -528,6 +528,10 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/snippets/dialog/scrollable_content.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/dialog/sticky_footer.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/drawer/scrollable_content.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/drawer/demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/drawer/nested.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/drawer/outside_press.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/drawer/rtl.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/drawer/sides.rs",
                 "apps/fret-ui-gallery/tests/ai_visible_text_role_surface.rs",
                 "ecosystem/fret-ui-ai/src/elements/mod.rs",
@@ -1935,6 +1939,8 @@ def main() -> None:
                 "instead of `ui::raw_text(format!(...))`",
                 "2026-05-19 gallery Drawer scroll/side text follow-up",
                 "historical `paragraph_block` helper name is gone",
+                "2026-05-19 gallery Drawer goal/diagnostics text follow-up",
+                "probe status/description now use shared paragraph/control-readout roles",
             ],
             forbidden=[
                 "Remaining advanced-table candidates are freeze panes, persistence, and old columns API shape",
@@ -1968,6 +1974,8 @@ def main() -> None:
                 "without changing shadcn dialog recipes",
                 "2026-05-19 gallery Drawer scroll/side text result",
                 "from `paragraph_block` to `scroll_rows`",
+                "2026-05-19 gallery Drawer goal/diagnostics text result",
+                "probe copy/status no longer emits bare `ui::text`",
             ],
             forbidden=[
                 "remain advanced-table candidates",
@@ -2260,6 +2268,12 @@ def main() -> None:
                 "`apps/fret-ui-gallery/src/ui/snippets/drawer/scrollable_content.rs`",
                 "`apps/fret-ui-gallery/src/ui/snippets/drawer/sides.rs`",
                 "drawer_scroll_and_side_body_text_uses_shared_roles --no-fail-fast",
+                "2026-05-19 gallery Drawer goal/diagnostics text-role slice",
+                "`apps/fret-ui-gallery/src/ui/snippets/drawer/demo.rs`",
+                "`apps/fret-ui-gallery/src/ui/snippets/drawer/nested.rs`",
+                "`apps/fret-ui-gallery/src/ui/snippets/drawer/outside_press.rs`",
+                "`apps/fret-ui-gallery/src/ui/snippets/drawer/rtl.rs`",
+                "drawer_remaining_custom_text_uses_shared_roles --no-fail-fast",
                 "cargo check -p fret-examples",
             ],
             forbidden=[
@@ -3492,6 +3506,54 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/drawer/demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, current_goal.to_string())",
+                "decl_text::text_control_readout(cx, \"Calories/day\")",
+            ],
+            forbidden=[
+                "ui::text(current_goal.to_string())",
+                "ui::text(\"Calories/day\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/drawer/rtl.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(",
+                "\"سعرات حرارية/يوم\"",
+            ],
+            forbidden=[
+                "ui::text(current_goal.to_string())",
+                "ui::text(\"سعرات حرارية/يوم\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/drawer/nested.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph(",
+                "Open the child drawer, then drag its handle. The child should track the drag while the parent remains stationary.",
+            ],
+            forbidden=[
+                "ui::text(",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/drawer/outside_press.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph(",
+                "The probe below exists only to make modal outside-press routing deterministic in the gallery and diag scripts.",
+                "decl_text::text_control_readout(",
+                "format!(\"Underlay activations: {probe_count}\")",
+            ],
+            forbidden=[
+                "ui::text(",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/drawer/sides.rs"),
             required=[
                 "use fret_ui_kit::declarative::text as decl_text;",
@@ -3608,6 +3670,7 @@ def main() -> None:
                 "fn popover_align_snippet_text_uses_shared_roles()",
                 "fn dialog_scroll_row_text_uses_shared_roles()",
                 "fn drawer_scroll_and_side_body_text_uses_shared_roles()",
+                "fn drawer_remaining_custom_text_uses_shared_roles()",
                 "fn tooltip_keyboard_shortcut_text_uses_shared_role()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",

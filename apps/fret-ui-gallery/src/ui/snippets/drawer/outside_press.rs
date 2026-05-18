@@ -4,6 +4,7 @@ pub const SOURCE: &str = include_str!("outside_press.rs");
 use fret::app::AppRenderActionsExt as _;
 use fret::{AppComponentCx, UiChild};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -37,10 +38,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                                             )
                                         ]
                                     }),
-                                    ui::text(
+                                    decl_text::text_paragraph(
+                                        cx,
                                         "The probe below exists only to make modal outside-press routing deterministic in the gallery and diag scripts.",
-                                    )
-                                    .text_sm(),
+                                    ),
                                     shadcn::DrawerFooter::new([]).children(|cx| {
                                         ui::children![
                                             cx;
@@ -68,8 +69,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 }))
                 .test_id("ui-gallery-drawer-outside-press-underlay-probe")
                 .into_element(cx),
-            ui::text(format!("Underlay activations: {probe_count}"))
-                .text_sm()
+            decl_text::text_control_readout(
+                cx,
+                format!("Underlay activations: {probe_count}"),
+            )
                 .into_element(cx)
                 .test_id("ui-gallery-drawer-outside-press-underlay-status"),
         ]

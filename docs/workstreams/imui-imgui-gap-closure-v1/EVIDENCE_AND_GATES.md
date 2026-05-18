@@ -2556,6 +2556,31 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   passed.
 - `git diff --check` passed.
 
+2026-05-19 gallery Drawer goal/diagnostics text-role slice:
+
+- Red repro:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  drawer_remaining_custom_text_uses_shared_roles --no-fail-fast` failed before the fix because
+  `drawer/demo.rs` was missing the shared `decl_text` role import.
+- `apps/fret-ui-gallery/src/ui/snippets/drawer/demo.rs` and
+  `apps/fret-ui-gallery/src/ui/snippets/drawer/rtl.rs` now route goal readout and unit labels
+  through `text_control_readout(...)`.
+- `apps/fret-ui-gallery/src/ui/snippets/drawer/nested.rs` now routes guidance copy through
+  `text_paragraph(...)`; `apps/fret-ui-gallery/src/ui/snippets/drawer/outside_press.rs` routes
+  deterministic probe description through `text_paragraph(...)` and activation count through
+  `text_control_readout(...)`.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  drawer_remaining_custom_text_uses_shared_roles --no-fail-fast` passed.
+- `cargo fmt -p fret-ui-gallery` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `cargo check -p fret-ui-gallery --test ui_authoring_surface_default_app` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.
+- `python tools\gate_imui_workstream_source.py` passed after tightening the source gate to use
+  stable rustfmt-resistant anchors for the multiline readout call.
+
 2026-05-19 gallery Drawer scroll/side text-role slice:
 
 - Red repro:

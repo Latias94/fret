@@ -699,6 +699,9 @@ Readiness order for the next locally testable review slices:
    through shared list-row label text, side body copy routes through paragraph text, and the
    historical `paragraph_block` helper name is gone so fixed scroll rows are not described as
    paragraph layout.
+   2026-05-19 gallery Drawer goal/diagnostics text follow-up: demo and RTL goal readouts now use
+   shared control-readout text, nested drawer guidance uses paragraph text, and the outside-press
+   probe status/description now use shared paragraph/control-readout roles instead of `ui::text`.
    2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
    headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
    through `control_readout_text(...)`, and custom pointer-region labels through
