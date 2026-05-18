@@ -471,6 +471,150 @@ fn ai_test_results_composable_routes_custom_child_text_through_roles() {
 }
 
 #[test]
+fn ai_workflow_snippets_route_fixed_text_through_roles() {
+    let snippets: &[(&str, &str, &[&str], &[&str])] = &[
+        (
+            "workflow_panel_demo",
+            include_str!("../src/ui/snippets/ai/workflow_panel_demo.rs"),
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(cx, \"WorkflowPanel (AI Elements)\")",
+                "decl_text::text_compact_paragraph",
+                "Container chrome only. Apps own placement + interactions.",
+                "WorkflowPanel (AI Elements): bordered container chrome.",
+            ],
+            &[
+                "cx.text(\"WorkflowPanel (AI Elements)\")",
+                "cx.text(\"Container chrome only. Apps own placement + interactions.\")",
+                "cx.text(\"WorkflowPanel (AI Elements): bordered container chrome.\")",
+            ],
+        ),
+        (
+            "workflow_toolbar_demo",
+            include_str!("../src/ui/snippets/ai/workflow_toolbar_demo.rs"),
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label",
+                "WorkflowToolbar (AI Elements): compact tool row chrome.",
+            ],
+            &["cx.text(\"WorkflowToolbar (AI Elements): compact tool row chrome.\")"],
+        ),
+        (
+            "workflow_controls_demo",
+            include_str!("../src/ui/snippets/ai/workflow_controls_demo.rs"),
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, format!(\"clicks={clicks}\"))",
+                "WorkflowControls (AI Elements): button stack chrome.",
+            ],
+            &[
+                "cx.text(format!(\"clicks={clicks}\"))",
+                "cx.text(\"WorkflowControls (AI Elements): button stack chrome.\")",
+            ],
+        ),
+        (
+            "workflow_canvas_demo",
+            include_str!("../src/ui/snippets/ai/workflow_canvas_demo.rs"),
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "WorkflowCanvas (AI Elements): pan/zoom host + overlay slot.",
+            ],
+            &["cx.text(\"WorkflowCanvas (AI Elements): pan/zoom host + overlay slot.\")"],
+        ),
+        (
+            "workflow_connection_demo",
+            include_str!("../src/ui/snippets/ai/workflow_connection_demo.rs"),
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "WorkflowConnection (AI Elements): in-progress connection line chrome.",
+            ],
+            &["cx.text(\"WorkflowConnection (AI Elements): in-progress connection line chrome.\")"],
+        ),
+        (
+            "workflow_edge_demo",
+            include_str!("../src/ui/snippets/ai/workflow_edge_demo.rs"),
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "WorkflowEdge (AI Elements): dashed + animated stroke renderers.",
+            ],
+            &["cx.text(\"WorkflowEdge (AI Elements): dashed + animated stroke renderers.\")"],
+        ),
+        (
+            "workflow_node_demo",
+            include_str!("../src/ui/snippets/ai/workflow_node_demo.rs"),
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_compact_paragraph",
+                "Node content slot: apps own interaction + state.",
+                "Use handles as a styling seam (not an engine).",
+                "decl_text::text_control_readout(cx, \"Footer slot\")",
+                "WorkflowNode (AI Elements): header/content/footer chrome.",
+            ],
+            &[
+                "cx.text(\"Node content slot: apps own interaction + state.\")",
+                "cx.text(\"Use handles as a styling seam (not an engine).\")",
+                "cx.text(\"Footer slot\")",
+                "cx.text(\"WorkflowNode (AI Elements): header/content/footer chrome.\")",
+            ],
+        ),
+        (
+            "workflow_chrome_demo",
+            include_str!("../src/ui/snippets/ai/workflow_chrome_demo.rs"),
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_compact_paragraph",
+                "Node content is app-owned; this is the shadcn-aligned chrome surface.",
+                "decl_text::text_control_readout",
+                "Footer area (optional).",
+                "Workflow panel (chrome-only).",
+                "Apps own node/canvas engines and interaction policy.",
+                "Workflow chrome (AI Elements)",
+                "UI-only ports of @xyflow/react wrappers (Panel/Toolbar).",
+            ],
+            &[
+                "cx.text(\"Node content is app-owned; this is the shadcn-aligned chrome surface.\")",
+                "cx.text(\"Footer area (optional).\")",
+                "cx.text(\"Workflow panel (chrome-only).\")",
+                "cx.text(\"Apps own node/canvas engines and interaction policy.\")",
+                "cx.text(\"Workflow chrome (AI Elements)\")",
+                "cx.text(\"UI-only ports of @xyflow/react wrappers (Panel/Toolbar).\")",
+            ],
+        ),
+        (
+            "workflow_node_graph_demo",
+            include_str!("../src/ui/snippets/ai/workflow_node_graph_demo.rs"),
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "Workflow editor (engine-backed)",
+                "Uses fret-node for graph interaction + fret-ui-ai for chrome wrappers.",
+            ],
+            &[
+                "cx.text(\"Workflow editor (engine-backed)\")",
+                "cx.text(\"Uses fret-node for graph interaction + fret-ui-ai for chrome wrappers.\")",
+            ],
+        ),
+    ];
+
+    for (name, source, required, forbidden) in snippets {
+        let canonical = canonicalize_rust_fragment(source);
+        for marker in *required {
+            let marker = canonicalize_rust_fragment(marker);
+            assert!(
+                canonical.contains(&marker),
+                "{name} should route fixed workflow text through shared roles; missing `{marker}`"
+            );
+        }
+        for marker in *forbidden {
+            let marker = canonicalize_rust_fragment(marker);
+            assert!(
+                !canonical.contains(&marker),
+                "{name} reintroduced bare workflow text: `{marker}`"
+            );
+        }
+    }
+}
+
+#[test]
 fn ai_selector_branch_snippets_use_shared_text_roles_and_non_text_markers() {
     for (name, source, title, body) in [
         (

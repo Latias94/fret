@@ -470,6 +470,15 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/snippets/ai/open_in_chat_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/chain_of_thought_composable.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/test_results_composable.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/workflow_canvas_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/workflow_chrome_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/workflow_connection_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/workflow_controls_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/workflow_edge_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/workflow_node_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/workflow_node_graph_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/workflow_panel_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/workflow_toolbar_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/message_branch_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/mic_selector_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/model_selector_demo.rs",
@@ -860,6 +869,124 @@ def main() -> None:
                 "cx.text(\"2 failing\")",
                 "cx.text(\"1 skipped\")",
                 "cx.text(\"3.25s wall time\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/workflow_panel_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(cx, \"WorkflowPanel (AI Elements)\")",
+                "decl_text::text_compact_paragraph(",
+                "Container chrome only. Apps own placement + interactions.",
+                "WorkflowPanel (AI Elements): bordered container chrome.",
+            ],
+            forbidden=[
+                "cx.text(\"WorkflowPanel (AI Elements)\")",
+                "cx.text(\"Container chrome only. Apps own placement + interactions.\")",
+                "cx.text(\"WorkflowPanel (AI Elements): bordered container chrome.\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/workflow_toolbar_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "WorkflowToolbar (AI Elements): compact tool row chrome.",
+            ],
+            forbidden=[
+                "cx.text(\"WorkflowToolbar (AI Elements): compact tool row chrome.\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/workflow_controls_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, format!(\"clicks={clicks}\"))",
+                "WorkflowControls (AI Elements): button stack chrome.",
+            ],
+            forbidden=[
+                "cx.text(format!(\"clicks={clicks}\"))",
+                "cx.text(\"WorkflowControls (AI Elements): button stack chrome.\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/workflow_canvas_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "WorkflowCanvas (AI Elements): pan/zoom host + overlay slot.",
+            ],
+            forbidden=[
+                "cx.text(\"WorkflowCanvas (AI Elements): pan/zoom host + overlay slot.\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/workflow_connection_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "WorkflowConnection (AI Elements): in-progress connection line chrome.",
+            ],
+            forbidden=[
+                "cx.text(\"WorkflowConnection (AI Elements): in-progress connection line chrome.\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/workflow_edge_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "WorkflowEdge (AI Elements): dashed + animated stroke renderers.",
+            ],
+            forbidden=[
+                "cx.text(\"WorkflowEdge (AI Elements): dashed + animated stroke renderers.\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/workflow_node_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_compact_paragraph(",
+                "Node content slot: apps own interaction + state.",
+                "decl_text::text_compact_paragraph(cx, \"Use handles as a styling seam (not an engine).\")",
+                "decl_text::text_control_readout(cx, \"Footer slot\")",
+                "WorkflowNode (AI Elements): header/content/footer chrome.",
+            ],
+            forbidden=[
+                "cx.text(\"Node content slot: apps own interaction + state.\")",
+                "cx.text(\"Use handles as a styling seam (not an engine).\")",
+                "cx.text(\"Footer slot\")",
+                "cx.text(\"WorkflowNode (AI Elements): header/content/footer chrome.\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/workflow_chrome_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_compact_paragraph(",
+                "Node content is app-owned; this is the shadcn-aligned chrome surface.",
+                "decl_text::text_control_readout(",
+                "Footer area (optional).",
+                "Workflow panel (chrome-only).",
+                "Apps own node/canvas engines and interaction policy.",
+                "Workflow chrome (AI Elements)",
+                "UI-only ports of @xyflow/react wrappers (Panel/Toolbar).",
+            ],
+            forbidden=[
+                "cx.text(\"Node content is app-owned; this is the shadcn-aligned chrome surface.\")",
+                "cx.text(\"Footer area (optional).\")",
+                "cx.text(\"Workflow panel (chrome-only).\")",
+                "cx.text(\"Apps own node/canvas engines and interaction policy.\")",
+                "cx.text(\"Workflow chrome (AI Elements)\")",
+                "cx.text(\"UI-only ports of @xyflow/react wrappers (Panel/Toolbar).\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/workflow_node_graph_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(cx, \"Workflow editor (engine-backed)\")",
+                "Uses fret-node for graph interaction + fret-ui-ai for chrome wrappers.",
+            ],
+            forbidden=[
+                "cx.text(\"Workflow editor (engine-backed)\")",
+                "cx.text(\"Uses fret-node for graph interaction + fret-ui-ai for chrome wrappers.\")",
             ],
         ),
         SourceCheck(

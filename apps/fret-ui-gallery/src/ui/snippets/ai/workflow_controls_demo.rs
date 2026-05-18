@@ -6,6 +6,7 @@ use fret::{AppComponentCx, UiChild};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 
@@ -16,8 +17,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .get_model_copied(&clicks_model, Invalidation::Paint)
         .unwrap_or(0);
 
-    let marker = cx
-        .text(format!("clicks={clicks}"))
+    let marker = decl_text::text_control_readout(cx, format!("clicks={clicks}"))
         .test_id("ui-ai-workflow-controls-demo-clicks");
 
     let controls = ui_ai::WorkflowControls::new([
@@ -76,7 +76,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("WorkflowControls (AI Elements): button stack chrome."),
+            decl_text::text_section_chrome_label(
+                cx,
+                "WorkflowControls (AI Elements): button stack chrome.",
+            ),
             marker,
             cx.container(props, move |_cx| vec![controls]),
         ]

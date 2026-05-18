@@ -5,6 +5,7 @@ use fret::{AppComponentCx, UiChild};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 
@@ -46,7 +47,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("WorkflowEdge (AI Elements): dashed + animated stroke renderers."),
+            decl_text::text_section_chrome_label(
+                cx,
+                "WorkflowEdge (AI Elements): dashed + animated stroke renderers.",
+            ),
             cx.container(props, move |_cx| vec![dashed, animated]),
         ]
     })

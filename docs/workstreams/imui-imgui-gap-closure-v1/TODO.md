@@ -569,6 +569,9 @@ Readiness order for the next locally testable review slices:
    `cx.text(...)`.
    2026-05-18 AI TestResults composable text-role follow-up: custom summary/progress/status/name
    and duration child text now uses shared readout/list-row roles instead of bare `cx.text(...)`.
+   2026-05-18 AI Workflow snippet text-role follow-up: workflow fixed chrome, panel copy,
+   node-content sample copy, footer labels, and click readouts now use shared text roles instead of
+   bare `cx.text(...)`.
    2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
    virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
    `control_readout_text(...)`.
