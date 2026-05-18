@@ -24,6 +24,8 @@ mod blob_state;
 mod blobs;
 mod bootstrap;
 mod diagnostics;
+#[cfg(not(target_arch = "wasm32"))]
+mod diagnostics_debug;
 mod face_cache;
 mod font_runtime_state;
 mod fonts;
