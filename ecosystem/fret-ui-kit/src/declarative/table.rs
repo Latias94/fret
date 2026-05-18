@@ -2873,6 +2873,183 @@ mod tests {
     }
 
     #[test]
+    fn table_virtualized_retained_selected_semantics_follow_windowed_row_selection() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let mut state_value = TableState::default();
+        state_value.pagination.page_size = 64;
+        let state = app.models_mut().insert(state_value);
+
+        let data: Arc<[u32]> = Arc::from((0u32..64).collect::<Vec<_>>());
+        let columns: Arc<[ColumnDef<u32>]> = Arc::from(vec![{
+            let mut col = ColumnDef::new("name");
+            col.size = 220.0;
+            col
+        }]);
+
+        let scroll = VirtualListScrollHandle::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let props = TableViewProps {
+            draw_frame: false,
+            enable_column_resizing: false,
+            enable_row_selection: true,
+            pointer_row_selection: true,
+            single_row_selection: true,
+            row_height: Some(Px(28.0)),
+            header_height: Some(Px(32.0)),
+            ..Default::default()
+        };
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![table_virtualized_retained_v0(
+                    cx,
+                    data.clone(),
+                    columns.clone(),
+                    state.clone(),
+                    &scroll,
+                    0,
+                    Arc::new(|_row: &u32, index: usize| RowKey::from_index(index)),
+                    None,
+                    props.clone(),
+                    Arc::new(|col: &ColumnDef<u32>| Arc::from(col.id.as_ref())),
+                    None,
+                    Arc::new(
+                        |cx: &mut dyn ElementContextAccess<'_, App>,
+                         _col: &ColumnDef<u32>,
+                         row: &u32| {
+                            crate::ui::text(format!("Row {row}")).into_element(cx.elements())
+                        },
+                    ),
+                    TableDebugIds {
+                        row_test_id_prefix: Some(Arc::<str>::from("table-retained-selected-row-")),
+                        ..Default::default()
+                    },
+                )]
+            })
+        };
+
+        let pump =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices, frames: usize| {
+                for _ in 0..frames {
+                    let root = render(ui, app, services);
+                    ui.set_root(root);
+                    ui.request_semantics_snapshot();
+                    ui.layout_all(app, services, bounds, 1.0);
+                    let mut scene = fret_core::Scene::default();
+                    ui.paint_all(app, services, bounds, &mut scene, 1.0);
+                }
+            };
+
+        let row_node_selected = |snap: &fret_core::SemanticsSnapshot, row_index: usize| {
+            let id = format!("table-retained-selected-row-{row_index}");
+            snap.nodes
+                .iter()
+                .find(|node| node.test_id.as_deref() == Some(id.as_str()))
+                .map(|node| node.flags.selected)
+                .unwrap_or_else(|| panic!("expected row semantics node `{id}`"))
+        };
+        let row_center = |snap: &fret_core::SemanticsSnapshot, row_index: usize| {
+            let id = format!("table-retained-selected-row-{row_index}");
+            let bounds = snap
+                .nodes
+                .iter()
+                .find(|node| node.test_id.as_deref() == Some(id.as_str()))
+                .map(|node| node.bounds)
+                .unwrap_or_else(|| panic!("expected row semantics node `{id}`"));
+            Point::new(
+                Px(bounds.origin.x.0 + bounds.size.width.0 * 0.5),
+                Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5),
+            )
+        };
+        let row_exists = |snap: &fret_core::SemanticsSnapshot, row_index: usize| {
+            let id = format!("table-retained-selected-row-{row_index}");
+            snap.nodes
+                .iter()
+                .any(|node| node.test_id.as_deref() == Some(id.as_str()))
+        };
+
+        pump(&mut ui, &mut app, &mut services, 2);
+
+        let initial_snap = ui
+            .semantics_snapshot()
+            .expect("expected retained table semantics after initial render");
+        assert!(
+            !row_node_selected(initial_snap, 0),
+            "expected row 0 to start unselected"
+        );
+
+        let click_pos = row_center(initial_snap, 0);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                is_click: true,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        pump(&mut ui, &mut app, &mut services, 2);
+        let selected_snap = ui
+            .semantics_snapshot()
+            .expect("expected retained table semantics after selecting row 0");
+        assert!(
+            row_node_selected(selected_snap, 0),
+            "expected row 0 selected semantics to refresh after pointer selection"
+        );
+
+        scroll.set_offset(Point::new(Px(0.0), Px(28.0 * 25.0)));
+        pump(&mut ui, &mut app, &mut services, 3);
+
+        let scrolled_snap = ui
+            .semantics_snapshot()
+            .expect("expected retained table semantics after scrolling away");
+        assert!(
+            !row_node_selected(scrolled_snap, 25),
+            "expected row 25 to remain unselected after row 0 was selected"
+        );
+        assert!(
+            !row_exists(scrolled_snap, 0),
+            "expected retained table semantics to detach row 0 after scrolling to row 25"
+        );
+    }
+
+    #[test]
     fn table_virtualized_retained_nested_pressable_remains_hittable_when_pointer_row_selection_disabled()
      {
         use std::cell::Cell;

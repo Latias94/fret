@@ -334,6 +334,41 @@ Current runtime evidence anchors:
   - companion harness gates:
     `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics history_predicates_can_match_stale_latest_snapshot retained_virtual_list_reconciles_matching_predicate_counts_ring_snapshots no_frame_keepalive_does_not_consume_wait_frames --no-fail-fast`
     passed with latest Nextest run id `3e4a180a-2670-4a6d-a826-ec84d196fdec`.
+- Retained Table selected semantics focused gate:
+  `ecosystem/fret-ui-kit/src/declarative/table.rs`
+  - proof:
+    `table_virtualized_retained_selected_semantics_follow_windowed_row_selection` renders a
+    retained Table, asserts row 0 starts with `SemanticsNode.flags.selected=false`, clicks row 0,
+    asserts it refreshes to `true`, then scrolls the retained window to row 25 and proves row 25 is
+    unselected while row 0 is absent from the current semantics snapshot.
+  - focused command:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_selected_semantics_follow_windowed_row_selection --no-fail-fast --no-capture`
+  - focused result:
+    passed; Nextest run id `bfefef11-f3dc-435a-a986-1d0cc16666d2`.
+  - runtime companion:
+    `tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-sort-select-scroll.json` now
+    asserts row 0 `selected=false`, row 0 `selected=true` after click, row 25 `selected=false`
+    after scrolling, and row 0 `not_exists`.
+  - protocol gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_table_retained_sort_select_scroll script_v2_roundtrip_ui_gallery_table_retained_window_boundary_scroll --no-fail-fast`
+    passed with Nextest run id `c6dd9233-dda9-48fd-8fde-c510fc6d9ac1`.
+  - registry:
+    `python tools\check_diag_scripts_registry.py`
+    passed.
+  - focused runtime rerun:
+    `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\table\ui-gallery-table-retained-sort-select-scroll.json --dir target\fret-diag-table-retained-selected-sort-select-scroll-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness`
+    failed before selected-state assertions at step 2,
+    `bounds_within_window(ui-gallery-table-retained-header-row)`.
+  - timeout evidence:
+    `target/fret-diag-table-retained-selected-sort-select-scroll-v2/sessions/1779101071184-190392/script.result.json`;
+    forced bundle
+    `target/fret-diag-table-retained-selected-sort-select-scroll-v2/sessions/1779101071184-190392/1779101173854`;
+    share pack
+    `target/fret-diag-table-retained-selected-sort-select-scroll-v2/sessions/1779101071184-190392/share/1779101173854.zip`.
+  - triage:
+    the header-row selector matched one node, but its bounds were still `0,0 0x0`; this keeps the
+    runtime selected assertions as authored-but-pending evidence rather than a failed retained
+    Table selected-semantics proof.
 - Checkbox RTL post-scroll idle-stability gate:
   `tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json`
   - suite membership:

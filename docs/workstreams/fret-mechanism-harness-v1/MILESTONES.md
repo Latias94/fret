@@ -1882,3 +1882,26 @@ Status: complete for clean ViewCache reuse with relative-inset semantics bounds 
   with Nextest run id `c013f3b5-819d-45ba-8722-ddea5139213d`.
 - Formatting passes:
   `cargo fmt -p fret-ui --check`.
+
+## M107: Retained Table Selected Semantics Focused Gate
+
+Status: complete for focused retained Table selected-state semantics; runtime companion assertions
+are authored but blocked by an existing launch/layout convergence precondition.
+
+- Added `table_virtualized_retained_selected_semantics_follow_windowed_row_selection` in
+  `fret-ui-kit`.
+- The gate locks the retained Table row-selection semantics path directly: row 0 starts
+  `selected=false`, a pointer click refreshes row 0 to `selected=true`, then scrolling to row 25
+  keeps row 25 `selected=false` and detaches row 0 from the current semantics snapshot.
+- Added `selected_is` assertions to `ui-gallery-table-retained-sort-select-scroll.json` and
+  roundtrip tests for both retained Table sort/select/scroll and window-boundary scripts.
+- No retained Table selected-semantics defect was reproduced. The focused runtime rerun timed out
+  before selected assertions at `bounds_within_window(ui-gallery-table-retained-header-row)`, where
+  the forced bundle still showed the retained Table subtree at `0,0 0x0`.
+- The focused gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_selected_semantics_follow_windowed_row_selection --no-fail-fast --no-capture`
+  with Nextest run id `bfefef11-f3dc-435a-a986-1d0cc16666d2`.
+- Protocol roundtrip and registry gates pass:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_table_retained_sort_select_scroll script_v2_roundtrip_ui_gallery_table_retained_window_boundary_scroll --no-fail-fast`
+  with Nextest run id `c6dd9233-dda9-48fd-8fde-c510fc6d9ac1`, and
+  `python tools\check_diag_scripts_registry.py`.

@@ -1009,3 +1009,10 @@ date: 2026-05-12
     a cached `PositionStyle::Relative` Pressable with `top: 12px` keeps one stable semantics node
     and moves its semantics bounds from `0,12` to `40,12` when the cache root moves without
     rerendering the cached subtree. No new `fret-ui` mechanism defect was reproduced.
+- [x] Add retained Table selected-state semantics coverage across windowed row movement.
+  - Result: `table_virtualized_retained_selected_semantics_follow_windowed_row_selection` now proves
+    retained Table row selection refreshes `SemanticsNode.flags.selected`, and that scrolling the
+    retained window detaches the selected row while newly visible rows remain unselected. The
+    runtime companion script now has `selected_is` assertions, but the fresh focused runtime rerun
+    timed out before those assertions because the existing header-row bounds precondition stayed at
+    `0,0 0x0`; treat that as a runtime convergence follow-up, not a selected semantics defect.

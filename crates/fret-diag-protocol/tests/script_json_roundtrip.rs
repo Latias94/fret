@@ -541,6 +541,20 @@ fn script_v2_roundtrip_ui_gallery_table_retained_row_pinning_keep_pinned_false()
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_table_retained_sort_select_scroll() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-table-retained-sort-select-scroll.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_table_retained_window_boundary_scroll() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-table-retained-window-boundary-scroll.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_data_table_retained_multi_sort_shift_click() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-data-table-retained-multi-sort-shift-click.json"
