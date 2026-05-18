@@ -387,6 +387,13 @@ fn script_v2_roundtrip_ui_gallery_command_palette_controlled_selection_value() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_command_docs_demo_long_query_text() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-command-docs-demo-long-query-text.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_command_scrollable_collection_metadata_mutation() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-command-scrollable-collection-metadata-mutation.json"

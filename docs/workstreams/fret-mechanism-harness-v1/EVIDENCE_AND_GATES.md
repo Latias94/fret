@@ -1255,6 +1255,9 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - asserts the cmdk-style Command search input keeps long-query text inside its viewport, clamps
     horizontal offset, reports overflow, keeps the IME cursor inside bounds, and covers the measured
     text height
+  - now also enables `FRET_TEXT_FONT_TRACE_ALL=1` and asserts at least one renderer font trace
+    entry for the long query with `font=ui`, `wrap=none`, `overflow=clip`, and
+    `missing_glyphs=0`.
   - suite redirect:
     `tools/diag-scripts/ui-gallery-command-docs-demo-long-query-text.json`
   - diagnostics catalog entry:
@@ -1270,6 +1273,21 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag/codex-command-long-query-rerun/sessions/1778634588632-102660/share/1778634605262.zip`
   - current screenshot:
     `target/fret-diag/codex-command-long-query-rerun/sessions/1778634588632-102660/screenshots/1778634607431-ui-gallery-command-docs-demo-long-query-text/window-4294967297-tick-80-frame-80.png`
+  - renderer font-trace focused roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_command_docs_demo_long_query_text --no-fail-fast --no-capture`
+    passed with Nextest run id `347bc280-0e4c-4f1d-beed-062fd2e4903f`.
+  - renderer font-trace full roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip --no-fail-fast`
+    passed with Nextest run id `9f94f99d-86c7-417b-9b0f-5f29e4ca5797`.
+  - renderer font-trace runtime evidence:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-long-query-text.json --dir target/fret-diag-command-docs-demo-long-query-renderer-trace-v6 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+    passed with run id `1779080299508`.
+  - renderer font-trace runtime artifacts:
+    `target/fret-diag-command-docs-demo-long-query-renderer-trace-v6/sessions/1779080286919-178616/script.result.json`,
+    `target/fret-diag-command-docs-demo-long-query-renderer-trace-v6/sessions/1779080286919-178616/1779080299508/ai.packet`,
+    `target/fret-diag-command-docs-demo-long-query-renderer-trace-v6/sessions/1779080286919-178616/share/1779080299508.zip`,
+    `target/fret-diag-command-docs-demo-long-query-renderer-trace-v6/sessions/1779080286919-178616/1779080386435-ui-gallery-command-docs-demo-long-query-text.layout/layout.taffy.v1.json`, and
+    `target/fret-diag-command-docs-demo-long-query-renderer-trace-v6/sessions/1779080286919-178616/screenshots/1779080386835-ui-gallery-command-docs-demo-long-query-text/window-4294967297-tick-7-frame-7.png`.
 - Composite active-descendant runtime gates:
   `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-auto-highlight-disabled-none-on-open.json`,
   `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-auto-highlight-first-match.json`,

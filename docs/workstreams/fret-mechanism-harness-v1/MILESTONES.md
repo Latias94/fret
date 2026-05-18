@@ -1641,3 +1641,23 @@ Status: complete for renderer text-preparation evidence on the RTL Combobox long
 - The RTL script roundtrip gate passes with Nextest run id
   `23514d59-c3bc-4985-8c8f-d1047d32e6aa`.
 - The runtime diagnostics gate passes with run id `1779078285665`.
+
+## M94: Command Docs Demo Long-Query Renderer Font Trace Companion
+
+Status: complete for renderer text-preparation evidence on the embedded Command search input.
+
+- Promoted `ui-gallery-command-docs-demo-long-query-text.json` from TextInput visual clipping
+  evidence to renderer-backed evidence by enabling `FRET_TEXT_FONT_TRACE_ALL=1` and asserting the
+  long query is prepared with `font=ui`, `wrap=none`, `overflow=clip`, and `missing_glyphs=0`.
+- Preserved the existing `value_len_ge`, bounds, IME cursor, horizontal overflow/offset,
+  visible-text viewport, text-height, layout sidecar, screenshot, and bundle captures.
+- Removed remaining bare static-page waits from the script and used bounded predicate convergence,
+  including the runner's requested/effective viewport contract: requested `1280x1200` and
+  `760x640` produce effective diagnostic windows `1280x1220` and `760x660` on the current Windows
+  native runner.
+- No Command recipe or renderer defect was reproduced.
+- The focused script roundtrip gate passes with Nextest run id
+  `347bc280-0e4c-4f1d-beed-062fd2e4903f`.
+- The full `script_json_roundtrip` gate passes with Nextest run id
+  `9f94f99d-86c7-417b-9b0f-5f29e4ca5797`.
+- The runtime diagnostics gate passes with run id `1779080299508`.

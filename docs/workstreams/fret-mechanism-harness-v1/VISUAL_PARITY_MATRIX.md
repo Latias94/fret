@@ -28,7 +28,7 @@ runtime gate, the oracle strength, and the remaining gap.
 
 | Scenario | State / viewport / theme | Stable IDs | Gate | Oracle strength | Current gap |
 | --- | --- | --- | --- | --- | --- |
-| Docs demo long query | embedded CommandPalette, constrained desktop | `ui-gallery-command-docs-demo-input`, `ui-gallery-command-docs-demo-listbox`, `ui-gallery-command-docs-demo` | `tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-long-query-text.json` | `value_len_ge`, `bounds_within_window`, `text_input_ime_cursor_area_within_bounds`, `text_input_horizontal_overflow_is`, `text_input_horizontal_offset_in_range`, `text_input_visible_text_within_viewport`, `text_input_viewport_covers_text_height`, layout sidecar, screenshot | Add renderer-level glyph/ellipsis evidence and CommandDialog overlay companion coverage. |
+| Docs demo long query | embedded CommandPalette, constrained desktop | `ui-gallery-command-docs-demo-input`, `ui-gallery-command-docs-demo-listbox`, `ui-gallery-command-docs-demo` | `tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-long-query-text.json` | `value_len_ge`, `bounds_within_window`, `text_input_ime_cursor_area_within_bounds`, `text_input_horizontal_overflow_is`, `text_input_horizontal_offset_in_range`, `text_input_visible_text_within_viewport`, `text_input_viewport_covers_text_height`, renderer font trace predicate for long query `font=ui`, `wrap=none`, `overflow=clip`, `missing_glyphs=0`, layout sidecar, screenshot | Add CommandDialog overlay companion coverage. |
 
 ## Input
 

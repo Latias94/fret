@@ -925,3 +925,11 @@ date: 2026-05-12
     `wrap=none`, `overflow=ellipsis`, and `missing_glyphs=0` while keeping the existing RTL
     chevron/checkmark geometry and top-flip placement oracles. No new Combobox or renderer defect
     was reproduced.
+- [x] Add the Command docs-demo long-query renderer font-trace companion.
+  - Result: `ui-gallery-command-docs-demo-long-query-text.json` now enables renderer font tracing
+    and proves the long search query is prepared with `font=ui`, `wrap=none`, `overflow=clip`, and
+    `missing_glyphs=0`, while retaining TextInput viewport, offset, IME cursor, layout sidecar, and
+    screenshot evidence. No Command recipe or renderer defect was reproduced; the first runtime
+    drafts only exposed that this runner reports effective window heights 20px taller than the
+    requested inner heights, matching the existing requested/effective viewport diagnostics
+    contract.
