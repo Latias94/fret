@@ -47,6 +47,12 @@ The same fixture now also covers auto-sized container child margin accounting: m
 measurement for a margin-bearing child now matches the laid-out container bounds, so measurement
 and layout stay aligned for finite margins in the auto-container path.
 
+The layout primitive fixture now includes `render-transform-mixed-flow-absolute-envelope-matches-visual-hit`.
+It reuses the mixed Pressable flow/absolute envelope case under a `RenderTransform` and proves the
+`34 x 12` layout/measurement envelope is preserved while visual and hit spaces translate together.
+The layout-space near-edge sample misses the absolute child, while the translated visual-space
+near-edge sample hits the absolute child. No new mechanism fix was required.
+
 Evidence anchor:
 
 - `crates/fret-ui/src/declarative/host_widget/measure.rs`
@@ -55,8 +61,8 @@ Evidence anchor:
 
 Run result:
 
-- `cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_primitives_match_oracles -- --nocapture`
-  - Result: passed.
+- `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+  - Result: passed; Nextest run id `fd0237ae-17ff-435d-a416-b34b2e8f5345`.
 
 ## Suite Lint Policy Gates
 

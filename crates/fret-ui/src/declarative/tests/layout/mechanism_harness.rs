@@ -47,6 +47,13 @@ enum LayoutPrimitiveScenario {
     FlexOrderMarginRightAutoUsesVisualOrder,
     FlexOrderMarginTopAutoUsesVisualOrder,
     VisualVsHitBoundsFollowRenderTransform,
+    RenderTransformMixedFlowAbsoluteEnvelopeMatchesVisualHit,
+}
+
+#[derive(Clone, Copy)]
+struct TrackedTransform {
+    element: crate::elements::GlobalElementId,
+    test_id: &'static str,
 }
 
 #[test]
@@ -74,7 +81,7 @@ fn observe_case(
         Size::new(Px(240.0), Px(120.0)),
     );
     let mut services = LayoutPrimitiveServices::default();
-    let mut transformed: Option<crate::elements::GlobalElementId> = None;
+    let mut transformed: Option<TrackedTransform> = None;
 
     let root = render_root(
         &mut ui,
@@ -118,29 +125,59 @@ fn observe_case(
         }
     }
 
-    if let Some(element) = transformed {
-        let layout = crate::elements::current_bounds_for_element(&mut app, window, element)
+    if let Some(tracked) = transformed {
+        let layout = crate::elements::current_bounds_for_element(&mut app, window, tracked.element)
             .ok_or_else(|| ScenarioObserveError::new("missing transformed layout bounds"))?;
-        let visual = crate::elements::current_visual_bounds_for_element(&mut app, window, element)
-            .ok_or_else(|| ScenarioObserveError::new("missing transformed visual bounds"))?;
+        let visual =
+            crate::elements::current_visual_bounds_for_element(&mut app, window, tracked.element)
+                .ok_or_else(|| ScenarioObserveError::new("missing transformed visual bounds"))?;
         observed.set_space_bounds_for_test_id(
-            "transformed-pressable",
+            tracked.test_id,
             fret_mechanism_harness::BoundsSpace::Layout,
             layout,
         );
-        observed.set_visual_bounds_for_test_id("transformed-pressable", visual);
-        observed.set_hit_bounds_for_test_id("transformed-pressable", visual);
+        observed.set_visual_bounds_for_test_id(tracked.test_id, visual);
+        observed.set_hit_bounds_for_test_id(tracked.test_id, visual);
 
-        let layout_center = Point::new(
-            Px(layout.origin.x.0 + layout.size.width.0 * 0.5),
-            Px(layout.origin.y.0 + layout.size.height.0 * 0.5),
-        );
-        let visual_center = Point::new(
-            Px(visual.origin.x.0 + visual.size.width.0 * 0.5),
-            Px(visual.origin.y.0 + visual.size.height.0 * 0.5),
-        );
-        observed.push_hit_test_sample(hit_sample(&ui, &snapshot, "layout-center", layout_center));
-        observed.push_hit_test_sample(hit_sample(&ui, &snapshot, "visual-center", visual_center));
+        match case.scenario {
+            LayoutPrimitiveScenario::VisualVsHitBoundsFollowRenderTransform => {
+                let layout_center = Point::new(
+                    Px(layout.origin.x.0 + layout.size.width.0 * 0.5),
+                    Px(layout.origin.y.0 + layout.size.height.0 * 0.5),
+                );
+                let visual_center = Point::new(
+                    Px(visual.origin.x.0 + visual.size.width.0 * 0.5),
+                    Px(visual.origin.y.0 + visual.size.height.0 * 0.5),
+                );
+                observed.push_hit_test_sample(hit_sample(
+                    &ui,
+                    &snapshot,
+                    "layout-center",
+                    layout_center,
+                ));
+                observed.push_hit_test_sample(hit_sample(
+                    &ui,
+                    &snapshot,
+                    "visual-center",
+                    visual_center,
+                ));
+            }
+            LayoutPrimitiveScenario::RenderTransformMixedFlowAbsoluteEnvelopeMatchesVisualHit => {
+                observed.push_hit_test_sample(hit_sample(
+                    &ui,
+                    &snapshot,
+                    "transformed-mixed-absolute-layout-near-edge",
+                    Point::new(Px(layout.origin.x.0 + 33.25), Px(layout.origin.y.0 + 10.75)),
+                ));
+                observed.push_hit_test_sample(hit_sample(
+                    &ui,
+                    &snapshot,
+                    "transformed-mixed-absolute-visual-near-edge",
+                    Point::new(Px(visual.origin.x.0 + 33.25), Px(visual.origin.y.0 + 10.75)),
+                ));
+            }
+            _ => {}
+        }
     }
 
     if matches!(
@@ -217,6 +254,7 @@ fn scenario_needs_paint(scenario: &LayoutPrimitiveScenario) -> bool {
     matches!(
         scenario,
         LayoutPrimitiveScenario::VisualVsHitBoundsFollowRenderTransform
+            | LayoutPrimitiveScenario::RenderTransformMixedFlowAbsoluteEnvelopeMatchesVisualHit
             | LayoutPrimitiveScenario::TextMeasurePaintWrapWidthColumn
             | LayoutPrimitiveScenario::TextMeasurePaintWrapWidthMaxWidthRow
             | LayoutPrimitiveScenario::TextMeasurePaintOverflowScale
@@ -533,6 +571,40 @@ fn observe_post_layout_scalar_metrics(
                 ),
             ])
         }
+        LayoutPrimitiveScenario::RenderTransformMixedFlowAbsoluteEnvelopeMatchesVisualHit => {
+            let transform = child_at(ui, root, 0, "render transform mixed absolute wrapper")?;
+            let pressable = child_at(ui, transform, 0, "transformed mixed absolute pressable")?;
+            let layout_bounds = ui.debug_node_bounds(pressable).ok_or_else(|| {
+                ScenarioObserveError::new("missing transformed mixed absolute layout bounds")
+            })?;
+            let constraints = crate::layout_constraints::LayoutConstraints::new(
+                crate::layout_constraints::LayoutSize::new(None, None),
+                crate::layout_constraints::LayoutSize::new(
+                    crate::layout_constraints::AvailableSpace::Definite(Px(0.0)),
+                    crate::layout_constraints::AvailableSpace::Definite(Px(0.0)),
+                ),
+            );
+            let measured = ui.measure_in(app, &mut *services, pressable, constraints, 1.0);
+
+            Ok(vec![
+                (
+                    "render_transform_mixed_absolute.layout_width",
+                    layout_bounds.size.width.0,
+                ),
+                (
+                    "render_transform_mixed_absolute.layout_height",
+                    layout_bounds.size.height.0,
+                ),
+                (
+                    "render_transform_mixed_absolute.placeholder_measured_width",
+                    measured.width.0,
+                ),
+                (
+                    "render_transform_mixed_absolute.placeholder_measured_height",
+                    measured.height.0,
+                ),
+            ])
+        }
         LayoutPrimitiveScenario::FlexWrapGapMeasureMatchesLayout => {
             let flex = child_at(ui, root, 0, "flex wrap gap root")?;
             let layout_bounds = ui
@@ -757,7 +829,7 @@ fn bool_metric(value: bool) -> f32 {
 fn build_scenario(
     cx: &mut ElementContext<'_, TestHost>,
     scenario: &LayoutPrimitiveScenario,
-    transformed: &mut Option<crate::elements::GlobalElementId>,
+    transformed: &mut Option<TrackedTransform>,
 ) -> Vec<AnyElement> {
     match scenario {
         LayoutPrimitiveScenario::AutoSizeShrinkWrapsText => {
@@ -1657,10 +1729,48 @@ fn build_scenario(
                 props.layout.size.height = Length::Px(Px(20.0));
                 vec![
                     cx.pressable_with_id(props, |_cx, _state, id| {
-                        *transformed = Some(id);
+                        *transformed = Some(TrackedTransform {
+                            element: id,
+                            test_id: "transformed-pressable",
+                        });
                         Vec::new()
                     })
                     .test_id("transformed-pressable"),
+                ]
+            })]
+        }
+        LayoutPrimitiveScenario::RenderTransformMixedFlowAbsoluteEnvelopeMatchesVisualHit => {
+            let transform = Transform2D::translation(Point::new(Px(40.0), Px(0.0)));
+            vec![cx.render_transform(transform, |cx| {
+                let pressable = crate::element::PressableProps::default();
+
+                vec![
+                    cx.pressable_with_id(pressable, |cx, _state, id| {
+                        *transformed = Some(TrackedTransform {
+                            element: id,
+                            test_id: "transformed-mixed-absolute",
+                        });
+
+                        let mut flow_child = crate::element::ContainerProps::default();
+                        flow_child.layout.size.width = Length::Px(Px(20.0));
+                        flow_child.layout.size.height = Length::Px(Px(10.0));
+
+                        let mut absolute_child = crate::element::ContainerProps::default();
+                        absolute_child.layout.position = crate::element::PositionStyle::Absolute;
+                        absolute_child.layout.inset.left =
+                            crate::element::InsetEdge::Fraction(0.25);
+                        absolute_child.layout.inset.top = crate::element::InsetEdge::Fraction(0.1);
+                        absolute_child.layout.size.width = Length::Px(Px(25.0));
+                        absolute_child.layout.size.height = Length::Px(Px(10.0));
+
+                        vec![
+                            cx.container(flow_child, |_cx| Vec::new())
+                                .test_id("transformed-mixed-flow-child"),
+                            cx.container(absolute_child, |_cx| Vec::new())
+                                .test_id("transformed-mixed-absolute-child"),
+                        ]
+                    })
+                    .test_id("transformed-mixed-absolute"),
                 ]
             })]
         }

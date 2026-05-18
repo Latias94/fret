@@ -1248,6 +1248,109 @@
           }
         ]
       }
+    },
+    {
+      "id": "render-transform-mixed-flow-absolute-envelope-matches-visual-hit",
+      "scenario": { "kind": "render_transform_mixed_flow_absolute_envelope_matches_visual_hit" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "transformed-mixed-absolute" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 34.0, "height": 12.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "transformed-mixed-flow-child" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 20.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "transformed-mixed-absolute-child" },
+            "expected": {
+              "origin": { "x": 8.5, "y": 1.2 },
+              "size": { "width": 25.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_space_metric_delta",
+            "target": { "kind": "test_id", "id": "transformed-mixed-absolute" },
+            "a_space": "visual",
+            "b_space": "layout",
+            "metric": "left",
+            "comparison": "eq",
+            "value_px": 40.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_space_metric_delta",
+            "target": { "kind": "test_id", "id": "transformed-mixed-absolute" },
+            "a_space": "hit",
+            "b_space": "layout",
+            "metric": "left",
+            "comparison": "eq",
+            "value_px": 40.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_space_metric_delta",
+            "target": { "kind": "test_id", "id": "transformed-mixed-absolute" },
+            "a_space": "visual",
+            "b_space": "layout",
+            "metric": "width",
+            "comparison": "eq",
+            "value_px": 0.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "render_transform_mixed_absolute.layout_width",
+            "comparison": "eq",
+            "value": 34.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "render_transform_mixed_absolute.layout_height",
+            "comparison": "eq",
+            "value": 12.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "render_transform_mixed_absolute.placeholder_measured_width",
+            "comparison": "eq",
+            "value": 34.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "render_transform_mixed_absolute.placeholder_measured_height",
+            "comparison": "eq",
+            "value": 12.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "hit_test_sample_not",
+            "sample_id": "transformed-mixed-absolute-layout-near-edge",
+            "target": { "kind": "test_id", "id": "transformed-mixed-absolute-child" }
+          },
+          {
+            "kind": "hit_test_sample",
+            "sample_id": "transformed-mixed-absolute-visual-near-edge",
+            "target": { "kind": "test_id", "id": "transformed-mixed-absolute-child" }
+          }
+        ]
+      }
     }
   ]
 }

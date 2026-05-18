@@ -897,3 +897,10 @@ date: 2026-05-12
     placement at its measured size while absolute placement uses the union envelope. The fixture
     locks wrapper bounds, flow child bounds, absolute child bounds, placeholder measurement, and
     near-edge hit-testing.
+- [x] Add RenderTransform mixed flow/absolute wrapper visual/hit coverage.
+  - Result: `render-transform-mixed-flow-absolute-envelope-matches-visual-hit` moves the mixed
+    Pressable flow/absolute envelope through a `RenderTransform`. The fixture locks the wrapper
+    layout envelope, flow child bounds, absolute child bounds, placeholder measurement, visual/hit
+    translation, and both layout-space miss plus visual-space near-edge absolute-child hit. No new
+    mechanism defect was reproduced; the F171/F172 absolute-envelope fixes already carry through
+    transform visual and hit spaces.

@@ -1563,3 +1563,21 @@ hit-test envelope consistency.
   with 55/55 tests.
 - Formatting passes:
   `cargo fmt -p fret-ui --check`.
+
+## M90: RenderTransform Mixed Flow/Absolute Envelope Fixture
+
+Status: complete for transformed mixed flow plus absolute child layout, measurement, visual, and
+hit-test envelope consistency.
+
+- Added `render-transform-mixed-flow-absolute-envelope-matches-visual-hit`, a focused layout
+  primitive case that places the F172 mixed Pressable flow/absolute envelope under a
+  `RenderTransform`.
+- No new mechanism defect was reproduced. The current mechanism keeps the `34 x 12` layout and
+  placeholder measurement envelope, translates visual and hit spaces together by `40px`, misses the
+  layout-space near-edge sample, and hits the absolute child at the translated visual-space
+  near-edge sample.
+- The gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+  with Nextest run id `fd0237ae-17ff-435d-a416-b34b2e8f5345`.
+- JSON fixture validation passes:
+  `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\layout_primitives_v1.json`.
