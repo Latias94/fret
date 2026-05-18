@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 401
+- Dedicated directories: 402
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2302,6 +2302,7 @@ Rule:
 - `docs/workstreams/wgpu-image-sampling-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating image-sampling WGPU conformance readback helpers onto shared support while keeping explicit render-target setup)
 - `docs/workstreams/wgpu-mask-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating mask-related WGPU conformance tests onto the shared readback/render harness)
 - `docs/workstreams/wgpu-materials-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating material-related WGPU conformance tests onto the shared readback/render harness)
+- `docs/workstreams/wgpu-output-srgb-transfer-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating output sRGB transfer WGPU conformance readback helpers onto shared support while preserving explicit output-format setup)
 - `docs/workstreams/wgpu-paint-eval-space-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating paint evaluation-space WGPU conformance tests onto the shared readback/render harness)
 - `docs/workstreams/wgpu-paint-gradient-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating paint-gradient WGPU conformance tests onto the shared readback/render harness)
 - `docs/workstreams/wgpu-standard-effects-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating standard effect/postprocess WGPU conformance tests onto the shared readback/render harness)
