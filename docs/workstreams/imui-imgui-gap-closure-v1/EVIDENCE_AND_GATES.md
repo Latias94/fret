@@ -2759,3 +2759,32 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
   passed.
 - `git diff --check` passed.
+
+2026-05-19 gallery Carousel status/readout text-role slice:
+
+- Red repro:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  selected_carousel_status_readouts_use_shared_control_readout_role --no-fail-fast` failed before
+  the fix because `carousel/api.rs` was missing the shared `decl_text` role import and still built
+  status text through ad-hoc `TextProps`.
+- `apps/fret-ui-gallery/src/ui/snippets/carousel/api.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/carousel/events.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/carousel/plugin_autoplay_stop_on_focus.rs`, and
+  `apps/fret-ui-gallery/src/ui/snippets/carousel/plugin_autoplay_stop_on_last_snap.rs` now route
+  centered diagnostic/status lines through `text_control_readout(...)` instead of local
+  word-wrapping `TextProps` blocks.
+- First post-fix
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  selected_carousel_status_readouts_use_shared_control_readout_role --no-fail-fast` timed out
+  without a capturable result; no background Cargo/Rustc processes remained afterward.
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ui_authoring_surface_default_app` passed.
+- Retried after the compile/check path completed:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  selected_carousel_status_readouts_use_shared_control_readout_role --no-fail-fast` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.

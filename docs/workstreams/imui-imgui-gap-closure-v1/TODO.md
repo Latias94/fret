@@ -729,6 +729,11 @@ Readiness order for the next locally testable review slices:
    `text_paragraph(...)`, and built-in `PaginationPrevious` / `PaginationNext` visible text in
    `fret-ui-shadcn` now uses the shared button-label role. This keeps `fret-imui` thin while
    moving button-like pagination text policy into the component/kit layer.
+   2026-05-19 gallery Carousel status/readout text follow-up: API/events/autoplay diagnostic
+   status lines now route through `text_control_readout(...)` instead of local centered
+   `TextProps` blocks with `TextWrap::Word`. The centering remains a layout concern in the
+   snippet shell (`h_flex + justify_center`), while the resize contract stays on the shared
+   control-readout role.
    2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
    headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
    through `control_readout_text(...)`, and custom pointer-region labels through

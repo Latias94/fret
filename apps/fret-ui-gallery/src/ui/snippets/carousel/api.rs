@@ -6,13 +6,13 @@ pub const DOCS_SOURCE: &str = include_str!("api.docs.rs.txt");
 use fret::{AppComponentCx, UiChild};
 use fret_core::Edges;
 use fret_ui::Theme;
-use fret_ui::element::{CrossAlign, FlexProps, MainAlign, TextProps};
+use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
-use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy)]
 struct SlideVisual {
@@ -88,32 +88,14 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let count = snapshot.snap_count;
     let api_counter_text = format!("Slide {} of {}", current, count);
     let api_counter = {
-        let theme = Theme::global(&*cx.app);
-        let style = fret_ui_kit::typography::control_text_style(
-            theme,
-            fret_ui_kit::typography::UiTextSize::Sm,
-        );
-        let color = theme
-            .color_by_key("muted-foreground")
-            .or_else(|| theme.color_by_key("muted_foreground"))
-            .unwrap_or_else(|| theme.color_token("foreground"));
-
-        let text = cx.text_props(TextProps {
-            layout: {
-                let mut layout = fret_ui::element::LayoutStyle::default();
-                layout.size.width = fret_ui::element::Length::Fill;
-                layout
-            },
-            text: Arc::from(api_counter_text),
-            style: Some(style),
-            color: Some(color),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Center,
-            ink_overflow: fret_ui::element::TextInkOverflow::None,
-        });
-
-        ui::container(move |_cx| vec![text]).py_2().into_element(cx)
+        let text = api_counter_text;
+        let text = decl_text::text_control_readout(cx, text);
+        ui::h_flex(move |_cx| vec![text])
+            .w_full()
+            .justify_center()
+            .items_center()
+            .py_2()
+            .into_element(cx)
     };
 
     ui::v_flex(move |_cx| vec![api_carousel, api_counter])

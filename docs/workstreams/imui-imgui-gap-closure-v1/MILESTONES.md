@@ -670,6 +670,10 @@ Exit criteria:
   button-label text via a context-bound helper, RTL page labels share that path, extras explanatory
   copy uses paragraph text, and `fret-ui-shadcn` Previous/Next visible labels use the same shared
   button-label role instead of bare `cx.text(...)`.
+  2026-05-19 gallery Carousel status/readout text result: API/events/autoplay diagnostic status
+  lines now use shared control-readout text instead of local word-wrapping `TextProps` blocks,
+  while centered placement stays in snippet layout (`h_flex + justify_center`) instead of becoming
+  a new text role.
   2026-05-17 gallery editor preview text result: code-editor, Markdown, and Web IME preview
   headers now use paragraph text for prose, control readout text for fixed status/debug values,
   and button label text for custom pointer-region actions. The slice keeps editor-proof resize

@@ -3944,6 +3944,7 @@ def main() -> None:
                 "fn tooltip_keyboard_shortcut_text_uses_shared_role()",
                 "fn context_menu_trigger_copy_uses_shared_readout_text_role()",
                 "fn selected_pagination_page_number_helpers_use_shared_button_label_role()",
+                "fn selected_carousel_status_readouts_use_shared_control_readout_role()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",
             ],
@@ -4067,6 +4068,54 @@ def main() -> None:
             ],
             forbidden=[
                 "cx.text(to_arabic_numerals(",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/carousel/api.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "let text = decl_text::text_control_readout(cx, text);",
+                ".justify_center()",
+            ],
+            forbidden=[
+                "cx.text_props(TextProps {",
+                "wrap: TextWrap::Word,",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/carousel/events.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "let text = decl_text::text_control_readout(cx, text);",
+                ".justify_center()",
+            ],
+            forbidden=[
+                "cx.text_props(TextProps {",
+                "wrap: TextWrap::Word,",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/carousel/plugin_autoplay_stop_on_focus.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "let text = decl_text::text_control_readout(cx, text);",
+                ".justify_center()",
+            ],
+            forbidden=[
+                "cx.text_props(TextProps {",
+                "wrap: TextWrap::Word,",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/carousel/plugin_autoplay_stop_on_last_snap.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "let text = decl_text::text_control_readout(cx, text);",
+                ".justify_center()",
+            ],
+            forbidden=[
+                "cx.text_props(TextProps {",
+                "wrap: TextWrap::Word,",
             ],
         ),
         SourceCheck(

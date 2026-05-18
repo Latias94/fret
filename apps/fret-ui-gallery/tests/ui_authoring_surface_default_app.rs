@@ -8931,6 +8931,35 @@ fn selected_carousel_docs_examples_follow_the_compact_builder_lane() {
 }
 
 #[test]
+fn selected_carousel_status_readouts_use_shared_control_readout_role() {
+    for relative_path in [
+        "src/ui/snippets/carousel/api.rs",
+        "src/ui/snippets/carousel/events.rs",
+        "src/ui/snippets/carousel/plugin_autoplay_stop_on_focus.rs",
+        "src/ui/snippets/carousel/plugin_autoplay_stop_on_last_snap.rs",
+    ] {
+        let normalized = assert_normalized_markers_present(
+            relative_path,
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, text)",
+                ".justify_center()",
+            ],
+        );
+        assert!(
+            !normalized.contains("cx.text_props(TextProps{"),
+            "{} should not build status/readout text with ad-hoc TextProps",
+            manifest_path(relative_path).display()
+        );
+        assert!(
+            !normalized.contains("wrap:TextWrap::Word"),
+            "{} should not let fixed Carousel status/readout text wrap under resize",
+            manifest_path(relative_path).display()
+        );
+    }
+}
+
+#[test]
 fn carousel_page_keeps_docs_width_lane_distinct_from_fixed_width_diagnostics_harnesses() {
     for relative_path in [
         "src/ui/snippets/carousel/options.rs",
