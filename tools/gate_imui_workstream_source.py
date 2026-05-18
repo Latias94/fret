@@ -3953,6 +3953,26 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/spinner/demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, \"$100.00\")",
+            ],
+            forbidden=[
+                "ui::text(\"$100.00\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/spinner/rtl.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, \"١٠٠.٠٠ دولار\")",
+            ],
+            forbidden=[
+                "cx.text(\"١٠٠.٠٠ دولار\")",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/toggle/label.rs"),
             required=[
                 "decl_text::text_control_readout(cx, format!(\"Pressed: {pressed_now}\"))",
@@ -4042,6 +4062,7 @@ def main() -> None:
                 "fn selected_carousel_status_readouts_use_shared_control_readout_role()",
                 "fn table_children_snippet_routes_custom_text_through_shared_roles()",
                 "fn item_snippets_route_slotted_copy_through_shared_text_roles()",
+                "fn spinner_item_amount_text_uses_control_readout_role()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",
             ],

@@ -3390,6 +3390,27 @@ fn spinner_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn spinner_item_amount_text_uses_control_readout_role() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/spinner/demo.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_control_readout(cx, \"$100.00\")",
+        ],
+        &["ui::text(\"$100.00\")"],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/spinner/rtl.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_control_readout(cx, \"١٠٠.٠٠ دولار\")",
+        ],
+        &["cx.text(\"١٠٠.٠٠ دولار\")"],
+    );
+}
+
+#[test]
 fn form_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[

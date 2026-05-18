@@ -2761,6 +2761,26 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   passed.
 - `git diff --check` passed.
 
+2026-05-19 gallery Spinner amount readout text-role slice:
+
+- Red repro:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  spinner_item_amount_text_uses_control_readout_role --no-fail-fast` failed before the fix because
+  `spinner/demo.rs` did not import shared text roles and still rendered the payment amount through
+  `ui::text("$100.00")`.
+- `apps/fret-ui-gallery/src/ui/snippets/spinner/demo.rs` and
+  `apps/fret-ui-gallery/src/ui/snippets/spinner/rtl.rs` now route item amount/status values through
+  `text_control_readout(...)`.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  spinner_item_amount_text_uses_control_readout_role --no-fail-fast` passed.
+- `cargo check -p fret-ui-gallery --test ui_authoring_surface_default_app` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `PYTHONIOENCODING=utf-8 python tools\gate_imui_workstream_source.py` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.
+
 2026-05-19 gallery ContextMenu trigger text-role slice:
 
 - Red repro:

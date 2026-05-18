@@ -665,6 +665,9 @@ Exit criteria:
   2026-05-19 gallery Item slotted text result: Item dropdown trigger copy, download header copy,
   and issue number side columns now use shared button-label, section-chrome, and control-readout
   roles. Recipe-owned `ItemTitle` / `ItemDescription` rendering stays inside `fret-ui-shadcn`.
+  2026-05-19 gallery Spinner amount readout result: Spinner item amount/status values in LTR and
+  RTL snippets now use shared control-readout text, keeping fixed item rows from teaching local
+  `ui::text(...).text_sm()` / `cx.text(...)` value builders.
   2026-05-19 gallery Dialog scroll-row text result: scrollable-content and sticky-footer dialog
   filler rows now use shared list-row label text instead of `ui::raw_text(format!(...))`, keeping
   the scroll proof rows on a fixed-row text role without changing shadcn dialog recipes.

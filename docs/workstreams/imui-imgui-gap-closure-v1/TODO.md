@@ -720,6 +720,9 @@ Readiness order for the next locally testable review slices:
    `text_button_label(...)`, the download header uses `text_section_chrome_label(...)`, and issue
    number side columns use `text_control_readout(...)`. Built-in `ItemTitle` /
    `ItemDescription` text stays recipe-owned.
+   2026-05-19 gallery Spinner amount readout follow-up: Spinner item amount/status values in the
+   demo and RTL snippets now use `text_control_readout(...)` instead of local `ui::text(...)` /
+   `cx.text(...)` builders.
    2026-05-19 gallery Dialog scroll-row text follow-up: scrollable-content and sticky-footer
    filler rows now route through shared list-row label text instead of `ui::raw_text(format!(...))`,
    keeping scroll proof rows single-line/shrinkable under resize while dialog title/description
