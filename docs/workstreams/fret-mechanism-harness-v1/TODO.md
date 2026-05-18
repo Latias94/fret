@@ -221,6 +221,14 @@ date: 2026-05-12
     The driver now records handled command decisions for owned gallery command paths, and the
     strict runtime gate passes with command dispatch, `disabled`, `invoke`, and checked-state
     mutation assertions.
+- [x] Add a leaf TextInput disabled action-state runtime gate.
+  - Result: `ui-gallery-input-disabled-action-state.json` now starts directly on the Input page,
+    waits for the disabled TextInput semantics node, and asserts `disabled=true`, `focus=false`,
+    `set_value=false`, and a stable value surface. The gate is promoted into
+    `ui-gallery-shadcn-runtime-evidence`. No Input recipe defect was reproduced. Early drafts found
+    a separate diagnostics authoring/tooling hazard: `scroll_into_view` against the long Input page
+    did not reliably move the Disabled section before a bounds wait, so the final gate avoids
+    coupling this semantics/action-state proof to that scroll path.
 - [x] Promote Combobox visual/style coverage into an explicit fixture-style matrix that tracks
   component state, theme, viewport, screenshot gate, geometry predicates, and current owner/gap.
 - [x] Harden the Button Group size gate with stable icon-only `Add` anchors and geometry predicates.
@@ -926,6 +934,22 @@ date: 2026-05-12
     into overflow clipping. No new mechanism defect was reproduced; the first red run exposed a
     fixture-oracle mistake that tried to prove escaped hit-testing with a width-overflow child
     whose layout was legitimately constrained to the wrapper width.
+- [x] Add EffectLayer computation-bound hit-test contract coverage.
+  - Result: `hit_test_routing_v1.json` now covers `EffectLayer` bounds versus hit-testing in both
+    default computation-bound and explicit `Overflow::Clip` modes. An escaped child remains
+    targetable outside the effect bounds by default, while the same child is suppressed when the
+    wrapper opts into overflow clipping. No new mechanism defect was reproduced.
+- [x] Add CompositeGroup computation-bound hit-test contract coverage.
+  - Result: `hit_test_routing_v1.json` now covers `CompositeGroup` bounds versus hit-testing in
+    both default computation-bound and explicit `Overflow::Clip` modes. An escaped child remains
+    targetable outside the compositing group bounds by default, while the same child is suppressed
+    when the wrapper opts into overflow clipping. No new mechanism defect was reproduced.
+- [x] Add BackdropSourceGroup computation-bound hit-test contract coverage.
+  - Result: `hit_test_routing_v1.json` now covers `BackdropSourceGroup` bounds versus hit-testing
+    in both default computation-bound and explicit `Overflow::Clip` modes. An escaped child remains
+    targetable outside the backdrop source group bounds by default, while the same child is
+    suppressed when the wrapper opts into overflow clipping. No new mechanism defect was
+    reproduced.
 - [x] Add renderer-level font trace predicates to the Combobox long-text gate.
   - Result: diagnostics could already capture renderer font trace bundles, but scripts could not
     assert the text-preparation facts directly. The new
@@ -959,3 +983,36 @@ date: 2026-05-12
     and `missing_glyphs=0`. No Button Group recipe or renderer defect was reproduced; the first
     runtime draft exposed an over-eager script precondition on the direct control's pre-value
     `0 x 0` semantics bounds, so the precondition now checks the owning group root instead.
+- [x] Add relative inset final-position and flow-sibling layout primitive coverage.
+  - Result: `relative-inset-offsets-final-position-without-affecting-flow-siblings` now locks the
+    `PositionStyle::Relative` contract from ADR 0062 and `element.rs`: inset offsets move the
+    target's final layout and hit-test position, but its sibling keeps the original flow slot. The
+    fixture proves the old flow-slot center misses the moved Pressable while the final-position
+    center hits it. No new `fret-ui` mechanism defect was reproduced.
+- [x] Add static inset ignore coverage for default flow positioning.
+  - Result: `static-inset-ignored-by-default-flow-position` now locks the opposite
+    `PositionStyle::Static` contract from `element.rs`: inset offsets are ignored unless the
+    element opts into a positioned mode. The fixture proves a static Pressable with `top: 12px`
+    remains at the original flow slot, keeps the following sibling at `x=20`, hits at the flow-slot
+    center, and does not hit at the hypothetical offset center. No new `fret-ui` mechanism defect
+    was reproduced.
+- [x] Add ViewCache clean-reuse movement coverage for relative inset final-position replay.
+  - Result: `view_cache_hit_moving_relative_inset_wrapper_updates_bounds_and_hit_test` now proves a
+    cached `PositionStyle::Relative` Pressable with `top: 12px` is rendered once, then moved by an
+    outer spacer from `x=0` to `x=40` without rerendering the cached subtree. Layout bounds, current
+    visual bounds, fallback hit-testing, and runtime routing all follow the moved final position,
+    while the old final-position center no longer hits. No new `fret-ui` mechanism defect was
+    reproduced.
+- [x] Add ViewCache clean-reuse semantics movement coverage for relative inset final-position
+  replay.
+  - Result: `view_cache_semantics_moving_relative_inset_updates_bounds_without_rerender` now proves
+    a cached `PositionStyle::Relative` Pressable with `top: 12px` keeps one stable semantics node
+    and moves its semantics bounds from `0,12` to `40,12` when the cache root moves without
+    rerendering the cached subtree. No new `fret-ui` mechanism defect was reproduced.
+- [x] Add retained Table selected-state semantics coverage across windowed row movement.
+  - Result: `table_virtualized_retained_selected_semantics_follow_windowed_row_selection` now proves
+    retained Table row selection refreshes `SemanticsNode.flags.selected`, and that scrolling the
+    retained window detaches the selected row while newly visible rows remain unselected. The
+    runtime companion script now has `selected_is` assertions, but the fresh focused runtime rerun
+    timed out before those assertions because the existing header-row bounds precondition stayed at
+    `0,0 0x0`; treat that as a runtime convergence follow-up, not a selected semantics defect.

@@ -1736,3 +1736,172 @@ Status: complete for MaskLayer bounds versus hit-test clipping semantics.
   with Nextest run id `a72e3112-544e-405a-957d-d4d00dfad034`.
 - JSON fixture validation passes:
   `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\hit_test_routing_v1.json`.
+
+## M99: EffectLayer Computation-Bound Hit-Test Fixture
+
+Status: complete for EffectLayer bounds versus hit-test clipping semantics.
+
+- Added `effect-layer-bounds-do-not-clip-hit-testing-by-default` and
+  `effect-layer-overflow-clip-suppresses-escaped-child-hit` to the hit-test routing fixture.
+- The cases lock ADR 0117/0118 semantics: effect bounds are computation bounds, not an implicit
+  hit-test clip, while explicit `Overflow::Clip` on the `EffectLayer` wrapper still clips escaped
+  descendants.
+- No new mechanism defect was reproduced. The existing `fret-ui` runtime already keeps effect
+  bounds separate from hit-testing and routes clipping through the explicit overflow contract.
+- The gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_hit_test_routing_matches_oracles --no-fail-fast --no-capture`
+  with Nextest run id `c31f8473-555a-4b65-996c-0648d8f85b75`.
+- JSON fixture validation passes:
+  `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\hit_test_routing_v1.json`.
+
+## M100: CompositeGroup Computation-Bound Hit-Test Fixture
+
+Status: complete for CompositeGroup bounds versus hit-test clipping semantics.
+
+- Added `composite-group-bounds-do-not-clip-hit-testing-by-default` and
+  `composite-group-overflow-clip-suppresses-escaped-child-hit` to the hit-test routing fixture.
+- The cases lock ADR 0247 semantics: compositing group bounds are computation bounds, not an
+  implicit hit-test clip, while explicit `Overflow::Clip` on the `CompositeGroup` wrapper still
+  clips escaped descendants.
+- No new mechanism defect was reproduced. The existing `fret-ui` runtime already keeps compositing
+  group bounds separate from hit-testing and routes clipping through the explicit overflow
+  contract.
+- The gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_hit_test_routing_matches_oracles --no-fail-fast --no-capture`
+  with Nextest run id `eb30efc1-a5c9-40a1-84ae-8360753f0842`.
+- JSON fixture validation passes:
+  `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\hit_test_routing_v1.json`.
+
+## M101: BackdropSourceGroup Computation-Bound Hit-Test Fixture
+
+Status: complete for BackdropSourceGroup bounds versus hit-test clipping semantics.
+
+- Added `backdrop-source-group-bounds-do-not-clip-hit-testing-by-default` and
+  `backdrop-source-group-overflow-clip-suppresses-escaped-child-hit` to the hit-test routing
+  fixture.
+- The cases lock ADR 0305 semantics: backdrop source group bounds are computation bounds, not an
+  implicit hit-test clip, while explicit `Overflow::Clip` on the `BackdropSourceGroup` wrapper
+  still clips escaped descendants.
+- No new mechanism defect was reproduced. The existing `fret-ui` runtime already keeps backdrop
+  source group bounds separate from hit-testing and routes clipping through the explicit overflow
+  contract.
+- The gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_hit_test_routing_matches_oracles --no-fail-fast --no-capture`
+  with Nextest run id `05c28589-9f50-4aa2-b1d5-3ab3a3700de2`.
+- JSON fixture validation passes:
+  `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\hit_test_routing_v1.json`.
+
+## M102: Relative Inset Flow-Sibling Layout Primitive Fixture
+
+Status: complete for `PositionStyle::Relative` final-position and flow-sibling semantics.
+
+- Added `relative-inset-offsets-final-position-without-affecting-flow-siblings` to the layout
+  primitive fixture.
+- The case locks ADR 0062 and `element.rs` semantics: relative inset offsets move the element's
+  final layout and hit-test position, but siblings still consume the original flow slot.
+- No new mechanism defect was reproduced. The current flex layout path keeps the moved Pressable at
+  `0,12`, the sibling at `20,0`, and routes hit-testing to the moved final position rather than the
+  original flow slot.
+- The gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+  with Nextest run id `6a87d598-b4f7-4b0d-83c6-c9842cdb9d25`.
+- JSON fixture validation passes:
+  `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\layout_primitives_v1.json`.
+
+## M103: Static Inset Ignore Layout Primitive Fixture
+
+Status: complete for `PositionStyle::Static` inset-ignore semantics.
+
+- Added `static-inset-ignored-by-default-flow-position` to the layout primitive fixture.
+- The case locks the opposite side of the ADR 0062 position/inset contract: inset offsets are
+  ignored for default flow-positioned nodes until the element opts into relative or absolute
+  positioning.
+- No new mechanism defect was reproduced. The current layout path keeps the static Pressable at
+  `0,0`, the sibling at `20,0`, and routes hit-testing to the original flow slot rather than the
+  hypothetical inset-offset position.
+- The gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+  with Nextest run id `63fb7f75-45f1-4f9b-bbfa-4f20d22d7d5c`.
+- JSON fixture validation passes:
+  `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\layout_primitives_v1.json`.
+
+## M104: ViewCache Relative Inset Clean-Reuse Movement Gate
+
+Status: complete for clean ViewCache reuse with relative-inset final-position movement.
+
+- Added `view_cache_hit_moving_relative_inset_wrapper_updates_bounds_and_hit_test` as a focused
+  `fret-ui` test.
+- The case locks the cached/replayed companion to M102: a `PositionStyle::Relative` Pressable with
+  `top: 12px` must keep final-position semantics when a clean ViewCache subtree is moved by an
+  outer layout change without rerendering the cached child.
+- No new mechanism defect was reproduced. The current runtime updates layout bounds, current visual
+  bounds, fallback hit-testing, and interaction-cache routing from `0,12` to `40,12` while rendering
+  the cached subtree once.
+- The focused gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui view_cache_hit_moving_relative_inset_wrapper_updates_bounds_and_hit_test --no-fail-fast --no-capture`
+  with Nextest run id `9db3ccd2-727f-4e22-be43-bd9f6f1f4b09`.
+- Formatting passes:
+  `cargo fmt -p fret-ui --check`.
+
+## M105: Input Disabled TextInput Action-State Runtime Gate
+
+Status: complete for disabled leaf TextInput action-state semantics.
+
+- Added `ui-gallery-input-disabled-control` to the disabled Input TextInput builder.
+- Added `ui-gallery-input-disabled-action-state.json` and promoted it into
+  `ui-gallery-shadcn-runtime-evidence`.
+- The runtime gate locks the concrete disabled TextInput semantics node to `disabled=true`,
+  `focus=false`, and `set_value=false`, so disabled visual styling cannot mask stale accessibility
+  action metadata.
+- No new Input recipe defect was reproduced. Early scroll-based drafts exposed a separate
+  diagnostics authoring/tooling hazard on the long Input page, so the final gate keeps the
+  action-state proof independent of deep-section scroll visibility.
+- The runtime gate passes:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\input\ui-gallery-input-disabled-action-state.json --dir target\fret-diag-input-disabled-action-state-v4 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779094906772`.
+- Protocol roundtrip passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_input_disabled_action_state --no-fail-fast`
+  with Nextest run id `4317d185-d642-4d7b-a042-592ef62530ce`.
+- Build and formatting pass:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev` and
+  `cargo fmt -p fret-ui-gallery -p fret-diag-protocol --check`.
+
+## M106: ViewCache Relative Inset Semantics Movement Gate
+
+Status: complete for clean ViewCache reuse with relative-inset semantics bounds movement.
+
+- Added `view_cache_semantics_moving_relative_inset_updates_bounds_without_rerender` as a focused
+  `fret-ui` test.
+- The case locks the semantics companion to M104: a `PositionStyle::Relative` Pressable with
+  `top: 12px` must keep one semantics node and move that node's bounds when a clean ViewCache
+  subtree moves without rerendering the cached child.
+- No new mechanism defect was reproduced. The current runtime moves the semantics bounds from
+  `0,12` to `40,12` while rendering the cached subtree once.
+- The focused gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui view_cache_semantics_moving_relative_inset_updates_bounds_without_rerender --no-fail-fast --no-capture`
+  with Nextest run id `c013f3b5-819d-45ba-8722-ddea5139213d`.
+- Formatting passes:
+  `cargo fmt -p fret-ui --check`.
+
+## M107: Retained Table Selected Semantics Focused Gate
+
+Status: complete for focused retained Table selected-state semantics; runtime companion assertions
+are authored but blocked by an existing launch/layout convergence precondition.
+
+- Added `table_virtualized_retained_selected_semantics_follow_windowed_row_selection` in
+  `fret-ui-kit`.
+- The gate locks the retained Table row-selection semantics path directly: row 0 starts
+  `selected=false`, a pointer click refreshes row 0 to `selected=true`, then scrolling to row 25
+  keeps row 25 `selected=false` and detaches row 0 from the current semantics snapshot.
+- Added `selected_is` assertions to `ui-gallery-table-retained-sort-select-scroll.json` and
+  roundtrip tests for both retained Table sort/select/scroll and window-boundary scripts.
+- No retained Table selected-semantics defect was reproduced. The focused runtime rerun timed out
+  before selected assertions at `bounds_within_window(ui-gallery-table-retained-header-row)`, where
+  the forced bundle still showed the retained Table subtree at `0,0 0x0`.
+- The focused gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_selected_semantics_follow_windowed_row_selection --no-fail-fast --no-capture`
+  with Nextest run id `bfefef11-f3dc-435a-a986-1d0cc16666d2`.
+- Protocol roundtrip and registry gates pass:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_table_retained_sort_select_scroll script_v2_roundtrip_ui_gallery_table_retained_window_boundary_scroll --no-fail-fast`
+  with Nextest run id `c6dd9233-dda9-48fd-8fde-c510fc6d9ac1`, and
+  `python tools\check_diag_scripts_registry.py`.

@@ -1038,6 +1038,277 @@ fn view_cache_hit_moving_mixed_absolute_wrapper_updates_bounds_and_hit_test() {
 }
 
 #[test]
+fn view_cache_hit_moving_relative_inset_wrapper_updates_bounds_and_hit_test() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+    let mut scene = Scene::default();
+
+    let renders = Arc::new(AtomicUsize::new(0));
+    let pressable_id = Arc::new(std::sync::Mutex::new(
+        None::<crate::elements::GlobalElementId>,
+    ));
+
+    let mut frame_bounds = Vec::new();
+    let mut frame_visual_bounds = Vec::new();
+    let mut frame_flow_slot_hits = Vec::new();
+    let mut frame_final_hits = Vec::new();
+    let mut frame_old_final_hits = Vec::new();
+    let mut frame_final_routing_hits = Vec::new();
+    let mut frame_old_final_routing_hits = Vec::new();
+
+    for offset in [0.0, 40.0] {
+        let renders = renders.clone();
+        let pressable_id_for_render = pressable_id.clone();
+        let _root_node = render_root_for_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "view-cache-moving-relative-inset-wrapper",
+            move |cx| {
+                let mut row = crate::element::FlexProps::default();
+                row.align = crate::element::CrossAlign::Start;
+
+                let mut spacer = crate::element::ContainerProps::default();
+                spacer.layout.size.width = Length::Px(Px(offset));
+                spacer.layout.size.height = Length::Px(Px(1.0));
+
+                vec![cx.flex(row, |cx| {
+                    vec![
+                        cx.container(spacer, |_cx| Vec::new()),
+                        cx.view_cache(crate::element::ViewCacheProps::default(), |cx| {
+                            renders.fetch_add(1, Ordering::SeqCst);
+
+                            let mut pressable = crate::element::PressableProps::default();
+                            pressable.layout.position = crate::element::PositionStyle::Relative;
+                            pressable.layout.inset.top = crate::element::InsetEdge::Px(Px(12.0));
+                            pressable.layout.size.width = Length::Px(Px(20.0));
+                            pressable.layout.size.height = Length::Px(Px(10.0));
+
+                            vec![
+                                cx.pressable_with_id(pressable, |_cx, _state, id| {
+                                    *pressable_id_for_render.lock().unwrap() = Some(id);
+                                    Vec::new()
+                                })
+                                .test_id("cached-relative-inset-pressable"),
+                            ]
+                        }),
+                    ]
+                })]
+            },
+        );
+
+        layout_frame(&mut ui, &mut app, &mut services, bounds);
+        paint_frame(&mut ui, &mut app, &mut services, bounds, &mut scene);
+
+        let pressable = pressable_id
+            .lock()
+            .unwrap()
+            .expect("pressable id should be recorded on the first render");
+        let pressable_node =
+            crate::elements::node_for_element(&mut app, window, pressable).expect("pressable node");
+
+        let layout = ui
+            .debug_node_bounds(pressable_node)
+            .expect("pressable layout bounds");
+        let visual =
+            crate::elements::current_visual_bounds_for_element(&mut app, window, pressable)
+                .expect("pressable visual bounds");
+
+        frame_bounds.push(layout);
+        frame_visual_bounds.push(visual);
+
+        let flow_slot_center = Point::new(Px(offset + 10.0), Px(5.0));
+        let final_center = Point::new(Px(offset + 10.0), Px(17.0));
+        let old_final_center = Point::new(Px(10.0), Px(17.0));
+
+        frame_flow_slot_hits.push(
+            ui.debug_hit_test(flow_slot_center)
+                .hit
+                .and_then(|node| ui.debug_node_element(node)),
+        );
+        frame_final_hits.push(
+            ui.debug_hit_test(final_center)
+                .hit
+                .and_then(|node| ui.debug_node_element(node)),
+        );
+        frame_old_final_hits.push(
+            ui.debug_hit_test(old_final_center)
+                .hit
+                .and_then(|node| ui.debug_node_element(node)),
+        );
+        frame_final_routing_hits.push(
+            ui.debug_hit_test_routing(final_center)
+                .hit
+                .and_then(|node| ui.debug_node_element(node)),
+        );
+        frame_old_final_routing_hits.push(
+            ui.debug_hit_test_routing(old_final_center)
+                .hit
+                .and_then(|node| ui.debug_node_element(node)),
+        );
+
+        app.advance_frame();
+    }
+
+    assert_eq!(
+        renders.load(Ordering::SeqCst),
+        1,
+        "second frame should reuse the cached relative-inset subtree"
+    );
+
+    assert_eq!(frame_bounds[0].origin, Point::new(Px(0.0), Px(12.0)));
+    assert_eq!(frame_bounds[0].size, Size::new(Px(20.0), Px(10.0)));
+    assert_eq!(frame_bounds[1].origin, Point::new(Px(40.0), Px(12.0)));
+    assert_eq!(frame_bounds[1].size, Size::new(Px(20.0), Px(10.0)));
+    assert_eq!(
+        frame_visual_bounds[1], frame_bounds[1],
+        "cached relative inset movement should update element visual bounds"
+    );
+
+    let pressable = pressable_id.lock().unwrap().expect("pressable id");
+    assert_ne!(
+        frame_flow_slot_hits[0],
+        Some(pressable),
+        "relative inset should move hit-testing away from the original flow slot"
+    );
+    assert_eq!(frame_final_hits[0], Some(pressable));
+    assert_eq!(frame_final_routing_hits[0], Some(pressable));
+    assert_ne!(
+        frame_old_final_hits[1],
+        Some(pressable),
+        "old final-position center should no longer hit after the cached subtree moves"
+    );
+    assert_ne!(
+        frame_old_final_routing_hits[1],
+        Some(pressable),
+        "runtime routing should not replay the old relative-inset hit after movement"
+    );
+    assert_eq!(
+        frame_final_hits[1],
+        Some(pressable),
+        "new final-position center should hit after cached subtree movement"
+    );
+    assert_eq!(
+        frame_final_routing_hits[1],
+        Some(pressable),
+        "runtime routing should hit the moved relative-inset element after interaction-cache replay"
+    );
+}
+
+#[test]
+fn view_cache_semantics_moving_relative_inset_updates_bounds_without_rerender() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let renders = Arc::new(AtomicUsize::new(0));
+    let mut frame_semantics_bounds = Vec::new();
+    let mut frame_node_counts = Vec::new();
+
+    for offset in [0.0, 40.0] {
+        let renders = renders.clone();
+        let _root_node = render_root_for_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "view-cache-moving-relative-inset-semantics",
+            move |cx| {
+                let mut row = crate::element::FlexProps::default();
+                row.align = crate::element::CrossAlign::Start;
+
+                let mut spacer = crate::element::ContainerProps::default();
+                spacer.layout.size.width = Length::Px(Px(offset));
+                spacer.layout.size.height = Length::Px(Px(1.0));
+
+                vec![cx.flex(row, |cx| {
+                    vec![
+                        cx.container(spacer, |_cx| Vec::new()),
+                        cx.view_cache(crate::element::ViewCacheProps::default(), |cx| {
+                            renders.fetch_add(1, Ordering::SeqCst);
+
+                            let mut pressable = crate::element::PressableProps::default();
+                            pressable.layout.position = crate::element::PositionStyle::Relative;
+                            pressable.layout.inset.top = crate::element::InsetEdge::Px(Px(12.0));
+                            pressable.layout.size.width = Length::Px(Px(20.0));
+                            pressable.layout.size.height = Length::Px(Px(10.0));
+
+                            vec![
+                                cx.pressable(pressable, |_cx, _state| Vec::new())
+                                    .test_id("cached-relative-inset-semantics"),
+                            ]
+                        }),
+                    ]
+                })]
+            },
+        );
+
+        ui.request_semantics_snapshot();
+        layout_frame(&mut ui, &mut app, &mut services, bounds);
+
+        let snapshot = ui.semantics_snapshot().expect("semantics snapshot");
+        let matching_nodes: Vec<_> = snapshot
+            .nodes
+            .iter()
+            .filter(|node| node.test_id.as_deref() == Some("cached-relative-inset-semantics"))
+            .collect();
+        let node = matching_nodes
+            .first()
+            .copied()
+            .expect("cached semantics node should remain observable after cache reuse");
+        frame_node_counts.push(matching_nodes.len());
+        frame_semantics_bounds.push(node.bounds);
+
+        app.advance_frame();
+    }
+
+    assert_eq!(
+        renders.load(Ordering::SeqCst),
+        1,
+        "second frame should reuse the cached relative-inset semantics subtree"
+    );
+    assert_eq!(
+        frame_node_counts,
+        vec![1, 1],
+        "cache reuse should not duplicate or drop the cached semantics node"
+    );
+    assert_eq!(
+        frame_semantics_bounds[0],
+        Rect::new(Point::new(Px(0.0), Px(12.0)), Size::new(Px(20.0), Px(10.0))),
+        "first snapshot should expose the relative-inset final position"
+    );
+    assert_eq!(
+        frame_semantics_bounds[1],
+        Rect::new(
+            Point::new(Px(40.0), Px(12.0)),
+            Size::new(Px(20.0), Px(10.0))
+        ),
+        "clean cache-hit semantics should move with the cache root instead of keeping stale bounds"
+    );
+}
+
+#[test]
 fn view_cache_keep_alive_revalidates_recorded_membership_before_touching_stale_detached_elements() {
     use crate::elements::NodeEntry;
 

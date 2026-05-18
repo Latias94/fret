@@ -1,0 +1,88 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: Input disabled action-state",
+    "required_capabilities": ["diag.script_v2"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "input"
+    },
+    "tags": ["ui_gallery", "shadcn", "input", "semantics", "disabled", "action-state"],
+    "target_hints": [
+      "Starts directly on the Input page.",
+      "Verifies that a disabled Input exposes disabled=true and set_value=false on the concrete TextInput semantics node."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-trigger" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "set_window_inner_size", "width_px": 760.0, "height_px": 700.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "window_inner_size_approx_equal",
+        "width_px": 760.0,
+        "height_px": 720.0,
+        "eps_px": 2.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-input" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-disabled-control" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "disabled_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-disabled-control" },
+        "disabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-disabled-control" },
+        "action": "focus",
+        "enabled": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-disabled-control" },
+        "action": "set_value",
+        "enabled": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "value_len_ge",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-disabled-control" },
+        "min_len_bytes": 0
+      }
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-input-disabled-action-state" }
+  ]
+}
