@@ -19,3 +19,30 @@ fn checkbox_table_snippet_keeps_action_first_select_all_surface() {
         "checkbox table snippet should not fall back to a command-id click handler for select-all"
     );
 }
+
+#[test]
+fn checkbox_table_snippet_keeps_fixed_cell_text_on_table_role() {
+    let source = include_str!("../src/ui/snippets/checkbox/table.rs");
+
+    for needle in [
+        "fn table_cell_text<H: UiHost>(",
+        "fret_ui_kit::declarative::text::text_table_cell(cx, text)",
+        "shadcn::table_cell(table_cell_text(cx, id))",
+        "shadcn::table_cell(table_cell_text(cx, role))",
+    ] {
+        assert!(
+            source.contains(needle),
+            "checkbox table snippet should route fixed cell text through the shared table-cell role; missing `{needle}`"
+        );
+    }
+
+    for forbidden in [
+        "shadcn::table_cell(ui::text(id))",
+        "shadcn::table_cell(ui::text(role))",
+    ] {
+        assert!(
+            !source.contains(forbidden),
+            "checkbox table snippet reintroduced bare fixed table-cell text: `{forbidden}`"
+        );
+    }
+}

@@ -1943,6 +1943,23 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
 - `git diff --check` passed.
 
+2026-05-19 checkbox table-cell text-role slice:
+
+- Red repro: `cargo nextest run -p fret-ui-gallery --test checkbox_table_action_first_surface
+  checkbox_table_snippet_keeps_fixed_cell_text_on_table_role --no-fail-fast` failed before the fix
+  because `checkbox/table.rs` was missing the local table-cell text helper.
+- `apps/fret-ui-gallery/src/ui/snippets/checkbox/table.rs` keeps the existing
+  `cx.actions().models::<act::ToggleAllRows>` / `.action(act::ToggleAllRows)` select-all flow, and
+  now routes member/role fixed table cells through a local helper backed by
+  `text_table_cell(...)` instead of `ui::text(id)` / `ui::text(role)`.
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test checkbox_table_action_first_surface --no-fail-fast` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
 2026-05-17 gallery data-grid text-role slice:
 
 - `cargo fmt -p fret-ui-gallery` passed.

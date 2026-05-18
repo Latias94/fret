@@ -484,6 +484,10 @@ Readiness order for the next locally testable review slices:
    kit roles. Demo/Usage/Footer/RTL/Actions and fixed body cells in Children no longer teach bare
    `ui::text(...)` inside table cells; the rich `table_head_children(...)` /
    `table_caption_children(...)` sample text stays intentionally owned by the children-API example.
+   2026-05-19 checkbox table-cell text follow-up: the checkbox table snippet now keeps its
+   action-first select-all surface while routing member/role fixed cells through a local helper
+   backed by `text_table_cell(...)`, so checkbox-table examples no longer teach bare `ui::text(id)`
+   / `ui::text(role)` inside fixed table rows.
    2026-05-18 AI AudioPlayer state-marker follow-up: copyable AudioPlayer snippets now expose
    state-only diagnostics anchors through zero-size `SpacerProps` children under generic semantics
    instead of empty `Text` nodes. This keeps test markers out of visible text layout semantics while

@@ -448,6 +448,10 @@ Exit criteria:
   `text_table_cell_emphasis(...)` preserves medium first-column emphasis without reintroducing
   app-local `ui::text(...).font_weight(...)`; rich head/caption child text remains scoped to the
   explicit children-API example.
+  2026-05-19 checkbox table-cell text result: the checkbox table snippet keeps the action-first
+  select-all model/action surface while moving member/role fixed cells to a local helper backed by
+  `text_table_cell(...)`, closing another fixed-row bare text escape without changing checkbox
+  recipe behavior.
   2026-05-18 AI AudioPlayer state-marker result: the copyable AudioPlayer local/remote snippets
   now use zero-size `SpacerProps` children under generic semantics for state-only diagnostics
   markers, instead of mounting empty `Text` nodes for non-visible test anchors.
