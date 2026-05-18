@@ -443,6 +443,9 @@ Exit criteria:
   fixed status/name/email/CPU/memory/fallback cells through a directory-local helper backed by
   `text_table_cell(...)`. The amount columns intentionally keep their existing tabular numeric text
   styling until numeric table-cell semantics are split as a separate role.
+  2026-05-18 AI AudioPlayer state-marker result: the copyable AudioPlayer local/remote snippets
+  now use zero-size `SpacerProps` children under generic semantics for state-only diagnostics
+  markers, instead of mounting empty `Text` nodes for non-visible test anchors.
   2026-05-17 gallery data-grid text result: the UI Gallery DataGrid preview now routes virtualized
   grid cells through `text_table_cell(...)` and the selected-row status line through
   `control_readout_text(...)`.

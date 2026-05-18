@@ -479,6 +479,10 @@ Readiness order for the next locally testable review slices:
    `text_table_cell(...)`. Default/basic/guide/RTL/reusable-component fixed cell text and fallback
    cells no longer teach bare `cx.text(...)`; amount columns keep their existing tabular numeric
    formatting until a dedicated numeric-cell role is designed.
+   2026-05-18 AI AudioPlayer state-marker follow-up: copyable AudioPlayer snippets now expose
+   state-only diagnostics anchors through zero-size `SpacerProps` children under generic semantics
+   instead of empty `Text` nodes. This keeps test markers out of visible text layout semantics while
+   preserving stable diagnostics `test_id`s.
    2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
    virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
    `control_readout_text(...)`.
