@@ -1,7 +1,12 @@
 # UI Gallery Code Editor Canvas Paint Tail Attribution v1
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-18
+
+Status note (2026-05-18): this lane closed with a `fret-ui` positioned-container layout fix. The
+code-editor `Canvas` tail was real row paint work, but the root owner was a wrong inner windowed
+scroll viewport caused by final child sizing under an outer scroll overflow probe. See
+`CPT_030_CPT_040_OWNER_PROOF_2026-05-18.md` and `CLOSEOUT_AUDIT_2026-05-18.md`.
 
 ## Why This Lane Exists
 
@@ -95,3 +100,8 @@ Close this lane only after it records one of these outcomes:
 - a diagnostics-first change with proof that the original owner was ambiguous;
 - a renderer follow-on with a source-backed owner boundary;
 - or a no-change verdict if the evidence does not reproduce.
+
+Closeout result:
+
+- Closed with a focused `fret-ui` runtime mechanism fix and regression tests.
+- No renderer, `ViewCache`, or code-editor row-surface follow-on is split from this evidence set.

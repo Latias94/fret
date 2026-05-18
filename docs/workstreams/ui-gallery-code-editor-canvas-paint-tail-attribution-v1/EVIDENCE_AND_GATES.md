@@ -59,6 +59,126 @@ CPT-030 decision:
   `us_windowed_surface_paint_callback`, `us_windowed_surface_row_paint`,
   `us_windowed_surface_non_row`, and row scene/text counters.
 
+## CPT-030 Repro Result
+
+Evidence:
+
+- `target/fret-diag/ui-gallery-code-editor-canvas-paint-tail-attribution-v1-cpt030/1779092655064/bundle.schema2.json`
+- `CPT_030_CPT_040_OWNER_PROOF_2026-05-18.md`
+
+Stats command:
+
+```bash
+target/release/fretboard-dev diag stats \
+  target/fret-diag/ui-gallery-code-editor-canvas-paint-tail-attribution-v1-cpt030/1779092655064/bundle.schema2.json \
+  --sort time --top 20
+```
+
+Observed local result:
+
+- `time p50/p95 (us): total=722/380102, layout=35/1140, prepaint=16/2575, paint=669/376387`
+- Worst frame `total=380102us`, `layout=1140us`, `prepaint=2575us`, `paint=376387us`
+- `code_editor.paint_perf` worst visible range: `visible(start/end/rows)=0/20003/20004`
+- `code_editor.paint_perf.surface` worst row paint: `row_paint=359962us`
+
+Viewport evidence:
+
+```json
+{"test_id":"ui-gallery-code-editor-torture-viewport","viewport_h":320064.0,"content_h":320064.0}
+```
+
+Verdict:
+
+- The `Canvas` tail repeated with paint perf enabled.
+- The row paint was real work, but the root owner was a wrong inner scroll viewport equal to the
+  full content height.
+
+## CPT-040 Owner Proof Result
+
+Runtime anchors:
+
+- `crates/fret-ui/src/declarative/host_widget/layout/positioned_container.rs`
+- `crates/fret-ui/src/declarative/tests/layout/scroll.rs`
+
+Focused test:
+
+```bash
+cargo nextest run -p fret-ui scroll_viewport_for_tall_canvas_child
+```
+
+Fresh local result:
+
+```text
+2 tests run: 2 passed, 1019 skipped
+```
+
+After bundle:
+
+- `target/fret-diag/ui-gallery-code-editor-canvas-paint-tail-attribution-v1-cpt040/1779099328829/bundle.schema2.json`
+
+Stats command:
+
+```bash
+target/release/fretboard-dev diag stats \
+  target/fret-diag/ui-gallery-code-editor-canvas-paint-tail-attribution-v1-cpt040/1779099328829/bundle.schema2.json \
+  --sort time --top 20
+```
+
+Observed local result:
+
+- `time p50/p95 (us): total=698/1425, layout=39/761, prepaint=124/286, paint=393/418`
+- Worst frame `total=1425us`, `layout=753us`, `prepaint=274us`, `paint=398us`
+- `paint_widget.hotspots canvas.top_exclusive_us(p50/p95/max)=125/134/134`
+- `code_editor.paint_perf` max rows: `painted=289`, `replayed=289`
+
+Viewport evidence:
+
+```json
+{"test_id":"ui-gallery-code-editor-torture-viewport","viewport_h":518.0,"content_h":320064.0}
+```
+
+Verdict:
+
+- The `fret-ui` positioned-container final child sizing fix bounded the inner windowed scroll
+  viewport.
+- The same local repro no longer shows the 360ms `Canvas` paint tail.
+- No renderer, `ViewCache`, or code-editor row-surface follow-on is split from this lane.
+
+## CPT-050 Closeout
+
+Evidence:
+
+- `CLOSEOUT_AUDIT_2026-05-18.md`
+
+Closeout verdict:
+
+- Closed with a runtime mechanism fix in `fret-ui`.
+- Future performance work should start from a new fresh bundle and a new owner boundary.
+
+Fresh verification:
+
+```bash
+cargo nextest run -p fret-ui scroll_viewport_for_tall_canvas_child
+```
+
+Result: passed, `2 tests run: 2 passed, 1019 skipped`.
+
+```bash
+python3 -m json.tool docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/WORKSTREAM.json
+python3 tools/check_workstream_catalog.py
+git diff --check
+cargo fmt --check
+python3 tools/check_layering.py
+```
+
+Results:
+
+- `WORKSTREAM.json`: valid JSON.
+- `check_workstream_catalog.py`: passed, `416 dedicated directories, 47 standalone markdown files`.
+- `git diff --check`: passed.
+- `cargo fmt --check`: passed.
+- `check_layering.py`: passed.
+
 ## Repro Template
 
 ```bash

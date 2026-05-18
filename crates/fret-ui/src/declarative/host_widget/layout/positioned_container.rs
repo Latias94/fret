@@ -106,6 +106,7 @@ impl ElementHostWidget {
                         .iter()
                         .find_map(|(id, size)| (*id == child).then_some(*size))
                         .unwrap_or(Size::new(Px(0.0), Px(0.0)));
+                    let child_size = static_child_size_for_base(child_style, child_size, base.size);
                     let _ = cx.layout_in(child, Rect::new(base.origin, child_size));
                 }
                 PositionedLayoutStyle::Relative(inset) => {
@@ -113,6 +114,7 @@ impl ElementHostWidget {
                         .iter()
                         .find_map(|(id, size)| (*id == child).then_some(*size))
                         .unwrap_or(Size::new(Px(0.0), Px(0.0)));
+                    let child_size = static_child_size_for_base(child_style, child_size, base.size);
                     layout_positioned_child(
                         cx,
                         child,
@@ -196,6 +198,24 @@ impl ElementHostWidget {
         }
         desired
     }
+}
+
+fn static_child_size_for_base(style: LayoutStyle, measured: Size, base: Size) -> Size {
+    fn axis(length: Length, measured: Px, base: Px) -> Px {
+        match length {
+            Length::Fill => Px(base.0.max(0.0)),
+            Length::Fraction(f) => {
+                let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                Px((base.0.max(0.0) * f).max(0.0))
+            }
+            Length::Auto | Length::Px(_) => measured,
+        }
+    }
+
+    Size::new(
+        axis(style.size.width, measured.width, base.width),
+        axis(style.size.height, measured.height, base.height),
+    )
 }
 
 // Intentionally omitted: probe constraint construction is context-dependent (scroll overflow

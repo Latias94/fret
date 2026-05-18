@@ -1,6 +1,169 @@
 use super::*;
 
 #[test]
+fn text_input_region_preserves_fill_scroll_viewport_for_tall_canvas_child() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "text-input-region-fill-scroll-viewport",
+        |cx| {
+            let mut panel = crate::element::ContainerProps::default();
+            panel.layout.size.width = Length::Fill;
+            panel.layout.size.height = Length::Px(Px(80.0));
+
+            vec![cx.container(panel, |cx| {
+                let mut region = crate::element::TextInputRegionProps::default();
+                region.layout.size.width = Length::Fill;
+                region.layout.size.height = Length::Fill;
+                region.layout.overflow = crate::element::Overflow::Clip;
+
+                let scroll_handle = scroll_handle.clone();
+                vec![cx.text_input_region(region, move |cx| {
+                    let mut scroll = crate::element::ScrollProps::default();
+                    scroll.layout.size.width = Length::Fill;
+                    scroll.layout.size.height = Length::Fill;
+                    scroll.layout.overflow = crate::element::Overflow::Clip;
+                    scroll.scroll_handle = Some(scroll_handle.clone());
+                    scroll.windowed_paint = true;
+
+                    vec![cx.scroll(scroll, |cx| {
+                        let mut canvas = crate::element::CanvasProps::default();
+                        canvas.layout.size.width = Length::Fill;
+                        canvas.layout.size.height = Length::Px(Px(320_064.0));
+                        vec![cx.canvas(canvas, |_painter| {})]
+                    })]
+                })]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let viewport = scroll_handle.viewport_size();
+    let content = scroll_handle.content_size();
+    assert_eq!(viewport.height, Px(80.0));
+    assert_eq!(content.height, Px(320_064.0));
+}
+
+#[test]
+fn nested_page_scroll_preserves_inner_windowed_scroll_viewport_for_tall_canvas_child() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(680.0), Px(640.0)),
+    );
+    let mut text = FakeTextService::default();
+    let outer_scroll_handle = crate::scroll::ScrollHandle::default();
+    let inner_scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "nested-page-scroll-inner-windowed-scroll-viewport",
+        |cx| {
+            let outer_scroll_handle = outer_scroll_handle.clone();
+            let inner_scroll_handle = inner_scroll_handle.clone();
+            let mut outer_scroll = crate::element::ScrollProps::default();
+            outer_scroll.layout.size.width = Length::Fill;
+            outer_scroll.layout.size.height = Length::Fill;
+            outer_scroll.layout.overflow = crate::element::Overflow::Clip;
+            outer_scroll.scroll_handle = Some(outer_scroll_handle);
+            outer_scroll.intrinsic_measure_mode =
+                crate::element::ScrollIntrinsicMeasureMode::Viewport;
+
+            vec![cx.scroll(outer_scroll, move |cx| {
+                let mut page = crate::element::ColumnProps::default();
+                page.layout.size.width = Length::Fill;
+                page.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                page.gap = crate::element::SpacingLength::Px(Px(16.0));
+
+                let inner_scroll_handle = inner_scroll_handle.clone();
+                vec![cx.column(page, move |cx| {
+                    let mut header = crate::element::ContainerProps::default();
+                    header.layout.size.width = Length::Fill;
+                    header.layout.size.height = Length::Px(Px(80.0));
+
+                    let mut panel = crate::element::ContainerProps::default();
+                    panel.layout.size.width = Length::Fill;
+                    panel.layout.size.height = Length::Px(Px(520.0));
+                    panel.layout.overflow = crate::element::Overflow::Clip;
+
+                    let inner_scroll_handle = inner_scroll_handle.clone();
+                    vec![
+                        cx.container(header, |_cx| vec![]),
+                        cx.container(panel, move |cx| {
+                            let mut region = crate::element::TextInputRegionProps::default();
+                            region.layout.size.width = Length::Fill;
+                            region.layout.size.height = Length::Fill;
+                            region.layout.overflow = crate::element::Overflow::Clip;
+
+                            let inner_scroll_handle = inner_scroll_handle.clone();
+                            vec![cx.text_input_region(region, move |cx| {
+                                let mut scroll = crate::element::ScrollProps::default();
+                                scroll.layout.size.width = Length::Fill;
+                                scroll.layout.size.height = Length::Fill;
+                                scroll.layout.overflow = crate::element::Overflow::Clip;
+                                scroll.scroll_handle = Some(inner_scroll_handle.clone());
+                                scroll.windowed_paint = true;
+
+                                vec![cx.scroll(scroll, |cx| {
+                                    let mut pointer = crate::element::PointerRegionProps::default();
+                                    pointer.layout.size.width = Length::Fill;
+                                    pointer.layout.size.height = Length::Fill;
+
+                                    vec![cx.pointer_region(pointer, |cx| {
+                                        let mut canvas = crate::element::CanvasProps::default();
+                                        canvas.layout.size.width = Length::Fill;
+                                        canvas.layout.size.height = Length::Px(Px(320_064.0));
+                                        vec![cx.canvas(canvas, |_painter| {})]
+                                    })]
+                                })]
+                            })]
+                        }),
+                    ]
+                })]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer_viewport = outer_scroll_handle.viewport_size();
+    let outer_content = outer_scroll_handle.content_size();
+    let inner_viewport = inner_scroll_handle.viewport_size();
+    let inner_content = inner_scroll_handle.content_size();
+
+    assert_eq!(outer_viewport.height, Px(640.0));
+    assert_eq!(outer_content.height, Px(640.0));
+    assert_eq!(inner_viewport.height, Px(520.0));
+    assert_eq!(inner_content.height, Px(320_064.0));
+}
+
+#[test]
 fn scroll_intrinsic_viewport_mode_does_not_measure_children() {
     use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 

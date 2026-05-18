@@ -112,8 +112,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     props.corner_radii = Corners::all(theme.metric_token("metric.radius.sm"));
 
                     vec![cx.container(props, move |cx| {
-                        vec![decl_text::text_button_label(cx, add_external_label.clone())
-                            .inherit_foreground(fg)]
+                        vec![
+                            decl_text::text_button_label(cx, add_external_label.clone())
+                                .inherit_foreground(fg),
+                        ]
                     })]
                 },
             );

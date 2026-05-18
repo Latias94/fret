@@ -34,7 +34,12 @@ Exit criteria:
 - A fresh bundle confirms or rejects the VCRJ-030 `Canvas` paint signature.
 - Any missing diagnostics needed for owner attribution are added or explicitly split.
 
-Status: Pending.
+Status: Complete.
+
+Evidence:
+
+- `CPT_030_CPT_040_OWNER_PROOF_2026-05-18.md`
+- `target/fret-diag/ui-gallery-code-editor-canvas-paint-tail-attribution-v1-cpt030/1779092655064/bundle.schema2.json`
 
 ## M3 - Proof Or Split
 
@@ -43,7 +48,13 @@ Exit criteria:
 - A runtime optimization lands only after a focused owner proof.
 - Otherwise, the lane records a no-change verdict or splits the actual owner.
 
-Status: Pending.
+Status: Complete.
+
+Evidence:
+
+- `crates/fret-ui/src/declarative/host_widget/layout/positioned_container.rs`
+- `crates/fret-ui/src/declarative/tests/layout/scroll.rs`
+- `target/fret-diag/ui-gallery-code-editor-canvas-paint-tail-attribution-v1-cpt040/1779099328829/bundle.schema2.json`
 
 ## M4 - Closeout
 
@@ -52,4 +63,8 @@ Exit criteria:
 - Workstream docs and gates reflect the final owner verdict.
 - Remaining work is split by ownership boundary.
 
-Status: Pending.
+Status: Complete.
+
+Evidence:
+
+- `CLOSEOUT_AUDIT_2026-05-18.md`

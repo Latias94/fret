@@ -31,30 +31,40 @@ Last updated: 2026-05-18
 
 ## M2 - Reproduction Or Instrumented Bundle
 
-- [ ] CPT-030 [owner=codex] [deps=CPT-020] [scope=target/fret-diag,tools/diag-scripts/ui-gallery/code-editor]
+- [x] CPT-030 [owner=codex] [deps=CPT-020] [scope=target/fret-diag,tools/diag-scripts/ui-gallery/code-editor]
   Goal: Capture a fresh bundle, optionally with any added low-overhead attribution, and verify
   whether the `Canvas` paint tail repeats.
   Validation:
   `target/release/fretboard-dev diag stats <bundle.schema2.json> --sort time --top 20`.
-  Evidence: Fresh bundle path and stats summary.
-  Handoff: If the signature repeats, continue with the smallest owner proof. If it does not repeat,
-  record a no-change/no-repro verdict.
+  Evidence:
+  `target/fret-diag/ui-gallery-code-editor-canvas-paint-tail-attribution-v1-cpt030/1779092655064/bundle.schema2.json`;
+  `CPT_030_CPT_040_OWNER_PROOF_2026-05-18.md`.
+  Handoff: Complete. The signature repeated, but the decisive clue was the inner scroll viewport:
+  `viewport_h=320064`, matching `content_h=320064`. Continue with CPT-040 owner proof.
 
 ## M3 - Focused Proof Or Split
 
-- [ ] CPT-040 [owner=codex] [deps=CPT-030] [scope=owner-selected]
+- [x] CPT-040 [owner=codex] [deps=CPT-030] [scope=crates/fret-ui/src/declarative/host_widget/layout/positioned_container.rs,crates/fret-ui/src/declarative/tests/layout/scroll.rs]
   Goal: Land the smallest justified proof or split the real owner into a narrower follow-on.
-  Validation: Owner-specific focused test or diag gate.
-  Evidence: Focused test path, diagnostics diff, or split follow-on.
-  Handoff: Keep renderer/canvas mechanism work separate from code-editor row-surface policy unless
-  the source audit proves they are the same owner.
+  Validation:
+  `cargo nextest run -p fret-ui scroll_viewport_for_tall_canvas_child`;
+  `target/release/fretboard-dev diag stats target/fret-diag/ui-gallery-code-editor-canvas-paint-tail-attribution-v1-cpt040/1779099328829/bundle.schema2.json --sort time --top 20`.
+  Evidence:
+  `CPT_030_CPT_040_OWNER_PROOF_2026-05-18.md`;
+  `target/fret-diag/ui-gallery-code-editor-canvas-paint-tail-attribution-v1-cpt040/1779099328829/bundle.schema2.json`.
+  Handoff: Complete. The real owner was `fret-ui` positioned-container final sizing for
+  non-absolute `Fill` / `Fraction` children under scroll overflow probes. No renderer or
+  code-editor follow-on is split from this evidence set.
 
 ## M4 - Closeout
 
-- [ ] CPT-050 [owner=codex] [deps=CPT-040] [scope=docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1]
+- [x] CPT-050 [owner=codex] [deps=CPT-040] [scope=docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1]
   Goal: Close the lane with the final owner verdict, evidence, and next action.
   Validation:
   `python3 tools/check_layering.py`; `cargo fmt --check`; `git diff --check`;
   `python3 tools/check_workstream_catalog.py`.
-  Evidence: Closeout audit and final bundle.
-  Handoff: Do not reopen VCRJ unless a future bundle again proves `ViewCache` is the top owner.
+  Evidence:
+  `CLOSEOUT_AUDIT_2026-05-18.md`;
+  `CPT_030_CPT_040_OWNER_PROOF_2026-05-18.md`.
+  Handoff: Closed. Do not reopen VCRJ, renderer, or code-editor row-surface work from this lane
+  unless a future fresh bundle with a bounded viewport proves a new owner.

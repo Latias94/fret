@@ -1,11 +1,11 @@
 # UI Gallery Code Editor Canvas Paint Tail Attribution v1 - Handoff
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-18
 
 ## Current State
 
-The lane is open as the follow-on to
+The lane is closed as the follow-on to
 `docs/workstreams/view-cache-resize-jitter-attribution-v1/`.
 
 Starting evidence:
@@ -32,43 +32,38 @@ CPT-020 source attribution is complete:
 - The all-zero `code_editor.paint_perf frames=10` stats lines are a reporting artifact, not proof
   that row paint did no work.
 
+Final owner proof is complete:
+
+- `CPT_030_CPT_040_OWNER_PROOF_2026-05-18.md`
+- `CLOSEOUT_AUDIT_2026-05-18.md`
+
+Final verdict:
+
+- CPT-030 repeated the `Canvas` tail with paint perf enabled:
+  `total=380102us`, `paint=376387us`, `rows_painted=20004`.
+- The decisive structural evidence was
+  `ui-gallery-code-editor-torture-viewport viewport_h=320064 content_h=320064`.
+- The root owner was `fret-ui` positioned-container final child sizing for non-absolute
+  `Fill` / `Fraction` children under scroll overflow probes.
+- CPT-040 after evidence shows the same script bounded the inner viewport:
+  `viewport_h=518 content_h=320064`, `rows_painted=289`, worst `total=1425us`,
+  worst `paint=398us`.
+
+Runtime/test anchors:
+
+- `crates/fret-ui/src/declarative/host_widget/layout/positioned_container.rs`
+- `crates/fret-ui/src/declarative/tests/layout/scroll.rs`
+
 ## Next Task
 
-Run CPT-030.
+No next task remains in this lane.
 
-Goal:
-
-- Capture a fresh same-script bundle with `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`.
-- Verify whether the `Canvas` paint tail repeats.
-- If it repeats, split it by `us_windowed_surface_paint_callback`,
-  `us_windowed_surface_row_paint`, `us_windowed_surface_non_row`, and row-scene/text counters.
-
-Use:
-
-```bash
-target/release/fretboard-dev diag perf \
-  tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json \
-  --repeat 1 \
-  --warmup-frames 5 \
-  --reuse-launch \
-  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
-  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
-  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
-  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
-  --env FRET_DIAG_RENDERER_PERF=1 \
-  --env FRET_LAYOUT_NODE_PROFILE=1 \
-  --env FRET_LAYOUT_NODE_PROFILE_TOP=20 \
-  --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 \
-  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
-  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
-  --env FRET_DIAG_SEMANTICS=0 \
-  --dir target/fret-diag/ui-gallery-code-editor-canvas-paint-tail-attribution-v1-cpt030 \
-  --launch -- cargo run -p fret-ui-gallery --release --features gallery-full
-```
+Start a new narrow workstream only if future bounded-viewport evidence proves a remaining owner.
 
 ## Guardrails
 
 - Keep `ViewCache` out of this lane.
-- Keep `Scroll` layout out of this lane.
-- Keep renderer redesign out until source evidence proves renderer ownership.
+- Keep renderer redesign out of this lane.
+- Do not split code-editor row-surface optimization from this evidence set; CPT-040 removed the
+  wrong-viewport cause.
 - Treat VCRJ-030 as local attribution evidence, not a portable performance baseline.

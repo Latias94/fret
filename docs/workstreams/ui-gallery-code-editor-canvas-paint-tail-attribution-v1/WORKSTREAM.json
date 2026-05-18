@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slug": "ui-gallery-code-editor-canvas-paint-tail-attribution-v1",
   "title": "UI Gallery Code Editor Canvas Paint Tail Attribution v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-05-18",
   "scope_kind": "audit",
   "follow_on_of": "view-cache-resize-jitter-attribution-v1",
@@ -33,15 +33,25 @@
       "path": "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/CPT_020_SOURCE_ATTRIBUTION_2026-05-18.md"
     },
     {
+      "role": "evidence",
+      "path": "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/CPT_030_CPT_040_OWNER_PROOF_2026-05-18.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    },
+    {
       "role": "reference",
       "path": "docs/workstreams/view-cache-resize-jitter-attribution-v1/CLOSEOUT_AUDIT_2026-05-18.md"
     }
   ],
   "repro": {
-    "summary": "Reuse the VCRJ-030 UI Gallery code-editor resize-jitter bundle as starting evidence, then rerun the same script after source attribution if the Canvas paint tail needs confirmation.",
+    "summary": "The lane starts from VCRJ-030, reproduces the Canvas tail in CPT-030 with paint perf enabled, then verifies the positioned-container sizing fix in CPT-040.",
     "commands": [
       "target/release/fretboard-dev diag stats target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030/1779091052963/bundle.schema2.json --sort time --top 20",
-      "target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json --repeat 1 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_RENDERER_PERF=1 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --dir target/fret-diag/ui-gallery-code-editor-canvas-paint-tail-attribution-v1-cpt030 --launch -- cargo run -p fret-ui-gallery --release --features gallery-full"
+      "target/release/fretboard-dev diag stats target/fret-diag/ui-gallery-code-editor-canvas-paint-tail-attribution-v1-cpt030/1779092655064/bundle.schema2.json --sort time --top 20",
+      "cargo nextest run -p fret-ui scroll_viewport_for_tall_canvas_child",
+      "target/release/fretboard-dev diag stats target/fret-diag/ui-gallery-code-editor-canvas-paint-tail-attribution-v1-cpt040/1779099328829/bundle.schema2.json --sort time --top 20"
     ]
   },
   "gates": [
@@ -64,6 +74,18 @@
     {
       "name": "perf-attribution",
       "command": "target/release/fretboard-dev diag stats <bundle.schema2.json> --sort time --top 20"
+    },
+    {
+      "name": "focused-runtime-proof",
+      "command": "cargo nextest run -p fret-ui scroll_viewport_for_tall_canvas_child"
+    },
+    {
+      "name": "format",
+      "command": "cargo fmt --check"
+    },
+    {
+      "name": "layering",
+      "command": "python3 tools/check_layering.py"
     }
   ],
   "evidence": [
@@ -73,12 +95,17 @@
     "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/EVIDENCE_AND_GATES.md",
     "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/HANDOFF.md",
     "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/CPT_020_SOURCE_ATTRIBUTION_2026-05-18.md",
+    "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/CPT_030_CPT_040_OWNER_PROOF_2026-05-18.md",
+    "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/CLOSEOUT_AUDIT_2026-05-18.md",
     "docs/workstreams/view-cache-resize-jitter-attribution-v1/CLOSEOUT_AUDIT_2026-05-18.md",
     "target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030/1779091052963/bundle.schema2.json",
     "target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030/layout.perf.summary.v1.json",
+    "target/fret-diag/ui-gallery-code-editor-canvas-paint-tail-attribution-v1-cpt030/1779092655064/bundle.schema2.json",
+    "target/fret-diag/ui-gallery-code-editor-canvas-paint-tail-attribution-v1-cpt040/1779099328829/bundle.schema2.json",
     "ecosystem/fret-code-editor/src/editor/mod.rs",
     "ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs",
-    "crates/fret-ui",
+    "crates/fret-ui/src/declarative/host_widget/layout/positioned_container.rs",
+    "crates/fret-ui/src/declarative/tests/layout/scroll.rs",
     "crates/fret-diag"
   ],
   "adr_refs": [
@@ -86,7 +113,7 @@
     "docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue with CPT-030 instrumented same-script rerun before any runtime change. Split renderer/canvas mechanism work only if paint_perf-enabled evidence proves that owner."
+    "default_action": "closed",
+    "notes": "Closed with a fret-ui positioned-container layout fix. Open a new narrow lane only if a future bounded-viewport bundle proves a remaining owner."
   }
 }
