@@ -610,6 +610,8 @@
     "apps/fret-ui-gallery/src/ui/snippets/ai/transcription_demo.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/web_preview_demo.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/chat_demo.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_provider_demo.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_docs_demo.rs",
     "apps/fret-ui-gallery/tests/ai_visible_text_role_surface.rs",
     "ecosystem/fret-ui-ai/src/elements/mod.rs",
     "ecosystem/fret-ui-ai/src/surface_policy_tests.rs",

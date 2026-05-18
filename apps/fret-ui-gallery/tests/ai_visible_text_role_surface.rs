@@ -764,3 +764,94 @@ fn ai_chat_demo_uses_shared_outer_text_roles_and_non_text_markers() {
         );
     }
 }
+
+#[test]
+fn ai_prompt_input_provider_and_docs_use_shared_text_roles_and_non_text_markers() {
+    for (name, source, title, body) in [
+        (
+            "prompt_input_provider_demo",
+            include_str!("../src/ui/snippets/ai/prompt_input_provider_demo.rs"),
+            "Prompt Input Provider (AI Elements)",
+            "External add mutates the provider attachments; send clears attachments.",
+        ),
+        (
+            "prompt_input_docs_demo",
+            include_str!("../src/ui/snippets/ai/prompt_input_docs_demo.rs"),
+            "Prompt Input (AI Elements)",
+            "Docs-aligned chat example: transcript + prompt composer, add attachments/screenshot actions, model picker, and upstream-like onSubmit(message).",
+        ),
+    ] {
+        let canonical = canonicalize_rust_fragment(source);
+
+        for marker in [
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_section_chrome_label",
+            title,
+            "decl_text::text_paragraph",
+            body,
+        ] {
+            let marker = canonicalize_rust_fragment(marker);
+            assert!(
+                canonical.contains(&marker),
+                "{name} should route fixed title/body text through shared text roles; missing `{marker}`"
+            );
+        }
+
+        for forbidden in [
+            format!("cx.text(\"{title}\")"),
+            format!("cx.text(\"{body}\")"),
+        ] {
+            let forbidden = canonicalize_rust_fragment(&forbidden);
+            assert!(
+                !canonical.contains(&forbidden),
+                "{name} reintroduced bare fixed visible text: `{forbidden}`"
+            );
+        }
+    }
+
+    let provider = canonicalize_rust_fragment(include_str!(
+        "../src/ui/snippets/ai/prompt_input_provider_demo.rs"
+    ));
+    for marker in [
+        "fn state_marker(cx: &mut AppComponentCx<'_>, test_id: &'static str) -> AnyElement",
+        "role: fret_core::SemanticsRole::Generic",
+        "cx.spacer(SpacerProps",
+        "state_marker(cx, \"ui-gallery-ai-prompt-input-provider-sent-count-1\")",
+        "decl_text::text_button_label(cx, add_external_label.clone())",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            provider.contains(&marker),
+            "prompt_input_provider_demo should route custom label and state marker through shared non-bare roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(\"\")",
+        "ui::text(add_external_label.clone())",
+        "role: fret_core::SemanticsRole::Text",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !provider.contains(&forbidden),
+            "prompt_input_provider_demo reintroduced bare custom label or marker text: `{forbidden}`"
+        );
+    }
+
+    let docs = canonicalize_rust_fragment(include_str!(
+        "../src/ui/snippets/ai/prompt_input_docs_demo.rs"
+    ));
+    for marker in ["decl_text::text_button_label(cx, \"Search\")"] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            docs.contains(&marker),
+            "prompt_input_docs_demo should route custom Search button text through shared button-label role"
+        );
+    }
+    for forbidden in ["ui::text(\"Search\")", "cx.text(\"Search\")"] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !docs.contains(&forbidden),
+            "prompt_input_docs_demo reintroduced bare custom Search label: `{forbidden}`"
+        );
+    }
+}

@@ -528,6 +528,11 @@ Readiness order for the next locally testable review slices:
    generic zero-size spacer, empty marker fallbacks use spacers instead of empty `Text`, fixed
    header instructions use paragraph roles, and exported markdown length uses control-readout text.
    Chat message body rendering remains app/content-owned for a separate semantics pass.
+   2026-05-18 AI PromptInput provider/docs text-role follow-up: PromptInputProvider now routes its
+   sent-count diagnostics marker through a generic zero-size spacer, its custom external-add label
+   through `text_button_label(...)`, and fixed outer title/body copy through shared roles.
+   PromptInput docs now routes the custom Search label through button-label text and fixed outer
+   title/body copy through section-chrome/paragraph roles.
    2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
    virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
    `control_readout_text(...)`.
