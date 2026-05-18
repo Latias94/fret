@@ -183,3 +183,16 @@ Status: Active
   driver leaves now skip the root solve, while implicit/default variants still reject. Fresh
   no-4090 evidence moves the next blockers to `text_reflow / Text` and `flex_cross_align / Flex`;
   editor `Canvas` and root `Scroll` remain separate follow-ups.
+
+## M15 — Gallery content-header stretch authoring cleanup
+
+- Treat the content-header `flex_cross_align / Flex` blocker as an authoring issue, not a
+  mechanism-layer expansion.
+- Keep full-width header lanes explicit: the outer content header and inner copy column should use
+  stretch cross-axis alignment because their children already express `w_full().min_w_0()`.
+- 2026-05-18 cleanup landed: `apps/fret-ui-gallery/src/ui/content.rs` now stretches the content
+  header lanes and exposes stable test ids for the copy and presets lanes. Focused gallery harness
+  coverage locks the header/copy/presets width alignment.
+- Fresh no-4090 evidence has no `flex_cross_align` in the raw bundle or `diag stats`. Remaining
+  blockers are `text_reflow / Text`, small editor `Canvas`, and root `Scroll` as a side-effect
+  boundary.

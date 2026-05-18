@@ -553,6 +553,27 @@ Status: Active
   - Decision: close the explicit-zero driver leaf slice here. Treat text reflow and flex
     cross-axis classification as separate follow-ups; keep the broad measured-size sentinel refactor
     as a TODO only if legal zero boxes recur outside explicit driver leaves.
+- [x] Close the gallery content-header `flex_cross_align / Flex` blocker as authoring cleanup.
+  - Source audit: the content header already intended full-width lanes. Both the copy column and
+    preset row had `w_full().min_w_0()`, but the outer vertical header flex and the inner copy
+    column still used `items_start()`, which prevented the existing vertical no-wrap
+    clean-geometry proof from applying during width-only resize.
+  - Implemented authoring fix: the content header outer flex and the copy column now use
+    `items_stretch()`. The copy and presets lanes also expose stable test ids so the gallery
+    harness can lock the layout intent directly.
+  - Focused gate:
+    `cargo nextest run -p fret-ui-gallery content_header_children_stretch_to_header_width --no-fail-fast`.
+  - Local no-4090 evidence:
+    `target/fret-diag/local-next-gallery-header-stretch-clean-geometry-20260518-r2/1779069580027/bundle.schema2.json`.
+  - Result: `flex_cross_align` is gone from the raw bundle and `diag stats` output. The final
+    rejection distribution is `text_reflow`, `unsupported_kind` for the small editor `Canvas`, and
+    `side_effect_boundary` for root `Scroll`. View-cache reuse remains `1`, needs-rerender remains
+    `0`, and row replay/store remains `289/0`.
+  - Remaining blockers: content `Semantics` still stops at `text_reflow / Text` around
+    `apps/fret-ui-gallery/src/ui/content.rs:742` (about `158us` solve), editor `Canvas` remains
+    small, and root `Scroll` remains a side-effect boundary.
+  - Decision: close this as a narrow gallery authoring cleanup. Do not widen the mechanism layer
+    for `text_reflow` until there is a dedicated text computed-box / line-break stability proof.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

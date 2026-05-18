@@ -1287,6 +1287,37 @@ Explicit zero driver leaves (2026-05-18):
   - Keep `measured_size: Option<Size>` as a follow-on only if legal zero boxes recur outside
     explicit driver leaves.
 
+Gallery content-header stretch authoring cleanup (2026-05-18):
+
+- Source audit:
+  - `apps/fret-ui-gallery/src/ui/content.rs:23-104`
+  - The content header's copy and presets lanes already used `w_full().min_w_0()`. The remaining
+    `flex_cross_align / Flex` blocker came from vertical flex authoring (`items_start`) in the
+    outer header flex and then the inner copy column, not from an unproven mechanism-layer layout
+    shape.
+- Focused gate:
+  - `cargo nextest run -p fret-ui-gallery content_header_children_stretch_to_header_width --no-fail-fast`
+    - Result: `1/1` passed.
+- Local no-4090 evidence:
+  - Bundle:
+    `target/fret-diag/local-next-gallery-header-stretch-clean-geometry-20260518-r2/1779069580027/bundle.schema2.json`
+  - Stats:
+    `target/fret-diag/local-next-gallery-header-stretch-clean-geometry-20260518-r2/worst.stats.json`
+  - Result:
+    - `flex_cross_align` is absent from both the raw bundle and `worst.stats.json`.
+    - Rejection distribution in the raw bundle is now `text_reflow` (`6`), `unsupported_kind` (`3`),
+      and `side_effect_boundary` (`3`).
+    - p95/max total/layout/layout-roots/layout-engine-solve/prepaint/paint/text-prepare is
+      `3062/2458/2325/209/256/388/66us`.
+    - Top frame has `4` layout-engine solves; the top content `Semantics` solve is still
+      `text_reflow / Text` at `apps/fret-ui-gallery/src/ui/content.rs:744` and about `158us`.
+    - View-cache guardrails stay stable: `cache_roots_reused=1`, `cache_roots=1`, row replay/store
+      `289/0`.
+- Decision:
+  - Close the content-header `flex_cross_align` blocker as a gallery authoring cleanup.
+  - Keep the remaining `text_reflow / Text` blocker as a mechanism stop condition until a focused
+    text computed-box / line-break stability proof exists.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:
