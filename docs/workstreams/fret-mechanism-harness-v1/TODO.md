@@ -1064,3 +1064,11 @@ date: 2026-05-12
     `scroll_into_view(require_fully_within_window=true)` guard. `ui-gallery-nav-search` and
     `ui-gallery-nav-scroll` remain exempt as always-visible/navigation-control targets. Registry
     self-tests now lock the bad direct-click case, the guarded case, and the search exemption.
+- [x] Harden the UI Gallery Chart Torture sampling-window runtime gate.
+  - Result: `ui-gallery-chart-torture` now requires at least two distinct nonzero
+    `chart_sampling_window_key` values instead of accepting repeated initial prepaint samples.
+    The first strict run exposed that the Gallery torture page recreated `ChartCanvas` under a
+    cached/retained boundary and lost widget-local pan/zoom state. The page now stores a shared
+    delinea `ChartEngine` in a stable local model, uses dataZoom-backed axes, and the suite passes
+    with `distinct_key_count=2` plus a delinea headless gate proving interactive pan/zoom updates
+    `output.axis_windows`.

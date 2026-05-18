@@ -4394,3 +4394,41 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
 - registry check:
   `python tools/check_diag_scripts_registry.py`
   - result: passed; registry is up to date.
+
+## Chart Torture Sampling-Window Runtime Gate
+
+- invariant:
+  Chart Torture pan/zoom diagnostics must prove that the chart's sampled data window changes after
+  runtime interaction. Repeated initial prepaint samples or recreated canvas nodes with the same
+  sampling key are not enough evidence.
+- finding:
+  the old suite accepted `total_actions >= 1` and could pass on an initial
+  `chart_sampling_window_shift` even when pan/zoom did not change the sampling key. Raising the
+  gate exposed `distinct_key_count=1`: the page had added dataZoom specs, but the retained
+  `ChartCanvas` could be recreated under the cached Gallery surface and lose widget-local state
+  before the post-run bundle.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/previews/pages/torture/chart_torture.rs`,
+  `ecosystem/delinea/src/engine/tests.rs`,
+  `crates/fret-diag/src/stats/debug_stats_gates.rs`,
+  `crates/fret-diag/src/diag_suite.rs`, and `crates/fret-diag/src/tests.rs`.
+- focused delinea gate:
+  `cargo nextest run --cargo-profile dev-fast -p delinea interactive_data_zoom_x_pan_and_zoom_updates_output_axis_window --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `9424544b-9b5b-4ac8-849b-61d2fd6bd6ec`.
+- diagnostics post-run gate unit tests:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag chart_sampling_window_shifts_min build_suite_core_default_post_run_checks_sets_chart_torture_sampling_window_gate --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `01f08348-f52b-4423-872d-cf0c3d0f1b00`.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_chart_torture_pan_zoom --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `3acf2b68-8b37-41da-8c73-e25f5820e177`.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-chart,gallery-dev`
+  - result: passed.
+- runtime diagnostics:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-chart-torture --dir target/fret-diag-chart-torture-suite-shared-engine-v2 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  - result: passed; suite summary
+    `target/fret-diag-chart-torture-suite-shared-engine-v2/sessions/1779129994544-98640/suite.summary.json`;
+    run id `1779130059382`.
+  - sampling-window post-run proof:
+    `target/fret-diag-chart-torture-suite-shared-engine-v2/sessions/1779129994544-98640/check.chart_sampling_window_shifts_min.json`
+    records `total_actions=3`, `distinct_key_count=2`, and two unique nonzero sampling keys.

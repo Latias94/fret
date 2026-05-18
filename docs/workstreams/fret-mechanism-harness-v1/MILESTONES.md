@@ -2045,3 +2045,27 @@ Status: complete for the cull/torture promoted-suite nav-click authoring guard.
   `python tools/test_check_diag_scripts_registry.py`
   with 39/39 tests passed, and
   `python tools/check_diag_scripts_registry.py`.
+
+## M114: Chart Torture Sampling-Window Runtime Gate
+
+Status: complete for Chart Torture pan/zoom sampling-window telemetry.
+
+- Hardened `chart_sampling_window_shifts_min` so `min_actions > 1` requires distinct nonzero
+  `chart_sampling_window_key` values and writes `distinct_key_count` plus sample `node` evidence.
+- Raised the `ui-gallery-chart-torture` default post-run gate from one sampling-window action to
+  two distinct sampling-window keys.
+- Fixed the Chart Torture page to keep a shared delinea `ChartEngine` in a stable local model and
+  use dataZoom-backed X/Y axes, so retained/cached root recreation no longer resets pan/zoom state
+  before the diagnostics post-run check.
+- Added a delinea headless regression test proving `PanDataWindowXFromBase` and
+  `ZoomDataWindowXFromBase` publish changed `output.axis_windows` when `dataZoomX` is present.
+- Focused gates pass:
+  `cargo nextest run --cargo-profile dev-fast -p delinea interactive_data_zoom_x_pan_and_zoom_updates_output_axis_window --no-fail-fast --no-capture`
+  with Nextest run id `9424544b-9b5b-4ac8-849b-61d2fd6bd6ec`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag chart_sampling_window_shifts_min build_suite_core_default_post_run_checks_sets_chart_torture_sampling_window_gate --no-fail-fast --no-capture`
+  with Nextest run id `01f08348-f52b-4423-872d-cf0c3d0f1b00`; and
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_chart_torture_pan_zoom --no-fail-fast --no-capture`
+  with Nextest run id `3acf2b68-8b37-41da-8c73-e25f5820e177`.
+- Runtime diagnostics pass:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-chart-torture --dir target/fret-diag-chart-torture-suite-shared-engine-v2 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  with run id `1779130059382`; the sampling-window evidence records `distinct_key_count=2`.

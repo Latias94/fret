@@ -5470,6 +5470,80 @@ fn chart_sampling_window_shifts_min_accepts_matching_action() {
         evidence_path.is_file(),
         "expected chart sampling window shifts evidence JSON to be written"
     );
+    let evidence: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&evidence_path).unwrap()).unwrap();
+    assert_eq!(
+        evidence.get("distinct_key_count").and_then(|v| v.as_u64()),
+        Some(1)
+    );
+    assert_eq!(
+        evidence
+            .get("samples")
+            .and_then(|v| v.as_array())
+            .and_then(|samples| samples.first())
+            .and_then(|sample| sample.get("node"))
+            .and_then(|v| v.as_u64()),
+        Some(10)
+    );
+}
+
+#[test]
+fn chart_sampling_window_shifts_min_rejects_repeated_same_key_when_distinct_keys_required() {
+    let out_dir = tmp_out_dir("chart_sampling_window_shifts_min_repeated_key");
+    let _ = std::fs::create_dir_all(&out_dir);
+
+    let bundle_dir = out_dir.join("run");
+    let _ = std::fs::create_dir_all(&bundle_dir);
+    let bundle_path = bundle_dir.join("bundle.json");
+
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [{
+            "window": 1,
+            "snapshots": [
+                {
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "debug": {
+                        "prepaint_actions": [{
+                            "node": 10,
+                            "kind": "chart_sampling_window_shift",
+                            "chart_sampling_window_key": 123
+                        }]
+                    }
+                },
+                {
+                    "tick_id": 2,
+                    "frame_id": 2,
+                    "debug": {
+                        "prepaint_actions": [{
+                            "node": 11,
+                            "kind": "chart_sampling_window_shift",
+                            "chart_sampling_window_key": 123
+                        }]
+                    }
+                }
+            ]
+        }]
+    });
+    std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+        .expect("bundle.json write should succeed");
+
+    let err = check_bundle_for_chart_sampling_window_shifts_min(&bundle_path, &bundle_dir, 2, 0)
+        .unwrap_err();
+    assert!(err.contains("distinct nonzero sampling keys"));
+
+    let evidence_path = bundle_dir.join("check.chart_sampling_window_shifts_min.json");
+    let evidence: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&evidence_path).unwrap()).unwrap();
+    assert_eq!(
+        evidence.get("distinct_key_count").and_then(|v| v.as_u64()),
+        Some(1)
+    );
+    assert_eq!(
+        evidence.get("total_actions").and_then(|v| v.as_u64()),
+        Some(2)
+    );
 }
 
 #[test]
