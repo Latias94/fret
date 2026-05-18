@@ -8,7 +8,6 @@ use fret_core::NodeId;
 use std::any::Any;
 use std::sync::Arc;
 
-pub use crate::resizable_panel_group::ResizablePanelGroupLayout;
 pub use crate::text_input::{BoundTextInput, TextInput};
 pub use crate::widget::{
     CommandAvailability, CommandAvailabilityCx, CommandCx, EventCx, Invalidation, LayoutCx,
@@ -90,35 +89,6 @@ impl RetainedSubtreeProps {
     pub fn with_layout(mut self, layout: crate::element::LayoutStyle) -> Self {
         self.layout = layout;
         self
-    }
-}
-
-/// Unstable mechanism helpers for splitter / panel-group sizing.
-pub mod resizable_panel_group {
-    use fret_core::{Axis, Px, Rect};
-
-    use crate::resizable_panel_group::{
-        ResizablePanelGroupLayout, compute_resizable_panel_group_layout,
-    };
-
-    pub fn compute_layout(
-        axis: Axis,
-        bounds: Rect,
-        children_len: usize,
-        fractions: &[f32],
-        gap: Px,
-        hit_thickness: Px,
-        min_px: &[Px],
-    ) -> ResizablePanelGroupLayout {
-        compute_resizable_panel_group_layout(
-            axis,
-            bounds,
-            children_len,
-            fractions.to_vec(),
-            gap,
-            hit_thickness,
-            min_px,
-        )
     }
 }
 

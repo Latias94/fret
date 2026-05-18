@@ -111,3 +111,52 @@ Commands:
 - `git diff --check`
   - Result: passed.
   - Scope proven: changed files have no whitespace errors.
+
+## 2026-05-18 - RBX-M1-021 demo diagnostics split helper migration
+
+Claim verified:
+
+- `apps/fret-examples/src/docking_arbitration_demo.rs` no longer depends on
+  `fret_ui::retained_bridge::resizable_panel_group` for diagnostics split geometry.
+- The remaining `retained_bridge::resizable_panel_group` helper module and
+  `retained_bridge::ResizablePanelGroupLayout` re-export were deleted after repo-wide no-user
+  proof.
+
+Evidence:
+
+- `apps/fret-examples/src/docking_arbitration_demo.rs`
+- `crates/fret-ui/src/retained_bridge.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the demo and bridge edits.
+- `cargo check -p fret-demo --bin docking_arbitration_demo`
+  - Result: passed.
+  - Scope proven: the docking arbitration demo still compiles after migrating diagnostics geometry
+    off the retained bridge helper.
+- `cargo clippy -p fret-demo --bin docking_arbitration_demo --no-deps -- -D warnings`
+  - Result: passed.
+  - Scope proven: the touched demo target remains warning-clean under clippy.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering remains valid after shrinking the retained bridge surface.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+- `rg -n "retained_bridge::resizable_panel_group|retained_bridge::ResizablePanelGroupLayout|resizable::compute_layout" crates ecosystem apps -g '*.rs'`
+  - Result: no matches.
+  - Scope proven: no Rust source still consumes the removed retained bridge split helper or
+    retained bridge panel-group layout re-export.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M1-021` is a targeted demo diagnostics migration plus bridge surface deletion; the
+    task-local demo compile/clippy gates and retained-bridge no-user proof cover the changed
+    behavioral surface.

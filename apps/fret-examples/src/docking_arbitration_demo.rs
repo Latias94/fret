@@ -3,9 +3,9 @@ use fret_app::CreateWindowKind;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_bootstrap::ui_diagnostics::{UiDiagnosticsService, UiRealPerfSpanCaptureV1};
 use fret_core::{
-    AppWindowId, Color, Corners, DrawOrder, Edges, Event, Modifiers, MouseButton, MouseButtons,
-    Point, Rect, RenderTargetId, Scene, SceneOp, Size, UiServices, ViewportInputEvent,
-    dock::DropZone, geometry::Px,
+    AppWindowId, Axis, Color, Corners, DrawOrder, Edges, Event, Modifiers, MouseButton,
+    MouseButtons, Point, Rect, RenderTargetId, Scene, SceneOp, Size, UiServices,
+    ViewportInputEvent, dock::DropZone, geometry::Px,
 };
 use fret_docking::{
     DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
@@ -20,7 +20,6 @@ use fret_launch::{
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
-use fret_ui::retained_bridge::resizable_panel_group as resizable;
 use fret_ui::retained_bridge::{LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt as _, Widget};
 use fret_ui::{Invalidation, Theme, UiTree};
 use fret_ui_kit::OverlayController;
@@ -50,6 +49,205 @@ const PANEL_KIND_VIEWPORT_RIGHT: &str = "demo.viewport.right";
 const PANEL_KIND_VIEWPORT_EXTRA: &str = "demo.viewport.extra";
 const PANEL_KIND_CONTROLS: &str = "demo.controls";
 const PANEL_KIND_DUMMY_OVERFLOW: &str = "demo.dummy.overflow";
+
+fn docking_arbitration_split_panel_rects(
+    axis: Axis,
+    bounds: Rect,
+    children_len: usize,
+    fractions: &[f32],
+    gap: Px,
+    min_px: &[Px],
+) -> Vec<Rect> {
+    let gap = gap.0.max(0.0);
+    let axis_len = docking_arbitration_axis_len(bounds, axis).max(0.0);
+    let total_gap = gap * (children_len.saturating_sub(1) as f32);
+    let avail = (axis_len - total_gap).max(0.0);
+
+    let mins = docking_arbitration_effective_min_px(children_len, avail, min_px);
+    let fractions = docking_arbitration_sanitize_fractions(fractions.to_vec(), children_len);
+    let sizes = docking_arbitration_apply_min_constraints(
+        docking_arbitration_sizes_from_fractions(&fractions, avail),
+        &mins,
+        avail,
+    );
+
+    let mut panel_rects = Vec::with_capacity(children_len);
+    let mut cursor = docking_arbitration_axis_origin(bounds, axis);
+    for i in 0..children_len {
+        let len = sizes.get(i).copied().unwrap_or(0.0).max(0.0);
+        match axis {
+            Axis::Horizontal => {
+                panel_rects.push(Rect::new(
+                    Point::new(Px(cursor), bounds.origin.y),
+                    Size::new(Px(len), bounds.size.height),
+                ));
+            }
+            Axis::Vertical => {
+                panel_rects.push(Rect::new(
+                    Point::new(bounds.origin.x, Px(cursor)),
+                    Size::new(bounds.size.width, Px(len)),
+                ));
+            }
+        }
+        cursor += len;
+        if i + 1 < children_len {
+            cursor += gap;
+        }
+    }
+
+    panel_rects
+}
+
+fn docking_arbitration_axis_len(bounds: Rect, axis: Axis) -> f32 {
+    match axis {
+        Axis::Horizontal => bounds.size.width.0,
+        Axis::Vertical => bounds.size.height.0,
+    }
+}
+
+fn docking_arbitration_axis_origin(bounds: Rect, axis: Axis) -> f32 {
+    match axis {
+        Axis::Horizontal => bounds.origin.x.0,
+        Axis::Vertical => bounds.origin.y.0,
+    }
+}
+
+fn docking_arbitration_effective_min_px(count: usize, avail: f32, min_px: &[Px]) -> Vec<f32> {
+    let default = Px(120.0);
+    if count == 0 {
+        return Vec::new();
+    }
+
+    let mut mins: Vec<f32> = if min_px.is_empty() {
+        vec![default.0; count]
+    } else if min_px.len() == 1 {
+        vec![min_px[0].0.max(0.0); count]
+    } else if min_px.len() == count {
+        min_px.iter().map(|p| p.0.max(0.0)).collect()
+    } else {
+        vec![min_px[0].0.max(0.0); count]
+    };
+
+    let sum: f32 = mins.iter().copied().sum();
+    if !sum.is_finite() || sum <= 0.0 {
+        return mins;
+    }
+    if avail > 0.0 && avail < sum {
+        let scale = (avail / sum).clamp(0.0, 1.0);
+        for m in &mut mins {
+            *m = (*m * scale).max(0.0);
+        }
+    }
+    mins
+}
+
+fn docking_arbitration_sanitize_fractions(mut fractions: Vec<f32>, count: usize) -> Vec<f32> {
+    if count == 0 {
+        return Vec::new();
+    }
+    if fractions.len() != count {
+        return vec![1.0 / count as f32; count];
+    }
+    for value in &mut fractions {
+        if !value.is_finite() {
+            *value = 0.0;
+        }
+        *value = (*value).max(0.0);
+    }
+    let sum: f32 = fractions.iter().sum();
+    if !sum.is_finite() || sum <= f32::EPSILON {
+        return vec![1.0 / count as f32; count];
+    }
+    for value in &mut fractions {
+        *value /= sum;
+    }
+    fractions
+}
+
+fn docking_arbitration_sizes_from_fractions(fractions: &[f32], avail: f32) -> Vec<f32> {
+    let mut sizes: Vec<f32> = fractions
+        .iter()
+        .copied()
+        .map(|f| (f.clamp(0.0, 1.0) * avail).max(0.0))
+        .collect();
+    let sum: f32 = sizes.iter().sum();
+    let diff = avail - sum;
+    if sizes.is_empty() {
+        return sizes;
+    }
+    let last = sizes.len() - 1;
+    sizes[last] = (sizes[last] + diff).max(0.0);
+    sizes
+}
+
+fn docking_arbitration_apply_min_constraints(
+    mut sizes: Vec<f32>,
+    mins: &[f32],
+    avail: f32,
+) -> Vec<f32> {
+    if sizes.is_empty() {
+        return sizes;
+    }
+    if mins.len() != sizes.len() {
+        return sizes;
+    }
+
+    let sum_min: f32 = mins.iter().copied().sum();
+    if avail <= 0.0 {
+        return vec![0.0; sizes.len()];
+    }
+    if sum_min.is_finite() && sum_min > 0.0 && avail < sum_min {
+        let scale = (avail / sum_min).clamp(0.0, 1.0);
+        for (size, min) in sizes.iter_mut().zip(mins.iter().copied()) {
+            *size = (min * scale).max(0.0);
+        }
+        return sizes;
+    }
+
+    for (size, min) in sizes.iter_mut().zip(mins.iter().copied()) {
+        if *size < min {
+            *size = min;
+        }
+    }
+
+    let mut sum: f32 = sizes.iter().sum();
+    if sum <= avail + 1.0e-3 {
+        let last = sizes.len() - 1;
+        sizes[last] = (sizes[last] + (avail - sum)).max(mins[last]);
+        return sizes;
+    }
+
+    let mut excess = sum - avail;
+    for _ in 0..4 {
+        if excess <= 1.0e-3 {
+            break;
+        }
+        let mut adjustable_total = 0.0;
+        for (size, min) in sizes.iter().zip(mins.iter().copied()) {
+            adjustable_total += (*size - min).max(0.0);
+        }
+        if adjustable_total <= 1.0e-6 {
+            break;
+        }
+        for (size, min) in sizes.iter_mut().zip(mins.iter().copied()) {
+            let room = (*size - min).max(0.0);
+            if room <= 0.0 {
+                continue;
+            }
+            let take = (excess * (room / adjustable_total)).min(room);
+            *size -= take;
+            excess -= take;
+            if excess <= 1.0e-3 {
+                break;
+            }
+        }
+    }
+
+    sum = sizes.iter().sum();
+    let last = sizes.len() - 1;
+    sizes[last] = (sizes[last] + (avail - sum)).max(mins[last]);
+    sizes
+}
 
 fn docking_arbitration_readout_text<H: fret_ui::UiHost>(
     cx: &mut fret_ui::ElementContext<'_, H>,
@@ -225,7 +423,6 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
             .copied()
             .unwrap_or_default();
         let split_handle_gap = docking_interaction_settings.split_handle_gap;
-        let split_handle_hit_thickness = docking_interaction_settings.split_handle_hit_thickness;
 
         let half = DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE.0 * 0.5;
         let rect = |x: f32, y: f32| {
@@ -266,43 +463,34 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 node: DockNodeId,
                 rect: Rect,
                 split_handle_gap: Px,
-                split_handle_hit_thickness: Px,
                 panel: &PanelKey,
             ) -> Option<Rect> {
                 #[allow(unreachable_patterns)]
                 match graph.node(node)? {
                     DockNode::Tabs { tabs, .. } => tabs.iter().any(|p| p == panel).then_some(rect),
-                    DockNode::Floating { child } => tabs_rect_for_panel(
-                        graph,
-                        *child,
-                        rect,
-                        split_handle_gap,
-                        split_handle_hit_thickness,
-                        panel,
-                    ),
+                    DockNode::Floating { child } => {
+                        tabs_rect_for_panel(graph, *child, rect, split_handle_gap, panel)
+                    }
                     DockNode::Split {
                         axis,
                         children,
                         fractions,
                     } => {
                         let min_px = vec![Px(0.0); children.len()];
-                        let computed = resizable::compute_layout(
+                        let panel_rects = docking_arbitration_split_panel_rects(
                             *axis,
                             rect,
                             children.len(),
                             fractions,
                             split_handle_gap,
-                            split_handle_hit_thickness,
                             &min_px,
                         );
-                        for (child, &child_rect) in children.iter().zip(computed.panel_rects.iter())
-                        {
+                        for (child, &child_rect) in children.iter().zip(panel_rects.iter()) {
                             if let Some(found) = tabs_rect_for_panel(
                                 graph,
                                 *child,
                                 child_rect,
                                 split_handle_gap,
-                                split_handle_hit_thickness,
                                 panel,
                             ) {
                                 return Some(found);
@@ -318,7 +506,6 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 window: AppWindowId,
                 bounds: Rect,
                 split_handle_gap: Px,
-                split_handle_hit_thickness: Px,
                 panel: &PanelKey,
             ) -> Option<(f32, f32)> {
                 let anchor_for_rect = |tabs_rect: Rect, floating: bool| {
@@ -343,14 +530,9 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 };
 
                 if let Some(root) = dock.graph.window_root(window) {
-                    if let Some(tabs_rect) = tabs_rect_for_panel(
-                        &dock.graph,
-                        root,
-                        bounds,
-                        split_handle_gap,
-                        split_handle_hit_thickness,
-                        panel,
-                    ) {
+                    if let Some(tabs_rect) =
+                        tabs_rect_for_panel(&dock.graph, root, bounds, split_handle_gap, panel)
+                    {
                         return Some(anchor_for_rect(tabs_rect, false));
                     }
                 }
@@ -361,7 +543,6 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                         floating.floating,
                         floating.rect,
                         split_handle_gap,
-                        split_handle_hit_thickness,
                         panel,
                     ) {
                         return Some(anchor_for_rect(tabs_rect, true));
@@ -376,7 +557,6 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 window: AppWindowId,
                 bounds: Rect,
                 split_handle_gap: Px,
-                split_handle_hit_thickness: Px,
                 panel: &PanelKey,
             ) -> Option<(f32, f32)> {
                 let anchor_for_rect = |tabs_rect: Rect, floating: bool| {
@@ -401,14 +581,9 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 };
 
                 if let Some(root) = dock.graph.window_root(window) {
-                    if let Some(tabs_rect) = tabs_rect_for_panel(
-                        &dock.graph,
-                        root,
-                        bounds,
-                        split_handle_gap,
-                        split_handle_hit_thickness,
-                        panel,
-                    ) {
+                    if let Some(tabs_rect) =
+                        tabs_rect_for_panel(&dock.graph, root, bounds, split_handle_gap, panel)
+                    {
                         return Some(anchor_for_rect(tabs_rect, false));
                     }
                 }
@@ -419,7 +594,6 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                         floating.floating,
                         floating.rect,
                         split_handle_gap,
-                        split_handle_hit_thickness,
                         panel,
                     ) {
                         return Some(anchor_for_rect(tabs_rect, true));
@@ -436,7 +610,6 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 self.window,
                 bounds,
                 split_handle_gap,
-                split_handle_hit_thickness,
                 &viewport_left,
             ) {
                 left_anchor_pos = p;
@@ -446,7 +619,6 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 self.window,
                 bounds,
                 split_handle_gap,
-                split_handle_hit_thickness,
                 &viewport_right,
             ) {
                 right_anchor_pos = p;
@@ -456,7 +628,6 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 self.window,
                 bounds,
                 split_handle_gap,
-                split_handle_hit_thickness,
                 &viewport_right,
             ) {
                 right_tabs_group_anchor_pos = p;
@@ -464,14 +635,9 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
 
             for (ix, pos) in extra_anchor_pos.iter_mut().enumerate() {
                 let panel = extra_viewport_panel_key(ix);
-                if let Some(p) = tab_bar_anchor_for_panel(
-                    dock,
-                    self.window,
-                    bounds,
-                    split_handle_gap,
-                    split_handle_hit_thickness,
-                    &panel,
-                ) {
+                if let Some(p) =
+                    tab_bar_anchor_for_panel(dock, self.window, bounds, split_handle_gap, &panel)
+                {
                     *pos = p;
                 }
             }
@@ -563,42 +729,33 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 node: DockNodeId,
                 rect: Rect,
                 split_handle_gap: Px,
-                split_handle_hit_thickness: Px,
                 panel: &PanelKey,
             ) -> Option<Rect> {
                 match graph.node(node)? {
                     DockNode::Tabs { tabs, .. } => tabs.iter().any(|p| p == panel).then_some(rect),
-                    DockNode::Floating { child } => tabs_rect_for_panel(
-                        graph,
-                        *child,
-                        rect,
-                        split_handle_gap,
-                        split_handle_hit_thickness,
-                        panel,
-                    ),
+                    DockNode::Floating { child } => {
+                        tabs_rect_for_panel(graph, *child, rect, split_handle_gap, panel)
+                    }
                     DockNode::Split {
                         axis,
                         children,
                         fractions,
                     } => {
                         let min_px = vec![Px(0.0); children.len()];
-                        let computed = resizable::compute_layout(
+                        let panel_rects = docking_arbitration_split_panel_rects(
                             *axis,
                             rect,
                             children.len(),
                             fractions,
                             split_handle_gap,
-                            split_handle_hit_thickness,
                             &min_px,
                         );
-                        for (child, &child_rect) in children.iter().zip(computed.panel_rects.iter())
-                        {
+                        for (child, &child_rect) in children.iter().zip(panel_rects.iter()) {
                             if let Some(found) = tabs_rect_for_panel(
                                 graph,
                                 *child,
                                 child_rect,
                                 split_handle_gap,
-                                split_handle_hit_thickness,
                                 panel,
                             ) {
                                 return Some(found);
@@ -617,14 +774,8 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
             // Anchor overflow geometry to the left viewport's tabs container. Most arbitration
             // scripts build tab overflow by merging additional tabs into that leaf.
             let left_panel = viewport_left_panel_key();
-            let tabs_rect = tabs_rect_for_panel(
-                &dock.graph,
-                root,
-                bounds,
-                split_handle_gap,
-                split_handle_hit_thickness,
-                &left_panel,
-            )?;
+            let tabs_rect =
+                tabs_rect_for_panel(&dock.graph, root, bounds, split_handle_gap, &left_panel)?;
             let (tabs_node, _active) = dock.graph.find_panel_in_window(self.window, &left_panel)?;
             let (tabs, active) = match dock.graph.node(tabs_node)? {
                 DockNode::Tabs { tabs, active } => (tabs.as_slice(), *active),
@@ -884,19 +1035,13 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 bounds: Rect,
                 desired_axis: fret_core::Axis,
                 split_handle_gap: Px,
-                split_handle_hit_thickness: Px,
             ) -> Option<Rect> {
                 let n = graph.node(node)?;
                 match n {
                     fret_core::DockNode::Tabs { .. } => None,
-                    fret_core::DockNode::Floating { child } => first_handle_for_axis(
-                        graph,
-                        *child,
-                        bounds,
-                        desired_axis,
-                        split_handle_gap,
-                        split_handle_hit_thickness,
-                    ),
+                    fret_core::DockNode::Floating { child } => {
+                        first_handle_for_axis(graph, *child, bounds, desired_axis, split_handle_gap)
+                    }
                     fret_core::DockNode::Split {
                         axis,
                         children,
@@ -906,13 +1051,12 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                         if count == 0 {
                             return None;
                         }
-                        let computed = resizable::compute_layout(
+                        let panel_rects = docking_arbitration_split_panel_rects(
                             *axis,
                             bounds,
                             count,
                             fractions,
                             split_handle_gap,
-                            split_handle_hit_thickness,
                             &[],
                         );
                         if *axis == desired_axis {
@@ -921,9 +1065,9 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                             // anchor aligned with the visible split boundary (and therefore
                             // reliably draggable in scripts), even if handle hit thickness / gap
                             // policies evolve.
-                            if computed.panel_rects.len() >= 2 {
-                                let a = computed.panel_rects[0];
-                                let b = computed.panel_rects[1];
+                            if panel_rects.len() >= 2 {
+                                let a = panel_rects[0];
+                                let b = panel_rects[1];
                                 let ax1 = a.origin.x.0 + a.size.width.0;
                                 let bx0 = b.origin.x.0;
                                 let cx = (ax1 + bx0) * 0.5;
@@ -948,14 +1092,13 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                                 }
                             }
                         }
-                        for (&child, &rect) in children.iter().zip(computed.panel_rects.iter()) {
+                        for (&child, &rect) in children.iter().zip(panel_rects.iter()) {
                             if let Some(found) = first_handle_for_axis(
                                 graph,
                                 child,
                                 rect,
                                 desired_axis,
                                 split_handle_gap,
-                                split_handle_hit_thickness,
                             ) {
                                 return Some(found);
                             }
@@ -973,7 +1116,6 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 bounds,
                 fret_core::Axis::Horizontal,
                 split_handle_gap,
-                split_handle_hit_thickness,
             )
         })();
 
