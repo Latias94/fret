@@ -719,6 +719,35 @@ fn ai_prompt_and_plan_snippets_use_shared_outer_text_roles() {
             );
         }
     }
+
+    let plan = canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/plan_demo.rs"));
+    for marker in [
+        "decl_text::text_section_chrome_label(cx, \"Overview\")",
+        "decl_text::text_paragraph",
+        "This plan outlines the migration strategy for converting the AI Elements",
+        "library from React to SolidJS, ensuring compatibility and maintaining existing functionality.",
+        "decl_text::text_section_chrome_label(cx, \"Key Steps\")",
+        "decl_text::text_list_row_label( cx, format!(\"• {item}\"), )",
+        "decl_text::text_button_label(cx, \"Build\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            plan.contains(&marker),
+            "plan_demo should route PlanContent section/body/bullet/action text through shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "ui::text(\"Overview\")",
+        "ui::text(\"Key Steps\")",
+        "ui::text(format!(\"• {item}\"))",
+        "ui::text(\"Build\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !plan.contains(&forbidden),
+            "plan_demo reintroduced local PlanContent text policy: `{forbidden}`"
+        );
+    }
 }
 
 #[test]

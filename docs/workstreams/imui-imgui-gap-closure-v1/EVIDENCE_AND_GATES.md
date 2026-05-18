@@ -698,6 +698,14 @@ Run evidence:
   section-chrome/paragraph roles. Inner Plan prose/Button composition stays out of this slice until
   a separate semantics pass. Gates: `cargo nextest run -p fret-ui-gallery --test
   ai_visible_text_role_surface --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-19: extended the AI visible text-role migration to PlanContent internals. Plan section
+  headings now use `text_section_chrome_label(...)`, the overview body uses `text_paragraph(...)`,
+  bullet rows use `text_list_row_label(...)`, and the custom Build button child uses
+  `text_button_label(...)` instead of local `ui::text(...)` styling. Plan open/streaming behavior
+  and `fret-ui-ai` Plan component ownership were intentionally left unchanged. Gates: `cargo
+  nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
+  ai_prompt_and_plan_snippets_use_shared_outer_text_roles --no-fail-fast` and `python
+  tools/gate_imui_workstream_source.py`.
 - 2026-05-18: extended the AI visible text-role migration to large/status snippets:
   StackTraceLarge, TestResultsLarge, Tool, and Suggestions. StackTraceLarge/TestResultsLarge
   opened/activated markers and Tool/Suggestions test markers now use generic zero-size
@@ -3065,6 +3073,33 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - Retried after the compile finished:
   `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
   ai_attachments_inline_hover_card_uses_shared_text_roles --no-fail-fast` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.
+
+2026-05-19 AI PlanContent text-role slice:
+
+- Source gap before fix: `plan_demo.rs` outer title/body already used shared roles, but inner
+  PlanContent still rendered section headings, bullet rows, and the custom Build button child
+  through local `ui::text(...)` styling. The overview body also carried local `text_sm().wrap(...)`
+  paragraph policy instead of the shared paragraph role.
+- `apps/fret-ui-gallery/src/ui/snippets/ai/plan_demo.rs` now routes inner section headings through
+  `decl_text::text_section_chrome_label(...)`, overview body copy through
+  `decl_text::text_paragraph(...)`, bullet rows through `decl_text::text_list_row_label(...)`, and
+  the custom Build child through `decl_text::text_button_label(...)`.
+- First post-fix
+  `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
+  ai_prompt_and_plan_snippets_use_shared_outer_text_roles --no-fail-fast` timed out while a
+  background Cargo/Rustc compile continued; Cargo/Rustc processes were allowed to exit.
+- Retried after the compile finished; the test failed once because the source-test marker expected
+  the runtime-concatenated long paragraph string while `include_str!` sees Rust's split source
+  literal. The marker was corrected to source-level stable fragments.
+- Final focused test:
+  `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
+  ai_prompt_and_plan_snippets_use_shared_outer_text_roles --no-fail-fast` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `cargo fmt --check -p fret-ui-gallery` passed.

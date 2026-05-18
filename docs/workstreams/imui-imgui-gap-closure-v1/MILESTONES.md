@@ -556,6 +556,9 @@ Exit criteria:
   2026-05-18 AI custom-children text-role result: environment variables, package info, inline
   citations, persona, and sources custom-child snippets now use shared roles for app-owned visible
   text; `text_code_label(...)` covers fixed-height package/env/dependency identifiers.
+  2026-05-19 AI PlanContent text-role result: Plan's inner section headings, paragraph body,
+  bullet rows, and custom Build button child now use shared section-chrome, paragraph, list-row,
+  and button-label roles instead of local `ui::text(...)` styling.
   2026-05-17 gallery data-grid text result: the UI Gallery DataGrid preview now routes virtualized
   grid cells through `text_table_cell(...)` and the selected-row status line through
   `control_readout_text(...)`.

@@ -60,27 +60,19 @@ updating all 29 components and their test suite.",
                             vec![
                                 ui::v_flex(move |cx| {
                                         vec![
-                                            ui::text("Overview")
-                                                .font_semibold()
-                                                .mb(Space::N2)
-                                                .into_element(cx),
-                                            ui::text(
+                                            decl_text::text_section_chrome_label(cx, "Overview"),
+                                            decl_text::text_paragraph(
+                                                cx,
                                                 "This plan outlines the migration strategy for converting the AI Elements \
 library from React to SolidJS, ensuring compatibility and maintaining existing functionality.",
                                             )
-                                            .text_sm()
-                                            .wrap(TextWrap::Word)
-                                            .into_element(cx),
                                         ]
                                     })
                                         .layout(LayoutRefinement::default().w_full().min_w_0())
                                         .gap(Space::N2).into_element(cx),
                                 ui::v_flex(move |cx| {
                                         vec![
-                                            ui::text("Key Steps")
-                                                .font_semibold()
-                                                .mb(Space::N2)
-                                                .into_element(cx),
+                                            decl_text::text_section_chrome_label(cx, "Key Steps"),
                                             ui::v_flex(move |cx| {
                                                     let bullets = [
                                                         "Set up SolidJS project structure",
@@ -92,10 +84,10 @@ library from React to SolidJS, ensuring compatibility and maintaining existing f
                                                     bullets
                                                         .into_iter()
                                                         .map(|item| {
-                                                            ui::text(format!("• {item}"))
-                                                                .text_sm()
-                                                                .wrap(TextWrap::Word)
-                                                                .into_element(cx)
+                                                            decl_text::text_list_row_label(
+                                                                cx,
+                                                                format!("• {item}"),
+                                                            )
                                                         })
                                                         .collect::<Vec<_>>()
                                                 })
@@ -121,7 +113,7 @@ library from React to SolidJS, ensuring compatibility and maintaining existing f
                         shadcn::Button::new("Build")
                             .size(shadcn::ButtonSize::Sm)
                             .children([
-                                ui::text("Build").into_element(cx),
+                                decl_text::text_button_label(cx, "Build"),
                                 shadcn::Kbd::new("⌘↩").into_element(cx),
                             ])
                             .a11y_label("Build")

@@ -527,6 +527,10 @@ Readiness order for the next locally testable review slices:
    PromptInputActionMenu, and PromptInputTooltip now put their outer demo titles/body copy on the
    same shared roles while leaving inner plan prose and shadcn/Button composition for a separate
    semantics pass.
+   2026-05-19 AI PlanContent text-role follow-up: Plan's inner section headings now use
+   section-chrome text, body copy uses paragraph text, bullet rows use list-row labels, and the
+   custom Build button child uses button-label text. Plan streaming/open behavior and the
+   `fret-ui-ai` Plan component surface remain unchanged.
    2026-05-18 AI large/status snippet text-role follow-up: StackTraceLarge and TestResultsLarge
    now use generic zero-size spacer markers for opened/activated diagnostics anchors, while
    StackTraceLarge, TestResultsLarge, Tool, and Suggestions route fixed outer title/body text
