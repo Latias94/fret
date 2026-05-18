@@ -29,7 +29,8 @@ pub(crate) fn content_view(
         })
         .layout(LayoutRefinement::default().w_full().min_w_0())
         .gap(Space::N1)
-        .items_start()
+        .items_stretch()
+        .test_id("ui-gallery-content-header-copy")
         .into_element(cx);
 
         let theme_select = shadcn::Select::new(
@@ -92,13 +93,14 @@ pub(crate) fn content_view(
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N3)
             .items_center()
+            .test_id("ui-gallery-content-header-presets")
             .into_element(cx);
 
         [left, presets]
     })
     .layout(LayoutRefinement::default().w_full())
     .gap(Space::N2)
-    .items_start()
+    .items_stretch()
     .into_element(cx);
 
     let mut header_semantics_layout = fret_ui::element::LayoutStyle::default();

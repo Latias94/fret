@@ -129,3 +129,94 @@ Status: Active
   `flex_item_sizing`; content `Semantics` remains blocked by `unsupported_kind=Grid` with
   `wrap_nodes=1`, `Canvas` remains too small to prioritize, and `Scroll` remains a side-effect
   boundary.
+
+## M11 — Narrow Grid geometry contract (candidate)
+
+- Prove only the real card-header-like grid shape before attempting any general grid or text
+  reflow optimization.
+- Accept one-column grids with explicit non-empty `Auto` / `Px` row tracks, px spacing, start
+  alignment, static children, simple grid lines, and stable child size semantics.
+- Keep flexible tracks, multi-column placement, item self-alignment, non-px spacing, positioned
+  children, text reflow, retained/windowing surfaces, and side-effect boundaries on the full solve
+  path until each has a focused proof.
+- 2026-05-17 minimum slice landed: `Grid` now has a
+  `SingleColumnAutoRowsGrid` child-bounds strategy for this narrow subset, plus a negative flexible
+  track guardrail. Fresh no-4090 evidence moves the content blocker from `unsupported_kind=Grid` to
+  `text_reflow / Text`; the root blocker is now `missing_measured_size / Stack` through sidebar
+  nav `ScrollArea`, while `Canvas` and root `Scroll` remain separate follow-ups.
+
+## M12 — Absent zero overlay clean-geometry contract
+
+- Classify `text_reflow / Text` as an intentional stop condition until text computed-box /
+  line-break stability has a dedicated proof.
+- Keep sidebar nav `ScrollArea` authoring explicit as a flex-fill slot:
+  `w_full().h_full().flex_1().min_w_0().min_h_0()`.
+- Treat `present=false` `InteractivityGate` nodes as absent propagated leaves in clean-geometry
+  preflight, and allow explicit `0x0` absolute overlay geometry without reporting
+  `missing_measured_size`.
+- 2026-05-18 minimum slice landed: hidden `ScrollArea` scrollbar/corner gates no longer block the
+  parent `Stack` root solve as `missing_measured_size`. Fresh no-4090 evidence moves the root
+  blocker to `unsupported_kind / ViewCache`; content `Text`, editor `Canvas`, and root `Scroll`
+  remain separate follow-ups.
+
+## M13 — ViewCache boundary clean-geometry propagation
+
+- Treat `ViewCache` as a side-effect/cache boundary instead of a pure geometry wrapper.
+- Allow clean ancestors to propagate width-only resized bounds to a clean contained `ViewCache`
+  boundary without a parent Taffy root solve.
+- Keep explicit `ViewCache` roots on their own authoritative solve path with
+  `side_effect_boundary / ViewCache` attribution.
+- 2026-05-18 minimum slice landed: the root `Stack` blocker moved away from
+  `unsupported_kind / ViewCache`. Fresh no-4090 evidence now points to `missing_measured_size /
+  Spacer` through shadcn `sonner` toast chrome; content `Text`, editor `Canvas`, and root `Scroll`
+  remain separate follow-ups.
+
+## M14 — Explicit zero driver leaf contract (candidate)
+
+- Classify explicit `0x0` driver-only leaves so overlay triggers can stay layout-neutral without
+  relying on a `Size::default()` sentinel.
+- Treat leaf `Spacer` and empty leaf `Container` differently from ordinary zero-sized chrome:
+  the intent must be explicit, and visual chrome must still stay on the full solve path.
+- Keep default/implicit empty leaves on the authoritative solve path until they are made explicit by
+  authoring or a broader data-model refactor.
+- 2026-05-18 minimum slice landed: explicit `0x0` `Spacer` and explicit `0x0` empty `Container`
+  driver leaves now skip the root solve, while implicit/default variants still reject. Fresh
+  no-4090 evidence moves the next blockers to `text_reflow / Text` and `flex_cross_align / Flex`;
+  editor `Canvas` and root `Scroll` remain separate follow-ups.
+
+## M15 — Gallery content-header stretch authoring cleanup
+
+- Treat the content-header `flex_cross_align / Flex` blocker as an authoring issue, not a
+  mechanism-layer expansion.
+- Keep full-width header lanes explicit: the outer content header and inner copy column should use
+  stretch cross-axis alignment because their children already express `w_full().min_w_0()`.
+- 2026-05-18 cleanup landed: `apps/fret-ui-gallery/src/ui/content.rs` now stretches the content
+  header lanes and exposes stable test ids for the copy and presets lanes. Focused gallery harness
+  coverage locks the header/copy/presets width alignment.
+- Fresh no-4090 evidence has no `flex_cross_align` in the raw bundle or `diag stats`. Remaining
+  blockers are `text_reflow / Text`, small editor `Canvas`, and root `Scroll` as a side-effect
+  boundary.
+
+## M16 — Wrapped text clean-geometry stop condition
+
+- Audit the remaining `text_reflow / Text` blocker before attempting any text fast-path expansion.
+- Treat shadcn `CardDescription` text as wrapped recipe text: it uses `TextWrap::Word`, `w_full`,
+  and width-derived layout/measure/paint constraints.
+- Keep `TextWrap::Word` text on the authoritative solve path until a dedicated line-break /
+  computed-box stability proof exists.
+- 2026-05-18 audit landed: the preview card description at
+  `apps/fret-ui-gallery/src/ui/content.rs:744` remains a correct `text_reflow / Text` stop
+  condition. The focused negative gate
+  `clean_geometry_small_resize_rejects_auto_height_text_reflow` passed, and local evidence leaves
+  only small `Canvas` and root `Scroll` non-text blockers outside the text stop condition.
+
+## M17 — Clean-geometry resize-jitter phase closeout
+
+- Close the local clean-geometry resize-jitter phase without closing the broader
+  `scroll-optimization-v1` workstream.
+- Treat the phase as complete when every remaining blocker is either an explicit stop condition or
+  a separate owner lane:
+  wrapped text, small `Canvas`, root `Scroll`, RTX4090/other-machine evidence, and the optional
+  measured-size data-model migration.
+- 2026-05-18 closeout decision: do not keep extending the clean-geometry proof inside this folder.
+  Future work should open narrow follow-ons with their own evidence and gates.

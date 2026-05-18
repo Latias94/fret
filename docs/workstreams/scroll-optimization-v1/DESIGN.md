@@ -3,6 +3,11 @@
 Date: 2026-03-03  
 Status: Active execution lane
 
+Status note (2026-05-18): the local clean-geometry resize-jitter phase is closed. The broader
+scroll optimization workstream remains active as a historical/umbrella lane for scroll correctness,
+wheel coalescing, scrollbar baseline, and extent-probing contracts. Future clean-geometry work
+should split into narrower follow-ons instead of reopening this phase.
+
 ## Motivation
 
 Scrolling is a core interaction that touches multiple mechanisms:

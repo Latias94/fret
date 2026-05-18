@@ -1141,7 +1141,894 @@ fn clean_geometry_small_resize_runs_text_input_layout_as_side_effect_boundary() 
 }
 
 #[test]
-fn clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve() {
+fn clean_geometry_small_resize_skips_px_absolute_stack_overlay_child() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(324.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-absolute-overlay-child",
+        |cx| {
+            let stack = crate::element::StackProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            };
+            vec![cx.stack_props(stack, |cx| {
+                let mut viewport = crate::element::ContainerProps::default();
+                viewport.layout.size.width = Length::Fill;
+                viewport.layout.size.height = Length::Fill;
+
+                let mut gate_layout = crate::element::LayoutStyle {
+                    position: crate::element::PositionStyle::Absolute,
+                    inset: crate::element::InsetStyle {
+                        top: Some(Px(0.0)).into(),
+                        right: Some(Px(0.0)).into(),
+                        bottom: Some(Px(0.0)).into(),
+                        left: None.into(),
+                    },
+                    size: crate::element::SizeStyle {
+                        width: Length::Px(Px(8.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+                gate_layout.size.min_width = Some(Length::Px(Px(0.0)));
+                gate_layout.size.min_height = Some(Length::Px(Px(0.0)));
+
+                let mut scrollbar_layout = crate::element::LayoutStyle::default();
+                scrollbar_layout.size.width = Length::Fill;
+                scrollbar_layout.size.height = Length::Fill;
+                let scrollbar = cx.scrollbar(crate::element::ScrollbarProps {
+                    layout: scrollbar_layout,
+                    axis: crate::element::ScrollbarAxis::Vertical,
+                    scroll_target: None,
+                    scroll_handle: crate::scroll::ScrollHandle::default(),
+                    style: crate::element::ScrollbarStyle::default(),
+                });
+
+                vec![
+                    cx.container(viewport, |_cx| Vec::<AnyElement>::new()),
+                    cx.interactivity_gate_props(
+                        crate::element::InteractivityGateProps {
+                            layout: gate_layout,
+                            present: true,
+                            interactive: true,
+                        },
+                        move |cx| vec![cx.opacity(1.0, |_cx| vec![scrollbar])],
+                    ),
+                ]
+            })]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(184.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "px-inset absolute overlay chrome should not force the Stack root solve"
+    );
+    assert_eq!(
+        ui.debug_stats().layout_clean_geometry_solve_skip_rejections,
+        0,
+        "accepted clean geometry skips should not leave rejection noise in frame stats"
+    );
+
+    let stack_node = ui.children(child)[0];
+    let gate_node = ui.children(stack_node)[1];
+    let gate_bounds = ui.debug_node_bounds(gate_node).expect("gate bounds");
+    assert!((gate_bounds.origin.x.0 - (rect_b.size.width.0 - 8.0)).abs() < 0.01);
+    assert!((gate_bounds.size.width.0 - 8.0).abs() < 0.01);
+    assert!((gate_bounds.size.height.0 - rect_b.size.height.0).abs() < 0.01);
+
+    let opacity_node = ui.children(gate_node)[0];
+    let scrollbar_node = ui.children(opacity_node)[0];
+    let scrollbar_bounds = ui
+        .debug_node_bounds(scrollbar_node)
+        .expect("scrollbar bounds");
+    assert!((scrollbar_bounds.origin.x.0 - gate_bounds.origin.x.0).abs() < 0.01);
+    assert!((scrollbar_bounds.size.width.0 - gate_bounds.size.width.0).abs() < 0.01);
+    assert!((scrollbar_bounds.size.height.0 - gate_bounds.size.height.0).abs() < 0.01);
+}
+
+#[test]
+fn clean_geometry_small_resize_skips_absent_zero_absolute_overlay_child() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls += 1;
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+    let mut text = FakeTextService::default();
+    let bounds_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(220.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(216.0), Px(180.0)),
+    );
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-absent-zero-absolute-overlay",
+        |cx| {
+            vec![cx.stack_props(
+                crate::element::StackProps {
+                    layout: crate::element::LayoutStyle {
+                        size: crate::element::SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+                |cx| {
+                    let mut viewport = crate::element::ContainerProps::default();
+                    viewport.layout.size.width = Length::Fill;
+                    viewport.layout.size.height = Length::Fill;
+
+                    let gate_layout = crate::element::LayoutStyle {
+                        position: crate::element::PositionStyle::Absolute,
+                        inset: crate::element::InsetStyle {
+                            top: Some(Px(0.0)).into(),
+                            right: Some(Px(0.0)).into(),
+                            ..Default::default()
+                        },
+                        size: crate::element::SizeStyle {
+                            width: Length::Px(Px(0.0)),
+                            height: Length::Px(Px(0.0)),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+
+                    let mut scrollbar_layout = crate::element::LayoutStyle::default();
+                    scrollbar_layout.size.width = Length::Fill;
+                    scrollbar_layout.size.height = Length::Fill;
+                    let scrollbar = cx.scrollbar(crate::element::ScrollbarProps {
+                        layout: scrollbar_layout,
+                        axis: crate::element::ScrollbarAxis::Vertical,
+                        scroll_target: None,
+                        scroll_handle: crate::scroll::ScrollHandle::default(),
+                        style: crate::element::ScrollbarStyle::default(),
+                    });
+
+                    vec![
+                        cx.container(viewport, |_cx| Vec::<AnyElement>::new()),
+                        cx.interactivity_gate_props(
+                            crate::element::InteractivityGateProps {
+                                layout: gate_layout,
+                                present: false,
+                                interactive: false,
+                            },
+                            move |cx| vec![cx.opacity(0.0, |_cx| vec![scrollbar])],
+                        ),
+                    ]
+                },
+            )]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(176.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    let stack_node = ui.children(child)[0];
+    let gate_node = ui.children(stack_node)[1];
+    assert!(
+        ui.debug_node_measured_size(gate_node)
+            .is_some_and(|size| size == Size::default()),
+        "absent overlay gate should legitimately have a zero measured size"
+    );
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "absent zero-size overlay chrome should not force the Stack root solve"
+    );
+    assert_eq!(
+        ui.debug_stats().layout_clean_geometry_solve_skip_rejections,
+        0,
+        "a legal absent 0x0 overlay should not be reported as missing_measured_size"
+    );
+
+    let gate_bounds = ui.debug_node_bounds(gate_node).expect("gate bounds");
+    assert!((gate_bounds.origin.x.0 - rect_b.size.width.0).abs() < 0.01);
+    assert!((gate_bounds.size.width.0 - 0.0).abs() < 0.01);
+    assert!((gate_bounds.size.height.0 - 0.0).abs() < 0.01);
+}
+
+#[test]
+fn clean_geometry_small_resize_skips_explicit_zero_spacer_leaf() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+    let mut text = FakeTextService::default();
+    let bounds_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(220.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(216.0), Px(180.0)),
+    );
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-explicit-zero-spacer",
+        |cx| {
+            vec![cx.stack_props(
+                crate::element::StackProps {
+                    layout: crate::element::LayoutStyle {
+                        size: crate::element::SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+                |cx| {
+                    let mut layout = crate::element::LayoutStyle::default();
+                    layout.size.width = Length::Px(Px(0.0));
+                    layout.size.height = Length::Px(Px(0.0));
+                    layout.flex.grow = 0.0;
+                    layout.flex.shrink = 0.0;
+                    layout.flex.basis = Length::Px(Px(0.0));
+                    vec![cx.spacer(crate::element::SpacerProps {
+                        layout,
+                        min: Px(0.0),
+                    })]
+                },
+            )]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(176.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    let stack_node = ui.children(child)[0];
+    let spacer_node = ui.children(stack_node)[0];
+    assert!(
+        ui.debug_node_measured_size(spacer_node)
+            .is_some_and(|size| size == Size::default()),
+        "an explicit driver-only spacer can legitimately measure to zero"
+    );
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "an explicit zero-size spacer leaf should not force the Stack root solve"
+    );
+    assert_eq!(
+        ui.debug_stats().layout_clean_geometry_solve_skip_rejections,
+        0,
+        "the explicit zero-size spacer leaf should not be reported as missing_measured_size"
+    );
+
+    let spacer_bounds = ui.debug_node_bounds(spacer_node).expect("spacer bounds");
+    assert!((spacer_bounds.size.width.0 - 0.0).abs() < 0.01);
+    assert!((spacer_bounds.size.height.0 - 0.0).abs() < 0.01);
+}
+
+#[test]
+fn clean_geometry_small_resize_rejects_implicit_zero_spacer_leaf() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+    let mut text = FakeTextService::default();
+    let bounds_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(220.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(216.0), Px(180.0)),
+    );
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-implicit-zero-spacer",
+        |cx| {
+            vec![cx.stack_props(
+                crate::element::StackProps {
+                    layout: crate::element::LayoutStyle {
+                        size: crate::element::SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+                |cx| vec![cx.spacer(crate::element::SpacerProps::default())],
+            )]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(176.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert!(
+        ui.debug_stats().layout_engine_solves > 0,
+        "implicit zero-size spacers should stay on the authoritative solve path until their intent is explicit"
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_rejection,
+        Some("missing_measured_size")
+    );
+}
+
+#[test]
+fn clean_geometry_small_resize_skips_explicit_zero_container_leaf() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+    let mut text = FakeTextService::default();
+    let bounds_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(220.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(216.0), Px(180.0)),
+    );
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-explicit-zero-container",
+        |cx| {
+            vec![cx.stack_props(
+                crate::element::StackProps {
+                    layout: crate::element::LayoutStyle {
+                        size: crate::element::SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+                |cx| {
+                    let mut props = crate::element::ContainerProps::default();
+                    props.layout.size.width = Length::Px(Px(0.0));
+                    props.layout.size.height = Length::Px(Px(0.0));
+                    vec![cx.container(props, |_cx| Vec::new())]
+                },
+            )]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(176.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    let stack_node = ui.children(child)[0];
+    let container_node = ui.children(stack_node)[0];
+    assert!(
+        ui.debug_node_measured_size(container_node)
+            .is_some_and(|size| size == Size::default()),
+        "an explicit driver-only container can legitimately measure to zero"
+    );
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "an explicit zero-size container leaf should not force the Stack root solve"
+    );
+    assert_eq!(
+        ui.debug_stats().layout_clean_geometry_solve_skip_rejections,
+        0,
+        "the explicit zero-size container leaf should not be reported as missing_measured_size"
+    );
+
+    let container_bounds = ui
+        .debug_node_bounds(container_node)
+        .expect("container bounds");
+    assert!((container_bounds.size.width.0 - 0.0).abs() < 0.01);
+    assert!((container_bounds.size.height.0 - 0.0).abs() < 0.01);
+}
+
+#[test]
+fn clean_geometry_small_resize_rejects_implicit_zero_container_leaf() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+    let mut text = FakeTextService::default();
+    let bounds_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(220.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(216.0), Px(180.0)),
+    );
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-implicit-zero-container",
+        |cx| {
+            vec![cx.stack_props(
+                crate::element::StackProps {
+                    layout: crate::element::LayoutStyle {
+                        size: crate::element::SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+                |cx| vec![cx.container(Default::default(), |_cx| Vec::new())],
+            )]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(176.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert!(
+        ui.debug_stats().layout_engine_solves > 0,
+        "implicit zero-size containers should stay on the authoritative solve path until their intent is explicit"
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_rejection,
+        Some("missing_measured_size")
+    );
+}
+
+#[test]
+fn clean_geometry_small_resize_rejects_fraction_absolute_stack_overlay_inset() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(324.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-fraction-absolute-overlay-child",
+        |cx| {
+            let stack = crate::element::StackProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            };
+            vec![cx.stack_props(stack, |cx| {
+                let mut viewport = crate::element::ContainerProps::default();
+                viewport.layout.size.width = Length::Fill;
+                viewport.layout.size.height = Length::Fill;
+
+                let gate_layout = crate::element::LayoutStyle {
+                    position: crate::element::PositionStyle::Absolute,
+                    inset: crate::element::InsetStyle {
+                        top: Some(Px(0.0)).into(),
+                        right: crate::element::InsetEdge::Fraction(0.5),
+                        bottom: Some(Px(0.0)).into(),
+                        left: None.into(),
+                    },
+                    size: crate::element::SizeStyle {
+                        width: Length::Px(Px(8.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+
+                vec![
+                    cx.container(viewport, |_cx| Vec::<AnyElement>::new()),
+                    cx.interactivity_gate_props(
+                        crate::element::InteractivityGateProps {
+                            layout: gate_layout,
+                            present: true,
+                            interactive: true,
+                        },
+                        |_cx| Vec::<AnyElement>::new(),
+                    ),
+                ]
+            })]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(184.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert!(
+        ui.debug_stats().layout_engine_solves > 0,
+        "fraction inset absolute children must keep the authoritative root solve until the percent basis is proven"
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_rejection,
+        Some("non_px_spacing")
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_element_kind,
+        Some("Stack")
+    );
+}
+
+#[test]
+fn clean_geometry_small_resize_propagates_to_view_cache_boundary_without_root_solve() {
     struct PrecomputeThenResize {
         child: NodeId,
         rect_a: Rect,
@@ -1193,6 +2080,7 @@ fn clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve() {
             let mut cache = crate::element::ViewCacheProps::default();
             cache.layout.size.width = Length::Fill;
             cache.layout.size.height = Length::Fill;
+            cache = cache.contain_layout_when_bounds_known(true);
             vec![cx.view_cache(cache, |cx| {
                 vec![cx.stack_props(
                     crate::element::StackProps {
@@ -1230,6 +2118,138 @@ fn clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve() {
     ui.set_root(parent);
 
     ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+    let cache_node = ui.children(child)[0];
+    assert!(ui.should_reuse_view_cache_node(cache_node));
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "clean width-only resize should propagate to a clean ViewCache boundary without a Taffy root solve"
+    );
+    assert_eq!(
+        ui.debug_stats().layout_clean_geometry_solve_skip_rejections,
+        0,
+        "accepted ViewCache boundary propagation should not leave rejection noise in frame stats"
+    );
+    assert_eq!(
+        ui.debug_stats().view_cache_contained_relayouts,
+        0,
+        "clean cache roots should not be forced into contained relayout by parent geometry propagation"
+    );
+
+    let cache_bounds = ui.debug_node_bounds(cache_node).expect("cache bounds");
+    assert!(
+        (cache_bounds.size.width.0 - rect_b.size.width.0).abs() < 0.01,
+        "ViewCache bounds must track the propagated root width"
+    );
+
+    assert!(
+        ui.should_reuse_view_cache_node(cache_node),
+        "clean geometry propagation must not mark the cache root for declarative rerender"
+    );
+    assert!(
+        !ui.view_cache_node_needs_rerender(cache_node),
+        "clean geometry propagation must leave view-cache rerender pressure unchanged"
+    );
+}
+
+#[test]
+fn clean_geometry_small_resize_keeps_view_cache_root_solve_as_boundary() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+    ui.set_view_cache_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(324.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let cache = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-view-cache-root-boundary-child",
+        |cx| {
+            let mut cache = crate::element::ViewCacheProps::default();
+            cache.layout.size.width = Length::Fill;
+            cache.layout.size.height = Length::Fill;
+            cache = cache.contain_layout_when_bounds_known(true);
+            let element = cx.view_cache(cache, |cx| {
+                vec![cx.stack_props(
+                    crate::element::StackProps {
+                        layout: crate::element::LayoutStyle {
+                            size: crate::element::SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Fill,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                    },
+                    |_cx| Vec::<AnyElement>::new(),
+                )]
+            });
+            vec![element]
+        },
+    );
+    let cache = ui.children(cache)[0];
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(184.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child: cache,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![cache]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
 
     app.advance_frame();
     ui.invalidate(parent, Invalidation::Layout);
@@ -1237,45 +2257,21 @@ fn clean_geometry_small_resize_does_not_skip_view_cache_root_engine_solve() {
 
     assert!(
         ui.debug_stats().layout_engine_solves > 0,
-        "ViewCache stays off the root-solve skip support set until its retained semantics have a dedicated proof"
+        "ViewCache as the explicit root remains a layout/cache boundary and should not skip its own solve"
     );
     assert!(
         ui.debug_stats().layout_clean_geometry_solve_skip_rejections > 0,
-        "unsupported clean geometry roots should report why the solve skip was rejected"
+        "boundary roots should report why their own root solve was kept"
     );
     assert_eq!(
         ui.debug_stats()
             .layout_clean_geometry_solve_skip_first_rejection,
-        Some("unsupported_kind")
+        Some("side_effect_boundary")
     );
     assert_eq!(
         ui.debug_stats()
             .layout_clean_geometry_solve_skip_first_element_kind,
         Some("ViewCache")
-    );
-
-    let rejected_solve = ui
-        .debug_layout_engine_solves()
-        .iter()
-        .find(|solve| solve.clean_geometry_solve_skip_rejection.is_some())
-        .expect("rejected root solve should carry its clean-geometry skip reason");
-    let rejection = rejected_solve
-        .clean_geometry_solve_skip_rejection
-        .as_ref()
-        .expect("rejected solve should expose rejection details");
-    assert_eq!(rejection.reason, "unsupported_kind");
-    assert_eq!(rejection.element_kind, Some("ViewCache"));
-    assert!(
-        rejection.node.is_some(),
-        "per-solve rejection attribution should expose the rejected node"
-    );
-    assert!(
-        rejection.element.is_some(),
-        "per-solve rejection attribution should expose the rejected element id"
-    );
-    assert!(
-        rejected_solve.root_element_kind.is_some(),
-        "per-solve rejection details should be attached to a concrete rejected root solve"
     );
 }
 
@@ -4220,6 +5216,275 @@ fn clean_geometry_small_resize_preserves_fixed_stack_child_width() {
     let spacer_node = ui.children(stack_node)[0];
     let spacer_bounds = ui.debug_node_bounds(spacer_node).expect("spacer bounds");
     assert!((spacer_bounds.size.width.0 - 24.0).abs() < 0.01);
+}
+
+#[test]
+fn clean_geometry_small_resize_skips_card_header_like_auto_grid() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(324.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-card-header-like-grid-child",
+        |cx| {
+            let grid = crate::element::GridProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                cols: 1,
+                rows: Some(2),
+                template_rows: Some(vec![
+                    crate::element::GridTrackSizing::Auto,
+                    crate::element::GridTrackSizing::Auto,
+                ]),
+                gap: Px(3.0).into(),
+                padding: crate::element::SpacingEdges {
+                    left: crate::element::SpacingLength::Px(Px(7.0)),
+                    right: crate::element::SpacingLength::Px(Px(11.0)),
+                    top: crate::element::SpacingLength::Px(Px(5.0)),
+                    bottom: crate::element::SpacingLength::Px(Px(13.0)),
+                },
+                align: crate::element::CrossAlign::Start,
+                ..Default::default()
+            };
+
+            let title = crate::element::StackProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Px(Px(14.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            };
+            let description = crate::element::StackProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Px(Px(9.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            };
+
+            vec![cx.grid(grid, |cx| {
+                vec![
+                    cx.stack_props(title, |_cx| Vec::<AnyElement>::new()),
+                    cx.stack_props(description, |_cx| Vec::<AnyElement>::new()),
+                ]
+            })]
+        },
+    );
+
+    let rect_a = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(180.0), Px(44.0)));
+    let rect_b = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(184.0), Px(44.0)));
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "single-column auto-row Grid geometry should not force a small width-delta root solve"
+    );
+    assert_eq!(
+        ui.debug_stats().layout_clean_geometry_solve_skip_rejections,
+        0,
+        "accepted Grid geometry skips should not report rejection noise"
+    );
+
+    let grid_node = ui.children(child)[0];
+    let rows = ui.children(grid_node);
+    let title_bounds = ui.debug_node_bounds(rows[0]).expect("title bounds");
+    let description_bounds = ui.debug_node_bounds(rows[1]).expect("description bounds");
+
+    assert_eq!(title_bounds.origin, Point::new(Px(7.0), Px(5.0)));
+    assert!((title_bounds.size.width.0 - 166.0).abs() < 0.01);
+    assert!((title_bounds.size.height.0 - 14.0).abs() < 0.01);
+    assert_eq!(description_bounds.origin, Point::new(Px(7.0), Px(22.0)));
+    assert!((description_bounds.size.width.0 - 166.0).abs() < 0.01);
+    assert!((description_bounds.size.height.0 - 9.0).abs() < 0.01);
+}
+
+#[test]
+fn clean_geometry_small_resize_rejects_flexible_grid_track() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(324.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-flexible-grid-track-child",
+        |cx| {
+            let grid = crate::element::GridProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                cols: 1,
+                rows: Some(1),
+                template_columns: Some(vec![crate::element::GridTrackSizing::Flex(1.0)]),
+                template_rows: Some(vec![crate::element::GridTrackSizing::Auto]),
+                align: crate::element::CrossAlign::Start,
+                ..Default::default()
+            };
+            let child = crate::element::StackProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Px(Px(14.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            };
+
+            vec![cx.grid(grid, |cx| {
+                vec![cx.stack_props(child, |_cx| Vec::<AnyElement>::new())]
+            })]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(184.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert!(
+        ui.debug_stats().layout_engine_solves > 0,
+        "flexible Grid tracks must keep the authoritative solve path"
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_rejection,
+        Some("grid_track_sizing")
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_element_kind,
+        Some("Grid")
+    );
 }
 
 #[test]

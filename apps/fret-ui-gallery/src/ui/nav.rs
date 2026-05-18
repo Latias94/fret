@@ -240,7 +240,14 @@ pub(crate) fn sidebar_view(
             nav_body
         } else {
             shadcn::ScrollArea::new([nav_body])
-                .refine_layout(LayoutRefinement::default().w_full().h_full())
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .w_full()
+                        .h_full()
+                        .flex_1()
+                        .min_w_0()
+                        .min_h_0(),
+                )
                 .scroll_handle(nav_scroll_handle.clone())
                 .into_element(cx)
         };

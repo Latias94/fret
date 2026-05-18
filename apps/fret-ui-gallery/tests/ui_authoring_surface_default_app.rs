@@ -10366,6 +10366,30 @@ fn shadcn_extras_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn gallery_sidebar_nav_scroll_is_explicit_flex_fill_slot() {
+    let source = read("src/ui/nav.rs");
+    let canonical = canonicalize_rust_fragment(&source);
+    let marker = canonicalize_rust_fragment(
+        r#"
+        shadcn::ScrollArea::new([nav_body])
+            .refine_layout(
+                LayoutRefinement::default()
+                    .w_full()
+                    .h_full()
+                    .flex_1()
+                    .min_w_0()
+                    .min_h_0(),
+            )
+        "#,
+    );
+
+    assert!(
+        canonical.contains(&marker),
+        "sidebar nav ScrollArea should be an explicit flex-fill slot so the shell does not rely on h_full inside a remaining-space flex column",
+    );
+}
+
+#[test]
 fn selected_sidebar_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     for relative_path in [
         "src/ui/snippets/sidebar/demo.rs",

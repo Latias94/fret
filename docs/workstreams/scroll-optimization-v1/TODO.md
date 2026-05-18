@@ -406,6 +406,218 @@ Status: Active
   - Decision: close the `TextInput` blocker here. The next optimization should target the sidebar
     `positioned_child / Stack` blocker or the content `Grid` / wrap-flex line-break story as
     separate work; do not treat text input as a pure geometry leaf.
+- [x] Close the sidebar `ScrollArea` `positioned_child / Stack` blocker with a narrow absolute
+  overlay proof.
+  - Source conclusion: shadcn `ScrollArea` mounts the viewport as the only flow child under the root
+    `Stack`; vertical/horizontal scrollbar gates and the optional corner are absolute overlay chrome
+    with px/auto insets. Those overlays should not force the parent `Stack` root solve during a
+    clean width-only resize when their geometry can be derived from the containing block.
+  - Implemented mechanism proof: `Stack` clean-geometry propagation can derive absolute child bounds
+    only for zero-margin, px/auto-inset children whose axis sizes are either px or fully constrained
+    by start/end px insets. Percent/fill/fraction inset or sizing remains rejected.
+  - Guardrails locked:
+    - `clean_geometry_small_resize_skips_px_absolute_stack_overlay_child` proves px-inset absolute
+      overlay chrome no longer forces a root Taffy solve and that nested scrollbar bounds update.
+    - `clean_geometry_small_resize_rejects_fraction_absolute_stack_overlay_inset` keeps fraction
+      inset on the authoritative solve path with `non_px_spacing / Stack`.
+    - `Scrollbar` is only classified as a propagated clean leaf when it has no children.
+  - Local blocker-shift evidence:
+    `target/fret-diag/local-next-absolute-scrollarea-clean-geometry-20260517-r1/1779014851068/bundle.schema2.json`.
+  - Result: the previous root `Stack` `positioned_child / Stack` blocker through
+    `ecosystem/fret-ui-shadcn/src/scroll_area.rs:340` disappeared from the per-solve blockers.
+    Top frame total/layout/solve/prepaint/paint is `1219/598/265/246/375us` with `4` layout-engine
+    solves, view-cache reused `1`, needs-rerender `0`, and row replay/store remains `289/0`.
+    Remaining per-solve blockers are content `Semantics` `Grid/wrap_nodes=1` (`169-176us`), root
+    `Stack` generic app-shell solve (`88-92us`), editor `PointerRegion -> Canvas` (`3-4us`), and
+    root `Scroll` as a side-effect boundary.
+  - Decision: close the sidebar absolute chrome blocker here. The next meaningful optimization is
+    the content `Grid` / wrap-flex line-break stability story; keep `Canvas`, root `Scroll`, and
+    `measured_size: Option<Size>` as separate follow-ups.
+- [x] Prove the narrow card-header-like `Grid` clean-geometry subset.
+  - Source conclusion: the real content root blocker was not a general CSS grid problem. The
+    relevant path is a one-column, explicit auto-row card-header-like grid whose child bounds can
+    be derived from previous clean geometry during a small width-only resize.
+  - Implemented mechanism proof: `Grid` participates only when it has one column, no explicit
+    column template, explicit non-empty `Auto` / `Px` row tracks, matching row count, px padding /
+    gaps, start alignment, static children, px margins, simple grid lines, and stable child
+    width/height styles.
+  - Guardrails locked: flexible grid tracks (`Fr` / `Flex` / explicit flex columns), item
+    self-alignment, non-px spacing, positioned children, and text/height reflow remain on the
+    authoritative solve path. `Grid` is manual-bounds-only in this clean propagation path, so
+    unsupported variants do not fall back to stale engine local rects.
+  - Focused gates:
+    `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_card_header_like_auto_grid clean_geometry_small_resize_rejects_flexible_grid_track --no-fail-fast`,
+    `cargo nextest run -p fret-ui layout_engine --no-fail-fast`,
+    `cargo nextest run -p fret-ui scroll --no-fail-fast`,
+    `cargo check -p fret-bootstrap --features ui-app-driver,diagnostics`,
+    `cargo fmt --check`, `python3 tools/check_layering.py`, and `git diff --check`.
+  - Local no-4090 evidence:
+    `target/fret-diag/local-next-card-header-grid-clean-geometry-20260517-r1/1779032450806/bundle.schema2.json`.
+  - Result: the previous content `Semantics` `unsupported_kind=Grid` blocker disappeared. Top
+    frame total/layout/layout-roots/layout-engine-solve/prepaint/paint is
+    `1214/602/399/263/234/378us` with `4` layout-engine solves. View-cache reuse remains present,
+    row replay/store remains `289/0`, and renderer text prepare is `64us`.
+  - Remaining blockers: content `Semantics` is now `text_reflow / Text` at
+    `apps/fret-ui-gallery/src/ui/content.rs:742`; root `Stack` is `missing_measured_size / Stack`
+    through the sidebar nav `ScrollArea`; editor `Canvas` remains a small solve; root `Scroll`
+    remains a side-effect boundary.
+  - Decision: close the narrow `Grid` proof here. The next slice should first classify the
+    `text_reflow / Text` and root `missing_measured_size / Stack` blockers rather than widening
+    text or grid participation by name.
+- [x] Classify `text_reflow / Text` and close the sidebar `missing_measured_size / Stack` blocker.
+  - Text classification: the content `Semantics` blocker is the existing safe `text_reflow / Text`
+    stop condition at `apps/fret-ui-gallery/src/ui/content.rs:742`. Keep it on the authoritative
+    solve path; do not widen text participation without a line-break / computed-box stability
+    proof.
+  - Source audit: the sidebar nav `ScrollArea` is a remaining-space child in a vertical flex column.
+    It now spells that policy explicitly with `w_full().h_full().flex_1().min_w_0().min_h_0()`,
+    matching the content scroll authoring surface and locking the intent with a gallery source
+    guard.
+  - First local check showed authoring alone did not remove the root blocker:
+    `target/fret-diag/local-next-sidebar-nav-flex-fill-clean-geometry-20260518-r1/1779034426572/bundle.schema2.json`
+    still reported `missing_measured_size / Stack` through the sidebar `ScrollArea`.
+  - Implemented mechanism fix: absent `InteractivityGate` nodes are treated as clean propagated
+    leaves in the clean-geometry preflight, and explicit `0x0` absolute overlay chrome is no longer
+    confused with an unmeasured child. This matches `ScrollArea` hidden scrollbar/corner gates:
+    they are mounted but `present=false`, layout to `0x0`, and suppress hidden descendant dirty
+    work.
+  - Focused guardrail:
+    `clean_geometry_small_resize_skips_absent_zero_absolute_overlay_child` proves a hidden absolute
+    overlay gate with legal zero measured size does not force the `Stack` root solve or report
+    `missing_measured_size`.
+  - Local no-4090 evidence:
+    `target/fret-diag/local-next-absent-zero-overlay-clean-geometry-20260518-r1/1779035222170/bundle.schema2.json`.
+  - Result: the root `Stack` blocker moved from `missing_measured_size / Stack` through sidebar
+    `ScrollArea` to `unsupported_kind / ViewCache` at the gallery content shell. Top frame
+    total/layout/solve/prepaint/paint is `1343/671/287/270/402us` with `4` layout-engine solves;
+    view-cache reuse remains `1`, needs-rerender remains `0`, and row replay/store remains `289/0`.
+  - Remaining blockers: content `Semantics` remains `text_reflow / Text`; root `Stack` is now
+    `unsupported_kind / ViewCache`; editor `Canvas` remains small; root `Scroll` remains a
+    side-effect boundary.
+  - Decision: close the sidebar `missing_measured_size` blocker here. Do not start an
+    `Option<Size>` data-model refactor from this evidence alone; the sentinel issue was real but
+    narrow enough to address at the absent overlay contract. The next optimization should audit
+    `ViewCache` clean-geometry participation or explicitly stop at text/view-cache boundaries.
+- [x] Audit and implement the `ViewCache` clean-geometry boundary slice.
+  - Contract decision: `ViewCache` is not a pure pass-through wrapper. It is a retained/cache
+    side-effect boundary whose own explicit root solve must remain authoritative.
+  - Implemented proof: a clean ancestor can propagate width-only resize geometry to a clean
+    contained `ViewCache` boundary without a parent Taffy root solve, without forcing contained
+    relayout, and without adding view-cache rerender pressure.
+  - Guardrails: `ViewCache` as the explicit clean root still reports `side_effect_boundary /
+    ViewCache` and keeps its own solve; dirty cache roots and contained relayout semantics remain
+    outside this propagation shortcut.
+  - Focused gates:
+    `clean_geometry_small_resize_propagates_to_view_cache_boundary_without_root_solve` and
+    `clean_geometry_small_resize_keeps_view_cache_root_solve_as_boundary`.
+  - Local no-4090 evidence:
+    `target/fret-diag/local-next-view-cache-clean-geometry-20260518-r1/1779039672694/bundle.schema2.json`.
+  - Result: the root `Stack` blocker moved away from `unsupported_kind / ViewCache`. Top frame
+    total/layout/solve/prepaint/paint is `1269/628/261/249/392us` with `4` layout-engine solves;
+    view-cache reuse remains `1`, needs-rerender remains `0`, and row replay/store remains
+    `289/0`.
+  - Remaining blockers: content `Semantics` remains `text_reflow / Text`; root `Stack` is now
+    `missing_measured_size / Spacer` through `ecosystem/fret-ui-shadcn/src/sonner.rs:382`;
+    editor `Canvas` remains small; root `Scroll` remains a side-effect boundary.
+  - Decision: close the `ViewCache` slice here. The next narrow optimization candidate is the
+    toast/sonner `Spacer` missing-measured-size path, with a measured-size data-model follow-up only
+    if the same sentinel ambiguity recurs across more real roots.
+- [x] Audit and implement explicit zero-size driver leaves for clean geometry.
+  - Source audit: shadcn `Toaster` returns an explicit `0x0` `Spacer` only to drive overlay
+    requests, and the gallery settings sheet uses an empty explicit `0x0` `Container` as a sheet
+    trigger placeholder. Neither should affect layout.
+  - Contract decision: this is a narrow legal-zero leaf issue, not a shadcn recipe rewrite and not
+    enough evidence for a broad `measured_size: Option<Size>` data-model migration.
+  - Implemented proof: clean-geometry preflight accepts only leaf `Spacer` or leaf `Container`
+    driver nodes with explicit `0x0` width/height, static positioning, zero margins, no flex grow,
+    zero-compatible constraints, and no children. `Container` additionally requires zero padding,
+    zero border, and no background/shadow/focus chrome.
+  - Guardrails: implicit/default `Spacer` and implicit/default empty `Container` still reject as
+    `missing_measured_size`, so ordinary legal `0x0` authoring remains explicit instead of inferred
+    from the `Size::default()` sentinel.
+  - Focused gates:
+    `clean_geometry_small_resize_skips_explicit_zero_spacer_leaf`,
+    `clean_geometry_small_resize_rejects_implicit_zero_spacer_leaf`,
+    `clean_geometry_small_resize_skips_explicit_zero_container_leaf`, and
+    `clean_geometry_small_resize_rejects_implicit_zero_container_leaf`.
+  - Local no-4090 evidence:
+    `target/fret-diag/local-next-explicit-zero-driver-leaf-clean-geometry-20260518-r1/1779066543524/bundle.schema2.json`.
+  - Result: the previous `missing_measured_size / Spacer` Sonner blocker and the follow-on
+    `missing_measured_size / Container` settings-sheet blocker are gone from per-solve attribution.
+    View-cache reuse remains `1`, needs-rerender remains `0`, and row replay/store remains `289/0`
+    with row-scene replay hit rate `100%`.
+  - Remaining blockers: content `Semantics` now stops at `text_reflow / Text` around
+    `apps/fret-ui-gallery/src/ui/content.rs:742` (about `159us` solve), content/header chrome stops
+    at `flex_cross_align / Flex` around `apps/fret-ui-gallery/src/ui/content.rs:102` (about
+    `44us` solve), editor `Canvas` remains small, and root `Scroll` remains a side-effect boundary.
+  - Decision: close the explicit-zero driver leaf slice here. Treat text reflow and flex
+    cross-axis classification as separate follow-ups; keep the broad measured-size sentinel refactor
+    as a TODO only if legal zero boxes recur outside explicit driver leaves.
+- [x] Close the gallery content-header `flex_cross_align / Flex` blocker as authoring cleanup.
+  - Source audit: the content header already intended full-width lanes. Both the copy column and
+    preset row had `w_full().min_w_0()`, but the outer vertical header flex and the inner copy
+    column still used `items_start()`, which prevented the existing vertical no-wrap
+    clean-geometry proof from applying during width-only resize.
+  - Implemented authoring fix: the content header outer flex and the copy column now use
+    `items_stretch()`. The copy and presets lanes also expose stable test ids so the gallery
+    harness can lock the layout intent directly.
+  - Focused gate:
+    `cargo nextest run -p fret-ui-gallery content_header_children_stretch_to_header_width --no-fail-fast`.
+  - Local no-4090 evidence:
+    `target/fret-diag/local-next-gallery-header-stretch-clean-geometry-20260518-r2/1779069580027/bundle.schema2.json`.
+  - Result: `flex_cross_align` is gone from the raw bundle and `diag stats` output. The final
+    rejection distribution is `text_reflow`, `unsupported_kind` for the small editor `Canvas`, and
+    `side_effect_boundary` for root `Scroll`. View-cache reuse remains `1`, needs-rerender remains
+    `0`, and row replay/store remains `289/0`.
+  - Remaining blockers: content `Semantics` still stops at `text_reflow / Text` around
+    `apps/fret-ui-gallery/src/ui/content.rs:742` (about `158us` solve), editor `Canvas` remains
+    small, and root `Scroll` remains a side-effect boundary.
+  - Decision: close this as a narrow gallery authoring cleanup. Do not widen the mechanism layer
+    for `text_reflow` until there is a dedicated text computed-box / line-break stability proof.
+- [x] Audit the remaining content `text_reflow / Text` blocker as a stop condition.
+  - Source audit: the top remaining content solve maps to
+    `apps/fret-ui-gallery/src/ui/content.rs:744`, where the preview card uses
+    `shadcn::CardDescription::new("Interactive preview for validating behaviors.")`.
+    `ecosystem/fret-ui-shadcn/src/card.rs` renders text descriptions as
+    `ui::raw_text(text).w_full().wrap(TextWrap::Word)`.
+  - Mechanism audit: layout, measure, and paint all derive a wrapped text max width from the
+    current text box width. `maybe_bucket_text_wrap_width` can reduce repeated text work during
+    interactive resize, but it does not make the computed text box or paint max-width independent
+    of width. The clean-geometry preflight only has a safe `StableComputedBox` text contract today,
+    and that contract correctly rejects when the text bounds size changes.
+  - Focused gate:
+    `cargo nextest run -p fret-ui clean_geometry_small_resize_rejects_auto_height_text_reflow --no-fail-fast`.
+  - Local evidence:
+    `target/fret-diag/local-next-gallery-header-stretch-clean-geometry-20260518-r2/1779069580027/bundle.schema2.json`.
+  - Result: the content preview card still rejects with `text_reflow / Text` at
+    `apps/fret-ui-gallery/src/ui/content.rs:744` with about `158-160us` solves. A smaller header
+    text path also rejects with `text_reflow`, while the only non-text blockers left in this sample
+    are the small editor `Canvas` solve and root `Scroll` side-effect boundary.
+  - Decision: do not widen clean geometry for `TextWrap::Word` / `CardDescription` in this lane.
+    Wrapped text can change line breaks, computed height, cached metrics, and paint preparation
+    constraints when width changes. A future text optimization should be a separate proof, likely
+    starting from `TextWrap::None` / single-line text or an explicit cached line-break stability
+    contract, not from this gallery description.
+- [x] Close the local clean-geometry resize-jitter phase and split remaining pressure.
+  - Verdict: do not close the entire `scroll-optimization-v1` workstream. Its original scope still
+    covers broader scroll correctness, wheel coalescing, scrollbar baseline, and extent probing.
+  - Closed phase: the local no-4090 resize-jitter clean-geometry phase has removed the repeated
+    app-shell/content blockers that were safe to prove locally: retained/windowed scroll cache-root
+    rerender pressure, clean root-solve propagation, Container/Grid/Flex/ViewCache boundaries,
+    explicit zero driver leaves, gallery header authoring, and rejection attribution.
+  - Stop conditions:
+    - wrapped `TextWrap::Word` / `CardDescription` remains authoritative solve work;
+    - editor `Canvas` is still measured small and should not drive the next primary slice;
+    - root `Scroll` is a side-effect boundary, not a skipped geometry node;
+    - RTX4090/other-machine validation is evidence collection, not a blocker for local closeout;
+    - `measured_size: Option<Size>` remains only a follow-on if sentinel ambiguity recurs outside
+      explicit driver leaves.
+  - Follow-ons should be separate lanes:
+    - text computed-box / line-break stability proof,
+    - Canvas bounds/prepaint/paint leaf proof,
+    - root `Scroll` side-effect boundary redesign,
+    - hardware closeout evidence,
+    - measured-size data-model migration only with fresh recurring evidence.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 
