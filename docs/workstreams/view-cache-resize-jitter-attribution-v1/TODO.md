@@ -19,15 +19,16 @@ Last updated: 2026-05-18
 
 ## M1 - ViewCache Source Audit
 
-- [ ] VCRJ-020 [owner=codex] [deps=VCRJ-010] [scope=crates/fret-ui/src/{element.rs,elements/runtime.rs,tree/view_boundary.rs,tree/layout}]
+- [x] VCRJ-020 [owner=codex] [deps=VCRJ-010] [scope=crates/fret-ui/src/{element.rs,elements/runtime.rs,tree/view_boundary.rs,tree/layout}]
   Goal: Map `ViewCache` geometry, cache-root reuse, boundary dirty tracking, contained relayout,
   root-bound repair, and scroll follow-up responsibilities to concrete source owners.
   Validation:
   `rg -n "ViewCache|view_cache|ViewBoundaryKind::ViewCacheRoot|contained_relayout|cache_root" crates/fret-ui/src/element.rs crates/fret-ui/src/elements/runtime.rs crates/fret-ui/src/tree/view_boundary.rs crates/fret-ui/src/tree/layout -S`.
   Evidence:
+  `docs/workstreams/view-cache-resize-jitter-attribution-v1/VCRJ_020_SOURCE_ATTRIBUTION_2026-05-18.md`;
   `docs/workstreams/view-cache-resize-jitter-attribution-v1/EVIDENCE_AND_GATES.md`.
-  Handoff: Do not edit runtime code until the audit can name which phase owns the `ViewCache`
-  hotspot.
+  Handoff: Complete. Current evidence points to main `layout_roots` work under the UI Gallery shell
+  cache root, not contained view-cache relayout. Continue with VCRJ-030 before runtime changes.
 
 ## M2 - Fresh Attribution Bundle
 

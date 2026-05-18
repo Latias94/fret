@@ -30,6 +30,10 @@
     },
     {
       "role": "reference",
+      "path": "docs/workstreams/view-cache-resize-jitter-attribution-v1/VCRJ_020_SOURCE_ATTRIBUTION_2026-05-18.md"
+    },
+    {
+      "role": "reference",
       "path": "docs/workstreams/pressable-clean-geometry-propagation-v1/EVIDENCE_AND_GATES.md"
     },
     {
@@ -38,7 +42,7 @@
     }
   ],
   "repro": {
-    "summary": "UI Gallery code-editor resize-jitter perf evidence with view-cache enabled, followed by source-backed ViewCache phase attribution.",
+    "summary": "UI Gallery code-editor resize-jitter perf evidence with view-cache enabled, followed by source-backed ViewCache phase attribution. VCRJ-020 found that the starting ViewCache hotspot is in main layout_roots work, not contained view-cache relayout.",
     "commands": [
       "target/release/fretboard-dev diag stats target/fret-diag/pressable-clean-geometry-propagation-v1-pgp050-after/1779088062238/bundle.schema2.json --sort time --top 20",
       "rg -n \"ViewCache|view_cache|ViewBoundaryKind::ViewCacheRoot|contained_relayout|cache_root\" crates/fret-ui/src/element.rs crates/fret-ui/src/elements/runtime.rs crates/fret-ui/src/tree/view_boundary.rs crates/fret-ui/src/tree/layout -S"
@@ -84,6 +88,7 @@
     "docs/workstreams/view-cache-resize-jitter-attribution-v1/MILESTONES.md",
     "docs/workstreams/view-cache-resize-jitter-attribution-v1/EVIDENCE_AND_GATES.md",
     "docs/workstreams/view-cache-resize-jitter-attribution-v1/HANDOFF.md",
+    "docs/workstreams/view-cache-resize-jitter-attribution-v1/VCRJ_020_SOURCE_ATTRIBUTION_2026-05-18.md",
     "docs/workstreams/pressable-clean-geometry-propagation-v1/EVIDENCE_AND_GATES.md",
     "docs/workstreams/pressable-clean-geometry-propagation-v1/CLOSEOUT_AUDIT_2026-05-18.md",
     "target/fret-diag/pressable-clean-geometry-propagation-v1-pgp050-after/1779088062238/bundle.schema2.json",
@@ -102,6 +107,6 @@
   ],
   "continue_policy": {
     "default_action": "continue_here",
-    "notes": "Continue with VCRJ-020 source attribution before any runtime optimization. Split Scroll or diagnostics attribution into separate lanes only with fresh evidence."
+    "notes": "Continue with VCRJ-030 fresh attribution bundle before any runtime optimization. Split Scroll, text reflow, or diagnostics attribution into separate lanes only with fresh evidence."
   }
 }

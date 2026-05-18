@@ -59,6 +59,46 @@ Interpretation:
   - View-cache layout phases include invalidation expansion, root-bound repair, contained root
     relayout, observation collapse, and scroll follow-up scheduling.
 
+## VCRJ-020 Source Attribution Result
+
+Detailed note:
+
+- `docs/workstreams/view-cache-resize-jitter-attribution-v1/VCRJ_020_SOURCE_ATTRIBUTION_2026-05-18.md`
+
+Verdict:
+
+- No runtime code changed in VCRJ-020.
+- The starting hotspot is real, but it is not dominated by the dedicated
+  `fret.ui.layout.view_cache` phase.
+- In the starting bundle, `layout_view_cache_time_us` is about `29-30us` while
+  `layout_roots_time_us` is about `764-799us`.
+- `view_cache_contained_relayouts=0` and `view_cache_roots_layout_invalidated=0`, so the observed
+  hotspot is not a contained-relayout owner.
+- `view_cache_roots_reused=1`, meaning the declarative cache-hit path is active.
+- The clean-geometry rejection starts at `Text/text_reflow`, not at
+  `ViewCache/side_effect_boundary`.
+
+Source owner map:
+
+- `crates/fret-ui/src/elements/cx.rs:1451` owns authoring-level cache-hit and cache-key behavior.
+- `crates/fret-ui/src/elements/runtime.rs:232` owns rendered/next cache-boundary liveness records.
+- `crates/fret-ui/src/declarative/mount.rs:1470` owns mount-time retained-node reuse and
+  `ViewCache` flag refresh.
+- `crates/fret-ui/src/tree/view_boundary.rs:48` owns contained-layout dependency metadata.
+- `crates/fret-ui/src/tree/layout/entrypoints.rs:245` owns root-layout and view-cache phase
+  sequencing.
+- `crates/fret-ui/src/declarative/host_widget/layout.rs:372` shows `ViewCache` has wrapper-like
+  geometry, but only after cache-boundary side effects are preserved.
+- `crates/fret-ui/src/tree/layout/clean_geometry.rs:764` keeps `ViewCache` as a side-effect
+  boundary.
+
+Next evidence target:
+
+- VCRJ-030 should capture a fresh bundle and preserve phase stats, `layout_hotspots`,
+  `top_layout_engine_solves`, and the first clean-geometry rejection fields.
+- If the signature repeats and the first rejection remains `Text/text_reflow`, split a text-reflow
+  clean-geometry lane before changing `ViewCache`.
+
 ## Canonical Gates
 
 Workstream state:
