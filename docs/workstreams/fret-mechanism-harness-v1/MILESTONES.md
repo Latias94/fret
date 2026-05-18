@@ -2002,3 +2002,26 @@ Status: complete for Node Graph Cull cull-window runtime evidence and protocol r
   with run id `1779124258887`; and
   `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-node-graph-cull-window-no-shifts-small-pan --dir target/fret-diag-node-graph-cull-window-no-shifts-small-pan-suite-current --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
   with run id `1779124253283`.
+
+## M112: UI Gallery Canvas Cull Runtime Gate Stabilization
+
+Status: complete for Canvas Cull pan/zoom runtime evidence and protocol roundtrip coverage.
+
+- Added `script_v2_roundtrip_ui_gallery_canvas_cull_torture_pan_zoom` so the Canvas Cull redirect
+  script is covered by `fret-diag-protocol` roundtrip.
+- Hardened `ui-gallery-canvas-cull-torture-pan-zoom.json` to enter the long Gallery nav through
+  `ui-gallery-nav-search`, type `canvas cull`, `ensure_visible` the target row, and then click the
+  Canvas Cull torture page.
+- The first runtime suite exposed a diagnostics authoring defect: the old direct click found
+  `ui-gallery-nav-canvas-cull-torture`, but its live bounds were at `y=993.3` in a `720px` window,
+  so the click was clamped out of the window and hit-tested `no_hit`.
+- No Canvas Cull mechanism defect was reproduced after the script entry fix.
+- JSON validation passes:
+  `python -m json.tool tools\diag-scripts\ui-gallery\perf\ui-gallery-canvas-cull-torture-pan-zoom.json > $null`.
+- Protocol roundtrip passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_canvas_cull_torture_pan_zoom --no-fail-fast --no-capture`
+  with Nextest run id `eace796c-8b9d-433b-a791-75eff8d7fb8e`.
+- Runtime diagnostics pass:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-canvas-cull --dir target/fret-diag-canvas-cull-suite-after-search-entry --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
+  with run id `1779125873114`; `check.pixels_changed.json` also passed for
+  `ui-gallery-canvas-cull-root`.

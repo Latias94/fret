@@ -4332,3 +4332,41 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - result: passed; registry is up to date.
   `git diff --check`
   - result: passed.
+
+## Canvas Cull Runtime Gate Stabilization
+
+- invariant:
+  Canvas Cull pan/zoom diagnostics must exercise the actual Gallery torture page and prove rendered
+  pixels change after pan/zoom interaction. The script must not rely on off-window nav rows being
+  directly clickable.
+- finding:
+  the first runtime suite failed before reaching Canvas Cull. Selector resolution found
+  `ui-gallery-nav-canvas-cull-torture`, but the row was at `y=993.3` in a `720px` window; the
+  click was clamped to the window edge, hit-tested `no_hit`, and the following `focus_is` wait
+  timed out. This was a diagnostics authoring defect. After switching to nav search plus
+  `ensure_visible`, the suite passed with zero lint warnings and pixels-changed evidence.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-canvas-cull-torture-pan-zoom.json`,
+  `tools/diag-scripts/ui-gallery-canvas-cull-torture-pan-zoom.json`,
+  `tools/diag-scripts/suites/ui-gallery-canvas-cull/suite.json`,
+  `apps/fret-ui-gallery/src/ui/previews/pages/torture/canvas_cull_torture.rs`,
+  `crates/fret-diag/src/diag_suite.rs`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- first failed runtime evidence:
+  `target/fret-diag-canvas-cull-suite-current/sessions/1779125762675-98156/script.result.json`
+  - result: failed at step 1 with `wait_until_timeout`; hit trace for step 0 reported
+    `clamped_outside_window=true`, `routing_explain="hit-test returned no node"`, and
+    `intended_test_id="ui-gallery-nav-canvas-cull-torture"`.
+- JSON validation:
+  `python -m json.tool tools\diag-scripts\ui-gallery\perf\ui-gallery-canvas-cull-torture-pan-zoom.json > $null`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_canvas_cull_torture_pan_zoom --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `eace796c-8b9d-433b-a791-75eff8d7fb8e`.
+- runtime diagnostics:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-canvas-cull --dir target/fret-diag-canvas-cull-suite-after-search-entry --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed; suite summary
+    `target/fret-diag-canvas-cull-suite-after-search-entry/sessions/1779125863873-16812/suite.summary.json`;
+    run id `1779125873114`; lint warnings `0`.
+  - pixels-changed post-run proof:
+    `target/fret-diag-canvas-cull-suite-after-search-entry/sessions/1779125863873-16812/check.pixels_changed.json`.

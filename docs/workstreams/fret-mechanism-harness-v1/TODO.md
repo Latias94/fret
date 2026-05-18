@@ -1050,3 +1050,10 @@ date: 2026-05-12
     cull-window-shift paths stay live, and the small-pan guard stays under the zero-shift budget.
     A prior `ensure_visible_timeout` was traced to an old `target/debug/fret-ui-gallery.exe`
     binary whose nav search did not expose the Node Graph Cull entry, not to a mechanism defect.
+- [x] Stabilize the UI Gallery Canvas Cull runtime gate and add protocol roundtrip coverage.
+  - Result: `ui-gallery-canvas-cull-torture-pan-zoom.json` now enters the long Gallery nav through
+    search plus `ensure_visible` before clicking the Canvas Cull torture page. The first runtime
+    suite failed because the direct click targeted a nav row at `y=993` in a `720px` window and
+    hit-tested `no_hit`; this was a diagnostics authoring defect, not a Canvas Cull mechanism
+    defect. After the script fix, `ui-gallery-canvas-cull` passes with zero lint warnings and a
+    pixels-changed post-run proof.
