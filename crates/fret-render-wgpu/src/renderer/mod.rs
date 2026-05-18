@@ -27,6 +27,8 @@ mod util;
 
 mod buffers;
 mod config;
+#[cfg(not(target_arch = "wasm32"))]
+mod debug_dump_gate;
 mod diagnostics;
 mod frame_binding_state;
 mod frame_scratch;

@@ -1,15 +1,18 @@
+use super::debug_dump_gate::{DumpFrameEnv, emit_dump_file, should_emit_dump_frame};
 use super::{OrderedDraw, SceneEncoding, TextDrawKind, TextGlyphInstance, ViewportUniform};
 use crate::text::DebugGlyphAtlasLookup;
+use std::sync::atomic::AtomicBool;
 
-#[cfg(not(target_arch = "wasm32"))]
-use std::path::PathBuf;
+const RENDER_TEXT_DUMP_ENV: DumpFrameEnv = DumpFrameEnv::new(
+    "FRET_RENDER_TEXT_DUMP",
+    "FRET_RENDER_TEXT_DUMP_FRAME",
+    "FRET_RENDER_TEXT_DUMP_AFTER_FRAMES",
+    "FRET_RENDER_TEXT_DUMP_EVERY",
+    "FRET_RENDER_TEXT_DUMP_DIR",
+    "render_text",
+);
+static RENDER_TEXT_DUMPED: AtomicBool = AtomicBool::new(false);
 
-#[cfg(not(target_arch = "wasm32"))]
-fn parse_env_u64(name: &str) -> Option<u64> {
-    std::env::var(name).ok().and_then(|v| v.parse::<u64>().ok())
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 fn parse_env_probe_px(name: &str) -> Option<(f32, f32, f32, f32)> {
     let v = std::env::var(name).ok()?;
     let mut it = v.split([',', ' ']).filter(|s| !s.is_empty());
@@ -20,42 +23,12 @@ fn parse_env_probe_px(name: &str) -> Option<(f32, f32, f32, f32)> {
     Some((x, y, w, h))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-fn dump_dir_from_env() -> PathBuf {
-    std::env::var_os("FRET_RENDER_TEXT_DUMP_DIR")
-        .filter(|v| !v.is_empty())
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(".fret").join("render_text"))
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 fn should_dump_frame(frame_index: u64) -> bool {
-    if std::env::var_os("FRET_RENDER_TEXT_DUMP")
-        .filter(|v| !v.is_empty())
-        .is_none()
-    {
-        return false;
-    }
-
-    if let Some(frame) = parse_env_u64("FRET_RENDER_TEXT_DUMP_FRAME") {
-        return frame_index == frame;
-    }
-
-    let after = parse_env_u64("FRET_RENDER_TEXT_DUMP_AFTER_FRAMES").unwrap_or(1);
-    if frame_index < after {
-        return false;
-    }
-
-    if let Some(every) = parse_env_u64("FRET_RENDER_TEXT_DUMP_EVERY") {
-        return every > 0 && (frame_index - after).is_multiple_of(every);
-    }
-
-    static DUMPED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-    !DUMPED.swap(true, std::sync::atomic::Ordering::SeqCst)
+    should_emit_dump_frame(frame_index, RENDER_TEXT_DUMP_ENV, &RENDER_TEXT_DUMPED)
 }
 
 #[derive(Debug, Clone, Copy, serde::Serialize)]
-#[cfg_attr(not(target_arch = "wasm32"), serde(rename_all = "snake_case"))]
+#[serde(rename_all = "snake_case")]
 enum JsonAtlasKind {
     Mask,
     Color,
@@ -235,7 +208,6 @@ impl RenderTextDumpState {
         self.bytes.clear();
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     pub(super) fn maybe_dump_render_text_json(
         &mut self,
         text_system: &crate::text::TextSystem,
@@ -353,23 +325,14 @@ impl RenderTextDumpState {
             probe_hits: &self.probe_hits,
         };
 
-        let dir = dump_dir_from_env();
-        let _ = std::fs::create_dir_all(&dir);
-        let file = dir.join(format!("render_text.frame{frame_index}.json"));
         self.bytes.clear();
         if serde_json::to_writer_pretty(&mut self.bytes, &dump).is_ok() {
-            let _ = std::fs::write(file, &self.bytes);
+            emit_dump_file(
+                RENDER_TEXT_DUMP_ENV,
+                format!("render_text.frame{frame_index}.json"),
+                &self.bytes,
+            );
         }
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    pub(super) fn maybe_dump_render_text_json(
-        &mut self,
-        _text_system: &crate::text::TextSystem,
-        _frame_index: u64,
-        _viewport_size: (u32, u32),
-        _encoding: &SceneEncoding,
-    ) {
     }
 }
 

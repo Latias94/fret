@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "slug": "renderer-debug-dump-gate-v1",
+  "title": "Renderer Debug Dump Gate v1",
+  "status": "closed",
+  "updated": "2026-05-18",
+  "scope_kind": "follow-on",
+  "problem": "Render-plan and text debug dumps duplicated the same native frame-gate and dump-directory mechanism, creating drift risk between dump surfaces.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/renderer-debug-dump-gate-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/renderer-debug-dump-gate-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/renderer-debug-dump-gate-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/renderer-debug-dump-gate-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/renderer-debug-dump-gate-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/renderer-debug-dump-gate-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    }
+  ],
+  "repro": {
+    "summary": "Renderer native debug dumps should share frame gate semantics while preserving per-dump one-shot state.",
+    "commands": [
+      "cargo check -p fret-render-wgpu --locked --tests -j 1",
+      "cargo nextest run -p fret-render-wgpu --locked dump_frame_gate render_text_dump_state_clear_scratch_keeps_capacity"
+    ]
+  },
+  "gates": [
+    {
+      "name": "fmt",
+      "command": "cargo fmt --package fret-render-wgpu --check"
+    },
+    {
+      "name": "wgpu-tests-compile",
+      "command": "cargo check -p fret-render-wgpu --locked --tests -j 1"
+    },
+    {
+      "name": "dump-gate-targeted",
+      "command": "cargo nextest run -p fret-render-wgpu --locked dump_frame_gate render_text_dump_state_clear_scratch_keeps_capacity"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json",
+      "command": "python -m json.tool docs/workstreams/renderer-debug-dump-gate-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "crates/fret-render-wgpu/src/renderer/debug_dump_gate.rs",
+    "crates/fret-render-wgpu/src/renderer/render_plan_dump_emit.rs",
+    "crates/fret-render-wgpu/src/renderer/render_text_dump.rs",
+    "crates/fret-render-wgpu/src/renderer/mod.rs",
+    "docs/workstreams/renderer-debug-dump-gate-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+  ],
+  "adr_refs": [],
+  "continue_policy": {
+    "default_action": "stay_closed",
+    "notes": "The debug dump gate mechanism is centralized. Future dump surfaces should reuse DumpFrameEnv instead of duplicating env parsing."
+  }
+}
