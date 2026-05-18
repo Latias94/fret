@@ -1941,6 +1941,9 @@ def main() -> None:
                 "historical `paragraph_block` helper name is gone",
                 "2026-05-19 gallery Drawer goal/diagnostics text follow-up",
                 "probe status/description now use shared paragraph/control-readout roles",
+                "2026-05-19 gallery Pagination text follow-up",
+                "route page labels through `text_button_label(...)` instead of no-context",
+                "`PaginationPrevious` / `PaginationNext` visible text",
             ],
             forbidden=[
                 "Remaining advanced-table candidates are freeze panes, persistence, and old columns API shape",
@@ -1976,6 +1979,8 @@ def main() -> None:
                 "from `paragraph_block` to `scroll_rows`",
                 "2026-05-19 gallery Drawer goal/diagnostics text result",
                 "probe copy/status no longer emits bare `ui::text`",
+                "2026-05-19 gallery Pagination text result",
+                "`fret-ui-shadcn` Previous/Next visible labels",
             ],
             forbidden=[
                 "remain advanced-table candidates",
@@ -2287,6 +2292,11 @@ def main() -> None:
                 "`apps/fret-ui-gallery/src/ui/snippets/context_menu/basic.rs`",
                 "`apps/fret-ui-gallery/src/ui/snippets/context_menu/sides.rs`",
                 "context_menu_trigger_copy_uses_shared_readout_text_role --no-fail-fast",
+                "2026-05-19 gallery Pagination text-role slice",
+                "`apps/fret-ui-gallery/src/ui/snippets/pagination/demo.rs`",
+                "`ecosystem/fret-ui-shadcn/src/pagination.rs` routes `PaginationPrevious`",
+                "selected_pagination_page_number_helpers_use_shared_button_label_role --no-fail-fast",
+                "pagination_link_active_stamps_selected",
                 "2026-05-19 checkbox table-cell text-role slice",
                 "`apps/fret-ui-gallery/src/ui/snippets/checkbox/table.rs`",
                 "checkbox_table_snippet_keeps_fixed_cell_text_on_table_role --no-fail-fast",
@@ -3933,10 +3943,131 @@ def main() -> None:
                 "fn drawer_remaining_custom_text_uses_shared_roles()",
                 "fn tooltip_keyboard_shortcut_text_uses_shared_role()",
                 "fn context_menu_trigger_copy_uses_shared_readout_text_role()",
+                "fn selected_pagination_page_number_helpers_use_shared_button_label_role()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",
             ],
             forbidden=[],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/pagination.rs"),
+            required=[
+                "text as decl_text",
+                "children.push(decl_text::text_button_label(cx, text.clone()));",
+            ],
+            forbidden=[
+                "children.push(cx.text(text));",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/pagination/demo.rs"),
+            required=[
+                "declarative::text as decl_text",
+                "fn page_number<H, L>(",
+                "decl_text::text_button_label(cx, label)",
+                "page_number(cx, \"1\")",
+            ],
+            forbidden=[
+                "fn page_number(label: &'static str)",
+                "fret_ui_kit::ui::text(label).tabular_nums()",
+                "ui::text(label).tabular_nums()",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/pagination/usage.rs"),
+            required=[
+                "declarative::text as decl_text",
+                "fn page_number<H, L>(",
+                "decl_text::text_button_label(cx, label)",
+                "page_number(cx, \"1\").into_element(cx)",
+            ],
+            forbidden=[
+                "fn page_number(label: &'static str)",
+                "fret_ui_kit::ui::text(label).tabular_nums()",
+                "ui::text(label).tabular_nums()",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/pagination/simple.rs"),
+            required=[
+                "declarative::text as decl_text",
+                "fn page_number<H, L>(",
+                "decl_text::text_button_label(cx, label)",
+                "page_number(cx, \"5\")",
+            ],
+            forbidden=[
+                "fn page_number(label: &'static str)",
+                "fret_ui_kit::ui::text(label).tabular_nums()",
+                "ui::text(label).tabular_nums()",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/pagination/custom_text.rs"),
+            required=[
+                "declarative::text as decl_text",
+                "fn page_number<H, L>(",
+                "decl_text::text_button_label(cx, label)",
+                "page_number(cx, \"12\")",
+            ],
+            forbidden=[
+                "fn page_number(label: &'static str)",
+                "ui::text(label).tabular_nums()",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/pagination/compact_builder.rs"),
+            required=[
+                "declarative::text as decl_text",
+                "fn page_number<H, L>(",
+                "decl_text::text_button_label(cx, label)",
+                "page_number(cx, \"2\")",
+            ],
+            forbidden=[
+                "fn page_number(label: &'static str)",
+                "fret_ui_kit::ui::text(label).tabular_nums()",
+                "ui::text(label).tabular_nums()",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/pagination/routing.rs"),
+            required=[
+                "declarative::text as decl_text",
+                "fn page_number<H, L>(",
+                "decl_text::text_button_label(cx, label)",
+                "page_number(cx, \"8\").into_element(cx)",
+            ],
+            forbidden=[
+                "fn page_number(label: &'static str)",
+                "ui::text(label).tabular_nums()",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/pagination/extras.rs"),
+            required=[
+                "declarative::text as decl_text",
+                "fn page_number<H, L>(",
+                "decl_text::text_button_label(cx, label)",
+                "page_number(cx, \"4\")",
+                "decl_text::text_paragraph(",
+                "Extras are Fret-specific recipes and regression gates (not part of upstream shadcn PaginationDemo).",
+            ],
+            forbidden=[
+                "fn page_number(label: &'static str)",
+                "ui::text(label).tabular_nums()",
+                "shadcn::raw::typography::muted(",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/pagination/rtl.rs"),
+            required=[
+                "declarative::text as decl_text",
+                "fn page_number<H, L>(",
+                "decl_text::text_button_label(cx, label)",
+                "page_number(cx, to_arabic_numerals(1))",
+            ],
+            forbidden=[
+                "cx.text(to_arabic_numerals(",
+            ],
         ),
         SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/context_menu/demo.rs"),

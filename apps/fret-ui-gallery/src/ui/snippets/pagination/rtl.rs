@@ -2,7 +2,8 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
-use fret_ui_kit::ui;
+use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::{declarative::text as decl_text, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
@@ -14,6 +15,14 @@ fn to_arabic_numerals(num: u32) -> String {
         .chars()
         .filter_map(|c| c.to_digit(10).map(|d| DIGITS[d as usize]))
         .collect()
+}
+
+fn page_number<H, L>(cx: &mut ElementContext<'_, H>, label: L) -> impl UiChild + use<H, L>
+where
+    H: UiHost,
+    L: Into<std::sync::Arc<str>>,
+{
+    decl_text::text_button_label(cx, label)
 }
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -31,20 +40,20 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         ),
                         shadcn::pagination_item(
                             shadcn::pagination_link(
-                                |cx| ui::children![cx; cx.text(to_arabic_numerals(1))],
+                                |cx| ui::children![cx; page_number(cx, to_arabic_numerals(1))],
                             )
                             .action(CMD_APP_OPEN),
                         ),
                         shadcn::pagination_item(
                             shadcn::pagination_link(
-                                |cx| ui::children![cx; cx.text(to_arabic_numerals(2))],
+                                |cx| ui::children![cx; page_number(cx, to_arabic_numerals(2))],
                             )
                             .action(CMD_APP_SAVE)
                             .active(true),
                         ),
                         shadcn::pagination_item(
                             shadcn::pagination_link(
-                                |cx| ui::children![cx; cx.text(to_arabic_numerals(3))],
+                                |cx| ui::children![cx; page_number(cx, to_arabic_numerals(3))],
                             )
                             .action(CMD_APP_SAVE),
                         ),

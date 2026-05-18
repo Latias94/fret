@@ -8640,31 +8640,41 @@ fn selected_combobox_state_rows_prefer_into_ui_element_over_anyelement() {
 }
 
 #[test]
-fn selected_pagination_page_number_helpers_prefer_ui_child_over_host_bound_into_ui_element() {
+fn selected_pagination_page_number_helpers_use_shared_button_label_role() {
     for relative_path in [
         "src/ui/snippets/pagination/compact_builder.rs",
         "src/ui/snippets/pagination/custom_text.rs",
+        "src/ui/snippets/pagination/demo.rs",
         "src/ui/snippets/pagination/extras.rs",
         "src/ui/snippets/pagination/routing.rs",
+        "src/ui/snippets/pagination/rtl.rs",
         "src/ui/snippets/pagination/simple.rs",
         "src/ui/snippets/pagination/usage.rs",
     ] {
         assert_selected_page_helpers_prefer_ui_child(
             relative_path,
-            &["fn page_number(label: &'static str) -> impl UiChild + use<>"],
             &[
-                "fn page_number<H: UiHost>(label: &'static str) -> impl IntoUiElement<H> + use<H>",
-                "fn page_number<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyElement",
+                "use fret_ui::{ElementContext, UiHost};",
+                "declarative::text as decl_text",
+                "fn page_number<H, L>(cx: &mut ElementContext<'_, H>, label: L) -> impl UiChild + use<H, L> where H: UiHost, L: Into<std::sync::Arc<str>>",
+                "decl_text::text_button_label(cx, label)",
+            ],
+            &[
+                "fn page_number(label: &'static str) -> impl UiChild + use<>",
+                "ui::text(label).tabular_nums()",
+                "fret_ui_kit::ui::text(label).tabular_nums()",
+                "cx.text(to_arabic_numerals(",
             ],
         );
     }
 
-    assert_selected_page_helpers_prefer_ui_child(
-        "src/ui/snippets/pagination/demo.rs",
-        &["fn page_number(label: &'static str) -> impl UiChild + use<>"],
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/pagination/extras.rs",
         &[
-            "let page_number = |cx: &mut AppComponentCx<'_>, label: &'static str| {",
-            "fret_ui_kit::ui::text(label).tabular_nums().into_element(cx)",
+            "decl_text::text_paragraph(cx, \"Extras are Fret-specific recipes and regression gates (not part of upstream shadcn PaginationDemo).\")",
+        ],
+        &[
+            "shadcn::raw::typography::muted(\"Extras are Fret-specific recipes and regression gates (not part of upstream shadcn PaginationDemo).\")",
         ],
     );
 }

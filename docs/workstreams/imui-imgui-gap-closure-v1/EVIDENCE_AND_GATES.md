@@ -2725,3 +2725,37 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
   passed.
 - `git diff --check` passed.
+
+2026-05-19 gallery Pagination text-role slice:
+
+- Red repro:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  selected_pagination_page_number_helpers_use_shared_button_label_role --no-fail-fast` failed
+  before the fix because pagination page-number helpers still used no-context
+  `ui::text(...).tabular_nums()` builders and the RTL snippet used bare
+  `cx.text(to_arabic_numerals(...))`.
+- `apps/fret-ui-gallery/src/ui/snippets/pagination/demo.rs`,
+  `compact_builder.rs`, `custom_text.rs`, `simple.rs`, `usage.rs`, `routing.rs`, `extras.rs`, and
+  `rtl.rs` now route page labels through `decl_text::text_button_label(...)` via a context-bound
+  helper. `extras.rs` also routes Fret-specific explanatory copy through `text_paragraph(...)`.
+- `ecosystem/fret-ui-shadcn/src/pagination.rs` routes `PaginationPrevious` and `PaginationNext`
+  visible labels through shared `text_button_label(...)` instead of bare `cx.text(...)`.
+- `cargo fmt -p fret-ui-gallery -p fret-ui-shadcn` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  selected_pagination_page_number_helpers_use_shared_button_label_role --no-fail-fast` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo check -p fret-ui-gallery --test ui_authoring_surface_default_app` passed.
+- First
+  `cargo nextest run -p fret-ui-shadcn pagination_root_is_w_full_and_labeled
+  pagination_content_and_item_emit_list_semantics pagination_link_active_stamps_selected
+  pagination_link_without_action_keeps_enabled_visual_chrome pagination_disabled_link_wraps_in_opacity
+  --no-fail-fast` attempt timed out at 304s while a background Cargo/Rustc compile continued.
+- The timed-out Cargo/Rustc process group from that attempt was stopped after it continued compiling
+  without a capturable result.
+- `cargo check -p fret-ui-shadcn --lib` passed as the direct compile gate for the changed shadcn
+  Pagination implementation.
+- `cargo fmt --check -p fret-ui-gallery -p fret-ui-shadcn` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.

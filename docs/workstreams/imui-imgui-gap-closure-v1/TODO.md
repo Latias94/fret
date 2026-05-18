@@ -722,6 +722,13 @@ Readiness order for the next locally testable review slices:
    2026-05-19 gallery ContextMenu trigger text follow-up: copyable ContextMenu dashed trigger
    surfaces now route fine/coarse pointer copy through `text_control_readout(...)` instead of
    repeating local `ui::text(label).text_sm().text_color(...)` policy in every snippet.
+   2026-05-19 gallery Pagination text follow-up: copyable Pagination page-number helpers now
+   accept `cx` and route page labels through `text_button_label(...)` instead of no-context
+   `ui::text(...).tabular_nums()` builders, because shared resize-safe roles are theme/context
+   bound. RTL page numbers use the same helper, Fret-specific extras prose uses
+   `text_paragraph(...)`, and built-in `PaginationPrevious` / `PaginationNext` visible text in
+   `fret-ui-shadcn` now uses the shared button-label role. This keeps `fret-imui` thin while
+   moving button-like pagination text policy into the component/kit layer.
    2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
    headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
    through `control_readout_text(...)`, and custom pointer-region labels through
