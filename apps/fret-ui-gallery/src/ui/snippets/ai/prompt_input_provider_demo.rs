@@ -4,12 +4,38 @@ pub const SOURCE: &str = include_str!("prompt_input_provider_demo.rs");
 use fret::{AppComponentCx, UiChild};
 use fret_core::{Corners, Edges, Px, SemanticsRole};
 use fret_ui::Invalidation;
-use fret_ui::element::{ContainerProps, PressableA11y, PressableProps};
+use fret_ui::element::{
+    AnyElement, ContainerProps, Length, PressableA11y, PressableProps, SemanticsProps, SpacerProps,
+};
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ColorRef, LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
+
+fn state_marker(cx: &mut AppComponentCx<'_>, test_id: &'static str) -> AnyElement {
+    cx.semantics(
+        SemanticsProps {
+            role: fret_core::SemanticsRole::Generic,
+            test_id: Some(Arc::<str>::from(test_id)),
+            ..Default::default()
+        },
+        |cx| {
+            vec![cx.spacer(SpacerProps {
+                layout: fret_ui::element::LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: Length::Px(Px(0.0)),
+                        height: Length::Px(Px(0.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                min: Px(0.0),
+            })]
+        },
+    )
+}
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let text = cx.local_model_keyed("text", String::new);
@@ -87,7 +113,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
                     vec![cx.container(props, move |cx| {
                         vec![
-                            ui::text(add_external_label.clone())
+                            decl_text::text_button_label(cx, add_external_label.clone())
                                 .text_color(ColorRef::Color(fg))
                                 .into_element(cx),
                         ]
@@ -99,10 +125,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 .get_model_copied(&sent_count, Invalidation::Paint)
                 .unwrap_or(0)
                 == 1)
-                .then(|| {
-                    cx.text("")
-                        .test_id("ui-gallery-ai-prompt-input-provider-sent-count-1")
-                });
+                .then(|| state_marker(cx, "ui-gallery-ai-prompt-input-provider-sent-count-1"));
 
             vec![
                 ui::v_stack(move |cx| {
@@ -129,8 +152,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("Prompt Input Provider (AI Elements)"),
-            cx.text("External add mutates the provider attachments; send clears attachments."),
+            decl_text::text_section_chrome_label(cx, "Prompt Input Provider (AI Elements)"),
+            decl_text::text_paragraph(
+                cx,
+                "External add mutates the provider attachments; send clears attachments.",
+            ),
             body,
         ]
     })

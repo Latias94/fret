@@ -9,7 +9,8 @@
     ],
     "env_defaults": {
       "FRET_UI_GALLERY_START_PAGE": "resizable",
-      "FRET_UI_GALLERY_START_SECTION": "ui-gallery-resizable-multi-viewport-combobox-docsec"
+      "FRET_UI_GALLERY_START_SECTION": "ui-gallery-resizable-multi-viewport-combobox-docsec",
+      "FRET_UI_GALLERY_RESIZABLE_MULTI_VIEWPORT_COMBOBOX": "1"
     },
     "tags": [
       "ui_gallery",

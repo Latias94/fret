@@ -278,7 +278,7 @@ Run evidence:
   `TableColumnVisibilityHeaderContextMenuOptions` exposes popup and menu-item policy instead of
   hard-coding placement/sizing. Callers still own when to apply `ImUiTableColumnVisibilityState` to
   their columns; persistence, freeze panes, and old columns API shape were still separate
-  follow-ons at this point.
+  follow-ons at that historical point.
   Gates: `cargo nextest run -p fret-imui
   table_column_visibility_header_context_menu_opens_from_plain_header
   table_column_visibility_header_context_menu_opens_and_updates_state
@@ -339,6 +339,12 @@ Run evidence:
   nextest run -p fret-imui table_helper_pins_left_and_right_columns_while_center_columns_scroll
   table_column_visibility_menu_item_updates_visibility_state --no-fail-fast`, and `python
   tools/gate_imui_workstream_source.py`.
+- 2026-05-18: refreshed the current table-gap wording after the visibility snapshot,
+  freeze-pane pinning, and `TableColumn` private-field slices landed. These are no longer current table gaps in this workstream.
+  Future table work should only open app/editor storage/schema policy or concrete Dear ImGui
+  table-runtime parity lanes with a new proof and gate. Gates:
+  `python tools/gate_imui_workstream_source.py`, `python -m py_compile
+  tools/gate_imui_workstream_source.py`, and `git diff --check`.
 - 2026-05-16: introduced `text_control_readout(...)` as the shared compact control-readout text
   role. The UI Gallery code-editor toolbar keeps its doc-layout helper, but that helper now
   delegates to `fret-ui-kit::declarative::text::text_control_readout(...)`, so dense status/readout
@@ -577,6 +583,117 @@ Run evidence:
   `proof_section_chrome_label(...)` backed by `text_section_chrome_label(...)`. Gates:
   `python tools/gate_imui_workstream_source.py` and
   `cargo check -p fret-demo --bin imui_editor_proof_demo`.
+- 2026-05-18: migrated the `imui_editor_proof_demo` collection proof fixed text to the same shared
+  role vocabulary without adding shared collection policy. Collection title text uses a
+  proof-local section-chrome helper, compact state/status/readout lines use a proof-local helper
+  backed by `text_control_readout(...)`, and inline rename explanatory copy opts into
+  `text_wrapped(...)`. Focused source tests and the IMUI source gate reject those fixed collection
+  paths drifting back to bare `ui.text(...)`.
+- 2026-05-18: moved the UI Gallery app-facing DataTable snippets onto the shared table-cell text
+  role. `apps/fret-ui-gallery/src/ui/snippets/data_table/mod.rs` now owns a narrow
+  `table_cell_text(...)` helper over `text_table_cell(...)`, and the default/basic/guide/RTL/reusable
+  snippets use it for fixed body cells plus fallback cells instead of bare `cx.text(...)`. Amount
+  columns remain on the existing tabular numeric formatting path pending a separate numeric-cell
+  role. Gates: `cargo nextest run -p fret-ui-gallery --test data_table_docs_surface
+  data_table_snippets_keep_fixed_cell_text_on_table_role --no-fail-fast` and
+  `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: removed empty text nodes from copyable AI AudioPlayer state markers. Local and remote
+  snippets now use a `state_marker(...)` helper that mounts a zero-size `SpacerProps` child under
+  generic semantics with the same diagnostics `test_id`s. This keeps non-visible test anchors out
+  of text layout semantics. Gates: `cargo nextest run -p fret-ui-gallery --test
+  ai_audio_player_text_role_surface audio_player_state_markers_use_non_text_spacers
+  --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: migrated visible fixed text in copyable AI Message and Terminal snippets onto the
+  shared text-role vocabulary. Message uses `text_control_readout(...)` for the compact action
+  status, `text_section_chrome_label(...)` for the fixed demo title, and `text_paragraph(...)` for
+  user-message prose. Terminal uses section-chrome title text, paragraph explanatory copy, and the
+  non-text spacer-marker pattern for its empty-output diagnostics marker. Gates: `cargo nextest run
+  -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` and
+  `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: extended the same visible text-role migration to AI Artifact, CodeBlock, and Sandbox
+  snippets. Fixed demo titles and panel labels now use section-chrome text, explanatory copy uses
+  paragraph text, Artifact's closed state uses a compact control readout, and CodeBlock's
+  active-language diagnostics marker now uses a zero-size generic spacer marker rather than an
+  invisible empty `Text`. Gates: `cargo nextest run -p fret-ui-gallery --test
+  ai_visible_text_role_surface --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: extended the AI visible text-role migration to the Queue copyable snippet. The fixed
+  demo title now uses `text_section_chrome_label(...)`, explanatory copy uses
+  `text_paragraph(...)`, and the action-revision diagnostics anchor uses a generic zero-size
+  spacer marker instead of an empty/invisible `Text` node. Gates: `cargo nextest run -p
+  fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` and
+  `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: extended the AI visible text-role migration to the Checkpoint copyable snippet.
+  Conversation and explanatory copy now use `text_paragraph(...)`, restore status uses
+  `text_control_readout(...)`, the checkpoint trigger uses `text_button_label(...)`, and custom
+  checkpoint icon symbols use `text_chrome_glyph(...)`. Gates: `cargo nextest run -p
+  fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` and
+  `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: extended the AI visible text-role migration to simple chrome/prose snippets:
+  Agent, CodeBlock usage, Environment Variables, and OpenIn. Each now routes fixed demo titles
+  through `text_section_chrome_label(...)` and explanatory body copy through `text_paragraph(...)`
+  instead of default bare `cx.text(...)`. Gates: `cargo nextest run -p fret-ui-gallery --test
+  ai_visible_text_role_surface --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: extended the AI visible text-role migration to selector/branch state markers.
+  MessageBranch, MicSelector, and ModelSelector now use generic zero-size `SpacerProps` markers for
+  diagnostics-only state anchors instead of empty `Text`, and their fixed demo title/body copy uses
+  shared section-chrome/paragraph roles. Gates: `cargo nextest run -p fret-ui-gallery --test
+  ai_visible_text_role_surface --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: extended the AI visible text-role migration to CommitLarge, Plan,
+  PromptInputActionMenu, and PromptInputTooltip. CommitLarge now uses a generic zero-size
+  `SpacerProps` marker for its opened-file diagnostics anchor instead of an empty `Text`, and the
+  four snippets route their outer fixed demo title/body copy through shared
+  section-chrome/paragraph roles. Inner Plan prose/Button composition stays out of this slice until
+  a separate semantics pass. Gates: `cargo nextest run -p fret-ui-gallery --test
+  ai_visible_text_role_surface --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: extended the AI visible text-role migration to large/status snippets:
+  StackTraceLarge, TestResultsLarge, Tool, and Suggestions. StackTraceLarge/TestResultsLarge
+  opened/activated markers and Tool/Suggestions test markers now use generic zero-size
+  `SpacerProps` anchors instead of empty `Text`; fixed outer title/body copy routes through shared
+  section-chrome/paragraph roles, and Tool's fixed state-section labels use section-chrome text.
+  Suggestions custom-children content stays app-owned for a later custom-content semantics pass.
+  Gates: `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
+  --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: extended the AI visible text-role migration to QueuePromptInput and Transcription.
+  QueuePromptInput now uses a generic zero-size `SpacerProps` anchor for the sent-count diagnostics
+  marker, routes the custom Search button child through `text_button_label(...)`, and keeps fixed
+  outer title/body copy on shared section-chrome/paragraph roles. Transcription now uses generic
+  zero-size spacer markers for time/active diagnostics anchors while routing fixed title/body copy
+  through shared roles. Gates: `cargo nextest run -p fret-ui-gallery --test
+  ai_visible_text_role_surface --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: extended the AI visible text-role migration to WebPreview. State diagnostics markers
+  now use generic zero-size `SpacerProps` anchors instead of empty `Text`, navigation arrow/reload
+  glyphs use `text_chrome_glyph(...)`, and composable child fixed body/footer copy routes through
+  shared section-chrome/paragraph roles. Gates: `cargo nextest run -p fret-ui-gallery --test
+  ai_visible_text_role_surface --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: extended the AI visible text-role migration to Chat's outer surface. The
+  prompt-nonempty diagnostics marker now uses a generic zero-size spacer, empty marker fallbacks use
+  spacers instead of empty `Text`, fixed header instructions route through paragraph roles, and the
+  exported markdown length readout uses `text_control_readout(...)`. Chat message body rendering
+  remains app/content-owned for a separate semantics pass. Gates: `cargo nextest run -p
+  fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` and `python
+  tools/gate_imui_workstream_source.py`.
+- 2026-05-18: extended the AI visible text-role migration to PromptInputProvider and PromptInput
+  docs. Provider sent-count diagnostics now use a generic zero-size `SpacerProps` anchor, the
+  custom external-add label uses `text_button_label(...)`, and fixed outer title/body copy uses
+  shared roles. PromptInput docs now routes the custom Search label through button-label text and
+  fixed outer title/body copy through section-chrome/paragraph roles. Gates: `cargo nextest run -p
+  fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` and `python
+  tools/gate_imui_workstream_source.py`.
+- 2026-05-18: extended the AI visible text-role migration to Reasoning, StackTrace, and
+  VoiceSelector fixed chrome/readouts. Fixed outer title/body copy uses shared
+  section-chrome/paragraph roles; StackTrace status and VoiceSelector selected/open diagnostics use
+  `text_control_readout(...)` instead of default wrapping text. Content renderers remain owned by
+  their respective AI element surfaces. Gates: `cargo nextest run -p fret-ui-gallery --test
+  ai_visible_text_role_surface --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
+  --no-fail-fast` passed after the large/status snippet slice landed. `python
+  tools/gate_imui_workstream_source.py`, `python -m py_compile
+  tools/gate_imui_workstream_source.py`, `python -m json.tool
+  docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json`, and `git diff --check` also passed.
+- 2026-05-18: `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
+  --no-fail-fast` passed after the Artifact/CodeBlock/Sandbox slice landed. `python
+  tools/gate_imui_workstream_source.py`, `python -m json.tool
+  docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json`, and `git diff --check` also passed.
 - 2026-05-17: migrated `imui_editor_proof_demo` drag-preview cards away from a newline-joined bare
   text blob. Preview titles now use `text_section_chrome_label(...)`, optional subtitles use
   `text_control_readout(...)`, and `proof_drag_preview_card_uses_single_line_text_roles` locks the
@@ -1696,6 +1813,15 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
 - `git diff --check` passed.
 
+2026-05-18 data-table snippet table-cell text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test data_table_docs_surface data_table_snippets_keep_fixed_cell_text_on_table_role --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
 2026-05-17 gallery data-grid text-role slice:
 
 - `cargo fmt -p fret-ui-gallery` passed.
@@ -1820,4 +1946,154 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 collection proof text-role slice:
+
+- `cargo fmt -p fret-examples` passed.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_text_roles_surface imui_editor_proof_collection_fixed_text_uses_shared_roles --no-fail-fast` passed.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_select_all_surface imui_editor_proof_demo_keeps_collection_select_all_app_owned_and_explicit --test imui_editor_collection_rename_surface imui_editor_proof_demo_keeps_collection_inline_rename_app_owned_and_explicit --no-fail-fast` passed.
+- `cargo check -p fret-examples` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 child-region auto-height gate slice:
+
+- `cargo fmt -p fret-imui` passed.
+- `cargo nextest run -p fret-imui child_region_without_height_constraint_auto_sizes_to_content --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 AI AudioPlayer state-marker text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- First `cargo nextest run -p fret-ui-gallery --test ai_audio_player_text_role_surface audio_player_state_markers_use_non_text_spacers --no-fail-fast` timed out at 120s while waiting on/building the workspace.
+- Retried with a longer timeout: `cargo nextest run -p fret-ui-gallery --test ai_audio_player_text_role_surface audio_player_state_markers_use_non_text_spacers --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 AI visible snippet text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- First `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` failed because the source test matched rustfmt-sensitive one-line `text_paragraph(...)` calls.
+- After making the source test check role calls and text payloads separately, `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 AI Queue visible snippet text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ai_visible_text_role_surface` passed.
+- `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 AI Checkpoint visible snippet text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ai_visible_text_role_surface` passed.
+- `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 AI simple chrome visible snippet text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ai_visible_text_role_surface` passed.
+- First `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast`
+  timed out at 300s while a background `rustc` compile continued.
+- Retried after the compile finished: `cargo nextest run -p fret-ui-gallery --test
+  ai_visible_text_role_surface --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 AI selector/branch marker text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ai_visible_text_role_surface` passed.
+- First `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast`
+  timed out at 300s while a background `rustc` compile continued.
+- Retried after the compile finished: `cargo nextest run -p fret-ui-gallery --test
+  ai_visible_text_role_surface --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 AI prompt/plan/commit-large text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ai_visible_text_role_surface` passed.
+- First `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast`
+  timed out at 300s while a background `rustc` compile continued.
+- Retried after the compile finished: `cargo nextest run -p fret-ui-gallery --test
+  ai_visible_text_role_surface --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed after replacing a rustfmt-sensitive
+  CommitLarge marker check with stable split markers.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 AI queue-prompt/transcription text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ai_visible_text_role_surface` passed.
+- `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 AI WebPreview text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ai_visible_text_role_surface` passed.
+- `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 AI Chat text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ai_visible_text_role_surface` passed.
+- `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 AI PromptInput provider/docs text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ai_visible_text_role_surface` passed.
+- `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 AI chrome/readout text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ai_visible_text_role_surface` passed.
+- `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
 - `git diff --check` passed.

@@ -6,7 +6,7 @@ use fret_core::{
 use fret_render_text::{
     FontFaceKey, TextBlobKey, WrappedLayout, sanitize_spans_for_text, wrap_with_constraints,
 };
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 mod cache_flow;
 mod driver;
@@ -35,28 +35,6 @@ impl TextSystem {
         constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
         self.prepare_with_key_driver(key, style, spans, constraints)
-    }
-
-    #[allow(dead_code)]
-    pub fn prepare_input(
-        &mut self,
-        input: TextInputRef<'_>,
-        constraints: TextConstraints,
-    ) -> (TextBlobId, TextMetrics) {
-        match input {
-            TextInputRef::Plain { text, style } => self.prepare(text, style, constraints),
-            TextInputRef::Attributed { text, base, spans } => {
-                let spans = sanitize_spans_for_text(text, spans);
-                if spans.is_none() {
-                    return self.prepare(text, base, constraints);
-                }
-                let rich = AttributedText {
-                    text: Arc::<str>::from(text),
-                    spans: spans.expect("non-empty spans"),
-                };
-                self.prepare_attributed(&rich, base, constraints)
-            }
-        }
     }
 
     pub fn prepare(

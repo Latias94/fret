@@ -2,15 +2,38 @@ pub const SOURCE: &str = include_str!("suggestions_demo.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
-use fret_core::{Corners, Edges, Px, SemanticsRole};
+use fret_core::{Corners, Edges, Px};
 use fret_icons_lucide::generated_ids::lucide;
-use fret_ui::element::SemanticsProps;
+use fret_ui::element::{AnyElement, Length, SemanticsProps, SpacerProps};
 use fret_ui::{Invalidation, Theme};
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::{icon as decl_icon, style as decl_style};
+use fret_ui_kit::declarative::{icon as decl_icon, style as decl_style, text as decl_text};
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
 use std::sync::Arc;
+
+fn state_marker(cx: &mut AppComponentCx<'_>, test_id: &'static str) -> AnyElement {
+    cx.semantics(
+        SemanticsProps {
+            role: fret_core::SemanticsRole::Generic,
+            test_id: Some(Arc::<str>::from(test_id)),
+            ..Default::default()
+        },
+        |cx| {
+            vec![cx.spacer(SpacerProps {
+                layout: fret_ui::element::LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: Length::Px(Px(0.0)),
+                        height: Length::Px(Px(0.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                min: Px(0.0),
+            })]
+        },
+    )
+}
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let clicked = cx.local_model_keyed("clicked", || false);
@@ -19,16 +42,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let clicked_now = cx
         .get_model_copied(&clicked, Invalidation::Paint)
         .unwrap_or(false);
-    let marker = clicked_now.then(|| {
-        cx.semantics(
-            SemanticsProps {
-                role: SemanticsRole::Text,
-                test_id: Some(Arc::<str>::from("ui-ai-suggestions-clicked-marker")),
-                ..Default::default()
-            },
-            |cx| vec![cx.text("")],
-        )
-    });
+    let marker = clicked_now.then(|| state_marker(cx, "ui-ai-suggestions-clicked-marker"));
 
     let on_click: ui_ai::OnSuggestionClick = Arc::new({
         let clicked = clicked.clone();
@@ -111,8 +125,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     };
 
     let mut out = vec![
-        cx.text("Suggestions (AI Elements)"),
-        cx.text("Suggestion pills emit intents; apps own prompt insertion."),
+        decl_text::text_section_chrome_label(cx, "Suggestions (AI Elements)"),
+        decl_text::text_paragraph(
+            cx,
+            "Suggestion pills emit intents; apps own prompt insertion.",
+        ),
         shell,
     ];
     if let Some(m) = marker {

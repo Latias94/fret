@@ -1,4 +1,4 @@
-use super::{TextBlobKey, TextShapeKey, spans_paint_fingerprint, subpixel_mask_to_alpha};
+use super::{TextBlobKey, TextShapeKey, spans_paint_fingerprint};
 use fret_core::{
     AttributedText, Color, DecorationLineStyle, FontWeight, Px, TextConstraints, TextOverflow,
     TextPaintStyle, TextShapingStyle, TextSpan, TextStyle, TextWrap, UnderlineStyle,
@@ -243,15 +243,6 @@ fn query_fontdb_family(
         stretch: usvg::fontdb::Stretch::Normal,
         style: usvg::fontdb::Style::Normal,
     })
-}
-
-#[test]
-fn subpixel_mask_to_alpha_uses_channel_max() {
-    let data = vec![
-        10u8, 3u8, 4u8, 0u8, //
-        1u8, 200u8, 2u8, 0u8,
-    ];
-    assert_eq!(subpixel_mask_to_alpha(&data), vec![10u8, 200u8]);
 }
 
 #[test]

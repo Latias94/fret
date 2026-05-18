@@ -5,6 +5,7 @@ use fret::{AppComponentCx, UiChild};
 use fret_icons_lucide::generated_ids::lucide::FILE_CODE;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
@@ -45,8 +46,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(|cx| {
         vec![
-            cx.text("CodeBlock usage"),
-            cx.text("Minimal compound-parts composition aligned with the official AI Elements usage block."),
+            decl_text::text_section_chrome_label(cx, "CodeBlock usage"),
+            decl_text::text_paragraph(
+                cx,
+                "Minimal compound-parts composition aligned with the official AI Elements usage block.",
+            ),
             code_block,
         ]
     })

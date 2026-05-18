@@ -3,12 +3,36 @@ pub const SOURCE: &str = include_str!("terminal_demo.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_ui::Invalidation;
-use fret_ui::element::{ContainerProps, LayoutStyle, Length, SemanticsProps, SizeStyle};
+use fret_ui::element::{AnyElement, Length, SemanticsProps, SpacerProps};
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
+
+fn state_marker(cx: &mut AppComponentCx<'_>, test_id: &'static str) -> AnyElement {
+    cx.semantics(
+        SemanticsProps {
+            role: fret_core::SemanticsRole::Generic,
+            test_id: Some(Arc::<str>::from(test_id)),
+            ..Default::default()
+        },
+        |cx| {
+            vec![cx.spacer(SpacerProps {
+                layout: fret_ui::element::LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: Length::Px(Px(0.0)),
+                        height: Length::Px(Px(0.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                min: Px(0.0),
+            })]
+        },
+    )
+}
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let output = cx.local_model_keyed("output", || {
@@ -20,31 +44,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .map(|v| v.trim().is_empty())
         .unwrap_or(false);
 
-    let empty_marker = empty_now.then(|| {
-        cx.semantics(
-            SemanticsProps {
-                role: fret_core::SemanticsRole::Text,
-                test_id: Some(Arc::<str>::from("ui-ai-terminal-demo-output-empty-true")),
-                ..Default::default()
-            },
-            |cx| {
-                vec![cx.container(
-                    ContainerProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Px(Px(0.0)),
-                                height: Length::Px(Px(0.0)),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    |_cx| Vec::new(),
-                )]
-            },
-        )
-    });
+    let empty_marker = empty_now.then(|| state_marker(cx, "ui-ai-terminal-demo-output-empty-true"));
 
     let terminal = ui_ai::Terminal::new(output.clone())
         .on_clear(Arc::new({
@@ -63,8 +63,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         let mut out = vec![
-            cx.text("Terminal (AI Elements)"),
-            cx.text("Chrome-only viewer: apps own streaming + clear behavior."),
+            decl_text::text_section_chrome_label(cx, "Terminal (AI Elements)"),
+            decl_text::text_paragraph(
+                cx,
+                "Chrome-only viewer: apps own streaming + clear behavior.",
+            ),
             terminal,
         ];
         if let Some(marker) = empty_marker {

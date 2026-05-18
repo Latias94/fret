@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "slug": "wgpu-standard-effects-conformance-harness-followon-v1",
+  "title": "WGPU Standard Effects Conformance Harness Follow-on v1",
+  "status": "closed",
+  "updated": "2026-05-18",
+  "scope_kind": "follow-on",
+  "problem": "Several standard effect and postprocess WGPU conformance tests still duplicated the same Rgba8Unorm final-render readback helpers already owned by the shared integration-test support module. The duplication obscured the behavior evidence for effect contracts without adding coverage.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/wgpu-standard-effects-conformance-harness-followon-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/wgpu-standard-effects-conformance-harness-followon-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/wgpu-standard-effects-conformance-harness-followon-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/wgpu-standard-effects-conformance-harness-followon-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/wgpu-standard-effects-conformance-harness-followon-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/wgpu-standard-effects-conformance-harness-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    }
+  ],
+  "repro": {
+    "summary": "Standard effect and postprocess WGPU conformance tests should render and sample through shared test support while preserving Rgba8Unorm transparent-clear behavior.",
+    "commands": [
+      "cargo nextest run -p fret-render-wgpu --locked --test effect_alpha_threshold_conformance --test effect_color_matrix_conformance --test effect_filter_content_blur_conformance --test effect_filter_content_blur_rounded_clip_conformance --test effect_filter_content_dither_conformance --test effect_filter_content_noise_conformance --test effect_filter_content_pixelate_conformance --test effect_filter_content_pixelate_rounded_clip_conformance --test postprocess_scissor_conformance -j 1"
+    ]
+  },
+  "gates": [
+    {
+      "name": "standard-effects-conformance",
+      "command": "cargo nextest run -p fret-render-wgpu --locked --test effect_alpha_threshold_conformance --test effect_color_matrix_conformance --test effect_filter_content_blur_conformance --test effect_filter_content_blur_rounded_clip_conformance --test effect_filter_content_dither_conformance --test effect_filter_content_noise_conformance --test effect_filter_content_pixelate_conformance --test effect_filter_content_pixelate_rounded_clip_conformance --test postprocess_scissor_conformance -j 1"
+    },
+    {
+      "name": "backend-tests-compile",
+      "command": "cargo check -p fret-render-wgpu --locked --tests -j 1"
+    },
+    {
+      "name": "layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "crates/fret-render-wgpu/tests/support/mod.rs",
+    "crates/fret-render-wgpu/tests/effect_alpha_threshold_conformance.rs",
+    "crates/fret-render-wgpu/tests/effect_color_matrix_conformance.rs",
+    "crates/fret-render-wgpu/tests/effect_filter_content_blur_conformance.rs",
+    "crates/fret-render-wgpu/tests/effect_filter_content_blur_rounded_clip_conformance.rs",
+    "crates/fret-render-wgpu/tests/effect_filter_content_dither_conformance.rs",
+    "crates/fret-render-wgpu/tests/effect_filter_content_noise_conformance.rs",
+    "crates/fret-render-wgpu/tests/effect_filter_content_pixelate_conformance.rs",
+    "crates/fret-render-wgpu/tests/effect_filter_content_pixelate_rounded_clip_conformance.rs",
+    "crates/fret-render-wgpu/tests/postprocess_scissor_conformance.rs",
+    "docs/workstreams/wgpu-standard-effects-conformance-harness-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0277-composite-effect-isolation-v1.md",
+    "docs/adr/0281-effect-filter-content-v1.md"
+  ],
+  "continue_policy": {
+    "default_action": "stay_closed",
+    "notes": "The named standard effect/postprocess tests migrated successfully. Backdrop, custom, warp-v2, drop-shadow, image, text, viewport metadata, Vulkan, and MSAA helper cleanup should stay in separate one-family follow-ons because their target setup or semantics may differ."
+  }
+}

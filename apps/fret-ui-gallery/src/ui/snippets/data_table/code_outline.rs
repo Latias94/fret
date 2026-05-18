@@ -96,11 +96,9 @@ fn reusable_table(
                 _ => col.id.clone(),
             },
             |cx, col, row| match col.id.as_ref() {
-                "status" => cx
-                    .text(row.status.as_ref())
+                "status" => super::table_cell_text(cx, row.status.clone())
                     .test_id(reusable_cell_test_id(row, "status")),
-                "email" => cx
-                    .text(row.email.as_ref())
+                "email" => super::table_cell_text(cx, row.email.clone())
                     .test_id(reusable_cell_test_id(row, "email")),
                 "amount" => {
                     let amount = Arc::<str>::from(format!("${}.00", row.amount_usd));
@@ -111,7 +109,7 @@ fn reusable_table(
                         .into_element(cx);
                     align_end(amount_text).into_element(cx)
                 }
-                _ => cx.text("?"),
+                _ => super::table_cell_text(cx, "?"),
             },
         )
         .test_id("ui-gallery-data-table-reusable-root")

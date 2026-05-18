@@ -517,6 +517,14 @@ impl ScriptV2Builder {
         })
     }
 
+    pub fn press_keys(self, keys: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        self.push(UiActionStepV2::PressKeys {
+            keys: keys.into_iter().map(Into::into).collect(),
+            modifiers: UiKeyModifiersV1::default(),
+            repeat: false,
+        })
+    }
+
     pub fn press_shortcut(self, shortcut: impl Into<String>) -> Self {
         self.push(UiActionStepV2::PressShortcut {
             shortcut: shortcut.into(),

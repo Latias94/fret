@@ -1330,7 +1330,6 @@ pub(super) fn apply_dither_step_masked(
     );
 }
 
-#[allow(dead_code)]
 pub(super) fn append_color_matrix_in_place_single_scratch(
     passes: &mut Vec<RenderPlanPass>,
     srcdst: PlanTarget,
@@ -1396,7 +1395,6 @@ pub(super) fn append_color_matrix_in_place_single_scratch(
     }));
 }
 
-#[allow(dead_code)]
 pub(super) fn append_alpha_threshold_in_place_single_scratch(
     passes: &mut Vec<RenderPlanPass>,
     srcdst: PlanTarget,

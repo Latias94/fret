@@ -844,6 +844,200 @@ fn view_cache_matches_non_cached_output_for_stable_frames() {
 }
 
 #[test]
+fn view_cache_hit_moving_mixed_absolute_wrapper_updates_bounds_and_hit_test() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+    let mut scene = Scene::default();
+
+    let renders = Arc::new(AtomicUsize::new(0));
+    let pressable_id = Arc::new(std::sync::Mutex::new(
+        None::<crate::elements::GlobalElementId>,
+    ));
+    let absolute_child_id = Arc::new(std::sync::Mutex::new(
+        None::<crate::elements::GlobalElementId>,
+    ));
+
+    let mut frame_bounds = Vec::new();
+    let mut frame_visual_bounds = Vec::new();
+    let mut frame_absolute_bounds = Vec::new();
+    let mut frame_old_edge_hits = Vec::new();
+    let mut frame_new_edge_hits = Vec::new();
+    let mut frame_old_edge_routing_hits = Vec::new();
+    let mut frame_new_edge_routing_hits = Vec::new();
+
+    for offset in [0.0, 40.0] {
+        let renders = renders.clone();
+        let pressable_id_for_render = pressable_id.clone();
+        let absolute_child_id_for_render = absolute_child_id.clone();
+        let _root_node = render_root_for_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "view-cache-moving-mixed-absolute-wrapper",
+            move |cx| {
+                let mut row = crate::element::FlexProps::default();
+                row.align = crate::element::CrossAlign::Start;
+
+                let mut spacer = crate::element::ContainerProps::default();
+                spacer.layout.size.width = Length::Px(Px(offset));
+                spacer.layout.size.height = Length::Px(Px(1.0));
+
+                vec![cx.flex(row, |cx| {
+                    vec![
+                        cx.container(spacer, |_cx| Vec::new()),
+                        cx.view_cache(crate::element::ViewCacheProps::default(), |cx| {
+                            renders.fetch_add(1, Ordering::SeqCst);
+
+                            let pressable = crate::element::PressableProps::default();
+                            vec![
+                                cx.pressable_with_id(pressable, |cx, _state, id| {
+                                    *pressable_id_for_render.lock().unwrap() = Some(id);
+
+                                    let mut flow_child = crate::element::ContainerProps::default();
+                                    flow_child.layout.size.width = Length::Px(Px(20.0));
+                                    flow_child.layout.size.height = Length::Px(Px(10.0));
+
+                                    let mut absolute_child =
+                                        crate::element::ContainerProps::default();
+                                    absolute_child.layout.position =
+                                        crate::element::PositionStyle::Absolute;
+                                    absolute_child.layout.inset.left =
+                                        crate::element::InsetEdge::Fraction(0.25);
+                                    absolute_child.layout.inset.top =
+                                        crate::element::InsetEdge::Fraction(0.1);
+                                    absolute_child.layout.size.width = Length::Px(Px(25.0));
+                                    absolute_child.layout.size.height = Length::Px(Px(10.0));
+
+                                    let absolute = cx.container(absolute_child, |_cx| Vec::new());
+                                    *absolute_child_id_for_render.lock().unwrap() =
+                                        Some(absolute.id);
+
+                                    vec![cx.container(flow_child, |_cx| Vec::new()), absolute]
+                                })
+                                .test_id("cached-mixed-absolute-pressable"),
+                            ]
+                        }),
+                    ]
+                })]
+            },
+        );
+
+        layout_frame(&mut ui, &mut app, &mut services, bounds);
+        paint_frame(&mut ui, &mut app, &mut services, bounds, &mut scene);
+
+        let pressable = pressable_id
+            .lock()
+            .unwrap()
+            .expect("pressable id should be recorded on the first render");
+        let absolute = absolute_child_id
+            .lock()
+            .unwrap()
+            .expect("absolute child id should be recorded on the first render");
+        let pressable_node =
+            crate::elements::node_for_element(&mut app, window, pressable).expect("pressable node");
+        let absolute_node =
+            crate::elements::node_for_element(&mut app, window, absolute).expect("absolute node");
+
+        let layout = ui
+            .debug_node_bounds(pressable_node)
+            .expect("pressable layout bounds");
+        let visual =
+            crate::elements::current_visual_bounds_for_element(&mut app, window, pressable)
+                .expect("pressable visual bounds");
+        let absolute_bounds = ui
+            .debug_node_bounds(absolute_node)
+            .expect("absolute child layout bounds");
+
+        frame_bounds.push(layout);
+        frame_visual_bounds.push(visual);
+        frame_absolute_bounds.push(absolute_bounds);
+
+        let old_edge = Point::new(Px(33.25), Px(10.75));
+        let new_edge = Point::new(Px(offset + 33.25), Px(10.75));
+        frame_old_edge_hits.push(
+            ui.debug_hit_test(old_edge)
+                .hit
+                .and_then(|node| ui.debug_node_element(node)),
+        );
+        frame_new_edge_hits.push(
+            ui.debug_hit_test(new_edge)
+                .hit
+                .and_then(|node| ui.debug_node_element(node)),
+        );
+        frame_old_edge_routing_hits.push(
+            ui.debug_hit_test_routing(old_edge)
+                .hit
+                .and_then(|node| ui.debug_node_element(node)),
+        );
+        frame_new_edge_routing_hits.push(
+            ui.debug_hit_test_routing(new_edge)
+                .hit
+                .and_then(|node| ui.debug_node_element(node)),
+        );
+
+        app.advance_frame();
+    }
+
+    assert_eq!(
+        renders.load(Ordering::SeqCst),
+        1,
+        "second frame should reuse the cached mixed flow/absolute subtree"
+    );
+
+    assert_eq!(frame_bounds[0].origin, Point::new(Px(0.0), Px(0.0)));
+    assert_eq!(frame_bounds[0].size, Size::new(Px(34.0), Px(12.0)));
+    assert_eq!(frame_bounds[1].origin, Point::new(Px(40.0), Px(0.0)));
+    assert_eq!(frame_bounds[1].size, Size::new(Px(34.0), Px(12.0)));
+    assert_eq!(
+        frame_visual_bounds[1], frame_bounds[1],
+        "cached subtree movement without render transform should update element visual bounds"
+    );
+    assert_eq!(
+        frame_absolute_bounds[1],
+        Rect::new(Point::new(Px(48.5), Px(1.2)), Size::new(Px(25.0), Px(10.0))),
+        "absolute child should move with the cached wrapper and keep the union envelope placement"
+    );
+
+    let absolute = absolute_child_id
+        .lock()
+        .unwrap()
+        .expect("absolute child id");
+    assert_eq!(frame_old_edge_hits[0], Some(absolute));
+    assert_eq!(frame_old_edge_routing_hits[0], Some(absolute));
+    assert_eq!(
+        frame_old_edge_hits[1], frame_old_edge_routing_hits[1],
+        "fallback and routing hit-test paths should agree after cached subtree movement"
+    );
+    assert_ne!(
+        frame_old_edge_hits[1],
+        Some(absolute),
+        "old layout-space edge should no longer hit the absolute child after the cached subtree moves"
+    );
+    assert_eq!(
+        frame_new_edge_hits[1],
+        Some(absolute),
+        "new visual/layout edge should hit the moved absolute child after cache reuse"
+    );
+    assert_eq!(
+        frame_new_edge_routing_hits[1],
+        Some(absolute),
+        "runtime routing should hit the moved absolute child after interaction-cache replay"
+    );
+}
+
+#[test]
 fn view_cache_keep_alive_revalidates_recorded_membership_before_touching_stale_detached_elements() {
     use crate::elements::NodeEntry;
 

@@ -2,35 +2,44 @@ pub const SOURCE: &str = include_str!("stack_trace_large_demo.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
-use fret_ui::element::SemanticsProps;
+use fret_ui::Invalidation;
+use fret_ui::element::{AnyElement, Length, SemanticsProps, SpacerProps};
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use std::sync::Arc;
 
+fn state_marker(cx: &mut AppComponentCx<'_>, test_id: &'static str) -> AnyElement {
+    cx.semantics(
+        SemanticsProps {
+            role: fret_core::SemanticsRole::Generic,
+            test_id: Some(Arc::<str>::from(test_id)),
+            ..Default::default()
+        },
+        |cx| {
+            vec![cx.spacer(SpacerProps {
+                layout: fret_ui::element::LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: Length::Px(fret_core::Px(0.0)),
+                        height: Length::Px(fret_core::Px(0.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                min: fret_core::Px(0.0),
+            })]
+        },
+    )
+}
+
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let opened = cx.local_model_keyed("opened", || false);
 
-    let opened_for_marker = opened.clone();
-    let marker = cx.semantics(
-        SemanticsProps {
-            role: fret_core::SemanticsRole::Text,
-            test_id: Some(Arc::<str>::from("ui-ai-stack-trace-large-opened-marker")),
-            ..Default::default()
-        },
-        move |cx| {
-            let opened = cx
-                .app
-                .models()
-                .read(&opened_for_marker, |v| *v)
-                .unwrap_or(false);
-            if opened {
-                vec![cx.text("")]
-            } else {
-                Vec::new()
-            }
-        },
-    );
+    let opened_now = cx
+        .get_model_copied(&opened, Invalidation::Paint)
+        .unwrap_or(false);
+    let marker = opened_now.then(|| state_marker(cx, "ui-ai-stack-trace-large-opened-marker"));
 
     let mut trace = String::new();
     trace.push_str("Error: synthetic large stack\n");
@@ -58,12 +67,15 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .into_element(cx);
 
     ui::v_flex(move |cx| {
-        vec![
-            cx.text("StackTrace (Large)"),
-            cx.text("Scroll in the frames viewport and click a file path."),
+        let mut out = vec![
+            decl_text::text_section_chrome_label(cx, "StackTrace (Large)"),
+            decl_text::text_paragraph(cx, "Scroll in the frames viewport and click a file path."),
             stack,
-            marker,
-        ]
+        ];
+        if let Some(marker) = marker {
+            out.push(marker);
+        }
+        out
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())
     .gap(Space::N4)

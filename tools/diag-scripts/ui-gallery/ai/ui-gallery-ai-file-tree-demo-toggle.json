@@ -54,6 +54,55 @@
       "timeout_frames": 240
     },
     {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-ai-file-tree-root" },
+        "role": "list"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-ai-file-tree-folder-src" },
+        "role": "tree_item"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "level_is",
+        "target": { "kind": "test_id", "id": "ui-ai-file-tree-folder-src" },
+        "level": 1
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": { "kind": "test_id", "id": "ui-ai-file-tree-folder-src" },
+        "expanded": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-ai-file-tree-folder-src" },
+        "selected": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-ai-file-tree-folder-src" },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
       "type": "wait_until",
       "predicate": {
         "kind": "not_exists",
@@ -74,14 +123,84 @@
       "timeout_frames": 240
     },
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": { "kind": "test_id", "id": "ui-ai-file-tree-folder-src" },
+        "expanded": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-ai-file-tree-folder-src" },
+        "selected": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-ai-file-tree-file-lib" },
+        "role": "tree_item"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "level_is",
+        "target": { "kind": "test_id", "id": "ui-ai-file-tree-file-lib" },
+        "level": 2
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-ai-file-tree-file-lib" },
+        "selected": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-ai-file-tree-file-lib" },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
       "type": "click_stable",
       "target": { "kind": "test_id", "id": "ui-ai-file-tree-file-lib" }
     },
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-file-tree-selected-marker" }
+        "kind": "raw_semantics_hidden_is",
+        "target": { "kind": "test_id", "id": "ui-ai-file-tree-selected-marker" },
+        "hidden": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-ai-file-tree-file-lib" },
+        "selected": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-ai-file-tree-folder-src" },
+        "selected": false
       },
       "timeout_frames": 240
     },

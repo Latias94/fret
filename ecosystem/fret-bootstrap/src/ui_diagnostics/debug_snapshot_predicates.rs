@@ -8,14 +8,14 @@ pub(super) fn eval_debug_snapshot_predicate_from_recent_snapshot(
 ) -> Option<bool> {
     let ring = svc.per_window.get(&window)?;
     let snapshot = ring.snapshots.back()?;
-    let age_ms = unix_ms_now().saturating_sub(snapshot.timestamp_unix_ms);
-    if age_ms > max_age_ms {
-        return None;
-    }
     if predicate_uses_debug_snapshot_history(predicate) {
         if let Some(ok) = eval_debug_snapshot_predicate_from_ring(ring, predicate) {
             return Some(ok);
         }
+    }
+    let age_ms = unix_ms_now().saturating_sub(snapshot.timestamp_unix_ms);
+    if age_ms > max_age_ms {
+        return None;
     }
     eval_debug_snapshot_predicate(&snapshot.debug, predicate)
 }
@@ -924,6 +924,38 @@ mod tests {
                 &svc,
                 window,
                 &UiPredicateV1::InputPointerCaptureActiveIs { active: false },
+                250,
+            ),
+            Some(true)
+        );
+    }
+
+    #[test]
+    fn history_predicates_can_match_stale_latest_snapshot() {
+        let mut svc = UiDiagnosticsService::default();
+        let window = AppWindowId::from(KeyData::from_ffi(1));
+        let ring = svc.per_window.entry(window).or_default();
+        ring.snapshots
+            .push_back(snapshot_with_retained_virtual_list_reconcile(
+                UiRetainedVirtualListReconcileKindV1::Escape,
+                9,
+                10,
+                0,
+            ));
+        ring.snapshots.back_mut().unwrap().timestamp_unix_ms = 0;
+
+        assert_eq!(
+            eval_debug_snapshot_predicate_from_recent_snapshot(
+                &svc,
+                window,
+                &UiPredicateV1::RetainedVirtualListReconcilesMatchingGe {
+                    min: 1,
+                    reconcile_kind: Some("escape".to_string()),
+                    attached_items_min: Some(1),
+                    detached_items_min: Some(1),
+                    reused_from_keep_alive_items_min: None,
+                    kept_alive_items_min: None,
+                },
                 250,
             ),
             Some(true)

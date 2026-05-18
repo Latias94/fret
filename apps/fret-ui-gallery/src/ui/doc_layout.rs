@@ -215,7 +215,7 @@ fn render_doc_page_raw(
 }
 
 fn focus_doc_sections(sections: Vec<DocSection>) -> Vec<DocSection> {
-    let Some(focus_filters) = doc_section_focus_filters() else {
+    let Some(focus_filters) = section_focus_filters() else {
         return sections;
     };
 
@@ -233,7 +233,7 @@ fn focus_doc_sections(sections: Vec<DocSection>) -> Vec<DocSection> {
         .collect()
 }
 
-fn doc_section_focus_filters() -> Option<Vec<String>> {
+pub(in crate::ui) fn section_focus_filters() -> Option<Vec<String>> {
     let raw = std::env::var(ENV_UI_GALLERY_START_SECTION).ok()?;
     let filters = raw
         .split(',')
@@ -264,6 +264,22 @@ fn doc_section_matches_focus(
             || test_id_prefix
                 .is_some_and(|candidate| section_focus_candidate_matches(filter, candidate))
     })
+}
+
+pub(in crate::ui) fn section_matches_focus_filter(
+    title: &'static str,
+    title_test_id: Option<&'static str>,
+    root_test_id: Option<&str>,
+    test_id_prefix: Option<&str>,
+    focus_filters: &[String],
+) -> bool {
+    doc_section_matches_focus(
+        title,
+        title_test_id,
+        root_test_id,
+        test_id_prefix,
+        focus_filters,
+    )
 }
 
 fn section_focus_candidate_matches(filter: &str, candidate: &str) -> bool {

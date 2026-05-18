@@ -2,10 +2,35 @@ pub const SOURCE: &str = include_str!("tool_demo.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
+use fret_ui::element::{AnyElement, Length, SemanticsProps, SpacerProps};
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use std::sync::Arc;
+
+fn state_marker(cx: &mut AppComponentCx<'_>, test_id: &'static str) -> AnyElement {
+    cx.semantics(
+        SemanticsProps {
+            role: fret_core::SemanticsRole::Generic,
+            test_id: Some(Arc::<str>::from(test_id)),
+            ..Default::default()
+        },
+        |cx| {
+            vec![cx.spacer(SpacerProps {
+                layout: fret_ui::element::LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: Length::Px(fret_core::Px(0.0)),
+                        height: Length::Px(fret_core::Px(0.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                min: fret_core::Px(0.0),
+            })]
+        },
+    )
+}
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let input_payload = ui_ai::model::ToolCallPayload::Json(serde_json::json!({
@@ -60,7 +85,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .test_id("ui-ai-tool-demo-trigger")
             .into(),
             ui_ai::ToolContent::new([
-                cx.text("").test_id("ui-ai-tool-demo-content-marker"),
+                state_marker(cx, "ui-ai-tool-demo-content-marker"),
                 completed_input,
                 completed_output,
             ])
@@ -79,15 +104,18 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("Tool (AI Elements)"),
-            cx.text("Docs-shaped compound composition with the four official Tool states."),
-            cx.text("Input Streaming (Pending)"),
+            decl_text::text_section_chrome_label(cx, "Tool (AI Elements)"),
+            decl_text::text_paragraph(
+                cx,
+                "Docs-shaped compound composition with the four official Tool states.",
+            ),
+            decl_text::text_section_chrome_label(cx, "Input Streaming (Pending)"),
             pending,
-            cx.text("Input Available (Running)"),
+            decl_text::text_section_chrome_label(cx, "Input Available (Running)"),
             running,
-            cx.text("Output Available (Completed)"),
+            decl_text::text_section_chrome_label(cx, "Output Available (Completed)"),
             completed,
-            cx.text("Output Error"),
+            decl_text::text_section_chrome_label(cx, "Output Error"),
             error,
         ]
     })

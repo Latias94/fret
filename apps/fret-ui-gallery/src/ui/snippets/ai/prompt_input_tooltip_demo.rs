@@ -4,6 +4,7 @@ pub const SOURCE: &str = include_str!("prompt_input_tooltip_demo.rs");
 use fret::{AppComponentCx, UiChild};
 use fret_icons::IconId;
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -43,8 +44,9 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("Prompt Input Button Tooltips (AI Elements)"),
-            cx.text(
+            decl_text::text_section_chrome_label(cx, "Prompt Input Button Tooltips (AI Elements)"),
+            decl_text::text_paragraph(
+                cx,
                 "Hover the toolbar actions to preview a simple tooltip, a shortcut hint, and a bottom-positioned tooltip.",
             ),
             tools,

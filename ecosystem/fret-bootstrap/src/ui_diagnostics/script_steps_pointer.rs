@@ -1681,8 +1681,8 @@ pub(super) fn handle_click_stable_step(
 
             let center = match &resolved {
                 ResolvedClickStableTarget::Semantics(node) => {
-                    if let Some(ui) = ui.as_deref() {
-                        pointer_position_prefer_intended_hit(
+                    if let Some(ui) = ui.as_deref_mut() {
+                        pointer_position_prefer_intended_hit_routing(
                             app,
                             snapshot,
                             element_runtime,

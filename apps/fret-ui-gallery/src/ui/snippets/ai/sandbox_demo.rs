@@ -7,6 +7,7 @@ use fret_ui::element::SemanticsDecoration;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Radius, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -29,12 +30,13 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let console_panel = {
         let panel = ui::v_flex(move |cx| {
             vec![
-                cx.text("Sandbox console output (demo).").attach_semantics(
-                    SemanticsDecoration::default()
-                        .role(fret_core::SemanticsRole::Generic)
-                        .test_id("ui-ai-sandbox-demo-panel-console"),
-                ),
-                cx.text("Apps own execution backends; this is UI-only."),
+                decl_text::text_section_chrome_label(cx, "Sandbox console output (demo).")
+                    .attach_semantics(
+                        SemanticsDecoration::default()
+                            .role(fret_core::SemanticsRole::Generic)
+                            .test_id("ui-ai-sandbox-demo-panel-console"),
+                    ),
+                decl_text::text_paragraph(cx, "Apps own execution backends; this is UI-only."),
             ]
         })
         .gap(Space::N2)
@@ -54,12 +56,13 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let files_panel = {
         let panel = ui::v_flex(move |cx| {
             vec![
-                cx.text("Sandbox files view (demo).").attach_semantics(
-                    SemanticsDecoration::default()
-                        .role(fret_core::SemanticsRole::Generic)
-                        .test_id("ui-ai-sandbox-demo-panel-files"),
-                ),
-                cx.text("Tabs are composable; provide your own panels."),
+                decl_text::text_section_chrome_label(cx, "Sandbox files view (demo).")
+                    .attach_semantics(
+                        SemanticsDecoration::default()
+                            .role(fret_core::SemanticsRole::Generic)
+                            .test_id("ui-ai-sandbox-demo-panel-files"),
+                    ),
+                decl_text::text_paragraph(cx, "Tabs are composable; provide your own panels."),
             ]
         })
         .gap(Space::N2)
@@ -97,8 +100,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("Sandbox (AI Elements)"),
-            cx.text("Collapsible + tabs chrome. Apps own the sandbox backend."),
+            decl_text::text_section_chrome_label(cx, "Sandbox (AI Elements)"),
+            decl_text::text_paragraph(
+                cx,
+                "Collapsible + tabs chrome. Apps own the sandbox backend.",
+            ),
             sandbox,
         ]
     })

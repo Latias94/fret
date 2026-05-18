@@ -10,7 +10,8 @@ fn imui_editor_proof_demo_keeps_collection_select_all_app_owned_and_explicit() {
         "proof_collection_select_all_shortcut_matches(",
         "KeyCode::KeyA",
         "proof_collection_select_all_selection(",
-        "ui.text(proof_collection_select_all_line());",
+        "proof_collection_readout_text(\n        ui,\n        proof_collection_select_all_line(),",
+        "\"imui-editor-proof.authoring.imui.collection.select-all-readout\"",
     ] {
         assert!(
             source.contains(needle),

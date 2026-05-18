@@ -5,6 +5,7 @@ use fret::{AppComponentCx, UiChild};
 use fret_ui::Invalidation;
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use std::sync::Arc;
@@ -100,10 +101,13 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("StackTrace (AI Elements)"),
-            cx.text("Docs-aligned compound parts API with copy + file-open seams."),
+            decl_text::text_section_chrome_label(cx, "StackTrace (AI Elements)"),
+            decl_text::text_paragraph(
+                cx,
+                "Docs-aligned compound parts API with copy + file-open seams.",
+            ),
             stack,
-            cx.text(format!("Status: {status_text}")).attach_semantics(
+            decl_text::text_control_readout(cx, format!("Status: {status_text}")).attach_semantics(
                 SemanticsDecoration::default().test_id("ui-ai-stack-trace-status"),
             ),
         ]

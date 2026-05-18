@@ -145,6 +145,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         UiActionStepV2::ResetDiagnostics
         | UiActionStepV2::ClearBaseRef
         | UiActionStepV2::PressKey { .. }
+        | UiActionStepV2::PressKeys { .. }
         | UiActionStepV2::PressShortcut { .. }
         | UiActionStepV2::TypeText { .. }
         | UiActionStepV2::Ime { .. }
@@ -204,6 +205,7 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::PointerCancel { .. } => "pointer_cancel",
         UiActionStepV2::Wheel { .. } => "wheel",
         UiActionStepV2::WheelBurst { .. } => "wheel_burst",
+        UiActionStepV2::PressKeys { .. } => "press_keys",
         UiActionStepV2::TypeText { .. } => "type_text",
         UiActionStepV2::TypeTextInto { .. } => "type_text_into",
         UiActionStepV2::SetTextValue { .. } => "set_text_value",
@@ -572,6 +574,7 @@ pub(super) fn dispatch_drive_script_step(
             output.request_redraw = true;
         }
         step @ (UiActionStepV2::PressKey { .. }
+        | UiActionStepV2::PressKeys { .. }
         | UiActionStepV2::PressShortcut { .. }
         | UiActionStepV2::TypeText { .. }
         | UiActionStepV2::Ime { .. }) => {
@@ -2196,7 +2199,35 @@ impl UiDiagnosticsService {
         }
 
         if active.wait_frames_remaining > 0 {
-            active.wait_frames_remaining = active.wait_frames_remaining.saturating_sub(1);
+            // `wait_frames` means rendered UI frames, not keepalive timer ticks. Consuming the
+            // counter here lets a script advance to its next input step while still using a stale
+            // semantics snapshot, which can make wheel-heavy diagnostics stall without ever seeing
+            // the frame that the wait was meant to observe.
+            if stall_age_ms >= Self::SCRIPT_NO_FRAME_DRIVE_HARD_TIMEOUT_MS {
+                let wait_step_index = active.next_step.saturating_sub(1);
+                return finalize_drive_script_for_window(
+                    self,
+                    app,
+                    window,
+                    active.next_step,
+                    wait_step_index,
+                    wait_step_index.min(u32::MAX as usize) as u32,
+                    "wait_frames".to_string(),
+                    active,
+                    UiScriptFrameOutput {
+                        request_redraw: true,
+                        ..UiScriptFrameOutput::default()
+                    },
+                    Some(format!(
+                        "script-step-{wait_step_index:04}-stalled-no-frames"
+                    )),
+                    None,
+                    true,
+                    Some("script_stalled_no_frames".to_string()),
+                    None,
+                );
+            }
+
             self.active_scripts.insert(window, active);
             return UiScriptFrameOutput {
                 request_redraw: true,
@@ -2867,6 +2898,45 @@ mod tests {
             last_explicit_cursor_override_pos: None,
             saved_pointer_points: HashMap::new(),
         }
+    }
+
+    #[test]
+    fn no_frame_keepalive_does_not_consume_wait_frames() {
+        let window = app_window(1);
+        let mut active = active_pointer_move_script();
+        active.steps = vec![
+            UiActionStepV2::WaitFrames { window: None, n: 2 },
+            UiActionStepV2::Wheel {
+                window: None,
+                pointer_kind: None,
+                target: test_id_selector("scroll-root"),
+                delta_x: 0.0,
+                delta_y: 120.0,
+            },
+        ];
+        active.next_step = 1;
+        active.wait_frames_remaining = 2;
+        active.pointer_sessions.clear();
+
+        let mut service = UiDiagnosticsService::default();
+        service.active_scripts.insert(window, active);
+
+        let mut app = App::new();
+        let output = service.drive_script_for_window_no_frame(
+            &mut app,
+            window,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(100.0), Px(100.0)),
+            ),
+            1.0,
+            UiDiagnosticsService::SCRIPT_NO_FRAME_DRIVE_STALL_THRESHOLD_MS,
+        );
+
+        assert!(output.request_redraw);
+        let active = service.active_scripts.get(&window).unwrap();
+        assert_eq!(active.next_step, 1);
+        assert_eq!(active.wait_frames_remaining, 2);
     }
 
     fn app_with_drag_for_pointer(

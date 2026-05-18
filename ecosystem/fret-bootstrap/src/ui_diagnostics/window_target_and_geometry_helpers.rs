@@ -799,6 +799,77 @@ fn wheel_position_prefer_intended_hit(
 mod window_target_and_geometry_helper_tests {
     use super::*;
 
+    fn test_node(
+        id: u64,
+        parent: Option<u64>,
+        role: SemanticsRole,
+        test_id: Option<&str>,
+    ) -> fret_core::SemanticsNode {
+        fret_core::SemanticsNode {
+            id: NodeId::from(KeyData::from_ffi(id)),
+            parent: parent.map(|id| NodeId::from(KeyData::from_ffi(id))),
+            role,
+            bounds: Rect::default(),
+            flags: fret_core::SemanticsFlags::default(),
+            test_id: test_id.map(str::to_owned),
+            active_descendant: None,
+            pos_in_set: None,
+            set_size: None,
+            label: None,
+            value: None,
+            extra: fret_core::SemanticsNodeExtra::default(),
+            text_selection: None,
+            text_composition: None,
+            actions: fret_core::SemanticsActions::default(),
+            labelled_by: Vec::new(),
+            described_by: Vec::new(),
+            controls: Vec::new(),
+            inline_spans: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn semantics_hit_matches_intended_accepts_descendant_label_hit() {
+        let root = NodeId::from(KeyData::from_ffi(1));
+        let intended = test_node(
+            2,
+            Some(1),
+            SemanticsRole::ComboBox,
+            Some("combo-trigger"),
+        );
+        let hit = test_node(
+            3,
+            Some(2),
+            SemanticsRole::Text,
+            Some("combo-trigger-label"),
+        );
+        let snapshot = fret_core::SemanticsSnapshot {
+            window: AppWindowId::from(KeyData::from_ffi(1)),
+            roots: vec![fret_core::SemanticsRoot {
+                root,
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                test_node(1, None, SemanticsRole::Generic, Some("root")),
+                intended.clone(),
+                hit.clone(),
+            ],
+        };
+        let index = SemanticsIndex::new(&snapshot);
+
+        assert!(
+            semantics_hit_matches_intended(&index, &hit, &intended),
+            "diagnostics hit validation should treat a label inside an action owner as the intended target"
+        );
+    }
+
     #[test]
     fn center_of_rect_clamped_to_rect_clamps_disjoint_rects_into_window() {
         let rect = Rect::new(

@@ -117,12 +117,22 @@ impl<H: UiHost> UiTree<H> {
             let range = prev.start as usize..prev.end as usize;
             if range.start <= range.end && range.end <= self.interaction_cache.prev_records.len() {
                 let start = self.interaction_cache.records.len();
+                let root_delta = Point::new(
+                    bounds.origin.x - prev.origin.x,
+                    bounds.origin.y - prev.origin.y,
+                );
                 self.interaction_cache.replay_scratch.clear();
                 self.interaction_cache
                     .replay_scratch
                     .extend_from_slice(&self.interaction_cache.prev_records[range]);
                 for i in 0..self.interaction_cache.replay_scratch.len() {
                     let mut record = self.interaction_cache.replay_scratch[i];
+                    if root_delta.x.0 != 0.0 || root_delta.y.0 != 0.0 {
+                        record.bounds.origin = Point::new(
+                            record.bounds.origin.x + root_delta.x,
+                            record.bounds.origin.y + root_delta.y,
+                        );
+                    }
                     // View-cache reuse can legitimately skip rerender/layout for the subtree, but
                     // hit-test-only invalidations (e.g. scroll handle offset changes) still need
                     // up-to-date interaction transforms so pointer routing stays correct.
@@ -191,6 +201,7 @@ impl<H: UiHost> UiTree<H> {
                     n.interaction_cache = Some(InteractionCacheEntry {
                         generation: self.interaction_cache.target_generation,
                         key,
+                        origin: bounds.origin,
                         start: start as u32,
                         end: end as u32,
                     });
@@ -268,6 +279,7 @@ impl<H: UiHost> UiTree<H> {
             n.interaction_cache = Some(InteractionCacheEntry {
                 generation: self.interaction_cache.target_generation,
                 key,
+                origin: bounds.origin,
                 start: start as u32,
                 end: end as u32,
             });

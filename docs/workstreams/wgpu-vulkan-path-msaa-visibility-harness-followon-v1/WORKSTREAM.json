@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "slug": "wgpu-vulkan-path-msaa-visibility-harness-followon-v1",
+  "title": "WGPU Vulkan Path MSAA Visibility Harness Follow-on v1",
+  "status": "closed",
+  "updated": "2026-05-18",
+  "scope_kind": "follow-on",
+  "problem": "The Vulkan path-MSAA visibility conformance test was the last WGPU conformance test duplicating readback and pixel helpers already owned by the shared integration-test support module. The duplication made Vulkan safety-valve evidence noisier without adding behavior coverage.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/wgpu-vulkan-path-msaa-visibility-harness-followon-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/wgpu-vulkan-path-msaa-visibility-harness-followon-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/wgpu-vulkan-path-msaa-visibility-harness-followon-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/wgpu-vulkan-path-msaa-visibility-harness-followon-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/wgpu-vulkan-path-msaa-visibility-harness-followon-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/wgpu-vulkan-path-msaa-visibility-harness-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    }
+  ],
+  "repro": {
+    "summary": "Vulkan path-MSAA visibility conformance should use shared readback/pixel helpers while preserving env/Vulkan/MSAA assertions.",
+    "commands": [
+      "cargo nextest run -p fret-render-wgpu --locked --test vulkan_path_msaa_visibility_conformance -j 1"
+    ]
+  },
+  "gates": [
+    {
+      "name": "vulkan-path-msaa-visibility",
+      "command": "cargo nextest run -p fret-render-wgpu --locked --test vulkan_path_msaa_visibility_conformance -j 1"
+    },
+    {
+      "name": "backend-tests-compile",
+      "command": "cargo check -p fret-render-wgpu --locked --tests -j 1"
+    },
+    {
+      "name": "layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "crates/fret-render-wgpu/tests/support/mod.rs",
+    "crates/fret-render-wgpu/tests/vulkan_path_msaa_visibility_conformance.rs",
+    "docs/workstreams/wgpu-vulkan-path-msaa-visibility-harness-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+  ],
+  "adr_refs": [],
+  "continue_policy": {
+    "default_action": "stay_closed",
+    "notes": "The named Vulkan path-MSAA visibility test migrated successfully. Known local WGPU readback helper duplication is closed."
+  }
+}

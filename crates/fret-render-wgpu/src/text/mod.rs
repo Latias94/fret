@@ -53,8 +53,6 @@ use self::quality::TextQualityState;
 pub(crate) use self::types::DebugGlyphAtlasLookup;
 pub use self::types::TextFontFamilyConfig;
 pub(crate) use self::types::TextLine;
-#[cfg(test)]
-pub(crate) use self::types::subpixel_mask_to_alpha;
 use self::types::{GlyphInstance, TextBlob, TextShape};
 pub(crate) use self::types::{
     TextAtlasPerfSnapshot, TextFontFaceUsage, TextRenderGlyph, TextRenderGlyphKind,

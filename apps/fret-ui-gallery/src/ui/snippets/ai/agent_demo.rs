@@ -4,6 +4,7 @@ pub const SOURCE: &str = include_str!("agent_demo.rs");
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, MetricRef, Space};
 use serde_json::json;
@@ -77,8 +78,9 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("Agent"),
-            cx.text(
+            decl_text::text_section_chrome_label(cx, "Agent"),
+            decl_text::text_paragraph(
+                cx,
                 "Composable agent chrome with model, instructions, expandable tool schemas, and structured output.",
             ),
             agent,

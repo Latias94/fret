@@ -4,12 +4,38 @@ pub const SOURCE: &str = include_str!("chat_demo.rs");
 use fret::app::AppRenderActionsExt as _;
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
+use fret_ui::element::{AnyElement, Length, SemanticsProps, SpacerProps};
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
+use std::sync::Arc;
+
+fn empty_spacer(cx: &mut AppComponentCx<'_>) -> AnyElement {
+    cx.spacer(SpacerProps {
+        layout: fret_ui::element::LayoutStyle {
+            size: fret_ui::element::SizeStyle {
+                width: Length::Px(Px(0.0)),
+                height: Length::Px(Px(0.0)),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        min: Px(0.0),
+    })
+}
+
+fn state_marker(cx: &mut AppComponentCx<'_>, test_id: &'static str) -> AnyElement {
+    cx.semantics(
+        SemanticsProps {
+            role: fret_core::SemanticsRole::Generic,
+            test_id: Some(Arc::<str>::from(test_id)),
+            ..Default::default()
+        },
+        |cx| vec![empty_spacer(cx)],
+    )
+}
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
-    use std::sync::Arc;
-
     use fret_ui::Invalidation;
     use fret_ui::action::{ActionCx, OnActivate, UiActionHost};
     use fret_ui_kit::ui;
@@ -101,31 +127,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .get_model_cloned(&prompt, Invalidation::Paint)
         .map(|v| !v.trim().is_empty())
         .unwrap_or(false);
-    let prompt_non_empty_marker = prompt_non_empty.then(|| {
-        cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: fret_core::SemanticsRole::Text,
-                test_id: Some(Arc::<str>::from("ui-gallery-ai-chat-prompt-nonempty")),
-                ..Default::default()
-            },
-            |cx| {
-                vec![cx.container(
-                    fret_ui::element::ContainerProps {
-                        layout: fret_ui::element::LayoutStyle {
-                            size: fret_ui::element::SizeStyle {
-                                width: fret_ui::element::Length::Px(Px(0.0)),
-                                height: fret_ui::element::Length::Px(Px(0.0)),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    |_cx| Vec::new(),
-                )]
-            },
-        )
-    });
+    let prompt_non_empty_marker =
+        prompt_non_empty.then(|| state_marker(cx, "ui-gallery-ai-chat-prompt-nonempty"));
 
     let loading_value = cx
         .get_model_copied(&loading, Invalidation::Paint)
@@ -511,8 +514,14 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     let header = ui::v_flex(|cx| {
         vec![
-            cx.text("Goal: interactive demo for PromptInput + transcript append."),
-            cx.text("Send triggers a short \"loading\" window where Stop is available."),
+            decl_text::text_paragraph(
+                cx,
+                "Goal: interactive demo for PromptInput + transcript append.",
+            ),
+            decl_text::text_paragraph(
+                cx,
+                "Send triggers a short \"loading\" window where Stop is available.",
+            ),
             shadcn::Button::new("Start streaming (seeded)")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .size(shadcn::ButtonSize::Sm)
@@ -593,12 +602,17 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .unwrap_or(None);
     let exported = exported_value.map(|len| {
         cx.semantics(
-            fret_ui::element::SemanticsProps {
+            SemanticsProps {
                 role: fret_core::SemanticsRole::Text,
                 test_id: Some(Arc::<str>::from("ui-gallery-ai-chat-exported-md-len")),
                 ..Default::default()
             },
-            move |cx| vec![cx.text(format!("Exported markdown: {len} chars"))],
+            move |cx| {
+                vec![decl_text::text_control_readout(
+                    cx,
+                    format!("Exported markdown: {len} chars"),
+                )]
+            },
         )
     });
 
@@ -607,8 +621,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             header,
             actions_demo,
             chat,
-            prompt_non_empty_marker.unwrap_or_else(|| cx.text("")),
-            exported.unwrap_or_else(|| cx.text("")),
+            prompt_non_empty_marker.unwrap_or_else(|| empty_spacer(cx)),
+            exported.unwrap_or_else(|| empty_spacer(cx)),
         ]
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())

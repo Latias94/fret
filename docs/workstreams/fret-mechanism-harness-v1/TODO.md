@@ -120,7 +120,8 @@ date: 2026-05-12
     the same color scheme, reduced-motion, and text-scale values. The first real run exposed a
     harness script defect rather than a mechanism defect: the script waited for the Motion Presets
     page probe without first navigating to that page. The script now enters the page explicitly and
-    the runtime gate passes.
+    the runtime gate passes. Fresh dev-fast evidence also passes with run id `1779029357027`, and
+    `COVERAGE_MAP.md` now treats this runtime path as covered rather than a current gap.
 - [x] Add a UI Gallery pointer occlusion diagnostics gate once a stable overlay demo exposes test
   ids for underlay and overlay state.
   - Result: `ui-gallery-context-menu-occlusion-wheel-pass-through.json` now asserts the content
@@ -515,6 +516,17 @@ date: 2026-05-12
     instead of the source element's nearest layout viewport root. A view-cache movement companion
     remains only as a future follow-on if a real Gallery surface can move cached overlay sources
     across viewport roots.
+- [x] Add the Resizable view-cache movement companion for cached Combobox source routing.
+  - Result: `ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json` now drives a
+    real UI Gallery surface where a Combobox source root is cached, moved from the left Resizable
+    panel to the right panel, and opened after the move. The first runtime run exposed a
+    mechanism-layer prepaint interaction-cache defect: semantics and paint moved with the cache
+    root, but replayed hit-test records kept their old absolute bounds, so the trigger click hit
+    the panel container and the script timed out waiting for the input. `InteractionCacheEntry`
+    now stores the cache-root origin and replay translates cached interaction records by the
+    origin delta. Focused prepaint, prepaint-family, hit-test/view-cache transform, build, and
+    runtime diagnostics gates all pass. The promoted `ui-gallery-resizable` suite also passes
+    2/2 with both multi-viewport Combobox scripts producing evidence and zero lint warnings.
 - [x] Add a diagnostics script lint/registry audit for long-page content clicks that use plain
   `click` without a nearby `scroll_into_view`, `bounds_within_window`, or `click_stable`
   precondition.
@@ -618,9 +630,14 @@ date: 2026-05-12
     invalidation. No new mechanism defect was reproduced; the slice closed a harness coverage gap.
 - [ ] Add RTL/writing-mode layout primitive cases once the direction/writing-mode contract is
   explicit enough to avoid encoding a recipe policy as a mechanism oracle.
-- [ ] Add a runtime UI Gallery companion for cached model/layout-query dependency mutation only if
+- [x] Add a runtime UI Gallery companion for cached model/layout-query dependency mutation only if
   a real surface exposes a non-synthetic risk; otherwise continue with scroll/click stability or
   retained/component semantics mutation.
+  - Result: closed by the later ViewCache runtime companion slice recorded below and in F148. The
+    real surface was the UI Gallery ViewCache harness page; the focused `ui-gallery-view-cache`
+    suite now proves cached-subtree counter mutation and Popover state through `/view_cache`
+    app-snapshot payloads. The slice found a shadcn Textarea resize-grip semantics defect rather
+    than a ViewCache mechanism defect.
 - [x] Promote the ScrollArea content-growth runtime gate if the focused run proves it is stable.
   - Result: `ui-gallery-scroll-area-expand-at-bottom.json` passed as a focused runtime gate and is
     now part of the promoted `ui-gallery-scroll-area` suite. No new mechanism defect was
@@ -684,6 +701,49 @@ date: 2026-05-12
     case as an intentional collision flip (`preferred_side=bottom`, `chosen_side=top`,
     `flipped=true`) because the current page geometry leaves only ~43px below the trigger. The
     full `ui-gallery-hover-card` suite passes 6/6.
+- [x] Promote the HoverCard suite into strict diagnostics authoring lint.
+  - Result: `ui-gallery-hover-card` now participates in both strict page-entry and long-page
+    click-visibility registry checks. A dry run found zero existing violations after the earlier
+    fixed-frame-clock and sides-placement repairs, so this slice added the reusable lint coverage
+    and focused self-tests rather than changing scripts. The full HoverCard suite still passes 6/6
+    with `scripts_with_evidence=6`, `focus_mismatch_total=0`, and zero lint errors/warnings.
+- [x] Promote the Menubar Placement suite into strict diagnostics authoring lint.
+  - Result: `ui-gallery-menubar-placement` now participates in both strict page-entry and
+    long-page click-visibility registry checks. A dry run found zero existing violations because
+    the three placement scripts already set `FRET_UI_GALLERY_START_PAGE=menubar`, assert
+    `ui-gallery-page-menubar`, and guard content clicks with `scroll_into_view` window
+    containment. Registry self-tests now run 27 tests, and the strict runtime suite still passes
+    3/3 with zero lint errors/warnings.
+  - Follow-up completed below: the DropdownMenu strict promotion adds those visibility guards and
+    locks the suite with registry and runtime evidence.
+- [x] Promote the DropdownMenu suite into strict diagnostics authoring lint.
+  - Result: `ui-gallery-dropdown-menu` now participates in both strict page-entry and long-page
+    click-visibility registry checks. The strict pass fixed the two remaining authoring gaps:
+    `ui-gallery-dropdown-menu-focusable-disabled-keyboard-suppression.json` now scrolls the demo
+    trigger fully into the window before `click_stable`, and
+    `ui-gallery-dropdown-menu-submenu-open-smoke.json` now requires window containment for the
+    submenu trigger scroll step. Registry self-tests now run 30 tests, and the strict runtime
+    suite passes 3/3 with zero lint errors/warnings.
+  - Observation: the first strict suite run hit a `timeout.no_frames` stall in the Basic
+    typeahead script after resize. The same script passed when rerun alone, and the full suite
+    passed on rerun, so this was recorded as a harness/run stability observation rather than a
+    DropdownMenu recipe or mechanism defect.
+- [x] Promote the ContextMenu suite into strict diagnostics authoring lint.
+  - Result: `ui-gallery-context-menu` now participates in both strict page-entry and long-page
+    click-visibility registry checks. The dry run found zero current violations because both
+    corridor scripts already provide an explicit `FRET_UI_GALLERY_START_PAGE=context_menu`
+    default, assert the ContextMenu page root, and guard the submenu trigger before
+    `click_stable`. Registry self-tests now run 33 tests, and the strict runtime suite passes 2/2
+    with `scripts_with_evidence=2`, `focus_mismatch_total=0`, and zero lint errors/warnings.
+- [x] Promote the Button Group suite into strict diagnostics authoring lint.
+  - Result: `ui-gallery-button-group` now participates in both strict page-entry and long-page
+    click-visibility registry checks. The dry run found three authoring violations in the Demo,
+    Accessibility, and Select screenshot scripts: each clicked the Code tab directly after the
+    Preview capture. The first strict runtime attempt then proved the Select Code tab was present
+    but off-window, so the script now scrolls the Select content fully into the Gallery content
+    viewport before the Preview and Code captures. Registry self-tests now run 36 tests, the
+    focused Select script passes, and the strict runtime suite passes 13/13 with zero lint
+    errors/warnings.
 - [x] Promote Menubar submenu placement traces into a focused runtime suite.
   - Result: `ui-gallery-menubar-placement` now gates the existing LTR submenu, RTL wide submenu,
     and RTL tight-left collision scripts as a small durable placement suite. The suite passed 3/3
@@ -748,3 +808,154 @@ date: 2026-05-12
     auto-sized container children, so `measure` and laid-out bounds agree for auto containers with
     finite margins. The new layout primitive fixture locks both the layout bounds and the measured
     max-content size for a margin-bearing child.
+- [x] Add HoverRegion absolute-child measure/layout envelope coverage.
+  - Result: the layout primitive fixture exposed a real mechanism defect where HoverRegion's
+    layout contract needed to include absolute-positioned children in its hover/hit-test envelope,
+    but intrinsic measurement still used the generic passthrough path and collapsed to `0 x 0`.
+    `measure_impl` now gives HoverRegion a dedicated absolute-child envelope path, and the fixture
+    locks final bounds, measured max-content size, and center hit-testing for a left/top inset
+    child.
+- [x] Add HoverRegion fractional-inset absolute-child envelope coverage.
+  - Result: the follow-on layout primitive fixture exposed a second HoverRegion mechanism defect:
+    fractional left/top insets were treated as zero during shrink-wrap envelope sizing, so the
+    wrapper stayed at the child size while final placement pushed the child beyond the wrapper's
+    hover/hit-test bounds. `fret-ui` now shares a conservative absolute-child envelope helper
+    between HoverRegion layout and measurement, including fractional inset solving, and the fixture
+    locks final bounds, measured max-content size, child placement, and near-edge hit-testing.
+- [x] Add HoverRegion right/bottom inset absolute-child envelope coverage.
+  - Result: real surfaces use this path for scrollbar chrome overlays
+    (`ecosystem/fret-ui-shadcn/src/scroll_area.rs` and
+    `ecosystem/fret-code-view/src/code_block.rs`). The new layout primitive fixture locks a
+    right/bottom inset absolute child against HoverRegion final bounds, measured max-content size,
+    child placement, and near-edge hit-testing. It passed with the shared envelope helper, so no
+    additional mechanism defect was reproduced.
+- [x] Promote the retained Table torture surface into a durable runtime diagnostics suite.
+  - Result: `ui-gallery-table-retained` now passes 7/7 across keyboard typeahead, multi-sort,
+    row-pinning with `keep_pinned_rows` true/false, descending sort, sort/select/scroll, and
+    window-boundary scroll. The slice found and fixed a real retained Table pagination /
+    `keep_pinned_rows` defect, plus diagnostics harness defects in no-frame `wait_frames` handling
+    and aggregate debug-history predicate freshness.
+- [x] Promote AI FileTree semantics/action-state runtime coverage and fix auto-height VirtualList
+  measured-leaf dirtying.
+  - Result: `ui-gallery-ai-file-tree` now passes 4/4 across toggle, actions, large-scroll, and
+    screenshot evidence. The runtime suite found a real `fret-ui` mechanism defect where
+    `VirtualList` len/items-revision changes updated rows and semantics but did not dirty the Taffy
+    measured leaf, so parent layout reused a stale auto-height and following doc sections overlapped
+    expanded FileTree rows. VirtualList layout-affecting prop diffs now mark layout dirty, measured
+    leaves can be marked dirty through `LayoutEngine`, and the focused regression locks sibling
+    reflow after auto-height list growth.
+- [x] Promote AI FileTree to strict zero-warning diagnostics lint.
+  - Result: demo-only selection/action state markers are now hidden semantics anchors, scripts
+    assert them with `raw_semantics_hidden_is`, `fret-diag` lint ignores non-focused hidden nodes for
+    visible-bounds/missing-label warnings, and the `ui-gallery-ai-file-tree` suite now enforces
+    `lint_policy.max_warning_issues=0`. The fresh strict suite passes 4/4 with zero lint errors and
+    zero lint warnings.
+- [x] Add grid column/row gap layout and max-content measurement coverage.
+  - Result: `layout_primitives_v1.json` now locks a 2x2 auto grid with independent column and row
+    gaps. The fixture proves final cell positions and `measure_in(MaxContent)` agree on the
+    `58 x 28` grid envelope. The first run found a fixture oracle math mistake rather than a
+    mechanism defect; the corrected layout primitive harness passes.
+- [x] Add flex visual-order plus auto-margin trailing-group coverage.
+  - Result: `flex-order-auto-margin-uses-visual-order` exposed a real `fret-ui` mechanism defect:
+    flex layout and measurement used visual order, but the auto-margin post-processing in
+    `layout_flex_impl_engine` still scanned source-order children. The flex layout path now uses
+    `ordered_flex_children` for tail detection, tail sizing, gap preservation, shift application,
+    and final layout iteration. The layout primitive harness and `cargo fmt -p fret-ui --check`
+    both pass.
+- [x] Add the right-side auto-margin RTL recipe analogue for flex visual-order coverage.
+  - Result: `flex-order-margin-right-auto-uses-visual-order` covers the `mr-auto` variant used by
+    RTL recipe helpers and Gallery surfaces. The fixture passed without a new runtime change,
+    proving the current flex engine plus F166's visual-order post-processing keeps right-side
+    auto-margin behavior aligned with ordered children.
+- [x] Add the vertical `mt-auto` recipe analogue for flex visual-order coverage.
+  - Result: `flex-order-margin-top-auto-uses-visual-order` covers the vertical trailing-group path
+    used by Sheet/Drawer-style footer placement. The fixture passed without a new runtime change,
+    proving the F166 visual-order post-processing path covers ordered vertical flex columns too.
+- [x] Add flex gap layout and max-content measurement coverage.
+  - Result: `flex-gap-measure-matches-layout` locks child placement and `measure_in(MaxContent)`
+    for a horizontal flex row with `gap=8`. The fixture passed without a runtime change, proving
+    flex final layout and intrinsic measurement currently agree on the `58 x 12` gap envelope.
+- [x] Add flex wrap gap layout and definite-width max-content measurement coverage.
+  - Result: `flex-wrap-gap-measure-matches-layout` locks child placement and
+    `measure_in(MaxContent)` for a 68px-wide wrapping row with `gap=8`. The fixture passed without
+    a runtime change, proving final layout and intrinsic measurement agree on the `68 x 34`
+    wrapped gap envelope.
+- [x] Add Pressable absolute-only wrapper envelope layout/measurement coverage.
+  - Result: `pressable-fractional-absolute-child-envelope-matches-layout` exposed a real `fret-ui`
+    mechanism defect: an auto/auto passthrough wrapper with only absolute children was solved by
+    the flow engine as `0 x 0`, even though widget layout and hit-testing could place the child.
+    The flow engine now treats absolute-only auto wrappers as measured leaves, and passthrough
+    measurement contributes the shared absolute-child envelope during final definite probes. The
+    fixture locks wrapper bounds, child placement, placeholder measurement, and near-edge
+    hit-testing for a fractional inset child.
+- [x] Add Pressable mixed flow/absolute wrapper envelope layout/measurement coverage.
+  - Result: `pressable-mixed-flow-absolute-child-envelope-matches-layout` exposed the mixed
+    companion defect: an auto/auto passthrough wrapper with a normal flow child and a fractional
+    absolute child sized itself to the flow child's `20 x 10` envelope while the absolute child
+    required `34 x 12`. The fix extends the shared absolute-child envelope path to mixed wrappers,
+    uses measured-leaf flow sizing for auto wrappers with absolute children, and keeps flow child
+    placement at its measured size while absolute placement uses the union envelope. The fixture
+    locks wrapper bounds, flow child bounds, absolute child bounds, placeholder measurement, and
+    near-edge hit-testing.
+- [x] Add RenderTransform mixed flow/absolute wrapper visual/hit coverage.
+  - Result: `render-transform-mixed-flow-absolute-envelope-matches-visual-hit` moves the mixed
+    Pressable flow/absolute envelope through a `RenderTransform`. The fixture locks the wrapper
+    layout envelope, flow child bounds, absolute child bounds, placeholder measurement, visual/hit
+    translation, and both layout-space miss plus visual-space near-edge absolute-child hit. No new
+    mechanism defect was reproduced; the F171/F172 absolute-envelope fixes already carry through
+    transform visual and hit spaces.
+- [x] Add ViewCache clean-reuse movement coverage for a mixed flow/absolute wrapper.
+  - Result: `view_cache_hit_moving_mixed_absolute_wrapper_updates_bounds_and_hit_test` moves a
+    cached Pressable mixed flow/absolute subtree by inserting a parent spacer while the ViewCache
+    child render closure stays clean. The focused test locks the moved wrapper bounds, moved
+    element visual bounds, moved absolute-child bounds, fallback hit-testing, and runtime routing
+    via `debug_hit_test_routing`. No new mechanism defect was reproduced; the first red assertion
+    was a harness-oracle issue because the old point legitimately hit the expanded outer row, not
+    the moved absolute child.
+- [x] Add FractionalRenderTransform layout/visual/hit contract coverage.
+  - Result: `fractional-render-transform-derives-visual-hit-from-layout-size` now locks
+    size-derived render-transform translation in the layout primitive fixture. A `20 x 20`
+    Pressable wrapped with `FractionalRenderTransform(2.0, 0.5)` keeps layout bounds at
+    `0,0 20 x 20` while visual and hit spaces move by `40 x 10`; the layout-space center misses
+    the target and the translated visual-space center hits it. No new mechanism defect was
+    reproduced.
+- [x] Add MaskLayer paint-only hit-test contract coverage.
+  - Result: `hit_test_routing_v1.json` now covers `MaskLayer` bounds versus hit-testing in both
+    default paint-only and explicit `Overflow::Clip` modes. An escaped child remains targetable
+    outside the mask bounds by default, while the same child is suppressed when the wrapper opts
+    into overflow clipping. No new mechanism defect was reproduced; the first red run exposed a
+    fixture-oracle mistake that tried to prove escaped hit-testing with a width-overflow child
+    whose layout was legitimately constrained to the wrapper width.
+- [x] Add renderer-level font trace predicates to the Combobox long-text gate.
+  - Result: diagnostics could already capture renderer font trace bundles, but scripts could not
+    assert the text-preparation facts directly. The new
+    `render_text_font_trace_entries_matching_ge` predicate lets the LTR Combobox long-text gate
+    prove the selected label is prepared with `font=ui`, `wrap=none`, `overflow=ellipsis`, and
+    `missing_glyphs=0`. The first runtime drafts found a static-page `wait_frames` stall in the
+    script, not a Combobox or renderer defect; the corrected gate uses semantic convergence waits.
+- [x] Add the RTL Combobox renderer font-trace companion.
+  - Result: `ui-gallery-combobox-rtl-long-text-geometry.json` now uses the same renderer trace
+    predicate as the LTR gate, proving the selected RTL long label is prepared with `font=ui`,
+    `wrap=none`, `overflow=ellipsis`, and `missing_glyphs=0` while keeping the existing RTL
+    chevron/checkmark geometry and top-flip placement oracles. No new Combobox or renderer defect
+    was reproduced.
+- [x] Add the Command docs-demo long-query renderer font-trace companion.
+  - Result: `ui-gallery-command-docs-demo-long-query-text.json` now enables renderer font tracing
+    and proves the long search query is prepared with `font=ui`, `wrap=none`, `overflow=clip`, and
+    `missing_glyphs=0`, while retaining TextInput viewport, offset, IME cursor, layout sidecar, and
+    screenshot evidence. No Command recipe or renderer defect was reproduced; the first runtime
+    drafts only exposed that this runner reports effective window heights 20px taller than the
+    requested inner heights, matching the existing requested/effective viewport diagnostics
+    contract.
+- [x] Add the plain Input/File renderer font-trace companion.
+  - Result: `ui-gallery-input-basic-and-file-long-text.json` now starts directly on the Input page,
+    removes navigation/static-frame waits, and proves both the Basic Input value and file-composed
+    Input value are renderer-prepared with `font=ui`, `wrap=none`, `overflow=clip`, and
+    `missing_glyphs=0`. No Input recipe or renderer defect was reproduced.
+- [x] Add the Button Group Input Group renderer font-trace companion.
+  - Result: `ui-gallery-button-group-input-group-long-text.json` now enables renderer tracing,
+    removes static-frame waits, waits on effective-window/page/root predicates, and proves the
+    long grouped-input value is renderer-prepared with `font=ui`, `wrap=none`, `overflow=clip`,
+    and `missing_glyphs=0`. No Button Group recipe or renderer defect was reproduced; the first
+    runtime draft exposed an over-eager script precondition on the direct control's pre-value
+    `0 x 0` semantics bounds, so the precondition now checks the owning group root instead.

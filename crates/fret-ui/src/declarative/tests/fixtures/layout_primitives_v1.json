@@ -308,6 +308,133 @@
       }
     },
     {
+      "id": "pressable-fractional-absolute-child-envelope-matches-layout",
+      "scenario": { "kind": "pressable_fractional_absolute_child_envelope_matches_layout" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "pressable-fractional-absolute" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 27.0, "height": 12.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "pressable-fractional-absolute-child" },
+            "expected": {
+              "origin": { "x": 6.75, "y": 1.2 },
+              "size": { "width": 20.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "pressable_fractional_absolute.layout_width",
+            "comparison": "eq",
+            "value": 27.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "pressable_fractional_absolute.layout_height",
+            "comparison": "eq",
+            "value": 12.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "pressable_fractional_absolute.placeholder_measured_width",
+            "comparison": "eq",
+            "value": 27.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "pressable_fractional_absolute.placeholder_measured_height",
+            "comparison": "eq",
+            "value": 12.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "hit_test_sample",
+            "sample_id": "pressable-fractional-absolute-child-near-edge",
+            "target": { "kind": "test_id", "id": "pressable-fractional-absolute-child" }
+          }
+        ]
+      }
+    },
+    {
+      "id": "pressable-mixed-flow-absolute-child-envelope-matches-layout",
+      "scenario": { "kind": "pressable_mixed_flow_absolute_child_envelope_matches_layout" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "pressable-mixed-absolute" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 34.0, "height": 12.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "pressable-mixed-flow-child" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 20.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "pressable-mixed-absolute-child" },
+            "expected": {
+              "origin": { "x": 8.5, "y": 1.2 },
+              "size": { "width": 25.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "pressable_mixed_absolute.layout_width",
+            "comparison": "eq",
+            "value": 34.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "pressable_mixed_absolute.layout_height",
+            "comparison": "eq",
+            "value": 12.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "pressable_mixed_absolute.placeholder_measured_width",
+            "comparison": "eq",
+            "value": 34.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "pressable_mixed_absolute.placeholder_measured_height",
+            "comparison": "eq",
+            "value": 12.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "hit_test_sample",
+            "sample_id": "pressable-mixed-absolute-child-near-edge",
+            "target": { "kind": "test_id", "id": "pressable-mixed-absolute-child" }
+          }
+        ]
+      }
+    },
+    {
       "id": "auto-container-child-margin-measure-matches-layout",
       "scenario": { "kind": "auto_container_child_margin_measure_matches_layout" },
       "oracle": {
@@ -357,6 +484,183 @@
             "comparison": "eq",
             "value": 17.0,
             "eps": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "hover-region-absolute-child-measure-matches-layout",
+      "scenario": { "kind": "hover_region_absolute_child_measure_matches_layout" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "hover-region-absolute" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 32.0, "height": 18.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "hover-region-absolute-child" },
+            "expected": {
+              "origin": { "x": 12.0, "y": 8.0 },
+              "size": { "width": 20.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "hover_region_absolute.layout_width",
+            "comparison": "eq",
+            "value": 32.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "hover_region_absolute.layout_height",
+            "comparison": "eq",
+            "value": 18.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "hover_region_absolute.measured_width",
+            "comparison": "eq",
+            "value": 32.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "hover_region_absolute.measured_height",
+            "comparison": "eq",
+            "value": 18.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "hit_test_sample",
+            "sample_id": "hover-region-absolute-child-center",
+            "target": { "kind": "test_id", "id": "hover-region-absolute-child" }
+          }
+        ]
+      }
+    },
+    {
+      "id": "hover-region-fractional-inset-envelope-matches-layout",
+      "scenario": { "kind": "hover_region_fractional_inset_envelope_matches_layout" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "hover-region-fractional" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 27.0, "height": 12.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "hover-region-fractional-child" },
+            "expected": {
+              "origin": { "x": 6.75, "y": 1.2 },
+              "size": { "width": 20.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "hover_region_fractional.layout_width",
+            "comparison": "eq",
+            "value": 27.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "hover_region_fractional.layout_height",
+            "comparison": "eq",
+            "value": 12.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "hover_region_fractional.measured_width",
+            "comparison": "eq",
+            "value": 27.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "hover_region_fractional.measured_height",
+            "comparison": "eq",
+            "value": 12.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "hit_test_sample",
+            "sample_id": "hover-region-fractional-child-near-edge",
+            "target": { "kind": "test_id", "id": "hover-region-fractional-child" }
+          }
+        ]
+      }
+    },
+    {
+      "id": "hover-region-right-bottom-inset-envelope-matches-layout",
+      "scenario": { "kind": "hover_region_right_bottom_inset_envelope_matches_layout" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "hover-region-right-bottom" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 24.0, "height": 16.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "hover-region-right-bottom-child" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 20.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "hover_region_right_bottom.layout_width",
+            "comparison": "eq",
+            "value": 24.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "hover_region_right_bottom.layout_height",
+            "comparison": "eq",
+            "value": 16.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "hover_region_right_bottom.measured_width",
+            "comparison": "eq",
+            "value": 24.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "hover_region_right_bottom.measured_height",
+            "comparison": "eq",
+            "value": 16.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "hit_test_sample",
+            "sample_id": "hover-region-right-bottom-child-near-edge",
+            "target": { "kind": "test_id", "id": "hover-region-right-bottom-child" }
           }
         ]
       }
@@ -421,6 +725,44 @@
             "metric": "top",
             "comparison": "eq",
             "value_px": 16.0,
+            "eps_px": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "fixed-container-passes-definite-height-to-fill-flex-intrinsic-measure",
+      "scenario": { "kind": "fixed_container_passes_definite_height_to_fill_flex_intrinsic_measure" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "fixed_container_fill_intrinsic.measured_width",
+            "comparison": "eq",
+            "value": 160.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "fixed_container_fill_intrinsic.measured_height",
+            "comparison": "eq",
+            "value": 36.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "fixed-fill-row" },
+            "metric": "height",
+            "comparison": "eq",
+            "value_px": 30.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "fixed-fill-box" },
+            "metric": "height",
+            "comparison": "eq",
+            "value_px": 30.0,
             "eps_px": 0.01
           }
         ]
@@ -511,6 +853,195 @@
       }
     },
     {
+      "id": "grid-gap-measure-matches-layout",
+      "scenario": { "kind": "grid_gap_measure_matches_layout" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "grid-gap-a" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 20.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "grid-gap-b" },
+            "expected": {
+              "origin": { "x": 28.0, "y": 0.0 },
+              "size": { "width": 30.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "grid-gap-c" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 16.0 },
+              "size": { "width": 20.0, "height": 12.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "grid-gap-d" },
+            "expected": {
+              "origin": { "x": 28.0, "y": 16.0 },
+              "size": { "width": 30.0, "height": 12.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "grid_gap.layout_width",
+            "comparison": "eq",
+            "value": 58.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "grid_gap.layout_height",
+            "comparison": "eq",
+            "value": 28.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "grid_gap.measured_width",
+            "comparison": "eq",
+            "value": 58.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "grid_gap.measured_height",
+            "comparison": "eq",
+            "value": 28.0,
+            "eps": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "flex-gap-measure-matches-layout",
+      "scenario": { "kind": "flex_gap_measure_matches_layout" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "flex-gap-a" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 20.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "flex-gap-b" },
+            "expected": {
+              "origin": { "x": 28.0, "y": 0.0 },
+              "size": { "width": 30.0, "height": 12.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "flex_gap.layout_width",
+            "comparison": "eq",
+            "value": 58.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "flex_gap.layout_height",
+            "comparison": "eq",
+            "value": 12.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "flex_gap.measured_width",
+            "comparison": "eq",
+            "value": 58.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "flex_gap.measured_height",
+            "comparison": "eq",
+            "value": 12.0,
+            "eps": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "flex-wrap-gap-measure-matches-layout",
+      "scenario": { "kind": "flex_wrap_gap_measure_matches_layout" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "flex-wrap-gap-a" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 30.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "flex-wrap-gap-b" },
+            "expected": {
+              "origin": { "x": 38.0, "y": 0.0 },
+              "size": { "width": 30.0, "height": 12.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "flex-wrap-gap-c" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 20.0 },
+              "size": { "width": 20.0, "height": 14.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "flex_wrap_gap.layout_width",
+            "comparison": "eq",
+            "value": 68.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "flex_wrap_gap.layout_height",
+            "comparison": "eq",
+            "value": 34.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "flex_wrap_gap.measured_width",
+            "comparison": "eq",
+            "value": 68.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "flex_wrap_gap.measured_height",
+            "comparison": "eq",
+            "value": 34.0,
+            "eps": 0.01
+          }
+        ]
+      }
+    },
+    {
       "id": "flex-order-affects-layout-position",
       "scenario": { "kind": "flex_order_affects_layout_position" },
       "oracle": {
@@ -568,6 +1099,111 @@
       }
     },
     {
+      "id": "flex-order-auto-margin-uses-visual-order",
+      "scenario": { "kind": "flex_order_auto_margin_uses_visual_order" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "flex-order-auto-margin-b" },
+            "expected": {
+              "origin": { "x": 10.0, "y": 0.0 },
+              "size": { "width": 40.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "flex-order-auto-margin-c" },
+            "expected": {
+              "origin": { "x": 50.0, "y": 0.0 },
+              "size": { "width": 20.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "flex-order-auto-margin-a" },
+            "expected": {
+              "origin": { "x": 70.0, "y": 0.0 },
+              "size": { "width": 30.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "flex-order-margin-right-auto-uses-visual-order",
+      "scenario": { "kind": "flex_order_margin_right_auto_uses_visual_order" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "flex-order-mr-auto-b" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 40.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "flex-order-mr-auto-c" },
+            "expected": {
+              "origin": { "x": 50.0, "y": 0.0 },
+              "size": { "width": 20.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "flex-order-mr-auto-a" },
+            "expected": {
+              "origin": { "x": 70.0, "y": 0.0 },
+              "size": { "width": 30.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "flex-order-margin-top-auto-uses-visual-order",
+      "scenario": { "kind": "flex_order_margin_top_auto_uses_visual_order" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "flex-order-mt-auto-b" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 10.0 },
+              "size": { "width": 10.0, "height": 40.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "flex-order-mt-auto-c" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 50.0 },
+              "size": { "width": 10.0, "height": 20.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "flex-order-mt-auto-a" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 70.0 },
+              "size": { "width": 10.0, "height": 30.0 }
+            },
+            "eps_px": 0.01
+          }
+        ]
+      }
+    },
+    {
       "id": "visual-vs-hit-bounds-follow-render-transform",
       "scenario": { "kind": "visual_vs_hit_bounds_follow_render_transform" },
       "oracle": {
@@ -609,6 +1245,184 @@
             "kind": "hit_test_sample",
             "sample_id": "visual-center",
             "target": { "kind": "test_id", "id": "transformed-pressable" }
+          }
+        ]
+      }
+    },
+    {
+      "id": "fractional-render-transform-derives-visual-hit-from-layout-size",
+      "scenario": { "kind": "fractional_render_transform_derives_visual_hit_from_layout_size" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "fractional-transformed-pressable" },
+            "metric": "left",
+            "comparison": "eq",
+            "value_px": 0.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "fractional-transformed-pressable" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 20.0, "height": 20.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_space_metric_delta",
+            "target": { "kind": "test_id", "id": "fractional-transformed-pressable" },
+            "a_space": "visual",
+            "b_space": "layout",
+            "metric": "left",
+            "comparison": "eq",
+            "value_px": 40.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_space_metric_delta",
+            "target": { "kind": "test_id", "id": "fractional-transformed-pressable" },
+            "a_space": "visual",
+            "b_space": "layout",
+            "metric": "top",
+            "comparison": "eq",
+            "value_px": 10.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_space_metric_delta",
+            "target": { "kind": "test_id", "id": "fractional-transformed-pressable" },
+            "a_space": "hit",
+            "b_space": "layout",
+            "metric": "left",
+            "comparison": "eq",
+            "value_px": 40.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_space_metric_delta",
+            "target": { "kind": "test_id", "id": "fractional-transformed-pressable" },
+            "a_space": "hit",
+            "b_space": "layout",
+            "metric": "top",
+            "comparison": "eq",
+            "value_px": 10.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "hit_test_sample_not",
+            "sample_id": "fractional-transform-layout-center",
+            "target": { "kind": "test_id", "id": "fractional-transformed-pressable" }
+          },
+          {
+            "kind": "hit_test_sample",
+            "sample_id": "fractional-transform-visual-center",
+            "target": { "kind": "test_id", "id": "fractional-transformed-pressable" }
+          }
+        ]
+      }
+    },
+    {
+      "id": "render-transform-mixed-flow-absolute-envelope-matches-visual-hit",
+      "scenario": { "kind": "render_transform_mixed_flow_absolute_envelope_matches_visual_hit" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "transformed-mixed-absolute" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 34.0, "height": 12.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "transformed-mixed-flow-child" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 20.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "transformed-mixed-absolute-child" },
+            "expected": {
+              "origin": { "x": 8.5, "y": 1.2 },
+              "size": { "width": 25.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_space_metric_delta",
+            "target": { "kind": "test_id", "id": "transformed-mixed-absolute" },
+            "a_space": "visual",
+            "b_space": "layout",
+            "metric": "left",
+            "comparison": "eq",
+            "value_px": 40.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_space_metric_delta",
+            "target": { "kind": "test_id", "id": "transformed-mixed-absolute" },
+            "a_space": "hit",
+            "b_space": "layout",
+            "metric": "left",
+            "comparison": "eq",
+            "value_px": 40.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_space_metric_delta",
+            "target": { "kind": "test_id", "id": "transformed-mixed-absolute" },
+            "a_space": "visual",
+            "b_space": "layout",
+            "metric": "width",
+            "comparison": "eq",
+            "value_px": 0.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "render_transform_mixed_absolute.layout_width",
+            "comparison": "eq",
+            "value": 34.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "render_transform_mixed_absolute.layout_height",
+            "comparison": "eq",
+            "value": 12.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "render_transform_mixed_absolute.placeholder_measured_width",
+            "comparison": "eq",
+            "value": 34.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "render_transform_mixed_absolute.placeholder_measured_height",
+            "comparison": "eq",
+            "value": 12.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "hit_test_sample_not",
+            "sample_id": "transformed-mixed-absolute-layout-near-edge",
+            "target": { "kind": "test_id", "id": "transformed-mixed-absolute-child" }
+          },
+          {
+            "kind": "hit_test_sample",
+            "sample_id": "transformed-mixed-absolute-visual-near-edge",
+            "target": { "kind": "test_id", "id": "transformed-mixed-absolute-child" }
           }
         ]
       }

@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 390
+- Dedicated directories: 414
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2295,7 +2295,31 @@ Rule:
 - `docs/workstreams/unified-authoring-builder-v1/` — first 2026-01-20, latest 2026-03-12, 2 markdown docs
 - `docs/workstreams/view-locals-authoring-fearless-refactor-v1/` — first 2026-03-20, latest 2026-03-20, 5 markdown docs
 - `docs/workstreams/webview-wry-v1/` — first 2026-02-11, latest 2026-02-16, 2 markdown docs
+- `docs/workstreams/wgpu-backdrop-effects-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating backdrop effect WGPU conformance tests onto the shared readback/render harness)
+- `docs/workstreams/wgpu-backdrop-warp-v2-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow image-registration-aware follow-on for migrating BackdropWarpV2 WGPU conformance onto the shared readback/render harness)
+- `docs/workstreams/wgpu-clip-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating clip-related WGPU conformance tests onto the shared readback/render harness)
+- `docs/workstreams/wgpu-composite-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating composite-group WGPU conformance tests onto the shared format-aware readback/render harness)
 - `docs/workstreams/wgpu-conformance-harness-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed WGPU conformance test-support extraction lane for shared readback/render helpers)
+- `docs/workstreams/wgpu-custom-effects-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating CustomV1/V2/V3 WGPU conformance tests onto the shared readback/render harness)
+- `docs/workstreams/wgpu-custom-effect-v3-raw-wanted-shape-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for unifying Custom Effect V3 raw-source flag render-plan shape across native and wasm)
+- `docs/workstreams/wgpu-drop-shadow-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating drop-shadow WGPU conformance onto the shared readback/render harness)
+- `docs/workstreams/wgpu-host-topology-smoke-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating host-provided GPU topology smoke readback helpers onto shared support while preserving direct adapter/device/queue setup)
+- `docs/workstreams/wgpu-image-registry-metadata-prune-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for pruning stale retained image color-space metadata from the WGPU image registry while preserving descriptor validation)
+- `docs/workstreams/wgpu-image-sampling-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating image-sampling WGPU conformance readback helpers onto shared support while keeping explicit render-target setup)
+- `docs/workstreams/wgpu-mask-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating mask-related WGPU conformance tests onto the shared readback/render harness)
+- `docs/workstreams/wgpu-materials-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating material-related WGPU conformance tests onto the shared readback/render harness)
+- `docs/workstreams/wgpu-output-srgb-transfer-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating output sRGB transfer WGPU conformance readback helpers onto shared support while preserving explicit output-format setup)
+- `docs/workstreams/wgpu-paint-eval-space-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating paint evaluation-space WGPU conformance tests onto the shared readback/render harness)
+- `docs/workstreams/wgpu-paint-gradient-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating paint-gradient WGPU conformance tests onto the shared readback/render harness)
+- `docs/workstreams/wgpu-path-msaa-composite-vulkan-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating Vulkan path-MSAA composite raw readback onto shared support while preserving local BGRA sampling)
+- `docs/workstreams/wgpu-renderer-dead-code-prune-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for pruning production dead-code residue from fret-render-wgpu while preserving test-only allowances)
+- `docs/workstreams/wgpu-renderer-wasm-guardrail-test-cleanup-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for moving the wasm-only renderer guardrail shader into wasm-only scope and fixing wgpu 29 test API drift)
+- `docs/workstreams/wgpu-standard-effects-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating standard effect/postprocess WGPU conformance tests onto the shared readback/render harness)
+- `docs/workstreams/wgpu-stroke-dash-shadow-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating stroke, dash, and shadow WGPU conformance tests onto the shared readback/render harness)
+- `docs/workstreams/wgpu-text-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating text paint/outline WGPU conformance tests onto the shared readback/render harness)
+- `docs/workstreams/wgpu-text-measure-dead-branch-prune-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for deleting unreachable WGPU text measurement `cfg(any())` implementation copies after shared `TextMeasureCaches` ownership)
+- `docs/workstreams/wgpu-viewport-metadata-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating viewport metadata WGPU conformance final render/readback helpers onto shared support while preserving metadata assertions)
+- `docs/workstreams/wgpu-vulkan-path-msaa-visibility-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating Vulkan path-MSAA visibility WGPU conformance readback helpers onto shared support while preserving env and safety-valve assertions)
 - `docs/workstreams/window-command-availability-snapshot-v2/` — first n/a, latest n/a, 4 markdown docs (active runtime command/action availability publication lane; includes `WORKSTREAM.json`)
 - `docs/workstreams/workstream-catalog-integrity-gate-v1/` — first n/a, latest n/a, 8 markdown docs (closed closeout record for the section-aware gate that keeps workstream directory/file catalog indexes aligned with actual `docs/workstreams` contents and common maintainer gate entrypoints)
 - `docs/workstreams/workspace-crate-boundaries-v1/` — first 2026-02-07, latest 2026-02-16, 3 markdown docs

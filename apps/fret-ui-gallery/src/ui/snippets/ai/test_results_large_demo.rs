@@ -3,11 +3,36 @@ pub const SOURCE: &str = include_str!("test_results_large_demo.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_ui::Invalidation;
+use fret_ui::element::{AnyElement, Length, SemanticsProps, SpacerProps};
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
+
+fn state_marker(cx: &mut AppComponentCx<'_>, test_id: &'static str) -> AnyElement {
+    cx.semantics(
+        SemanticsProps {
+            role: fret_core::SemanticsRole::Generic,
+            test_id: Some(Arc::<str>::from(test_id)),
+            ..Default::default()
+        },
+        |cx| {
+            vec![cx.spacer(SpacerProps {
+                layout: fret_ui::element::LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: Length::Px(fret_core::Px(0.0)),
+                        height: Length::Px(fret_core::Px(0.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                min: fret_core::Px(0.0),
+            })]
+        },
+    )
+}
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let activated = cx.local_model_keyed("activated", || false);
@@ -37,12 +62,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         tests.push(row.into_element(cx));
     }
 
-    let marker = activated_now
-        .then(|| {
-            cx.text("")
-                .test_id("ui-ai-test-results-large-activated-marker")
-        })
-        .unwrap_or_else(|| cx.text(""));
+    let marker =
+        activated_now.then(|| state_marker(cx, "ui-ai-test-results-large-activated-marker"));
 
     let suite = ui_ai::TestSuite::new(
         ui_ai::TestSuiteName::new("Large suite", ui_ai::TestStatusKind::Passed)
@@ -53,16 +74,21 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     .default_open(true)
     .into_element(cx);
 
+    let mut test_results_children = vec![suite];
+    if let Some(marker) = marker {
+        test_results_children.push(marker);
+    }
+
     let root = ui_ai::TestResults::new()
         .summary(ui_ai::TestResultsSummaryData::new(500, 0, 0, 500).duration_ms(888))
-        .children([suite, marker])
+        .children(test_results_children)
         .test_id_root("ui-ai-test-results-large-root")
         .into_element(cx);
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("Test Results Large (AI Elements)"),
-            cx.text("Scroll the page and click a deep row to set a marker."),
+            decl_text::text_section_chrome_label(cx, "Test Results Large (AI Elements)"),
+            decl_text::text_paragraph(cx, "Scroll the page and click a deep row to set a marker."),
             root,
         ]
     })

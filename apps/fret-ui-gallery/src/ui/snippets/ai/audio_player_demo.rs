@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("audio_player_demo.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_ui::Invalidation;
-use fret_ui::element::SemanticsProps;
+use fret_ui::element::{AnyElement, Length, SemanticsProps, SpacerProps};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
@@ -12,6 +12,29 @@ use std::sync::Arc;
 
 fn demo_speech_data() -> ui_ai::AudioPlayerSpeechData {
     ui_ai::AudioPlayerSpeechData::new("ZGVtbw==", "mp3", "audio/mpeg")
+}
+
+fn state_marker(cx: &mut AppComponentCx<'_>, test_id: String) -> AnyElement {
+    cx.semantics(
+        SemanticsProps {
+            role: fret_core::SemanticsRole::Generic,
+            test_id: Some(Arc::<str>::from(test_id)),
+            ..Default::default()
+        },
+        |cx| {
+            vec![cx.spacer(SpacerProps {
+                layout: fret_ui::element::LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: Length::Px(fret_core::Px(0.0)),
+                        height: Length::Px(fret_core::Px(0.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                min: fret_core::Px(0.0),
+            })]
+        },
+    )
 }
 
 fn render_demo_audio_player(
@@ -40,36 +63,11 @@ fn render_demo_audio_player(
         .and_then(|values| values.first().copied())
         .unwrap_or(0.0);
 
-    let playing_marker = playing_now.then(|| {
-        cx.semantics(
-            SemanticsProps {
-                role: fret_core::SemanticsRole::Text,
-                test_id: Some(Arc::<str>::from(format!("{test_prefix}-playing-true"))),
-                ..Default::default()
-            },
-            |cx| vec![cx.text("")],
-        )
-    });
-    let muted_marker = muted_now.then(|| {
-        cx.semantics(
-            SemanticsProps {
-                role: fret_core::SemanticsRole::Text,
-                test_id: Some(Arc::<str>::from(format!("{test_prefix}-muted-true"))),
-                ..Default::default()
-            },
-            |cx| vec![cx.text("")],
-        )
-    });
-    let time_marker = (time_now > 0.0).then(|| {
-        cx.semantics(
-            SemanticsProps {
-                role: fret_core::SemanticsRole::Text,
-                test_id: Some(Arc::<str>::from(format!("{test_prefix}-time-nonzero"))),
-                ..Default::default()
-            },
-            |cx| vec![cx.text("")],
-        )
-    });
+    let playing_marker =
+        playing_now.then(|| state_marker(cx, format!("{test_prefix}-playing-true")));
+    let muted_marker = muted_now.then(|| state_marker(cx, format!("{test_prefix}-muted-true")));
+    let time_marker =
+        (time_now > 0.0).then(|| state_marker(cx, format!("{test_prefix}-time-nonzero")));
 
     let player = ui_ai::AudioPlayer::new()
         .playing_model(playing.clone())

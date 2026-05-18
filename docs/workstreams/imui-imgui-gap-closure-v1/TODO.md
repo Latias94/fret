@@ -186,8 +186,9 @@ Readiness order for the next locally testable review slices:
    2026-05-16 table background/text role follow-up: explicit per-row/per-cell background overrides
    now live in `TableRowOptions::background` / `TableCellOptions::background`, and
    `ImUiTableRow::cell_text(...)` routes through the shared `text_table_cell(...)` helper instead
-   of bare paragraph text. Remaining advanced-table candidates are freeze panes, persistence, and
-   old columns API shape.
+   of bare paragraph text. At that point the still-open advanced-table axes were freeze panes,
+   runtime visibility persistence, and old columns API shape; later follow-ups below narrow or close
+   those axes.
    2026-05-16 table header text follow-up: sortable/plain table header labels now reuse
    `text_table_cell(...)` too, so header text follows the same single-line ellipsis role as body
    cells instead of falling back to default word wrapping.
@@ -204,13 +205,14 @@ Readiness order for the next locally testable review slices:
    provides a narrow stable-id visibility override helper in `fret-ui-kit::imui`. It applies to
    `TableColumn` lists before render and reuses the existing hidden-column path; menu/popup policy
    is covered by the subsequent helpers below, while persistence, freeze panes, and old columns API
-   shape were still separate follow-ons at this point. A `fret-imui` composition test proves the helper drives the
-   existing table render path without moving the state policy into `fret-imui`.
+   shape were still separate follow-ons at that historical point. A `fret-imui` composition test
+   proves the helper drives the existing table render path without moving the state policy into
+   `fret-imui`.
    2026-05-17 table visibility menu-item follow-up: `table_column_visibility_menu_item(...)` now
    provides the checkbox menu-item bridge between `TableColumn` and
    `ImUiTableColumnVisibilityState`. It reuses existing menu item policy; automatic header
    context-menu popup wiring is now covered by the helper below, while persistence, freeze panes,
-   and old columns API shape were still separate follow-ons at this point.
+   and old columns API shape were still separate follow-ons at that historical point.
    2026-05-17 table visibility menu-items group follow-up:
    `table_column_visibility_menu_items(...)` now composes the repeated checkbox menu section for
    stable-id, human-labeled table columns and returns accessor-first per-column responses. It still
@@ -234,13 +236,13 @@ Readiness order for the next locally testable review slices:
    for `ImUiTableColumnVisibilityState`. The snapshot stores only stable column ids plus visible
    flags, round-trips through serde, ignores empty ids on restore, and uses last-entry-wins for
    duplicate ids. Apps/editors still own storage, schema placement, and when to apply the restored
-   state; freeze panes and old columns API shape were still separate follow-ons at this point.
+   state. Later entries below close the freeze-pane seam and old API-shape cleanup.
    2026-05-17 table column pinning follow-up: `TableColumn::pinned_left()` and
    `TableColumn::pinned_right()` now provide the narrow freeze-pane seam for IMUI tables. The
    render path splits visible cells into left/center/right groups and keeps left/right frozen
    outside the shared center horizontal scroll handle. This stays in `fret-ui-kit::imui`, reuses
-   `fret-ui` scroll mechanics, and does not add a table-state runtime to `fret-imui`; old columns
-   API shape was still a separate follow-on at this point.
+   `fret-ui` scroll mechanics, and does not add a table-state runtime to `fret-imui`. The old
+   columns API shape stayed as the separate cleanup closed below.
    2026-05-18 table column API-shape first pass: `TableColumn` now has accessor-first read methods
    for header, stable id, width, visibility, sortability, sort direction, resize options, and pin
    state. The IMUI table render path, visibility helper, `fret-imui` composition tests, and public
@@ -252,6 +254,10 @@ Readiness order for the next locally testable review slices:
    `header_arc(...)`, `id_arc(...)`, and `set_visible_for_policy(...)` seams for render/policy
    internals, and `tools/gate_imui_workstream_source.py` prevents the public field bag from
    returning. This closes the old columns API-shape table follow-on.
+   2026-05-18 table gap current read: visibility snapshot/restore, freeze-pane pinning, and the old
+   `TableColumn` public field-bag shape are no longer current table gaps. Broader storage/schema
+   ownership and any full Dear ImGui-style mutable table runtime remain outside `fret-imui` until a
+   separate proof needs them.
    2026-05-16 control readout text role follow-up: `text_control_readout(...)` now lives beside
    `text_table_cell(...)` in `fret-ui-kit::declarative::text`, and the UI Gallery code-editor
    toolbar readouts route through that shared role instead of carrying app-local text layout policy.
@@ -273,6 +279,11 @@ Readiness order for the next locally testable review slices:
    now route their default body copy through a crate-local `tooltip_body_text(...)` helper backed
    by `text_compact_paragraph(...)`, while rich-content `tooltip(...)` closures still let callers
    choose their own text role.
+   2026-05-18 collection proof text-role follow-up: `imui_editor_proof_demo` collection titles,
+   status/readout lines, asset metadata/path text, context-menu selection summaries, and drop
+   status now route through proof-local helpers backed by shared section-chrome and control-readout
+   roles. The inline rename explanatory copy explicitly uses `text_wrapped(...)`, keeping app-owned
+   collection behavior intact while avoiding fixed-row bare text under resize.
    2026-05-16 trigger label reuse follow-up: IMUI tab triggers and menubar triggers now reuse
    `text_button_label(...)` because they are button-like trigger labels.
    2026-05-16 list row text role follow-up: `text_list_row_label(...)` now owns dense
@@ -463,6 +474,69 @@ Readiness order for the next locally testable review slices:
    2026-05-17 gallery data-table torture text follow-up: the UI Gallery DataTable torture page now
    routes both retained and non-retained fixed cell renderers through `text_table_cell(...)`, and
    table sorting/filter/pinning status lines through `control_readout_text(...)`.
+   2026-05-18 data-table snippet table-cell text follow-up: the app-facing copyable DataTable
+   snippets now share a directory-local `table_cell_text(...)` helper backed by
+   `text_table_cell(...)`. Default/basic/guide/RTL/reusable-component fixed cell text and fallback
+   cells no longer teach bare `cx.text(...)`; amount columns keep their existing tabular numeric
+   formatting until a dedicated numeric-cell role is designed.
+   2026-05-18 AI AudioPlayer state-marker follow-up: copyable AudioPlayer snippets now expose
+   state-only diagnostics anchors through zero-size `SpacerProps` children under generic semantics
+   instead of empty `Text` nodes. This keeps test markers out of visible text layout semantics while
+   preserving stable diagnostics `test_id`s.
+   2026-05-18 AI visible text-role follow-up: Message and Terminal copyable snippets now route
+   fixed titles through `text_section_chrome_label(...)`, explanatory prose through
+   `text_paragraph(...)`, and compact Message action status through `text_control_readout(...)`.
+   The Terminal empty-output marker also uses the same non-text spacer-marker pattern.
+   2026-05-18 AI visible text-role follow-up 2: Artifact, CodeBlock, and Sandbox copyable snippets
+   now use the same role split for fixed demo titles, explanatory prose, and compact status text.
+   CodeBlock's active-language diagnostics marker also moved from an invisible empty text node to a
+   zero-size generic spacer marker.
+   2026-05-18 AI Queue text-role follow-up: the Queue copyable snippet now routes its fixed demo
+   title through `text_section_chrome_label(...)`, explanatory copy through `text_paragraph(...)`,
+   and action-revision diagnostics through a generic zero-size spacer marker instead of empty or
+   invisible text.
+   2026-05-18 AI Checkpoint text-role follow-up: the Checkpoint copyable snippet now uses
+   paragraph text for conversation/prose, control-readout text for restore status, button-label
+   text for the checkpoint trigger, and chrome-glyph text for custom checkpoint icon glyphs.
+   2026-05-18 AI simple chrome text-role follow-up: Agent, CodeBlock usage, Environment Variables,
+   and OpenIn copyable snippets now route fixed demo titles through `text_section_chrome_label(...)`
+   and explanatory body copy through `text_paragraph(...)`.
+   2026-05-18 AI selector/branch marker follow-up: MessageBranch, MicSelector, and ModelSelector
+   snippets now expose state-only diagnostics anchors through generic zero-size spacer markers
+   instead of empty `Text`, while their fixed demo titles/body copy use shared text roles.
+   2026-05-18 AI prompt/plan/commit-large text-role follow-up: CommitLarge now routes its
+   opened-file diagnostics marker through a generic zero-size spacer anchor instead of empty
+   `Text`, and its fixed title/body copy uses shared section-chrome/paragraph roles. Plan,
+   PromptInputActionMenu, and PromptInputTooltip now put their outer demo titles/body copy on the
+   same shared roles while leaving inner plan prose and shadcn/Button composition for a separate
+   semantics pass.
+   2026-05-18 AI large/status snippet text-role follow-up: StackTraceLarge and TestResultsLarge
+   now use generic zero-size spacer markers for opened/activated diagnostics anchors, while
+   StackTraceLarge, TestResultsLarge, Tool, and Suggestions route fixed outer title/body text
+   through shared section-chrome/paragraph roles. Tool's fixed state-section labels also use
+   section-chrome text; Suggestions custom-children content stays app-owned for a later custom
+   content semantics pass.
+   2026-05-18 AI queue-prompt/transcription text-role follow-up: QueuePromptInput now routes its
+   sent-count diagnostics marker through a generic zero-size spacer marker, its custom Search
+   button child through `text_button_label(...)`, and fixed outer title/body copy through shared
+   section-chrome/paragraph roles. Transcription now uses generic zero-size spacer markers for
+   time/active diagnostics anchors while keeping fixed title/body copy on shared roles.
+   2026-05-18 AI WebPreview text-role follow-up: WebPreview state diagnostics now use generic
+   zero-size spacer markers instead of empty `Text`, navigation glyphs use `text_chrome_glyph(...)`,
+   and composable child fixed body/footer copy uses shared section-chrome/paragraph roles.
+   2026-05-18 AI Chat text-role follow-up: Chat's prompt-nonempty diagnostics marker now uses a
+   generic zero-size spacer, empty marker fallbacks use spacers instead of empty `Text`, fixed
+   header instructions use paragraph roles, and exported markdown length uses control-readout text.
+   Chat message body rendering remains app/content-owned for a separate semantics pass.
+   2026-05-18 AI PromptInput provider/docs text-role follow-up: PromptInputProvider now routes its
+   sent-count diagnostics marker through a generic zero-size spacer, its custom external-add label
+   through `text_button_label(...)`, and fixed outer title/body copy through shared roles.
+   PromptInput docs now routes the custom Search label through button-label text and fixed outer
+   title/body copy through section-chrome/paragraph roles.
+   2026-05-18 AI chrome/readout text-role follow-up: Reasoning, StackTrace, and VoiceSelector now
+   route fixed outer title/body copy through shared section-chrome/paragraph roles; StackTrace and
+   VoiceSelector compact status/diagnostics readouts use `text_control_readout(...)` instead of
+   default wrapping text.
    2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
    virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
    `control_readout_text(...)`.
@@ -627,8 +701,10 @@ Readiness order for the next locally testable review slices:
    keyed scrollable child areas, chrome, scroll handles, nested shell panes, and app-owned
    collection behavior. The closed `imui-child-region-resize-y-v1` and
    `imui-child-region-resize-x-v1` follow-ons now cover axis-specific manual resize with
-   app-owned size state; auto-resize, visibility-return, and nav-flattening remain
-   behavior-specific candidates. Do not open a generic `BeginChild()` flag-mirror lane.
+   app-owned size state; the height-unconstrained child-region path now has a focused AutoResizeY
+   composition gate, while visibility-return, nav-flattening, and more specific auto-resize
+   behavior remain behavior-specific candidates. Do not open a generic `BeginChild()` flag-mirror
+   lane.
 8. Multi-window parity: continue in `docking-multiwindow-imgui-parity`.
 9. Performance alignment: keep Dear ImGui-class smoothness pressure in the dedicated perf lanes and
    product-chain perf gates, not in a broad widget/API backlog.

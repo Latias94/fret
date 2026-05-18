@@ -3,10 +3,12 @@ pub const SOURCE: &str = include_str!("queue_demo.rs");
 // region: example
 use super::shared_preview_image_id;
 use fret::{AppComponentCx, UiChild};
-use fret_core::ImageId;
+use fret_core::{ImageId, Px};
 use fret_ui::Invalidation;
+use fret_ui::element::{AnyElement, Length, SemanticsProps, SpacerProps};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
@@ -35,6 +37,43 @@ struct DemoTodo {
 
 fn demo_queue_image_id(cx: &mut AppComponentCx<'_>) -> Option<ImageId> {
     shared_preview_image_id(cx)
+}
+
+fn empty_spacer(cx: &mut AppComponentCx<'_>) -> AnyElement {
+    cx.spacer(SpacerProps {
+        layout: fret_ui::element::LayoutStyle {
+            size: fret_ui::element::SizeStyle {
+                width: Length::Px(Px(0.0)),
+                height: Length::Px(Px(0.0)),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        min: Px(0.0),
+    })
+}
+
+fn state_marker(cx: &mut AppComponentCx<'_>, test_id: &'static str) -> AnyElement {
+    cx.semantics(
+        SemanticsProps {
+            role: fret_core::SemanticsRole::Generic,
+            test_id: Some(Arc::<str>::from(test_id)),
+            ..Default::default()
+        },
+        |cx| {
+            vec![cx.spacer(SpacerProps {
+                layout: fret_ui::element::LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: Length::Px(Px(0.0)),
+                        height: Length::Px(Px(0.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                min: Px(0.0),
+            })]
+        },
+    )
 }
 
 fn default_messages() -> Vec<DemoMessage> {
@@ -138,14 +177,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .get_model_copied(&action_revision, Invalidation::Layout)
         .unwrap_or(0);
 
-    let action_marker = (action_rev > 0)
-        .then(|| {
-            cx.container(fret_ui::element::ContainerProps::default(), |_cx| {
-                Vec::<AnyElement>::new()
-            })
-            .test_id("ui-ai-queue-action-marker")
-        })
-        .unwrap_or_else(|| cx.text(""));
+    let action_marker = if action_rev > 0 {
+        state_marker(cx, "ui-ai-queue-action-marker")
+    } else {
+        empty_spacer(cx)
+    };
 
     let image_id = demo_queue_image_id(cx);
 
@@ -399,8 +435,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("Queue (AI Elements)"),
-            cx.text("Hover an item to reveal actions; actions increment a demo marker."),
+            decl_text::text_section_chrome_label(cx, "Queue (AI Elements)"),
+            decl_text::text_paragraph(
+                cx,
+                "Hover an item to reveal actions; actions increment a demo marker.",
+            ),
             queue,
             action_marker,
         ]

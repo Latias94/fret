@@ -36,11 +36,7 @@ pub struct ImageDescriptor {
 struct ImageEntry {
     view: wgpu::TextureView,
     size: (u32, u32),
-    #[allow(dead_code)]
     format: wgpu::TextureFormat,
-    #[allow(dead_code)]
-    color_space: ImageColorSpace,
-    #[allow(dead_code)]
     alpha_mode: AlphaMode,
 }
 
@@ -71,7 +67,6 @@ impl ImageRegistry {
             view: desc.view,
             size: desc.size,
             format: desc.format,
-            color_space: desc.color_space,
             alpha_mode: desc.alpha_mode,
         })
     }
@@ -88,7 +83,6 @@ impl ImageRegistry {
         entry.view = desc.view;
         entry.size = desc.size;
         entry.format = desc.format;
-        entry.color_space = desc.color_space;
         entry.alpha_mode = desc.alpha_mode;
         true
     }

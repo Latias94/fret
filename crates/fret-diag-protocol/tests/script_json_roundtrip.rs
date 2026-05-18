@@ -225,6 +225,21 @@ fn script_v2_roundtrip_command_palette_shortcut_primary() {
 }
 
 #[test]
+fn script_v2_roundtrip_press_keys() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "press_keys",
+      "keys": ["9", "0", "0", "0"]
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_menubar_active_mnemonic() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-active-mnemonic.json"
@@ -330,9 +345,23 @@ fn script_v2_roundtrip_ui_gallery_input_basic_and_file_long_text() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_button_group_input_group_long_text() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-button-group-input-group-long-text.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_combobox_long_text_geometry() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-combobox-long-text-geometry.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_combobox_rtl_long_text_geometry() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-combobox-rtl-long-text-geometry.json"
     ));
 }
 
@@ -361,6 +390,13 @@ fn script_v2_roundtrip_ui_gallery_command_palette_controlled_selection_arrowdown
 fn script_v2_roundtrip_ui_gallery_command_palette_controlled_selection_value() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-command-palette-controlled-selection-value.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_command_docs_demo_long_query_text() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-command-docs-demo-long-query-text.json"
     ));
 }
 
@@ -473,6 +509,13 @@ fn script_v2_roundtrip_ui_gallery_avatar_dropdown_activate_open_trigger() {
 fn script_v2_roundtrip_ui_gallery_table_retained_multi_sort_shift_click() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-table-retained-multi-sort-shift-click.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_table_retained_keyboard_typeahead() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-table-retained-keyboard-typeahead.json"
     ));
 }
 

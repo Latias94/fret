@@ -6,6 +6,7 @@ use fret_core::Px;
 use fret_ui::Invalidation;
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{Items, LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -105,33 +106,33 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .as_deref()
         .and_then(|id| DEMO_VOICES.iter().copied().find(|voice| voice.id == id));
 
-    let marker = cx
-        .text(format!(
-            "selected={}",
-            selected.as_deref().unwrap_or("<none>")
-        ))
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .role(fret_core::SemanticsRole::Generic)
-                .test_id(if selected.is_some() {
-                    "ui-ai-voice-selector-demo-selected"
-                } else {
-                    "ui-ai-voice-selector-demo-none"
-                }),
-        );
+    let marker = decl_text::text_control_readout(
+        cx,
+        format!("selected={}", selected.as_deref().unwrap_or("<none>")),
+    )
+    .attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Generic)
+            .test_id(if selected.is_some() {
+                "ui-ai-voice-selector-demo-selected"
+            } else {
+                "ui-ai-voice-selector-demo-none"
+            }),
+    );
 
     let open_now = cx
         .get_model_copied(&open, Invalidation::Paint)
         .unwrap_or(false);
-    let open_marker = cx.text(format!("open={open_now}")).attach_semantics(
-        SemanticsDecoration::default()
-            .role(fret_core::SemanticsRole::Generic)
-            .test_id(if open_now {
-                "ui-ai-voice-selector-demo-open-true"
-            } else {
-                "ui-ai-voice-selector-demo-open-false"
-            }),
-    );
+    let open_marker = decl_text::text_control_readout(cx, format!("open={open_now}"))
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Generic)
+                .test_id(if open_now {
+                    "ui-ai-voice-selector-demo-open-true"
+                } else {
+                    "ui-ai-voice-selector-demo-open-false"
+                }),
+        );
 
     let playing_now = cx
         .get_model_cloned(&playing, Invalidation::Paint)
@@ -257,8 +258,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("VoiceSelector (AI Elements)"),
-            cx.text("Composable dialog + command recipe. Apps still own inventory and preview playback state."),
+            decl_text::text_section_chrome_label(cx, "VoiceSelector (AI Elements)"),
+            decl_text::text_paragraph(
+                cx,
+                "Composable dialog + command recipe. Apps still own inventory and preview playback state.",
+            ),
             marker,
             open_marker,
             selector,

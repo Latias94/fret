@@ -3,6 +3,9 @@
   "meta": {
     "name": "ui-gallery-resizable-adaptive-panel-proof",
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_RESIZABLE_ADAPTIVE_PANEL": "1"
+    },
     "tags": [
       "ui_gallery",
       "shadcn",

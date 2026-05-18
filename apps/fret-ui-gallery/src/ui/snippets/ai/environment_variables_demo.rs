@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("environment_variables_demo.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 
@@ -94,8 +95,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("Environment Variables (AI Elements)"),
-            cx.text("Toggle to reveal values; copy uses a clipboard effect."),
+            decl_text::text_section_chrome_label(cx, "Environment Variables (AI Elements)"),
+            decl_text::text_paragraph(cx, "Toggle to reveal values; copy uses a clipboard effect."),
             env,
         ]
     })

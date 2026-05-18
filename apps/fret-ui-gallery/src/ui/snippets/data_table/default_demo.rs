@@ -197,14 +197,14 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 _ => col.id.clone(),
             },
             |cx, col, row| match col.id.as_ref() {
-                "status" => cx.text(row.status.as_ref()),
-                "email" => cx.text(row.customer_email.as_ref()),
+                "status" => super::table_cell_text(cx, row.status.clone()),
+                "email" => super::table_cell_text(cx, row.customer_email.clone()),
                 "amount" => {
                     let amount = Arc::<str>::from(format!("${}.00", row.amount_usd));
                     let amount_text = ui::text(amount).text_sm().tabular_nums().into_element(cx);
                     align_end(amount_text).into_element(cx)
                 }
-                _ => cx.text("?"),
+                _ => super::table_cell_text(cx, "?"),
             },
         )
         .test_id("ui-gallery-data-table-default-root");

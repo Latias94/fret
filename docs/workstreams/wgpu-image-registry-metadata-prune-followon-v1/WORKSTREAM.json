@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "slug": "wgpu-image-registry-metadata-prune-followon-v1",
+  "title": "WGPU Image Registry Metadata Prune Follow-on v1",
+  "status": "closed",
+  "updated": "2026-05-18",
+  "scope_kind": "follow-on",
+  "problem": "ImageRegistry retained per-entry image color-space metadata after registration/update validation had already consumed it. That state had no runtime reader and required dead-code suppressions beside metadata that is actively used by render encoding.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/wgpu-image-registry-metadata-prune-followon-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/wgpu-image-registry-metadata-prune-followon-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/wgpu-image-registry-metadata-prune-followon-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/wgpu-image-registry-metadata-prune-followon-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/wgpu-image-registry-metadata-prune-followon-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/wgpu-image-registry-metadata-prune-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    }
+  ],
+  "repro": {
+    "summary": "Renderer image registry should compile after retaining only runtime-read image metadata.",
+    "commands": [
+      "cargo check -p fret-render-wgpu --locked --tests -j 1"
+    ]
+  },
+  "gates": [
+    {
+      "name": "backend-tests-compile",
+      "command": "cargo check -p fret-render-wgpu --locked --tests -j 1"
+    },
+    {
+      "name": "fmt",
+      "command": "cargo fmt --package fret-render-wgpu"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json",
+      "command": "python -m json.tool docs/workstreams/wgpu-image-registry-metadata-prune-followon-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "crates/fret-render-wgpu/src/images.rs",
+    "docs/workstreams/wgpu-image-registry-metadata-prune-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+  ],
+  "adr_refs": [],
+  "continue_policy": {
+    "default_action": "stay_closed",
+    "notes": "The named metadata prune is complete. Broader image descriptor or alpha/color-space semantics changes should use a separate follow-on."
+  }
+}

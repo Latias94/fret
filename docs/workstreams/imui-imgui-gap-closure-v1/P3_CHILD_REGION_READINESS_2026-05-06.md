@@ -1,12 +1,18 @@
 # P3 Child Region Readiness - 2026-05-06
 
 Status: readiness audit; partially superseded by closed resize follow-ons
-Last updated: 2026-05-16
+Last updated: 2026-05-18
 
 Status note (2026-05-16): this audit remains the child-region gap map, but the manual resize
 targets have since landed in `imui-child-region-resize-y-v1` and
 `imui-child-region-resize-x-v1`. Read older references to "`ResizeY` first" as historical
 sequencing, not current TODO state.
+
+Status note (2026-05-18): a focused `fret-imui` composition gate now proves the Fret-native
+AutoResizeY-equivalent posture: a `child_region` with width but no explicit height auto-sizes to
+its measured content and pushes following siblings down. That evidence does not add an
+`AutoResizeY` flag mirror; explicit fixed-height scroll regions and manual resize remain the
+bounded-scroll paths.
 
 ## Decision
 
@@ -55,6 +61,11 @@ The relevant `repo-ref/imgui` behavior axes are:
   `ResizeY` and `ResizeX` helpers.
   Evidence: `docs/workstreams/imui-child-region-resize-y-v1/CLOSEOUT_AUDIT_2026-05-15.md` and
   `docs/workstreams/imui-child-region-resize-x-v1/CLOSEOUT_AUDIT_2026-05-16.md`.
+- Confident: the Fret-native AutoResizeY-equivalent behavior is already represented by leaving the
+  child-region height unconstrained. Evidence:
+  `child_region_without_height_constraint_auto_sizes_to_content` proves a width-constrained,
+  height-auto child region contains its measured content and pushes the next sibling below it.
+  Keep this as layout evidence, not as a public `AutoResizeY` flag mirror.
 - Unclear: clipping-return semantics need a Fret-native expression. Fret's declarative element
   construction does not naturally match ImGui's "return false but still call EndChild" grammar, so
   this should not be copied without a concrete performance or diagnostics proof.
@@ -66,8 +77,9 @@ The relevant `repo-ref/imgui` behavior axes are:
 Open a narrow child-region follow-on only when one of these targets is named with a runnable repro
 and gate:
 
-1. **Auto-resize child region**: one axis only, with a proof that it does not defeat scroll-region
-   intent or create layout feedback loops.
+1. **Auto-resize child region**: only reopen if a proof needs behavior beyond the current
+   height-unconstrained auto-size layout gate, such as width auto-resize or always-auto-resize
+   feedback-loop control.
 2. **Visibility / clipping budget**: a performance or diagnostics proof where submitting all child
    content is measurably wrong and a Fret-native "visible content gate" can be tested.
 3. **Nav-flattened child region**: a keyboard/focus proof where tab/arrow navigation must cross
@@ -79,8 +91,10 @@ Keep `child-region depth` below `diagnostics/devtools` and `collection helper` u
 editor proof asks for one of the behavior targets above.
 
 Manual resize is already covered by `imui-child-region-resize-y-v1` and
-`imui-child-region-resize-x-v1`. Future work should start with a named auto-resize, visibility
-gate, or nav-flattening follow-on rather than a generic `BeginChild()` parity lane.
+`imui-child-region-resize-x-v1`, and the current height-unconstrained child-region path covers the
+basic AutoResizeY-equivalent layout posture. Future work should start with a named visibility gate,
+nav-flattening follow-on, or a more specific auto-resize behavior than height-auto layout rather
+than a generic `BeginChild()` parity lane.
 
 Suggested first gate:
 
@@ -105,3 +119,10 @@ cargo check -p fret-demo --bin workspace_shell_demo
 
 - `imui-child-region-resize-y-v1` closed with vertical resize policy and app-owned height state.
 - `imui-child-region-resize-x-v1` closed with horizontal resize policy and app-owned width state.
+
+2026-05-18 auto-height composition result:
+
+- `cargo nextest run -p fret-imui child_region_without_height_constraint_auto_sizes_to_content
+  --no-fail-fast` passed. This proves that a child region with explicit width and no explicit height
+  auto-sizes to measured content, keeps the unbounded viewport auto-height, and pushes following
+  siblings below the measured region.

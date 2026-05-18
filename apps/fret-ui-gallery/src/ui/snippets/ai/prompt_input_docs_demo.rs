@@ -11,6 +11,7 @@ use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -271,7 +272,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 let search_btn = ui_ai::PromptInputButton::new("Search")
                     .children([
                         decl_icon::icon(cx, IconId::new("lucide.globe")),
-                        ui::text("Search").into_element(cx),
+                        decl_text::text_button_label(cx, "Search"),
                     ])
                     .tooltip(
                         ui_ai::PromptInputButtonTooltip::new("Search the web")
@@ -366,8 +367,9 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("Prompt Input (AI Elements)"),
-            cx.text(
+            decl_text::text_section_chrome_label(cx, "Prompt Input (AI Elements)"),
+            decl_text::text_paragraph(
+                cx,
                 "Docs-aligned chat example: transcript + prompt composer, add attachments/screenshot actions, model picker, and upstream-like onSubmit(message).",
             ),
             frame,

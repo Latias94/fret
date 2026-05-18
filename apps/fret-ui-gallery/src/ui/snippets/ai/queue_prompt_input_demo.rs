@@ -4,9 +4,10 @@ pub const SOURCE: &str = include_str!("queue_prompt_input_demo.rs");
 use fret::{AppComponentCx, UiChild};
 use fret_ui::Invalidation;
 use fret_ui::Theme;
-use fret_ui::element::AnyElement;
+use fret_ui::element::{AnyElement, Length, SemanticsProps, SpacerProps};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, Corners4, LayoutRefinement, Space};
 use std::sync::Arc;
@@ -75,6 +76,29 @@ fn sample_todos() -> Vec<ui_ai::QueueTodo> {
             .description("Increase test coverage for hooks")
             .status(ui_ai::QueueTodoStatus::Pending),
     ]
+}
+
+fn state_marker(cx: &mut AppComponentCx<'_>, test_id: &'static str) -> AnyElement {
+    cx.semantics(
+        SemanticsProps {
+            role: fret_core::SemanticsRole::Generic,
+            test_id: Some(Arc::<str>::from(test_id)),
+            ..Default::default()
+        },
+        |cx| {
+            vec![cx.spacer(SpacerProps {
+                layout: fret_ui::element::LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: Length::Px(fret_core::Px(0.0)),
+                        height: Length::Px(fret_core::Px(0.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                min: fret_core::Px(0.0),
+            })]
+        },
+    )
 }
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -256,7 +280,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             let search = ui_ai::PromptInputButton::new("Search")
                 .children([
                     decl_icon::icon(cx, fret_icons::IconId::new("lucide.globe")),
-                    ui::text("Search").into_element(cx),
+                    decl_text::text_button_label(cx, "Search"),
                 ])
                 .test_id("ui-ai-queue-prompt-input-search")
                 .into_element(cx);
@@ -406,7 +430,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .get_model_copied(&sent_count, Invalidation::Paint)
         .unwrap_or(0)
         == 1)
-        .then(|| cx.text("").test_id("ui-ai-queue-prompt-input-sent-count-1"));
+        .then(|| state_marker(cx, "ui-ai-queue-prompt-input-sent-count-1"));
 
     let mut stack_children: Vec<AnyElement> = Vec::new();
     stack_children.push(queue);
@@ -417,8 +441,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("Queue + PromptInput (AI Elements)"),
-            cx.text("Docs-aligned composition: content-only QueueSection above PromptInput tools."),
+            decl_text::text_section_chrome_label(cx, "Queue + PromptInput (AI Elements)"),
+            decl_text::text_paragraph(
+                cx,
+                "Docs-aligned composition: content-only QueueSection above PromptInput tools.",
+            ),
             ui::v_flex(move |_cx| stack_children)
                 .layout(
                     LayoutRefinement::default()
