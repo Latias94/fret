@@ -855,3 +855,98 @@ fn ai_prompt_input_provider_and_docs_use_shared_text_roles_and_non_text_markers(
         );
     }
 }
+
+#[test]
+fn ai_reasoning_stack_trace_and_voice_selector_use_shared_chrome_text_roles() {
+    for (name, source, title, body) in [
+        (
+            "reasoning_demo",
+            include_str!("../src/ui/snippets/ai/reasoning_demo.rs"),
+            "Reasoning (AI Elements)",
+            "Start streaming to auto-open; stop to auto-close.",
+        ),
+        (
+            "stack_trace_demo",
+            include_str!("../src/ui/snippets/ai/stack_trace_demo.rs"),
+            "StackTrace (AI Elements)",
+            "Docs-aligned compound parts API with copy + file-open seams.",
+        ),
+        (
+            "voice_selector_demo",
+            include_str!("../src/ui/snippets/ai/voice_selector_demo.rs"),
+            "VoiceSelector (AI Elements)",
+            "Composable dialog + command recipe. Apps still own inventory and preview playback state.",
+        ),
+    ] {
+        let canonical = canonicalize_rust_fragment(source);
+
+        for marker in [
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_section_chrome_label",
+            title,
+            "decl_text::text_paragraph",
+            body,
+        ] {
+            let marker = canonicalize_rust_fragment(marker);
+            assert!(
+                canonical.contains(&marker),
+                "{name} should route fixed title/body text through shared chrome/prose roles; missing `{marker}`"
+            );
+        }
+
+        for forbidden in [
+            format!("cx.text(\"{title}\")"),
+            format!("cx.text(\"{body}\")"),
+        ] {
+            let forbidden = canonicalize_rust_fragment(&forbidden);
+            assert!(
+                !canonical.contains(&forbidden),
+                "{name} reintroduced bare fixed visible text: `{forbidden}`"
+            );
+        }
+    }
+
+    let stack_trace =
+        canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/stack_trace_demo.rs"));
+    for marker in [
+        "decl_text::text_control_readout(cx, format!(\"Status: {status_text}\"))",
+        "test_id(\"ui-ai-stack-trace-status\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            stack_trace.contains(&marker),
+            "stack_trace_demo should keep status text on the shared control-readout role; missing `{marker}`"
+        );
+    }
+    let forbidden = canonicalize_rust_fragment("cx.text(format!(\"Status: {status_text}\"))");
+    assert!(
+        !stack_trace.contains(&forbidden),
+        "stack_trace_demo reintroduced bare status readout text: `{forbidden}`"
+    );
+
+    let voice_selector =
+        canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/voice_selector_demo.rs"));
+    for marker in [
+        "decl_text::text_control_readout",
+        "selected.as_deref().unwrap_or(\"<none>\")",
+        "decl_text::text_control_readout(cx, format!(\"open={open_now}\"))",
+        "ui-ai-voice-selector-demo-selected",
+        "ui-ai-voice-selector-demo-open-true",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            voice_selector.contains(&marker),
+            "voice_selector_demo should keep diagnostics readouts on the shared control-readout role; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(format!(\"selected={}\", selected.as_deref().unwrap_or(\"<none>\")))",
+        "cx.text(format!(\"open={open_now}\"))",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !voice_selector.contains(&forbidden),
+            "voice_selector_demo reintroduced bare diagnostics readout text: `{forbidden}`"
+        );
+    }
+}

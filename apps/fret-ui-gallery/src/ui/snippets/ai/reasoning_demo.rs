@@ -5,6 +5,7 @@ use fret::app::AppRenderActionsExt as _;
 use fret::{AppComponentCx, UiChild};
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -65,8 +66,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("Reasoning (AI Elements)"),
-            cx.text("Start streaming to auto-open; stop to auto-close."),
+            decl_text::text_section_chrome_label(cx, "Reasoning (AI Elements)"),
+            decl_text::text_paragraph(cx, "Start streaming to auto-open; stop to auto-close."),
             controls,
             reasoning,
         ]

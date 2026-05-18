@@ -533,6 +533,10 @@ Readiness order for the next locally testable review slices:
    through `text_button_label(...)`, and fixed outer title/body copy through shared roles.
    PromptInput docs now routes the custom Search label through button-label text and fixed outer
    title/body copy through section-chrome/paragraph roles.
+   2026-05-18 AI chrome/readout text-role follow-up: Reasoning, StackTrace, and VoiceSelector now
+   route fixed outer title/body copy through shared section-chrome/paragraph roles; StackTrace and
+   VoiceSelector compact status/diagnostics readouts use `text_control_readout(...)` instead of
+   default wrapping text.
    2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
    virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
    `control_readout_text(...)`.
