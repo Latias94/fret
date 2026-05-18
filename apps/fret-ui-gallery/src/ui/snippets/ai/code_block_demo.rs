@@ -3,12 +3,37 @@ pub const SOURCE: &str = include_str!("code_block_demo.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_icons_lucide::generated_ids::lucide::FILE_CODE;
+use fret_ui::element::{AnyElement, Length, SemanticsProps, SpacerProps};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
+
+fn state_marker(cx: &mut AppComponentCx<'_>, test_id: String) -> AnyElement {
+    cx.semantics(
+        SemanticsProps {
+            role: fret_core::SemanticsRole::Generic,
+            test_id: Some(Arc::<str>::from(test_id)),
+            ..Default::default()
+        },
+        |cx| {
+            vec![cx.spacer(SpacerProps {
+                layout: fret_ui::element::LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: Length::Px(Px(0.0)),
+                        height: Length::Px(Px(0.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                min: Px(0.0),
+            })]
+        },
+    )
+}
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let theme = Theme::global(&*cx.app).clone();
@@ -108,12 +133,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         });
 
     let language_marker = ui::v_flex(move |cx| {
-        vec![cx.opacity(0.0, |cx| {
-            vec![
-                cx.text("")
-                    .test_id(format!("ui-ai-code-block-language-active-{language_value}")),
-            ]
-        })]
+        vec![state_marker(
+            cx,
+            format!("ui-ai-code-block-language-active-{language_value}"),
+        )]
     })
     .layout(
         LayoutRefinement::default()
@@ -125,8 +148,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(|cx| {
         vec![
-            cx.text("CodeBlock (AI Elements)"),
-            cx.text("Composable header/title/actions composition aligned with the official AI Elements language-selector example."),
+            decl_text::text_section_chrome_label(cx, "CodeBlock (AI Elements)"),
+            decl_text::text_paragraph(
+                cx,
+                "Composable header/title/actions composition aligned with the official AI Elements language-selector example.",
+            ),
             code_block,
             language_marker,
         ]

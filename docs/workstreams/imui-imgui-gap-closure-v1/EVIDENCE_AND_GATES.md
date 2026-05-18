@@ -610,6 +610,16 @@ Run evidence:
   non-text spacer-marker pattern for its empty-output diagnostics marker. Gates: `cargo nextest run
   -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` and
   `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: extended the same visible text-role migration to AI Artifact, CodeBlock, and Sandbox
+  snippets. Fixed demo titles and panel labels now use section-chrome text, explanatory copy uses
+  paragraph text, Artifact's closed state uses a compact control readout, and CodeBlock's
+  active-language diagnostics marker now uses a zero-size generic spacer marker rather than an
+  invisible empty `Text`. Gates: `cargo nextest run -p fret-ui-gallery --test
+  ai_visible_text_role_surface --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
+  --no-fail-fast` passed after the Artifact/CodeBlock/Sandbox slice landed. `python
+  tools/gate_imui_workstream_source.py`, `python -m json.tool
+  docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json`, and `git diff --check` also passed.
 - 2026-05-17: migrated `imui_editor_proof_demo` drag-preview cards away from a newline-joined bare
   text blob. Preview titles now use `text_section_chrome_label(...)`, optional subtitles use
   `text_control_readout(...)`, and `proof_drag_preview_card_uses_single_line_text_roles` locks the

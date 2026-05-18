@@ -4,6 +4,7 @@ pub const SOURCE: &str = include_str!("artifact_demo.rs");
 use fret::app::AppRenderActionsExt as _;
 use fret::{AppComponentCx, UiChild};
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -64,21 +65,22 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
         ui_ai::Artifact::new([
             ui_ai::ArtifactHeader::new([header_text, header_actions]).into_element(cx),
-            ui_ai::ArtifactContent::new([
-                cx.text("Artifacts are chrome-only: apps own rendering, export, and lifecycle.")
-            ])
+            ui_ai::ArtifactContent::new([decl_text::text_paragraph(
+                cx,
+                "Artifacts are chrome-only: apps own rendering, export, and lifecycle.",
+            )])
             .into_element(cx),
         ])
         .test_id_root("ui-ai-artifact-root")
         .into_element(cx)
     } else {
-        cx.text("Artifact closed.")
+        decl_text::text_control_readout(cx, "Artifact closed.")
     };
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("Artifact (AI Elements)"),
-            cx.text("Close hides the artifact; reset re-mounts it."),
+            decl_text::text_section_chrome_label(cx, "Artifact (AI Elements)"),
+            decl_text::text_paragraph(cx, "Close hides the artifact; reset re-mounts it."),
             reset,
             artifact,
         ]

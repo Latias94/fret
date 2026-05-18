@@ -487,6 +487,10 @@ Readiness order for the next locally testable review slices:
    fixed titles through `text_section_chrome_label(...)`, explanatory prose through
    `text_paragraph(...)`, and compact Message action status through `text_control_readout(...)`.
    The Terminal empty-output marker also uses the same non-text spacer-marker pattern.
+   2026-05-18 AI visible text-role follow-up 2: Artifact, CodeBlock, and Sandbox copyable snippets
+   now use the same role split for fixed demo titles, explanatory prose, and compact status text.
+   CodeBlock's active-language diagnostics marker also moved from an invisible empty text node to a
+   zero-size generic spacer marker.
    2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
    virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
    `control_readout_text(...)`.
