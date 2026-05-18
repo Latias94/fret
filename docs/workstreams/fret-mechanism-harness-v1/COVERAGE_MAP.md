@@ -144,6 +144,12 @@ date: 2026-05-12
   removes Item's misuse of shortcut `key_context` for recipe slot detection. The source-hygiene
   gate `tools/check_shadcn_internal_slots.py` now prevents `fret-ui-shadcn.*` marker strings from
   flowing back into `test_id`, `attach_test_id`, or `key_context`.
+- Retained DataTable selected-state update:
+  `ui-gallery-data-table-retained-sort-select-scroll.json` now proves the real retained DataTable
+  sort/select/scroll path updates row 0 from `selected=false` to `selected=true` after click and
+  keeps the stable post-scroll row `ui-gallery-data-table-row-10015` `selected=false`. Runtime
+  evidence is anchored at
+  `target/fret-diag-data-table-retained-selected-sort-select-scroll-current/sessions/1779122417901-101808/1779122449287/ai.packet`.
 
 A mechanism invariant is covered only when it has at least one of these:
 

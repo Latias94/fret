@@ -1034,3 +1034,10 @@ date: 2026-05-12
     gate/opacity/scrollbar stay on the `10px` right track, and the retained Table
     sort/select/scroll runtime gate now passes through selected-state and retained-window movement
     assertions.
+- [x] Add retained DataTable sort/select/scroll selected-state runtime companion.
+  - Result: `ui-gallery-data-table-retained-sort-select-scroll.json` now asserts row 0 starts
+    `selected=false`, becomes `selected=true` after the row click, and that the stable post-scroll
+    visible row `ui-gallery-data-table-row-10015` remains `selected=false`. The script runs against
+    the real UI Gallery DataTable torture page with `FRET_UI_GALLERY_DATA_TABLE_RETAINED=1`, passes
+    with zero tooling warnings, and keeps the selected-state proof in diagnostics rather than only
+    in retained Table-focused unit coverage.

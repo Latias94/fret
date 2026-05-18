@@ -4240,3 +4240,44 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - result: passed.
   `git diff --check`
   - result: passed.
+
+## Retained DataTable Selected-State Runtime Gate
+
+- invariant:
+  retained DataTable row selection must refresh `SemanticsNode.flags.selected` on the clicked row,
+  and retained/window movement must not leak selected state into newly visible rows.
+- finding:
+  no new mechanism or recipe defect was reproduced. The retained DataTable torture page already
+  keeps row-selection semantics fresh across the sort/select/scroll path after the retained Table
+  scrollbar hit-region fix. This slice converts that risk into a durable diagnostics oracle.
+- implementation anchors:
+  `ecosystem/fret-ui-kit/src/declarative/table.rs`,
+  `apps/fret-ui-gallery/src/ui/previews/gallery/data/table_torture.rs`,
+  `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-sort-select-scroll.json`,
+  `tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- JSON validation:
+  `python -m json.tool tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-retained-sort-select-scroll.json > $null`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_data_table_retained_sort_select_scroll --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `a23c2c5e-e7a7-499b-b2c3-62b73ed5ffd8`.
+- registry:
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed; registry is up to date.
+- runtime diagnostics:
+  `$env:FRET_UI_GALLERY_DATA_TABLE_RETAINED='1'; target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-retained-sort-select-scroll.json --dir target\fret-diag-data-table-retained-selected-sort-select-scroll-current --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev`
+  - result: passed; run id `1779122449287`; `tooling.warnings.json` is empty.
+  - selected-state proof:
+    script step 23 asserts `ui-gallery-data-table-row-0 selected=false`, step 27 asserts
+    `ui-gallery-data-table-row-0 selected=true`, and step 48 asserts
+    `ui-gallery-data-table-row-10015 selected=false`.
+  - artifacts:
+    `target/fret-diag-data-table-retained-selected-sort-select-scroll-current/sessions/1779122417901-101808/1779122449287/ai.packet`
+    and
+    `target/fret-diag-data-table-retained-selected-sort-select-scroll-current/sessions/1779122417901-101808/share/1779122449287.zip`.
+- formatting/static checks:
+  `cargo fmt -p fret-diag-protocol --check`
+  - result: passed.
+  `git diff --check`
+  - result: passed; only Git's line-ending notice for `WORKSTREAM.json` was printed.

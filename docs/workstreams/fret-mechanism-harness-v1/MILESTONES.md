@@ -1958,3 +1958,20 @@ Status: complete for the retained Table sort/select/scroll row-click hit-region 
 - Runtime diagnostics pass:
   `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\table\ui-gallery-table-retained-sort-select-scroll.json --dir target\fret-diag-table-retained-selected-sort-select-scroll-after-absolute-size-fix-current --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness`
   with run id `1779121343180`.
+
+## M110: Retained DataTable Selected-State Runtime Companion
+
+Status: complete for the retained DataTable sort/select/scroll selected-state diagnostics companion.
+
+- Extended `ui-gallery-data-table-retained-sort-select-scroll.json` with `selected_is` assertions on
+  the real DataTable torture retained path.
+- The runtime proof covers row 0 `selected=false` before the click, row 0 `selected=true` after the
+  click, and post-scroll row `ui-gallery-data-table-row-10015` `selected=false`.
+- Added `script_v2_roundtrip_ui_gallery_data_table_retained_sort_select_scroll` so the redirect
+  script and new selected predicates are covered by protocol roundtrip.
+- The protocol gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_data_table_retained_sort_select_scroll --no-fail-fast --no-capture`
+  with Nextest run id `a23c2c5e-e7a7-499b-b2c3-62b73ed5ffd8`.
+- Runtime diagnostics pass:
+  `$env:FRET_UI_GALLERY_DATA_TABLE_RETAINED='1'; target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-retained-sort-select-scroll.json --dir target\fret-diag-data-table-retained-selected-sort-select-scroll-current --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev`
+  with run id `1779122449287`.

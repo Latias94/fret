@@ -576,6 +576,13 @@ fn script_v2_roundtrip_ui_gallery_data_table_retained_column_actions_menu() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_data_table_retained_sort_select_scroll() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_data_table_listlike_pointer_selection() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-data-table-listlike-pointer-selection.json"
