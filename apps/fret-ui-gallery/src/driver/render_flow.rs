@@ -999,6 +999,37 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "gallery-dev")]
+    #[test]
+    fn table_retained_torture_direct_start_header_bounds_converge() {
+        run_with_large_test_stack(
+            "table-retained-torture-direct-start-header-bounds",
+            || {
+                let _page_size =
+                    EnvVarGuard::set("FRET_UI_GALLERY_TABLE_RETAINED_PAGE_SIZE", "256");
+                let mut rendered =
+                    render_gallery_page_with_bootstrapped_app(PAGE_TABLE_RETAINED_TORTURE);
+                wait_until_test_id_exists(&mut rendered, "ui-gallery-table-retained-header-row", 4);
+
+                let mut header_bounds =
+                    visual_bounds_by_test_id(&rendered, "ui-gallery-table-retained-header-row");
+                for _ in 0..4 {
+                    if header_bounds.size.width.0 > 0.0 && header_bounds.size.height.0 > 0.0 {
+                        return;
+                    }
+                    render_gallery_frame(&mut rendered);
+                    header_bounds =
+                        visual_bounds_by_test_id(&rendered, "ui-gallery-table-retained-header-row");
+                }
+
+                assert!(
+                    header_bounds.size.width.0 > 0.0 && header_bounds.size.height.0 > 0.0,
+                    "expected retained Table direct-start header row to converge to non-zero bounds, got {header_bounds:?}"
+                );
+            }
+        );
+    }
+
     #[test]
     fn begin_frame_mirrors_workspace_layout_commands_before_rebuilding_from_models() {
         let mut rendered = render_gallery_page(PAGE_INTRO);

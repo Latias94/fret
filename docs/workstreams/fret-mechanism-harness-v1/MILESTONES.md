@@ -1905,3 +1905,28 @@ are authored but blocked by an existing launch/layout convergence precondition.
   `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_table_retained_sort_select_scroll script_v2_roundtrip_ui_gallery_table_retained_window_boundary_scroll --no-fail-fast`
   with Nextest run id `c6dd9233-dda9-48fd-8fde-c510fc6d9ac1`, and
   `python tools\check_diag_scripts_registry.py`.
+
+## M108: Retained Table Header Bounds Flex Snapshot Fix
+
+Status: complete for the retained Table direct-start header-row bounds convergence defect.
+
+- Fixed a `fret-ui` flex mechanism defect in `layout_flex_impl_engine`: recursive child layout could
+  invalidate later sibling solved rects while the same final layout pass still needed those rects.
+- The flex path now snapshots ordered child rects before recursive child layout and uses that
+  snapshot for auto-margin tail computation, gap preservation, shifts, and final child layout.
+- Added `table_retained_torture_direct_start_header_bounds_converge` in the Gallery driver tests to
+  lock the direct-start retained Table header row at non-zero bounds.
+- Removed temporary debug probes and Gallery-side layout workarounds; the fix lives in the mechanism
+  layer.
+- Focused gates pass:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --features gallery-dev table_retained_torture_direct_start_header_bounds_converge --no-fail-fast --no-capture`
+  with Nextest run id `e84b549f-2b87-4faa-afb2-969c294ae01e`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+  with Nextest run id `faa8f32d-8f3e-4831-aa95-00e1861f831b`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_selected_semantics_follow_windowed_row_selection --no-fail-fast --no-capture`
+  with Nextest run id `9951e6c7-722f-4713-be3f-797dd2d01a6e`; and
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_table_retained_sort_select_scroll script_v2_roundtrip_ui_gallery_table_retained_window_boundary_scroll --no-fail-fast`
+  with Nextest run id `f8df7c84-6a3e-4dde-bbbe-0c0e31546407`.
+- Runtime diagnostics now pass the previous header-row bounds precondition and fail later at the row
+  selected-state assertion because the row click hit-tests the enclosing `scroll_bar`; that is the
+  next isolated follow-up, not part of this flex fix.

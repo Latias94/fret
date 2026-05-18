@@ -4160,3 +4160,43 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
 - formatting:
   `cargo fmt -p fret-ui --check`
   - result: passed.
+
+## Retained Table Header Bounds Flex Snapshot Gate
+
+- invariant:
+  flex final layout must use a stable ordered child-rect snapshot while recursively laying out
+  children. Recursive layout of an earlier child must not make later siblings appear unsolved to the
+  same final flex pass.
+- finding:
+  the retained Table direct-start Gallery path exposed a real `fret-ui` mechanism defect. The
+  retained Table subtree existed, but its header row stayed at `0,0 0x0` because
+  `layout_flex_impl_engine` re-queried live sibling rects after recursive child layout invalidated
+  later solved stamps. The fix snapshots child rects before recursion and uses the snapshot for
+  auto-margin tail sizing, gap preservation, shift application, and final child layout.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/host_widget/layout/flex.rs` and
+  `apps/fret-ui-gallery/src/driver/render_flow.rs`.
+- focused retained Table bounds gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --features gallery-dev table_retained_torture_direct_start_header_bounds_converge --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `e84b549f-2b87-4faa-afb2-969c294ae01e`.
+- layout companion gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `faa8f32d-8f3e-4831-aa95-00e1861f831b`.
+- retained Table selected semantics companion:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_selected_semantics_follow_windowed_row_selection --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `9951e6c7-722f-4713-be3f-797dd2d01a6e`.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_table_retained_sort_select_scroll script_v2_roundtrip_ui_gallery_table_retained_window_boundary_scroll --no-fail-fast`
+  - result: passed; Nextest run id `f8df7c84-6a3e-4dde-bbbe-0c0e31546407`.
+- registry:
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed.
+- runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\table\ui-gallery-table-retained-sort-select-scroll.json --dir target\fret-diag-table-retained-selected-sort-select-scroll-after-flex-snapshot --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness`
+  - result: failed later at step 12 `selected_is true`, after the previous header-row
+    `bounds_within_window` precondition passed.
+  - artifact:
+    `target/fret-diag-table-retained-selected-sort-select-scroll-after-flex-snapshot/sessions/1779113354850-74192/script.result.json`.
+  - follow-up:
+    click step 10 intended `ui-gallery-table-retained-row-0`, but hit-tested the enclosing
+    `scroll_bar` node. Split that as a hit-test/routing or diagnostics click-targeting slice.

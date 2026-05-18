@@ -1016,3 +1016,12 @@ date: 2026-05-12
     runtime companion script now has `selected_is` assertions, but the fresh focused runtime rerun
     timed out before those assertions because the existing header-row bounds precondition stayed at
     `0,0 0x0`; treat that as a runtime convergence follow-up, not a selected semantics defect.
+- [x] Fix retained Table direct-start header-row bounds convergence.
+  - Result: the retained Table runtime precondition from F190 was a real `fret-ui` flex layout
+    defect. `layout_flex_impl_engine` queried sibling solved rects live while recursively laying
+    out earlier children; that recursion could invalidate later sibling solved stamps, so the
+    retained Table subtree skipped final layout and collapsed to `0 x 0`. The flex path now
+    snapshots ordered child rects before recursive child layout, and the direct-start Gallery
+    retained Table regression test proves the header row converges to non-zero bounds. The runtime
+    diagnostics script now reaches the selected-state click path, where a separate follow-up remains:
+    clicking row 0 currently hit-tests the enclosing scroll bar instead of the row.
