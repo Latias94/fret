@@ -5563,6 +5563,18 @@ fn tooltip_usage_snippet_keeps_a_standalone_provider_wrapped_example() {
 }
 
 #[test]
+fn tooltip_keyboard_shortcut_text_uses_shared_role() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/tooltip/keyboard_shortcut.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_control_readout(cx, \"Save Changes\")",
+        ],
+        &["cx.text(\"Save Changes\")"],
+    );
+}
+
+#[test]
 fn progress_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/progress.rs",

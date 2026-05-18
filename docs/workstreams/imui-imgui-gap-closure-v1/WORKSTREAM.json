@@ -626,6 +626,7 @@
     "apps/fret-ui-gallery/src/ui/snippets/hover_card/trigger_delays.rs",
     "apps/fret-ui-gallery/src/ui/snippets/hover_card/usage.rs",
     "apps/fret-ui-gallery/src/ui/snippets/popover/align.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/tooltip/keyboard_shortcut.rs",
     "apps/fret-ui-gallery/src/ui/previews/gallery/data/data_grid.rs",
     "apps/fret-ui-gallery/src/ui/previews/gallery/data/table_torture.rs",
     "apps/fret-ui-gallery/src/ui/previews/gallery/data/tree_torture.rs",

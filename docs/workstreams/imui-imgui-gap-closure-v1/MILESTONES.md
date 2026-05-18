@@ -637,6 +637,8 @@ Exit criteria:
   raw/default text builders.
   2026-05-18 gallery Popover align text result: the align preview body labels now use paragraph
   text instead of bare `cx.text(...)`.
+  2026-05-18 gallery Tooltip keyboard shortcut text result: the custom shortcut tooltip label now
+  uses control-readout text instead of bare `cx.text(...)`.
   2026-05-17 gallery editor preview text result: code-editor, Markdown, and Web IME preview
   headers now use paragraph text for prose, control readout text for fixed status/debug values,
   and button label text for custom pointer-region actions. The slice keeps editor-proof resize

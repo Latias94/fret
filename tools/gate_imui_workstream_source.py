@@ -3448,6 +3448,16 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/tooltip/keyboard_shortcut.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, \"Save Changes\")",
+            ],
+            forbidden=[
+                "cx.text(\"Save Changes\")",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/toggle/label.rs"),
             required=[
                 "decl_text::text_control_readout(cx, format!(\"Pressed: {pressed_now}\"))",
@@ -3527,6 +3537,7 @@ def main() -> None:
                 "fn alert_dialog_snippet_custom_text_uses_shared_roles()",
                 "fn hover_card_snippet_text_uses_shared_roles()",
                 "fn popover_align_snippet_text_uses_shared_roles()",
+                "fn tooltip_keyboard_shortcut_text_uses_shared_role()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",
             ],

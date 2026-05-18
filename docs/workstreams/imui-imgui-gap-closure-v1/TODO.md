@@ -688,6 +688,9 @@ Readiness order for the next locally testable review slices:
    2026-05-18 gallery Popover align text follow-up: the fixed align preview body labels now route
    through shared paragraph text instead of `cx.text(...)`, keeping the overlay content examples on
    the same resize-aware text-role vocabulary.
+   2026-05-18 gallery Tooltip keyboard shortcut text follow-up: the custom keyboard-shortcut
+   tooltip label now routes through shared control-readout text instead of bare `cx.text(...)`,
+   while built-in `TooltipContent::text(...)` recipe paths stay recipe-owned.
    2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
    headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
    through `control_readout_text(...)`, and custom pointer-region labels through

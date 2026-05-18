@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("keyboard_shortcut.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::time::Duration;
 
@@ -23,7 +24,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             let keyboard_content = shadcn::TooltipContent::build(cx, |_cx| {
                 [ui::h_row(|cx| {
                     vec![
-                        cx.text("Save Changes"),
+                        decl_text::text_control_readout(cx, "Save Changes"),
                         shadcn::Kbd::new("S").into_element(cx),
                     ]
                 })
