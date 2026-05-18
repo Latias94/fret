@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 397
+- Dedicated directories: 398
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2296,6 +2296,7 @@ Rule:
 - `docs/workstreams/wgpu-clip-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating clip-related WGPU conformance tests onto the shared readback/render harness)
 - `docs/workstreams/wgpu-composite-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating composite-group WGPU conformance tests onto the shared format-aware readback/render harness)
 - `docs/workstreams/wgpu-conformance-harness-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed WGPU conformance test-support extraction lane for shared readback/render helpers)
+- `docs/workstreams/wgpu-drop-shadow-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating drop-shadow WGPU conformance onto the shared readback/render harness)
 - `docs/workstreams/wgpu-mask-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating mask-related WGPU conformance tests onto the shared readback/render harness)
 - `docs/workstreams/wgpu-materials-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating material-related WGPU conformance tests onto the shared readback/render harness)
 - `docs/workstreams/wgpu-paint-eval-space-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating paint evaluation-space WGPU conformance tests onto the shared readback/render harness)
