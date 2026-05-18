@@ -89,7 +89,8 @@ public helper widening:
      override targets, a narrow runtime hideable-column helper, caller-owned visibility
      snapshot/restore, default header visibility-menu wiring, and column pinning/freeze-pane seam
      already have proof.
-   - Old columns API shape should stay a narrow follow-on.
+   - The old public `TableColumn` field-bag API shape is closed; do not reopen it as a follow-on
+     unless a new public construction failure appears.
 5. **Child-region flag mirrors beyond manual resize**
    - `ResizeY` and `ResizeX` now have closed proof lanes.
    - Basic AutoResizeY-equivalent layout is covered by the height-unconstrained child-region
@@ -147,7 +148,6 @@ Suggested follow-on names:
 
 - `imui-list-box-proof-v1`
 - `imui-plot-adapter-proof-v1`
-- `imui-table-column-api-shape-v1`
 - `imui-child-region-auto-resize-specific-v1`
 - `imui-child-region-visibility-return-v1`
 
