@@ -1,5 +1,6 @@
 #![allow(clippy::field_reassign_with_default)]
 
+use super::super::frame_targets::downsampled_size;
 use super::super::intermediate_pool::estimate_texture_bytes;
 use super::super::render_plan_effects as effects;
 use super::super::{
@@ -9,6 +10,7 @@ use super::super::{
 use super::analysis::insert_early_releases;
 #[cfg(debug_assertions)]
 use super::debug::{validate_plan_scissors, validate_plan_target_lifetimes};
+use super::postprocess::append_downsample_half_quarter;
 use super::*;
 
 fn strip_releases(passes: &[RenderPlanPass]) -> Vec<&RenderPlanPass> {
