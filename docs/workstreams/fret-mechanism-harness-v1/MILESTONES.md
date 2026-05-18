@@ -1824,3 +1824,21 @@ Status: complete for `PositionStyle::Static` inset-ignore semantics.
   with Nextest run id `63fb7f75-45f1-4f9b-bbfa-4f20d22d7d5c`.
 - JSON fixture validation passes:
   `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\layout_primitives_v1.json`.
+
+## M104: ViewCache Relative Inset Clean-Reuse Movement Gate
+
+Status: complete for clean ViewCache reuse with relative-inset final-position movement.
+
+- Added `view_cache_hit_moving_relative_inset_wrapper_updates_bounds_and_hit_test` as a focused
+  `fret-ui` test.
+- The case locks the cached/replayed companion to M102: a `PositionStyle::Relative` Pressable with
+  `top: 12px` must keep final-position semantics when a clean ViewCache subtree is moved by an
+  outer layout change without rerendering the cached child.
+- No new mechanism defect was reproduced. The current runtime updates layout bounds, current visual
+  bounds, fallback hit-testing, and interaction-cache routing from `0,12` to `40,12` while rendering
+  the cached subtree once.
+- The focused gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui view_cache_hit_moving_relative_inset_wrapper_updates_bounds_and_hit_test --no-fail-fast --no-capture`
+  with Nextest run id `9db3ccd2-727f-4e22-be43-bd9f6f1f4b09`.
+- Formatting passes:
+  `cargo fmt -p fret-ui --check`.

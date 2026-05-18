@@ -4036,3 +4036,29 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
 - scoped whitespace:
   `git diff --check -- crates/fret-ui/src/declarative/host_widget/layout.rs crates/fret-ui/src/declarative/host_widget/layout/positioned_container.rs crates/fret-ui/src/declarative/host_widget/measure.rs crates/fret-ui/src/layout/engine/flow.rs crates/fret-ui/src/declarative/tests/layout/mechanism_harness.rs crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json`
   - result: passed.
+
+## ViewCache Relative Inset Clean-Reuse Movement Gate
+
+- invariant:
+  clean ViewCache reuse must translate cached interaction records and current element bounds by the
+  cache-root movement even when the cached child uses `PositionStyle::Relative` inset offsets. The
+  relative inset still defines final-position hit space, and the old final-position center must not
+  remain targetable after the cache root moves.
+- finding:
+  `view_cache_hit_moving_relative_inset_wrapper_updates_bounds_and_hit_test` did not reproduce a new
+  mechanism defect. It proves a cached `20 x 10` Pressable with `top: 12px` renders once, then moves
+  from `0,12` to `40,12` when an outer spacer changes from `0` to `40`. Layout bounds, visual
+  bounds, fallback hit-testing, and `debug_hit_test_routing` agree on the moved final position.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/tests/view_cache.rs`,
+  `crates/fret-ui/src/elements/runtime.rs`,
+  `crates/fret-ui/src/tree/prepaint/interaction.rs`,
+  `crates/fret-ui/src/element.rs`, and
+  `docs/adr/0213-cache-roots-and-cached-subtree-semantics-v1.md`.
+- focused gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui view_cache_hit_moving_relative_inset_wrapper_updates_bounds_and_hit_test --no-fail-fast --no-capture`
+- result:
+  passed; Nextest run id `9db3ccd2-727f-4e22-be43-bd9f6f1f4b09`.
+- formatting:
+  `cargo fmt -p fret-ui --check`
+  - result: passed.

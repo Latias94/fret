@@ -988,3 +988,10 @@ date: 2026-05-12
     remains at the original flow slot, keeps the following sibling at `x=20`, hits at the flow-slot
     center, and does not hit at the hypothetical offset center. No new `fret-ui` mechanism defect
     was reproduced.
+- [x] Add ViewCache clean-reuse movement coverage for relative inset final-position replay.
+  - Result: `view_cache_hit_moving_relative_inset_wrapper_updates_bounds_and_hit_test` now proves a
+    cached `PositionStyle::Relative` Pressable with `top: 12px` is rendered once, then moved by an
+    outer spacer from `x=0` to `x=40` without rerendering the cached subtree. Layout bounds, current
+    visual bounds, fallback hit-testing, and runtime routing all follow the moved final position,
+    while the old final-position center no longer hits. No new `fret-ui` mechanism defect was
+    reproduced.
