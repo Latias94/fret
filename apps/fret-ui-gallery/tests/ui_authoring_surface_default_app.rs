@@ -9839,6 +9839,36 @@ fn selected_toggle_snippets_prefer_builder_preserving_helpers() {
 }
 
 #[test]
+fn toggle_snippet_item_text_uses_button_label_role() {
+    for relative_path in [
+        "src/ui/snippets/toggle/children.rs",
+        "src/ui/snippets/toggle/demo.rs",
+        "src/ui/snippets/toggle/disabled.rs",
+        "src/ui/snippets/toggle/label.rs",
+        "src/ui/snippets/toggle/outline.rs",
+        "src/ui/snippets/toggle/rtl.rs",
+        "src/ui/snippets/toggle/size.rs",
+        "src/ui/snippets/toggle/usage.rs",
+        "src/ui/snippets/toggle/with_text.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_button_label(cx,",
+            ],
+            &["ui::text("],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/toggle/label.rs",
+        &["decl_text::text_control_readout(cx, format!(\"Pressed: {pressed_now}\"))"],
+        &["shadcn::raw::typography::muted(format!(\"Pressed: {pressed_now}\"))"],
+    );
+}
+
+#[test]
 fn toggle_children_snippet_prefers_explicit_root_children_followup() {
     let normalized = assert_normalized_markers_present(
         "src/ui/snippets/toggle/children.rs",

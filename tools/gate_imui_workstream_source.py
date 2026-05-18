@@ -3134,6 +3134,38 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/snippets/toggle_group/usage.rs",
             ]
         ],
+        *[
+            SourceCheck(
+                Path(path),
+                required=[
+                    "use fret_ui_kit::declarative::text as decl_text;",
+                    "decl_text::text_button_label(",
+                ],
+                forbidden=[
+                    "ui::text(",
+                ],
+            )
+            for path in [
+                "apps/fret-ui-gallery/src/ui/snippets/toggle/children.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/toggle/demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/toggle/disabled.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/toggle/label.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/toggle/outline.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/toggle/rtl.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/toggle/size.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/toggle/usage.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/toggle/with_text.rs",
+            ]
+        ],
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/toggle/label.rs"),
+            required=[
+                "decl_text::text_control_readout(cx, format!(\"Pressed: {pressed_now}\"))",
+            ],
+            forbidden=[
+                "shadcn::raw::typography::muted(format!(\"Pressed: {pressed_now}\"))",
+            ],
+        ),
         SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/command/composable_shell.rs"),
             required=[
@@ -3198,6 +3230,7 @@ def main() -> None:
                 "fn command_snippet_chrome_text_uses_shared_roles()",
                 "fn accordion_snippet_trigger_text_uses_button_label_role()",
                 "fn toggle_group_snippet_item_text_uses_button_label_role()",
+                "fn toggle_snippet_item_text_uses_button_label_role()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",
             ],

@@ -153,6 +153,15 @@ Last updated: 2026-05-18
   - `apps/fret-ui-gallery/src/ui/snippets/toggle_group/rtl.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/toggle_group/spacing.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/toggle_group/usage.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/toggle/children.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/toggle/demo.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/toggle/disabled.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/toggle/label.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/toggle/outline.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/toggle/rtl.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/toggle/size.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/toggle/usage.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/toggle/with_text.rs`
   - `apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/mvp/gates.rs`
   - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
   - `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs`
@@ -2109,6 +2118,22 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - Retried after the compile finished:
   `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
   toggle_group_snippet_item_text_uses_button_label_role --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 gallery Toggle item text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- `cargo check -p fret-ui-gallery --test ui_authoring_surface_default_app` passed.
+- First `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  toggle_snippet_item_text_uses_button_label_role --no-fail-fast` timed out at 300s while waiting
+  on/building the focused test binary.
+- Retried after background compilation finished:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  toggle_snippet_item_text_uses_button_label_role --no-fail-fast` passed.
 - `python tools/gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
 - `git diff --check` passed.

@@ -661,6 +661,10 @@ Readiness order for the next locally testable review slices:
    `ui::text(...)`, keeping toggle buttons single-line/shrinkable under resize. The custom
    weight-card snippet remains an explicitly styled visual sample rather than a default text-role
    migration target.
+   2026-05-18 gallery Toggle item text follow-up: copyable Toggle examples now route ordinary
+   toggle captions through `text_button_label(...)`, and the label-association pressed-state
+   marker through `text_control_readout(...)`, so these fixed button-like snippets no longer teach
+   wrapping text inside toggle chrome.
    2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
    headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
    through `control_readout_text(...)`, and custom pointer-region labels through
