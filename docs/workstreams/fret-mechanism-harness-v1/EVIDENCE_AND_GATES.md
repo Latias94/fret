@@ -4062,3 +4062,40 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
 - formatting:
   `cargo fmt -p fret-ui --check`
   - result: passed.
+
+## Input Disabled TextInput Action-State Runtime Gate
+
+- invariant:
+  a disabled leaf TextInput must publish disabled semantics and suppress accessibility actions that
+  would focus or mutate the value. Visual disabled styling alone is not enough; the concrete
+  TextInput node must report `disabled=true`, `focus=false`, and `set_value=false`.
+- finding:
+  `ui-gallery-input-disabled-action-state.json` did not reproduce a new Input recipe defect. The UI
+  Gallery disabled Input already exports the expected TextInput semantics action state. Early
+  scroll-based drafts exposed a separate diagnostics authoring hazard: the long Input page
+  `scroll_into_view` path did not reliably move the Disabled section before a bounds wait, so the
+  promoted gate proves the action-state contract without depending on that scroll path.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/input/disabled.rs`,
+  `tools/diag-scripts/ui-gallery/input/ui-gallery-input-disabled-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- JSON validation:
+  `python -m json.tool tools\diag-scripts\ui-gallery\input\ui-gallery-input-disabled-action-state.json > $null`
+  - result: passed.
+- roundtrip gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_input_disabled_action_state --no-fail-fast`
+  - result: passed; Nextest run id `4317d185-d642-4d7b-a042-592ef62530ce`.
+- build gate:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- runtime gate:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\input\ui-gallery-input-disabled-action-state.json --dir target\fret-diag-input-disabled-action-state-v4 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779094906772`.
+  - artifacts:
+    `target/fret-diag-input-disabled-action-state-v4/sessions/1779094885443-189836/script.result.json`,
+    `target/fret-diag-input-disabled-action-state-v4/sessions/1779094885443-189836/1779094906772/ai.packet`, and
+    `target/fret-diag-input-disabled-action-state-v4/sessions/1779094885443-189836/share/1779094906772.zip`.
+- formatting:
+  `cargo fmt -p fret-ui-gallery -p fret-diag-protocol --check`
+  - result: passed.

@@ -1842,3 +1842,26 @@ Status: complete for clean ViewCache reuse with relative-inset final-position mo
   with Nextest run id `9db3ccd2-727f-4e22-be43-bd9f6f1f4b09`.
 - Formatting passes:
   `cargo fmt -p fret-ui --check`.
+
+## M105: Input Disabled TextInput Action-State Runtime Gate
+
+Status: complete for disabled leaf TextInput action-state semantics.
+
+- Added `ui-gallery-input-disabled-control` to the disabled Input TextInput builder.
+- Added `ui-gallery-input-disabled-action-state.json` and promoted it into
+  `ui-gallery-shadcn-runtime-evidence`.
+- The runtime gate locks the concrete disabled TextInput semantics node to `disabled=true`,
+  `focus=false`, and `set_value=false`, so disabled visual styling cannot mask stale accessibility
+  action metadata.
+- No new Input recipe defect was reproduced. Early scroll-based drafts exposed a separate
+  diagnostics authoring/tooling hazard on the long Input page, so the final gate keeps the
+  action-state proof independent of deep-section scroll visibility.
+- The runtime gate passes:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\input\ui-gallery-input-disabled-action-state.json --dir target\fret-diag-input-disabled-action-state-v4 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779094906772`.
+- Protocol roundtrip passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_input_disabled_action_state --no-fail-fast`
+  with Nextest run id `4317d185-d642-4d7b-a042-592ef62530ce`.
+- Build and formatting pass:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev` and
+  `cargo fmt -p fret-ui-gallery -p fret-diag-protocol --check`.

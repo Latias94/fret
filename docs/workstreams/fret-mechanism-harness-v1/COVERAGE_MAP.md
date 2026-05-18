@@ -107,6 +107,14 @@ date: 2026-05-12
   UI Gallery driver-handled commands could be visible only as `UiTree` `handled=false` traces, so
   the driver now records `handled_by_driver=true` command dispatch decisions for owned command
   paths.
+- Leaf TextInput disabled action-state update:
+  `ui-gallery-input-disabled-action-state.json` now covers the Input page disabled TextInput leaf
+  directly. The gate asserts the concrete TextInput semantics node reports `disabled=true` while
+  suppressing `focus` and `set_value` actions, so a visual disabled style cannot hide stale
+  accessibility action metadata. The script is promoted into `ui-gallery-shadcn-runtime-evidence`.
+  The focused draft also exposed a diagnostics authoring hazard: long-page `scroll_into_view`
+  against the Disabled section did not reliably move the target before a bounds wait, so this gate
+  intentionally keeps the action-state proof independent of the scroll path.
 - Shell theme/motion runtime-token update:
   `ui-gallery-motion-preset-runtime-token-mutation.json` now covers always-visible UI Gallery
   Theme/Motion preset selectors. The gate proves shell model state, select close state, effective

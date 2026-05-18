@@ -221,6 +221,14 @@ date: 2026-05-12
     The driver now records handled command decisions for owned gallery command paths, and the
     strict runtime gate passes with command dispatch, `disabled`, `invoke`, and checked-state
     mutation assertions.
+- [x] Add a leaf TextInput disabled action-state runtime gate.
+  - Result: `ui-gallery-input-disabled-action-state.json` now starts directly on the Input page,
+    waits for the disabled TextInput semantics node, and asserts `disabled=true`, `focus=false`,
+    `set_value=false`, and a stable value surface. The gate is promoted into
+    `ui-gallery-shadcn-runtime-evidence`. No Input recipe defect was reproduced. Early drafts found
+    a separate diagnostics authoring/tooling hazard: `scroll_into_view` against the long Input page
+    did not reliably move the Disabled section before a bounds wait, so the final gate avoids
+    coupling this semantics/action-state proof to that scroll path.
 - [x] Promote Combobox visual/style coverage into an explicit fixture-style matrix that tracks
   component state, theme, viewport, screenshot gate, geometry predicates, and current owner/gap.
 - [x] Harden the Button Group size gate with stable icon-only `Add` anchors and geometry predicates.
