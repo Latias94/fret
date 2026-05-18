@@ -501,6 +501,9 @@ Exit criteria:
   2026-05-18 AI Task content text-role result: Task item labels now route through
   `text_list_row_label(...)`, attached file names through `text_code_wrap(...)`, and the demo's
   fixed outer title/body copy through shared section-chrome/paragraph roles.
+  2026-05-18 AI Conversation instrumentation text-role result: Conversation export/message-count
+  diagnostics now use generic semantics instead of text semantics, and the custom scroll-bottom
+  label uses the shared `text_button_label(...)` role.
   2026-05-17 gallery data-grid text result: the UI Gallery DataGrid preview now routes virtualized
   grid cells through `text_table_cell(...)` and the selected-row status line through
   `control_readout_text(...)`.

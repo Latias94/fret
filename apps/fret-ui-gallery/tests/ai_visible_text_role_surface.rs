@@ -1087,3 +1087,37 @@ fn ai_task_demo_uses_shared_content_text_roles() {
         );
     }
 }
+
+#[test]
+fn ai_conversation_demo_uses_non_text_instrumentation_and_button_label() {
+    let source = include_str!("../src/ui/snippets/ai/conversation_demo.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "role: SemanticsRole::Generic",
+        "test_id: Some(Arc::<str>::from(\"ui-ai-conversation-demo-exported-md-len\"))",
+        "test_id: Some(Arc::<str>::from(\"ui-ai-conversation-demo-messages-len\"))",
+        "numeric_value: Some(exported_md_len as f64)",
+        "numeric_value: Some(messages.len() as f64)",
+        "decl_text::text_button_label(cx, \"Latest\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "conversation_demo should keep diagnostics out of text layout and custom button text on the shared role; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "role: SemanticsRole::Text",
+        "role: fret_core::SemanticsRole::Text",
+        "cx.text(\"Latest\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "conversation_demo reintroduced text-role diagnostics or bare button text: `{forbidden}`"
+        );
+    }
+}

@@ -544,6 +544,9 @@ Readiness order for the next locally testable review slices:
    2026-05-18 AI Task content text-role follow-up: Task item labels now route through
    `text_list_row_label(...)`, attached file names through `text_code_wrap(...)`, and the demo's
    fixed outer title/body copy through shared section-chrome/paragraph roles.
+   2026-05-18 AI Conversation instrumentation text-role follow-up: Conversation length/export
+   diagnostics now use generic semantics instead of text semantics, and the custom scroll-bottom
+   label routes through `text_button_label(...)`.
    2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
    virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
    `control_readout_text(...)`.

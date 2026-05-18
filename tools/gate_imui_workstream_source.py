@@ -491,6 +491,7 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/snippets/ai/confirmation_rejected.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/confirmation_request.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/task_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/conversation_demo.rs",
                 "apps/fret-ui-gallery/tests/ai_visible_text_role_surface.rs",
                 "ecosystem/fret-ui-ai/src/elements/mod.rs",
                 "ecosystem/fret-ui-ai/src/surface_policy_tests.rs",
@@ -1234,6 +1235,23 @@ def main() -> None:
                 "cx.text(file_name)",
                 "cx.text(\"Task (AI Elements)\")",
                 "cx.text(\n                \"Collapsible task list demo aligned with the official AI Elements Task structure.\",\n            )",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/conversation_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "role: SemanticsRole::Generic",
+                "test_id: Some(Arc::<str>::from(\"ui-ai-conversation-demo-exported-md-len\"))",
+                "test_id: Some(Arc::<str>::from(\"ui-ai-conversation-demo-messages-len\"))",
+                "numeric_value: Some(exported_md_len as f64)",
+                "numeric_value: Some(messages.len() as f64)",
+                "decl_text::text_button_label(cx, \"Latest\")",
+            ],
+            forbidden=[
+                "role: SemanticsRole::Text",
+                "role: fret_core::SemanticsRole::Text",
+                "cx.text(\"Latest\")",
             ],
         ),
         SourceCheck(
