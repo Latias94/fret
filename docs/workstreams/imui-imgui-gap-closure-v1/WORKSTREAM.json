@@ -624,6 +624,7 @@
     "apps/fret-ui-gallery/src/ui/snippets/ai/attachments_usage.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/stack_trace_usage.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/message_usage.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/ai/canvas_world_layer_spike.rs",
     "apps/fret-ui-gallery/tests/ai_visible_text_role_surface.rs",
     "ecosystem/fret-ui-ai/src/elements/mod.rs",
     "ecosystem/fret-ui-ai/src/surface_policy_tests.rs",

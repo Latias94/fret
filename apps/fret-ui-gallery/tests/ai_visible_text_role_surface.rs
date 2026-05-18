@@ -1206,3 +1206,53 @@ fn ai_message_usage_uses_shared_outer_and_user_text_roles() {
         );
     }
 }
+
+#[test]
+fn ai_canvas_world_spike_routes_visible_text_through_roles() {
+    let source = include_str!("../src/ui/snippets/ai/canvas_world_layer_spike.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_section_chrome_label(cx, \"Canvas world layer (spike)\")",
+        "decl_text::text_paragraph",
+        "Goal: nodes as element subtrees under a pan/zoom view transform.",
+        "format!(\"Clicks: {node_clicks_value}\")",
+        "decl_text::text_paragraph(cx, \"Try zooming/panning and click again.\")",
+        "decl_text::text_control_readout(cx, \"Layout settled\")",
+        "decl_text::text_control_readout(cx, \"Reset done\")",
+        "format!(\"Connections: {}\", connections_value.len())",
+        "decl_text::text_control_readout(cx, \"Marquee blocked (node hit)\")",
+        "format!(\"Selected: {selected_count_value}\")",
+        "decl_text::text_control_readout(cx, bounds_text)",
+        "decl_text::text_control_readout(cx, debug_view_text)",
+        "decl_text::text_control_readout(cx, debug_nodes_text)",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "canvas_world_layer_spike should route visible chrome/readouts through shared text roles; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "cx.text(\"Canvas world layer (spike)\")",
+        "cx.text(\"Goal: nodes as element subtrees under a pan/zoom view transform.\")",
+        "cx.text(format!(\"Clicks: {node_clicks_value}\"))",
+        "cx.text(\"Try zooming/panning and click again.\")",
+        "cx.text(\"Layout settled\")",
+        "cx.text(\"Reset done\")",
+        "cx.text(format!(\"Connections: {}\", connections_value.len()))",
+        "cx.text(\"Marquee blocked (node hit)\")",
+        "cx.text(format!(\"Selected: {selected_count_value}\"))",
+        "cx.text(bounds_text)",
+        "cx.text(debug_view_text)",
+        "cx.text(debug_nodes_text)",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "canvas_world_layer_spike reintroduced bare visible text: `{forbidden}`"
+        );
+    }
+}
