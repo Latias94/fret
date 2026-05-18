@@ -11171,6 +11171,21 @@ fn shadcn_extras_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn shadcn_extras_announcement_title_keeps_composable_title_surface() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/shadcn_extras/announcement.rs",
+        &[
+            "shadcn::raw::extras::AnnouncementTitle::new([cx.text(\"Shadcn Extras landed in Fret\")])",
+        ],
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_button_label(",
+            "decl_text::text_section_chrome_label(",
+        ],
+    );
+}
+
+#[test]
 fn shadcn_extras_avatar_stack_direction_labels_use_shared_chrome_text_role() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/shadcn_extras/avatar_stack.rs",

@@ -2833,6 +2833,36 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   passed.
 - `git diff --check` passed.
 
+2026-05-19 Shadcn Extras AnnouncementTitle composable-title slice:
+
+- Decision: do not mechanically rewrite
+  `AnnouncementTitle::new([cx.text("Shadcn Extras landed in Fret")])` at the gallery call site.
+  Upstream `repo-ref/kibo/packages/announcement/index.tsx` keeps `AnnouncementTitle` children-first
+  while applying `truncate` on the title container, so Fret keeps the composable surface and moves
+  the resize contract into `fret-ui-shadcn`.
+- `ecosystem/fret-ui-shadcn/src/extras/announcement.rs` now gives `AnnouncementTitle` a
+  shrinkable/min-width-zero clipped title container, scopes medium `text-sm` inherited typography,
+  and recursively forces nested text children to single-line ellipsis.
+- `apps/fret-ui-gallery/src/ui/snippets/shadcn_extras/announcement.rs` intentionally keeps the raw
+  composable title call; the gallery source test and IMUI workstream gate prevent it from being
+  mistaken for an unowned fixed-row text role.
+- First `cargo nextest run -p fret-ui-shadcn
+  announcement_title_keeps_composable_children_on_truncated_title_contract --no-fail-fast`
+  attempts timed out while cold Cargo/Rustc compilation continued in the background; those
+  processes were allowed to finish before retrying. A later unscoped nextest attempt failed during
+  test-list enumeration with Windows `os error 740` from an unrelated
+  `extras_relative_time_auto_update` integration-test executable, so the component gate was scoped
+  to `--lib`.
+- `cargo nextest run -p fret-ui-shadcn --lib
+  announcement_title_keeps_composable_children_on_truncated_title_contract --no-fail-fast` passed.
+- `cargo check -p fret-ui-shadcn --lib` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  shadcn_extras_announcement_title_keeps_composable_title_surface --no-fail-fast` passed after an
+  earlier cold-compile timeout was allowed to finish.
+- `cargo check -p fret-ui-gallery --test ui_authoring_surface_default_app` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `PYTHONIOENCODING=utf-8 python tools\gate_imui_workstream_source.py` passed.
+
 2026-05-19 gallery ContextMenu trigger text-role slice:
 
 - Red repro:

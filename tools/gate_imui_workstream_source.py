@@ -4452,6 +4452,32 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/shadcn_extras/announcement.rs"),
+            required=[
+                "shadcn::raw::extras::AnnouncementTitle::new([cx.text(\"Shadcn Extras landed in Fret\")])",
+            ],
+            forbidden=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_button_label(",
+                "decl_text::text_section_chrome_label(",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/extras/announcement.rs"),
+            required=[
+                "fn announcement_title_text_refinement(theme: &Theme) -> TextStyleRefinement",
+                "fn apply_announcement_title_text_contract_recursive(el: &mut AnyElement)",
+                "typography::scope_text_style(el, title_refinement)",
+                ".flex_shrink(1.0)",
+                ".min_w_0()",
+                ".overflow_hidden()",
+                "*wrap = TextWrap::None;",
+                "*overflow = TextOverflow::Ellipsis;",
+                "fn announcement_title_keeps_composable_children_on_truncated_title_contract()",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/shadcn_extras/kanban.rs"),
             required=[
                 "use fret_ui_kit::{declarative::text as decl_text, ui};",

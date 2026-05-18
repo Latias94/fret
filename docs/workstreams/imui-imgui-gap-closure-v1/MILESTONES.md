@@ -674,6 +674,11 @@ Exit criteria:
   2026-05-19 gallery Kanban card title result: Shadcn Extras Kanban app-owned card titles now use
   shared button-label text instead of local `ui::text(item.name).font_medium().truncate()` policy,
   while raw Kanban drag/drop and column recipes remain unchanged.
+  2026-05-19 Shadcn Extras AnnouncementTitle result: the announcement title copy is intentionally
+  not rewritten at the gallery call site. `AnnouncementTitle` remains a composable children-first
+  raw extras component, while `fret-ui-shadcn` now applies the upstream-style `truncate` contract
+  at the recipe owner: shrink/min-width-zero title container, clipped overflow, inherited medium
+  text-sm title style, and single-line ellipsis for nested text children.
   2026-05-19 gallery Dialog scroll-row text result: scrollable-content and sticky-footer dialog
   filler rows now use shared list-row label text instead of `ui::raw_text(format!(...))`, keeping
   the scroll proof rows on a fixed-row text role without changing shadcn dialog recipes.

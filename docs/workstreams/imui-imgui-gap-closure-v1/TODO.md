@@ -725,12 +725,18 @@ Readiness order for the next locally testable review slices:
    `cx.text(...)` builders.
    2026-05-19 gallery AvatarStack direction label follow-up: Shadcn Extras avatar-stack LTR/RTL
    direction labels now use `text_section_chrome_label(...)` instead of local
-   `ui::text(...).font_medium()` builders. Announcement title copy remains a separate candidate
-   because its role needs an owner-specific decision.
+   `ui::text(...).font_medium()` builders. Announcement title copy remained a separate candidate
+   until the recipe-owner decision below.
    2026-05-19 gallery Kanban card title follow-up: Shadcn Extras Kanban app-owned card title slots
    now use `text_button_label(...)` instead of local `ui::text(item.name).font_medium().truncate()`
-   builders. Announcement title copy remains a separate candidate because it is passed into a raw
+   builders. Announcement title copy remained a separate candidate because it is passed into a raw
    extras title component rather than rendered by the caller's card slot.
+   2026-05-19 Shadcn Extras AnnouncementTitle follow-up: `AnnouncementTitle` stays a children-first
+   composable title surface, matching the upstream Kibo source shape, but `fret-ui-shadcn` now owns
+   the title row contract: `text-sm` medium inherited typography, shrinkable/min-width-zero layout,
+   single-line ellipsis for nested text, and clipped title containers. The gallery snippet keeps
+   `AnnouncementTitle::new([cx.text(...)])` intentionally, and source gates prevent both the
+   component contract and the caller-side composable surface from drifting.
    2026-05-19 gallery Dialog scroll-row text follow-up: scrollable-content and sticky-footer
    filler rows now route through shared list-row label text instead of `ui::raw_text(format!(...))`,
    keeping scroll proof rows single-line/shrinkable under resize while dialog title/description
