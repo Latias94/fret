@@ -10,7 +10,7 @@ use fret_ui::element::{
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
-use fret_ui_kit::{ColorRef, LayoutRefinement, Space};
+use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
@@ -112,11 +112,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     props.corner_radii = Corners::all(theme.metric_token("metric.radius.sm"));
 
                     vec![cx.container(props, move |cx| {
-                        vec![
-                            decl_text::text_button_label(cx, add_external_label.clone())
-                                .text_color(ColorRef::Color(fg))
-                                .into_element(cx),
-                        ]
+                        vec![decl_text::text_button_label(cx, add_external_label.clone())
+                            .inherit_foreground(fg)]
                     })]
                 },
             );
