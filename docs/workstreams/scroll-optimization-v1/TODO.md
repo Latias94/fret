@@ -598,6 +598,26 @@ Status: Active
     constraints when width changes. A future text optimization should be a separate proof, likely
     starting from `TextWrap::None` / single-line text or an explicit cached line-break stability
     contract, not from this gallery description.
+- [x] Close the local clean-geometry resize-jitter phase and split remaining pressure.
+  - Verdict: do not close the entire `scroll-optimization-v1` workstream. Its original scope still
+    covers broader scroll correctness, wheel coalescing, scrollbar baseline, and extent probing.
+  - Closed phase: the local no-4090 resize-jitter clean-geometry phase has removed the repeated
+    app-shell/content blockers that were safe to prove locally: retained/windowed scroll cache-root
+    rerender pressure, clean root-solve propagation, Container/Grid/Flex/ViewCache boundaries,
+    explicit zero driver leaves, gallery header authoring, and rejection attribution.
+  - Stop conditions:
+    - wrapped `TextWrap::Word` / `CardDescription` remains authoritative solve work;
+    - editor `Canvas` is still measured small and should not drive the next primary slice;
+    - root `Scroll` is a side-effect boundary, not a skipped geometry node;
+    - RTX4090/other-machine validation is evidence collection, not a blocker for local closeout;
+    - `measured_size: Option<Size>` remains only a follow-on if sentinel ambiguity recurs outside
+      explicit driver leaves.
+  - Follow-ons should be separate lanes:
+    - text computed-box / line-break stability proof,
+    - Canvas bounds/prepaint/paint leaf proof,
+    - root `Scroll` side-effect boundary redesign,
+    - hardware closeout evidence,
+    - measured-size data-model migration only with fresh recurring evidence.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

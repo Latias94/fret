@@ -1365,6 +1365,48 @@ Content `text_reflow / Text` stop-condition audit (2026-05-18):
     a very small `Canvas` proof, root `Scroll` side-effect-boundary redesign, or collecting
     RTX4090/other-machine closeout evidence. None should be folded into the current text audit.
 
+Local clean-geometry resize-jitter phase closeout (2026-05-18):
+
+- Audited scope:
+  - `docs/workstreams/scroll-optimization-v1/DESIGN.md`
+  - `docs/workstreams/scroll-optimization-v1/TODO.md`
+  - `docs/workstreams/scroll-optimization-v1/MILESTONES.md`
+  - `docs/workstreams/scroll-optimization-v1/EVIDENCE_AND_GATES.md`
+  - `docs/workstreams/scroll-optimization-v1/WORKSTREAM.json`
+  - git history through `535007b6b5 docs(perf): record text reflow stop condition`
+- Verdict:
+  - Do not close the entire scroll optimization workstream. Its original design still covers broader
+    scroll correctness, wheel coalescing, scrollbar drag baseline, and extent-probing contracts.
+  - Close the local no-4090 clean-geometry resize-jitter phase. The remaining blockers are no longer
+    unclassified local mechanism gaps.
+- Closed local phase:
+  - retained/windowed scroll updates no longer force parent view-cache rerender;
+  - clean root-solve propagation and rejection attribution are in place;
+  - Container, stable auto-height wrappers, horizontal Flex subsets, card-header-like Grid,
+    absolute overlay chrome, ViewCache boundary propagation, explicit zero driver leaves, and
+    gallery header authoring all have focused gates and evidence;
+  - wrapped text is documented as a stop condition.
+- Residual risks and follow-ons:
+  - Wrapped text proof: split a dedicated text lane; do not start from `CardDescription` without a
+    line-break / computed-box stability contract.
+  - Canvas proof: possible but currently low value (`3-4us` in the local bundle); needs bounds,
+    prepaint/paint, and hit-test proof if attempted.
+  - Root `Scroll`: remains a side-effect boundary that publishes viewport/content handles, deferred
+    probe state, overflow observation, and transforms; redesign only in a new scroll-boundary lane.
+  - RTX4090/other-machine evidence: collect as closeout evidence or perf-baseline calibration, not
+    as a blocker for this local phase.
+  - `measured_size: Option<Size>`: still architecturally plausible, but only justified if legal
+    zero-size ambiguity recurs outside explicit driver leaves.
+- Validation during closeout:
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_rejects_auto_height_text_reflow --no-fail-fast`
+    - Result: `1/1` passed.
+  - `python3 -m json.tool docs/workstreams/scroll-optimization-v1/WORKSTREAM.json`
+    - Result: passed.
+  - `python3 tools/check_layering.py`
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:

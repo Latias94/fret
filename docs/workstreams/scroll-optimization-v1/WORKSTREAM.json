@@ -26,6 +26,10 @@
     {
       "role": "audit",
       "path": "docs/workstreams/scroll-optimization-v1/M5_DIRTY_FRONTIER_RESIZE_MEASURE_AUDIT_2026-05-15.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/scroll-optimization-v1/HANDOFF.md"
     }
   ],
   "repro": {
@@ -256,11 +260,12 @@
     "crates/fret-ui/src/declarative/host_widget/layout.rs",
     "crates/fret-ui/src/declarative/host_widget/measure.rs",
     "crates/fret-ui/src/declarative/host_widget/paint.rs",
-    "crates/fret-ui/src/tree/layout/state.rs"
+    "crates/fret-ui/src/tree/layout/state.rs",
+    "docs/workstreams/scroll-optimization-v1/HANDOFF.md"
   ],
   "adr_refs": [],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Current no-4090 resize-jitter evidence has landed the stable auto-height classification slice, the clean-geometry classification model refactor, the horizontal fixed Flex proof, the narrow single basis-zero grow Flex proof, app-shell/workspace authoring alignment to explicit basis-zero flex-1 semantics, the fixed auto-width no-shrink chrome proof, the RovingFlex trigger authoring closeout, the root missing_measured_size attribution/fill-slot closeout, the centered intrinsic horizontal Flex proof for shadcn Button chrome, the gallery sidebar no-shrink authoring closeout, the TextInput side-effect boundary closeout, the sidebar ScrollArea absolute overlay chrome closeout, the narrow card-header-like Grid geometry proof, the absent zero absolute overlay / sidebar nav authoring closeout, the ViewCache boundary propagation closeout, the explicit zero driver leaf closeout, the gallery content-header stretch authoring cleanup, and the wrapped text stop-condition audit. The previous nav Container flex_item_sizing / Flex blocker, root Stack flex_item_sizing / RovingFlex blocker, root Stack missing_measured_size / Spacer blocker, root Stack flex_main_align / Flex shadcn Button blocker, root Stack flex_item_sizing / Flex blocker at apps/fret-ui-gallery/src/driver/render_flow.rs:336, root Stack unsupported_kind=TextInput blocker through ecosystem/fret-ui-shadcn/src/input.rs:514, root Stack positioned_child / Stack blocker through ecosystem/fret-ui-shadcn/src/scroll_area.rs:340, content Semantics unsupported_kind=Grid blocker, sidebar root Stack missing_measured_size / Stack blocker, root Stack unsupported_kind / ViewCache blocker at apps/fret-ui-gallery/src/driver/shell.rs:164, root Stack missing_measured_size / Spacer through ecosystem/fret-ui-shadcn/src/sonner.rs:382, follow-on missing_measured_size / Container through apps/fret-ui-gallery/src/driver/settings_sheet.rs:40-55, and content/header flex_cross_align / Flex through apps/fret-ui-gallery/src/ui/content.rs:102 are gone from the top per-solve blockers. The remaining content Semantics text_reflow / Text path at apps/fret-ui-gallery/src/ui/content.rs:744 is now an explicit stop condition because shadcn CardDescription uses w_full TextWrap::Word and width-derived layout/measure/paint constraints. Remaining non-text blockers are editor Canvas measured small and root Scroll as a side-effect boundary. Keep RTX4090 closeout as follow-up evidence, not a local completion gate. Continue by either opening a separate text proof lane, collecting closeout hardware evidence, or choosing a non-text follow-up such as Canvas proof or Scroll boundary redesign; start a measured_size Option<Size> architecture follow-up only if the sentinel ambiguity recurs outside explicit driver leaves."
+    "default_action": "split_follow_on",
+    "notes": "The local no-4090 clean-geometry resize-jitter phase is closed, but the broader scroll-optimization-v1 umbrella remains active for historical scroll correctness, wheel coalescing, scrollbar baseline, and extent-probing contracts. Do not continue widening clean geometry in this folder by default. The remaining content Semantics text_reflow / Text path at apps/fret-ui-gallery/src/ui/content.rs:744 is an explicit stop condition because shadcn CardDescription uses w_full TextWrap::Word and width-derived layout/measure/paint constraints. Remaining non-text pressure should split into separate lanes: text computed-box/line-break stability proof, low-priority Canvas proof, root Scroll side-effect-boundary redesign, RTX4090/other-machine evidence collection, or measured_size Option<Size> only if sentinel ambiguity recurs outside explicit driver leaves."
   }
 }

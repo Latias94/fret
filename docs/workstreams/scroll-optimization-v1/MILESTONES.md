@@ -209,3 +209,14 @@ Status: Active
   condition. The focused negative gate
   `clean_geometry_small_resize_rejects_auto_height_text_reflow` passed, and local evidence leaves
   only small `Canvas` and root `Scroll` non-text blockers outside the text stop condition.
+
+## M17 — Clean-geometry resize-jitter phase closeout
+
+- Close the local clean-geometry resize-jitter phase without closing the broader
+  `scroll-optimization-v1` workstream.
+- Treat the phase as complete when every remaining blocker is either an explicit stop condition or
+  a separate owner lane:
+  wrapped text, small `Canvas`, root `Scroll`, RTX4090/other-machine evidence, and the optional
+  measured-size data-model migration.
+- 2026-05-18 closeout decision: do not keep extending the clean-geometry proof inside this folder.
+  Future work should open narrow follow-ons with their own evidence and gates.
