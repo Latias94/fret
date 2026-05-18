@@ -6,6 +6,7 @@ use super::super::{
     ClipPathMaskDraw, EffectMarker, EffectMarkerKind, OrderedDraw, PathDraw, QuadDraw,
     QuadPipelineKey,
 };
+use super::analysis::insert_early_releases;
 #[cfg(debug_assertions)]
 use super::debug::{validate_plan_scissors, validate_plan_target_lifetimes};
 use super::*;
