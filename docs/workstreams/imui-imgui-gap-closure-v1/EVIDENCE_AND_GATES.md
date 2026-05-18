@@ -782,6 +782,13 @@ Run evidence:
   of bare `cx.text(...)`; source chip state and PromptInput model behavior were intentionally left
   unchanged. Gates: `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
   --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-19: extended the AI visible text-role migration to Attachments inline hover-card details.
+  App-owned attachment labels now use `text_list_row_label(...)`, and media-type values use
+  `text_control_readout(...)` instead of default `ui::text(...)` builders; attachment chip,
+  remove affordance, and hover-card behavior were intentionally left unchanged. Gates: `cargo
+  nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
+  ai_attachments_inline_hover_card_uses_shared_text_roles --no-fail-fast` and `python
+  tools/gate_imui_workstream_source.py`.
 - 2026-05-18: migrated the AI Artifact docs code-display status marker from an invisible
   `cx.text(...)` node to a generic zero-size semantics marker with a diagnostic label. This keeps
   the existing `ui-gallery-ai-artifact-docs-run-action` `label_contains` script contract while
@@ -3036,6 +3043,28 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - Retried after the compile/check path completed:
   `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
   selected_carousel_status_readouts_use_shared_control_readout_role --no-fail-fast` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.
+
+2026-05-19 AI Attachments inline hover-card text-role slice:
+
+- Source gap before fix: `attachments_inline.rs` did not import shared text roles and still
+  rendered hover-card attachment labels/media types through default `ui::text(...)` builders. This
+  slice added the focused source test and gate marker with the implementation change.
+- `apps/fret-ui-gallery/src/ui/snippets/ai/attachments_inline.rs` now routes hover-card attachment
+  labels through `decl_text::text_list_row_label(...)` and media-type values through
+  `decl_text::text_control_readout(...)`.
+- First post-fix
+  `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
+  ai_attachments_inline_hover_card_uses_shared_text_roles --no-fail-fast` timed out while a
+  background Cargo/Rustc compile continued; Cargo/Rustc processes were allowed to exit.
+- Retried after the compile finished:
+  `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
+  ai_attachments_inline_hover_card_uses_shared_text_roles --no-fail-fast` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `cargo fmt --check -p fret-ui-gallery` passed.

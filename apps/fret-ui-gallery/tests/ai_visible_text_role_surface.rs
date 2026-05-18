@@ -1722,6 +1722,35 @@ fn ai_usage_snippets_use_shared_chrome_and_paragraph_roles() {
 }
 
 #[test]
+fn ai_attachments_inline_hover_card_uses_shared_text_roles() {
+    let source = include_str!("../src/ui/snippets/ai/attachments_inline.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_list_row_label(cx, ui_ai::get_attachment_label(&item))",
+        "decl_text::text_control_readout(cx, media_type)",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "attachments_inline should route hover-card label/readout text through shared roles; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "ui::text(ui_ai::get_attachment_label(&item))",
+        "ui::text(media_type).text_xs()",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "attachments_inline reintroduced default wrapping hover-card text: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
 fn ai_message_usage_uses_shared_outer_and_user_text_roles() {
     let source = include_str!("../src/ui/snippets/ai/message_usage.rs");
     let canonical = canonicalize_rust_fragment(source);

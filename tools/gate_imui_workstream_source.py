@@ -521,6 +521,7 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/snippets/ai/inline_citation_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/package_info_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/sources_custom_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/attachments_inline.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/attachments_usage.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/stack_trace_usage.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/message_usage.rs",
@@ -1635,6 +1636,18 @@ def main() -> None:
             ],
             forbidden=[
                 "cx.text(\n                \"Display uploaded files in a message surface with a shared Attachments container. The image preview comes from the gallery demo asset bundle through a logical asset request so the snippet teaches shipped asset ownership.\",\n            )",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/attachments_inline.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_list_row_label(cx, ui_ai::get_attachment_label(&item))",
+                "decl_text::text_control_readout(cx, media_type)",
+            ],
+            forbidden=[
+                "ui::text(ui_ai::get_attachment_label(&item))",
+                "ui::text(media_type).text_xs()",
             ],
         ),
         SourceCheck(

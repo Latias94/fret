@@ -578,6 +578,10 @@ Readiness order for the next locally testable review slices:
    2026-05-18 AI PromptInput referenced sources text-role follow-up: fixed referenced-sources
    title/body copy now routes through section-chrome and paragraph roles instead of bare
    `cx.text(...)`.
+   2026-05-19 AI Attachments inline hover-card text-role follow-up: app-owned hover-card
+   attachment labels now use `text_list_row_label(...)`, and media-type readouts use
+   `text_control_readout(...)` instead of default `ui::text(...)` builders. Attachment chip,
+   remove affordance, and hover-card behavior remain owned by `fret-ui-ai`.
    2026-05-18 AI Artifact code display status-marker follow-up: the docs status marker now keeps
    the diagnostic `label_contains` contract on a generic semantics marker with a zero-size spacer
    instead of an invisible bare text element.

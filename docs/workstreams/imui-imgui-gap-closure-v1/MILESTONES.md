@@ -535,6 +535,10 @@ Exit criteria:
   2026-05-18 AI PromptInput referenced sources text-role result: fixed referenced-sources
   title/body copy now uses shared section-chrome and paragraph roles instead of bare
   `cx.text(...)`.
+  2026-05-19 AI Attachments inline hover-card text-role result: hover-card attachment labels now
+  use shared list-row text and media-type values use shared control-readout text instead of
+  default `ui::text(...)`, keeping inline attachment overlay details single-line/shrinkable under
+  resize without changing `fret-ui-ai` attachment behavior.
   2026-05-18 AI Artifact code display status-marker result: the docs action status now preserves
   its diagnostic label on a generic zero-size semantics marker instead of an invisible bare text
   element.

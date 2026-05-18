@@ -712,6 +712,7 @@
     "apps/fret-ui-gallery/src/ui/snippets/ai/inline_citation_demo.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/package_info_demo.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/sources_custom_demo.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/ai/attachments_inline.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/attachments_usage.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/stack_trace_usage.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/message_usage.rs",
