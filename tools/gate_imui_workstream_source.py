@@ -4063,6 +4063,7 @@ def main() -> None:
                 "fn table_children_snippet_routes_custom_text_through_shared_roles()",
                 "fn item_snippets_route_slotted_copy_through_shared_text_roles()",
                 "fn spinner_item_amount_text_uses_control_readout_role()",
+                "fn shadcn_extras_avatar_stack_direction_labels_use_shared_chrome_text_role()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",
             ],
@@ -4435,6 +4436,18 @@ def main() -> None:
                 "let fg = theme.color_token(\"muted-foreground\");",
                 "ui::text(label)",
                 ".text_color(ColorRef::Color(fg))",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/shadcn_extras/avatar_stack.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(cx, \"LTR\")",
+                "decl_text::text_section_chrome_label(cx, \"RTL\")",
+            ],
+            forbidden=[
+                "ui::text(\"LTR\").font_medium()",
+                "ui::text(\"RTL\").font_medium()",
             ],
         ),
         SourceCheck(

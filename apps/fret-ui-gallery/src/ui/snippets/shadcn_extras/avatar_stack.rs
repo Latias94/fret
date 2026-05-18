@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("avatar_stack.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn stack<H: UiHost>(cx: &mut ElementContext<'_, H>, test_id: &'static str) -> AnyElement {
@@ -23,7 +24,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         vec![
             fret_ui_kit::ui::v_flex(|cx| {
                 vec![
-                    ui::text("LTR").font_medium().into_element(cx),
+                    decl_text::text_section_chrome_label(cx, "LTR"),
                     stack(cx, "ui-gallery-shadcn-extras-avatar-stack-ltr"),
                 ]
             })
@@ -32,7 +33,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .into_element(cx),
             fret_ui_kit::ui::v_flex(|cx| {
                 vec![
-                    ui::text("RTL").font_medium().into_element(cx),
+                    decl_text::text_section_chrome_label(cx, "RTL"),
                     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
                         stack(cx, "ui-gallery-shadcn-extras-avatar-stack-rtl")
                     }),

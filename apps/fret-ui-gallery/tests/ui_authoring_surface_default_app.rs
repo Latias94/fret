@@ -11171,6 +11171,22 @@ fn shadcn_extras_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn shadcn_extras_avatar_stack_direction_labels_use_shared_chrome_text_role() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/shadcn_extras/avatar_stack.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_section_chrome_label(cx, \"LTR\")",
+            "decl_text::text_section_chrome_label(cx, \"RTL\")",
+        ],
+        &[
+            "ui::text(\"LTR\").font_medium()",
+            "ui::text(\"RTL\").font_medium()",
+        ],
+    );
+}
+
+#[test]
 fn gallery_sidebar_nav_scroll_is_explicit_flex_fill_slot() {
     let source = read("src/ui/nav.rs");
     let canonical = canonicalize_rust_fragment(&source);

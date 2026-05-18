@@ -2781,6 +2781,32 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   passed.
 - `git diff --check` passed.
 
+2026-05-19 gallery AvatarStack direction label text-role slice:
+
+- Red repro:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  shadcn_extras_avatar_stack_direction_labels_use_shared_chrome_text_role --no-fail-fast` failed
+  before the fix because `shadcn_extras/avatar_stack.rs` did not import shared text roles and still
+  rendered direction labels through `ui::text("LTR").font_medium()`.
+- `apps/fret-ui-gallery/src/ui/snippets/shadcn_extras/avatar_stack.rs` now routes LTR/RTL
+  direction labels through `text_section_chrome_label(...)`.
+- First post-fix
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  shadcn_extras_avatar_stack_direction_labels_use_shared_chrome_text_role --no-fail-fast` timed out
+  without a capturable result while Cargo/Rustc processes continued; those processes were allowed
+  to finish before retrying.
+- Retried after the compile finished:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  shadcn_extras_avatar_stack_direction_labels_use_shared_chrome_text_role --no-fail-fast` passed.
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ui_authoring_surface_default_app` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `PYTHONIOENCODING=utf-8 python tools\gate_imui_workstream_source.py` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.
+
 2026-05-19 gallery ContextMenu trigger text-role slice:
 
 - Red repro:

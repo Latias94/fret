@@ -723,6 +723,10 @@ Readiness order for the next locally testable review slices:
    2026-05-19 gallery Spinner amount readout follow-up: Spinner item amount/status values in the
    demo and RTL snippets now use `text_control_readout(...)` instead of local `ui::text(...)` /
    `cx.text(...)` builders.
+   2026-05-19 gallery AvatarStack direction label follow-up: Shadcn Extras avatar-stack LTR/RTL
+   direction labels now use `text_section_chrome_label(...)` instead of local
+   `ui::text(...).font_medium()` builders. Kanban card titles and Announcement title copy remain
+   separate candidates because their roles need owner-specific decisions.
    2026-05-19 gallery Dialog scroll-row text follow-up: scrollable-content and sticky-footer
    filler rows now route through shared list-row label text instead of `ui::raw_text(format!(...))`,
    keeping scroll proof rows single-line/shrinkable under resize while dialog title/description
