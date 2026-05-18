@@ -507,6 +507,9 @@ Exit criteria:
   2026-05-18 AI usage snippet text-role result: Attachments usage explanatory copy now uses the
   shared paragraph role, and StackTrace usage fixed title/body copy uses shared
   section-chrome/paragraph roles.
+  2026-05-18 AI Message usage text-role result: Message usage user text now uses paragraph text,
+  the last-action marker uses control-readout text, and fixed outer title/body copy uses
+  section-chrome/paragraph roles.
   2026-05-17 gallery data-grid text result: the UI Gallery DataGrid preview now routes virtualized
   grid cells through `text_table_cell(...)` and the selected-row status line through
   `control_readout_text(...)`.

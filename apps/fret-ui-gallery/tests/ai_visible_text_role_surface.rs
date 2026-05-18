@@ -1172,3 +1172,37 @@ fn ai_usage_snippets_use_shared_chrome_and_paragraph_roles() {
         );
     }
 }
+
+#[test]
+fn ai_message_usage_uses_shared_outer_and_user_text_roles() {
+    let source = include_str!("../src/ui/snippets/ai/message_usage.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_paragraph(cx, text.clone())",
+        "decl_text::text_control_readout(cx, format!(\"last_action={last_action}\"))",
+        "decl_text::text_section_chrome_label(cx, \"Message usage (AI Elements)\")",
+        "decl_text::text_paragraph",
+        "Docs-aligned composition: Conversation + Message + MessageActions + PromptInput.",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "message_usage should route user content, readout, and fixed outer copy through shared roles; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "_ => Some(cx.text(text.clone()))",
+        "cx.text(format!(\"last_action={last_action}\"))",
+        "cx.text(\"Message usage (AI Elements)\")",
+        "cx.text(\"Docs-aligned composition: Conversation + Message + MessageActions + PromptInput.\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "message_usage reintroduced bare user/readout/outer text: `{forbidden}`"
+        );
+    }
+}

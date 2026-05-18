@@ -494,6 +494,7 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/snippets/ai/conversation_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/attachments_usage.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/stack_trace_usage.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/message_usage.rs",
                 "apps/fret-ui-gallery/tests/ai_visible_text_role_surface.rs",
                 "ecosystem/fret-ui-ai/src/elements/mod.rs",
                 "ecosystem/fret-ui-ai/src/surface_policy_tests.rs",
@@ -1278,6 +1279,22 @@ def main() -> None:
             forbidden=[
                 "cx.text(\"StackTrace usage\")",
                 "cx.text(\"Minimal compound-parts composition aligned with the official AI Elements usage example.\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/message_usage.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph(cx, text.clone())",
+                "decl_text::text_control_readout(cx, format!(\"last_action={last_action}\"))",
+                "decl_text::text_section_chrome_label(cx, \"Message usage (AI Elements)\")",
+                "Docs-aligned composition: Conversation + Message + MessageActions + PromptInput.",
+            ],
+            forbidden=[
+                "_ => Some(cx.text(text.clone()))",
+                "cx\n        .text(format!(\"last_action={last_action}\"))",
+                "cx.text(\"Message usage (AI Elements)\")",
+                "cx.text(\n                \"Docs-aligned composition: Conversation + Message + MessageActions + PromptInput.\",\n            )",
             ],
         ),
         SourceCheck(

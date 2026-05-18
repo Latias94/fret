@@ -549,6 +549,9 @@ Readiness order for the next locally testable review slices:
    label routes through `text_button_label(...)`.
    2026-05-18 AI usage snippet text-role follow-up: Attachments usage explanatory copy now uses
    paragraph text, and StackTrace usage title/body copy uses section-chrome/paragraph roles.
+   2026-05-18 AI Message usage text-role follow-up: Message usage now routes user message text
+   through paragraph text, the last-action marker through control-readout text, and fixed outer
+   title/body copy through section-chrome/paragraph roles.
    2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
    virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
    `control_readout_text(...)`.
