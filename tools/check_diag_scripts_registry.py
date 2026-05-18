@@ -43,6 +43,17 @@ STRICT_CLICK_VISIBILITY_SUITES = {
     "ui-gallery-hover-card",
     "ui-gallery-menubar-placement",
 }
+STRICT_NAV_CLICK_VISIBILITY_SUITES = {
+    "ui-gallery-canvas-cull",
+    "ui-gallery-chart-torture",
+    "ui-gallery-node-graph-cull",
+    "ui-gallery-node-graph-cull-window-no-shifts-small-pan",
+    "ui-gallery-node-graph-cull-window-shifts",
+}
+UI_GALLERY_NAV_CLICK_EXEMPT_TEST_IDS = {
+    "ui-gallery-nav-search",
+    "ui-gallery-nav-scroll",
+}
 STRICT_UI_GALLERY_CONTENT_TEST_ID_PREFIXES = (
     "ui-gallery-command-",
     "ui-gallery-combobox-",
@@ -465,6 +476,13 @@ def is_strict_ui_gallery_content_target(test_id: str) -> bool:
     return test_id.startswith(STRICT_UI_GALLERY_CONTENT_TEST_ID_PREFIXES)
 
 
+def is_strict_ui_gallery_nav_click_target(test_id: str) -> bool:
+    return (
+        test_id.startswith("ui-gallery-nav-")
+        and test_id not in UI_GALLERY_NAV_CLICK_EXEMPT_TEST_IDS
+    )
+
+
 def collect_test_ids(value: Any) -> list[str]:
     out: list[str] = []
     if isinstance(value, dict):
@@ -716,6 +734,80 @@ def lint_strict_click_visibility(repo_root: Path, registry: dict[str, Any]) -> l
     return violations
 
 
+def lint_strict_nav_click_visibility(repo_root: Path, registry: dict[str, Any]) -> list[str]:
+    """
+    Check promoted UI Gallery navigation clicks that can target off-window nav rows.
+
+    This is intentionally opt-in by suite: many legacy perf scripts still own their own nav
+    scrolling pattern, while the strict cull/torture suites have been cleared to explicit
+    `ensure_visible` guards.
+    """
+    scripts = registry.get("scripts")
+    if not isinstance(scripts, list):
+        return ["registry scripts must be a list"]
+
+    violations: list[str] = []
+
+    for entry in scripts:
+        if not isinstance(entry, dict):
+            continue
+        memberships = entry.get("suite_memberships")
+        if not isinstance(memberships, list):
+            continue
+        if not STRICT_NAV_CLICK_VISIBILITY_SUITES.intersection(
+            item for item in memberships if isinstance(item, str)
+        ):
+            continue
+
+        rel_path = entry.get("path")
+        if not isinstance(rel_path, str) or not rel_path.strip():
+            continue
+
+        script_path = repo_root / Path(rel_path)
+        obj = read_json(script_path)
+        steps = obj.get("steps") if isinstance(obj, dict) else None
+        if not isinstance(steps, list):
+            continue
+
+        visible_nav_targets: set[str] = set()
+        for index, step in enumerate(steps):
+            if not isinstance(step, dict):
+                continue
+
+            step_type = step.get("type")
+            if step_type == "set_window_inner_size":
+                visible_nav_targets.clear()
+
+            if step_type == "scroll_into_view":
+                target_id = test_id_from_target_ref(step.get("target"))
+                if (
+                    target_id is not None
+                    and is_strict_ui_gallery_nav_click_target(target_id)
+                    and step.get("require_fully_within_window") is True
+                ):
+                    visible_nav_targets.add(target_id)
+
+            if step_type == "ensure_visible" and step.get("within_window") is True:
+                target_id = test_id_from_target_ref(step.get("target"))
+                if target_id is not None and is_strict_ui_gallery_nav_click_target(target_id):
+                    visible_nav_targets.add(target_id)
+
+            if step_type in {"click", "click_stable"}:
+                target_id = test_id_from_target_ref(step.get("target"))
+                if (
+                    target_id is not None
+                    and is_strict_ui_gallery_nav_click_target(target_id)
+                    and target_id not in visible_nav_targets
+                ):
+                    violations.append(
+                        f"{rel_path}: step {index}: nav click target `{target_id}` lacks a "
+                        "prior ensure_visible(within_window=true) or "
+                        "scroll_into_view(require_fully_within_window=true) guard"
+                    )
+
+    return violations
+
+
 def lint_pointer_current_state_convergence(repo_root: Path, registry: dict[str, Any]) -> list[str]:
     """
     Check promoted scripts for pointer-event steps followed by immediate current-state asserts.
@@ -844,6 +936,13 @@ def main() -> None:
     if click_visibility_violations:
         print("error: promoted diag scripts have unsafe long-page click authoring:", file=sys.stderr)
         for violation in click_visibility_violations:
+            print(f"- {violation}", file=sys.stderr)
+        raise SystemExit(2)
+
+    nav_click_visibility_violations = lint_strict_nav_click_visibility(repo_root, expected)
+    if nav_click_visibility_violations:
+        print("error: promoted diag scripts have unsafe Gallery nav click authoring:", file=sys.stderr)
+        for violation in nav_click_visibility_violations:
             print(f"- {violation}", file=sys.stderr)
         raise SystemExit(2)
 

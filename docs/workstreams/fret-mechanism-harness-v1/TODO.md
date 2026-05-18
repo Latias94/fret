@@ -1057,3 +1057,10 @@ date: 2026-05-12
     hit-tested `no_hit`; this was a diagnostics authoring defect, not a Canvas Cull mechanism
     defect. After the script fix, `ui-gallery-canvas-cull` passes with zero lint warnings and a
     pixels-changed post-run proof.
+- [x] Add a strict Gallery nav click authoring lint for promoted cull/torture suites.
+  - Result: `tools/check_diag_scripts_registry.py` now rejects direct clicks on `ui-gallery-nav-*`
+    page rows in the Canvas Cull, Chart Torture, and Node Graph Cull suites unless the same nav row
+    has a prior `ensure_visible(within_window=true)` or
+    `scroll_into_view(require_fully_within_window=true)` guard. `ui-gallery-nav-search` and
+    `ui-gallery-nav-scroll` remain exempt as always-visible/navigation-control targets. Registry
+    self-tests now lock the bad direct-click case, the guarded case, and the search exemption.

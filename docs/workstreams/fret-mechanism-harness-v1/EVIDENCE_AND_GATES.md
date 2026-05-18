@@ -4362,7 +4362,7 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - result: passed.
 - protocol roundtrip:
   `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_canvas_cull_torture_pan_zoom --no-fail-fast --no-capture`
-  - result: passed; Nextest run id `eace796c-8b9d-433b-a791-75eff8d7fb8e`.
+  - result: passed; Nextest run id `b32d1fd3-74f8-46c3-893f-1bee7b5d65f6`.
 - runtime diagnostics:
   `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-canvas-cull --dir target/fret-diag-canvas-cull-suite-after-search-entry --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
   - result: passed; suite summary
@@ -4370,3 +4370,27 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     run id `1779125873114`; lint warnings `0`.
   - pixels-changed post-run proof:
     `target/fret-diag-canvas-cull-suite-after-search-entry/sessions/1779125863873-16812/check.pixels_changed.json`.
+
+## Gallery Nav Click Visibility Authoring Lint
+
+- invariant:
+  promoted UI Gallery scripts that click long navigation page rows must prove the nav row is inside
+  the window first. Selector existence alone is not enough because off-window nav rows can resolve
+  successfully while click synthesis clamps to the window edge and hit-tests `no_hit`.
+- finding:
+  the Canvas Cull runtime failure exposed a missing registry guard for `ui-gallery-nav-*` page-row
+  clicks. Existing strict click-visibility lint covered long-page content targets, but not the left
+  Gallery navigation list.
+- implementation anchors:
+  `tools/check_diag_scripts_registry.py` and `tools/test_check_diag_scripts_registry.py`.
+- scope:
+  strict nav-click visibility now covers the cleared cull/torture suites:
+  `ui-gallery-canvas-cull`, `ui-gallery-chart-torture`, `ui-gallery-node-graph-cull`,
+  `ui-gallery-node-graph-cull-window-shifts`, and
+  `ui-gallery-node-graph-cull-window-no-shifts-small-pan`.
+- registry self-test:
+  `python tools/test_check_diag_scripts_registry.py`
+  - result: passed; 39 tests.
+- registry check:
+  `python tools/check_diag_scripts_registry.py`
+  - result: passed; registry is up to date.

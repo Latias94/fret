@@ -2020,8 +2020,28 @@ Status: complete for Canvas Cull pan/zoom runtime evidence and protocol roundtri
   `python -m json.tool tools\diag-scripts\ui-gallery\perf\ui-gallery-canvas-cull-torture-pan-zoom.json > $null`.
 - Protocol roundtrip passes:
   `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_canvas_cull_torture_pan_zoom --no-fail-fast --no-capture`
-  with Nextest run id `eace796c-8b9d-433b-a791-75eff8d7fb8e`.
+  with Nextest run id `b32d1fd3-74f8-46c3-893f-1bee7b5d65f6`.
 - Runtime diagnostics pass:
   `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-canvas-cull --dir target/fret-diag-canvas-cull-suite-after-search-entry --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
   with run id `1779125873114`; `check.pixels_changed.json` also passed for
   `ui-gallery-canvas-cull-root`.
+
+## M113: Strict Gallery Nav Click Visibility Authoring Lint
+
+Status: complete for the cull/torture promoted-suite nav-click authoring guard.
+
+- Added `STRICT_NAV_CLICK_VISIBILITY_SUITES` to `tools/check_diag_scripts_registry.py` for:
+  `ui-gallery-canvas-cull`, `ui-gallery-chart-torture`, `ui-gallery-node-graph-cull`,
+  `ui-gallery-node-graph-cull-window-shifts`, and
+  `ui-gallery-node-graph-cull-window-no-shifts-small-pan`.
+- The new lint rejects `click` or `click_stable` on page-row `ui-gallery-nav-*` targets unless the
+  same target has a prior `ensure_visible(within_window=true)` or
+  `scroll_into_view(require_fully_within_window=true)` guard.
+- `ui-gallery-nav-search` and `ui-gallery-nav-scroll` are exempt because they are nav controls, not
+  long-list page rows.
+- Registry self-tests now cover the bad Canvas Cull direct-nav-click case, the guarded case, and
+  the nav-search exemption.
+- Gates pass:
+  `python tools/test_check_diag_scripts_registry.py`
+  with 39/39 tests passed, and
+  `python tools/check_diag_scripts_registry.py`.

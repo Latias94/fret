@@ -968,6 +968,88 @@ class DiagScriptRegistryLintTests(unittest.TestCase):
 
             self.assertEqual([], violations)
 
+    def test_canvas_cull_nav_click_requires_visibility_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/perf/canvas-cull-bad.json"
+            self.write_script(
+                root,
+                rel,
+                [
+                    {
+                        "type": "click",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-nav-canvas-cull-torture",
+                        },
+                    },
+                ],
+            )
+
+            violations = REGISTRY.lint_strict_nav_click_visibility(
+                root, self.registry_for(rel, ["ui-gallery-canvas-cull"])
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertIn("ui-gallery-nav-canvas-cull-torture", violations[0])
+            self.assertIn("ensure_visible", violations[0])
+
+    def test_canvas_cull_nav_click_accepts_ensure_visible_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/perf/canvas-cull-good.json"
+            self.write_script(
+                root,
+                rel,
+                [
+                    {
+                        "type": "ensure_visible",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-nav-canvas-cull-torture",
+                        },
+                        "within_window": True,
+                    },
+                    {
+                        "type": "click",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-nav-canvas-cull-torture",
+                        },
+                    },
+                ],
+            )
+
+            violations = REGISTRY.lint_strict_nav_click_visibility(
+                root, self.registry_for(rel, ["ui-gallery-canvas-cull"])
+            )
+
+            self.assertEqual([], violations)
+
+    def test_nav_search_click_is_exempt_from_nav_visibility_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/perf/canvas-cull-search.json"
+            self.write_script(
+                root,
+                rel,
+                [
+                    {
+                        "type": "click",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-nav-search",
+                        },
+                    },
+                ],
+            )
+
+            violations = REGISTRY.lint_strict_nav_click_visibility(
+                root, self.registry_for(rel, ["ui-gallery-canvas-cull"])
+            )
+
+            self.assertEqual([], violations)
+
     def test_pointer_current_state_assert_immediately_after_pointer_step_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
