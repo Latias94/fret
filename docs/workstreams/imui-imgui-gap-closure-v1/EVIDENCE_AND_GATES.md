@@ -2807,6 +2807,32 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   passed.
 - `git diff --check` passed.
 
+2026-05-19 gallery Kanban card title text-role slice:
+
+- Red repro:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  shadcn_extras_kanban_card_titles_use_shared_button_label_role --no-fail-fast` failed before the
+  fix because `shadcn_extras/kanban.rs` did not import shared text roles and still rendered card
+  titles through local `ui::text(item.name.clone()).font_medium().truncate()` policy.
+- `apps/fret-ui-gallery/src/ui/snippets/shadcn_extras/kanban.rs` now routes the app-owned Kanban
+  card title slot through `text_button_label(...)`.
+- First post-fix
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  shadcn_extras_kanban_card_titles_use_shared_button_label_role --no-fail-fast` timed out without a
+  capturable result while Cargo/Rustc processes continued; those processes were allowed to finish
+  before retrying.
+- Retried after the compile finished:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  shadcn_extras_kanban_card_titles_use_shared_button_label_role --no-fail-fast` passed.
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ui_authoring_surface_default_app` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `PYTHONIOENCODING=utf-8 python tools\gate_imui_workstream_source.py` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.
+
 2026-05-19 gallery ContextMenu trigger text-role slice:
 
 - Red repro:

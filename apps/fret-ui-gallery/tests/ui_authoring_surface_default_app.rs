@@ -11187,6 +11187,22 @@ fn shadcn_extras_avatar_stack_direction_labels_use_shared_chrome_text_role() {
 }
 
 #[test]
+fn shadcn_extras_kanban_card_titles_use_shared_button_label_role() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/shadcn_extras/kanban.rs",
+        &[
+            "use fret_ui_kit::{declarative::text as decl_text, ui};",
+            "let title = decl_text::text_button_label(cx, item.name.clone());",
+        ],
+        &[
+            "ui::text(item.name.clone())",
+            ".font_medium()",
+            ".truncate()",
+        ],
+    );
+}
+
+#[test]
 fn gallery_sidebar_nav_scroll_is_explicit_flex_fill_slot() {
     let source = read("src/ui/nav.rs");
     let canonical = canonicalize_rust_fragment(&source);

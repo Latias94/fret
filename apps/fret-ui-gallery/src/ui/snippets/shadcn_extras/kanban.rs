@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("kanban.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
-use fret_ui_kit::ui;
+use fret_ui_kit::{declarative::text as decl_text, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -26,12 +26,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         shadcn::raw::extras::Kanban::new(columns, items)
             .test_id("ui-gallery-shadcn-extras-kanban")
             .into_element_with(cx, |cx, item, ctx| {
-                let title = ui::text(item.name.clone())
-                    .font_medium()
-                    .w_full()
-                    .min_w_0()
-                    .truncate()
-                    .into_element(cx);
+                let title = decl_text::text_button_label(cx, item.name.clone());
 
                 let badge = shadcn::Badge::new(item.column.clone())
                     .variant(shadcn::BadgeVariant::Secondary)

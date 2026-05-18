@@ -671,6 +671,9 @@ Exit criteria:
   2026-05-19 gallery AvatarStack direction label result: Shadcn Extras avatar-stack direction
   labels now use shared section-chrome text instead of local `ui::text(...).font_medium()`, keeping
   the fixed demo chrome on resize-safe roles while leaving raw extras recipes unchanged.
+  2026-05-19 gallery Kanban card title result: Shadcn Extras Kanban app-owned card titles now use
+  shared button-label text instead of local `ui::text(item.name).font_medium().truncate()` policy,
+  while raw Kanban drag/drop and column recipes remain unchanged.
   2026-05-19 gallery Dialog scroll-row text result: scrollable-content and sticky-footer dialog
   filler rows now use shared list-row label text instead of `ui::raw_text(format!(...))`, keeping
   the scroll proof rows on a fixed-row text role without changing shadcn dialog recipes.

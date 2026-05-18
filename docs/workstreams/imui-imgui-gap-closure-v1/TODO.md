@@ -725,8 +725,12 @@ Readiness order for the next locally testable review slices:
    `cx.text(...)` builders.
    2026-05-19 gallery AvatarStack direction label follow-up: Shadcn Extras avatar-stack LTR/RTL
    direction labels now use `text_section_chrome_label(...)` instead of local
-   `ui::text(...).font_medium()` builders. Kanban card titles and Announcement title copy remain
-   separate candidates because their roles need owner-specific decisions.
+   `ui::text(...).font_medium()` builders. Announcement title copy remains a separate candidate
+   because its role needs an owner-specific decision.
+   2026-05-19 gallery Kanban card title follow-up: Shadcn Extras Kanban app-owned card title slots
+   now use `text_button_label(...)` instead of local `ui::text(item.name).font_medium().truncate()`
+   builders. Announcement title copy remains a separate candidate because it is passed into a raw
+   extras title component rather than rendered by the caller's card slot.
    2026-05-19 gallery Dialog scroll-row text follow-up: scrollable-content and sticky-footer
    filler rows now route through shared list-row label text instead of `ui::raw_text(format!(...))`,
    keeping scroll proof rows single-line/shrinkable under resize while dialog title/description
