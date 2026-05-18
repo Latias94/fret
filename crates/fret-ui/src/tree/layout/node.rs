@@ -880,6 +880,27 @@ impl<H: UiHost> UiTree<H> {
             }
             return Ok(());
         }
+        if self.clean_geometry_explicit_zero_driver_leaf(app, window, node) {
+            let Some(entry) = self.nodes.get(node) else {
+                return Err(CleanGeometrySolveSkipRejection::new(
+                    CleanGeometrySolveSkipRejectionReason::MissingNode,
+                )
+                .at_node(node));
+            };
+            if entry.invalidation.layout {
+                return Err(CleanGeometrySolveSkipRejection::new(
+                    CleanGeometrySolveSkipRejectionReason::LayoutDirty,
+                )
+                .at_node(node));
+            }
+            if self.node_subtree_layout_dirty(node) {
+                return Err(CleanGeometrySolveSkipRejection::new(
+                    CleanGeometrySolveSkipRejectionReason::SubtreeLayoutDirty,
+                )
+                .at_node(node));
+            }
+            return Ok(());
+        }
         self.clean_geometry_node_clean_result(node)?;
         if !is_root
             && self
@@ -1212,6 +1233,91 @@ impl<H: UiHost> UiTree<H> {
                 )
             },
         )
+    }
+
+    fn clean_geometry_explicit_zero_driver_leaf(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        node: NodeId,
+    ) -> bool {
+        let Some(entry) = self.nodes.get(node) else {
+            return false;
+        };
+        if !entry.children.is_empty() {
+            return false;
+        }
+        crate::declarative::frame::element_record_for_node(app, window, node).is_some_and(
+            |record| match record.instance {
+                crate::declarative::frame::ElementInstance::Spacer(props) => {
+                    props.min.0.abs() <= 0.01
+                        && Self::clean_explicit_zero_driver_layout_supported(props.layout)
+                }
+                crate::declarative::frame::ElementInstance::Container(props) => {
+                    Self::clean_zero_driver_container_chrome_is_empty(props)
+                        && Self::clean_explicit_zero_driver_layout_supported(props.layout)
+                }
+                _ => false,
+            },
+        )
+    }
+
+    fn clean_explicit_zero_driver_layout_supported(layout: crate::element::LayoutStyle) -> bool {
+        layout.position == crate::element::PositionStyle::Static
+            && layout.overflow == crate::element::Overflow::Visible
+            && layout.inset == crate::element::InsetStyle::default()
+            && layout.grid == crate::element::GridItemStyle::default()
+            && layout.aspect_ratio.is_none()
+            && Self::clean_margin_edges_are_zero_px(layout.margin)
+            && Self::clean_length_is_zero_px(layout.size.width)
+            && Self::clean_length_is_zero_px(layout.size.height)
+            && Self::clean_optional_min_length_allows_zero(layout.size.min_width)
+            && Self::clean_optional_min_length_allows_zero(layout.size.min_height)
+            && Self::clean_optional_max_length_allows_zero(layout.size.max_width)
+            && Self::clean_optional_max_length_allows_zero(layout.size.max_height)
+            && layout.flex.order == 0
+            && layout.flex.grow.abs() <= 0.01
+            && layout.flex.align_self.is_none()
+            && layout.flex.shrink >= -0.01
+            && (Self::clean_length_is_zero_px(layout.flex.basis)
+                || matches!(layout.flex.basis, crate::element::Length::Auto))
+    }
+
+    fn clean_zero_driver_container_chrome_is_empty(props: crate::element::ContainerProps) -> bool {
+        Self::clean_spacing_edges_are_zero_px(props.padding)
+            && props.background.is_none()
+            && props.background_paint.is_none()
+            && props.shadow.is_none()
+            && Self::clean_edges_are_zero_px(props.border)
+            && props.border_color.is_none()
+            && props.border_paint.is_none()
+            && props.border_dash.is_none()
+            && props.focus_ring.is_none()
+            && !props.focus_ring_always_paint
+            && props.focus_border_color.is_none()
+            && !props.focus_within
+            && Self::clean_corners_are_zero_px(props.corner_radii)
+            && !props.snap_to_device_pixels
+    }
+
+    fn clean_length_is_zero_px(length: crate::element::Length) -> bool {
+        matches!(length, crate::element::Length::Px(px) if px.0.abs() <= 0.01)
+    }
+
+    fn clean_optional_min_length_allows_zero(length: Option<crate::element::Length>) -> bool {
+        match length {
+            Some(crate::element::Length::Px(px)) => px.0 <= 0.01,
+            Some(crate::element::Length::Auto) | None => true,
+            Some(crate::element::Length::Fill | crate::element::Length::Fraction(_)) => false,
+        }
+    }
+
+    fn clean_optional_max_length_allows_zero(length: Option<crate::element::Length>) -> bool {
+        match length {
+            Some(crate::element::Length::Px(px)) => px.0 >= -0.01,
+            Some(crate::element::Length::Auto) | None => true,
+            Some(crate::element::Length::Fill | crate::element::Length::Fraction(_)) => false,
+        }
     }
 
     fn clean_flex_child_bounds_strategy(
@@ -2300,6 +2406,28 @@ impl<H: UiHost> UiTree<H> {
             && is_zero(margin.right)
             && is_zero(margin.top)
             && is_zero(margin.bottom)
+    }
+
+    fn clean_spacing_edges_are_zero_px(spacing: crate::element::SpacingEdges) -> bool {
+        let is_zero = |edge: crate::element::SpacingLength| matches!(edge, crate::element::SpacingLength::Px(px) if px.0.abs() <= 0.01);
+        is_zero(spacing.left)
+            && is_zero(spacing.right)
+            && is_zero(spacing.top)
+            && is_zero(spacing.bottom)
+    }
+
+    fn clean_edges_are_zero_px(edges: fret_core::Edges) -> bool {
+        edges.left.0.abs() <= 0.01
+            && edges.right.0.abs() <= 0.01
+            && edges.top.0.abs() <= 0.01
+            && edges.bottom.0.abs() <= 0.01
+    }
+
+    fn clean_corners_are_zero_px(corners: fret_core::Corners) -> bool {
+        corners.top_left.0.abs() <= 0.01
+            && corners.top_right.0.abs() <= 0.01
+            && corners.bottom_right.0.abs() <= 0.01
+            && corners.bottom_left.0.abs() <= 0.01
     }
 
     fn clean_engine_geometry_propagation_supported_element(

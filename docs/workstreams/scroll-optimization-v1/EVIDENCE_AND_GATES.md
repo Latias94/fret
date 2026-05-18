@@ -1249,6 +1249,44 @@ ViewCache clean-geometry boundary slice (2026-05-18):
   - The next narrow candidate is the toast/sonner `Spacer` missing-measured-size path, with a
     measured-size data-model refactor only if the same sentinel ambiguity recurs across more roots.
 
+Explicit zero driver leaves (2026-05-18):
+
+- Source audit:
+  - `ecosystem/fret-ui-shadcn/src/sonner.rs:377-382`
+  - `apps/fret-ui-gallery/src/driver/settings_sheet.rs:40-55`
+- Focused gates:
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_skips_explicit_zero_spacer_leaf clean_geometry_small_resize_rejects_implicit_zero_spacer_leaf clean_geometry_small_resize_skips_explicit_zero_container_leaf clean_geometry_small_resize_rejects_implicit_zero_container_leaf --no-fail-fast`
+    - Result: `4/4` passed.
+  - `cargo nextest run -p fret-ui layout_engine --no-fail-fast`
+    - Result: `48/48` passed.
+  - `cargo nextest run -p fret-ui scroll --no-fail-fast`
+    - Result: `153/153` passed.
+  - `cargo nextest run -p fret-ui view_cache --no-fail-fast`
+    - Result: `68/68` passed.
+- Local no-4090 evidence:
+  - Bundle:
+    `target/fret-diag/local-next-explicit-zero-driver-leaf-clean-geometry-20260518-r1/1779066543524/bundle.schema2.json`
+  - Perf summary:
+    `target/fret-diag/local-next-explicit-zero-driver-leaf-clean-geometry-20260518-r1/layout.perf.summary.v1.json`
+  - Result:
+    - Top frame total/layout/layout-engine-solve/prepaint/paint is `3096/2476/208/258/378us`.
+    - View-cache guardrails stay stable: `top_view_cache_roots_reused=1`,
+      `top_view_cache_roots_needs_rerender=0`, row replay/store `289/0`, row-scene replay hit
+      rate `100%`.
+    - The previous `missing_measured_size / Spacer` and `missing_measured_size / Container`
+      blockers are gone from per-solve attribution.
+    - Remaining blockers:
+      - content `Semantics`: `text_reflow / Text` at `apps/fret-ui-gallery/src/ui/content.rs:742`,
+        solve about `159us`;
+      - content/header `Semantics`: `flex_cross_align / Flex` at
+        `apps/fret-ui-gallery/src/ui/content.rs:102`, solve about `44us`;
+      - editor `PointerRegion`: `unsupported_kind / Canvas`, solve about `3us`;
+      - root `Scroll`: `side_effect_boundary / Scroll`, solve `0us`.
+- Decision:
+  - Close the explicit-zero driver leaf blocker as a narrow legal-zero contract fix.
+  - Keep `measured_size: Option<Size>` as a follow-on only if legal zero boxes recur outside
+    explicit driver leaves.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:

@@ -522,6 +522,37 @@ Status: Active
   - Decision: close the `ViewCache` slice here. The next narrow optimization candidate is the
     toast/sonner `Spacer` missing-measured-size path, with a measured-size data-model follow-up only
     if the same sentinel ambiguity recurs across more real roots.
+- [x] Audit and implement explicit zero-size driver leaves for clean geometry.
+  - Source audit: shadcn `Toaster` returns an explicit `0x0` `Spacer` only to drive overlay
+    requests, and the gallery settings sheet uses an empty explicit `0x0` `Container` as a sheet
+    trigger placeholder. Neither should affect layout.
+  - Contract decision: this is a narrow legal-zero leaf issue, not a shadcn recipe rewrite and not
+    enough evidence for a broad `measured_size: Option<Size>` data-model migration.
+  - Implemented proof: clean-geometry preflight accepts only leaf `Spacer` or leaf `Container`
+    driver nodes with explicit `0x0` width/height, static positioning, zero margins, no flex grow,
+    zero-compatible constraints, and no children. `Container` additionally requires zero padding,
+    zero border, and no background/shadow/focus chrome.
+  - Guardrails: implicit/default `Spacer` and implicit/default empty `Container` still reject as
+    `missing_measured_size`, so ordinary legal `0x0` authoring remains explicit instead of inferred
+    from the `Size::default()` sentinel.
+  - Focused gates:
+    `clean_geometry_small_resize_skips_explicit_zero_spacer_leaf`,
+    `clean_geometry_small_resize_rejects_implicit_zero_spacer_leaf`,
+    `clean_geometry_small_resize_skips_explicit_zero_container_leaf`, and
+    `clean_geometry_small_resize_rejects_implicit_zero_container_leaf`.
+  - Local no-4090 evidence:
+    `target/fret-diag/local-next-explicit-zero-driver-leaf-clean-geometry-20260518-r1/1779066543524/bundle.schema2.json`.
+  - Result: the previous `missing_measured_size / Spacer` Sonner blocker and the follow-on
+    `missing_measured_size / Container` settings-sheet blocker are gone from per-solve attribution.
+    View-cache reuse remains `1`, needs-rerender remains `0`, and row replay/store remains `289/0`
+    with row-scene replay hit rate `100%`.
+  - Remaining blockers: content `Semantics` now stops at `text_reflow / Text` around
+    `apps/fret-ui-gallery/src/ui/content.rs:742` (about `159us` solve), content/header chrome stops
+    at `flex_cross_align / Flex` around `apps/fret-ui-gallery/src/ui/content.rs:102` (about
+    `44us` solve), editor `Canvas` remains small, and root `Scroll` remains a side-effect boundary.
+  - Decision: close the explicit-zero driver leaf slice here. Treat text reflow and flex
+    cross-axis classification as separate follow-ups; keep the broad measured-size sentinel refactor
+    as a TODO only if legal zero boxes recur outside explicit driver leaves.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

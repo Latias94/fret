@@ -170,3 +170,16 @@ Status: Active
   `unsupported_kind / ViewCache`. Fresh no-4090 evidence now points to `missing_measured_size /
   Spacer` through shadcn `sonner` toast chrome; content `Text`, editor `Canvas`, and root `Scroll`
   remain separate follow-ups.
+
+## M14 — Explicit zero driver leaf contract (candidate)
+
+- Classify explicit `0x0` driver-only leaves so overlay triggers can stay layout-neutral without
+  relying on a `Size::default()` sentinel.
+- Treat leaf `Spacer` and empty leaf `Container` differently from ordinary zero-sized chrome:
+  the intent must be explicit, and visual chrome must still stay on the full solve path.
+- Keep default/implicit empty leaves on the authoritative solve path until they are made explicit by
+  authoring or a broader data-model refactor.
+- 2026-05-18 minimum slice landed: explicit `0x0` `Spacer` and explicit `0x0` empty `Container`
+  driver leaves now skip the root solve, while implicit/default variants still reject. Fresh
+  no-4090 evidence moves the next blockers to `text_reflow / Text` and `flex_cross_align / Flex`;
+  editor `Canvas` and root `Scroll` remain separate follow-ups.

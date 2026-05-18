@@ -1454,6 +1454,446 @@ fn clean_geometry_small_resize_skips_absent_zero_absolute_overlay_child() {
 }
 
 #[test]
+fn clean_geometry_small_resize_skips_explicit_zero_spacer_leaf() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+    let mut text = FakeTextService::default();
+    let bounds_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(220.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(216.0), Px(180.0)),
+    );
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-explicit-zero-spacer",
+        |cx| {
+            vec![cx.stack_props(
+                crate::element::StackProps {
+                    layout: crate::element::LayoutStyle {
+                        size: crate::element::SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+                |cx| {
+                    let mut layout = crate::element::LayoutStyle::default();
+                    layout.size.width = Length::Px(Px(0.0));
+                    layout.size.height = Length::Px(Px(0.0));
+                    layout.flex.grow = 0.0;
+                    layout.flex.shrink = 0.0;
+                    layout.flex.basis = Length::Px(Px(0.0));
+                    vec![cx.spacer(crate::element::SpacerProps {
+                        layout,
+                        min: Px(0.0),
+                    })]
+                },
+            )]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(176.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    let stack_node = ui.children(child)[0];
+    let spacer_node = ui.children(stack_node)[0];
+    assert!(
+        ui.debug_node_measured_size(spacer_node)
+            .is_some_and(|size| size == Size::default()),
+        "an explicit driver-only spacer can legitimately measure to zero"
+    );
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "an explicit zero-size spacer leaf should not force the Stack root solve"
+    );
+    assert_eq!(
+        ui.debug_stats().layout_clean_geometry_solve_skip_rejections,
+        0,
+        "the explicit zero-size spacer leaf should not be reported as missing_measured_size"
+    );
+
+    let spacer_bounds = ui.debug_node_bounds(spacer_node).expect("spacer bounds");
+    assert!((spacer_bounds.size.width.0 - 0.0).abs() < 0.01);
+    assert!((spacer_bounds.size.height.0 - 0.0).abs() < 0.01);
+}
+
+#[test]
+fn clean_geometry_small_resize_rejects_implicit_zero_spacer_leaf() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+    let mut text = FakeTextService::default();
+    let bounds_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(220.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(216.0), Px(180.0)),
+    );
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-implicit-zero-spacer",
+        |cx| {
+            vec![cx.stack_props(
+                crate::element::StackProps {
+                    layout: crate::element::LayoutStyle {
+                        size: crate::element::SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+                |cx| vec![cx.spacer(crate::element::SpacerProps::default())],
+            )]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(176.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert!(
+        ui.debug_stats().layout_engine_solves > 0,
+        "implicit zero-size spacers should stay on the authoritative solve path until their intent is explicit"
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_rejection,
+        Some("missing_measured_size")
+    );
+}
+
+#[test]
+fn clean_geometry_small_resize_skips_explicit_zero_container_leaf() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+    let mut text = FakeTextService::default();
+    let bounds_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(220.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(216.0), Px(180.0)),
+    );
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-explicit-zero-container",
+        |cx| {
+            vec![cx.stack_props(
+                crate::element::StackProps {
+                    layout: crate::element::LayoutStyle {
+                        size: crate::element::SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+                |cx| {
+                    let mut props = crate::element::ContainerProps::default();
+                    props.layout.size.width = Length::Px(Px(0.0));
+                    props.layout.size.height = Length::Px(Px(0.0));
+                    vec![cx.container(props, |_cx| Vec::new())]
+                },
+            )]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(176.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    let stack_node = ui.children(child)[0];
+    let container_node = ui.children(stack_node)[0];
+    assert!(
+        ui.debug_node_measured_size(container_node)
+            .is_some_and(|size| size == Size::default()),
+        "an explicit driver-only container can legitimately measure to zero"
+    );
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "an explicit zero-size container leaf should not force the Stack root solve"
+    );
+    assert_eq!(
+        ui.debug_stats().layout_clean_geometry_solve_skip_rejections,
+        0,
+        "the explicit zero-size container leaf should not be reported as missing_measured_size"
+    );
+
+    let container_bounds = ui
+        .debug_node_bounds(container_node)
+        .expect("container bounds");
+    assert!((container_bounds.size.width.0 - 0.0).abs() < 0.01);
+    assert!((container_bounds.size.height.0 - 0.0).abs() < 0.01);
+}
+
+#[test]
+fn clean_geometry_small_resize_rejects_implicit_zero_container_leaf() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let window = AppWindowId::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+    let mut text = FakeTextService::default();
+    let bounds_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(220.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(216.0), Px(180.0)),
+    );
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-implicit-zero-container",
+        |cx| {
+            vec![cx.stack_props(
+                crate::element::StackProps {
+                    layout: crate::element::LayoutStyle {
+                        size: crate::element::SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+                |cx| vec![cx.container(Default::default(), |_cx| Vec::new())],
+            )]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(176.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert!(
+        ui.debug_stats().layout_engine_solves > 0,
+        "implicit zero-size containers should stay on the authoritative solve path until their intent is explicit"
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_rejection,
+        Some("missing_measured_size")
+    );
+}
+
+#[test]
 fn clean_geometry_small_resize_rejects_fraction_absolute_stack_overlay_inset() {
     struct PrecomputeThenResize {
         child: NodeId,
