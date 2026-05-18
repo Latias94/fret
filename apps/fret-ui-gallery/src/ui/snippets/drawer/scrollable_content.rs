@@ -6,9 +6,10 @@ use fret_core::Px;
 use fret_ui::Theme;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
-fn paragraph_block<H: UiHost>(
+fn scroll_rows<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     prefix: &'static str,
     rows: usize,
@@ -17,10 +18,13 @@ fn paragraph_block<H: UiHost>(
     ui::v_flex(move |cx| {
         (0..rows)
             .map(|index| {
-                cx.text(format!(
-                    "{prefix} {}: Drawer scroll content for parity checks.",
-                    index + 1
-                ))
+                decl_text::text_list_row_label(
+                    cx,
+                    format!(
+                        "{prefix} {}: Drawer scroll content for parity checks.",
+                        index + 1
+                    ),
+                )
             })
             .collect::<Vec<_>>()
     })
@@ -45,7 +49,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::DrawerPart::content_with(move |cx| {
                 let scroller = shadcn::ScrollArea::new(ui::children![
                     cx;
-                    paragraph_block(cx, "Scrollable", 14)
+                    scroll_rows(cx, "Scrollable", 14)
                 ])
                 .refine_layout(
                     LayoutRefinement::default()

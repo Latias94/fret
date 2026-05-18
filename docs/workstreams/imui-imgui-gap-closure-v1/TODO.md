@@ -695,6 +695,10 @@ Readiness order for the next locally testable review slices:
    filler rows now route through shared list-row label text instead of `ui::raw_text(format!(...))`,
    keeping scroll proof rows single-line/shrinkable under resize while dialog title/description
    recipe-owned text stays inside shadcn components.
+   2026-05-19 gallery Drawer scroll/side text follow-up: drawer scroll filler rows now route
+   through shared list-row label text, side body copy routes through paragraph text, and the
+   historical `paragraph_block` helper name is gone so fixed scroll rows are not described as
+   paragraph layout.
    2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
    headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
    through `control_readout_text(...)`, and custom pointer-region labels through

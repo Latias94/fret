@@ -642,6 +642,9 @@ Exit criteria:
   2026-05-19 gallery Dialog scroll-row text result: scrollable-content and sticky-footer dialog
   filler rows now use shared list-row label text instead of `ui::raw_text(format!(...))`, keeping
   the scroll proof rows on a fixed-row text role without changing shadcn dialog recipes.
+  2026-05-19 gallery Drawer scroll/side text result: drawer scroll filler rows now use shared
+  list-row label text, side body examples use paragraph text, and the scroll helper was renamed
+  from `paragraph_block` to `scroll_rows` to match the fixed-row role.
   2026-05-17 gallery editor preview text result: code-editor, Markdown, and Web IME preview
   headers now use paragraph text for prose, control readout text for fixed status/debug values,
   and button label text for custom pointer-region actions. The slice keeps editor-proof resize

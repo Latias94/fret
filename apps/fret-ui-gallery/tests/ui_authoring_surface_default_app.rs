@@ -2900,6 +2900,28 @@ fn drawer_snippets_prefer_ui_cx_on_the_default_app_surface() {
 }
 
 #[test]
+fn drawer_scroll_and_side_body_text_uses_shared_roles() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/drawer/scrollable_content.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_list_row_label(cx, format!(",
+            "\"{prefix} {}: Drawer scroll content for parity checks.\"",
+        ],
+        &["cx.text(format!("],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/drawer/sides.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_paragraph(cx, format!(",
+            "\"{title} drawer example {}. Use the `direction` prop to control drawer placement.\"",
+        ],
+        &["cx.text(format!("],
+    );
+}
+
+#[test]
 fn drawer_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/drawer.rs",
@@ -10679,10 +10701,11 @@ fn selected_drawer_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/drawer/scrollable_content.rs",
         &[
-            "fn paragraph_block<H: UiHost>(cx: &mut ElementContext<'_, H>, prefix: &'static str, rows: usize,) -> impl IntoUiElement<H> + use<H>",
+            "fn scroll_rows<H: UiHost>(cx: &mut ElementContext<'_, H>, prefix: &'static str, rows: usize,) -> impl IntoUiElement<H> + use<H>",
         ],
         &[
-            "fn paragraph_block<H: UiHost>(cx: &mut ElementContext<'_, H>, prefix: &'static str, rows: usize,) -> AnyElement",
+            "fn paragraph_block<H: UiHost>(cx: &mut ElementContext<'_, H>, prefix: &'static str, rows: usize,)",
+            "fn scroll_rows<H: UiHost>(cx: &mut ElementContext<'_, H>, prefix: &'static str, rows: usize,) -> AnyElement",
         ],
     );
 }

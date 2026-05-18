@@ -527,6 +527,8 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/snippets/ai/canvas_world_layer_spike.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/dialog/scrollable_content.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/dialog/sticky_footer.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/drawer/scrollable_content.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/drawer/sides.rs",
                 "apps/fret-ui-gallery/tests/ai_visible_text_role_surface.rs",
                 "ecosystem/fret-ui-ai/src/elements/mod.rs",
                 "ecosystem/fret-ui-ai/src/surface_policy_tests.rs",
@@ -1931,6 +1933,8 @@ def main() -> None:
                 "2026-05-19 gallery Dialog scroll-row text follow-up",
                 "filler rows now route through shared list-row label text",
                 "instead of `ui::raw_text(format!(...))`",
+                "2026-05-19 gallery Drawer scroll/side text follow-up",
+                "historical `paragraph_block` helper name is gone",
             ],
             forbidden=[
                 "Remaining advanced-table candidates are freeze panes, persistence, and old columns API shape",
@@ -1962,6 +1966,8 @@ def main() -> None:
                 "2026-05-19 gallery Dialog scroll-row text result",
                 "filler rows now use shared list-row label text",
                 "without changing shadcn dialog recipes",
+                "2026-05-19 gallery Drawer scroll/side text result",
+                "from `paragraph_block` to `scroll_rows`",
             ],
             forbidden=[
                 "remain advanced-table candidates",
@@ -2250,6 +2256,10 @@ def main() -> None:
                 "`apps/fret-ui-gallery/src/ui/snippets/dialog/sticky_footer.rs`",
                 "`text_list_row_label(...)` instead of `ui::raw_text(format!(...))`",
                 "dialog_scroll_row_text_uses_shared_roles --no-fail-fast",
+                "2026-05-19 gallery Drawer scroll/side text-role slice",
+                "`apps/fret-ui-gallery/src/ui/snippets/drawer/scrollable_content.rs`",
+                "`apps/fret-ui-gallery/src/ui/snippets/drawer/sides.rs`",
+                "drawer_scroll_and_side_body_text_uses_shared_roles --no-fail-fast",
                 "cargo check -p fret-examples",
             ],
             forbidden=[
@@ -3469,6 +3479,30 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/drawer/scrollable_content.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "fn scroll_rows<H: UiHost>(",
+                "decl_text::text_list_row_label(",
+                "{prefix} {}: Drawer scroll content for parity checks.",
+            ],
+            forbidden=[
+                "fn paragraph_block<H: UiHost>(",
+                "cx.text(format!(",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/drawer/sides.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph(cx, format!(",
+                "{title} drawer example {}. Use the `direction` prop to control drawer placement.",
+            ],
+            forbidden=[
+                "cx.text(format!(",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/popover/align.rs"),
             required=[
                 "use fret_ui_kit::declarative::text as decl_text;",
@@ -3573,6 +3607,7 @@ def main() -> None:
                 "fn hover_card_snippet_text_uses_shared_roles()",
                 "fn popover_align_snippet_text_uses_shared_roles()",
                 "fn dialog_scroll_row_text_uses_shared_roles()",
+                "fn drawer_scroll_and_side_body_text_uses_shared_roles()",
                 "fn tooltip_keyboard_shortcut_text_uses_shared_role()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",

@@ -2555,3 +2555,28 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
   passed.
 - `git diff --check` passed.
+
+2026-05-19 gallery Drawer scroll/side text-role slice:
+
+- Red repro:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  drawer_scroll_and_side_body_text_uses_shared_roles --no-fail-fast` failed before the fix because
+  `drawer/scrollable_content.rs` was missing the shared `decl_text` role import.
+- `apps/fret-ui-gallery/src/ui/snippets/drawer/scrollable_content.rs` now routes scroll rows
+  through `text_list_row_label(...)`, and `apps/fret-ui-gallery/src/ui/snippets/drawer/sides.rs`
+  routes side body copy through `text_paragraph(...)`.
+- `cargo fmt -p fret-ui-gallery` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `cargo check -p fret-ui-gallery --test ui_authoring_surface_default_app` passed.
+- First post-fix
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  drawer_scroll_and_side_body_text_uses_shared_roles --no-fail-fast` timed out while a background
+  Cargo/Rustc compile continued; Cargo/Rustc processes were allowed to exit.
+- Retried after the compile finished:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  drawer_scroll_and_side_body_text_uses_shared_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.
