@@ -2693,6 +2693,31 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   passed.
 - `git diff --check` passed.
 
+2026-05-19 gallery Table children custom text-role slice:
+
+- Red repro:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  table_children_snippet_routes_custom_text_through_shared_roles --no-fail-fast` failed before the
+  fix because `table/children.rs` did not import shared text roles and still rendered custom header
+  child text through `ui::text(...)`.
+- `apps/fret-ui-gallery/src/ui/snippets/table/children.rs` now routes custom header child text
+  through `super::table_cell_text(...)` and caption prose through
+  `decl_text::text_paragraph(...)`.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  table_children_snippet_routes_custom_text_through_shared_roles --no-fail-fast` passed.
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ui_authoring_surface_default_app` passed.
+- First `python tools\gate_imui_workstream_source.py` attempt failed because the older table
+  source check still required the intentional `ui::text("Status ")` / `ui::text("Amount ")` /
+  `ui::text("(USD)")` exception. The gate was updated to require the new table-cell markers and
+  forbid the old bare text markers.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.
+
 2026-05-19 gallery ContextMenu trigger text-role slice:
 
 - Red repro:

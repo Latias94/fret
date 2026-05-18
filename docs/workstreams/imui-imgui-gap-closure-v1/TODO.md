@@ -482,8 +482,12 @@ Readiness order for the next locally testable review slices:
    2026-05-19 table snippet table-cell text follow-up: ordinary copyable Table snippets now share
    directory-local `table_cell_text(...)` / `table_cell_text_emphasis(...)` helpers backed by shared
    kit roles. Demo/Usage/Footer/RTL/Actions and fixed body cells in Children no longer teach bare
-   `ui::text(...)` inside table cells; the rich `table_head_children(...)` /
-   `table_caption_children(...)` sample text stays intentionally owned by the children-API example.
+   `ui::text(...)` inside table cells. The later children-API follow-up below routes the remaining
+   rich header/caption sample text through table-cell and paragraph roles too.
+   2026-05-19 table children custom text follow-up: the explicit `table_head_children(...)` /
+   `table_caption_children(...)` sample now routes header child text through the shared
+   table-cell helper and caption copy through `text_paragraph(...)`, closing the previous
+   children-API bare text exception without changing shadcn table recipes.
    2026-05-19 checkbox table-cell text follow-up: the checkbox table snippet now keeps its
    action-first select-all surface while routing member/role fixed cells through a local helper
    backed by `text_table_cell(...)`, so checkbox-table examples no longer teach bare `ui::text(id)`

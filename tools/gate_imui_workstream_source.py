@@ -2651,6 +2651,13 @@ def main() -> None:
         SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/table/children.rs"),
             required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "super::table_cell_text(cx, \"Status \")",
+                "super::table_cell_text(cx, \"Amount \")",
+                "super::table_cell_text(cx, \"(USD)\")",
+                "decl_text::text_paragraph(cx, \"A list of your recent invoices.\")",
+                "decl_text::text_paragraph(",
+                "\"Use the children helpers when the compact text constructors are too narrow.\"",
                 "super::table_cell_text_emphasis(cx, \"INV101\")",
                 "super::table_cell_text(cx, \"Paid\")",
                 "super::table_cell_text(cx, \"Credit Card\")",
@@ -2659,11 +2666,13 @@ def main() -> None:
                 "super::table_cell_text(cx, \"Pending\")",
                 "super::table_cell_text(cx, \"Wire Transfer\")",
                 "super::table_cell_text(cx, \"$340.00\")",
+            ],
+            forbidden=[
                 "ui::text(\"Status \")",
                 "ui::text(\"Amount \")",
                 "ui::text(\"(USD)\")",
-            ],
-            forbidden=[
+                "ui::text(\"A list of your recent invoices.\")",
+                "ui::text(\"Use the children helpers when the compact text constructors are too narrow.\")",
                 "shadcn::table_cell(ui::text(\"INV101\")",
                 "shadcn::table_cell(ui::text(\"Paid\"))",
                 "shadcn::table_cell(ui::text(\"Credit Card\"))",
@@ -3992,6 +4001,7 @@ def main() -> None:
                 "fn context_menu_trigger_copy_uses_shared_readout_text_role()",
                 "fn selected_pagination_page_number_helpers_use_shared_button_label_role()",
                 "fn selected_carousel_status_readouts_use_shared_control_readout_role()",
+                "fn table_children_snippet_routes_custom_text_through_shared_roles()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",
             ],

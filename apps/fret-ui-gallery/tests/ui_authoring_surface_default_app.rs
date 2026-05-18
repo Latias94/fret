@@ -7046,6 +7046,28 @@ fn table_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn table_children_snippet_routes_custom_text_through_shared_roles() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/table/children.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "super::table_cell_text(cx, \"Status \")",
+            "super::table_cell_text(cx, \"Amount \")",
+            "super::table_cell_text(cx, \"(USD)\")",
+            "decl_text::text_paragraph(cx, \"A list of your recent invoices.\")",
+            "decl_text::text_paragraph(cx, \"Use the children helpers when the compact text constructors are too narrow.\")",
+        ],
+        &[
+            "ui::text(\"Status \")",
+            "ui::text(\"Amount \")",
+            "ui::text(\"(USD)\")",
+            "ui::text(\"A list of your recent invoices.\")",
+            "ui::text(\"Use the children helpers when the compact text constructors are too narrow.\")",
+        ],
+    );
+}
+
+#[test]
 fn remaining_app_facing_tail_snippets_prefer_ui_cx_on_the_default_app_surface() {
     for relative_path in [
         "src/ui/snippets/breadcrumb/responsive.rs",

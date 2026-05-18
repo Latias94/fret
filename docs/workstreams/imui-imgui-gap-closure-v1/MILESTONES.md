@@ -446,8 +446,12 @@ Exit criteria:
   2026-05-19 table snippet table-cell text result: ordinary copyable Table snippets now route
   fixed body/footer/action cells through directory-local helpers backed by shared table-cell roles.
   `text_table_cell_emphasis(...)` preserves medium first-column emphasis without reintroducing
-  app-local `ui::text(...).font_weight(...)`; rich head/caption child text remains scoped to the
-  explicit children-API example.
+  app-local `ui::text(...).font_weight(...)`; the later children-API follow-up below closes the
+  remaining custom header/caption text exception.
+  2026-05-19 table children custom text result: the explicit children-API table snippet now routes
+  rich header child text through `table_cell_text(...)` and caption copy through
+  `text_paragraph(...)`, keeping slotted table examples on shared roles without changing table
+  recipe internals.
   2026-05-19 checkbox table-cell text result: the checkbox table snippet keeps the action-first
   select-all model/action surface while moving member/role fixed cells to a local helper backed by
   `text_table_cell(...)`, closing another fixed-row bare text escape without changing checkbox

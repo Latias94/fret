@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("children.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -22,7 +23,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                             shadcn::table_head_children(|cx| {
                                 ui::children![
                                     cx;
-                                    ui::text("Status "),
+                                    super::table_cell_text(cx, "Status "),
                                     shadcn::Badge::new("Live")
                                         .variant(shadcn::BadgeVariant::Outline),
                                 ]
@@ -31,8 +32,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                             shadcn::table_head_children(|cx| {
                                 ui::children![
                                     cx;
-                                    ui::text("Amount "),
-                                    ui::text("(USD)"),
+                                    super::table_cell_text(cx, "Amount "),
+                                    super::table_cell_text(cx, "(USD)"),
                                 ]
                             })
                             .text_align_end(),
@@ -69,8 +70,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::table_caption_children(|cx| {
                 ui::children![
                     cx;
-                    ui::text("A list of your recent invoices."),
-                    ui::text("Use the children helpers when the compact text constructors are too narrow."),
+                    decl_text::text_paragraph(cx, "A list of your recent invoices."),
+                    decl_text::text_paragraph(
+                        cx,
+                        "Use the children helpers when the compact text constructors are too narrow.",
+                    ),
                 ]
             }),
         ]
