@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
-use fret_core::{FontWeight, Px};
+use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -33,11 +33,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     shadcn::table_row(4, |cx| {
                         ui::children![
                             cx;
-                            shadcn::table_cell(ui::text("INV001").font_weight(FontWeight::MEDIUM))
+                            shadcn::table_cell(super::table_cell_text_emphasis(cx, "INV001"))
                                 .refine_layout(LayoutRefinement::default().w_px(invoice_w)),
-                            shadcn::table_cell(ui::text("Paid")),
-                            shadcn::table_cell(ui::text("Credit Card")),
-                            shadcn::table_cell(ui::text("$250.00")).text_align_end(),
+                            shadcn::table_cell(super::table_cell_text(cx, "Paid")),
+                            shadcn::table_cell(super::table_cell_text(cx, "Credit Card")),
+                            shadcn::table_cell(super::table_cell_text(cx, "$250.00")).text_align_end(),
                         ]
                     }),
                 ]

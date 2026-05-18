@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 use std::sync::Arc;
 
 use fret::{AppComponentCx, UiChild};
-use fret_core::{FontWeight, Px};
+use fret_core::Px;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -22,11 +22,11 @@ fn body_row(
     shadcn::table_row(4, move |cx| {
         ui::children![
             cx;
-            shadcn::table_cell(ui::text(invoice).font_weight(FontWeight::MEDIUM))
+            shadcn::table_cell(super::table_cell_text_emphasis(cx, invoice))
                 .refine_layout(LayoutRefinement::default().w_px(invoice_w)),
-            shadcn::table_cell(ui::text(status)),
-            shadcn::table_cell(ui::text(method)),
-            shadcn::table_cell(ui::text(amount)).text_align_end(),
+            shadcn::table_cell(super::table_cell_text(cx, status)),
+            shadcn::table_cell(super::table_cell_text(cx, method)),
+            shadcn::table_cell(super::table_cell_text(cx, amount)).text_align_end(),
         ]
     })
     .test_id(row_test_id)
@@ -75,8 +75,8 @@ fn make_invoice_table(
                         shadcn::table_row(4, |cx| {
                             ui::children![
                                 cx;
-                                shadcn::table_cell(ui::text("المجموع")).col_span(3),
-                                shadcn::table_cell(ui::text("$2,500.00")).text_align_end(),
+                                shadcn::table_cell(super::table_cell_text(cx, "المجموع")).col_span(3),
+                                shadcn::table_cell(super::table_cell_text(cx, "$2,500.00")).text_align_end(),
                             ]
                         })
                         .border_bottom(false),

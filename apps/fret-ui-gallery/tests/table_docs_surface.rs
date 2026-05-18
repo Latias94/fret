@@ -2,6 +2,17 @@ fn normalize_ws(source: &str) -> String {
     source.split_whitespace().collect()
 }
 
+fn canonicalize_rust_fragment(fragment: &str) -> String {
+    let mut canonical = fragment.split_whitespace().collect::<String>();
+    loop {
+        let next = canonical.replace(",)", ")");
+        if next == canonical {
+            return canonical;
+        }
+        canonical = next;
+    }
+}
+
 #[test]
 fn table_page_documents_source_axes_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/table.rs");
@@ -99,6 +110,153 @@ fn table_snippets_keep_default_lane_and_focused_children_followup() {
         !children.contains(".compose("),
         "table children follow-up should not introduce an unnecessary compose lane",
     );
+}
+
+#[test]
+fn table_snippets_keep_fixed_cell_text_on_table_roles() {
+    let module_source = include_str!("../src/ui/snippets/table/mod.rs");
+    let module_canonical = canonicalize_rust_fragment(module_source);
+
+    for needle in [
+        "pub(super) fn table_cell_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement",
+        "fret_ui_kit::declarative::text::text_table_cell(cx, text)",
+        "pub(super) fn table_cell_text_emphasis<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement",
+        "fret_ui_kit::declarative::text::text_table_cell_emphasis(cx, text)",
+    ] {
+        let needle = canonicalize_rust_fragment(needle);
+        assert!(
+            module_canonical.contains(&needle),
+            "table snippets should share directory helpers backed by table-cell text roles; missing `{needle}`"
+        );
+    }
+
+    for (name, source, required, forbidden) in [
+        (
+            "demo",
+            include_str!("../src/ui/snippets/table/demo.rs"),
+            &[
+                "super::table_cell_text_emphasis(cx, invoice)",
+                "super::table_cell_text(cx, status)",
+                "super::table_cell_text(cx, method)",
+                "super::table_cell_text(cx, amount)",
+                "super::table_cell_text(cx, \"Total\")",
+                "super::table_cell_text(cx, \"$2,500.00\")",
+            ][..],
+            &[
+                "ui::text(invoice)",
+                "ui::text(status)",
+                "ui::text(method)",
+                "ui::text(amount)",
+                "ui::text(\"Total\")",
+                "ui::text(\"$2,500.00\")",
+            ][..],
+        ),
+        (
+            "usage",
+            include_str!("../src/ui/snippets/table/usage.rs"),
+            &[
+                "super::table_cell_text_emphasis(cx, \"INV001\")",
+                "super::table_cell_text(cx, \"Paid\")",
+                "super::table_cell_text(cx, \"Credit Card\")",
+                "super::table_cell_text(cx, \"$250.00\")",
+            ][..],
+            &[
+                "ui::text(\"INV001\")",
+                "ui::text(\"Paid\")",
+                "ui::text(\"Credit Card\")",
+                "ui::text(\"$250.00\")",
+            ][..],
+        ),
+        (
+            "footer",
+            include_str!("../src/ui/snippets/table/footer.rs"),
+            &[
+                "super::table_cell_text_emphasis(cx, invoice)",
+                "super::table_cell_text(cx, status)",
+                "super::table_cell_text(cx, method)",
+                "super::table_cell_text(cx, amount)",
+                "super::table_cell_text(cx, \"Total\")",
+                "super::table_cell_text(cx, \"$2,500.00\")",
+            ][..],
+            &[
+                "ui::text(invoice)",
+                "ui::text(status)",
+                "ui::text(method)",
+                "ui::text(amount)",
+                "ui::text(\"Total\")",
+                "ui::text(\"$2,500.00\")",
+            ][..],
+        ),
+        (
+            "rtl",
+            include_str!("../src/ui/snippets/table/rtl.rs"),
+            &[
+                "super::table_cell_text_emphasis(cx, invoice)",
+                "super::table_cell_text(cx, status)",
+                "super::table_cell_text(cx, method)",
+                "super::table_cell_text(cx, amount)",
+                "super::table_cell_text(cx, \"المجموع\")",
+                "super::table_cell_text(cx, \"$2,500.00\")",
+            ][..],
+            &[
+                "ui::text(invoice)",
+                "ui::text(status)",
+                "ui::text(method)",
+                "ui::text(amount)",
+                "ui::text(\"المجموع\")",
+                "ui::text(\"$2,500.00\")",
+            ][..],
+        ),
+        (
+            "actions",
+            include_str!("../src/ui/snippets/table/actions.rs"),
+            &[
+                "super::table_cell_text_emphasis(cx, product)",
+                "super::table_cell_text(cx, price)",
+            ][..],
+            &["ui::text(product)", "ui::text(price)"][..],
+        ),
+        (
+            "children",
+            include_str!("../src/ui/snippets/table/children.rs"),
+            &[
+                "super::table_cell_text_emphasis(cx, \"INV101\")",
+                "super::table_cell_text(cx, \"Paid\")",
+                "super::table_cell_text(cx, \"Credit Card\")",
+                "super::table_cell_text(cx, \"$120.00\")",
+                "super::table_cell_text_emphasis(cx, \"INV102\")",
+                "super::table_cell_text(cx, \"Pending\")",
+                "super::table_cell_text(cx, \"Wire Transfer\")",
+                "super::table_cell_text(cx, \"$340.00\")",
+            ][..],
+            &[
+                "shadcn::table_cell(ui::text(\"INV101\")",
+                "shadcn::table_cell(ui::text(\"Paid\"))",
+                "shadcn::table_cell(ui::text(\"Credit Card\"))",
+                "shadcn::table_cell(ui::text(\"$120.00\"))",
+                "shadcn::table_cell(ui::text(\"INV102\")",
+                "shadcn::table_cell(ui::text(\"Pending\"))",
+                "shadcn::table_cell(ui::text(\"Wire Transfer\"))",
+                "shadcn::table_cell(ui::text(\"$340.00\"))",
+            ][..],
+        ),
+    ] {
+        let canonical = canonicalize_rust_fragment(source);
+        for marker in required {
+            let marker = canonicalize_rust_fragment(marker);
+            assert!(
+                canonical.contains(&marker),
+                "{name} should route fixed table-cell text through the shared table-cell role; missing `{marker}`"
+            );
+        }
+        for marker in forbidden {
+            let marker = canonicalize_rust_fragment(marker);
+            assert!(
+                !canonical.contains(&marker),
+                "{name} reintroduced bare fixed table-cell text: `{marker}`"
+            );
+        }
+    }
 }
 
 #[test]

@@ -443,6 +443,11 @@ Exit criteria:
   fixed status/name/email/CPU/memory/fallback cells through a directory-local helper backed by
   `text_table_cell(...)`. The amount columns intentionally keep their existing tabular numeric text
   styling until numeric table-cell semantics are split as a separate role.
+  2026-05-19 table snippet table-cell text result: ordinary copyable Table snippets now route
+  fixed body/footer/action cells through directory-local helpers backed by shared table-cell roles.
+  `text_table_cell_emphasis(...)` preserves medium first-column emphasis without reintroducing
+  app-local `ui::text(...).font_weight(...)`; rich head/caption child text remains scoped to the
+  explicit children-API example.
   2026-05-18 AI AudioPlayer state-marker result: the copyable AudioPlayer local/remote snippets
   now use zero-size `SpacerProps` children under generic semantics for state-only diagnostics
   markers, instead of mounting empty `Text` nodes for non-visible test anchors.

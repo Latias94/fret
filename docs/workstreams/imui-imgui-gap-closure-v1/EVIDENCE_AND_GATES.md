@@ -1925,6 +1925,24 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
 - `git diff --check` passed.
 
+2026-05-19 table snippet table-cell text-role slice:
+
+- Added `text_table_cell_emphasis(...)` in `fret-ui-kit::declarative::text` as a medium-weight
+  derivative of the shared table-cell role. It keeps the same single-line, shrinkable,
+  min-width-zero, ellipsis layout contract as `text_table_cell(...)`.
+- UI Gallery ordinary Table snippets now share directory-local `table_cell_text(...)` and
+  `table_cell_text_emphasis(...)` helpers. Demo/Usage/Footer/RTL/Actions and fixed body cells in
+  Children no longer mount bare `ui::text(...)` inside fixed table cells. The rich
+  `table_head_children(...)` / `table_caption_children(...)` sample text remains intentionally
+  scoped to the children-API follow-up.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_cell_emphasis_text_keeps_single_line_truncation_and_medium_weight --no-fail-fast` passed.
+- `cargo nextest run -p fret-ui-gallery --test table_docs_surface table_snippets_keep_fixed_cell_text_on_table_roles --no-fail-fast` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo fmt --check -p fret-ui-kit -p fret-ui-gallery` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
 2026-05-17 gallery data-grid text-role slice:
 
 - `cargo fmt -p fret-ui-gallery` passed.
