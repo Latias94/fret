@@ -2282,6 +2282,11 @@ def main() -> None:
                 "`apps/fret-ui-gallery/src/ui/snippets/scroll_area/horizontal.rs`",
                 "`apps/fret-ui-gallery/src/ui/snippets/scroll_area/nested_scroll_routing.rs`",
                 "scroll_area_snippets_route_visible_text_through_shared_roles --no-fail-fast",
+                "2026-05-19 gallery ContextMenu trigger text-role slice",
+                "`apps/fret-ui-gallery/src/ui/snippets/context_menu/demo.rs`",
+                "`apps/fret-ui-gallery/src/ui/snippets/context_menu/basic.rs`",
+                "`apps/fret-ui-gallery/src/ui/snippets/context_menu/sides.rs`",
+                "context_menu_trigger_copy_uses_shared_readout_text_role --no-fail-fast",
                 "2026-05-19 checkbox table-cell text-role slice",
                 "`apps/fret-ui-gallery/src/ui/snippets/checkbox/table.rs`",
                 "checkbox_table_snippet_keeps_fixed_cell_text_on_table_role --no-fail-fast",
@@ -3927,10 +3932,143 @@ def main() -> None:
                 "fn drawer_scroll_and_side_body_text_uses_shared_roles()",
                 "fn drawer_remaining_custom_text_uses_shared_roles()",
                 "fn tooltip_keyboard_shortcut_text_uses_shared_role()",
+                "fn context_menu_trigger_copy_uses_shared_readout_text_role()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",
             ],
             forbidden=[],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/context_menu/demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "let label = decl_text::text_control_readout(cx, label);",
+            ],
+            forbidden=[
+                "let fg = theme.color_token(\"muted-foreground\");",
+                "ui::text(label)",
+                ".text_color(ColorRef::Color(fg))",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/context_menu/basic.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "let label = decl_text::text_control_readout(cx, label);",
+            ],
+            forbidden=[
+                "let fg = theme.color_token(\"muted-foreground\");",
+                "ui::text(label)",
+                ".text_color(ColorRef::Color(fg))",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/context_menu/submenu.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "let label = decl_text::text_control_readout(cx, label);",
+            ],
+            forbidden=[
+                "let fg = theme.color_token(\"muted-foreground\");",
+                "ui::text(label)",
+                ".text_color(ColorRef::Color(fg))",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/context_menu/shortcuts.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "let label = decl_text::text_control_readout(cx, label);",
+            ],
+            forbidden=[
+                "let fg = theme.color_token(\"muted-foreground\");",
+                "ui::text(label)",
+                ".text_color(ColorRef::Color(fg))",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/context_menu/groups.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "let label = decl_text::text_control_readout(cx, label);",
+            ],
+            forbidden=[
+                "let fg = theme.color_token(\"muted-foreground\");",
+                "ui::text(label)",
+                ".text_color(ColorRef::Color(fg))",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/context_menu/icons.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "let label = decl_text::text_control_readout(cx, label);",
+            ],
+            forbidden=[
+                "let fg = theme.color_token(\"muted-foreground\");",
+                "ui::text(label)",
+                ".text_color(ColorRef::Color(fg))",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/context_menu/checkboxes.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "let label = decl_text::text_control_readout(cx, label);",
+            ],
+            forbidden=[
+                "let fg = theme.color_token(\"muted-foreground\");",
+                "ui::text(label)",
+                ".text_color(ColorRef::Color(fg))",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/context_menu/radio.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "let label = decl_text::text_control_readout(cx, label);",
+            ],
+            forbidden=[
+                "let fg = theme.color_token(\"muted-foreground\");",
+                "ui::text(label)",
+                ".text_color(ColorRef::Color(fg))",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/context_menu/destructive.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "let label = decl_text::text_control_readout(cx, label);",
+            ],
+            forbidden=[
+                "let fg = theme.color_token(\"muted-foreground\");",
+                "ui::text(label)",
+                ".text_color(ColorRef::Color(fg))",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/context_menu/sides.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "let label = decl_text::text_control_readout(cx, label);",
+            ],
+            forbidden=[
+                "let fg = theme.color_token(\"muted-foreground\");",
+                "ui::text(label)",
+                ".text_color(ColorRef::Color(fg))",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/context_menu/rtl.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "let label = decl_text::text_control_readout(cx, label);",
+            ],
+            forbidden=[
+                "let fg = theme.color_token(\"muted-foreground\");",
+                "ui::text(label)",
+                ".text_color(ColorRef::Color(fg))",
+            ],
         ),
         SourceCheck(
             Path("apps/fret-ui-gallery/tests/scroll_area_docs_surface.rs"),

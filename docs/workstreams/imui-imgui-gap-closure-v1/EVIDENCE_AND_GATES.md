@@ -2609,6 +2609,42 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   passed.
 - `git diff --check` passed.
 
+2026-05-19 gallery ContextMenu trigger text-role slice:
+
+- Red repro:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  context_menu_trigger_copy_uses_shared_readout_text_role --no-fail-fast` failed before the fix
+  because `context_menu/demo.rs` was missing the shared `decl_text` role import.
+- `apps/fret-ui-gallery/src/ui/snippets/context_menu/demo.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/context_menu/basic.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/context_menu/submenu.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/context_menu/shortcuts.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/context_menu/groups.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/context_menu/icons.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/context_menu/checkboxes.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/context_menu/radio.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/context_menu/destructive.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/context_menu/sides.rs`, and
+  `apps/fret-ui-gallery/src/ui/snippets/context_menu/rtl.rs` now route dashed trigger copy through
+  `text_control_readout(...)`.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  context_menu_trigger_copy_uses_shared_readout_text_role --no-fail-fast` passed.
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ui_authoring_surface_default_app` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- A parallel post-fix
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  context_menu_trigger_copy_uses_shared_readout_text_role --no-fail-fast` attempt printed PASS but
+  hit the tool timeout while contending with Cargo locks from `cargo check`.
+- Retried after Cargo locks cleared:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  context_menu_trigger_copy_uses_shared_readout_text_role --no-fail-fast` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.
+
 2026-05-19 gallery ScrollArea visible text-role slice:
 
 - Red repro:

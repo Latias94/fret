@@ -873,6 +873,44 @@ fn context_menu_docs_examples_keep_pointer_aware_trigger_copy() {
 }
 
 #[test]
+fn context_menu_trigger_copy_uses_shared_readout_text_role() {
+    for relative_path in [
+        "src/ui/snippets/context_menu/demo.rs",
+        "src/ui/snippets/context_menu/basic.rs",
+        "src/ui/snippets/context_menu/submenu.rs",
+        "src/ui/snippets/context_menu/shortcuts.rs",
+        "src/ui/snippets/context_menu/groups.rs",
+        "src/ui/snippets/context_menu/icons.rs",
+        "src/ui/snippets/context_menu/checkboxes.rs",
+        "src/ui/snippets/context_menu/radio.rs",
+        "src/ui/snippets/context_menu/destructive.rs",
+        "src/ui/snippets/context_menu/sides.rs",
+        "src/ui/snippets/context_menu/rtl.rs",
+    ] {
+        let normalized = assert_normalized_markers_present(
+            relative_path,
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, label)",
+            ],
+        );
+
+        for forbidden in [
+            "let fg = theme.color_token(\"muted-foreground\")",
+            "ui::text(label)",
+            ".text_sm()",
+            ".text_color(ColorRef::Color(fg))",
+        ] {
+            let forbidden = canonicalize_rust_fragment(forbidden);
+            assert!(
+                !normalized.contains(&forbidden),
+                "{relative_path} reintroduced locally styled fixed context-menu trigger text: `{forbidden}`"
+            );
+        }
+    }
+}
+
+#[test]
 fn context_menu_usage_and_basic_examples_stay_docs_aligned() {
     let usage = read("src/ui/snippets/context_menu/usage.rs");
     assert!(

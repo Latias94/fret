@@ -719,6 +719,9 @@ Readiness order for the next locally testable review slices:
    fixed tag/RTL rows through `text_list_row_label(...)`, section headings through
    `text_section_chrome_label(...)`, figure captions through `text_control_readout(...)`, and body
    prose through `text_paragraph(...)` instead of local `ui::text(...)` / raw typography policy.
+   2026-05-19 gallery ContextMenu trigger text follow-up: copyable ContextMenu dashed trigger
+   surfaces now route fine/coarse pointer copy through `text_control_readout(...)` instead of
+   repeating local `ui::text(label).text_sm().text_color(...)` policy in every snippet.
    2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
    headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
    through `control_readout_text(...)`, and custom pointer-region labels through
