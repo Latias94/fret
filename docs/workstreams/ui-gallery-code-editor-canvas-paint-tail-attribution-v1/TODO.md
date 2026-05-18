@@ -19,14 +19,15 @@ Last updated: 2026-05-18
 
 ## M1 - Canvas Source Attribution
 
-- [ ] CPT-020 [owner=codex] [deps=CPT-010] [scope=ecosystem/fret-code-editor,ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs,crates/fret-ui,crates/fret-diag]
+- [x] CPT-020 [owner=codex] [deps=CPT-010] [scope=ecosystem/fret-code-editor,ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs,crates/fret-ui,crates/fret-diag]
   Goal: Map the code-editor `Canvas` callback, windowed rows surface, row cache/scene paths, and
   paint diagnostics counters to concrete source owners.
   Validation:
   `rg -n "windowed_rows_surface|Canvas|paint_perf|row_scene|surface_callback|torture" ecosystem/fret-code-editor ecosystem/fret-ui-kit/src/declarative crates/fret-ui crates/fret-diag -S`.
-  Evidence: Dated source attribution note in this lane.
-  Handoff: Decide whether CPT-030 should rerun perf with extra instrumentation, add diagnostics, or
-  start a focused runtime proof.
+  Evidence: `CPT_020_SOURCE_ATTRIBUTION_2026-05-18.md`.
+  Handoff: CPT-030 should rerun the same perf script with
+  `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`. Do not optimize runtime until that bundle splits the
+  `Canvas` hotspot into windowed-surface and row-scene counters.
 
 ## M2 - Reproduction Or Instrumented Bundle
 

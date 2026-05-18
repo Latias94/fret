@@ -21,7 +21,11 @@ Exit criteria:
   counters are mapped to source owners.
 - The lane records why `code_editor.paint_perf` is zero while `Canvas` paint owns the tail.
 
-Status: Pending.
+Status: Complete.
+
+Evidence:
+
+- `CPT_020_SOURCE_ATTRIBUTION_2026-05-18.md`
 
 ## M2 - Fresh Repro Or Instrumentation
 

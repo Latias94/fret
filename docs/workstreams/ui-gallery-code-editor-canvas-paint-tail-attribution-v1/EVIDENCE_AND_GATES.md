@@ -33,6 +33,32 @@ Canvas paint_time_us=360009 inclusive_us=360009 scene_ops_delta=20009
 The same stats output reports zero `code_editor.paint_perf` counters. That mismatch is the first
 source-audit target.
 
+## CPT-020 Source Attribution
+
+Evidence:
+
+- `CPT_020_SOURCE_ATTRIBUTION_2026-05-18.md`
+
+Verdict:
+
+- The `Canvas` hotspot is owned by the code-editor windowed rows surface callback:
+  `TextInputRegion` -> `windowed_rows_surface_with_pointer_region` -> `PointerRegion` -> `Canvas`
+  -> `paint_windowed_rows` -> `paint::paint_row`.
+- `code_editor.paint_perf` is missing from the bundle because
+  `FRET_CODE_EDITOR_DIAG_PAINT_PERF` was not set. UI Gallery serialized
+  `paint_perf: null` for every captured snapshot.
+- The all-zero `code_editor.paint_perf frames=10` stats output is a reporting artifact: the stats
+  code treats a present `null` `paint_perf` field as a default all-zero sample.
+- Cumulative cache stats show heavy row text/scene/syntax churn, but the current bundle cannot prove
+  that churn owns the 360ms frame because per-frame paint perf was disabled.
+
+CPT-030 decision:
+
+- Rerun the same script with `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`.
+- Treat runtime optimization as blocked until the new bundle distinguishes
+  `us_windowed_surface_paint_callback`, `us_windowed_surface_row_paint`,
+  `us_windowed_surface_non_row`, and row scene/text counters.
+
 ## Repro Template
 
 ```bash
@@ -49,6 +75,7 @@ target/release/fretboard-dev diag perf \
   --env FRET_LAYOUT_NODE_PROFILE=1 \
   --env FRET_LAYOUT_NODE_PROFILE_TOP=20 \
   --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 \
+  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
   --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
   --env FRET_DIAG_SEMANTICS=0 \
   --dir target/fret-diag/ui-gallery-code-editor-canvas-paint-tail-attribution-v1-cpt030 \

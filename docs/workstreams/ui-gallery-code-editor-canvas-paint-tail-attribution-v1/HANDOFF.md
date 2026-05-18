@@ -23,27 +23,47 @@ Starting verdict:
 - `code_editor.paint_perf` counters are zero in the same stats output, so source attribution comes
   before runtime changes.
 
+CPT-020 source attribution is complete:
+
+- `CPT_020_SOURCE_ATTRIBUTION_2026-05-18.md`
+- The `Canvas` owner is the code-editor windowed rows surface callback.
+- The VCRJ-030 bundle has `app_snapshot.code_editor.torture.paint_perf = null` for every snapshot
+  because `FRET_CODE_EDITOR_DIAG_PAINT_PERF` was not enabled.
+- The all-zero `code_editor.paint_perf frames=10` stats lines are a reporting artifact, not proof
+  that row paint did no work.
+
 ## Next Task
 
-Run CPT-020.
+Run CPT-030.
 
 Goal:
 
-- Map the code-editor `Canvas` callback, windowed rows surface, row scene/cache paths, and
-  diagnostics counters to source owners.
-- Explain why `code_editor.paint_perf` is zero while `Canvas` paint owns the tail.
-- Decide whether CPT-030 needs extra instrumentation, a direct fresh repro, or a focused runtime
-  proof.
+- Capture a fresh same-script bundle with `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`.
+- Verify whether the `Canvas` paint tail repeats.
+- If it repeats, split it by `us_windowed_surface_paint_callback`,
+  `us_windowed_surface_row_paint`, `us_windowed_surface_non_row`, and row-scene/text counters.
 
-Start with:
+Use:
 
 ```bash
-rg -n "windowed_rows_surface|Canvas|paint_perf|row_scene|surface_callback|torture" \
-  ecosystem/fret-code-editor \
-  ecosystem/fret-ui-kit/src/declarative \
-  crates/fret-ui \
-  crates/fret-diag \
-  -S
+target/release/fretboard-dev diag perf \
+  tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json \
+  --repeat 1 \
+  --warmup-frames 5 \
+  --reuse-launch \
+  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
+  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_RENDERER_PERF=1 \
+  --env FRET_LAYOUT_NODE_PROFILE=1 \
+  --env FRET_LAYOUT_NODE_PROFILE_TOP=20 \
+  --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 \
+  --env FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --dir target/fret-diag/ui-gallery-code-editor-canvas-paint-tail-attribution-v1-cpt030 \
+  --launch -- cargo run -p fret-ui-gallery --release --features gallery-full
 ```
 
 ## Guardrails
