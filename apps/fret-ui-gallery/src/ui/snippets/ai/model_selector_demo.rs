@@ -2,9 +2,11 @@ pub const SOURCE: &str = include_str!("model_selector_demo.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
+use fret_core::Px;
 use fret_ui::Invalidation;
-use fret_ui::element::SemanticsProps;
+use fret_ui::element::{AnyElement, Length, SemanticsProps, SpacerProps};
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{Justify, LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -57,6 +59,29 @@ const MODELS: &[DemoModel] = &[
     },
 ];
 
+fn state_marker(cx: &mut AppComponentCx<'_>, test_id: String) -> AnyElement {
+    cx.semantics(
+        SemanticsProps {
+            role: fret_core::SemanticsRole::Generic,
+            test_id: Some(Arc::<str>::from(test_id)),
+            ..Default::default()
+        },
+        |cx| {
+            vec![cx.spacer(SpacerProps {
+                layout: fret_ui::element::LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: Length::Px(Px(0.0)),
+                        height: Length::Px(Px(0.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                min: Px(0.0),
+            })]
+        },
+    )
+}
+
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model_keyed("open", || false);
     let query = cx.local_model_keyed("query", String::new);
@@ -66,20 +91,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .get_model_cloned(&selected, Invalidation::Paint)
         .unwrap_or_else(|| Arc::<str>::from("openai-gpt-4o"));
 
-    let selected_marker = {
-        let test_id = Arc::<str>::from(format!(
-            "ui-ai-model-selector-selected-{}",
-            selected_now.as_ref()
-        ));
-        cx.semantics(
-            SemanticsProps {
-                role: fret_core::SemanticsRole::Text,
-                test_id: Some(test_id),
-                ..Default::default()
-            },
-            |cx| vec![cx.text("")],
-        )
-    };
+    let selected_marker = state_marker(
+        cx,
+        format!("ui-ai-model-selector-selected-{}", selected_now.as_ref()),
+    );
 
     let selected_model = MODELS
         .iter()
@@ -210,8 +225,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("ModelSelector (AI Elements)"),
-            cx.text("Dialog + Command surfaces; selection is app-owned."),
+            decl_text::text_section_chrome_label(cx, "ModelSelector (AI Elements)"),
+            decl_text::text_paragraph(cx, "Dialog + Command surfaces; selection is app-owned."),
             ui::h_flex(move |_cx| vec![model_selector])
                 .layout(LayoutRefinement::default().w_full().min_w_0())
                 .justify_center()

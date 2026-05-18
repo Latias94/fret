@@ -501,6 +501,9 @@ Readiness order for the next locally testable review slices:
    2026-05-18 AI simple chrome text-role follow-up: Agent, CodeBlock usage, Environment Variables,
    and OpenIn copyable snippets now route fixed demo titles through `text_section_chrome_label(...)`
    and explanatory body copy through `text_paragraph(...)`.
+   2026-05-18 AI selector/branch marker follow-up: MessageBranch, MicSelector, and ModelSelector
+   snippets now expose state-only diagnostics anchors through generic zero-size spacer markers
+   instead of empty `Text`, while their fixed demo titles/body copy use shared text roles.
    2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
    virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
    `control_readout_text(...)`.

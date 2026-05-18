@@ -312,3 +312,59 @@ fn ai_simple_chrome_snippets_use_shared_title_and_paragraph_roles() {
         }
     }
 }
+
+#[test]
+fn ai_selector_branch_snippets_use_shared_text_roles_and_non_text_markers() {
+    for (name, source, title, body) in [
+        (
+            "message_branch_demo",
+            include_str!("../src/ui/snippets/ai/message_branch_demo.rs"),
+            "MessageBranch (AI Elements)",
+            "Prev/Next cycles through branches; only active branch is mounted.",
+        ),
+        (
+            "mic_selector_demo",
+            include_str!("../src/ui/snippets/ai/mic_selector_demo.rs"),
+            "MicSelector (AI Elements)",
+            "Docs-shaped compound example with typed item rows. Device inventory + permissions stay app-owned.",
+        ),
+        (
+            "model_selector_demo",
+            include_str!("../src/ui/snippets/ai/model_selector_demo.rs"),
+            "ModelSelector (AI Elements)",
+            "Dialog + Command surfaces; selection is app-owned.",
+        ),
+    ] {
+        let canonical = canonicalize_rust_fragment(source);
+
+        for marker in [
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "fn state_marker",
+            "SemanticsRole::Generic",
+            "cx.spacer(SpacerProps",
+            "decl_text::text_section_chrome_label",
+            title,
+            "decl_text::text_paragraph",
+            body,
+        ] {
+            let marker = canonicalize_rust_fragment(marker);
+            assert!(
+                canonical.contains(&marker),
+                "{name} should route fixed visible text and state markers through shared non-bare roles; missing `{marker}`"
+            );
+        }
+
+        for forbidden in [
+            "cx.text(\"\")",
+            "role: fret_core::SemanticsRole::Text",
+            &format!("cx.text(\"{title}\")"),
+            &format!("cx.text(\"{body}\")"),
+        ] {
+            let forbidden = canonicalize_rust_fragment(forbidden);
+            assert!(
+                !canonical.contains(&forbidden),
+                "{name} reintroduced bare visible text/state marker text: `{forbidden}`"
+            );
+        }
+    }
+}
