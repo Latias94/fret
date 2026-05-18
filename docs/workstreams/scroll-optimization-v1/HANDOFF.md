@@ -24,8 +24,23 @@ The local resize-jitter clean-geometry phase closed after:
 
 Most recent evidence:
 
-- `target/fret-diag/local-next-gallery-header-stretch-clean-geometry-20260518-r2/1779069580027/bundle.schema2.json`
-- `target/fret-diag/local-next-gallery-header-stretch-clean-geometry-20260518-r2/worst.stats.json`
+- Post-push baseline:
+  `target/fret-diag/local-post-push-clean-geometry-closeout-20260518-r1/1779072457079-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.schema2.json`
+- Post-push stats:
+  `target/fret-diag/local-post-push-clean-geometry-closeout-20260518-r1/worst.stats.json`
+- Phase-closeout reference:
+  `target/fret-diag/local-next-gallery-header-stretch-clean-geometry-20260518-r2/1779069580027/bundle.schema2.json`
+- Phase-closeout stats:
+  `target/fret-diag/local-next-gallery-header-stretch-clean-geometry-20260518-r2/worst.stats.json`
+
+Post-push result:
+
+- p95/max total/layout/layout-roots/solve/prepaint/paint/text-prepare:
+  `3117/2538/2401/221/267/400/71us`.
+- Remaining clean-geometry rejections are still `text_reflow / Text`, `unsupported_kind / Canvas`,
+  and `side_effect_boundary / Scroll`.
+- View-cache and code-editor guardrails stay stable: cache root reused `1`, rows replayed/stored
+  `289/0`, row replay hit rate `100%`.
 
 ## Remaining Follow-Ons
 

@@ -1407,6 +1407,39 @@ Local clean-geometry resize-jitter phase closeout (2026-05-18):
   - `git diff --check`
     - Result: passed.
 
+Post-push local closeout baseline refresh (2026-05-18):
+
+- Branch state before the refresh:
+  - `git status --short --branch`
+    - Result: `## main...origin/main` with a clean worktree.
+- Evidence:
+  - Bundle:
+    `target/fret-diag/local-post-push-clean-geometry-closeout-20260518-r1/1779072457079-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.schema2.json`
+  - Stats:
+    `target/fret-diag/local-post-push-clean-geometry-closeout-20260518-r1/worst.stats.json`
+- Command shape:
+  - `target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
+  - repeat `1`, warmup `5`, `--reuse-launch`, standard tooling-suite font prewarm and diagnostics
+    reset prelude, overlay disabled, view-cache shell enabled, code-editor paint perf enabled,
+    scroll/layout/node profiling enabled.
+  - Launch command: `cargo run -p fret-ui-gallery --release --features gallery-full`.
+- Result:
+  - p95/max total/layout/layout-roots/layout-engine-solve/prepaint/paint/renderer-text-prepare is
+    `3117/2538/2401/221/267/400/71us`.
+  - Top frame is `total=3117us`, `layout=2471us`, `layout_roots=2339us`,
+    `layout_engine_solve=221us`, `layout_engine_solves=4`, `prepaint=254us`, `paint=392us`.
+  - View-cache and editor row guardrails remain stable: cache root reused `1`, rows replayed/stored
+    `289/0`, rows painted `289`, row-scene replay hit rate `100%`, code-editor total
+    `93us`, row paint `107us`, windowed-surface callback `126us`, row prepaint plan `41us`.
+  - Rejection distribution in the raw bundle is unchanged from the closeout stop conditions:
+    `text_reflow / Text` (`6`, max solve `165us`), `unsupported_kind / Canvas` (`3`, max solve
+    `8us`), and `side_effect_boundary / Scroll` (`3`, solve `0us`).
+- Decision:
+  - This post-push baseline confirms the local clean-geometry phase should remain closed.
+  - Do not reopen clean geometry from this sample. The next work should split into a text
+    computed-box / line-break stability lane, a low-priority Canvas proof only if fresh evidence
+    justifies it, a root `Scroll` side-effect-boundary redesign, or other-machine calibration.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:
