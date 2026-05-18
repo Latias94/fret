@@ -4016,7 +4016,7 @@
       "target_hints": [
         "Starts on the Button Group Input Group fixture.",
         "Injects a long value into the grouped input through the SetValue path.",
-        "Asserts the input, trailing voice button, and IME/caret anchor remain bounded under long text."
+        "Asserts the input, trailing voice button, IME/caret anchor, visible viewport clipping, and renderer font trace facts under long text."
       ]
     },
     {

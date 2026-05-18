@@ -938,3 +938,10 @@ date: 2026-05-12
     removes navigation/static-frame waits, and proves both the Basic Input value and file-composed
     Input value are renderer-prepared with `font=ui`, `wrap=none`, `overflow=clip`, and
     `missing_glyphs=0`. No Input recipe or renderer defect was reproduced.
+- [x] Add the Button Group Input Group renderer font-trace companion.
+  - Result: `ui-gallery-button-group-input-group-long-text.json` now enables renderer tracing,
+    removes static-frame waits, waits on effective-window/page/root predicates, and proves the
+    long grouped-input value is renderer-prepared with `font=ui`, `wrap=none`, `overflow=clip`,
+    and `missing_glyphs=0`. No Button Group recipe or renderer defect was reproduced; the first
+    runtime draft exposed an over-eager script precondition on the direct control's pre-value
+    `0 x 0` semantics bounds, so the precondition now checks the owning group root instead.

@@ -1679,3 +1679,25 @@ long-text gate.
 - The full `script_json_roundtrip` gate passes with Nextest run id
   `29fe790a-4b52-4b96-9d3c-0fb7677a8401`.
 - The runtime diagnostics gate passes with run id `1779081108865`.
+
+## M96: Button Group Input Group Long-Text Renderer Font Trace Companion
+
+Status: complete for renderer text-preparation evidence on the Button Group Input Group long-text
+gate.
+
+- Promoted `ui-gallery-button-group-input-group-long-text.json` from TextInput visual clipping and
+  trailing-control geometry evidence to renderer-backed evidence by enabling
+  `FRET_TEXT_FONT_TRACE_ALL=1` and asserting the long grouped-input value is prepared with
+  `font=ui`, `wrap=none`, `overflow=clip`, and `missing_glyphs=0`.
+- Removed the remaining bare static waits from the script by starting on the Button Group Input
+  Group section, waiting for the effective `760x660` diagnostic window after requesting `760x640`,
+  waiting for page/root predicates, and converging on the renderer trace after `set_text_value`.
+- The first runtime draft found a diagnostics precondition issue, not a Button Group or renderer
+  defect: waiting for the direct control to be within the window before `set_text_value` observed
+  its pre-value semantics bounds as `0 x 0`. The final script waits on the owning group root before
+  mutation and keeps the existing post-mutation control-size assertions.
+- The focused script roundtrip gate passes with Nextest run id
+  `d656b55e-a80c-4a53-8cb0-98a8c2307872`.
+- The full `script_json_roundtrip` gate passes with Nextest run id
+  `72429701-d2a0-4d9f-9742-563fc421a36f`.
+- The runtime diagnostics gate passes with run id `1779082851147`.

@@ -1216,6 +1216,9 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - asserts bounded input/root geometry, trailing-control non-overlap, IME cursor area inside the
     input, text-input horizontal overflow, offset range, and visible text inside the padded content
     viewport
+  - now also enables `FRET_TEXT_FONT_TRACE_ALL=1` and asserts a renderer font trace entry for the
+    long grouped-input value with `font=ui`, `wrap=none`, `overflow=clip`, and
+    `missing_glyphs=0`.
   - suite redirect:
     `tools/diag-scripts/ui-gallery-button-group-input-group-long-text.json`
   - diagnostics catalog entry:
@@ -1231,6 +1234,35 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - visual proof:
     content width `625.2627`, viewport width `326.0`, offset/max offset `299.2627`, visible text
     bounds inside viewport `x=335.33334..661.33337`
+  - first renderer-trace runtime draft:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-long-text.json --dir target/fret-diag-button-group-input-group-long-text-renderer-trace-v1 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+    failed at step 7 with `wait_until_timeout` on
+    `bounds_within_window(ui-gallery-button-group-input-group-control)`.
+  - first-draft triage:
+    `target/fret-diag-button-group-input-group-long-text-renderer-trace-v1/sessions/1779082623510-152148/1779082638377/ai.packet/slice.failed_step.7.test_id.ui-gallery-button-group-input-group-control.json`
+    showed a unique `text_field` match for `ui-gallery-button-group-input-group-control` with
+    pre-mutation bounds `0 x 0`, so the failure was a script precondition issue. The final script
+    waits on the owning Button Group root before mutating the direct control and keeps the
+    post-mutation control-size assertions.
+  - renderer font-trace focused roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_button_group_input_group_long_text --no-fail-fast --no-capture`
+    passed with Nextest run id `d656b55e-a80c-4a53-8cb0-98a8c2307872`.
+  - renderer font-trace full roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip --no-fail-fast`
+    passed with Nextest run id `72429701-d2a0-4d9f-9742-563fc421a36f`.
+  - registry gates:
+    `python tools/check_diag_scripts_registry.py` and
+    `python tools/test_check_diag_scripts_registry.py` passed after refreshing
+    `tools/diag-scripts/index.json`.
+  - renderer font-trace runtime evidence:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-input-group-long-text.json --dir target/fret-diag-button-group-input-group-long-text-renderer-trace-v2 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 360000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+    passed with run id `1779082851147`.
+  - renderer font-trace runtime artifacts:
+    `target/fret-diag-button-group-input-group-long-text-renderer-trace-v2/sessions/1779082839430-157148/script.result.json`,
+    `target/fret-diag-button-group-input-group-long-text-renderer-trace-v2/sessions/1779082839430-157148/1779082851147/ai.packet`,
+    `target/fret-diag-button-group-input-group-long-text-renderer-trace-v2/sessions/1779082839430-157148/share/1779082851147.zip`,
+    `target/fret-diag-button-group-input-group-long-text-renderer-trace-v2/sessions/1779082839430-157148/1779082919330-ui-gallery-button-group-input-group-long-text.layout/layout.taffy.v1.json`, and
+    `target/fret-diag-button-group-input-group-long-text-renderer-trace-v2/sessions/1779082839430-157148/screenshots/1779082919566-ui-gallery-button-group-input-group-long-text/window-4294967297-tick-6-frame-6.png`.
 - Combobox Input Group long-query visible-text gate:
   `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-input-group-long-query-text.json`
   - asserts the searchable combobox input with an inline search addon keeps long-query text within

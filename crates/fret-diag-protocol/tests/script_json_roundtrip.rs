@@ -345,6 +345,13 @@ fn script_v2_roundtrip_ui_gallery_input_basic_and_file_long_text() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_button_group_input_group_long_text() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-button-group-input-group-long-text.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_combobox_long_text_geometry() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-combobox-long-text-geometry.json"
