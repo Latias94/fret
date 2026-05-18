@@ -1021,6 +1021,345 @@ fn clean_geometry_small_resize_skips_barrier_root_engine_solve() {
 }
 
 #[test]
+fn clean_geometry_small_resize_propagates_through_semantics_wrapper() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(324.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+    let first_row_id = Arc::new(std::sync::Mutex::new(None));
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-semantics-wrapper-child",
+        |cx| {
+            let semantics = crate::element::SemanticsProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                role: fret_core::SemanticsRole::Region,
+                test_id: Some(Arc::<str>::from("clean-geometry-semantics-wrapper")),
+                ..Default::default()
+            };
+            let flex = crate::element::FlexProps {
+                direction: fret_core::Axis::Vertical,
+                gap: Px(1.0).into(),
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            let first_row_id = first_row_id.clone();
+            vec![cx.semantics(semantics, |cx| {
+                vec![cx.flex(flex, |cx| {
+                    (0..8)
+                        .map(|idx| {
+                            let mut props = crate::element::ContainerProps::default();
+                            props.layout.size.width = Length::Fill;
+                            props.layout.size.height = Length::Px(Px(8.0));
+                            let row = cx.container(props, |_cx| Vec::<AnyElement>::new());
+                            if idx == 0 {
+                                *first_row_id.lock().unwrap() = Some(row.id);
+                            }
+                            row
+                        })
+                        .collect::<Vec<_>>()
+                })]
+            })]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(184.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+    assert!(
+        ui.debug_stats().layout_engine_solves > 0,
+        "expected the initial barrier layout to solve"
+    );
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "Semantics is a pure wrapper and should not force a root solve during clean width-only resize"
+    );
+    assert_eq!(
+        ui.debug_stats().layout_clean_geometry_solve_skip_rejections,
+        0,
+        "accepted clean geometry skips should not leave rejection noise in frame stats"
+    );
+
+    let performed = ui.debug_stats().layout_nodes_performed;
+    assert!(
+        performed <= 2,
+        "Semantics clean-geometry propagation should avoid re-running wrapper/subtree layout; performed={performed}"
+    );
+
+    let semantics_node = ui.children(child)[0];
+    let flex_node = ui.children(semantics_node)[0];
+    let semantics_bounds = ui
+        .debug_node_bounds(semantics_node)
+        .expect("semantics bounds");
+    let flex_bounds = ui.debug_node_bounds(flex_node).expect("flex bounds");
+    assert!((semantics_bounds.size.width.0 - rect_b.size.width.0).abs() < 0.01);
+    assert!((flex_bounds.size.width.0 - rect_b.size.width.0).abs() < 0.01);
+
+    let first_row_id = first_row_id
+        .lock()
+        .unwrap()
+        .expect("first row id should be recorded");
+    let first_row_bounds =
+        crate::elements::current_bounds_for_element(&mut app, window, first_row_id)
+            .expect("first row element bounds");
+    assert!(
+        (first_row_bounds.size.width.0 - rect_b.size.width.0).abs() < 0.01,
+        "fast-path propagation must refresh descendant element bounds through Semantics"
+    );
+}
+
+#[test]
+fn clean_geometry_small_resize_propagates_through_pressable_wrapper() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(324.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+    let first_row_id = Arc::new(std::sync::Mutex::new(None));
+    let pressable_id = Arc::new(std::sync::Mutex::new(None));
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-pressable-wrapper-child",
+        |cx| {
+            let pressable = crate::element::PressableProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            let flex = crate::element::FlexProps {
+                direction: fret_core::Axis::Vertical,
+                gap: Px(1.0).into(),
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            let first_row_id = first_row_id.clone();
+            let pressable_id = pressable_id.clone();
+            vec![cx.pressable_with_id(pressable, move |cx, _state, id| {
+                *pressable_id.lock().unwrap() = Some(id);
+                vec![cx.flex(flex, |cx| {
+                    (0..8)
+                        .map(|idx| {
+                            let mut props = crate::element::ContainerProps::default();
+                            props.layout.size.width = Length::Fill;
+                            props.layout.size.height = Length::Px(Px(8.0));
+                            let row = cx.container(props, |_cx| Vec::<AnyElement>::new());
+                            if idx == 0 {
+                                *first_row_id.lock().unwrap() = Some(row.id);
+                            }
+                            row
+                        })
+                        .collect::<Vec<_>>()
+                })]
+            })]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(184.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+    assert!(
+        ui.debug_stats().layout_engine_solves > 0,
+        "expected the initial barrier layout to solve"
+    );
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "Pressable is already modeled as a pure wrapper and should not force a root solve during clean width-only resize"
+    );
+    assert_eq!(
+        ui.debug_stats().layout_clean_geometry_solve_skip_rejections,
+        0,
+        "accepted clean geometry skips should not leave rejection noise in frame stats"
+    );
+
+    let performed = ui.debug_stats().layout_nodes_performed;
+    assert!(
+        performed <= 1,
+        "Pressable clean-geometry propagation should avoid re-running wrapper/subtree layout; performed={performed}"
+    );
+
+    let pressable_node = ui.children(child)[0];
+    let flex_node = ui.children(pressable_node)[0];
+    let pressable_bounds = ui
+        .debug_node_bounds(pressable_node)
+        .expect("pressable bounds");
+    let flex_bounds = ui.debug_node_bounds(flex_node).expect("flex bounds");
+    assert!((pressable_bounds.size.width.0 - rect_b.size.width.0).abs() < 0.01);
+    assert!((flex_bounds.size.width.0 - rect_b.size.width.0).abs() < 0.01);
+
+    let pressable_id = pressable_id
+        .lock()
+        .unwrap()
+        .expect("pressable id should be recorded");
+    let pressable_element_bounds =
+        crate::elements::current_bounds_for_element(&mut app, window, pressable_id)
+            .expect("pressable element bounds");
+    assert!(
+        (pressable_element_bounds.size.width.0 - rect_b.size.width.0).abs() < 0.01,
+        "fast-path propagation must refresh Pressable element bounds"
+    );
+
+    let first_row_id = first_row_id
+        .lock()
+        .unwrap()
+        .expect("first row id should be recorded");
+    let first_row_bounds =
+        crate::elements::current_bounds_for_element(&mut app, window, first_row_id)
+            .expect("first row element bounds");
+    assert!(
+        (first_row_bounds.size.width.0 - rect_b.size.width.0).abs() < 0.01,
+        "fast-path propagation must refresh descendant element bounds through Pressable"
+    );
+}
+
+#[test]
 fn clean_geometry_small_resize_runs_text_input_layout_as_side_effect_boundary() {
     struct PrecomputeThenResize {
         child: NodeId,

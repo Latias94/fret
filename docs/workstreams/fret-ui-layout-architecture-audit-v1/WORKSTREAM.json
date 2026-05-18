@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "slug": "fret-ui-layout-architecture-audit-v1",
+  "title": "fret-ui Layout Architecture Audit v1",
+  "status": "closed",
+  "updated": "2026-05-18",
+  "scope_kind": "audit",
+  "follow_on": "retained-layout-orchestration-v1",
+  "problem": "Audit the fret-ui layout, node classification, and clean-geometry architecture so future performance work can choose between narrow proofs, behavior-preserving extraction, or a real model redesign with evidence.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/fret-ui-layout-architecture-audit-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-ui-layout-architecture-audit-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-ui-layout-architecture-audit-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-ui-layout-architecture-audit-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/fret-ui-layout-architecture-audit-v1/ARCHITECTURE_INVENTORY_2026-05-18.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/fret-ui-layout-architecture-audit-v1/ARCHITECTURE_DECISION_2026-05-18.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/fret-ui-layout-architecture-audit-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/fret-ui-layout-architecture-audit-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    }
+  ],
+  "repro": {
+    "summary": "Source inventory, one local resize-jitter attribution sample, and the behavior-preserving clean-geometry module extraction are recorded. This audit is closed; continue runtime performance work in retained-layout-orchestration-v1.",
+    "commands": [
+      "cargo nextest run -p fret-ui layout_engine --no-fail-fast",
+      "target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json --repeat 1 --warmup-frames 5 --reuse-launch --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_RENDERER_PERF=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --dir target/fret-diag/layout-architecture-audit-v1-baseline --launch -- cargo run -p fret-ui-gallery --release --features gallery-full"
+    ]
+  },
+  "gates": [
+    {
+      "name": "layout-engine",
+      "command": "cargo nextest run -p fret-ui layout_engine --no-fail-fast"
+    },
+    {
+      "name": "clean-geometry-text-stop-condition",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_rejects_auto_height_text_reflow --no-fail-fast"
+    },
+    {
+      "name": "layering",
+      "command": "python3 tools/check_layering.py"
+    },
+    {
+      "name": "format-check",
+      "command": "cargo fmt --check"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/fret-ui-layout-architecture-audit-v1/DESIGN.md",
+    "docs/workstreams/fret-ui-layout-architecture-audit-v1/TODO.md",
+    "docs/workstreams/fret-ui-layout-architecture-audit-v1/ARCHITECTURE_INVENTORY_2026-05-18.md",
+    "docs/workstreams/fret-ui-layout-architecture-audit-v1/ARCHITECTURE_DECISION_2026-05-18.md",
+    "docs/workstreams/scroll-optimization-v1/HANDOFF.md",
+    "docs/workstreams/text-intrinsic-sizing-and-wrap-v1/text-intrinsic-sizing-and-wrap-v1.md",
+    "crates/fret-ui/src/tree/layout/node.rs",
+    "crates/fret-ui/src/tree/layout/clean_geometry.rs",
+    "crates/fret-ui/src/layout/engine.rs",
+    "docs/workstreams/fret-ui-layout-architecture-audit-v1/CLOSEOUT_AUDIT_2026-05-18.md",
+    "docs/workstreams/retained-layout-orchestration-v1/"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0076-declarative-layout-performance-hardening.md",
+    "docs/adr/0251-text-intrinsic-sizing-semantics-v1.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
+  ],
+  "continue_policy": {
+    "default_action": "split_follow_on",
+    "notes": "Closed after recording the layout architecture decision and landing the behavior-preserving clean-geometry module extraction. Continue runtime performance work in retained-layout-orchestration-v1; do not redesign the layout model from this lane without fresh evidence."
+  }
+}

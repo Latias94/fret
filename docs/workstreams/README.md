@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 387
+- Dedicated directories: 390
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2013,6 +2013,7 @@ Rule:
 - `docs/workstreams/fret-node-style-skinning-v1/` — first 2026-02-27, latest 2026-03-01, 7 markdown docs
 - `docs/workstreams/fret-node-style-skinning-v2/` — first 2026-03-01, latest 2026-03-01, 3 markdown docs
 - `docs/workstreams/fret-node-style-skinning-v3/` — first 2026-03-02, latest 2026-03-02, 6 markdown docs
+- `docs/workstreams/fret-ui-layout-architecture-audit-v1/` — first n/a, latest n/a, 8 markdown docs (closed audit lane that kept the current clean-geometry model, extracted proof helpers to `tree/layout/clean_geometry.rs`, and split retained layout orchestration follow-on work; includes `WORKSTREAM.json`)
 - `docs/workstreams/genui-json-render-v1/` — first 2026-02-14, latest 2026-03-02, 3 markdown docs
 - `docs/workstreams/generated-icon-presentation-defaults-v1/` — first n/a, latest n/a, 8 markdown docs (closed closeout record for explicit versioned `OriginalColors` vs `Mask` defaults in generated/imported icon packs without reopening acquisition or runtime icon contracts)
 - `docs/workstreams/grid-track-and-slot-placement-parity-v1/` — first 2026-04-07, latest 2026-04-07, 4 markdown docs
@@ -2205,6 +2206,7 @@ Rule:
 - `docs/workstreams/path-paint-surface-v1/` — first 2026-02-16, latest 2026-05-17, 4 markdown docs (closed path paint contract lane; `SceneOp::Path` uses bounded `PaintBindingV1` with gradient/material conformance)
 - `docs/workstreams/path-stroke-style-v2/` — first 2026-02-16, latest 2026-05-17, 4 markdown docs (closed vector path stroke v2 lane for join/cap/miter/dash semantics and conformance)
 - `docs/workstreams/perf-baselines/` — first 2026-02-06, latest 2026-02-10, 1 markdown docs
+- `docs/workstreams/pressable-clean-geometry-propagation-v1/` — first n/a, latest n/a, 7 markdown docs (closed narrow follow-on proving `Pressable` can use clean-geometry propagation without bypassing hit-test, focus, hover, pressed-state, capture, or activation semantics; includes `WORKSTREAM.json`)
 - `docs/workstreams/primitives-interaction-semantics-alignment-v1/` — first 2026-02-09, latest 2026-02-17, 19 markdown docs
 - `docs/workstreams/public-authoring-state-lanes-and-identity-fearless-refactor-v1/` — first 2026-04-02, latest 2026-04-15, 6 markdown docs
 - `docs/workstreams/quad-border-styles-v1/` — first 2026-02-13, latest 2026-02-16, 3 markdown docs
@@ -2227,6 +2229,7 @@ Rule:
 - `docs/workstreams/resource-loading-fearless-refactor-v1/` — first 2026-03-15, latest 2026-03-16, 7 markdown docs
 - `docs/workstreams/resource-loading-release-readiness-fearless-refactor-v1/` — first n/a, latest n/a, 3 markdown docs
 - `docs/workstreams/retained-bridge-exit-v1/` — first 2026-02-07, latest 2026-02-08, 2 markdown docs
+- `docs/workstreams/retained-layout-orchestration-v1/` — first n/a, latest n/a, 7 markdown docs (closed retained layout orchestration follow-on that landed the `Semantics` clean-geometry propagation fast path and split remaining `Pressable`/`Scroll`/`ViewCache` owners to future narrower lanes; includes `WORKSTREAM.json`)
 - `docs/workstreams/router-tanstack-parity-v1/` — first 2026-02-07, latest 2026-02-16, 2 markdown docs
 - `docs/workstreams/router-ui-v1/` — first 2026-02-08, latest 2026-03-12, 2 markdown docs
 - `docs/workstreams/router-v1/` — first 2026-02-06, latest 2026-03-11, 2 markdown docs

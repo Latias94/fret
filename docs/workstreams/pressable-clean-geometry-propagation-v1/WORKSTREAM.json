@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "slug": "pressable-clean-geometry-propagation-v1",
+  "title": "Pressable Clean Geometry Propagation v1",
+  "status": "closed",
+  "updated": "2026-05-18",
+  "scope_kind": "execution",
+  "follow_on_of": "retained-layout-orchestration-v1",
+  "problem": "Determine whether Pressable can safely use the retained clean-geometry propagation fast path after RLO-030, without bypassing hit-test, focus, hover, pressed-state, capture, or activation semantics.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/pressable-clean-geometry-propagation-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/pressable-clean-geometry-propagation-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/pressable-clean-geometry-propagation-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/pressable-clean-geometry-propagation-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/pressable-clean-geometry-propagation-v1/HANDOFF.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/pressable-clean-geometry-propagation-v1/PGP_020_030_SOURCE_AUDIT_AND_RED_PROOF_2026-05-18.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/pressable-clean-geometry-propagation-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/retained-layout-orchestration-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    }
+  ],
+  "repro": {
+    "summary": "Focused RED/GREEN proof for Pressable clean-geometry propagation, followed by UI Gallery code-editor resize-jitter perf confirmation.",
+    "commands": [
+      "cargo nextest run -p fret-ui clean_geometry_small_resize_propagates_through_pressable_wrapper --no-fail-fast",
+      "target/release/fretboard-dev diag stats target/fret-diag/pressable-clean-geometry-propagation-v1-pgp050-after/1779088062238/bundle.schema2.json --sort time --top 20"
+    ]
+  },
+  "gates": [
+    {
+      "name": "workstream-state-json",
+      "command": "python3 -m json.tool docs/workstreams/pressable-clean-geometry-propagation-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "pressable-layout-proof",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_propagates_through_pressable_wrapper --no-fail-fast"
+    },
+    {
+      "name": "pressable-interaction-proof",
+      "command": "cargo nextest run -p fret-ui pressable_on_activate_hook_runs_on_pointer_activation pressable_on_hover_change_hook_runs_on_pointer_move pressable_clears_pressed_and_releases_capture_on_move_without_buttons --no-fail-fast"
+    },
+    {
+      "name": "mechanism-boundary",
+      "command": "python3 tools/check_layering.py"
+    },
+    {
+      "name": "format-check",
+      "command": "cargo fmt --check"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    },
+    {
+      "name": "perf-confirmation",
+      "command": "target/release/fretboard-dev diag stats target/fret-diag/pressable-clean-geometry-propagation-v1-pgp050-after/1779088062238/bundle.schema2.json --sort time --top 20"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/pressable-clean-geometry-propagation-v1/DESIGN.md",
+    "docs/workstreams/pressable-clean-geometry-propagation-v1/TODO.md",
+    "docs/workstreams/pressable-clean-geometry-propagation-v1/MILESTONES.md",
+    "docs/workstreams/pressable-clean-geometry-propagation-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/pressable-clean-geometry-propagation-v1/HANDOFF.md",
+    "docs/workstreams/pressable-clean-geometry-propagation-v1/CLOSEOUT_AUDIT_2026-05-18.md",
+    "docs/workstreams/pressable-clean-geometry-propagation-v1/PGP_020_030_SOURCE_AUDIT_AND_RED_PROOF_2026-05-18.md",
+    "docs/workstreams/retained-layout-orchestration-v1/CLOSEOUT_AUDIT_2026-05-18.md",
+    "docs/workstreams/retained-layout-orchestration-v1/EVIDENCE_AND_GATES.md",
+    "crates/fret-ui/src/tree/layout/clean_geometry.rs",
+    "crates/fret-ui/src/declarative/host_widget/layout.rs",
+    "crates/fret-ui/src/declarative/host_widget/event/pressable.rs",
+    "crates/fret-ui/src/tree/dispatch/hover.rs",
+    "crates/fret-ui/src/declarative/tests/layout/layout_engine.rs",
+    "crates/fret-ui/src/declarative/tests/interactions/pressable.rs",
+    "target/fret-diag/pressable-clean-geometry-propagation-v1-pgp050-after/1779088062238/bundle.schema2.json",
+    "target/fret-diag/pressable-clean-geometry-propagation-v1-pgp050-after/layout.perf.summary.v1.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md",
+    "docs/adr/0076-declarative-layout-performance-hardening.md"
+  ],
+  "continue_policy": {
+    "default_action": "closed",
+    "notes": "This lane is closed. Start separate owner-specific lanes for ViewCache or Scroll only with fresh attribution and a source audit."
+  }
+}

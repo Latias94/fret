@@ -1,5 +1,6 @@
 use super::*;
 
+mod clean_geometry;
 mod entrypoints;
 mod node;
 mod solve;
