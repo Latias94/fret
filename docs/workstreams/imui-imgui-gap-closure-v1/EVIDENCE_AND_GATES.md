@@ -577,6 +577,12 @@ Run evidence:
   `proof_section_chrome_label(...)` backed by `text_section_chrome_label(...)`. Gates:
   `python tools/gate_imui_workstream_source.py` and
   `cargo check -p fret-demo --bin imui_editor_proof_demo`.
+- 2026-05-18: migrated the `imui_editor_proof_demo` collection proof fixed text to the same shared
+  role vocabulary without adding shared collection policy. Collection title text uses a
+  proof-local section-chrome helper, compact state/status/readout lines use a proof-local helper
+  backed by `text_control_readout(...)`, and inline rename explanatory copy opts into
+  `text_wrapped(...)`. Focused source tests and the IMUI source gate reject those fixed collection
+  paths drifting back to bare `ui.text(...)`.
 - 2026-05-17: migrated `imui_editor_proof_demo` drag-preview cards away from a newline-joined bare
   text blob. Preview titles now use `text_section_chrome_label(...)`, optional subtitles use
   `text_control_readout(...)`, and `proof_drag_preview_card_uses_single_line_text_roles` locks the
@@ -1817,6 +1823,17 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 
 - `cargo fmt -p fret-ui-kit` passed.
 - `cargo nextest run -p fret-ui-kit --features imui --lib tooltip_body_text_uses_compact_paragraph_role --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 collection proof text-role slice:
+
+- `cargo fmt -p fret-examples` passed.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_text_roles_surface imui_editor_proof_collection_fixed_text_uses_shared_roles --no-fail-fast` passed.
+- `cargo nextest run -p fret-examples --test imui_editor_collection_select_all_surface imui_editor_proof_demo_keeps_collection_select_all_app_owned_and_explicit --test imui_editor_collection_rename_surface imui_editor_proof_demo_keeps_collection_inline_rename_app_owned_and_explicit --no-fail-fast` passed.
+- `cargo check -p fret-examples` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.

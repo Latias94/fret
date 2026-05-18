@@ -273,6 +273,11 @@ Readiness order for the next locally testable review slices:
    now route their default body copy through a crate-local `tooltip_body_text(...)` helper backed
    by `text_compact_paragraph(...)`, while rich-content `tooltip(...)` closures still let callers
    choose their own text role.
+   2026-05-18 collection proof text-role follow-up: `imui_editor_proof_demo` collection titles,
+   status/readout lines, asset metadata/path text, context-menu selection summaries, and drop
+   status now route through proof-local helpers backed by shared section-chrome and control-readout
+   roles. The inline rename explanatory copy explicitly uses `text_wrapped(...)`, keeping app-owned
+   collection behavior intact while avoiding fixed-row bare text under resize.
    2026-05-16 trigger label reuse follow-up: IMUI tab triggers and menubar triggers now reuse
    `text_button_label(...)` because they are button-like trigger labels.
    2026-05-16 list row text role follow-up: `text_list_row_label(...)` now owns dense

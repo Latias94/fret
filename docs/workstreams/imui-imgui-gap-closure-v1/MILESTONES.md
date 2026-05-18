@@ -276,6 +276,10 @@ Exit criteria:
   through a private `tooltip_body_text(...)` seam backed by `text_compact_paragraph(...)`, so
   convenience tooltips wrap as dense body/help text instead of inheriting single-line chrome text
   from `ui.text(...)`.
+  2026-05-18 collection proof text-role result: `imui_editor_proof_demo` collection fixed chrome
+  and readouts now use proof-local helpers over shared section-chrome/control-readout roles. Inline
+  rename explanatory copy is the explicit wrapping path, while collection state, asset metadata,
+  context-menu selection, and drop-status text stay single-line and shrinkable under resize.
   2026-05-16 trigger label reuse result: IMUI tab triggers and menubar triggers now reuse
   `text_button_label(...)`; selectable/menu item row labels stayed out of that role because they
   are command/list rows, not button labels.
