@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-18
+Last updated: 2026-05-19
 
 ## M0 - Current Source Baseline
 
@@ -639,6 +639,9 @@ Exit criteria:
   text instead of bare `cx.text(...)`.
   2026-05-18 gallery Tooltip keyboard shortcut text result: the custom shortcut tooltip label now
   uses control-readout text instead of bare `cx.text(...)`.
+  2026-05-19 gallery Dialog scroll-row text result: scrollable-content and sticky-footer dialog
+  filler rows now use shared list-row label text instead of `ui::raw_text(format!(...))`, keeping
+  the scroll proof rows on a fixed-row text role without changing shadcn dialog recipes.
   2026-05-17 gallery editor preview text result: code-editor, Markdown, and Web IME preview
   headers now use paragraph text for prose, control readout text for fixed status/debug values,
   and button label text for custom pointer-region actions. The slice keeps editor-proof resize

@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-05-18
+Last updated: 2026-05-19
 
 ## Evidence Anchors
 
@@ -2529,4 +2529,29 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   tooltip_keyboard_shortcut_text_uses_shared_role --no-fail-fast` passed.
 - `cargo fmt --check -p fret-ui-gallery` passed.
 - `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-19 gallery Dialog scroll-row text-role slice:
+
+- Red repro:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  dialog_scroll_row_text_uses_shared_roles --no-fail-fast` failed before the fix because
+  `dialog/scrollable_content.rs` was missing the shared `decl_text` role import.
+- `apps/fret-ui-gallery/src/ui/snippets/dialog/scrollable_content.rs` and
+  `apps/fret-ui-gallery/src/ui/snippets/dialog/sticky_footer.rs` route scroll filler rows through
+  `text_list_row_label(...)` instead of `ui::raw_text(format!(...))`.
+- `cargo fmt -p fret-ui-gallery` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `cargo check -p fret-ui-gallery --test ui_authoring_surface_default_app` passed.
+- First post-fix
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  dialog_scroll_row_text_uses_shared_roles --no-fail-fast` timed out while contending with the
+  parallel `cargo check` package-cache lock; Cargo/Rustc processes were allowed to exit.
+- Retried after the lock cleared:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  dialog_scroll_row_text_uses_shared_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
 - `git diff --check` passed.

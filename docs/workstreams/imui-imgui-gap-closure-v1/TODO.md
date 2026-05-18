@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-05-18
+Last updated: 2026-05-19
 
 ## P0 - Source Baseline
 
@@ -691,6 +691,10 @@ Readiness order for the next locally testable review slices:
    2026-05-18 gallery Tooltip keyboard shortcut text follow-up: the custom keyboard-shortcut
    tooltip label now routes through shared control-readout text instead of bare `cx.text(...)`,
    while built-in `TooltipContent::text(...)` recipe paths stay recipe-owned.
+   2026-05-19 gallery Dialog scroll-row text follow-up: scrollable-content and sticky-footer
+   filler rows now route through shared list-row label text instead of `ui::raw_text(format!(...))`,
+   keeping scroll proof rows single-line/shrinkable under resize while dialog title/description
+   recipe-owned text stays inside shadcn components.
    2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
    headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
    through `control_readout_text(...)`, and custom pointer-region labels through

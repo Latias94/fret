@@ -5321,6 +5321,24 @@ fn popover_align_snippet_text_uses_shared_roles() {
 }
 
 #[test]
+fn dialog_scroll_row_text_uses_shared_roles() {
+    for relative_path in [
+        "src/ui/snippets/dialog/scrollable_content.rs",
+        "src/ui/snippets/dialog/sticky_footer.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_list_row_label(cx, format!(",
+                "\"{prefix} {}: This dialog row is intentionally verbose to validate scroll behavior and footer visibility.\"",
+            ],
+            &["ui::raw_text(format!("],
+        );
+    }
+}
+
+#[test]
 fn hover_card_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[

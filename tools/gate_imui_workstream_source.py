@@ -399,7 +399,7 @@ def main() -> None:
             required=[
                 '"slug": "imui-imgui-gap-closure-v1"',
                 '"status": "active"',
-                '"updated": "2026-05-18"',
+                '"updated": "2026-05-19"',
                 '"path": "docs/workstreams/imui-imgui-gap-closure-v1/P1_CLEANUP_AUDIT_2026-05-06.md"',
                 '"path": "docs/workstreams/imui-imgui-gap-closure-v1/P1_CLOSEOUT_AUDIT_2026-05-06.md"',
                 '"path": "docs/workstreams/imui-imgui-gap-closure-v1/P3_TEXT_ROLE_MATRIX_2026-05-17.md"',
@@ -525,6 +525,8 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/snippets/ai/stack_trace_usage.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/message_usage.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/canvas_world_layer_spike.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/dialog/scrollable_content.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/dialog/sticky_footer.rs",
                 "apps/fret-ui-gallery/tests/ai_visible_text_role_surface.rs",
                 "ecosystem/fret-ui-ai/src/elements/mod.rs",
                 "ecosystem/fret-ui-ai/src/surface_policy_tests.rs",
@@ -1926,6 +1928,9 @@ def main() -> None:
                 "the UI Gallery code-view torture header",
                 "2026-05-18 text editor/conformance header prose follow-up",
                 "editor/conformance headers for feature toggles",
+                "2026-05-19 gallery Dialog scroll-row text follow-up",
+                "filler rows now route through shared list-row label text",
+                "instead of `ui::raw_text(format!(...))`",
             ],
             forbidden=[
                 "Remaining advanced-table candidates are freeze panes, persistence, and old columns API shape",
@@ -1954,6 +1959,9 @@ def main() -> None:
                 "2026-05-18 retained table fixed-row clip result",
                 "`table_body_row_layout(...)`",
                 "measured rows keep measurement-friendly overflow",
+                "2026-05-19 gallery Dialog scroll-row text result",
+                "filler rows now use shared list-row label text",
+                "without changing shadcn dialog recipes",
             ],
             forbidden=[
                 "remain advanced-table candidates",
@@ -2237,6 +2245,11 @@ def main() -> None:
                 "sidebar_app_collapsed_projects_do_not_emit_empty_text",
                 "`fret-ui-ai` now owns a crate-local `empty_placeholder(...)` helper",
                 "hidden_ai_element_paths_use_non_text_placeholder",
+                "2026-05-19 gallery Dialog scroll-row text-role slice",
+                "`apps/fret-ui-gallery/src/ui/snippets/dialog/scrollable_content.rs`",
+                "`apps/fret-ui-gallery/src/ui/snippets/dialog/sticky_footer.rs`",
+                "`text_list_row_label(...)` instead of `ui::raw_text(format!(...))`",
+                "dialog_scroll_row_text_uses_shared_roles --no-fail-fast",
                 "cargo check -p fret-examples",
             ],
             forbidden=[
@@ -3434,6 +3447,28 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/dialog/scrollable_content.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_list_row_label(cx, format!(",
+                "{prefix} {}: This dialog row is intentionally verbose to validate scroll behavior and footer visibility.",
+            ],
+            forbidden=[
+                "ui::raw_text(format!(",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/dialog/sticky_footer.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_list_row_label(cx, format!(",
+                "{prefix} {}: This dialog row is intentionally verbose to validate scroll behavior and footer visibility.",
+            ],
+            forbidden=[
+                "ui::raw_text(format!(",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/popover/align.rs"),
             required=[
                 "use fret_ui_kit::declarative::text as decl_text;",
@@ -3537,6 +3572,7 @@ def main() -> None:
                 "fn alert_dialog_snippet_custom_text_uses_shared_roles()",
                 "fn hover_card_snippet_text_uses_shared_roles()",
                 "fn popover_align_snippet_text_uses_shared_roles()",
+                "fn dialog_scroll_row_text_uses_shared_roles()",
                 "fn tooltip_keyboard_shortcut_text_uses_shared_role()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",
