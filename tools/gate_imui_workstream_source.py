@@ -3434,6 +3434,20 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/popover/align.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph(cx, \"Aligned to start\")",
+                "decl_text::text_paragraph(cx, \"Aligned to center\")",
+                "decl_text::text_paragraph(cx, \"Aligned to end\")",
+            ],
+            forbidden=[
+                "cx.text(\"Aligned to start\")",
+                "cx.text(\"Aligned to center\")",
+                "cx.text(\"Aligned to end\")",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/toggle/label.rs"),
             required=[
                 "decl_text::text_control_readout(cx, format!(\"Pressed: {pressed_now}\"))",
@@ -3512,6 +3526,7 @@ def main() -> None:
                 "fn collapsible_snippet_text_uses_shared_roles()",
                 "fn alert_dialog_snippet_custom_text_uses_shared_roles()",
                 "fn hover_card_snippet_text_uses_shared_roles()",
+                "fn popover_align_snippet_text_uses_shared_roles()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",
             ],

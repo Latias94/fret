@@ -635,6 +635,8 @@ Exit criteria:
   2026-05-18 gallery HoverCard text result: app-owned HoverCard title/date/body/positioning copy
   now uses shared section-chrome, paragraph, control-readout, and button-label roles instead of
   raw/default text builders.
+  2026-05-18 gallery Popover align text result: the align preview body labels now use paragraph
+  text instead of bare `cx.text(...)`.
   2026-05-17 gallery editor preview text result: code-editor, Markdown, and Web IME preview
   headers now use paragraph text for prose, control readout text for fixed status/debug values,
   and button label text for custom pointer-region actions. The slice keeps editor-proof resize

@@ -5303,6 +5303,24 @@ fn popover_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn popover_align_snippet_text_uses_shared_roles() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/popover/align.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_paragraph(cx, \"Aligned to start\")",
+            "decl_text::text_paragraph(cx, \"Aligned to center\")",
+            "decl_text::text_paragraph(cx, \"Aligned to end\")",
+        ],
+        &[
+            "cx.text(\"Aligned to start\")",
+            "cx.text(\"Aligned to center\")",
+            "cx.text(\"Aligned to end\")",
+        ],
+    );
+}
+
+#[test]
 fn hover_card_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[

@@ -183,6 +183,7 @@ Last updated: 2026-05-18
   - `apps/fret-ui-gallery/src/ui/snippets/hover_card/sides.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/hover_card/trigger_delays.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/hover_card/usage.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/popover/align.rs`
   - `apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/mvp/gates.rs`
   - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
   - `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs`
@@ -2501,6 +2502,18 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - Retried after cleaning generated build artifacts:
   `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
   hover_card_snippet_text_uses_shared_roles --no-fail-fast` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 gallery Popover align text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ui_authoring_surface_default_app` passed.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  popover_align_snippet_text_uses_shared_roles --no-fail-fast` passed.
 - `cargo fmt --check -p fret-ui-gallery` passed.
 - `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
 - `git diff --check` passed.

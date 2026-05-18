@@ -685,6 +685,9 @@ Readiness order for the next locally testable review slices:
    title/chrome labels through section-chrome text, body copy through paragraph/break-words roles,
    date/status copy through control-readout text, and the usage trigger label through button-label
    text instead of raw/default text builders.
+   2026-05-18 gallery Popover align text follow-up: the fixed align preview body labels now route
+   through shared paragraph text instead of `cx.text(...)`, keeping the overlay content examples on
+   the same resize-aware text-role vocabulary.
    2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
    headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
    through `control_readout_text(...)`, and custom pointer-region labels through
