@@ -3,8 +3,7 @@ pub const SOURCE: &str = include_str!("dropdown.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_core::Edges;
-use fret_ui_kit::IntoUiElement;
-use fret_ui_kit::ui;
+use fret_ui_kit::{IntoUiElement, declarative::text as decl_text, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn icon(
@@ -28,7 +27,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .size(shadcn::ButtonSize::Sm)
         .toggle_model(dropdown_open.clone())
         .children([
-            ui::text("Select").text_sm().into_element(cx),
+            decl_text::text_button_label(cx, "Select"),
             icon(cx, "lucide.chevron-down").into_element(cx),
         ])
         .test_id("ui-gallery-item-dropdown-trigger")

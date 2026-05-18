@@ -716,6 +716,10 @@ Readiness order for the next locally testable review slices:
    routes section titles through `text_section_chrome_label(...)` and descriptions through
    `text_control_readout(...)` instead of local `Theme`/`fixed_line_box_px` text policy, while
    keeping Separator itself a leaf primitive.
+   2026-05-19 gallery Item slotted text follow-up: app-owned Item dropdown trigger copy now uses
+   `text_button_label(...)`, the download header uses `text_section_chrome_label(...)`, and issue
+   number side columns use `text_control_readout(...)`. Built-in `ItemTitle` /
+   `ItemDescription` text stays recipe-owned.
    2026-05-19 gallery Dialog scroll-row text follow-up: scrollable-content and sticky-footer
    filler rows now route through shared list-row label text instead of `ui::raw_text(format!(...))`,
    keeping scroll proof rows single-line/shrinkable under resize while dialog title/description

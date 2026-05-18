@@ -3930,6 +3930,29 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/item/dropdown.rs"),
+            required=[
+                "use fret_ui_kit::{IntoUiElement, declarative::text as decl_text, ui};",
+                "decl_text::text_button_label(cx, \"Select\")",
+            ],
+            forbidden=[
+                "ui::text(\"Select\").text_sm()",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/item/gallery.rs"),
+            required=[
+                "declarative::{style as decl_style, text as decl_text}",
+                "shadcn::ItemHeader::new([decl_text::text_section_chrome_label(",
+                "\"Your download has started.\"",
+                "shadcn::ItemContent::new([decl_text::text_control_readout(cx, number_text)])",
+            ],
+            forbidden=[
+                "ui::text(\"Your download has started.\")",
+                "ui::text(number_text)",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/toggle/label.rs"),
             required=[
                 "decl_text::text_control_readout(cx, format!(\"Pressed: {pressed_now}\"))",
@@ -4018,6 +4041,7 @@ def main() -> None:
                 "fn selected_pagination_page_number_helpers_use_shared_button_label_role()",
                 "fn selected_carousel_status_readouts_use_shared_control_readout_role()",
                 "fn table_children_snippet_routes_custom_text_through_shared_roles()",
+                "fn item_snippets_route_slotted_copy_through_shared_text_roles()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",
             ],

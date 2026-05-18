@@ -11389,6 +11389,31 @@ fn selected_item_snippet_helpers_prefer_into_ui_element_over_anyelement() {
 }
 
 #[test]
+fn item_snippets_route_slotted_copy_through_shared_text_roles() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/item/dropdown.rs",
+        &[
+            "use fret_ui_kit::{IntoUiElement, declarative::text as decl_text, ui};",
+            "decl_text::text_button_label(cx, \"Select\")",
+        ],
+        &["ui::text(\"Select\").text_sm()"],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/item/gallery.rs",
+        &[
+            "declarative::{style as decl_style, text as decl_text}",
+            "shadcn::ItemHeader::new([decl_text::text_section_chrome_label(cx, \"Your download has started.\")])",
+            "shadcn::ItemContent::new([decl_text::text_control_readout(cx, number_text)])",
+        ],
+        &[
+            "ui::text(\"Your download has started.\")",
+            "ui::text(number_text)",
+        ],
+    );
+}
+
+#[test]
 fn selected_native_select_snippets_prefer_builder_preserving_helpers() {
     for relative_path in [
         "src/ui/snippets/native_select/demo.rs",
