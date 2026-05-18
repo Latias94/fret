@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 409
+- Dedicated directories: 410
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2298,6 +2298,7 @@ Rule:
 - `docs/workstreams/wgpu-composite-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating composite-group WGPU conformance tests onto the shared format-aware readback/render harness)
 - `docs/workstreams/wgpu-conformance-harness-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed WGPU conformance test-support extraction lane for shared readback/render helpers)
 - `docs/workstreams/wgpu-custom-effects-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating CustomV1/V2/V3 WGPU conformance tests onto the shared readback/render harness)
+- `docs/workstreams/wgpu-custom-effect-v3-raw-wanted-shape-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for unifying Custom Effect V3 raw-source flag render-plan shape across native and wasm)
 - `docs/workstreams/wgpu-drop-shadow-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating drop-shadow WGPU conformance onto the shared readback/render harness)
 - `docs/workstreams/wgpu-host-topology-smoke-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating host-provided GPU topology smoke readback helpers onto shared support while preserving direct adapter/device/queue setup)
 - `docs/workstreams/wgpu-image-registry-metadata-prune-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for pruning stale retained image color-space metadata from the WGPU image registry while preserving descriptor validation)

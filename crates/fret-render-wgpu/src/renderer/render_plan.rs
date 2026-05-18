@@ -392,7 +392,6 @@ pub(super) struct CustomEffectV3Pass {
     /// space). When present, the renderer may restrict pyramid generation work to the scissor (and
     /// its downsampled projections) instead of building a full-viewport pyramid.
     pub(super) pyramid_build_scissor: Option<LocalScissorRect>,
-    #[cfg(not(target_arch = "wasm32"))]
     pub(super) raw_wanted: bool,
     pub(super) pyramid_wanted: bool,
     pub(super) common: CustomEffectPassCommon,
@@ -839,6 +838,7 @@ fn validate_plan_target_lifetimes(passes: &[RenderPlanPass]) -> Result<(), Strin
             RenderPlanPass::CustomEffectV3(CustomEffectV3Pass {
                 src_raw,
                 src_pyramid,
+                raw_wanted,
                 common:
                     CustomEffectPassCommon {
                         src,
@@ -850,6 +850,9 @@ fn validate_plan_target_lifetimes(passes: &[RenderPlanPass]) -> Result<(), Strin
                 ..
             }) => {
                 mark_read(&live, &initialized, pass_index, src)?;
+                // Custom V3 always binds both source views; the flags describe shader-requested
+                // source semantics for diagnostics and summaries, not resource availability.
+                let _ = raw_wanted;
                 mark_read(&live, &initialized, pass_index, src_raw)?;
                 mark_read(&live, &initialized, pass_index, src_pyramid)?;
                 if let Some(mask) = mask {
