@@ -1,12 +1,11 @@
 # ViewCache Resize-Jitter Attribution v1 - Handoff
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-18
 
 ## Current State
 
-The lane is open and scoped as a narrow follow-on after `pressable-clean-geometry-propagation-v1`.
-No runtime code has been changed.
+The lane is closed as a no-runtime-change attribution lane. No runtime code was changed.
 
 Starting evidence:
 
@@ -34,44 +33,35 @@ Current verdict:
 - The first clean-geometry rejection is `Text/text_reflow`, so a direct `ViewCache` allowlist change
   is not justified by current evidence.
 
-## Next Task
+## Closeout
 
-Run VCRJ-030.
+VCRJ-030 captured fresh UI Gallery code-editor resize-jitter evidence:
 
-Goal:
+- Bundle:
+  `target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030/1779091052963/bundle.schema2.json`
+- Layout summary:
+  `target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030/layout.perf.summary.v1.json`
 
-- Capture a fresh UI Gallery resize-jitter bundle with current code and confirm whether the same
-  main-root `ViewCache` hotspot signature repeats.
-- Preserve phase stats and clean-geometry rejection fields so VCRJ-040 can choose between a narrow
-  `ViewCache` proof, a text-reflow clean-geometry split, or a no-change verdict.
+Result:
 
-Start with:
+- Worst frame: `total=362814us`, `layout=1070us`, `prepaint=1349us`, `paint=360395us`.
+- Top layout hotspots: `Scroll layout_us=224`, `ViewCache layout_us=184`,
+  `Flex layout_us=96`.
+- Dedicated view-cache phase: `layout_view_cache_time_us=33`.
+- `view_cache_roots_reused=1`, `view_cache_contained_relayouts=0`,
+  `view_cache_roots_layout_invalidated=0`.
+- First clean-geometry skip: `Text/text_reflow`.
 
-```bash
-target/release/fretboard-dev diag perf \
-  tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json \
-  --repeat 1 \
-  --warmup-frames 5 \
-  --reuse-launch \
-  --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json \
-  --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json \
-  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
-  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
-  --env FRET_DIAG_RENDERER_PERF=1 \
-  --env FRET_LAYOUT_NODE_PROFILE=1 \
-  --env FRET_LAYOUT_NODE_PROFILE_TOP=20 \
-  --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 \
-  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
-  --env FRET_DIAG_SEMANTICS=0 \
-  --dir target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030 \
-  --launch -- cargo run -p fret-ui-gallery --release --features gallery-full
-```
+Conclusion:
+
+- Do not add `ViewCache` to the clean-geometry allowlist from this evidence.
+- Do not optimize contained view-cache relayout from this evidence.
+- Continue in
+  `docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/`.
 
 ## Guardrails
 
-- Do not add `ElementInstance::ViewCache(_)` to the clean-geometry allowlist as a first move.
-- Do not optimize `layout_contained_view_cache_roots_if_needed(...)` unless a fresh bundle shows
-  `view_cache_contained_relayouts > 0`.
+- Keep `ViewCache` as a clean-geometry side-effect boundary unless a future focused proof proves a
+  narrower safe case.
 - Keep `Scroll` as a separate possible follow-on.
-- Keep UI Gallery recipe changes out unless evidence proves the demo composition owns the cost.
-- Preserve cache-root liveness, state retention, boundary tracing, and scroll extent repair.
+- Keep the next lane focused on the current `Canvas` paint tail first.

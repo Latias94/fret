@@ -1,7 +1,13 @@
 # ViewCache Resize-Jitter Attribution v1
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-18
+
+Status note (2026-05-18): VCRJ closed with a no-runtime-change verdict. Fresh VCRJ-030 evidence
+shows the UI Gallery resize-jitter worst frame is paint-dominated, and the layout hotspot no longer
+has `ViewCache` as the top owner. Continue with
+`docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/` for the current worst
+owner.
 
 ## Why This Lane Exists
 
@@ -127,3 +133,16 @@ This lane can close when it leaves one of these explicit verdicts:
 
 In all cases the lane must preserve cache-root liveness, state retention, boundary tracing, and
 scroll extent correctness.
+
+Closeout verdict (2026-05-18):
+
+- No `ViewCache` runtime change is justified in this lane.
+- VCRJ-030 captured a fresh bundle at
+  `target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030/1779091052963/bundle.schema2.json`.
+- The worst frame is dominated by paint, not layout:
+  `total=362814us`, `layout=1070us`, `prepaint=1349us`, `paint=360395us`.
+- The top layout hotspot is `Scroll layout_us=224`, while `ViewCache layout_us=184`.
+- Dedicated view-cache work remains small: `layout_view_cache_time_us=33`,
+  `layout_contained_view_cache_roots_time_us=0`, and `view_cache_roots_reused=1`.
+- The first clean-geometry solve rejection is still `Text/text_reflow`, so adding `ViewCache` to
+  the clean-geometry allowlist would optimize the wrong invariant.

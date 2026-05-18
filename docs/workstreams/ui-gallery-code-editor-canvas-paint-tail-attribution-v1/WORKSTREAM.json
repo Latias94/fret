@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "slug": "ui-gallery-code-editor-canvas-paint-tail-attribution-v1",
+  "title": "UI Gallery Code Editor Canvas Paint Tail Attribution v1",
+  "status": "active",
+  "updated": "2026-05-18",
+  "scope_kind": "audit",
+  "follow_on_of": "view-cache-resize-jitter-attribution-v1",
+  "problem": "Fresh UI Gallery code-editor resize-jitter evidence shows the current worst frame is dominated by a Canvas paint tail, while ViewCache is not the top layout owner. This lane attributes that Canvas tail before any code-editor, windowed-rows-surface, diagnostics, or renderer runtime change.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/HANDOFF.md"
+    },
+    {
+      "role": "reference",
+      "path": "docs/workstreams/view-cache-resize-jitter-attribution-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    }
+  ],
+  "repro": {
+    "summary": "Reuse the VCRJ-030 UI Gallery code-editor resize-jitter bundle as starting evidence, then rerun the same script after source attribution if the Canvas paint tail needs confirmation.",
+    "commands": [
+      "target/release/fretboard-dev diag stats target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030/1779091052963/bundle.schema2.json --sort time --top 20",
+      "target/release/fretboard-dev diag perf tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json --repeat 1 --warmup-frames 5 --reuse-launch --prewarm-script tools/diag-scripts/_prelude/tooling-suite-prewarm-fonts.json --prelude-script tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_RENDERER_PERF=1 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --dir target/fret-diag/ui-gallery-code-editor-canvas-paint-tail-attribution-v1-cpt030 --launch -- cargo run -p fret-ui-gallery --release --features gallery-full"
+    ]
+  },
+  "gates": [
+    {
+      "name": "workstream-state-json",
+      "command": "python3 -m json.tool docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    },
+    {
+      "name": "source-audit",
+      "command": "rg -n \"windowed_rows_surface|Canvas|paint_perf|row_scene|surface_callback|torture\" ecosystem/fret-code-editor ecosystem/fret-ui-kit/src/declarative crates/fret-ui crates/fret-diag -S"
+    },
+    {
+      "name": "perf-attribution",
+      "command": "target/release/fretboard-dev diag stats <bundle.schema2.json> --sort time --top 20"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/DESIGN.md",
+    "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/TODO.md",
+    "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/MILESTONES.md",
+    "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/HANDOFF.md",
+    "docs/workstreams/view-cache-resize-jitter-attribution-v1/CLOSEOUT_AUDIT_2026-05-18.md",
+    "target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030/1779091052963/bundle.schema2.json",
+    "target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030/layout.perf.summary.v1.json",
+    "ecosystem/fret-code-editor/src/editor/mod.rs",
+    "ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs",
+    "crates/fret-ui",
+    "crates/fret-diag"
+  ],
+  "adr_refs": [
+    "docs/adr/0076-declarative-layout-performance-hardening.md",
+    "docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue with CPT-020 source attribution before any runtime change. Split renderer/canvas mechanism work only after source evidence proves that owner."
+  }
+}

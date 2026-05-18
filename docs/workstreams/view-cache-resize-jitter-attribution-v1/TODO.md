@@ -1,6 +1,6 @@
 # ViewCache Resize-Jitter Attribution v1 - TODO
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-18
 
 ## M0 - Scope And Evidence Freeze
@@ -32,7 +32,7 @@ Last updated: 2026-05-18
 
 ## M2 - Fresh Attribution Bundle
 
-- [ ] VCRJ-030 [owner=codex] [deps=VCRJ-020] [scope=target/fret-diag,tools/diag-scripts/ui-gallery]
+- [x] VCRJ-030 [owner=codex] [deps=VCRJ-020] [scope=target/fret-diag,tools/diag-scripts/ui-gallery]
   Goal: Capture or reuse a fresh UI Gallery resize-jitter bundle and record whether `ViewCache`
   remains the top owner with current code after the source audit.
   Validation:
@@ -40,27 +40,31 @@ Last updated: 2026-05-18
   Evidence:
   `target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030-*/bundle.schema2.json`;
   `target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030-*/layout.perf.summary.v1.json`.
-  Handoff: If `ViewCache` is no longer the top owner, close with a no-change verdict or split the
-  actual owner.
+  Handoff: Complete. Fresh evidence shows `ViewCache` is not the top layout owner and the overall
+  worst frame is paint-dominated. Continue with VCRJ-040 as a no-change verdict.
 
 ## M3 - First Proof Or No-Change Verdict
 
-- [ ] VCRJ-040 [owner=codex] [deps=VCRJ-030] [scope=crates/fret-ui/src/tree/layout,crates/fret-ui/src/declarative/tests]
+- [x] VCRJ-040 [owner=codex] [deps=VCRJ-030] [scope=crates/fret-ui/src/tree/layout,crates/fret-ui/src/declarative/tests]
   Goal: Add a focused proof for the smallest safe `ViewCache` invariant, or record a no-change
   verdict if the source/evidence review shows the hotspot is legitimate or not attributable.
   Validation:
   `cargo nextest run -p fret-ui view_cache layout_engine --no-fail-fast`.
-  Evidence: Focused test path or dated no-change note.
-  Handoff: A runtime change must preserve cache-root liveness, state retention, boundary tracing,
-  and scroll extent repair.
+  Evidence: `docs/workstreams/view-cache-resize-jitter-attribution-v1/CLOSEOUT_AUDIT_2026-05-18.md`.
+  Handoff: Complete with no runtime change. `ViewCache` remains a clean-geometry side-effect
+  boundary.
 
 ## M4 - Perf Confirmation And Closeout
 
-- [ ] VCRJ-050 [owner=codex] [deps=VCRJ-040] [scope=docs/workstreams/view-cache-resize-jitter-attribution-v1,target/fret-diag]
+- [x] VCRJ-050 [owner=codex] [deps=VCRJ-040] [scope=docs/workstreams/view-cache-resize-jitter-attribution-v1,target/fret-diag]
   Goal: Confirm the final owner verdict with gates, update `WORKSTREAM.json`, and close or split
   follow-on work.
   Validation:
   `python3 tools/check_layering.py`; `cargo fmt --check`; `git diff --check`;
   `python3 tools/check_workstream_catalog.py`.
-  Evidence: Final bundle, closeout/no-change note, and updated lane state.
-  Handoff: Split `Scroll` or diagnostics attribution only as a separate lane with fresh evidence.
+  Evidence:
+  `target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030/1779091052963/bundle.schema2.json`;
+  `target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030/layout.perf.summary.v1.json`;
+  `docs/workstreams/view-cache-resize-jitter-attribution-v1/CLOSEOUT_AUDIT_2026-05-18.md`.
+  Handoff: Complete. Split the actual current owner into
+  `ui-gallery-code-editor-canvas-paint-tail-attribution-v1`.

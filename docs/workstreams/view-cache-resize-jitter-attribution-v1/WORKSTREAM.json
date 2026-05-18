@@ -2,11 +2,11 @@
   "schema_version": 1,
   "slug": "view-cache-resize-jitter-attribution-v1",
   "title": "ViewCache Resize-Jitter Attribution v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-05-18",
-  "scope_kind": "attribution",
+  "scope_kind": "closeout",
   "follow_on_of": "pressable-clean-geometry-propagation-v1",
-  "problem": "Fresh UI Gallery resize-jitter evidence moved Pressable off the worst-frame layout hotspot list and surfaced ViewCache as the top remaining retained layout owner, but ViewCache is a cache-boundary side-effect primitive and needs source-backed phase attribution before any runtime optimization.",
+  "problem": "Fresh UI Gallery resize-jitter attribution showed that ViewCache should not be changed in this lane: the current worst frame is paint-dominated, Scroll is the top layout hotspot, dedicated ViewCache layout work is small, and cache-root reuse remains healthy.",
   "authoritative_docs": [
     {
       "role": "design",
@@ -33,6 +33,10 @@
       "path": "docs/workstreams/view-cache-resize-jitter-attribution-v1/VCRJ_020_SOURCE_ATTRIBUTION_2026-05-18.md"
     },
     {
+      "role": "closeout",
+      "path": "docs/workstreams/view-cache-resize-jitter-attribution-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    },
+    {
       "role": "reference",
       "path": "docs/workstreams/pressable-clean-geometry-propagation-v1/EVIDENCE_AND_GATES.md"
     },
@@ -42,9 +46,10 @@
     }
   ],
   "repro": {
-    "summary": "UI Gallery code-editor resize-jitter perf evidence with view-cache enabled, followed by source-backed ViewCache phase attribution. VCRJ-020 found that the starting ViewCache hotspot is in main layout_roots work, not contained view-cache relayout.",
+    "summary": "UI Gallery code-editor resize-jitter perf evidence with view-cache enabled, followed by source-backed ViewCache phase attribution and a fresh no-change closeout. VCRJ-030 found the current worst frame is paint-dominated and ViewCache is not the top layout owner.",
     "commands": [
       "target/release/fretboard-dev diag stats target/fret-diag/pressable-clean-geometry-propagation-v1-pgp050-after/1779088062238/bundle.schema2.json --sort time --top 20",
+      "target/release/fretboard-dev diag stats target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030/1779091052963/bundle.schema2.json --sort time --top 20",
       "rg -n \"ViewCache|view_cache|ViewBoundaryKind::ViewCacheRoot|contained_relayout|cache_root\" crates/fret-ui/src/element.rs crates/fret-ui/src/elements/runtime.rs crates/fret-ui/src/tree/view_boundary.rs crates/fret-ui/src/tree/layout -S"
     ]
   },
@@ -89,10 +94,13 @@
     "docs/workstreams/view-cache-resize-jitter-attribution-v1/EVIDENCE_AND_GATES.md",
     "docs/workstreams/view-cache-resize-jitter-attribution-v1/HANDOFF.md",
     "docs/workstreams/view-cache-resize-jitter-attribution-v1/VCRJ_020_SOURCE_ATTRIBUTION_2026-05-18.md",
+    "docs/workstreams/view-cache-resize-jitter-attribution-v1/CLOSEOUT_AUDIT_2026-05-18.md",
     "docs/workstreams/pressable-clean-geometry-propagation-v1/EVIDENCE_AND_GATES.md",
     "docs/workstreams/pressable-clean-geometry-propagation-v1/CLOSEOUT_AUDIT_2026-05-18.md",
     "target/fret-diag/pressable-clean-geometry-propagation-v1-pgp050-after/1779088062238/bundle.schema2.json",
     "target/fret-diag/pressable-clean-geometry-propagation-v1-pgp050-after/layout.perf.summary.v1.json",
+    "target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030/1779091052963/bundle.schema2.json",
+    "target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030/layout.perf.summary.v1.json",
     "crates/fret-ui/src/tree/layout/clean_geometry.rs",
     "crates/fret-ui/src/element.rs",
     "crates/fret-ui/src/elements/runtime.rs",
@@ -106,7 +114,7 @@
     "docs/adr/0224-view-cache-subtree-reuse-and-state-retention.md"
   ],
   "continue_policy": {
-    "default_action": "continue_here",
-    "notes": "Continue with VCRJ-030 fresh attribution bundle before any runtime optimization. Split Scroll, text reflow, or diagnostics attribution into separate lanes only with fresh evidence."
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed. Continue with ui-gallery-code-editor-canvas-paint-tail-attribution-v1 for the current worst owner. Split Scroll layout or text-reflow clean-geometry only as separate lanes with fresh evidence."
   }
 }

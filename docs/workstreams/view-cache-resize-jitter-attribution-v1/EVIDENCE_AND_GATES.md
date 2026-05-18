@@ -1,6 +1,6 @@
 # ViewCache Resize-Jitter Attribution v1 - Evidence And Gates
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-18
 
 ## Starting Evidence
@@ -98,6 +98,78 @@ Next evidence target:
   `top_layout_engine_solves`, and the first clean-geometry rejection fields.
 - If the signature repeats and the first rejection remains `Text/text_reflow`, split a text-reflow
   clean-geometry lane before changing `ViewCache`.
+
+## VCRJ-030 Fresh Attribution Result
+
+Fresh bundle:
+
+- `target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030/1779091052963/bundle.schema2.json`
+- Named copy:
+  `target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030/1779091083442-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.schema2.json`
+- Layout summary:
+  `target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030/layout.perf.summary.v1.json`
+
+Stats command:
+
+```bash
+target/release/fretboard-dev diag stats \
+  target/fret-diag/view-cache-resize-jitter-attribution-v1-vcrj030/1779091052963/bundle.schema2.json \
+  --sort time --top 20
+```
+
+Observed result:
+
+- `time p50/p95 (us): total=693/362814, layout=34/1070, prepaint=14/1353, paint=643/360395`
+- Worst frame `tick=386 frame=442`: `total=362814`, `layout=1070`, `prepaint=1349`,
+  `paint=360395`
+- Phase split inside layout:
+  - `layout_roots_time_us=930`
+  - `layout_view_cache_time_us=33`
+  - `layout_repair_view_cache_bounds_time_us=1`
+  - `layout_contained_view_cache_roots_time_us=0`
+  - `layout_collapse_layout_observations_time_us=31`
+- View-cache counters:
+  - `view_cache_roots_reused=1`
+  - `view_cache_contained_relayouts=0`
+  - `view_cache_roots_layout_invalidated=0`
+  - `view_cache_roots_cache_key_mismatch=0`
+- Clean-geometry skip:
+  - `layout_clean_geometry_solve_skip_first_element_kind=Text`
+  - `layout_clean_geometry_solve_skip_first_rejection=text_reflow`
+
+Layout hotspots:
+
+```text
+Scroll layout_us=224 inclusive_us=572
+ViewCache layout_us=184 inclusive_us=888
+Flex layout_us=96 inclusive_us=303
+```
+
+Paint hotspot:
+
+```text
+Canvas paint_time_us=360009 inclusive_us=360009 scene_ops_delta=20009
+```
+
+Verdict:
+
+- `ViewCache` is not the current top layout owner in the fresh sample.
+- Dedicated view-cache layout work is small and cache-root reuse is healthy.
+- The overall worst frame is dominated by a code-editor `Canvas` paint tail, so this lane should
+  not change `ViewCache` runtime behavior.
+
+## Closeout Verdict
+
+Closeout note:
+
+- `docs/workstreams/view-cache-resize-jitter-attribution-v1/CLOSEOUT_AUDIT_2026-05-18.md`
+
+Follow-on:
+
+- `docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/`
+
+No runtime code changed in this lane. A later `Scroll` layout lane may be justified, but the
+immediate worst owner is the `Canvas` paint tail exposed by VCRJ-030.
 
 ## Canonical Gates
 

@@ -1,6 +1,6 @@
 # ViewCache Resize-Jitter Attribution v1 - Milestones
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-18
 
 ## M0 - Scope And Evidence Freeze
@@ -35,7 +35,7 @@ Exit criteria:
 - `diag stats` and `layout.perf.summary.v1.json` identify the current top layout owners.
 - The evidence states whether `ViewCache` remains the top owner.
 
-Status: Pending.
+Status: Complete.
 
 ## M3 - Proof Or No-Change Verdict
 
@@ -46,7 +46,8 @@ Exit criteria:
   should not be optimized in this lane.
 - Cache-root liveness, state retention, boundary tracing, and scroll extent repair remain protected.
 
-Status: Pending.
+Status: Complete with a no-runtime-change verdict. Fresh evidence does not justify a `ViewCache`
+clean-geometry or contained-relayout runtime change.
 
 ## M4 - Closeout
 
@@ -57,4 +58,5 @@ Exit criteria:
   verdict.
 - Remaining work is split only when it has a distinct owner and evidence.
 
-Status: Pending.
+Status: Complete. Closeout split the current worst owner into
+`ui-gallery-code-editor-canvas-paint-tail-attribution-v1`.

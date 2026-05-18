@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 415
+- Dedicated directories: 416
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2280,6 +2280,7 @@ Rule:
 - `docs/workstreams/ui-editor-v1/` — first 2026-02-14, latest 2026-02-16, 2 markdown docs
 - `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/` — first 2026-03-01, latest 2026-03-03, 8 markdown docs
 - `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/` — first n/a, latest n/a, 19 markdown docs (active Frame Pipeline v2 execution-model refactor lane; includes `WORKSTREAM.json`, `PROGRESS.md`, and M4C boundary-hint API evidence)
+- `docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/` — first n/a, latest n/a, 5 markdown docs (active narrow follow-on for attributing the UI Gallery code-editor resize-jitter `Canvas` paint tail before code-editor, diagnostics, or renderer runtime changes; includes `WORKSTREAM.json`)
 - `docs/workstreams/ui-gallery-fearless-refactor/` — first 2026-03-01, latest 2026-03-11, 7 markdown docs
 - `docs/workstreams/ui-gallery-view-cache-web-perf-stabilization-v1/` — first 2026-02-23, latest 2026-03-10, 3 markdown docs
 - `docs/workstreams/ui-gallery-visual-parity/` — first 2026-02-01, latest 2026-02-24, 2 markdown docs
@@ -2294,7 +2295,7 @@ Rule:
 - `docs/workstreams/uicx-compat-alias-release-retirement-v1/` — first n/a, latest n/a, 6 markdown docs
 - `docs/workstreams/unified-authoring-builder-v1/` — first 2026-01-20, latest 2026-03-12, 2 markdown docs
 - `docs/workstreams/view-locals-authoring-fearless-refactor-v1/` — first 2026-03-20, latest 2026-03-20, 5 markdown docs
-- `docs/workstreams/view-cache-resize-jitter-attribution-v1/` — first n/a, latest n/a, 6 markdown docs (active narrow follow-on for attributing the remaining `ViewCache` UI Gallery resize-jitter layout hotspot before any cache-boundary runtime optimization; includes `WORKSTREAM.json`)
+- `docs/workstreams/view-cache-resize-jitter-attribution-v1/` — first n/a, latest n/a, 7 markdown docs (closed no-runtime-change attribution lane; fresh evidence shows `ViewCache` is not the current top layout owner and splits the code-editor `Canvas` paint tail into a follow-on; includes `WORKSTREAM.json`)
 - `docs/workstreams/webview-wry-v1/` — first 2026-02-11, latest 2026-02-16, 2 markdown docs
 - `docs/workstreams/wgpu-backdrop-effects-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating backdrop effect WGPU conformance tests onto the shared readback/render harness)
 - `docs/workstreams/wgpu-backdrop-warp-v2-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow image-registration-aware follow-on for migrating BackdropWarpV2 WGPU conformance onto the shared readback/render harness)
