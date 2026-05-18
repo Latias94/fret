@@ -344,6 +344,64 @@
       }
     },
     {
+      "id": "backdrop-source-group-bounds-do-not-clip-hit-testing-by-default",
+      "scenario": { "kind": "backdrop_source_group_bounds_do_not_clip_hit_testing_by_default" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "backdrop-source-wrapper" },
+            "metric": "width",
+            "comparison": "eq",
+            "value_px": 20.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "backdrop-source-escaped-child" },
+            "metric": "width",
+            "comparison": "eq",
+            "value_px": 20.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "hit_test_sample",
+            "sample_id": "backdrop-source-escaped-child-area",
+            "target": { "kind": "test_id", "id": "backdrop-source-escaped-child" }
+          }
+        ]
+      }
+    },
+    {
+      "id": "backdrop-source-group-overflow-clip-suppresses-escaped-child-hit",
+      "scenario": { "kind": "backdrop_source_group_overflow_clip_suppresses_escaped_child_hit" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "backdrop-source-wrapper" },
+            "metric": "width",
+            "comparison": "eq",
+            "value_px": 20.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "backdrop-source-escaped-child" },
+            "metric": "width",
+            "comparison": "eq",
+            "value_px": 20.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "hit_test_sample_not",
+            "sample_id": "backdrop-source-escaped-child-area",
+            "target": { "kind": "test_id", "id": "backdrop-source-escaped-child" }
+          }
+        ]
+      }
+    },
+    {
       "id": "overlay-root-z-order-wins",
       "scenario": { "kind": "overlay_root_z_order_wins" },
       "oracle": {

@@ -26,6 +26,8 @@ enum HitTestRoutingScenario {
     EffectLayerOverflowClipSuppressesEscapedChildHit,
     CompositeGroupBoundsDoNotClipHitTestingByDefault,
     CompositeGroupOverflowClipSuppressesEscapedChildHit,
+    BackdropSourceGroupBoundsDoNotClipHitTestingByDefault,
+    BackdropSourceGroupOverflowClipSuppressesEscapedChildHit,
     OverlayRootZOrderWins,
     ModalBarrierRootSuppressesUnderlay,
 }
@@ -195,6 +197,17 @@ fn observe_declarative_case(
                 &ui,
                 &snapshot,
                 "composite-escaped-child-area",
+                Point::new(Px(wrapper.origin.x.0 + 34.0), Px(wrapper.origin.y.0 + 10.0)),
+            ));
+        }
+        HitTestRoutingScenario::BackdropSourceGroupBoundsDoNotClipHitTestingByDefault
+        | HitTestRoutingScenario::BackdropSourceGroupOverflowClipSuppressesEscapedChildHit => {
+            let wrapper =
+                bounds_for_test_id(&observed, "backdrop-source-wrapper", BoundsSpace::Layout)?;
+            observed.push_hit_test_sample(hit_sample(
+                &ui,
+                &snapshot,
+                "backdrop-source-escaped-child-area",
                 Point::new(Px(wrapper.origin.x.0 + 34.0), Px(wrapper.origin.y.0 + 10.0)),
             ));
         }
@@ -443,6 +456,18 @@ fn build_declarative_scenario(
                 crate::element::Overflow::Clip,
             )]
         }
+        HitTestRoutingScenario::BackdropSourceGroupBoundsDoNotClipHitTestingByDefault => {
+            vec![backdrop_source_group_with_escaped_pressable(
+                cx,
+                crate::element::Overflow::Visible,
+            )]
+        }
+        HitTestRoutingScenario::BackdropSourceGroupOverflowClipSuppressesEscapedChildHit => {
+            vec![backdrop_source_group_with_escaped_pressable(
+                cx,
+                crate::element::Overflow::Clip,
+            )]
+        }
         HitTestRoutingScenario::OverlayRootZOrderWins
         | HitTestRoutingScenario::ModalBarrierRootSuppressesUnderlay => unreachable!(),
     }
@@ -624,6 +649,34 @@ fn composite_group_with_escaped_pressable(
         )]
     })
     .test_id("composite-wrapper")
+}
+
+fn backdrop_source_group_with_escaped_pressable(
+    cx: &mut ElementContext<'_, TestHost>,
+    overflow: crate::element::Overflow,
+) -> AnyElement {
+    let mut layout = absolute_layout(0.0, 0.0, 20.0, 20.0);
+    layout.overflow = overflow;
+    let props = crate::element::BackdropSourceGroupProps {
+        layout,
+        pyramid: Some(fret_core::scene::CustomEffectPyramidRequestV1 {
+            max_levels: 3,
+            max_radius_px: Px(16.0),
+        }),
+        quality: fret_core::EffectQuality::Auto,
+    };
+
+    cx.backdrop_source_group_v1_props(props, |cx| {
+        vec![absolute_pressable(
+            cx,
+            "backdrop-source-escaped-child",
+            30.0,
+            0.0,
+            20.0,
+            20.0,
+        )]
+    })
+    .test_id("backdrop-source-wrapper")
 }
 
 fn absolute_layout(x: f32, y: f32, w: f32, h: f32) -> crate::element::LayoutStyle {

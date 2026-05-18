@@ -1771,3 +1771,22 @@ Status: complete for CompositeGroup bounds versus hit-test clipping semantics.
   with Nextest run id `eb30efc1-a5c9-40a1-84ae-8360753f0842`.
 - JSON fixture validation passes:
   `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\hit_test_routing_v1.json`.
+
+## M101: BackdropSourceGroup Computation-Bound Hit-Test Fixture
+
+Status: complete for BackdropSourceGroup bounds versus hit-test clipping semantics.
+
+- Added `backdrop-source-group-bounds-do-not-clip-hit-testing-by-default` and
+  `backdrop-source-group-overflow-clip-suppresses-escaped-child-hit` to the hit-test routing
+  fixture.
+- The cases lock ADR 0305 semantics: backdrop source group bounds are computation bounds, not an
+  implicit hit-test clip, while explicit `Overflow::Clip` on the `BackdropSourceGroup` wrapper
+  still clips escaped descendants.
+- No new mechanism defect was reproduced. The existing `fret-ui` runtime already keeps backdrop
+  source group bounds separate from hit-testing and routes clipping through the explicit overflow
+  contract.
+- The gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_hit_test_routing_matches_oracles --no-fail-fast --no-capture`
+  with Nextest run id `05c28589-9f50-4aa2-b1d5-3ab3a3700de2`.
+- JSON fixture validation passes:
+  `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\hit_test_routing_v1.json`.
