@@ -322,6 +322,7 @@ pub struct DockSpaceController {
     diag_env_enabled: bool,
     allow_multi_window_tear_off: bool,
     last_bounds: Rect,
+    last_layout_snapshot: Option<DockSpaceLayoutSnapshot>,
     prepaint_wants_animation_frames: bool,
     dock_drop_resolve_diagnostics: Option<fret_runtime::DockDropResolveDiagnostics>,
     dock_drop_resolve_keep_until_frame: Option<fret_runtime::FrameId>,
@@ -387,6 +388,7 @@ impl DockSpaceController {
             diag_env_enabled,
             allow_multi_window_tear_off: false,
             last_bounds: Rect::default(),
+            last_layout_snapshot: None,
             prepaint_wants_animation_frames: false,
             dock_drop_resolve_diagnostics: None,
             dock_drop_resolve_keep_until_frame: None,
@@ -569,11 +571,161 @@ struct SplitFractionsMotion {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct FloatingChrome {
-    outer: Rect,
-    title_bar: Rect,
-    close_button: Rect,
-    inner: Rect,
+pub(super) struct FloatingChrome {
+    pub(super) outer: Rect,
+    pub(super) title_bar: Rect,
+    pub(super) close_button: Rect,
+    pub(super) inner: Rect,
+}
+
+#[derive(Clone)]
+pub(super) struct DockSpaceFloatingLayoutSnapshot {
+    pub(super) floating: fret_core::DockFloatingWindow,
+    pub(super) chrome: FloatingChrome,
+    pub(super) layout: HashMap<DockNodeId, Rect>,
+}
+
+#[derive(Clone)]
+pub(super) struct DockSpaceLayoutSnapshot {
+    pub(super) frame_id: fret_runtime::FrameId,
+    pub(super) bounds: Rect,
+    pub(super) dock_bounds: Rect,
+    pub(super) split_handle_gap: Px,
+    pub(super) split_handle_hit_thickness: Px,
+    pub(super) root: Option<DockNodeId>,
+    pub(super) root_layout: HashMap<DockNodeId, Rect>,
+    pub(super) floating_layouts: Vec<DockSpaceFloatingLayoutSnapshot>,
+    pub(super) layout_all: HashMap<DockNodeId, Rect>,
+    pub(super) active_panel_bounds: HashMap<PanelKey, Rect>,
+    pub(super) paint_panel_bounds: Vec<(PanelKey, Rect)>,
+    pub(super) viewport_layouts: Vec<(RenderTargetId, super::DockViewportLayout)>,
+}
+
+impl DockSpaceLayoutSnapshot {
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn build(
+        dock: &DockManager,
+        window: fret_core::AppWindowId,
+        frame_id: fret_runtime::FrameId,
+        bounds: Rect,
+        dock_bounds: Rect,
+        split_handle_gap: Px,
+        split_handle_hit_thickness: Px,
+        split_overrides: &HashMap<DockNodeId, Arc<[f32]>>,
+    ) -> Option<Self> {
+        let root = dock.graph.window_root(window);
+        let has_floatings = !dock.graph.floating_windows(window).is_empty();
+        if root.is_none() && !has_floatings {
+            return None;
+        }
+
+        let root_layout = root
+            .map(|root| {
+                compute_layout_map_with_split_fractions_overrides(
+                    &dock.graph,
+                    root,
+                    dock_bounds,
+                    split_handle_gap,
+                    split_handle_hit_thickness,
+                    split_overrides,
+                )
+            })
+            .unwrap_or_default();
+
+        let mut layout_all = root_layout.clone();
+        let mut floating_layouts = Vec::new();
+        for floating in dock.graph.floating_windows(window) {
+            let chrome = DockSpace::floating_chrome(floating.rect);
+            let layout = compute_layout_map_with_split_fractions_overrides(
+                &dock.graph,
+                floating.floating,
+                chrome.inner,
+                split_handle_gap,
+                split_handle_hit_thickness,
+                split_overrides,
+            );
+            for (&node, &rect) in &layout {
+                layout_all.insert(node, rect);
+            }
+            floating_layouts.push(DockSpaceFloatingLayoutSnapshot {
+                floating: *floating,
+                chrome,
+                layout,
+            });
+        }
+
+        let mut active_panel_bounds = HashMap::new();
+        let mut paint_panel_bounds: Vec<(PanelKey, Rect)> =
+            active_panel_content_bounds(&dock.graph, &root_layout)
+                .into_iter()
+                .collect();
+        for (panel, rect) in &paint_panel_bounds {
+            active_panel_bounds.insert(panel.clone(), *rect);
+        }
+        for floating in &floating_layouts {
+            let floating_panel_bounds = active_panel_content_bounds(&dock.graph, &floating.layout);
+            for (panel, rect) in floating_panel_bounds {
+                active_panel_bounds.insert(panel.clone(), rect);
+                paint_panel_bounds.push((panel, rect));
+            }
+        }
+
+        let mut viewport_layouts = Vec::new();
+        for (&node_id, &rect) in &layout_all {
+            let (_tab_bar, content) = split_tab_bar(rect);
+            let viewport = (|| {
+                let DockNode::Tabs { tabs, active } = dock.graph.node(node_id)?.clone() else {
+                    return None;
+                };
+                let panel_key = tabs.get(active)?;
+                let panel = dock.panel(panel_key)?;
+                panel.viewport
+            })();
+            if let Some(viewport) = viewport {
+                let mapping = ViewportMapping {
+                    content_rect: content,
+                    target_px_size: viewport.target_px_size,
+                    fit: viewport.fit,
+                };
+                viewport_layouts.push((
+                    viewport.target,
+                    super::DockViewportLayout {
+                        content_rect: content,
+                        mapping,
+                        draw_rect: mapping.map().draw_rect,
+                    },
+                ));
+            }
+        }
+
+        Some(Self {
+            frame_id,
+            bounds,
+            dock_bounds,
+            split_handle_gap,
+            split_handle_hit_thickness,
+            root,
+            root_layout,
+            floating_layouts,
+            layout_all,
+            active_panel_bounds,
+            paint_panel_bounds,
+            viewport_layouts,
+        })
+    }
+
+    fn valid_for(
+        &self,
+        frame_id: fret_runtime::FrameId,
+        bounds: Rect,
+        split_handle_gap: Px,
+        split_handle_hit_thickness: Px,
+    ) -> bool {
+        self.frame_id == frame_id
+            && self.bounds == bounds
+            && self.split_handle_gap == split_handle_gap
+            && self.split_handle_hit_thickness == split_handle_hit_thickness
+    }
 }
 
 impl DockSpace {
@@ -7155,7 +7307,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 });
         }
 
-        let Some((active_bounds, layout, wants_split_motion_frame)) = (|| {
+        let Some((layout_snapshot, wants_split_motion_frame)) = (|| {
             let dock = cx.app.global::<DockManager>()?;
             let root = dock.graph.window_root(self.window)?;
             let (_chrome, dock_bounds) = dock_space_regions(cx.bounds);
@@ -7175,36 +7327,20 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 allow_split_motion,
             );
 
-            let mut layout = compute_layout_map_with_split_fractions_overrides(
-                &dock.graph,
-                root,
+            let snapshot = DockSpaceLayoutSnapshot::build(
+                dock,
+                self.window,
+                now_frame,
+                cx.bounds,
                 dock_bounds,
                 split_handle_gap,
                 split_handle_hit_thickness,
                 &overrides,
-            );
+            )?;
 
-            for floating in dock.graph.floating_windows(self.window) {
-                let chrome = Self::floating_chrome(floating.rect);
-                let floating_layout = compute_layout_map_with_split_fractions_overrides(
-                    &dock.graph,
-                    floating.floating,
-                    chrome.inner,
-                    split_handle_gap,
-                    split_handle_hit_thickness,
-                    &overrides,
-                );
-                for (k, v) in floating_layout {
-                    layout.insert(k, v);
-                }
-            }
-
-            Some((
-                active_panel_content_bounds(&dock.graph, &layout),
-                layout,
-                any_active,
-            ))
+            Some((snapshot, any_active))
         })() else {
+            self.last_layout_snapshot = None;
             for &child in cx.children {
                 let _ = cx.layout_in(child, hidden);
             }
@@ -7216,7 +7352,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
         if let Some(dock) = cx.app.global::<DockManager>() {
             let mut visible_tabs_nodes: HashSet<DockNodeId> = HashSet::new();
-            for (&node_id, &rect) in &layout {
+            for (&node_id, &rect) in &layout_snapshot.layout_all {
                 let Some(DockNode::Tabs { tabs, active }) = dock.graph.node(node_id) else {
                     continue;
                 };
@@ -7240,7 +7376,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let panel_nodes = self.panel_nodes(cx.app);
         let mut laid_out: HashSet<NodeId> = HashSet::new();
         for (panel, node) in &panel_nodes {
-            let bounds = match active_bounds.get(panel).copied() {
+            let bounds = match layout_snapshot.active_panel_bounds.get(panel).copied() {
                 Some(rect) => {
                     self.panel_last_sizes.insert(panel.clone(), rect.size);
                     rect
@@ -7263,6 +7399,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             let _ = cx.layout_in(child, hidden);
         }
 
+        self.last_layout_snapshot = Some(layout_snapshot);
         cx.available
     }
 
@@ -7507,6 +7644,18 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let split_handle_gap = docking_interaction_settings.split_handle_gap;
         let split_handle_hit_thickness = docking_interaction_settings.split_handle_hit_thickness;
         let frame_id = app.frame_id();
+        let layout_snapshot = self
+            .last_layout_snapshot
+            .as_ref()
+            .filter(|snapshot| {
+                snapshot.valid_for(
+                    frame_id,
+                    bounds,
+                    split_handle_gap,
+                    split_handle_hit_thickness,
+                )
+            })
+            .cloned();
         #[derive(Clone)]
         struct DockDragGhostSnapshot {
             panel: PanelKey,
@@ -7567,46 +7716,24 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
         let paint_panels = app.with_global_mut_untracked(DockManager::default, |dock, _app| {
             dock.register_dock_space_node(self.window, dock_space_node);
-            let root = dock.graph.window_root(self.window);
-            let has_floatings = !dock.graph.floating_windows(self.window).is_empty();
-            if root.is_none() && !has_floatings {
-                return None;
-            }
-
-            let root_layout = root
-                .map(|root| {
-                    compute_layout_map_with_split_fractions_overrides(
-                        &dock.graph,
-                        root,
-                        dock_bounds,
-                        split_handle_gap,
-                        split_handle_hit_thickness,
-                        &split_overrides,
-                    )
-                })
-                .unwrap_or_default();
-
-            let mut floating_layouts: Vec<(
-                fret_core::DockFloatingWindow,
-                FloatingChrome,
-                HashMap<DockNodeId, Rect>,
-            )> = Vec::new();
-            let mut layout_all = root_layout.clone();
-            for floating in dock.graph.floating_windows(self.window) {
-                let chrome = Self::floating_chrome(floating.rect);
-                let layout = compute_layout_map_with_split_fractions_overrides(
-                    &dock.graph,
-                    floating.floating,
-                    chrome.inner,
+            let layout_snapshot = match layout_snapshot.clone() {
+                Some(snapshot) => snapshot,
+                None => DockSpaceLayoutSnapshot::build(
+                    dock,
+                    self.window,
+                    frame_id,
+                    bounds,
+                    dock_bounds,
                     split_handle_gap,
                     split_handle_hit_thickness,
                     &split_overrides,
-                );
-                for (k, v) in layout.iter() {
-                    layout_all.insert(*k, *v);
-                }
-                floating_layouts.push((*floating, chrome, layout));
-            }
+                )?,
+            };
+            let root = layout_snapshot.root;
+            let root_layout = &layout_snapshot.root_layout;
+            let floating_layouts = &layout_snapshot.floating_layouts;
+            let layout_all = &layout_snapshot.layout_all;
+            let dock_bounds = layout_snapshot.dock_bounds;
 
             if let (Some(pos), Some(DockDropTarget::Dock(target))) =
                 (dock_drag_pos, dock.hover.as_mut())
@@ -7643,7 +7770,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 scale_factor,
                 text_font_stack_key,
                 &*dock,
-                &layout_all,
+                layout_all,
                 dock_drag_panel.as_ref(),
             );
             let drag_tab_title = dock_drag_panel
@@ -7685,41 +7812,15 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 self.tab_widths.insert(node_id, Arc::from(widths));
             }
 
-            let mut viewport_layouts = Vec::new();
-            for (&node_id, &rect) in layout_all.iter() {
-                let (_tab_bar, content) = split_tab_bar(rect);
-                let viewport = (|| {
-                    let DockNode::Tabs { tabs, active } = dock.graph.node(node_id)?.clone() else {
-                        return None;
-                    };
-                    let panel_key = tabs.get(active)?;
-                    let panel = dock.panel(panel_key)?;
-                    panel.viewport
-                })();
-                if let Some(viewport) = viewport {
-                    let mapping = ViewportMapping {
-                        content_rect: content,
-                        target_px_size: viewport.target_px_size,
-                        fit: viewport.fit,
-                    };
-                    viewport_layouts.push((
-                        viewport.target,
-                        super::DockViewportLayout {
-                            content_rect: content,
-                            mapping,
-                            draw_rect: mapping.map().draw_rect,
-                        },
-                    ));
-                }
-            }
-            let _ = dock.sync_viewport_layouts_for_window(self.window, viewport_layouts);
+            let _ = dock
+                .sync_viewport_layouts_for_window(self.window, layout_snapshot.viewport_layouts);
 
             paint_dock(
                 theme.clone(),
                 &*dock,
                 PaintDockParams {
                     window: self.window,
-                    layout: &root_layout,
+                    layout: root_layout,
                     tab_titles: &self.tab_titles,
                     tab_widths: &self.tab_widths,
                     hovered_tab: self.hovered_tab,
@@ -7740,12 +7841,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 scene,
             );
 
-            let mut paint_panels: Vec<(PanelKey, Rect)> =
-                active_panel_content_bounds(&dock.graph, &root_layout)
-                    .into_iter()
-                    .collect();
+            let paint_panels = layout_snapshot.paint_panel_bounds;
 
-            for (floating, chrome, layout) in &floating_layouts {
+            for floating_layout in floating_layouts {
+                let floating = floating_layout.floating;
+                let chrome = floating_layout.chrome;
+                let layout = &floating_layout.layout;
                 let border = theme.color_token("border");
                 let surface = theme.color_token("background");
                 let hover_bg = theme.color_token("accent");
@@ -7861,14 +7962,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     overlay_hooks.as_deref(),
                     scene,
                 );
-
-                paint_panels.extend(active_panel_content_bounds(&dock.graph, layout));
             }
 
             paint_split_handles(
                 theme.clone(),
                 &dock.graph,
-                &layout_all,
+                layout_all,
                 self.divider_drag.as_ref().map(|d| d.handle.split),
                 split_handle_gap,
                 split_handle_hit_thickness,
@@ -7971,9 +8070,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
                             let mut layout_root = root;
                             let mut layout_bounds = dock_bounds;
-                            let mut layout_ctx = &root_layout;
+                            let mut layout_ctx = root_layout;
                             let mut effective_position = position;
-                            for (floating, chrome, layout) in floating_layouts.iter().rev() {
+                            for floating_layout in floating_layouts.iter().rev() {
+                                let floating = floating_layout.floating;
+                                let chrome = floating_layout.chrome;
+                                let layout = &floating_layout.layout;
                                 if chrome.close_button.contains(position) {
                                     continue;
                                 }
@@ -8033,7 +8135,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         hint_font_size_outer,
                         self.window,
                         bounds,
-                        &layout_all,
+                        layout_all,
                         scene,
                     );
                 }
@@ -8044,7 +8146,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 self.window,
                 bounds,
                 &dock.graph,
-                &layout_all,
+                layout_all,
                 split_handle_gap,
                 split_handle_hit_thickness,
                 &self.tab_scroll,

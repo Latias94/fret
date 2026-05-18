@@ -258,3 +258,51 @@ Follow-up:
 
 - `RBX-M1-050` should extract layout/paint snapshots so the retained adapter and future declarative
   host can consume the same per-frame docking decisions without recomputing layout in paint.
+
+## 2026-05-18 - RBX-M1-050 docking layout/paint snapshot extraction
+
+Claim verified:
+
+- `DockSpace::layout` now builds a reusable private `DockSpaceLayoutSnapshot` after split-motion
+  overrides are computed.
+- `DockSpace::paint` consumes a same-frame valid snapshot when available and rebuilds one only as a
+  fallback when paint does not have a matching layout snapshot.
+- The snapshot centralizes root layout, floating layouts, merged layout, active panel bounds, paint
+  panel bounds, viewport layouts, host bounds, frame identity, and split handle settings.
+- The snapshot and builder are `pub(super)` internal surfaces, so future `dock` module adapters can
+  consume the same frame decision object without exposing it as a public crate API.
+- Retained `DockSpace` hosting remains in place; this slice only removes layout/paint decision
+  duplication from the adapter path.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: the snapshot extraction type-checks before broader docking tests.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the snapshot extraction.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 111 tests.
+  - Scope proven: docking layout, paint, split, drag/drop hints, viewport capture/layout, floating
+    windows, panel binding, and runtime tests remain green after snapshot reuse.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after the task ledger update.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Follow-up:
+
+- `RBX-M1-060` should decide whether the existing declarative primitives can host the extracted
+  controller + snapshot path, or whether a narrow mechanism-only managed-surface primitive is needed.

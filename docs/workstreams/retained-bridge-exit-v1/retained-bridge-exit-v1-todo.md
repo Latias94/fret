@@ -155,7 +155,7 @@ Related plan:
     - Kept the retained `DockSpace` widget as the adapter and delegated field access through a
       transitional `Deref` / `DerefMut` shim.
     - Preserved current behavior with the full `fret-docking` nextest gate.
-- [ ] RBX-M1-050 Extract docking layout/paint snapshots.
+- [x] RBX-M1-050 Extract docking layout/paint snapshots.
   - Scope:
     - `ecosystem/fret-docking/src/dock/space.rs`
     - `ecosystem/fret-docking/src/dock/layout.rs`
@@ -170,6 +170,17 @@ Related plan:
     - `python3 tools/check_layering.py`
   - Evidence:
     - `docs/workstreams/retained-bridge-exit-v1/RBX_M1_030_DOCKING_DECLARATIVE_PRIMITIVE_GAP_AUDIT_2026-05-18.md#rbx-m1-050-extract-layoutpaint-snapshots`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-18---rbx-m1-050-docking-layoutpaint-snapshot-extraction`
+  - Result:
+    - Added a private `DockSpaceLayoutSnapshot` carrying root layout, floating layouts, merged
+      layout map, active panel bounds, paint panel bounds, viewport layouts, bounds/frame identity,
+      and split handle settings.
+    - Exposed the snapshot and builder at `pub(super)` scope so a future declarative dock host
+      adapter can reuse the same docking-frame decision object inside the `dock` module.
+    - `DockSpace::layout` now builds and stores the snapshot after computing split-motion overrides.
+    - `DockSpace::paint` reuses a same-frame valid snapshot and falls back to rebuilding one when
+      paint runs without a matching layout snapshot.
+    - Preserved retained adapter behavior with the full `fret-docking` nextest gate.
 - [ ] RBX-M1-060 Decide and prove the declarative docking host mechanism.
   - Scope:
     - `crates/fret-ui/src/element.rs` / declarative host internals only if existing primitives are

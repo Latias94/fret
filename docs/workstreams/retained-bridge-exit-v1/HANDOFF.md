@@ -4,8 +4,8 @@ Updated: 2026-05-18
 
 ## Current State
 
-`RBX-M1-010`, `RBX-M1-020`, `RBX-M1-021`, `RBX-M1-030`, and `RBX-M1-040` are complete. The docking
-retained bridge audit is recorded in:
+`RBX-M1-010`, `RBX-M1-020`, `RBX-M1-021`, `RBX-M1-030`, `RBX-M1-040`, and `RBX-M1-050` are complete.
+The docking retained bridge audit is recorded in:
 
 - `docs/workstreams/retained-bridge-exit-v1/RBX_M1_010_DOCKING_RETAINED_BRIDGE_AUDIT_2026-05-18.md`
 - `docs/workstreams/retained-bridge-exit-v1/RBX_M1_030_DOCKING_DECLARATIVE_PRIMITIVE_GAP_AUDIT_2026-05-18.md`
@@ -57,6 +57,12 @@ the retained `DockSpace` widget as the adapter. The extraction is intentionally 
 methods still live on `DockSpace` for now, with a transitional `Deref` / `DerefMut` shim delegating
 state field access to the controller.
 
+`RBX-M1-050` added a private `DockSpaceLayoutSnapshot`. `DockSpace::layout` stores a snapshot for
+the current frame, and `DockSpace::paint` reuses it when bounds/frame/split settings match. Paint
+still has a fallback rebuild path so retained host behavior remains unchanged if paint runs without a
+matching layout snapshot. The snapshot and builder are `pub(super)` internal surfaces so a future
+declarative dock host adapter can reuse the same frame decision object without making it public API.
+
 ## Next Task
 
 Pick the next M1 task from:
@@ -65,10 +71,10 @@ Pick the next M1 task from:
 
 Recommended next implementation shape:
 
-- `RBX-M1-050`: extract layout/paint snapshots so a future declarative adapter can consume the same
-  host decisions without recomputing layout in paint.
 - `RBX-M1-060`: decide whether existing declarative primitives are enough or whether `fret-ui` needs
   a narrow mechanism-only managed-surface primitive.
+- Proof target: mount a small declarative docking host or host shim that can consume the controller +
+  snapshot path for panel-root placement without `RetainedSubtreeProps`.
 - Do not remove `DockSpace` retained hosting until those seams exist and the declarative host
   mechanism has a proof-of-life.
 
@@ -96,6 +102,15 @@ Last run on 2026-05-18:
 - `git diff --check` - passed.
 
 `RBX-M1-040` gates:
+
+- `cargo check -p fret-docking` - passed.
+- `cargo fmt --check` - passed.
+- `cargo nextest run -p fret-docking` - passed, 111 tests.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
+`RBX-M1-050` gates:
 
 - `cargo check -p fret-docking` - passed.
 - `cargo fmt --check` - passed.
