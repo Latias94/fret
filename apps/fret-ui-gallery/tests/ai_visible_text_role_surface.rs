@@ -176,3 +176,82 @@ fn ai_sandbox_demo_visible_text_uses_shared_roles() {
         );
     }
 }
+
+#[test]
+fn ai_queue_demo_visible_text_and_state_marker_use_shared_roles() {
+    let source = include_str!("../src/ui/snippets/ai/queue_demo.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "fn state_marker(cx: &mut AppComponentCx<'_>, test_id: &'static str) -> AnyElement",
+        "role: fret_core::SemanticsRole::Generic",
+        "cx.spacer(SpacerProps",
+        "decl_text::text_section_chrome_label(cx, \"Queue (AI Elements)\")",
+        "decl_text::text_paragraph",
+        "\"Hover an item to reveal actions; actions increment a demo marker.\"",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "queue_demo should route visible text and state markers through shared non-bare roles; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "unwrap_or_else(|| cx.text(\"\"))",
+        "cx.text(\"Queue (AI Elements)\")",
+        "cx.text(\"Hover an item to reveal actions; actions increment a demo marker.\")",
+        "cx.container(fret_ui::element::ContainerProps::default()",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "queue_demo reintroduced bare visible text/state marker text: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
+fn ai_checkpoint_demo_visible_text_uses_shared_roles() {
+    let source = include_str!("../src/ui/snippets/ai/checkpoint_demo.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_control_readout(cx, \"Preview restored to the checkpoint.\")",
+        "decl_text::text_control_readout",
+        "\"The preview currently shows the latest conversation state.\"",
+        "decl_text::text_paragraph(cx, message.content)",
+        "decl_text::text_button_label",
+        "checkpoint.trigger_label",
+        "decl_text::text_paragraph",
+        "\"The `Checkpoint` component provides a way to mark specific points in a conversation history and restore the chat to that state.\"",
+        "\"Docs-aligned composition: `Conversation` + `Message` + `Checkpoint`. Hover the trigger to preview the tooltip, then activate it to restore the conversation.\"",
+        "decl_text::text_chrome_glyph(cx, \"⟲\")",
+        "decl_text::text_chrome_glyph(cx, \"•\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "checkpoint_demo should route visible text through shared text roles; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "cx.text(\"Preview restored to the checkpoint.\")",
+        "cx.text(\"The preview currently shows the latest conversation state.\")",
+        "cx.text(message.content)",
+        "cx.text(checkpoint.trigger_label)",
+        "cx.text(\"The `Checkpoint` component provides a way to mark specific points in a conversation history and restore the chat to that state.\")",
+        "cx.text(\"Docs-aligned composition: `Conversation` + `Message` + `Checkpoint`. Hover the trigger to preview the tooltip, then activate it to restore the conversation.\")",
+        "cx.text(\"⟲\")",
+        "cx.text(\"•\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "checkpoint_demo reintroduced visible bare text: `{forbidden}`"
+        );
+    }
+}

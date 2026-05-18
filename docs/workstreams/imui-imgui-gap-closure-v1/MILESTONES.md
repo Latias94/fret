@@ -452,6 +452,13 @@ Exit criteria:
   2026-05-18 AI visible text-role result 2: Artifact, CodeBlock, and Sandbox snippets now reuse the
   same shared text roles for visible fixed chrome/prose, and CodeBlock's active-language marker no
   longer mounts an invisible empty `Text` element.
+  2026-05-18 AI Queue text-role result: the Queue copyable snippet now uses section-chrome text for
+  the fixed demo title, paragraph text for explanatory copy, and a generic zero-size spacer marker
+  for action-revision diagnostics instead of bare or invisible `cx.text(...)`.
+  2026-05-18 AI Checkpoint text-role result: the Checkpoint copyable snippet now routes
+  conversation/prose text through paragraph roles, restore status through control-readout text,
+  checkpoint trigger text through button-label text, and custom checkpoint icon symbols through
+  chrome-glyph text.
   2026-05-17 gallery data-grid text result: the UI Gallery DataGrid preview now routes virtualized
   grid cells through `text_table_cell(...)` and the selected-row status line through
   `control_readout_text(...)`.

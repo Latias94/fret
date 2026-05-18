@@ -9,6 +9,7 @@ use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -81,10 +82,15 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     let restored_marker = (visible_message_count == INITIAL_CHECKPOINTS[0].message_count)
         .then(|| {
-            cx.text("Preview restored to the checkpoint.")
+            decl_text::text_control_readout(cx, "Preview restored to the checkpoint.")
                 .test_id("ui-ai-checkpoint-restored-marker")
         })
-        .unwrap_or_else(|| cx.text("The preview currently shows the latest conversation state."));
+        .unwrap_or_else(|| {
+            decl_text::text_control_readout(
+                cx,
+                "The preview currently shows the latest conversation state.",
+            )
+        });
 
     let conversation = ui_ai::Conversation::new([])
         .content_revision(visible_message_count as u64)
@@ -106,10 +112,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             {
                 let bubble = ui_ai::Message::new(
                     message.role,
-                    [
-                        ui_ai::MessageContent::new(message.role, [cx.text(message.content)])
-                            .into_element(cx),
-                    ],
+                    [ui_ai::MessageContent::new(
+                        message.role,
+                        [decl_text::text_paragraph(cx, message.content)],
+                    )
+                    .into_element(cx)],
                 )
                 .into_element(cx);
                 content_children.push(bubble);
@@ -122,12 +129,15 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     content_children.push(
                         ui_ai::Checkpoint::new([
                             ui_ai::CheckpointIcon::default().into_element(cx),
-                            ui_ai::CheckpointTrigger::new([cx.text(checkpoint.trigger_label)])
-                                .tooltip(checkpoint.tooltip)
-                                .tooltip_panel_test_id("ui-ai-checkpoint-tooltip-panel")
-                                .test_id("ui-ai-checkpoint-trigger")
-                                .on_activate(cx.actions().listen(restore_to_checkpoint.clone()))
-                                .into_element(cx),
+                            ui_ai::CheckpointTrigger::new([decl_text::text_button_label(
+                                cx,
+                                checkpoint.trigger_label,
+                            )])
+                            .tooltip(checkpoint.tooltip)
+                            .tooltip_panel_test_id("ui-ai-checkpoint-tooltip-panel")
+                            .test_id("ui-ai-checkpoint-trigger")
+                            .on_activate(cx.actions().listen(restore_to_checkpoint.clone()))
+                            .into_element(cx),
                         ])
                         .test_id("ui-ai-checkpoint-row")
                         .into_element(cx),
@@ -180,10 +190,12 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text(
+            decl_text::text_paragraph(
+                cx,
                 "The `Checkpoint` component provides a way to mark specific points in a conversation history and restore the chat to that state.",
             ),
-            cx.text(
+            decl_text::text_paragraph(
+                cx,
                 "Docs-aligned composition: `Conversation` + `Message` + `Checkpoint`. Hover the trigger to preview the tooltip, then activate it to restore the conversation.",
             ),
             controls,
@@ -200,8 +212,12 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 // region: custom_icon
 #[allow(dead_code)]
 fn custom_checkpoint_icon(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
-    fret_ui_ai::CheckpointIcon::default()
-        .into_element_with_children(cx, |cx| vec![cx.text("⟲"), cx.text("•")])
+    fret_ui_ai::CheckpointIcon::default().into_element_with_children(cx, |cx| {
+        vec![
+            decl_text::text_chrome_glyph(cx, "⟲"),
+            decl_text::text_chrome_glyph(cx, "•"),
+        ]
+    })
 }
 // endregion: custom_icon
 

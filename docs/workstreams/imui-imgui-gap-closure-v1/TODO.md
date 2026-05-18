@@ -491,6 +491,13 @@ Readiness order for the next locally testable review slices:
    now use the same role split for fixed demo titles, explanatory prose, and compact status text.
    CodeBlock's active-language diagnostics marker also moved from an invisible empty text node to a
    zero-size generic spacer marker.
+   2026-05-18 AI Queue text-role follow-up: the Queue copyable snippet now routes its fixed demo
+   title through `text_section_chrome_label(...)`, explanatory copy through `text_paragraph(...)`,
+   and action-revision diagnostics through a generic zero-size spacer marker instead of empty or
+   invisible text.
+   2026-05-18 AI Checkpoint text-role follow-up: the Checkpoint copyable snippet now uses
+   paragraph text for conversation/prose, control-readout text for restore status, button-label
+   text for the checkpoint trigger, and chrome-glyph text for custom checkpoint icon glyphs.
    2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
    virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
    `control_readout_text(...)`.
