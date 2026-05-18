@@ -6,6 +6,7 @@ use fret::{AppComponentCx, UiChild};
 use fret_ui::Invalidation;
 use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{Justify, LayoutRefinement, Space};
 use std::sync::Arc;
@@ -18,8 +19,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .map(|v| v.to_string())
         .unwrap_or_else(|| "<none>".to_string());
 
-    let marker = cx
-        .text(format!("last_action={last_action}"))
+    let marker = decl_text::text_control_readout(cx, format!("last_action={last_action}"))
         .test_id("ui-ai-message-demo-last-action");
 
     let set_action = |label: &'static str| {
@@ -89,8 +89,11 @@ fn streamed_demo() {\n\
         .into_element_with_children(cx, move |cx| {
             vec![
                 ui_ai::MessageContent::from_context([
-                    cx.text("User messages render as a bubble aligned to the right."),
-                    cx.text("Bubble chrome is controlled by theme tokens."),
+                    decl_text::text_paragraph(
+                        cx,
+                        "User messages render as a bubble aligned to the right.",
+                    ),
+                    decl_text::text_paragraph(cx, "Bubble chrome is controlled by theme tokens."),
                 ])
                 .test_id("ui-ai-message-demo-user-content")
                 .into_element(cx),
@@ -98,7 +101,10 @@ fn streamed_demo() {\n\
             ]
         });
 
-    let title = cx.text("Message (AI Elements): alignment + bubble + actions + markdown response.");
+    let title = decl_text::text_section_chrome_label(
+        cx,
+        "Message (AI Elements): alignment + bubble + actions + markdown response.",
+    );
 
     ui::v_flex(move |_cx| vec![title, marker, assistant, user])
         .layout(LayoutRefinement::default().w_full().min_w_0())

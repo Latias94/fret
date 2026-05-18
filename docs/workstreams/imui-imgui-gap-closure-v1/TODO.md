@@ -483,6 +483,10 @@ Readiness order for the next locally testable review slices:
    state-only diagnostics anchors through zero-size `SpacerProps` children under generic semantics
    instead of empty `Text` nodes. This keeps test markers out of visible text layout semantics while
    preserving stable diagnostics `test_id`s.
+   2026-05-18 AI visible text-role follow-up: Message and Terminal copyable snippets now route
+   fixed titles through `text_section_chrome_label(...)`, explanatory prose through
+   `text_paragraph(...)`, and compact Message action status through `text_control_readout(...)`.
+   The Terminal empty-output marker also uses the same non-text spacer-marker pattern.
    2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
    virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
    `control_readout_text(...)`.

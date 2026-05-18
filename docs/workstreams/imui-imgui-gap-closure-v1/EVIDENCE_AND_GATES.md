@@ -603,6 +603,13 @@ Run evidence:
   of text layout semantics. Gates: `cargo nextest run -p fret-ui-gallery --test
   ai_audio_player_text_role_surface audio_player_state_markers_use_non_text_spacers
   --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: migrated visible fixed text in copyable AI Message and Terminal snippets onto the
+  shared text-role vocabulary. Message uses `text_control_readout(...)` for the compact action
+  status, `text_section_chrome_label(...)` for the fixed demo title, and `text_paragraph(...)` for
+  user-message prose. Terminal uses section-chrome title text, paragraph explanatory copy, and the
+  non-text spacer-marker pattern for its empty-output diagnostics marker. Gates: `cargo nextest run
+  -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` and
+  `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: migrated `imui_editor_proof_demo` drag-preview cards away from a newline-joined bare
   text blob. Preview titles now use `text_section_chrome_label(...)`, optional subtitles use
   `text_control_readout(...)`, and `proof_drag_preview_card_uses_single_line_text_roles` locks the
@@ -1883,6 +1890,16 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m py_compile tools/gate_imui_workstream_source.py` passed.
 - First `cargo nextest run -p fret-ui-gallery --test ai_audio_player_text_role_surface audio_player_state_markers_use_non_text_spacers --no-fail-fast` timed out at 120s while waiting on/building the workspace.
 - Retried with a longer timeout: `cargo nextest run -p fret-ui-gallery --test ai_audio_player_text_role_surface audio_player_state_markers_use_non_text_spacers --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 AI visible snippet text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- First `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` failed because the source test matched rustfmt-sensitive one-line `text_paragraph(...)` calls.
+- After making the source test check role calls and text payloads separately, `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` passed.
 - `python tools/gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
 - `git diff --check` passed.

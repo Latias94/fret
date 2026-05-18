@@ -446,6 +446,9 @@ Exit criteria:
   2026-05-18 AI AudioPlayer state-marker result: the copyable AudioPlayer local/remote snippets
   now use zero-size `SpacerProps` children under generic semantics for state-only diagnostics
   markers, instead of mounting empty `Text` nodes for non-visible test anchors.
+  2026-05-18 AI visible text-role result: the Message and Terminal copyable snippets now use shared
+  text roles for fixed demo titles, explanatory prose, and compact action status instead of visible
+  bare `cx.text(...)`; the Terminal empty-output marker also moved to a non-text spacer anchor.
   2026-05-17 gallery data-grid text result: the UI Gallery DataGrid preview now routes virtualized
   grid cells through `text_table_cell(...)` and the selected-row status line through
   `control_readout_text(...)`.

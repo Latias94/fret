@@ -455,6 +455,9 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/snippets/ai/audio_player_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/audio_player_remote_demo.rs",
                 "apps/fret-ui-gallery/tests/ai_audio_player_text_role_surface.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/message_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/terminal_demo.rs",
+                "apps/fret-ui-gallery/tests/ai_visible_text_role_surface.rs",
                 "ecosystem/fret-ui-ai/src/elements/mod.rs",
                 "ecosystem/fret-ui-ai/src/surface_policy_tests.rs",
                 "apps/fret-examples/src/imui_editor_proof_demo/collection.rs",
@@ -550,6 +553,38 @@ def main() -> None:
             forbidden=[
                 "role: fret_core::SemanticsRole::Text",
                 "vec![cx.text(\"\")]",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/message_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, format!(\"last_action={last_action}\"))",
+                "decl_text::text_paragraph(\n                        cx,\n                        \"User messages render as a bubble aligned to the right.\",\n                    )",
+                "decl_text::text_paragraph(cx, \"Bubble chrome is controlled by theme tokens.\")",
+                "decl_text::text_section_chrome_label(\n        cx,\n        \"Message (AI Elements): alignment + bubble + actions + markdown response.\",\n    )",
+            ],
+            forbidden=[
+                "cx.text(format!(\"last_action={last_action}\"))",
+                "cx.text(\"User messages render as a bubble aligned to the right.\")",
+                "cx.text(\"Bubble chrome is controlled by theme tokens.\")",
+                "cx.text(\"Message (AI Elements): alignment + bubble + actions + markdown response.\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/terminal_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "fn state_marker(cx: &mut AppComponentCx<'_>, test_id: &'static str) -> AnyElement",
+                "role: fret_core::SemanticsRole::Generic",
+                "cx.spacer(SpacerProps {",
+                "decl_text::text_section_chrome_label(cx, \"Terminal (AI Elements)\")",
+                "decl_text::text_paragraph(\n                cx,\n                \"Chrome-only viewer: apps own streaming + clear behavior.\",\n            )",
+            ],
+            forbidden=[
+                "role: fret_core::SemanticsRole::Text",
+                "cx.text(\"Terminal (AI Elements)\")",
+                "cx.text(\"Chrome-only viewer: apps own streaming + clear behavior.\")",
             ],
         ),
         SourceCheck(
