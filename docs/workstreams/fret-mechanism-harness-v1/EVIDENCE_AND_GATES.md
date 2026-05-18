@@ -3944,6 +3944,32 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
 - result:
   passed; Nextest run id `6a87d598-b4f7-4b0d-83c6-c9842cdb9d25`.
 
+## Layout Primitive Static Inset Ignore Gate
+
+- invariant:
+  `PositionStyle::Static` inset offsets must be ignored. Default flow-positioned nodes should keep
+  their original flow slot, keep sibling placement unchanged, and route hit-testing through the
+  flow slot rather than a hypothetical inset-offset position.
+- finding:
+  `static-inset-ignored-by-default-flow-position` did not reproduce a new mechanism defect. It
+  proves a `20 x 10` Pressable with `top: 12px` but no positioned mode stays at `0,0`, keeps the
+  following `30 x 10` sibling at `20,0`, hits at the original flow-slot center, and does not hit at
+  the hypothetical `top: 12px` offset center.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/tests/layout/mechanism_harness.rs`,
+  `crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json`,
+  `crates/fret-ui/src/element.rs`,
+  `crates/fret-ui/src/declarative/taffy_layout.rs`,
+  `crates/fret-ui/src/layout/engine/flow.rs`, and
+  `docs/adr/0062-tailwind-layout-primitives-margin-position-grid-aspect-ratio.md`.
+- JSON fixture validation:
+  `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\layout_primitives_v1.json`
+  - result: passed.
+- gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+- result:
+  passed; Nextest run id `63fb7f75-45f1-4f9b-bbfa-4f20d22d7d5c`.
+
 ## Layout Primitive Pressable Absolute-Only Wrapper Envelope Gate
 
 - invariant:

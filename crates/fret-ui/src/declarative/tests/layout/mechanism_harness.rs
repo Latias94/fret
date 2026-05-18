@@ -26,6 +26,7 @@ enum LayoutPrimitiveScenario {
     TextMeasurePaintOverflowScale,
     ScrollRootPreservesChildLayoutBounds,
     AbsoluteInsetFractionResolvesAgainstContainingBlock,
+    StaticInsetIgnoredByDefaultFlowPosition,
     RelativeInsetOffsetsFinalPositionWithoutAffectingFlowSiblings,
     PressableFractionalAbsoluteChildEnvelopeMatchesLayout,
     PressableMixedFlowAbsoluteChildEnvelopeMatchesLayout,
@@ -202,6 +203,24 @@ fn observe_case(
             }
             _ => {}
         }
+    }
+
+    if matches!(
+        case.scenario,
+        LayoutPrimitiveScenario::StaticInsetIgnoredByDefaultFlowPosition
+    ) {
+        observed.push_hit_test_sample(hit_sample(
+            &ui,
+            &snapshot,
+            "static-inset-original-flow-slot-center",
+            Point::new(Px(10.0), Px(5.0)),
+        ));
+        observed.push_hit_test_sample(hit_sample(
+            &ui,
+            &snapshot,
+            "static-inset-hypothetical-offset-center",
+            Point::new(Px(10.0), Px(17.0)),
+        ));
     }
 
     if matches!(
@@ -1129,6 +1148,42 @@ fn build_scenario(
                         .test_id("absolute-percent-child"),
                 ]
             })]
+        }
+        LayoutPrimitiveScenario::StaticInsetIgnoredByDefaultFlowPosition => {
+            let row = crate::element::FlexProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Px(Px(100.0)),
+                        height: Length::Px(Px(40.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                direction: fret_core::Axis::Horizontal,
+                align: CrossAlign::Start,
+                ..Default::default()
+            };
+
+            let mut static_pressable = crate::element::PressableProps::default();
+            static_pressable.layout.inset.top = crate::element::InsetEdge::Px(Px(12.0));
+            static_pressable.layout.size.width = Length::Px(Px(20.0));
+            static_pressable.layout.size.height = Length::Px(Px(10.0));
+
+            let mut sibling = crate::element::ContainerProps::default();
+            sibling.layout.size.width = Length::Px(Px(30.0));
+            sibling.layout.size.height = Length::Px(Px(10.0));
+
+            vec![
+                cx.flex(row, |cx| {
+                    vec![
+                        cx.pressable(static_pressable, |_cx, _state| Vec::new())
+                            .test_id("static-inset-pressable"),
+                        cx.container(sibling, |_cx| Vec::new())
+                            .test_id("static-inset-sibling"),
+                    ]
+                })
+                .test_id("static-inset-row"),
+            ]
         }
         LayoutPrimitiveScenario::RelativeInsetOffsetsFinalPositionWithoutAffectingFlowSiblings => {
             let row = crate::element::FlexProps {

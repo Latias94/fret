@@ -1807,3 +1807,20 @@ Status: complete for `PositionStyle::Relative` final-position and flow-sibling s
   with Nextest run id `6a87d598-b4f7-4b0d-83c6-c9842cdb9d25`.
 - JSON fixture validation passes:
   `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\layout_primitives_v1.json`.
+
+## M103: Static Inset Ignore Layout Primitive Fixture
+
+Status: complete for `PositionStyle::Static` inset-ignore semantics.
+
+- Added `static-inset-ignored-by-default-flow-position` to the layout primitive fixture.
+- The case locks the opposite side of the ADR 0062 position/inset contract: inset offsets are
+  ignored for default flow-positioned nodes until the element opts into relative or absolute
+  positioning.
+- No new mechanism defect was reproduced. The current layout path keeps the static Pressable at
+  `0,0`, the sibling at `20,0`, and routes hit-testing to the original flow slot rather than the
+  hypothetical inset-offset position.
+- The gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+  with Nextest run id `63fb7f75-45f1-4f9b-bbfa-4f20d22d7d5c`.
+- JSON fixture validation passes:
+  `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\layout_primitives_v1.json`.

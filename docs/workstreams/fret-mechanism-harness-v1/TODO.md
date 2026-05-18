@@ -981,3 +981,10 @@ date: 2026-05-12
     target's final layout and hit-test position, but its sibling keeps the original flow slot. The
     fixture proves the old flow-slot center misses the moved Pressable while the final-position
     center hits it. No new `fret-ui` mechanism defect was reproduced.
+- [x] Add static inset ignore coverage for default flow positioning.
+  - Result: `static-inset-ignored-by-default-flow-position` now locks the opposite
+    `PositionStyle::Static` contract from `element.rs`: inset offsets are ignored unless the
+    element opts into a positioned mode. The fixture proves a static Pressable with `top: 12px`
+    remains at the original flow slot, keeps the following sibling at `x=20`, hits at the flow-slot
+    center, and does not hit at the hypothetical offset center. No new `fret-ui` mechanism defect
+    was reproduced.

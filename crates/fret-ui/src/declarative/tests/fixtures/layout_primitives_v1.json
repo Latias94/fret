@@ -353,6 +353,51 @@
       }
     },
     {
+      "id": "static-inset-ignored-by-default-flow-position",
+      "scenario": { "kind": "static_inset_ignored_by_default_flow_position" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "static-inset-row" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 100.0, "height": 40.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "static-inset-pressable" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 20.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "static-inset-sibling" },
+            "expected": {
+              "origin": { "x": 20.0, "y": 0.0 },
+              "size": { "width": 30.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "hit_test_sample",
+            "sample_id": "static-inset-original-flow-slot-center",
+            "target": { "kind": "test_id", "id": "static-inset-pressable" }
+          },
+          {
+            "kind": "hit_test_sample_not",
+            "sample_id": "static-inset-hypothetical-offset-center",
+            "target": { "kind": "test_id", "id": "static-inset-pressable" }
+          }
+        ]
+      }
+    },
+    {
       "id": "pressable-fractional-absolute-child-envelope-matches-layout",
       "scenario": { "kind": "pressable_fractional_absolute_child_envelope_matches_layout" },
       "oracle": {
