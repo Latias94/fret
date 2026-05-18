@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 395
+- Dedicated directories: 396
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2298,6 +2298,7 @@ Rule:
 - `docs/workstreams/wgpu-conformance-harness-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed WGPU conformance test-support extraction lane for shared readback/render helpers)
 - `docs/workstreams/wgpu-mask-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating mask-related WGPU conformance tests onto the shared readback/render harness)
 - `docs/workstreams/wgpu-materials-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating material-related WGPU conformance tests onto the shared readback/render harness)
+- `docs/workstreams/wgpu-paint-eval-space-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating paint evaluation-space WGPU conformance tests onto the shared readback/render harness)
 - `docs/workstreams/wgpu-paint-gradient-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating paint-gradient WGPU conformance tests onto the shared readback/render harness)
 - `docs/workstreams/wgpu-standard-effects-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating standard effect/postprocess WGPU conformance tests onto the shared readback/render harness)
 - `docs/workstreams/wgpu-stroke-dash-shadow-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating stroke, dash, and shadow WGPU conformance tests onto the shared readback/render harness)
