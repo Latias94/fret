@@ -530,6 +530,9 @@ Exit criteria:
   2026-05-18 AI Workflow snippet text-role result: workflow fixed chrome, panel copy,
   node-content sample copy, footer labels, and click readouts now use shared text roles instead of
   bare `cx.text(...)`.
+  2026-05-18 AI Suggestions/reasoning/transcript text-role result: suggestions custom children,
+  reasoning hook status, transcript torture header copy, and chat exported-status marker now use
+  shared text roles or generic marker semantics instead of bare/default text surfaces.
   2026-05-17 gallery data-grid text result: the UI Gallery DataGrid preview now routes virtualized
   grid cells through `text_table_cell(...)` and the selected-row status line through
   `control_readout_text(...)`.

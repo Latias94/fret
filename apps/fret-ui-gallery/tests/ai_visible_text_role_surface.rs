@@ -884,6 +884,32 @@ fn ai_tool_and_suggestions_use_shared_text_roles_and_non_text_markers() {
             "tool_demo reintroduced bare section label text: `{bare_marker}`"
         );
     }
+
+    let suggestions =
+        canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/suggestions_demo.rs"));
+    for marker in [
+        "decl_text::text_button_label(cx, \"Summarize the release notes\")",
+        "decl_text::text_button_label(cx, \"Draft a Tokyo travel brief\")",
+        "decl_text::text_paragraph",
+        "Composable children let callers add icons or extra inline structure while the suggestion payload stays app-owned.",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            suggestions.contains(&marker),
+            "suggestions_demo should route custom children labels/body text through shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(\"Summarize the release notes\")",
+        "cx.text(\"Draft a Tokyo travel brief\")",
+        "cx.text(\"Composable children let callers add icons or extra inline structure while the suggestion payload stays app-owned.\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !suggestions.contains(&forbidden),
+            "suggestions_demo reintroduced bare custom children text: `{forbidden}`"
+        );
+    }
 }
 
 #[test]
@@ -1024,6 +1050,60 @@ fn ai_web_preview_uses_shared_text_roles_and_non_text_markers() {
 }
 
 #[test]
+fn ai_reasoning_hooks_and_transcript_torture_use_shared_text_roles() {
+    let reasoning_hooks =
+        canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/reasoning_hooks.rs"));
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_control_readout",
+        "Reasoning controller unavailable",
+        "decl_text::text_control_readout(cx, status)",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            reasoning_hooks.contains(&marker),
+            "reasoning_hooks should route custom trigger status text through shared readout roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(\"Reasoning controller unavailable\")",
+        "cx.text(status)",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !reasoning_hooks.contains(&forbidden),
+            "reasoning_hooks reintroduced bare status text: `{forbidden}`"
+        );
+    }
+
+    let transcript =
+        canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/transcript_torture.rs"));
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_section_chrome_label",
+        "Goal: baseline harness for long AI transcripts (scrolling + virtualization + caching).",
+        "decl_text::text_paragraph",
+        "Use scripted wheel-scroll to validate view-cache reuse stability and stale-paint safety.",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            transcript.contains(&marker),
+            "transcript_torture should route fixed header copy through shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(\"Goal: baseline harness for long AI transcripts (scrolling + virtualization + caching).\")",
+        "cx.text(\"Use scripted wheel-scroll to validate view-cache reuse stability and stale-paint safety.\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !transcript.contains(&forbidden),
+            "transcript_torture reintroduced bare header text: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
 fn ai_chat_demo_uses_shared_outer_text_roles_and_non_text_markers() {
     let source = include_str!("../src/ui/snippets/ai/chat_demo.rs");
     let canonical = canonicalize_rust_fragment(source);
@@ -1040,6 +1120,7 @@ fn ai_chat_demo_uses_shared_outer_text_roles_and_non_text_markers() {
         "\"Send triggers a short \\\"loading\\\" window where Stop is available.\"",
         "decl_text::text_control_readout",
         "format!(\"Exported markdown: {len} chars\")",
+        "test_id: Some(Arc::<str>::from(\"ui-gallery-ai-chat-exported-md-len\"))",
         "prompt_non_empty_marker.unwrap_or_else(|| empty_spacer(cx))",
         "exported.unwrap_or_else(|| empty_spacer(cx))",
     ] {
@@ -1052,6 +1133,7 @@ fn ai_chat_demo_uses_shared_outer_text_roles_and_non_text_markers() {
 
     for forbidden in [
         "role: fret_core::SemanticsRole::Text, test_id: Some(Arc::<str>::from(\"ui-gallery-ai-chat-prompt-nonempty\"))",
+        "role: fret_core::SemanticsRole::Text, test_id: Some(Arc::<str>::from(\"ui-gallery-ai-chat-exported-md-len\"))",
         "cx.text(\"Goal: interactive demo for PromptInput + transcript append.\")",
         "cx.text(\"Send triggers a short \\\"loading\\\" window where Stop is available.\")",
         "vec![cx.text(format!(\"Exported markdown: {len} chars\"))]",

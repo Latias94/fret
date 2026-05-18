@@ -10,6 +10,7 @@ use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::declarative::{CachedSubtreeExt as _, CachedSubtreeProps};
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
@@ -90,8 +91,14 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     let header = ui::v_flex(|cx| {
             vec![
-                cx.text("Goal: baseline harness for long AI transcripts (scrolling + virtualization + caching)."),
-                cx.text("Use scripted wheel-scroll to validate view-cache reuse stability and stale-paint safety."),
+                decl_text::text_section_chrome_label(
+                    cx,
+                    "Goal: baseline harness for long AI transcripts (scrolling + virtualization + caching).",
+                ),
+                decl_text::text_paragraph(
+                    cx,
+                    "Use scripted wheel-scroll to validate view-cache reuse stability and stale-paint safety.",
+                ),
                 shadcn::Button::new(format!("Append {append_batch} messages"))
                     .test_id("ui-gallery-ai-transcript-append")
                     .on_activate(cx.actions().listen(append_messages))

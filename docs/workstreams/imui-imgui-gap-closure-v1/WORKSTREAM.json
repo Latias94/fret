@@ -619,6 +619,8 @@
     "apps/fret-ui-gallery/src/ui/snippets/ai/test_results_large_demo.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/tool_demo.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/suggestions_demo.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/ai/reasoning_hooks.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/ai/transcript_torture.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/queue_prompt_input_demo.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/transcription_demo.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/web_preview_demo.rs",

@@ -490,6 +490,8 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/snippets/ai/test_results_large_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/tool_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/suggestions_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/reasoning_hooks.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/transcript_torture.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/queue_prompt_input_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/transcription_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/web_preview_demo.rs",
@@ -1174,6 +1176,9 @@ def main() -> None:
                 "decl_text::text_section_chrome_label(cx, \"Suggestions (AI Elements)\")",
                 "decl_text::text_paragraph(",
                 "Suggestion pills emit intents; apps own prompt insertion.",
+                "decl_text::text_button_label(cx, \"Summarize the release notes\")",
+                "decl_text::text_button_label(cx, \"Draft a Tokyo travel brief\")",
+                "Composable children let callers add icons or extra inline structure while the suggestion payload stays app-owned.",
             ],
             forbidden=[
                 "role: SemanticsRole::Text",
@@ -1181,6 +1186,35 @@ def main() -> None:
                 "cx.text(\"\")",
                 "cx.text(\"Suggestions (AI Elements)\")",
                 "cx.text(\"Suggestion pills emit intents; apps own prompt insertion.\")",
+                "cx.text(\"Summarize the release notes\")",
+                "cx.text(\"Draft a Tokyo travel brief\")",
+                "cx.text(\n                \"Composable children let callers add icons or extra inline structure while the suggestion payload stays app-owned.\",\n            )",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/reasoning_hooks.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(\n                        cx,\n                        \"Reasoning controller unavailable\",\n                    )",
+                "decl_text::text_control_readout(cx, status)",
+            ],
+            forbidden=[
+                "cx.text(\"Reasoning controller unavailable\")",
+                "cx.text(status)",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/transcript_torture.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(",
+                "Goal: baseline harness for long AI transcripts (scrolling + virtualization + caching).",
+                "decl_text::text_paragraph(",
+                "Use scripted wheel-scroll to validate view-cache reuse stability and stale-paint safety.",
+            ],
+            forbidden=[
+                "cx.text(\"Goal: baseline harness for long AI transcripts (scrolling + virtualization + caching).\")",
+                "cx.text(\"Use scripted wheel-scroll to validate view-cache reuse stability and stale-paint safety.\")",
             ],
         ),
         SourceCheck(
@@ -1270,11 +1304,13 @@ def main() -> None:
                 "Send triggers a short \\\"loading\\\" window where Stop is available.",
                 "decl_text::text_control_readout(",
                 "format!(\"Exported markdown: {len} chars\")",
+                "test_id: Some(Arc::<str>::from(\"ui-gallery-ai-chat-exported-md-len\"))",
                 "prompt_non_empty_marker.unwrap_or_else(|| empty_spacer(cx))",
                 "exported.unwrap_or_else(|| empty_spacer(cx))",
             ],
             forbidden=[
                 "role: fret_core::SemanticsRole::Text,\n                test_id: Some(Arc::<str>::from(\"ui-gallery-ai-chat-prompt-nonempty\"))",
+                "role: fret_core::SemanticsRole::Text,\n                test_id: Some(Arc::<str>::from(\"ui-gallery-ai-chat-exported-md-len\"))",
                 "cx.text(\"Goal: interactive demo for PromptInput + transcript append.\")",
                 "cx.text(\"Send triggers a short \\\"loading\\\" window where Stop is available.\")",
                 "vec![cx.text(format!(\"Exported markdown: {len} chars\"))]",

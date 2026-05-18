@@ -151,11 +151,17 @@ pub fn render_custom_children(cx: &mut AppComponentCx<'_>) -> impl UiChild + use
     let suggestions = ui_ai::Suggestions::new([
         ui_ai::Suggestion::new("Summarize the release notes")
             .test_id("ui-ai-suggestion-custom-summary")
-            .children([sparkles, cx.text("Summarize the release notes")])
+            .children([
+                sparkles,
+                decl_text::text_button_label(cx, "Summarize the release notes"),
+            ])
             .into_element(cx),
         ui_ai::Suggestion::new("Draft a Tokyo travel brief")
             .test_id("ui-ai-suggestion-custom-brief")
-            .children([globe, cx.text("Draft a Tokyo travel brief")])
+            .children([
+                globe,
+                decl_text::text_button_label(cx, "Draft a Tokyo travel brief"),
+            ])
             .into_element(cx),
     ])
     .viewport_test_id("ui-ai-suggestions-custom-viewport")
@@ -164,7 +170,8 @@ pub fn render_custom_children(cx: &mut AppComponentCx<'_>) -> impl UiChild + use
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text(
+            decl_text::text_paragraph(
+                cx,
                 "Composable children let callers add icons or extra inline structure while the suggestion payload stays app-owned.",
             ),
             suggestions,
