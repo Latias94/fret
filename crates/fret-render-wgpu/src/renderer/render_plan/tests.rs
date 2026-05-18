@@ -6,6 +6,8 @@ use super::super::{
     ClipPathMaskDraw, EffectMarker, EffectMarkerKind, OrderedDraw, PathDraw, QuadDraw,
     QuadPipelineKey,
 };
+#[cfg(debug_assertions)]
+use super::debug::{validate_plan_scissors, validate_plan_target_lifetimes};
 use super::*;
 
 fn strip_releases(passes: &[RenderPlanPass]) -> Vec<&RenderPlanPass> {
