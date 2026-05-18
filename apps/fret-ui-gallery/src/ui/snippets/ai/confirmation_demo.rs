@@ -8,6 +8,7 @@ use fret_ui::Theme;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ColorRef;
 use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{Items, LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -121,9 +122,9 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
         let request = ui::h_row(|cx| {
             vec![
-                cx.text("This tool wants to delete the file"),
-                shadcn::raw::typography::inline_code("/tmp/example.txt").into_element(cx),
-                cx.text(". Do you approve this action?"),
+                decl_text::text_paragraph(cx, "This tool wants to delete the file"),
+                decl_text::text_code_wrap(cx, "/tmp/example.txt"),
+                decl_text::text_paragraph(cx, ". Do you approve this action?"),
             ]
         })
         .gap(Space::N1)
@@ -146,7 +147,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                             Some(fret_core::Px(16.0)),
                             Some(ColorRef::Color(success)),
                         ),
-                        cx.text("You approved this tool execution"),
+                        decl_text::text_control_readout(cx, "You approved this tool execution"),
                     ])
                     .test_id("ui-ai-confirmation-accepted")
                     .into_element(cx),
@@ -157,7 +158,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                             Some(fret_core::Px(16.0)),
                             Some(ColorRef::Color(destructive)),
                         ),
-                        cx.text("You rejected this tool execution"),
+                        decl_text::text_control_readout(cx, "You rejected this tool execution"),
                     ])
                     .test_id("ui-ai-confirmation-rejected")
                     .into_element(cx),
@@ -188,8 +189,9 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         };
 
         let mut out = vec![
-            cx.text("Confirmation (AI Elements)"),
-            cx.text(
+            decl_text::text_section_chrome_label(cx, "Confirmation (AI Elements)"),
+            decl_text::text_paragraph(
+                cx,
                 "Docs-aligned tool approval workflow: request a destructive action, confirm or reject it, then inspect the final output state.",
             ),
             request_btn,

@@ -41,7 +41,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             Some(fret_core::Px(16.0)),
             Some(ColorRef::Color(success)),
         ),
-        cx.text("You approved this tool execution"),
+        decl_text::text_control_readout(cx, "You approved this tool execution"),
     ];
 
     let rejected = [
@@ -51,7 +51,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             Some(fret_core::Px(16.0)),
             Some(ColorRef::Color(destructive)),
         ),
-        cx.text("You rejected this tool execution"),
+        decl_text::text_control_readout(cx, "You rejected this tool execution"),
     ];
 
     ui_ai::Confirmation::new(ui_ai::ToolUiPartState::ApprovalRequested)
@@ -65,7 +65,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .children([
             ui_ai::ConfirmationTitle::new([
                 ui_ai::ConfirmationRequest::new([
-                    cx.text("This tool wants to execute a query on the production database:"),
+                    decl_text::text_paragraph(
+                        cx,
+                        "This tool wants to execute a query on the production database:",
+                    ),
                     query_block,
                 ])
                 .into_element(cx),

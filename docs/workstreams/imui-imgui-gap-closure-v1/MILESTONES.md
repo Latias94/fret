@@ -494,6 +494,10 @@ Exit criteria:
   fixed outer title/body copy through shared section-chrome/paragraph roles; StackTrace and
   VoiceSelector compact status/diagnostics readouts use `text_control_readout(...)` instead of
   default wrapping text.
+  2026-05-18 AI Confirmation content text-role result: Confirmation request/body snippets now route
+  prose through `text_paragraph(...)`, inline/code payloads through `text_code_wrap(...)`,
+  approval/rejection result text through `text_control_readout(...)`, and the demo's fixed outer
+  title/body copy through shared section-chrome/paragraph roles.
   2026-05-17 gallery data-grid text result: the UI Gallery DataGrid preview now routes virtualized
   grid cells through `text_table_cell(...)` and the selected-row status line through
   `control_readout_text(...)`.

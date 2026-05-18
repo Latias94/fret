@@ -950,3 +950,106 @@ fn ai_reasoning_stack_trace_and_voice_selector_use_shared_chrome_text_roles() {
         );
     }
 }
+
+#[test]
+fn ai_confirmation_snippets_use_shared_content_text_roles() {
+    for (name, source) in [
+        (
+            "confirmation_demo",
+            include_str!("../src/ui/snippets/ai/confirmation_demo.rs"),
+        ),
+        (
+            "confirmation_accepted",
+            include_str!("../src/ui/snippets/ai/confirmation_accepted.rs"),
+        ),
+        (
+            "confirmation_rejected",
+            include_str!("../src/ui/snippets/ai/confirmation_rejected.rs"),
+        ),
+    ] {
+        let canonical = canonicalize_rust_fragment(source);
+
+        for marker in [
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_paragraph(cx, \"This tool wants to delete the file\")",
+            "decl_text::text_code_wrap(cx, \"/tmp/example.txt\")",
+            "decl_text::text_paragraph(cx, \". Do you approve this action?\")",
+            "decl_text::text_control_readout(cx, \"You approved this tool execution\")",
+            "decl_text::text_control_readout(cx, \"You rejected this tool execution\")",
+        ] {
+            let marker = canonicalize_rust_fragment(marker);
+            assert!(
+                canonical.contains(&marker),
+                "{name} should route confirmation request/result content through shared roles; missing `{marker}`"
+            );
+        }
+
+        for forbidden in [
+            "cx.text(\"This tool wants to delete the file\")",
+            "shadcn::raw::typography::inline_code(\"/tmp/example.txt\").into_element(cx)",
+            "cx.text(\". Do you approve this action?\")",
+            "cx.text(\"You approved this tool execution\")",
+            "cx.text(\"You rejected this tool execution\")",
+        ] {
+            let forbidden = canonicalize_rust_fragment(forbidden);
+            assert!(
+                !canonical.contains(&forbidden),
+                "{name} reintroduced bare confirmation content text: `{forbidden}`"
+            );
+        }
+    }
+
+    let demo =
+        canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/confirmation_demo.rs"));
+    for marker in [
+        "decl_text::text_section_chrome_label(cx, \"Confirmation (AI Elements)\")",
+        "decl_text::text_paragraph",
+        "\"Docs-aligned tool approval workflow: request a destructive action, confirm or reject it, then inspect the final output state.\"",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            demo.contains(&marker),
+            "confirmation_demo should route fixed outer title/body through shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(\"Confirmation (AI Elements)\")",
+        "cx.text(\"Docs-aligned tool approval workflow: request a destructive action, confirm or reject it, then inspect the final output state.\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !demo.contains(&forbidden),
+            "confirmation_demo reintroduced bare outer text: `{forbidden}`"
+        );
+    }
+
+    let request = canonicalize_rust_fragment(include_str!(
+        "../src/ui/snippets/ai/confirmation_request.rs"
+    ));
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_paragraph",
+        "\"This tool wants to execute a query on the production database:\"",
+        "decl_text::text_code_wrap",
+        "SELECT * FROM users WHERE role = 'admin'",
+        "decl_text::text_control_readout(cx, \"You approved this tool execution\")",
+        "decl_text::text_control_readout(cx, \"You rejected this tool execution\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            request.contains(&marker),
+            "confirmation_request should route query request/result content through shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(\"This tool wants to execute a query on the production database:\")",
+        "cx.text(\"You approved this tool execution\")",
+        "cx.text(\"You rejected this tool execution\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !request.contains(&forbidden),
+            "confirmation_request reintroduced bare confirmation content text: `{forbidden}`"
+        );
+    }
+}
