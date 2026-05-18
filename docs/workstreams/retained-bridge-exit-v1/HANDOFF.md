@@ -4,10 +4,11 @@ Updated: 2026-05-18
 
 ## Current State
 
-`RBX-M1-010`, `RBX-M1-020`, and `RBX-M1-021` are complete. The docking retained bridge audit is
-recorded in:
+`RBX-M1-010`, `RBX-M1-020`, `RBX-M1-021`, `RBX-M1-030`, and `RBX-M1-040` are complete. The docking
+retained bridge audit is recorded in:
 
 - `docs/workstreams/retained-bridge-exit-v1/RBX_M1_010_DOCKING_RETAINED_BRIDGE_AUDIT_2026-05-18.md`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M1_030_DOCKING_DECLARATIVE_PRIMITIVE_GAP_AUDIT_2026-05-18.md`
 
 The first implementation slice was:
 
@@ -21,14 +22,15 @@ Readiness note:
 ## Key Finding
 
 `fret-docking` cannot drop `fret-ui/unstable-retained-bridge` in one step. The retained bridge is
-still the host substrate for:
+still the authoring/hosting substrate for:
 
 - `DockSpace` as a retained `Widget`.
 - public retained dock creation helpers.
 - `imui.rs` retained subtree embedding.
-- docking split layout, hit-test, drag update, and handle paint helpers.
+- docking host lifecycle hooks for layout, prepaint, event, command, paint, and child-root placement.
 
-The best first cut is the helper extraction because it is private and behavior-preserving.
+The best first cut was helper extraction because it was private and behavior-preserving. The next
+cut was controller extraction, not direct retained host deletion.
 
 ## Completed Implementation
 
@@ -45,6 +47,16 @@ There are no remaining Rust source users of:
 - `retained_bridge::ResizablePanelGroupLayout`
 - `resizable::compute_layout`
 
+`RBX-M1-030` found that panel content is already declarative-capable through
+`DockPanelRegistry`/`render_cached_panel_root(...)`. The missing piece is the host lifecycle around
+`DockSpace`: externalized controller state, child-root placement, prepaint liveness, raw event
+arbitration, command/focus routing, and custom chrome/child paint ordering.
+
+`RBX-M1-040` added `DockSpaceController` as the docking-owned cross-frame host state object and kept
+the retained `DockSpace` widget as the adapter. The extraction is intentionally behavior-preserving:
+methods still live on `DockSpace` for now, with a transitional `Deref` / `DerefMut` shim delegating
+state field access to the controller.
+
 ## Next Task
 
 Pick the next M1 task from:
@@ -53,9 +65,12 @@ Pick the next M1 task from:
 
 Recommended next implementation shape:
 
-- Identify the minimal declarative primitives still missing for docking.
-- Keep the task narrow: do not remove `DockSpace` retained hosting until the missing primitive list
-  is explicit and backed by code evidence.
+- `RBX-M1-050`: extract layout/paint snapshots so a future declarative adapter can consume the same
+  host decisions without recomputing layout in paint.
+- `RBX-M1-060`: decide whether existing declarative primitives are enough or whether `fret-ui` needs
+  a narrow mechanism-only managed-surface primitive.
+- Do not remove `DockSpace` retained hosting until those seams exist and the declarative host
+  mechanism has a proof-of-life.
 
 ## Gates
 
@@ -69,6 +84,25 @@ Last run on 2026-05-18:
 - `git diff --check` - passed.
 - `rg -n "retained_bridge::resizable_panel_group|retained_bridge::ResizablePanelGroupLayout|resizable::compute_layout" crates ecosystem apps -g '*.rs'`
   - no matches.
+
+`RBX-M1-030` audit commands:
+
+- `python3 tools/audit_crate.py --crate fret-docking` - passed.
+- `rg -n "retained_bridge|UiTreeRetainedExt|create_node_retained|RetainedSubtree|impl<.*Widget|impl Widget|Widget<" ecosystem/fret-docking/src ecosystem/fret-docking/tests -g '*.rs'`
+  - found retained host/lifecycle usage in docking source and tests.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
+`RBX-M1-040` gates:
+
+- `cargo check -p fret-docking` - passed.
+- `cargo fmt --check` - passed.
+- `cargo nextest run -p fret-docking` - passed, 111 tests.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
 
 Previous `RBX-M1-020` gates:
 

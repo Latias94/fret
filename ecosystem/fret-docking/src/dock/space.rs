@@ -309,6 +309,15 @@ fn dock_graph_signature_for_window(
 
 pub struct DockSpace {
     pub window: fret_core::AppWindowId,
+    controller: DockSpaceController,
+}
+
+/// Docking-owned cross-frame host state extracted from the retained `DockSpace` adapter.
+///
+/// The first extraction slice keeps behavior methods on `DockSpace`; later slices can move
+/// transition logic onto this controller and reuse it from a declarative host adapter.
+#[doc(hidden)]
+pub struct DockSpaceController {
     semantics_test_id: Option<&'static str>,
     diag_env_enabled: bool,
     allow_multi_window_tear_off: bool,
@@ -369,6 +378,115 @@ pub struct DockSpace {
     last_theme_revision: Option<u64>,
     last_active_tabs: Option<DockNodeId>,
     hovered_float_zone: bool,
+}
+
+impl DockSpaceController {
+    fn new(diag_env_enabled: bool) -> Self {
+        Self {
+            semantics_test_id: None,
+            diag_env_enabled,
+            allow_multi_window_tear_off: false,
+            last_bounds: Rect::default(),
+            prepaint_wants_animation_frames: false,
+            dock_drop_resolve_diagnostics: None,
+            dock_drop_resolve_keep_until_frame: None,
+            divider_drag: None,
+            split_fraction_motion: HashMap::new(),
+            floating_drag: None,
+            pending_dock_drags: HashMap::new(),
+            pending_dock_tabs_drags: HashMap::new(),
+            hovered_floating_close: None,
+            pressed_floating_close: None,
+            hovered_floating_title_bar: None,
+            panel_content: HashMap::new(),
+            panel_last_sizes: HashMap::new(),
+            viewport_capture: HashMap::new(),
+            tab_titles: HashMap::new(),
+            empty_state: None,
+            hovered_tab: None,
+            hovered_tab_close: false,
+            hovered_tab_overflow_button: None,
+            pressed_tab_close: None,
+            tab_scroll: HashMap::new(),
+            tab_drag_auto_scroll_last_frame: HashMap::new(),
+            tab_overflow_menu: None,
+            tab_context_menu: None,
+            tab_context_menu_items: Vec::new(),
+            tab_context_menu_titles: Vec::new(),
+            tab_widths: HashMap::new(),
+            tab_close_glyph: None,
+            tab_overflow_glyph: None,
+            tab_close_svg: None,
+            tab_overflow_svg: None,
+            float_zone_glyph: None,
+            float_zone_tooltip: None,
+            dock_drag_tooltip: None,
+            tab_text_style: TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(13.0),
+                ..Default::default()
+            },
+            tab_close_style: TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(13.0),
+                ..Default::default()
+            },
+            empty_state_style: TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(13.0),
+                ..Default::default()
+            },
+            float_zone_style: TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(11.0),
+                ..Default::default()
+            },
+            float_zone_tooltip_style: TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(12.0),
+                ..Default::default()
+            },
+            dock_drag_tooltip_style: TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(12.0),
+                ..Default::default()
+            },
+            tab_context_menu_style: TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(12.0),
+                ..Default::default()
+            },
+            last_empty_state_scale_factor: None,
+            last_empty_state_theme_revision: None,
+            last_float_zone_scale_factor: None,
+            last_float_zone_theme_revision: None,
+            last_float_zone_tooltip_scale_factor: None,
+            last_float_zone_tooltip_theme_revision: None,
+            last_dock_drag_tooltip_scale_factor: None,
+            last_dock_drag_tooltip_theme_revision: None,
+            last_tab_context_menu_scale_factor: None,
+            last_tab_context_menu_theme_revision: None,
+            last_tab_text_scale_factor: None,
+            last_text_font_stack_key: None,
+            last_theme_revision: None,
+            last_active_tabs: None,
+            hovered_float_zone: false,
+        }
+    }
+}
+
+impl std::ops::Deref for DockSpace {
+    type Target = DockSpaceController;
+
+    fn deref(&self) -> &Self::Target {
+        &self.controller
+    }
+}
+
+impl std::ops::DerefMut for DockSpace {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.controller
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -466,94 +584,7 @@ impl DockSpace {
             || std::env::var_os("FRET_DIAG_DIR").is_some_and(|v| !v.is_empty());
         Self {
             window,
-            semantics_test_id: None,
-            diag_env_enabled,
-            allow_multi_window_tear_off: false,
-            last_bounds: Rect::default(),
-            prepaint_wants_animation_frames: false,
-            dock_drop_resolve_diagnostics: None,
-            dock_drop_resolve_keep_until_frame: None,
-            divider_drag: None,
-            split_fraction_motion: HashMap::new(),
-            floating_drag: None,
-            pending_dock_drags: HashMap::new(),
-            pending_dock_tabs_drags: HashMap::new(),
-            hovered_floating_close: None,
-            pressed_floating_close: None,
-            hovered_floating_title_bar: None,
-            panel_content: HashMap::new(),
-            panel_last_sizes: HashMap::new(),
-            viewport_capture: HashMap::new(),
-            tab_titles: HashMap::new(),
-            empty_state: None,
-            hovered_tab: None,
-            hovered_tab_close: false,
-            hovered_tab_overflow_button: None,
-            pressed_tab_close: None,
-            tab_scroll: HashMap::new(),
-            tab_drag_auto_scroll_last_frame: HashMap::new(),
-            tab_overflow_menu: None,
-            tab_context_menu: None,
-            tab_context_menu_items: Vec::new(),
-            tab_context_menu_titles: Vec::new(),
-            tab_widths: HashMap::new(),
-            tab_close_glyph: None,
-            tab_overflow_glyph: None,
-            tab_close_svg: None,
-            tab_overflow_svg: None,
-            float_zone_glyph: None,
-            float_zone_tooltip: None,
-            dock_drag_tooltip: None,
-            tab_text_style: TextStyle {
-                font: fret_core::FontId::default(),
-                size: Px(13.0),
-                ..Default::default()
-            },
-            tab_close_style: TextStyle {
-                font: fret_core::FontId::default(),
-                size: Px(13.0),
-                ..Default::default()
-            },
-            empty_state_style: TextStyle {
-                font: fret_core::FontId::default(),
-                size: Px(13.0),
-                ..Default::default()
-            },
-            float_zone_style: TextStyle {
-                font: fret_core::FontId::default(),
-                size: Px(11.0),
-                ..Default::default()
-            },
-            float_zone_tooltip_style: TextStyle {
-                font: fret_core::FontId::default(),
-                size: Px(12.0),
-                ..Default::default()
-            },
-            dock_drag_tooltip_style: TextStyle {
-                font: fret_core::FontId::default(),
-                size: Px(12.0),
-                ..Default::default()
-            },
-            tab_context_menu_style: TextStyle {
-                font: fret_core::FontId::default(),
-                size: Px(12.0),
-                ..Default::default()
-            },
-            last_empty_state_scale_factor: None,
-            last_empty_state_theme_revision: None,
-            last_float_zone_scale_factor: None,
-            last_float_zone_theme_revision: None,
-            last_float_zone_tooltip_scale_factor: None,
-            last_float_zone_tooltip_theme_revision: None,
-            last_dock_drag_tooltip_scale_factor: None,
-            last_dock_drag_tooltip_theme_revision: None,
-            last_tab_context_menu_scale_factor: None,
-            last_tab_context_menu_theme_revision: None,
-            last_tab_text_scale_factor: None,
-            last_text_font_stack_key: None,
-            last_theme_revision: None,
-            last_active_tabs: None,
-            hovered_float_zone: false,
+            controller: DockSpaceController::new(diag_env_enabled),
         }
     }
 
@@ -2188,12 +2219,14 @@ impl DockSpace {
             scale_factor,
         };
 
-        for item in &self.tab_context_menu_items {
-            let (blob, metrics) =
-                services
-                    .text()
-                    .prepare_str(item.label, &self.tab_context_menu_style, constraints);
-            self.tab_context_menu_titles.push(PreparedTabTitle {
+        let controller = &mut self.controller;
+        for item in &controller.tab_context_menu_items {
+            let (blob, metrics) = services.text().prepare_str(
+                item.label,
+                &controller.tab_context_menu_style,
+                constraints,
+            );
+            controller.tab_context_menu_titles.push(PreparedTabTitle {
                 blob,
                 metrics,
                 title_hash: hash_title(item.label),
@@ -4846,13 +4879,15 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 return;
                             }
 
-                            if let Some(menu) = self.tab_context_menu.as_mut() {
+                            let tab_context_menu_items_len =
+                                self.controller.tab_context_menu_items.len();
+                            if let Some(menu) = self.controller.tab_context_menu.as_mut() {
                                 let next = if menu.rect.contains(*position) {
                                     let y = position.y.0 - menu.rect.origin.y.0;
                                     let idx = (y / menu.row_h.0).floor() as isize;
                                     if idx >= 0 {
                                         let idx = idx as usize;
-                                        (idx < self.tab_context_menu_items.len()).then_some(idx)
+                                        (idx < tab_context_menu_items_len).then_some(idx)
                                     } else {
                                         None
                                     }

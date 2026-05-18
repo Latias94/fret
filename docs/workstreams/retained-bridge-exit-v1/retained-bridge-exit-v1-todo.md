@@ -113,7 +113,78 @@ Related plan:
       `retained_bridge::ResizablePanelGroupLayout` re-export after repo-wide no-user proof.
     - Verified with formatting, targeted demo check, targeted demo clippy, layering, workstream
       catalog, whitespace, and retained-bridge split-helper no-match gates.
-- [ ] Identify the minimal declarative primitives missing for docking (if any).
+- [x] RBX-M1-030 Identify the minimal declarative primitives missing for docking.
+  - Scope:
+    - `ecosystem/fret-docking/src/dock/space.rs`
+    - `ecosystem/fret-docking/src/dock/mod.rs`
+    - `ecosystem/fret-docking/src/dock/panel_registry.rs`
+    - `ecosystem/fret-docking/src/imui.rs`
+    - `crates/fret-ui/src/element.rs`
+    - `crates/fret-ui/src/widget.rs`
+  - Goal:
+    - Audit whether docking is blocked by missing panel-content declarative authoring or by a
+      missing host/lifecycle primitive, then record the smallest implementation slices.
+  - Evidence:
+    - `docs/workstreams/retained-bridge-exit-v1/RBX_M1_030_DOCKING_DECLARATIVE_PRIMITIVE_GAP_AUDIT_2026-05-18.md`
+  - Result:
+    - Panel content is already declarative-capable through `DockPanelRegistry` and
+      `render_cached_panel_root(...)`.
+    - The blocker is the retained `DockSpace` host surface: controller state, child-root placement,
+      prepaint liveness, raw event arbitration, command/focus routing, and custom chrome/child paint
+      ordering.
+    - Next implementation slice should extract `DockSpaceController` before adding or choosing a
+      declarative managed-surface primitive.
+- [x] RBX-M1-040 Extract `DockSpaceController` while keeping the retained adapter.
+  - Scope:
+    - `ecosystem/fret-docking/src/dock/space.rs`
+    - new private docking controller/state module if needed, e.g.
+      `ecosystem/fret-docking/src/dock/space_controller.rs`
+  - Goal:
+    - Move cross-frame docking host state and practical transition helpers out of the retained
+      `Widget` struct so the retained adapter and future declarative adapter can share the same
+      policy engine.
+  - Validation:
+    - `cargo fmt --check`
+    - `cargo nextest run -p fret-docking`
+    - `python3 tools/check_layering.py`
+  - Evidence:
+    - `docs/workstreams/retained-bridge-exit-v1/RBX_M1_030_DOCKING_DECLARATIVE_PRIMITIVE_GAP_AUDIT_2026-05-18.md#rbx-m1-040-extract-dockspacecontroller`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-18---rbx-m1-040-dockspacecontroller-state-extraction`
+  - Result:
+    - Added `DockSpaceController` as the docking-owned cross-frame host state object.
+    - Kept the retained `DockSpace` widget as the adapter and delegated field access through a
+      transitional `Deref` / `DerefMut` shim.
+    - Preserved current behavior with the full `fret-docking` nextest gate.
+- [ ] RBX-M1-050 Extract docking layout/paint snapshots.
+  - Scope:
+    - `ecosystem/fret-docking/src/dock/space.rs`
+    - `ecosystem/fret-docking/src/dock/layout.rs`
+    - `ecosystem/fret-docking/src/dock/paint.rs`
+    - new private snapshot/frame module if needed.
+  - Goal:
+    - Make layout produce a reusable host frame/snapshot consumed by paint, including active panel
+      bounds, floating layouts, viewport layouts, and drop-hint paint inputs.
+  - Validation:
+    - `cargo nextest run -p fret-docking`
+    - targeted unit tests for split, floating, viewport, and drop-hint snapshot cases
+    - `python3 tools/check_layering.py`
+  - Evidence:
+    - `docs/workstreams/retained-bridge-exit-v1/RBX_M1_030_DOCKING_DECLARATIVE_PRIMITIVE_GAP_AUDIT_2026-05-18.md#rbx-m1-050-extract-layoutpaint-snapshots`
+- [ ] RBX-M1-060 Decide and prove the declarative docking host mechanism.
+  - Scope:
+    - `crates/fret-ui/src/element.rs` / declarative host internals only if existing primitives are
+      insufficient.
+    - `ecosystem/fret-docking/src/` proof-of-life declarative host.
+  - Goal:
+    - Try existing primitives first; add a narrow mechanism-only managed-surface primitive only if
+      docking still cannot express child-root placement, lifecycle liveness, raw event actions, and
+      controlled child painting.
+  - Validation:
+    - `cargo nextest run -p fret-ui -p fret-docking`
+    - `python3 tools/check_layering.py`
+    - a small docking layout/diagnostics proof for declarative panel-root placement
+  - Evidence:
+    - `docs/workstreams/retained-bridge-exit-v1/RBX_M1_030_DOCKING_DECLARATIVE_PRIMITIVE_GAP_AUDIT_2026-05-18.md#rbx-m1-060-decide-the-declarative-host-mechanism`
 - [ ] Replace retained subtree hosting in docking with declarative composition where feasible.
 - [ ] Add/upgrade `fretboard-dev diag` scripts to lock in docking drag + tear-off correctness.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-docking` dependencies.

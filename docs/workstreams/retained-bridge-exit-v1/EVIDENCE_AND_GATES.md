@@ -160,3 +160,101 @@ Broader gates not run:
   - Reason: `RBX-M1-021` is a targeted demo diagnostics migration plus bridge surface deletion; the
     task-local demo compile/clippy gates and retained-bridge no-user proof cover the changed
     behavioral surface.
+
+## 2026-05-18 - RBX-M1-030 docking declarative primitive gap audit
+
+Claim verified:
+
+- Docking panel content already has a declarative rendering path through `DockPanelRegistry` and
+  `render_cached_panel_root(...)`.
+- Docking cannot safely delete `DockSpace` retained hosting yet because the missing piece is a
+  managed host lifecycle: controller state, child-root placement, prepaint liveness, raw event
+  arbitration, command/focus routing, and controlled chrome/child paint ordering.
+- The next implementation slice should extract a docking-owned `DockSpaceController` before choosing
+  or adding a declarative managed-surface primitive.
+
+Evidence:
+
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M1_030_DOCKING_DECLARATIVE_PRIMITIVE_GAP_AUDIT_2026-05-18.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `python3 tools/audit_crate.py --crate fret-docking`
+  - Result: passed; `src/dock/space.rs` is the largest source file at 8057 lines; suggested task
+    gates remain `cargo fmt`, `cargo nextest run -p fret-docking`, and
+    `python3 tools/check_layering.py`.
+  - Scope proven: `fret-docking` remains the right audit target for the retained host migration.
+- `rg -n "retained_bridge|UiTreeRetainedExt|create_node_retained|RetainedSubtree|impl<.*Widget|impl Widget|Widget<" ecosystem/fret-docking/src ecosystem/fret-docking/tests -g '*.rs'`
+  - Result: retained hosting remains in `dock/prelude_ui.rs`, `dock/mod.rs`, `dock/space.rs`,
+    `imui.rs`, and retained-focused docking tests.
+  - Scope proven: the remaining retained usage is host/lifecycle usage, not the already-removed
+    split-helper bridge surface.
+
+Validation:
+
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting remains clean after the documentation-only update.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: retained bridge allowlist and crate layering remain valid after recording the
+    docking migration plan.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed documentation has no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run -p fret-docking`
+  - Reason: `RBX-M1-030` is an audit/documentation slice with no Rust behavior changes. The next
+    implementation slice (`RBX-M1-040`) must run the targeted docking test gate.
+
+## 2026-05-18 - RBX-M1-040 DockSpaceController state extraction
+
+Claim verified:
+
+- `DockSpace` no longer directly owns the bulky cross-frame docking host state fields.
+- `DockSpaceController` now owns the retained host state needed by docking interactions, panel
+  binding, viewport capture, tab chrome, menu state, prepared text/SVG caches, and diagnostics.
+- The retained `DockSpace` widget remains the adapter for event/layout/prepaint/paint/command
+  lifecycles; behavior is intentionally unchanged in this slice.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: the controller extraction type-checks before running the broader docking test
+    gate.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the controller extraction.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 111 tests.
+  - Scope proven: docking split layout, hit-test, drag, drop preview, viewport capture, panel
+    binding, focus, floating-window, runtime, and diagnostics-sensitive tests remain green after
+    moving state behind `DockSpaceController`.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after the task ledger update.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Follow-up:
+
+- `RBX-M1-050` should extract layout/paint snapshots so the retained adapter and future declarative
+  host can consume the same per-frame docking decisions without recomputing layout in paint.
