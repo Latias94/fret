@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("usage.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -63,8 +64,14 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     shadcn::card_content(|cx| {
                         vec![
                             shadcn::SidebarTrigger::new().into_element(cx),
-                            cx.text("Use SidebarProvider to own width defaults and state."),
-                            cx.text("Sidebar keeps theme-token fallbacks for recipe chrome."),
+                            decl_text::text_paragraph(
+                                cx,
+                                "Use SidebarProvider to own width defaults and state.",
+                            ),
+                            decl_text::text_paragraph(
+                                cx,
+                                "Sidebar keeps theme-token fallbacks for recipe chrome.",
+                            ),
                         ]
                     }),
                 ]
@@ -85,7 +92,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     content
         .into_iter()
         .next()
-        .unwrap_or_else(|| cx.text("Missing sidebar usage content."))
+        .unwrap_or_else(|| decl_text::text_paragraph(cx, "Missing sidebar usage content."))
 }
 
 // endregion: example

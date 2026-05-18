@@ -645,6 +645,9 @@ Readiness order for the next locally testable review slices:
    2026-05-17 gallery shell content/nav text follow-up: the page header title/source and sidebar
    group headings now route through shared chrome/readout roles instead of local `TextProps`,
    keeping app-shell text policy centralized while staying outside `fret-imui`.
+   2026-05-18 gallery sidebar snippet chrome text follow-up: the copyable Sidebar examples now
+   route card body prose and missing-content fallbacks through paragraph roles, and debug/status
+   lines through `text_control_readout(...)` instead of bare `cx.text(...)`.
    2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
    headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
    through `control_readout_text(...)`, and custom pointer-region labels through

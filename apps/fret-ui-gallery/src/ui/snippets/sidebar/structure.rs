@@ -5,6 +5,7 @@ use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_icons::IconId;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -250,12 +251,21 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     shadcn::card_content(|cx| {
                         vec![
                             shadcn::SidebarTrigger::new().into_element(cx),
-                            cx.text(format!("search={search_value:?}")),
-                            cx.text(format!("selected={}", selected_value.as_ref())),
-                            cx.text(format!("last_action={}", last_action_value.as_ref())),
-                            cx.text(format!("collapsed={collapsed}")),
-                            cx.text("This example consolidates the upstream Header/Footer/Content/Group/Menu/Action/Sub/Rail docs into one copyable Fret snippet."),
-                            cx.text("It also keeps the official SidebarGroup collapsible-label lane copyable via SidebarGroupLabel::as_child(true) + CollapsibleTriggerPart."),
+                            decl_text::text_control_readout(
+                                cx,
+                                format!("search={search_value:?}"),
+                            ),
+                            decl_text::text_control_readout(
+                                cx,
+                                format!("selected={}", selected_value.as_ref()),
+                            ),
+                            decl_text::text_control_readout(
+                                cx,
+                                format!("last_action={}", last_action_value.as_ref()),
+                            ),
+                            decl_text::text_control_readout(cx, format!("collapsed={collapsed}")),
+                            decl_text::text_paragraph(cx, "This example consolidates the upstream Header/Footer/Content/Group/Menu/Action/Sub/Rail docs into one copyable Fret snippet."),
+                            decl_text::text_paragraph(cx, "It also keeps the official SidebarGroup collapsible-label lane copyable via SidebarGroupLabel::as_child(true) + CollapsibleTriggerPart."),
                         ]
                     }),
                 ]
@@ -276,7 +286,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     content
         .into_iter()
         .next()
-        .unwrap_or_else(|| cx.text("Missing sidebar structure content."))
+        .unwrap_or_else(|| decl_text::text_paragraph(cx, "Missing sidebar structure content."))
 }
 
 // endregion: example

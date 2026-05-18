@@ -6,6 +6,7 @@ use fret_core::{FontWeight, Px};
 use fret_icons::IconId;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
 use fret_ui::element::SpacerProps;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -656,7 +657,7 @@ fn shell_card(
         ui::children![
             cx;
             shadcn::card_header(|cx| ui::children![cx; shadcn::card_title(title)]),
-            shadcn::card_content(|cx| vec![cx.text(body.clone())]),
+            shadcn::card_content(|cx| vec![decl_text::text_paragraph(cx, body.clone())]),
         ]
     })
     .refine_layout(LayoutRefinement::default().flex_1().min_w_0().h_full())
@@ -732,8 +733,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         ),
                         shadcn::card_content(|cx| {
                             vec![
-                                cx.text("This example keeps the upstream AppSidebar information architecture but inlines the helper files into one copyable Fret snippet."),
-                                cx.text(format!("team={} selected={} last_action={}", team.name, selected_value.as_ref(), last_action_value.as_ref())),
+                                decl_text::text_paragraph(cx, "This example keeps the upstream AppSidebar information architecture but inlines the helper files into one copyable Fret snippet."),
+                                decl_text::text_control_readout(cx, format!("team={} selected={} last_action={}", team.name, selected_value.as_ref(), last_action_value.as_ref())),
                             ]
                         }),
                     ]
@@ -769,7 +770,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         content
             .into_iter()
             .next()
-            .unwrap_or_else(|| cx.text("Missing AppSidebar content."))
+            .unwrap_or_else(|| decl_text::text_paragraph(cx, "Missing AppSidebar content."))
     })
 }
 

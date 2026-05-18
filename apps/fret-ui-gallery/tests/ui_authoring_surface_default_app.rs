@@ -4624,6 +4624,144 @@ fn sidebar_app_collapsed_projects_do_not_emit_empty_text() {
 }
 
 #[test]
+fn sidebar_snippet_chrome_text_uses_shared_roles() {
+    let cases: &[(&str, &[&str], &[&str])] = &[
+        (
+            "src/ui/snippets/sidebar/use_sidebar.rs",
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, format!(\"state={state_label}\"))",
+                "decl_text::text_control_readout(cx, format!(\"open={open_now}\"))",
+                "decl_text::text_control_readout(cx, format!(\"open_mobile={open_mobile_now}\"))",
+                "decl_text::text_control_readout(cx, format!(\"width={:.0}px\", sidebar_ctx.width.0))",
+                "decl_text::text_paragraph(cx, \"Missing use_sidebar example content.\")",
+            ],
+            &[
+                "cx.text(format!(\"state={state_label}\"))",
+                "cx.text(format!(\"open={open_now}\"))",
+                "cx.text(format!(\"open_mobile={open_mobile_now}\"))",
+                "cx.text(format!(\"width={:.0}px\", sidebar_ctx.width.0))",
+                "cx.text(\"Missing use_sidebar example content.\")",
+            ],
+        ),
+        (
+            "src/ui/snippets/sidebar/usage.rs",
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph(cx, \"Use SidebarProvider to own width defaults and state.\")",
+                "decl_text::text_paragraph(cx, \"Sidebar keeps theme-token fallbacks for recipe chrome.\")",
+                "decl_text::text_paragraph(cx, \"Missing sidebar usage content.\")",
+            ],
+            &[
+                "cx.text(\"Use SidebarProvider to own width defaults and state.\")",
+                "cx.text(\"Sidebar keeps theme-token fallbacks for recipe chrome.\")",
+                "cx.text(\"Missing sidebar usage content.\")",
+            ],
+        ),
+        (
+            "src/ui/snippets/sidebar/structure.rs",
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, format!(\"search={search_value:?}\"))",
+                "decl_text::text_control_readout(cx, format!(\"selected={}\", selected_value.as_ref()))",
+                "decl_text::text_control_readout(cx, format!(\"last_action={}\", last_action_value.as_ref()))",
+                "decl_text::text_control_readout(cx, format!(\"collapsed={collapsed}\"))",
+                "decl_text::text_paragraph(cx, \"This example consolidates the upstream Header/Footer/Content/Group/Menu/Action/Sub/Rail docs into one copyable Fret snippet.\")",
+                "decl_text::text_paragraph(cx, \"It also keeps the official SidebarGroup collapsible-label lane copyable via SidebarGroupLabel::as_child(true) + CollapsibleTriggerPart.\")",
+                "decl_text::text_paragraph(cx, \"Missing sidebar structure content.\")",
+            ],
+            &[
+                "cx.text(format!(\"search={search_value:?}\"))",
+                "cx.text(format!(\"selected={}\", selected_value.as_ref()))",
+                "cx.text(format!(\"last_action={}\", last_action_value.as_ref()))",
+                "cx.text(format!(\"collapsed={collapsed}\"))",
+                "cx.text(\"This example consolidates the upstream Header/Footer/Content/Group/Menu/Action/Sub/Rail docs into one copyable Fret snippet.\")",
+                "cx.text(\"It also keeps the official SidebarGroup collapsible-label lane copyable via SidebarGroupLabel::as_child(true) + CollapsibleTriggerPart.\")",
+                "cx.text(\"Missing sidebar structure content.\")",
+            ],
+        ),
+        (
+            "src/ui/snippets/sidebar/demo.rs",
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph(cx, \"A sidebar that collapses to icon mode.\")",
+                "decl_text::text_paragraph(cx, \"Select any menu item to verify active and hover states.\")",
+                "decl_text::text_paragraph(cx, \"Missing sidebar demo content.\")",
+            ],
+            &[
+                "cx.text(\"A sidebar that collapses to icon mode.\")",
+                "cx.text(\"Select any menu item to verify active and hover states.\")",
+                "cx.text(\"Missing sidebar demo content.\")",
+            ],
+        ),
+        (
+            "src/ui/snippets/sidebar/controlled.rs",
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph(cx, \"Use a main content panel next to Sidebar when controlled.\")",
+                "decl_text::text_control_readout(cx, format!(\"open={}\", open_now))",
+                "decl_text::text_control_readout(cx, format!(\"selected={}\", selected_value.as_ref()))",
+                "decl_text::text_paragraph(cx, \"Missing sidebar controlled content.\")",
+            ],
+            &[
+                "cx.text(\"Use a main content panel next to Sidebar when controlled.\")",
+                "cx.text(format!(\"open={}\", open_now))",
+                "cx.text(format!(\"selected={}\", selected_value.as_ref()))",
+                "cx.text(\"Missing sidebar controlled content.\")",
+            ],
+        ),
+        (
+            "src/ui/snippets/sidebar/mobile.rs",
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph(cx, \"Open the sidebar via SidebarTrigger. Escape should close and restore focus.\")",
+                "decl_text::text_paragraph(cx, \"Missing sidebar mobile content.\")",
+            ],
+            &[
+                "cx.text(\"Open the sidebar via SidebarTrigger. Escape should close and restore focus.\")",
+                "cx.text(\"Missing sidebar mobile content.\")",
+            ],
+        ),
+        (
+            "src/ui/snippets/sidebar/rtl.rs",
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph(cx, \"This section validates RTL direction + icon alignment.\")",
+                "decl_text::text_control_readout(cx, format!(\"active={}\", selected_value.as_ref()))",
+            ],
+            &[
+                "cx.text(\"This section validates RTL direction + icon alignment.\")",
+                "cx.text(format!(\"active={}\", selected_value.as_ref()))",
+            ],
+        ),
+        (
+            "src/ui/snippets/sidebar/app_sidebar.rs",
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph(cx, body.clone())",
+                "decl_text::text_paragraph(cx, \"This example keeps the upstream AppSidebar information architecture but inlines the helper files into one copyable Fret snippet.\")",
+                "decl_text::text_control_readout(cx, format!(\"team={} selected={} last_action={}\", team.name, selected_value.as_ref(), last_action_value.as_ref()))",
+                "decl_text::text_paragraph(cx, \"Missing AppSidebar content.\")",
+            ],
+            &[
+                "cx.text(body.clone())",
+                "cx.text(\"This example keeps the upstream AppSidebar information architecture but inlines the helper files into one copyable Fret snippet.\")",
+                "cx.text(format!(\"team={} selected={} last_action={}\", team.name, selected_value.as_ref(), last_action_value.as_ref()))",
+                "cx.text(\"Missing AppSidebar content.\")",
+            ],
+        ),
+    ];
+
+    for &(relative_path, required_markers, forbidden_markers) in cases {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            required_markers,
+            forbidden_markers,
+        );
+    }
+}
+
+#[test]
 fn date_picker_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[

@@ -600,6 +600,9 @@ Exit criteria:
   2026-05-17 gallery shell content/nav text result: page header title/source and sidebar group
   headings now use shared chrome/readout roles instead of hand-rolled `TextProps` in the gallery
   app shell.
+  2026-05-18 gallery sidebar snippet chrome text result: copyable Sidebar examples now keep
+  body/fallback prose on shared paragraph roles and status/debug lines on shared control-readout
+  text, so sidebar docs no longer teach bare wrapping `cx.text(...)` in fixed example chrome.
   2026-05-17 gallery editor preview text result: code-editor, Markdown, and Web IME preview
   headers now use paragraph text for prose, control readout text for fixed status/debug values,
   and button label text for custom pointer-region actions. The slice keeps editor-proof resize
