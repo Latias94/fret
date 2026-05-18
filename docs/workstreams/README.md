@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 389
+- Dedicated directories: 390
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2294,6 +2294,7 @@ Rule:
 - `docs/workstreams/webview-wry-v1/` — first 2026-02-11, latest 2026-02-16, 2 markdown docs
 - `docs/workstreams/wgpu-clip-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating clip-related WGPU conformance tests onto the shared readback/render harness)
 - `docs/workstreams/wgpu-conformance-harness-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed WGPU conformance test-support extraction lane for shared readback/render helpers)
+- `docs/workstreams/wgpu-mask-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating mask-related WGPU conformance tests onto the shared readback/render harness)
 - `docs/workstreams/wgpu-materials-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating material-related WGPU conformance tests onto the shared readback/render harness)
 - `docs/workstreams/window-command-availability-snapshot-v2/` — first n/a, latest n/a, 4 markdown docs (active runtime command/action availability publication lane; includes `WORKSTREAM.json`)
 - `docs/workstreams/workstream-catalog-integrity-gate-v1/` — first n/a, latest n/a, 8 markdown docs (closed closeout record for the section-aware gate that keeps workstream directory/file catalog indexes aligned with actual `docs/workstreams` contents and common maintainer gate entrypoints)
