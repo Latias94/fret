@@ -6,7 +6,7 @@ use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui::Theme;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::{icon, style as decl_style};
+use fret_ui_kit::declarative::{icon, style as decl_style, text as decl_text};
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -105,7 +105,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 let content_children = items.into_iter().map(|(text, file)| {
                     if let Some((file_name, icon_name)) = file {
                         ui_ai::TaskItem::new([
-                            cx.text(text),
+                            decl_text::text_list_row_label(cx, text),
                             ui_ai::TaskItemFile::new([
                                 icon::icon_with(
                                     cx,
@@ -113,13 +113,14 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                                     Some(Px(16.0)),
                                     None,
                                 ),
-                                cx.text(file_name),
+                                decl_text::text_code_wrap(cx, file_name),
                             ])
                             .into_element(cx),
                         ])
                         .into_element(cx)
                     } else {
-                        ui_ai::TaskItem::new([cx.text(text)]).into_element(cx)
+                        ui_ai::TaskItem::new([decl_text::text_list_row_label(cx, text)])
+                            .into_element(cx)
                     }
                 });
 
@@ -165,8 +166,9 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("Task (AI Elements)"),
-            cx.text(
+            decl_text::text_section_chrome_label(cx, "Task (AI Elements)"),
+            decl_text::text_paragraph(
+                cx,
                 "Collapsible task list demo aligned with the official AI Elements Task structure.",
             ),
             ui::h_row(move |_cx| vec![react_dev, api_integration])

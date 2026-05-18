@@ -541,6 +541,9 @@ Readiness order for the next locally testable review slices:
    route prose through `text_paragraph(...)`, inline/code payloads through `text_code_wrap(...)`,
    approval/rejection result text through `text_control_readout(...)`, and the demo's fixed outer
    title/body copy through shared section-chrome/paragraph roles.
+   2026-05-18 AI Task content text-role follow-up: Task item labels now route through
+   `text_list_row_label(...)`, attached file names through `text_code_wrap(...)`, and the demo's
+   fixed outer title/body copy through shared section-chrome/paragraph roles.
    2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
    virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
    `control_readout_text(...)`.

@@ -1053,3 +1053,37 @@ fn ai_confirmation_snippets_use_shared_content_text_roles() {
         );
     }
 }
+
+#[test]
+fn ai_task_demo_uses_shared_content_text_roles() {
+    let source = include_str!("../src/ui/snippets/ai/task_demo.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::{icon, style as decl_style, text as decl_text};",
+        "decl_text::text_list_row_label(cx, text)",
+        "decl_text::text_code_wrap(cx, file_name)",
+        "decl_text::text_section_chrome_label(cx, \"Task (AI Elements)\")",
+        "decl_text::text_paragraph",
+        "\"Collapsible task list demo aligned with the official AI Elements Task structure.\"",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "task_demo should route task rows, file labels, and fixed outer text through shared roles; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "cx.text(text)",
+        "cx.text(file_name)",
+        "cx.text(\"Task (AI Elements)\")",
+        "cx.text(\"Collapsible task list demo aligned with the official AI Elements Task structure.\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "task_demo reintroduced bare task content text: `{forbidden}`"
+        );
+    }
+}

@@ -619,6 +619,7 @@
     "apps/fret-ui-gallery/src/ui/snippets/ai/confirmation_accepted.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/confirmation_rejected.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/confirmation_request.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/ai/task_demo.rs",
     "apps/fret-ui-gallery/tests/ai_visible_text_role_surface.rs",
     "ecosystem/fret-ui-ai/src/elements/mod.rs",
     "ecosystem/fret-ui-ai/src/surface_policy_tests.rs",

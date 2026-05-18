@@ -490,6 +490,7 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/snippets/ai/confirmation_accepted.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/confirmation_rejected.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/confirmation_request.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/task_demo.rs",
                 "apps/fret-ui-gallery/tests/ai_visible_text_role_surface.rs",
                 "ecosystem/fret-ui-ai/src/elements/mod.rs",
                 "ecosystem/fret-ui-ai/src/surface_policy_tests.rs",
@@ -1217,6 +1218,22 @@ def main() -> None:
                 "cx.text(\"This tool wants to execute a query on the production database:\")",
                 "cx.text(\"You approved this tool execution\")",
                 "cx.text(\"You rejected this tool execution\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/task_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::{icon, style as decl_style, text as decl_text};",
+                "decl_text::text_list_row_label(cx, text)",
+                "decl_text::text_code_wrap(cx, file_name)",
+                "decl_text::text_section_chrome_label(cx, \"Task (AI Elements)\")",
+                "Collapsible task list demo aligned with the official AI Elements Task structure.",
+            ],
+            forbidden=[
+                "cx.text(text)",
+                "cx.text(file_name)",
+                "cx.text(\"Task (AI Elements)\")",
+                "cx.text(\n                \"Collapsible task list demo aligned with the official AI Elements Task structure.\",\n            )",
             ],
         ),
         SourceCheck(
