@@ -7,8 +7,8 @@ mod menus;
 mod misc;
 
 pub use collections::{
-    TableCellOptions, TableColumn, TableColumnResizeOptions, TableColumnWidth, TableOptions,
-    TableRowOptions, TableSortDirection, VirtualListOptions,
+    TableCellOptions, TableColumn, TableColumnPin, TableColumnResizeOptions, TableColumnWidth,
+    TableOptions, TableRowOptions, TableSortDirection, VirtualListOptions,
 };
 pub use containers::{
     ChildRegionChrome, ChildRegionOptions, ChildRegionResizeXOptions, ChildRegionResizeYOptions,

@@ -1,0 +1,42 @@
+fn compact(source: &str) -> String {
+    source.split_whitespace().collect()
+}
+
+#[test]
+fn markdown_demo_chrome_text_uses_shared_roles() {
+    let source = include_str!("../src/markdown_demo.rs");
+    let source = compact(source);
+
+    for needle in [
+        "usefret_ui_kit::declarative::textasdecl_text;",
+        "fnmarkdown_demo_readout_text<H:fret_ui::UiHost>(",
+        "fnmarkdown_demo_title_text<H:fret_ui::UiHost>(",
+        "fnmarkdown_demo_paragraph_text<H:fret_ui::UiHost>(",
+        "decl_text::text_control_readout(cx,text)",
+        "decl_text::text_section_chrome_label(cx,text)",
+        "decl_text::text_paragraph(cx,text)",
+        "markdown_demo_readout_text(cx,format!(\"wrapcode:{}\",ifwrap_enabled{\"on\"}else{\"off\"}),)",
+        "markdown_demo_readout_text(cx,format!(\"capcodeheight:{}\",ifcap_enabled{\"on\"}else{\"off\"}),)",
+        "markdown_demo_readout_text(cx,format!(\"expandedcodeblocks:{expanded_count}\"))",
+        "markdown_demo_title_text(cx,\"markdown_demo\")",
+        "markdown_demo_paragraph_text(cx,\"Scrollablemarkdownpreview(linksopenviaplatformshell).\",)",
+    ] {
+        assert!(
+            source.contains(needle),
+            "markdown demo should keep fixed chrome/status text on shared roles; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "cx.text(format!(\"wrapcode:{}\",ifwrap_enabled{\"on\"}else{\"off\"}))",
+        "cx.text(format!(\"capcodeheight:{}\",ifcap_enabled{\"on\"}else{\"off\"}))",
+        "cx.text(format!(\"expandedcodeblocks:{expanded_count}\"))",
+        "cx.text(\"markdown_demo\")",
+        "cx.text(\"Scrollablemarkdownpreview(linksopenviaplatformshell).\")",
+    ] {
+        assert!(
+            !source.contains(needle),
+            "markdown demo should not render fixed chrome/status text with bare wrapping text; unexpected `{needle}`"
+        );
+    }
+}

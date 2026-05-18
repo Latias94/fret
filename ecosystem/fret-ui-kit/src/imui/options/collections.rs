@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::{Color, Px};
+use fret_ui::scroll::ScrollHandle;
 
 use super::super::label_identity::parse_label_identity;
 
@@ -22,6 +23,14 @@ pub enum TableSortDirection {
     Descending,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TableColumnPin {
+    #[default]
+    None,
+    Left,
+    Right,
+}
+
 impl TableColumnWidth {
     pub fn px(width: Px) -> Self {
         Self::Px(width)
@@ -34,13 +43,14 @@ impl TableColumnWidth {
 
 #[derive(Debug, Clone)]
 pub struct TableColumn {
-    pub header: Option<Arc<str>>,
-    pub id: Option<Arc<str>>,
-    pub width: TableColumnWidth,
-    pub visible: bool,
-    pub sortable: bool,
-    pub sort_direction: Option<TableSortDirection>,
-    pub resize: Option<TableColumnResizeOptions>,
+    header: Option<Arc<str>>,
+    id: Option<Arc<str>>,
+    width: TableColumnWidth,
+    visible: bool,
+    sortable: bool,
+    sort_direction: Option<TableSortDirection>,
+    resize: Option<TableColumnResizeOptions>,
+    pin: TableColumnPin,
 }
 
 impl TableColumn {
@@ -54,6 +64,7 @@ impl TableColumn {
             sortable: false,
             sort_direction: None,
             resize: None,
+            pin: TableColumnPin::None,
         }
     }
 
@@ -67,6 +78,7 @@ impl TableColumn {
             sortable: false,
             sort_direction: None,
             resize: None,
+            pin: TableColumnPin::None,
         }
     }
 
@@ -80,6 +92,7 @@ impl TableColumn {
             sortable: false,
             sort_direction: None,
             resize: None,
+            pin: TableColumnPin::None,
         }
     }
 
@@ -92,12 +105,37 @@ impl TableColumn {
             sortable: false,
             sort_direction: None,
             resize: None,
+            pin: TableColumnPin::None,
         }
     }
 
     pub fn with_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.id = Some(id.into());
         self
+    }
+
+    pub fn header(&self) -> Option<&str> {
+        self.header.as_deref()
+    }
+
+    pub(crate) fn header_arc(&self) -> Option<Arc<str>> {
+        self.header.clone()
+    }
+
+    pub fn id(&self) -> Option<&str> {
+        self.id.as_deref()
+    }
+
+    pub(crate) fn id_arc(&self) -> Option<Arc<str>> {
+        self.id.clone()
+    }
+
+    pub fn width(&self) -> TableColumnWidth {
+        self.width
+    }
+
+    pub fn visible(&self) -> bool {
+        self.visible
     }
 
     pub fn hidden(mut self) -> Self {
@@ -110,9 +148,21 @@ impl TableColumn {
         self
     }
 
+    pub(crate) fn set_visible_for_policy(&mut self, visible: bool) {
+        self.visible = visible;
+    }
+
+    pub fn is_sortable(&self) -> bool {
+        self.sortable || self.sort_direction.is_some()
+    }
+
     pub fn sortable(mut self) -> Self {
         self.sortable = true;
         self
+    }
+
+    pub fn sort_direction(&self) -> Option<TableSortDirection> {
+        self.sort_direction
     }
 
     pub fn sorted(mut self, direction: TableSortDirection) -> Self {
@@ -134,11 +184,34 @@ impl TableColumn {
         self
     }
 
+    pub fn resize_options(&self) -> Option<TableColumnResizeOptions> {
+        self.resize
+    }
+
     pub fn resizable_with_limits(mut self, min_width: Option<Px>, max_width: Option<Px>) -> Self {
         self.resize = Some(TableColumnResizeOptions {
             min_width,
             max_width,
         });
+        self
+    }
+
+    pub fn pin(&self) -> TableColumnPin {
+        self.pin
+    }
+
+    pub fn pinned_left(mut self) -> Self {
+        self.pin = TableColumnPin::Left;
+        self
+    }
+
+    pub fn pinned_right(mut self) -> Self {
+        self.pin = TableColumnPin::Right;
+        self
+    }
+
+    pub fn with_pin(mut self, pin: TableColumnPin) -> Self {
+        self.pin = pin;
         self
     }
 }
@@ -157,14 +230,29 @@ fn inferred_column_id(header: &str) -> Option<Arc<str>> {
     (!identity.is_empty()).then(|| Arc::from(identity))
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct TableOptions {
     pub show_header: bool,
     pub striped: bool,
     pub clip_cells: bool,
     pub column_gap: crate::MetricRef,
     pub row_gap: crate::MetricRef,
+    pub horizontal_scroll: Option<ScrollHandle>,
     pub test_id: Option<Arc<str>>,
+}
+
+impl std::fmt::Debug for TableOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TableOptions")
+            .field("show_header", &self.show_header)
+            .field("striped", &self.striped)
+            .field("clip_cells", &self.clip_cells)
+            .field("column_gap", &self.column_gap)
+            .field("row_gap", &self.row_gap)
+            .field("horizontal_scroll", &self.horizontal_scroll.is_some())
+            .field("test_id", &self.test_id)
+            .finish()
+    }
 }
 
 impl Default for TableOptions {
@@ -175,6 +263,7 @@ impl Default for TableOptions {
             clip_cells: true,
             column_gap: crate::MetricRef::space(crate::Space::N0),
             row_gap: crate::MetricRef::space(crate::Space::N0),
+            horizontal_scroll: None,
             test_id: None,
         }
     }

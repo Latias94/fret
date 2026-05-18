@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-05-17
+Last updated: 2026-05-18
 
 ## Evidence Anchors
 
@@ -123,11 +123,13 @@ Last updated: 2026-05-17
   - `apps/fret-examples/src/container_queries_docking_demo.rs`
   - `apps/fret-examples/src/form_demo.rs`
   - `apps/fret-examples/src/sonner_demo.rs`
+  - `apps/fret-examples/src/echarts_demo.rs`
   - `apps/fret-examples/tests/docking_demo_surface.rs`
   - `apps/fret-examples/tests/docking_arbitration_surface.rs`
   - `apps/fret-examples/tests/container_queries_docking_surface.rs`
   - `apps/fret-examples/tests/form_demo_surface.rs`
   - `apps/fret-examples/tests/sonner_demo_surface.rs`
+  - `apps/fret-examples/tests/echarts_demo_surface.rs`
   - `apps/fret-ui-gallery/src/driver/toaster.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs`
   - `apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/mvp/gates.rs`
@@ -229,9 +231,9 @@ Run evidence:
   table_helper_skips_hidden_columns_in_header_and_body --no-fail-fast`.
 - 2026-05-17: added runtime table-column visibility state through
   `ImUiTableColumnVisibilityState`. The helper stays in `fret-ui-kit::imui`, keeps storage opaque,
-  applies stable-id overrides to `TableColumn` lists before render, and intentionally does not add
-  persistence, header-menu policy, freeze panes, or a Dear ImGui-style mutable table runtime.
-  Gates: `cargo nextest run -p fret-ui-kit --features imui --lib
+  applies stable-id overrides to `TableColumn` lists before render, and intentionally leaves
+  persistence, freeze panes, and durable column storage outside the model helper. Gates: `cargo
+  nextest run -p fret-ui-kit --features imui --lib
   visibility_state_applies_runtime_overrides_by_stable_column_id
   visibility_state_leaves_unlisted_and_unidentified_columns_at_declared_visibility
   visibility_state_toggle_uses_current_override_or_default_visibility --no-fail-fast`, `cargo
@@ -242,11 +244,101 @@ Run evidence:
   tools/gate_imui_workstream_source.py`.
 - 2026-05-17: added a table column visibility menu-item bridge through
   `table_column_visibility_menu_item(...)`. The helper stays in `fret-ui-kit::imui`, reuses the
-  existing checkbox menu-item behavior, updates `ImUiTableColumnVisibilityState`, and intentionally
-  does not add automatic header context-menu popup wiring or persistence. Gates: `cargo nextest run
-  -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`, `cargo nextest run -p
-  fret-imui table_column_visibility_menu_item_updates_visibility_state --no-fail-fast`, and
+  existing checkbox menu-item behavior, updates `ImUiTableColumnVisibilityState`, and remains
+  usable for custom popup/menu surfaces even after the default header context-menu helper below.
+  Gates: `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`,
+  `cargo nextest run -p fret-imui table_column_visibility_menu_item_updates_visibility_state
+  --no-fail-fast`, and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-17: added a table column visibility menu-items group helper through
+  `table_column_visibility_menu_items(...)`. The helper filters to stable-id, human-labeled
+  columns, clones caller-owned item options, returns opaque/accessor-first per-column responses,
+  and feeds both custom popup surfaces and the default header context-menu helper below. Gates:
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`,
+  `cargo nextest run -p fret-imui
+  table_column_visibility_menu_items_update_shared_visibility_state_and_filter_columns
+  --no-fail-fast`, and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-17: added table header context-menu request reporting for sortable and plain headers
+  through a shared private header trigger surface in `fret-ui-kit::imui`. Sortable headers still
+  own button-like primary activation/click lifecycle, while plain headers only expose context-menu
+  request signals. `TableHeaderResponse::response()` now reports right-click context-menu requests
+  with a pointer anchor, plus keyboard requests from the ContextMenu key and Shift+F10; the helper
+  below consumes this response signal for the default visibility menu surface. Gates: `cargo
+  nextest run -p fret-imui table_plain_header_left_click_does_not_activate_or_click
+  table_plain_header_reports_context_menu_request_from_keyboard_without_clicking
+  table_column_visibility_header_context_menu_opens_from_plain_header
+  table_sortable_header_reports_context_menu_request --no-fail-fast`, `cargo nextest run -p
+  fret-imui interaction_press interaction_menu_tabs --no-fail-fast`, and `cargo nextest run -p
+  fret-ui-kit --features imui --test imui_response_contract_smoke --test imui_table_smoke
+  --no-fail-fast`.
+- 2026-05-17: added automatic table header visibility-menu wiring through
+  `table_column_visibility_header_context_menu(...)`. The helper stays in `fret-ui-kit::imui`,
+  scans `TableResponse` header responses from both sortable and plain headers for context-menu
+  requests, opens a popup menu with the existing popup policy, renders
+  `table_column_visibility_menu_items(...)`, and returns an opaque/accessor-first response.
+  `TableColumnVisibilityHeaderContextMenuOptions` exposes popup and menu-item policy instead of
+  hard-coding placement/sizing. Callers still own when to apply `ImUiTableColumnVisibilityState` to
+  their columns; persistence, freeze panes, and old columns API shape were still separate
+  follow-ons at this point.
+  Gates: `cargo nextest run -p fret-imui
+  table_column_visibility_header_context_menu_opens_from_plain_header
+  table_column_visibility_header_context_menu_opens_and_updates_state
+  table_column_visibility_menu_items_update_shared_visibility_state_and_filter_columns
+  table_sortable_header_reports_context_menu_request --no-fail-fast`, `cargo nextest run -p
+  fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`, and `python
+  tools/gate_imui_workstream_source.py`.
+- 2026-05-17: added the narrow persistence seam for runtime table-column visibility through
+  `TableColumnVisibilitySnapshot` and `TableColumnVisibilityEntry`. The public data shape
+  serializes stable column ids as `id` and visible flags as `visible`, while
+  `ImUiTableColumnVisibilityState::snapshot()`, `from_snapshot(...)`, and
+  `replace_from_snapshot(...)` keep runtime storage opaque and caller-owned. Restore ignores empty
+  ids and duplicate entries use last-entry-wins. This does not add file storage, schema registry,
+  freeze panes, or a mutable table runtime to `fret-imui`. Gates: `cargo nextest run -p
+  fret-ui-kit --features imui --lib visibility_state_snapshot_roundtrips_stable_column_ids
+  visibility_state_snapshot_restore_ignores_empty_ids_and_last_entry_wins --no-fail-fast`,
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke
+  table_column_visibility_snapshot_api_compiles_and_roundtrips
+  table_column_visibility_snapshot_entries_are_public_data_shape --no-fail-fast`, and `python
+  tools/gate_imui_workstream_source.py`.
+- 2026-05-17: added IMUI table column pinning as the first narrow freeze-pane seam. `TableColumn`
+  now exposes `TableColumn::pinned_left()`, `TableColumn::pinned_right()`, and `with_pin(...)`;
+  `TableOptions` accepts an optional `horizontal_scroll` handle. The helper render path partitions visible header/body cells
+  into left/center/right groups and keeps frozen left/right cells outside the shared center X-scroll
+  region. This uses `fret-ui` scroll mechanics and does not add table-state storage to `fret-imui`.
+  Gates: `cargo nextest run -p fret-ui-kit --features imui --lib
+  horizontal_scroll_option_wraps_unpinned_header_and_body_center_groups --no-fail-fast`,
+  `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke
+  table_column_pinning_helpers_compile --no-fail-fast`, `cargo nextest run -p fret-imui
+  table_helper_pins_left_and_right_columns_while_center_columns_scroll --no-fail-fast`, and
   `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: added the first accessor-first cleanup for `TableColumn`. New read accessors cover
+  `header()`, `id()`, `width()`, `visible()`, `is_sortable()`, `sort_direction()`,
+  `resize_options()`, and `pin()`. `ImUiTableColumnVisibilityState::apply_to_columns(...)` now uses
+  a crate-local visibility mutator, while table rendering, visibility menu policy, `fret-imui`
+  composition tests, and public smoke tests use read accessors instead of direct field reads. This
+  prepared the private-field hardening follow-up below. Gates: `cargo nextest run -p fret-ui-kit --features imui --test
+  imui_table_smoke table_column_helpers_compile table_column_visibility_helpers_compile
+  table_resizable_column_api_compiles table_sortable_header_api_compiles --no-fail-fast`, `cargo
+  nextest run -p fret-ui-kit --features imui --lib
+  visibility_state_applies_runtime_overrides_by_stable_column_id
+  visibility_state_leaves_unlisted_and_unidentified_columns_at_declared_visibility
+  horizontal_scroll_option_wraps_unpinned_header_and_body_center_groups --no-fail-fast`, `cargo
+  nextest run -p fret-imui table_helper_pins_left_and_right_columns_while_center_columns_scroll
+  table_column_visibility_menu_item_updates_visibility_state --no-fail-fast`, and `python
+  tools/gate_imui_workstream_source.py`.
+- 2026-05-18: completed the `TableColumn` private-field hardening follow-up. The struct is now
+  builder/accessor-first instead of a public option-data bag; fields are private, render and
+  visibility-policy internals keep crate-local `header_arc(...)`, `id_arc(...)`, and
+  `set_visible_for_policy(...)` seams, and `tools/gate_imui_workstream_source.py` rejects the old
+  public field shape from returning. Gates: `cargo nextest run -p fret-ui-kit --features imui
+  --test imui_table_smoke table_column_helpers_compile table_column_visibility_helpers_compile
+  table_resizable_column_api_compiles table_sortable_header_api_compiles --no-fail-fast`, `cargo
+  nextest run -p fret-ui-kit --features imui --lib
+  visibility_state_applies_runtime_overrides_by_stable_column_id
+  visibility_state_leaves_unlisted_and_unidentified_columns_at_declared_visibility
+  horizontal_scroll_option_wraps_unpinned_header_and_body_center_groups --no-fail-fast`, `cargo
+  nextest run -p fret-imui table_helper_pins_left_and_right_columns_while_center_columns_scroll
+  table_column_visibility_menu_item_updates_visibility_state --no-fail-fast`, and `python
+  tools/gate_imui_workstream_source.py`.
 - 2026-05-16: introduced `text_control_readout(...)` as the shared compact control-readout text
   role. The UI Gallery code-editor toolbar keeps its doc-layout helper, but that helper now
   delegates to `fret-ui-kit::declarative::text::text_control_readout(...)`, so dense status/readout
@@ -284,6 +376,11 @@ Run evidence:
   compact_paragraph_text_uses_wrapping_fill_width_layout
   bullet_text_uses_shared_compact_paragraph_role imui_text_wrapped_is_explicit_wrapping_text
   --no-fail-fast`.
+- 2026-05-18: routed IMUI `tooltip_text(...)` / `tooltip_text_with_options(...)` body copy through
+  a private `tooltip_body_text(...)` helper backed by `text_compact_paragraph(...)`. This keeps the
+  convenience tooltip path on dense wrapping body/help text, while rich-content `tooltip(...)`
+  closures remain caller-owned. Gate: `cargo nextest run -p fret-ui-kit --features imui --lib
+  tooltip_body_text_uses_compact_paragraph_role --no-fail-fast`.
 - 2026-05-16: routed IMUI tab triggers and menubar triggers through the shared
   `text_button_label(...)` role. This keeps button-like trigger labels single-line and truncating
   while leaving menu item/selectable row labels out of the button-label role. Gate: `cargo nextest
@@ -352,11 +449,16 @@ Run evidence:
   fret-ui-kit --features imui --lib control_label_text_uses_fill_width_single_line_truncation
   imui_fill_text_is_single_line_and_shrinkable imui_control_text_uses_shared_button_label_role
   --no-fail-fast`.
-- 2026-05-16: hardened `tools/gate_imui_workstream_source.py` with an explicit allowlist for the
-  remaining direct `TextProps::new(...)` constructors under `fret-ui-kit::imui`: facade
-  `text(...)` only. New direct constructors now fail the
-  source gate unless they are routed through the shared text roles or intentionally added to the
-  allowlist. Gate: `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: hardened `tools/gate_imui_workstream_source.py` so direct `TextProps`
+  construction under `fret-ui-kit::imui` fails the source gate unless it is moved into shared text
+  roles with explicit evidence. The check now covers both `TextProps::new(...)` and
+  `TextProps { ... }` struct literals, matching the editor allowlist scanner and closing the
+  remaining source-gate bypass for local IMUI text policy.
+- 2026-05-17: removed the last IMUI direct text constructor exception by routing
+  `UiWriterImUiFacadeExt::text(...)` through the shared `text_section_chrome_label(...)` role.
+  Gates: `cargo nextest run -p fret-ui-kit --features imui --lib
+  imui_text_item_is_single_line_and_shrinkable imui_text_wrapped_is_explicit_wrapping_text
+  --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: introduced `editor_input_value_text(...)` in `fret-ui-editor` input-group primitives
   and routed drag-value plus axis-drag-value scrub readouts through it. The helper keeps editor
   numeric value text fill-width, `min-width: 0`, shrinkable, single-line, and ellipsis-truncated
@@ -645,6 +747,11 @@ Run evidence:
   prose, and routed first-party editor/workspace proof prose through it. Gates: `cargo nextest run
   -p fret-ui-kit --features imui --lib imui_text_item_is_single_line_and_shrinkable
   imui_text_wrapped_is_explicit_wrapping_text --no-fail-fast` and `cargo check -p fret-examples`.
+- 2026-05-17: `UiWriterImUiFacadeExt::text(...)` now delegates to
+  `text_section_chrome_label(...)`, removing the former local `TextProps` construction while
+  keeping the same single-line resize contract. Gate: `cargo nextest run -p fret-ui-kit
+  --features imui --lib imui_text_item_is_single_line_and_shrinkable
+  imui_text_wrapped_is_explicit_wrapping_text --no-fail-fast`.
 - 2026-05-16: tightened `control_chrome::fill_text(...)`, the shared path for boolean labels,
   combo preview/captions, and slider captions, to fill, shrink, `min-width: 0`, and truncate instead
   of word-wrapping inside compact control chrome. Gates: `cargo nextest run -p fret-ui-kit
@@ -1285,6 +1392,62 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
 - `git diff --check` passed.
 
+2026-05-18 IMUI virtual-list fixed-row clip slice:
+
+- `cargo fmt --package fret-imui --package fret-ui-kit` passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib fixed_virtual_list_rows_clip_content_to_row_height known_virtual_list_rows_clip_content_to_known_row_height measured_virtual_list_rows_keep_content_overflow_visible_for_measurement --no-fail-fast` passed.
+- `cargo nextest run -p fret-imui virtual_list_fixed_rows_clip_oversized_row_content --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 retained tree fixed-row clip slice:
+
+- `cargo fmt --package fret-ui-kit` passed.
+- `cargo fmt --check --package fret-ui-kit` passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib retained_tree_fixed_rows_clip_to_row_height retained_tree_known_rows_clip_to_row_height retained_tree_measured_rows_keep_overflow_visible_for_measurement retained_tree_fixed_rows_mount_as_clip_boundaries retained_tree_measured_rows_do_not_force_row_clip --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\check_workstream_catalog.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 retained file-tree fixed-row clip slice:
+
+- `cargo fmt --package fret-ui-kit` passed.
+- `cargo fmt --check --package fret-ui-kit` passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib file_tree_retained_row_layout_clips_to_row_height file_tree_retained_rows_mount_as_clip_boundaries --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\check_workstream_catalog.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 retained table fixed-row clip slice:
+
+- `cargo fmt --package fret-ui-kit` passed.
+- `cargo fmt --check --package fret-ui-kit` passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_fixed_body_row_layout_clips_to_row_height table_measured_body_row_layout_keeps_overflow_visible_for_measurement table_virtualized_retained_fixed_rows_mount_as_clip_boundaries table_virtualized_retained_measured_rows_do_not_force_row_clip --no-fail-fast` passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_virtualized_retained_nested_pressable_remains_hittable_when_pointer_row_selection_disabled table_virtualized_retained_pointer_row_selection_policy_list_like table_virtualized_retained_colpin_alignment_gate_measured_rows_do_not_shrink_width table_virtualized_retained_colpin_alignment_gate_across_pin_resize_and_overflow --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\check_workstream_catalog.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 fixed-row clip milestone traceability slice:
+
+- `MILESTONES.md` now records the IMUI virtual-list, retained tree, retained file-tree, and
+  retained/eager table fixed-row clip results.
+- `tools/gate_imui_workstream_source.py` now checks those milestone anchors so the row-owner clip
+  contract does not disappear from the lane summary.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\check_workstream_catalog.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
 2026-05-17 canvas datagrid stress proof text-role slice:
 
 - `cargo fmt -p fret-examples` passed.
@@ -1315,6 +1478,40 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
 - `git diff --check` passed.
 
+2026-05-17 markdown proof chrome text-role slice:
+
+- `cargo fmt -p fret-examples` passed.
+- `cargo check -p fret-examples` passed.
+- `cargo nextest run -p fret-examples --test markdown_demo_surface markdown_demo_chrome_text_uses_shared_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 fret-examples residual bare text capability slice:
+
+- `cargo fmt -p fret-examples` passed.
+- `cargo nextest run -p fret-examples --test text_role_residual_surface remaining_bare_text_in_fret_examples_is_explicit_capability_surface --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 fret-examples residual direct TextProps capability slice:
+
+- `assets_demo` image/SVG stats and `image_heavy_memory_demo` image-memory stats now route through
+  `text_control_readout(...)` instead of local direct `TextProps` construction.
+- `text_role_residual_surface` now counts direct `TextProps { ... }` struct literals as well as
+  `cx.text(...)` and `TextProps::new(...)`, limiting remaining direct text construction to explicit
+  text/IME/rendering capability proofs.
+- `cargo fmt -p fret-examples` passed.
+- `cargo check -p fret-examples` passed.
+- `cargo nextest run -p fret-examples --test text_role_residual_surface remaining_bare_text_in_fret_examples_is_explicit_capability_surface --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
 2026-05-17 form proof header text-role slice:
 
 - `cargo fmt -p fret-examples` passed.
@@ -1330,6 +1527,16 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `cargo fmt -p fret-examples` passed.
 - `cargo check -p fret-examples` passed.
 - `cargo nextest run -p fret-examples --test sonner_demo_surface sonner_demo_header_text_uses_fixed_chrome_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-17 echarts proof title text-role slice:
+
+- `cargo fmt -p fret-examples` passed.
+- `cargo check -p fret-examples` passed.
+- `cargo nextest run -p fret-examples --test echarts_demo_surface echarts_demo_chart_titles_use_section_chrome_role --no-fail-fast` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
@@ -1428,6 +1635,24 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 
 - `cargo fmt -p fret-ui-gallery` passed.
 - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews code_editor_mvp_internal_helpers_prefer_ui_child_over_anyelement --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 code-view editor preview prose slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews editor_code_view_header_uses_paragraph_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 text editor/conformance header prose slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews editor_text_conformance_headers_use_text_roles --no-fail-fast` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
@@ -1583,6 +1808,15 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 
 - `cargo fmt -p fret-ui-gallery` passed.
 - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews page_chrome_torture_uses_control_label_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 tooltip body text role slice:
+
+- `cargo fmt -p fret-ui-kit` passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib tooltip_body_text_uses_compact_paragraph_role --no-fail-fast` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.

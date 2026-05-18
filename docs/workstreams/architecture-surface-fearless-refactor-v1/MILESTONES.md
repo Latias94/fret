@@ -1,0 +1,157 @@
+# Architecture Surface Fearless Refactor v1 — Milestones
+
+Status: Closed
+Last updated: 2026-05-17
+
+## M0 — Scope And Evidence Freeze
+
+Exit criteria:
+
+- The architecture findings are recorded.
+- The target state says explicitly that old compatibility paths may be deleted.
+- The first proof target and gate set are listed.
+
+Primary evidence:
+
+- `docs/workstreams/architecture-surface-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/architecture-surface-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/architecture-surface-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
+
+## M1 — Minimal App Authoring Profile
+
+Exit criteria:
+
+- `fret --no-default-features` and `fret --no-default-features --features app` have honest,
+  documented dependency behavior.
+- Backend crates and renderer crates are absent from backend-free profiles or intentionally required
+  by a documented feature.
+- The consumption profile gate prevents regression.
+
+Primary gates:
+
+- `cargo tree -p fret --no-default-features -e normal --depth 4`
+- `cargo tree -p fret --no-default-features --features app -e normal --depth 4`
+- `cargo check -p fret --no-default-features`
+- `cargo check -p fret --no-default-features --features app`
+- `cargo check -p fret --no-default-features --features app --test backend_free_app_authoring_profile`
+- `python tools/check_consumption_profiles.py`
+
+## M2 — Bootstrap Plan vs Launch Adapter
+
+Exit criteria:
+
+- `fret-bootstrap --no-default-features` can be used without implicit launch/render dependencies, or
+  the crate is renamed/repositioned so the dependency behavior is explicit.
+- Concrete runner/render adapters are feature-gated or moved to the owning launch layer.
+- First-party templates and demos use the target path.
+
+Status:
+
+- Complete through ASF-031 on 2026-05-17. `fret-bootstrap --no-default-features` owns backend-free
+  planning/default vocabulary, `fret` consumes those planning types in its backend-free `app`
+  authoring profile without pulling launch/render/backend crates, and first-party generated asset
+  templates apply startup plans through the desktop builder mount path.
+
+Primary gates:
+
+- `cargo tree -p fret-bootstrap --no-default-features -e normal --depth 4`
+- targeted `cargo check` / `cargo nextest` for changed packages.
+
+## M3 — Public Facade Narrowing
+
+Exit criteria:
+
+- `fret::app::prelude::*` has a small approved budget.
+- Advanced interop, raw model escape hatches, and lower-level component authoring helpers require
+  explicit imports.
+- Public surface tests lock the distinction.
+
+Status:
+
+- Complete through ASF-041 on 2026-05-17. The app prelude has a closed Golden Path budget, and the
+  LocalState owner family has been split into a private `view/local_state.rs` module while retaining
+  the existing `crate::view` public re-export surface.
+
+Primary gates:
+
+- `cargo nextest run -p fret`
+- targeted tests under `ecosystem/fret/tests` or source-level public-surface gates.
+
+## M4 — Ecosystem Taxonomy Closure
+
+Exit criteria:
+
+- One representative primitive family proves the headless/primitives/kit/recipe split.
+- Compatibility re-exports are deleted or explicitly quarantined.
+- ADR 0154 alignment is refreshed with code and test anchors.
+
+Primary gates:
+
+- `python tools/check_layering.py`
+- targeted package tests for the representative primitive family.
+
+Status:
+
+- Complete for the first representative family on 2026-05-17. Checkbox/switch optional-bool
+  transitions now live in `fret-ui-headless::boolean_control`; `fret-ui-kit::primitives` retains
+  only runtime/a11y/model facades for that family; shadcn, Material3, editor, gallery, and `fret`
+  facade callers import the headless owner directly for pure state.
+- Complete through ASF-051 on 2026-05-17. `fret-ui-shadcn::carousel` now consumes the headless
+  carousel/Embla/snap-point engines directly from `fret-ui-headless`, proving a recipe surface does
+  not need broad kit shims for pure behavior.
+
+## M5 — Shared Menu/Select Policy
+
+Exit criteria:
+
+- At least one repeated menu/select behavior is owned by a shared module and consumed by multiple
+  recipe surfaces, or the extraction is rejected with evidence.
+- Recipe files keep taxonomy/style ownership rather than duplicating shared behavior policy.
+
+Primary gates:
+
+- targeted `cargo nextest run -p fret-ui-shadcn <menu-or-select-filter>`
+- targeted unit tests in the owner module.
+
+Status:
+
+- Complete through ASF-060 on 2026-05-17. Input-modality-gated entry-focus target selection now
+  lives in `fret-ui-headless::entry_focus`; menu and select primitives adapt runtime modality into
+  that owner, and shadcn select consumes the shared select adapter.
+- ASF-061 split remaining shadcn menu/select policy cleanup into
+  `docs/workstreams/shadcn-menu-select-policy-followon-v1/`; this lane keeps only the architecture
+  proof.
+
+## M6 — Renderer Facade Decision
+
+Exit criteria:
+
+- `fret-render` is either collapsed as a shallow facade or deepened as the renderer interface.
+- The decision is reflected in docs, Cargo features, and at least one compile/test gate.
+
+Status:
+
+- Complete through ASF-070 on 2026-05-17. `fret-render` remains the curated default renderer
+  facade rather than collapsing into `fret-render-wgpu`. The closed renderer-modularity lane already
+  locked the v1 facade buckets, host-provided GPU topology, and backend-specific diagnostics escape
+  hatch; future renderer semantic/capability goals should open a renderer-specific follow-on.
+
+Primary gates:
+
+- targeted `cargo check` for the chosen renderer profile.
+- renderer-specific tests if code moves.
+
+## M7 — Closeout
+
+Exit criteria:
+
+- Final gates are recorded in `EVIDENCE_AND_GATES.md`.
+- Remaining tasks are completed, explicitly deferred, or split into narrower workstreams.
+- `WORKSTREAM.json` status reflects the lane state.
+
+Status:
+
+- Complete through ASF-080 on 2026-05-17. The lane is closed with all architecture-surface tasks
+  complete. Remaining shadcn menu/select policy cleanup is owned by
+  `docs/workstreams/shadcn-menu-select-policy-followon-v1/`; renderer semantic/capability goals
+  should open a renderer-specific follow-on.

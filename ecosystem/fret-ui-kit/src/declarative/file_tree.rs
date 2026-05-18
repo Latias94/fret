@@ -4,7 +4,7 @@ use std::sync::Arc;
 use fret_core::{Color, Edges, Px, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, LayoutStyle, Length, PressableA11y, PressableProps, SemanticsDecoration,
+    AnyElement, LayoutStyle, Length, Overflow, PressableA11y, PressableProps, SemanticsDecoration,
 };
 use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -157,6 +157,14 @@ fn file_tree_missing_virtual_row_placeholder<H: UiHost>(
     cx.spacer(fret_ui::element::SpacerProps::default())
 }
 
+fn file_tree_retained_row_layout(row_h: Px) -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+    layout.size.height = Length::Px(row_h);
+    layout.overflow = Overflow::Clip;
+    layout
+}
+
 #[track_caller]
 pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
@@ -253,6 +261,7 @@ pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
 
         cx.pressable(
             PressableProps {
+                layout: file_tree_retained_row_layout(row_h),
                 enabled,
                 a11y: file_tree_item_a11y(&entry, is_selected, is_expanded, debug_test_id),
                 ..Default::default()
@@ -297,7 +306,7 @@ pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
                             .h_px(MetricRef::Px(row_h)),
                     )
                 };
-                row_props.layout.overflow = fret_ui::element::Overflow::Clip;
+                row_props.layout.overflow = Overflow::Clip;
                 row_props.padding = Edges {
                     top: row_py,
                     right: row_px,
@@ -358,8 +367,13 @@ pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
 mod tests {
     use super::*;
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Rect, TextOverflow, TextWrap};
+    use fret_core::{
+        AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
+        Point, Rect, SvgId, SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics,
+        TextOverflow, TextService, TextWrap,
+    };
     use fret_ui::element::ElementKind;
+    use fret_ui::{ThemeConfig, UiTree};
 
     fn test_bounds() -> Rect {
         Rect::new(
@@ -377,6 +391,119 @@ mod tests {
             has_children,
             disabled: false,
         }
+    }
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: fret_core::Size::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
+    fn render_file_tree(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut FakeServices,
+        window: AppWindowId,
+        bounds: Rect,
+    ) {
+        let items = app.models_mut().insert(vec![TreeItem::new(
+            7,
+            "Long file tree row that must not paint outside a fixed row",
+        )]);
+        let state = app.models_mut().insert(TreeState::default());
+        let scroll = VirtualListScrollHandle::new();
+
+        for _ in 0..3 {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "file-tree-row-clip-test",
+                |cx| {
+                    vec![file_tree_view_retained_v0(
+                        cx,
+                        items.clone(),
+                        state.clone(),
+                        &scroll,
+                        FileTreeViewProps {
+                            row_height: Px(26.0),
+                            debug_row_test_id_prefix: Some(Arc::from("file-tree-row")),
+                            ..FileTreeViewProps::default()
+                        },
+                    )]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(app, services, bounds, &mut scene, 1.0);
+            let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
+        }
+    }
+
+    fn semantics_node_id_by_test_id(ui: &UiTree<App>, test_id: &str) -> fret_core::NodeId {
+        ui.semantics_snapshot()
+            .expect("semantics snapshot")
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some(test_id))
+            .map(|node| node.id)
+            .unwrap_or_else(|| panic!("expected semantics node with test_id {test_id:?}"))
     }
 
     #[test]
@@ -448,5 +575,53 @@ mod tests {
             panic!("missing file tree virtual row placeholder should be a spacer");
         };
         assert_eq!(props.min, Px(0.0));
+    }
+
+    #[test]
+    fn file_tree_retained_row_layout_clips_to_row_height() {
+        let layout = file_tree_retained_row_layout(Px(26.0));
+
+        assert_eq!(layout.size.width, Length::Fill);
+        assert_eq!(layout.size.height, Length::Px(Px(26.0)));
+        assert_eq!(layout.overflow, Overflow::Clip);
+    }
+
+    #[test]
+    fn file_tree_retained_rows_mount_as_clip_boundaries() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(240.0), Px(96.0)),
+        );
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        render_file_tree(&mut ui, &mut app, &mut services, window, bounds);
+
+        let row_node = semantics_node_id_by_test_id(&ui, "file-tree-row-7");
+        let row_bounds = ui.debug_node_bounds(row_node).expect("row bounds");
+
+        assert_eq!(
+            ui.debug_declarative_instance_kind(&mut app, window, row_node),
+            Some("Pressable")
+        );
+        assert!(
+            row_bounds.size.height.0 <= 26.5,
+            "retained file-tree row should keep configured row height, got {row_bounds:?}"
+        );
+        assert_eq!(
+            ui.debug_node_clips_hit_test(row_node),
+            Some(true),
+            "retained file-tree row should clip oversized/wrapping row content"
+        );
     }
 }

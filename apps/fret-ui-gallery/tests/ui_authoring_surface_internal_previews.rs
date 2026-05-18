@@ -288,6 +288,120 @@ fn wrap_preview_page_callers_land_the_typed_preview_shell_explicitly() {
 }
 
 #[test]
+fn editor_code_view_header_uses_paragraph_roles() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/pages/editors/code_view.rs",
+        &[
+            "doc_layout::paragraph_text(cx,\"Goal:stresslargescrollablecode/textsurfaces(candidateforprepaint-windowedlines).\")",
+            "doc_layout::paragraph_text(cx,\"Usescriptedwheelsteps+stale-paintcheckstovalidatescrollstability.\")",
+        ],
+    );
+
+    for forbidden in [
+        "cx.text(\"Goal:stresslargescrollablecode/textsurfaces(candidateforprepaint-windowedlines).\")",
+        "cx.text(\"Usescriptedwheelsteps+stale-paintcheckstovalidatescrollstability.\")",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "code_view reintroduced bare explanatory header text: {forbidden}"
+        );
+    }
+}
+
+#[test]
+fn editor_text_conformance_headers_use_text_roles() {
+    for (relative_path, required, forbidden) in [
+        (
+            "src/ui/previews/pages/editors/text/feature_toggles.rs",
+            vec![
+                "doc_layout::paragraph_text(cx,\"Goal:validateOpenTypefeatureoverrides(`TextShapingStyle.features`)end-to-end.\")",
+                "doc_layout::paragraph_text(cx,\"Thisisbest-effort:visibledifferencesdependonthechosenfont.Intertypicallyshows`liga`(fi/fl/ffi/ffl).\")",
+                "doc_layout::paragraph_text(cx,\"Tip:setFRET_TEXT_SYSTEM_FONTS=0tovalidatethedeterministicno-system-fontspathonnative.\")",
+            ],
+            vec![
+                "cx.text(\"Goal:validateOpenTypefeatureoverrides(`TextShapingStyle.features`)end-to-end.\")",
+                "cx.text(\"Thisisbest-effort:visibledifferencesdependonthechosenfont.Intertypicallyshows`liga`(fi/fl/ffi/ffl).\")",
+                "cx.text(\"Tip:setFRET_TEXT_SYSTEM_FONTS=0tovalidatethedeterministicno-system-fontspathonnative.\")",
+            ],
+        ),
+        (
+            "src/ui/previews/pages/editors/text/measure_overlay.rs",
+            vec![
+                "doc_layout::paragraph_text(cx,\"Goal:visualizemeasuredtextboundsvsallocatedcontainerbounds.\")",
+                "doc_layout::paragraph_text(cx,\"Green=containerbounds;Yellow=measuredTextMetrics.size;Cyan=baseline.\")",
+            ],
+            vec![
+                "cx.text(\"Goal:visualizemeasuredtextboundsvsallocatedcontainerbounds.\")",
+                "cx.text(\"Green=containerbounds;Yellow=measuredTextMetrics.size;Cyan=baseline.\")",
+            ],
+        ),
+        (
+            "src/ui/previews/pages/editors/text/mixed_script_fallback.rs",
+            vec![
+                "doc_layout::paragraph_text(cx,\"Goal:ensuremixed-scriptfallbackstaystofu-freewithbundledfonts.\")",
+                "doc_layout::paragraph_text(cx,\"Tip:setFRET_TEXT_SYSTEM_FONTS=0tovalidatethedeterministicno-system-fontspathonnative.\")",
+                "doc_layout::paragraph_text(cx,\"Thispagere-injectsthebundleddefaultfontsetwheneverthelivecatalognolongerexposestheexpectedbundledfamilies.\")",
+            ],
+            vec![
+                "cx.text(\"Goal:ensuremixed-scriptfallbackstaystofu-freewithbundledfonts.\")",
+                "cx.text(\"Tip:setFRET_TEXT_SYSTEM_FONTS=0tovalidatethedeterministicno-system-fontspathonnative.\")",
+                "cx.text(\"Thispagere-injectsthebundleddefaultfontsetwheneverthelivecatalognolongerexposestheexpectedbundledfamilies.\")",
+            ],
+        ),
+        (
+            "src/ui/previews/pages/editors/text/outline_stroke.rs",
+            vec![
+                "doc_layout::paragraph_text(cx,\"Goal:exercise`SceneOp::Text.outline:Option<TextOutlineV1>`end-to-end.\")",
+                "doc_layout::paragraph_text(cx,\"Thispagedrawsthesametexttwice:fill-onlyvsfill+outline,onahigh-contrastbackdrop.\")",
+                "doc_layout::paragraph_text(cx,\"Tip:setFRET_TEXT_SYSTEM_FONTS=0tovalidatedeterministicbundled-fontbehavior.\")",
+            ],
+            vec![
+                "cx.text(\"Goal:exercise`SceneOp::Text.outline:Option<TextOutlineV1>`end-to-end.\")",
+                "cx.text(\"Thispagedrawsthesametexttwice:fill-onlyvsfill+outline,onahigh-contrastbackdrop.\")",
+                "cx.text(\"Tip:setFRET_TEXT_SYSTEM_FONTS=0tovalidatedeterministicbundled-fontbehavior.\")",
+            ],
+        ),
+        (
+            "src/ui/previews/pages/editors/text/selection_perf.rs",
+            vec![
+                "doc_layout::paragraph_text(cx,\"Goal:trackselectionrectcountforlargeselections.\")",
+                "doc_layout::paragraph_text(cx,\"Expectation:rectgenerationscaleswithvisiblelineswhenclippedtotheviewport(notdocumentlength).\")",
+                "doc_layout::paragraph_text(cx,\"Scrollwiththemousewheeloverthedemosurface.\")",
+            ],
+            vec![
+                "cx.text(\"Goal:trackselectionrectcountforlargeselections.\")",
+                "cx.text(\"Expectation:rectgenerationscaleswithvisiblelineswhenclippedtotheviewport(notdocumentlength).\")",
+                "cx.text(\"Scrollwiththemousewheeloverthedemosurface.\")",
+            ],
+        ),
+        (
+            "src/ui/previews/pages/editors/text/bidi_rtl_conformance.rs",
+            vec![
+                "doc_layout::paragraph_text(cx,\"Goal:sanity-checkBiDi/RTLgeometryqueries(hit-test,caretrects,selectionrects).\")",
+                "doc_layout::paragraph_text(cx,\"Usetheselectablesamplestovalidateeditor-likeselectionbehavior.\")",
+                "doc_layout::paragraph_text(cx,\"Usethediagnosticpaneltoverify`hit_test_point`->caret/selectionrenderingundermixed-directionstrings.\")",
+                "doc_layout::control_readout_text(cx,\"SelectableTextsamples:\")",
+            ],
+            vec![
+                "cx.text(\"Goal:sanity-checkBiDi/RTLgeometryqueries(hit-test,caretrects,selectionrects).\")",
+                "cx.text(\"Usetheselectablesamplestovalidateeditor-likeselectionbehavior.\")",
+                "cx.text(\"Usethediagnosticpaneltoverify`hit_test_point`",
+                "cx.text(\"SelectableTextsamples:\")",
+            ],
+        ),
+    ] {
+        let normalized = assert_normalized_markers_present(relative_path, &required);
+        for forbidden in forbidden {
+            assert!(
+                !normalized.contains(forbidden),
+                "{} reintroduced bare text for editor text/conformance header copy: {forbidden}",
+                manifest_path(relative_path).display()
+            );
+        }
+    }
+}
+
+#[test]
 fn render_doc_page_callers_land_the_typed_doc_page_explicitly() {
     for path in rust_sources("src/ui/previews") {
         let source = read_path(&path);

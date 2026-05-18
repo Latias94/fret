@@ -550,7 +550,7 @@ impl View for TodoView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = Theme::global(cx.app()).snapshot();
         let theme_for_rows = theme.clone();
         let locals = TodoLocals::new(cx);
         locals.bind_actions(cx);
@@ -854,7 +854,7 @@ fn todo_page(
 }
 
 fn filter_group_item(cx: &mut AppUi<'_, '_>, filter: TodoFilter) -> shadcn::ToggleGroupItem {
-    shadcn::ToggleGroupItem::new(filter.value(), [cx.text(filter.as_label())])
+    shadcn::ToggleGroupItem::new(filter.value(), [ui::text(filter.as_label()).into_element_in(cx)])
         .a11y_label(format!("Show {} tasks", filter.as_label().to_lowercase()))
         .refine_style(ChromeRefinement::default().rounded(Radius::Full))
         .refine_layout(LayoutRefinement::default().h_px(Px(28.0)).min_h(Px(28.0)))
@@ -1159,7 +1159,7 @@ impl View for TodoView {
     }
 
     fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui {
-        let theme = Theme::global(&*cx.app).snapshot();
+        let theme = Theme::global(cx.app()).snapshot();
         let theme_for_rows = theme.clone();
         let locals = TodoLocals::new(cx);
         locals.bind_actions(cx);
@@ -1465,7 +1465,7 @@ pub(super) fn todo_template_readme_md(
 ) -> String {
     let ui_assets_line = if opts.ui_assets {
         format!(
-            "- UI assets: enabled (`fret/ui-assets` + `src/generated_assets.rs` + `generated_assets::mount(builder)?`)\n- Portable asset lane: place app-owned files under `assets/`, then regenerate `src/generated_assets.rs` with `fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle {package_name} --force`\n- Startup ownership: generated assets now publish `preferred_startup_plan()` / `preferred_startup_mode()`, so debug native uses the file-backed development lane while packaged/web/mobile stays on the compiled bundle lane\n- Resolve app-owned files via `generated_assets::locator(\"...\")` or `AssetBundleId::app(\"{package_name}\")`\n- File-backed development escape hatch: keep startup on `FretApp::asset_startup(...)` + `AssetStartupPlan::development_dir(...)` when you intentionally want manual native/package-dev layering\n"
+            "- UI assets: enabled (`fret/ui-assets` + `src/generated_assets.rs` + `generated_assets::mount(builder)?`)\n- Portable asset lane: place app-owned files under `assets/`, then regenerate `src/generated_assets.rs` with `fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle {package_name} --force`\n- Startup ownership: generated assets now publish `preferred_startup_plan()` / `preferred_startup_mode()`, so `generated_assets::mount(builder)?` applies the file-backed development lane on native while packaged/web/mobile stays on the compiled bundle lane\n- Resolve app-owned files via `generated_assets::locator(\"...\")` or `AssetBundleId::app(\"{package_name}\")`\n- File-backed development escape hatch: record manual app intent with `FretApp::asset_startup(...)` or apply it on the desktop builder with `UiAppBuilder::with_asset_startup(...)` + `AssetStartupPlan::development_dir(...)`\n"
         )
     } else {
         format!(
@@ -1563,7 +1563,7 @@ pub(super) fn simple_todo_template_readme_md(
 ) -> String {
     let ui_assets_line = if opts.ui_assets {
         format!(
-            "- UI assets: enabled (`fret/ui-assets` + `src/generated_assets.rs` + `generated_assets::mount(builder)?`)\n- Portable asset lane: place app-owned files under `assets/`, then regenerate `src/generated_assets.rs` with `fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle {package_name} --force`\n- Startup ownership: generated assets now publish `preferred_startup_plan()` / `preferred_startup_mode()`, so debug native uses the file-backed development lane while packaged/web/mobile stays on the compiled bundle lane\n- Resolve app-owned files via `generated_assets::locator(\"...\")` or `AssetBundleId::app(\"{package_name}\")`\n- File-backed development escape hatch: keep startup on `FretApp::asset_startup(...)` + `AssetStartupPlan::development_dir(...)` when you intentionally want manual native/package-dev layering\n"
+            "- UI assets: enabled (`fret/ui-assets` + `src/generated_assets.rs` + `generated_assets::mount(builder)?`)\n- Portable asset lane: place app-owned files under `assets/`, then regenerate `src/generated_assets.rs` with `fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle {package_name} --force`\n- Startup ownership: generated assets now publish `preferred_startup_plan()` / `preferred_startup_mode()`, so `generated_assets::mount(builder)?` applies the file-backed development lane on native while packaged/web/mobile stays on the compiled bundle lane\n- Resolve app-owned files via `generated_assets::locator(\"...\")` or `AssetBundleId::app(\"{package_name}\")`\n- File-backed development escape hatch: record manual app intent with `FretApp::asset_startup(...)` or apply it on the desktop builder with `UiAppBuilder::with_asset_startup(...)` + `AssetStartupPlan::development_dir(...)`\n"
         )
     } else {
         format!(
@@ -1758,7 +1758,7 @@ mod tests {
         assert!(src.contains("let chips = shadcn::ToggleGroup::single(&locals.filter)"));
         assert!(src.contains(".deselectable(false)"));
         assert!(src.contains(
-            "shadcn::ToggleGroupItem::new(filter.value(), [cx.text(filter.as_label())])"
+            "shadcn::ToggleGroupItem::new(filter.value(), [ui::text(filter.as_label()).into_element_in(cx)])"
         ));
         assert!(!src.contains("filter_chip(cx, TodoFilter::All, filter_value)"));
         assert!(!src.contains("filter_chip("));
@@ -1881,6 +1881,8 @@ mod tests {
         assert!(src.contains("style::{ColorRef, Radius, Space, Theme, ThemeSnapshot},"));
         assert!(src.contains("fn init(_app: &mut App, _window: WindowId) -> Self"));
         assert!(src.contains("fn render(&mut self, cx: &mut AppUi<'_, '_>) -> Ui"));
+        assert!(src.contains("let theme = Theme::global(cx.app()).snapshot();"));
+        assert!(!src.contains("Theme::global(&*cx.app).snapshot()"));
         assert!(src.contains("impl UiChild"));
         assert!(src.contains("ui::children!["));
         assert!(src.contains("ui::for_each_keyed("));
@@ -2078,6 +2080,16 @@ mod tests {
             simple_with_assets.contains("`preferred_startup_plan()` / `preferred_startup_mode()`")
         );
         assert!(simple_with_assets.contains(
+            "`generated_assets::mount(builder)?` applies the file-backed development lane"
+        ));
+        assert!(
+            simple_with_assets
+                .contains("record manual app intent with `FretApp::asset_startup(...)`")
+        );
+        assert!(simple_with_assets.contains(
+            "apply it on the desktop builder with `UiAppBuilder::with_asset_startup(...)`"
+        ));
+        assert!(simple_with_assets.contains(
             "`fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle simple-todo-app --force`"
         ));
         assert!(simple_with_assets.contains("`AssetBundleId::app(\"simple-todo-app\")`"));
@@ -2116,6 +2128,16 @@ mod tests {
         assert!(
             todo_with_assets.contains("`preferred_startup_plan()` / `preferred_startup_mode()`")
         );
+        assert!(todo_with_assets.contains(
+            "`generated_assets::mount(builder)?` applies the file-backed development lane"
+        ));
+        assert!(
+            todo_with_assets
+                .contains("record manual app intent with `FretApp::asset_startup(...)`")
+        );
+        assert!(todo_with_assets.contains(
+            "apply it on the desktop builder with `UiAppBuilder::with_asset_startup(...)`"
+        ));
         assert!(todo_with_assets.contains(
             "`fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle todo-app --force`"
         ));

@@ -5,7 +5,7 @@ use fret::advanced::kernel::ui::element::{ImageProps, SvgIconProps};
 use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_ui_assets::ui::{image_stats_in, svg_stats_in, use_rgba8_image_state_in};
 use fret_ui_assets::{UiAssets, image_asset_state, svg_asset_state};
-use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::{style as decl_style, text as decl_text};
 use fret_ui_kit::{ColorRef, IntoUiElement, LayoutRefinement, Radius, Space, ui};
 
 static DEMO_SVG: &[u8] = br##"
@@ -211,17 +211,9 @@ where
             ),
         ];
 
+        let muted = theme.color_token("muted-foreground");
         out.extend(lines.into_iter().map(|line| {
-            cx.text_props(TextProps {
-                layout: Default::default(),
-                text: Arc::from(line),
-                style: None,
-                color: Some(theme.color_token("muted-foreground")),
-                align: fret_core::TextAlign::Start,
-                wrap: fret_core::TextWrap::None,
-                overflow: fret_core::TextOverflow::Clip,
-                ink_overflow: Default::default(),
-            })
+            decl_text::text_control_readout(cx, Arc::<str>::from(line)).inherit_foreground(muted)
         }));
     })
     .gap(Space::N2)

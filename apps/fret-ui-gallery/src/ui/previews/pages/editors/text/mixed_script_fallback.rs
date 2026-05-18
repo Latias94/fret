@@ -10,14 +10,24 @@ pub(in crate::ui) fn preview_text_mixed_script_fallback(
     let _ = crate::driver::ensure_ui_gallery_default_profile_fonts_present(cx.app, cx.window);
 
     let header = ui::v_flex(|cx| {
-            vec![
-                cx.text("Goal: ensure mixed-script fallback stays tofu-free with bundled fonts."),
-                cx.text("Tip: set FRET_TEXT_SYSTEM_FONTS=0 to validate the deterministic no-system-fonts path on native."),
-                cx.text("This page re-injects the bundled default font set whenever the live catalog no longer exposes the expected bundled families."),
-            ]
-        })
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2).into_element(cx);
+        vec![
+            doc_layout::paragraph_text(
+                cx,
+                "Goal: ensure mixed-script fallback stays tofu-free with bundled fonts.",
+            ),
+            doc_layout::paragraph_text(
+                cx,
+                "Tip: set FRET_TEXT_SYSTEM_FONTS=0 to validate the deterministic no-system-fonts path on native.",
+            ),
+            doc_layout::paragraph_text(
+                cx,
+                "This page re-injects the bundled default font set whenever the live catalog no longer exposes the expected bundled families.",
+            ),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .gap(Space::N2)
+    .into_element(cx);
 
     fn sample_row(
         cx: &mut AppComponentCx<'_>,

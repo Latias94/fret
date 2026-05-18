@@ -45,11 +45,7 @@ OPAQUE_STRUCT_SUFFIXES = (
     "Summary",
 )
 
-IMUI_DIRECT_TEXT_PROPS_ALLOWED = {
-    Path("ecosystem/fret-ui-kit/src/imui/facade_writer.rs"): {
-        "let mut props = fret_ui::element::TextProps::new(text);": 1,
-    },
-}
+IMUI_DIRECT_TEXT_PROPS_ALLOWED: dict[Path, dict[str, int]] = {}
 
 EDITOR_DIRECT_TEXT_PROPS_ALLOWED = {
     Path("ecosystem/fret-ui-editor/src/primitives/input_group.rs"): {
@@ -191,45 +187,12 @@ def check_fret_imui_runtime_dependencies(failures: list[str]) -> None:
 
 
 def check_imui_direct_text_props_allowlist(failures: list[str]) -> None:
-    actual: dict[Path, dict[str, int]] = {}
-    root = WORKSPACE_ROOT / "ecosystem/fret-ui-kit/src/imui"
-    for source_path in sorted(root.rglob("*.rs")):
-        path = source_path.relative_to(WORKSPACE_ROOT)
-        source = read_source(path)
-        for line in source.splitlines():
-            stripped = line.strip()
-            if "TextProps::new(" not in stripped:
-                continue
-            actual.setdefault(path, {})
-            actual[path][stripped] = actual[path].get(stripped, 0) + 1
-
-    for path, constructors in sorted(actual.items()):
-        allowed = IMUI_DIRECT_TEXT_PROPS_ALLOWED.get(path)
-        if allowed is None:
-            for constructor, count in sorted(constructors.items()):
-                failures.append(
-                    f"{path.as_posix()}: direct TextProps constructor is not in the text-role allowlist ({count}x {constructor})"
-                )
-            continue
-        for constructor, count in sorted(constructors.items()):
-            expected = allowed.get(constructor)
-            if expected is None:
-                failures.append(
-                    f"{path.as_posix()}: direct TextProps constructor is not allowed: {constructor}"
-                )
-            elif count != expected:
-                failures.append(
-                    f"{path.as_posix()}: direct TextProps constructor count changed for {constructor}: expected {expected}, found {count}"
-                )
-
-    for path, constructors in sorted(IMUI_DIRECT_TEXT_PROPS_ALLOWED.items()):
-        actual_for_path = actual.get(path, {})
-        for constructor, expected in sorted(constructors.items()):
-            count = actual_for_path.get(constructor, 0)
-            if count != expected:
-                failures.append(
-                    f"{path.as_posix()}: missing allowed direct TextProps constructor {constructor}: expected {expected}, found {count}"
-                )
+    check_direct_text_props_allowlist(
+        Path("ecosystem/fret-ui-kit/src/imui"),
+        IMUI_DIRECT_TEXT_PROPS_ALLOWED,
+        "IMUI",
+        failures,
+    )
 
 
 def check_direct_text_props_allowlist(
@@ -310,6 +273,45 @@ def check_property_row_value_slot_overflow(failures: list[str]) -> None:
             )
 
 
+def check_table_column_accessors(failures: list[str]) -> None:
+    path = Path("ecosystem/fret-ui-kit/src/imui/options/collections.rs")
+    source = read_source(path)
+    body = find_struct_body(source, "TableColumn")
+    if body is None:
+        failures.append(f"{path.as_posix()}: missing public struct TableColumn")
+    else:
+        for field in (
+            "header",
+            "id",
+            "width",
+            "visible",
+            "sortable",
+            "sort_direction",
+            "resize",
+            "pin",
+        ):
+            if re.search(rf"^\s*pub(?:\([^)]+\))?\s+{field}\s*:", body, re.MULTILINE):
+                failures.append(
+                    f"{path.as_posix()} TableColumn: field must stay private/accessor-first: {field}"
+                )
+
+    for marker in (
+        "pub fn header(&self) -> Option<&str>",
+        "pub(crate) fn header_arc(&self) -> Option<Arc<str>>",
+        "pub fn id(&self) -> Option<&str>",
+        "pub(crate) fn id_arc(&self) -> Option<Arc<str>>",
+        "pub fn width(&self) -> TableColumnWidth",
+        "pub fn visible(&self) -> bool",
+        "pub(crate) fn set_visible_for_policy(&mut self, visible: bool)",
+        "pub fn is_sortable(&self) -> bool",
+        "pub fn sort_direction(&self) -> Option<TableSortDirection>",
+        "pub fn resize_options(&self) -> Option<TableColumnResizeOptions>",
+        "pub fn pin(&self) -> TableColumnPin",
+    ):
+        if marker not in source:
+            failures.append(f"{path.as_posix()}: missing TableColumn accessor seam {marker}")
+
+
 def main() -> None:
     opaque_struct_checks = [
         OpaqueStructCheck(
@@ -334,7 +336,12 @@ def main() -> None:
         ),
         OpaqueStructCheck(
             Path("ecosystem/fret-ui-kit/src/imui/table_column_visibility.rs"),
-            ["ImUiTableColumnVisibilityState"],
+            [
+                "ImUiTableColumnVisibilityState",
+                "TableColumnVisibilityHeaderContextMenuResponse",
+                "TableColumnVisibilityMenuResponse",
+                "TableColumnVisibilityMenuItemResponse",
+            ],
         ),
         OpaqueStructCheck(
             Path("ecosystem/fret-ui-kit/src/imui/response/drag.rs"),
@@ -392,7 +399,7 @@ def main() -> None:
             required=[
                 '"slug": "imui-imgui-gap-closure-v1"',
                 '"status": "active"',
-                '"updated": "2026-05-17"',
+                '"updated": "2026-05-18"',
                 '"path": "docs/workstreams/imui-imgui-gap-closure-v1/P1_CLEANUP_AUDIT_2026-05-06.md"',
                 '"path": "docs/workstreams/imui-imgui-gap-closure-v1/P1_CLOSEOUT_AUDIT_2026-05-06.md"',
                 '"path": "docs/workstreams/imui-imgui-gap-closure-v1/P3_TEXT_ROLE_MATRIX_2026-05-17.md"',
@@ -663,11 +670,16 @@ def main() -> None:
                 "`TableColumn::hidden()` and",
                 "`TableColumn::with_visible(bool)`",
                 "Runtime hideable-column policy is now covered by the",
-                "`ImUiTableColumnVisibilityState` follow-up below",
+                "`ImUiTableColumnVisibilityState` and header menu follow-ups below",
                 "2026-05-17 runtime table column visibility follow-up",
                 "2026-05-17 table visibility menu-item follow-up",
                 "`table_column_visibility_menu_item(...)`",
-                "header context-menu popup wiring, persistence, freeze panes, and old columns API shape as",
+                "2026-05-17 table header visibility menu wiring follow-up",
+                "`table_column_visibility_header_context_menu(...)`",
+                "2026-05-17 table column pinning follow-up",
+                "`TableColumn::pinned_left()`",
+                "`TableColumn::pinned_right()`",
+                "keeps left/right frozen",
                 "2026-05-16 button label text role follow-up",
                 "`text_button_label(...)` now owns compact",
                 "2026-05-16 code block text role follow-up",
@@ -691,8 +703,12 @@ def main() -> None:
                 "disclosure/tree indicators route through",
                 "2026-05-17 control label text follow-up",
                 "labels in `fret-ui-kit::declarative::text`, and `control_chrome::fill_text(...)` routes through",
-                "2026-05-16 text role source-gate follow-up",
-                "explicit allowlist for remaining direct `TextProps::new(...)` constructors",
+                "2026-05-18 text role source-gate hardening follow-up",
+                "rejects direct `TextProps` construction under `fret-ui-kit::imui`",
+                "`TextProps::new(...)` and struct-literal forms",
+                "2026-05-17 IMUI text item role cleanup",
+                "`UiWriterImUiFacadeExt::text(...)` now delegates to the",
+                "shared `text_section_chrome_label(...)` role",
                 "2026-05-16 IMUI text item resize follow-up",
                 "`UiWriterImUiFacadeExt::text(...)` now follows Dear",
                 "`text_wrapped(...)` is the explicit opt-in path",
@@ -727,6 +743,30 @@ def main() -> None:
                 "copyable app-sidebar snippet",
                 "2026-05-17 fret-ui-ai empty placeholder follow-up",
                 "crate-local spacer helper",
+                "2026-05-18 code-view editor preview prose follow-up",
+                "the UI Gallery code-view torture header",
+                "2026-05-18 text editor/conformance header prose follow-up",
+                "editor/conformance headers for feature toggles",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/imui-imgui-gap-closure-v1/MILESTONES.md"),
+            required=[
+                "2026-05-18 code-view editor preview prose result",
+                "uses `doc_layout::paragraph_text(...)` for explanatory copy",
+                "2026-05-18 text editor/conformance header prose result",
+                "editor/conformance headers now use paragraph text",
+                "2026-05-18 IMUI virtual-list fixed-row clip result",
+                "fixed/known-height `fret-ui-kit::imui`",
+                "fixed-height `Overflow::Clip` row containers",
+                "2026-05-18 retained tree fixed-row clip result",
+                "retained tree rows now align their pressable row",
+                "2026-05-18 retained file-tree fixed-row clip result",
+                "`file_tree_view_retained_v0(...)` now clips",
+                "2026-05-18 retained table fixed-row clip result",
+                "`table_body_row_layout(...)`",
+                "measured rows keep measurement-friendly overflow",
             ],
             forbidden=[],
         ),
@@ -916,6 +956,13 @@ def main() -> None:
                 "added a table column visibility menu-item bridge through",
                 "`table_column_visibility_menu_item(...)`",
                 "table_column_visibility_menu_item_updates_visibility_state",
+                "added automatic table header visibility-menu wiring through",
+                "`table_column_visibility_header_context_menu(...)`",
+                "table_column_visibility_header_context_menu_opens_and_updates_state",
+                "added IMUI table column pinning as the first narrow freeze-pane seam",
+                "`TableColumn::pinned_left()`",
+                "`TableColumn::pinned_right()`",
+                "table_helper_pins_left_and_right_columns_while_center_columns_scroll",
                 "introduced `text_button_label(...)` as the shared compact button-label text role",
                 "routed IMUI `control_text(...)` through it",
                 "button_label_text_uses_medium_single_line_truncation",
@@ -952,8 +999,12 @@ def main() -> None:
                 "role and routed disclosure/tree indicators through it",
                 "chrome_glyph_text_uses_fixed_slot_single_line_clip",
                 "disclosure_indicator_uses_shared_chrome_glyph_text_role",
-                "hardened `tools/gate_imui_workstream_source.py` with an explicit allowlist",
-                "remaining direct `TextProps::new(...)` constructors under `fret-ui-kit::imui`",
+                "hardened `tools/gate_imui_workstream_source.py` so direct `TextProps`",
+                "construction under `fret-ui-kit::imui` fails",
+                "`TextProps { ... }` struct literals",
+                "removed the last IMUI direct text constructor exception",
+                "`UiWriterImUiFacadeExt::text(...)` through the shared",
+                "`text_section_chrome_label(...)` role",
                 "introduced `editor_input_value_text(...)` in `fret-ui-editor` input-group primitives",
                 "routed drag-value plus axis-drag-value scrub readouts through it",
                 "editor_input_value_text_is_single_line_and_shrinkable",
@@ -973,6 +1024,8 @@ def main() -> None:
                 "added `P3_TEXT_ROLE_MATRIX_2026-05-17.md` as the resize triage contract",
                 "requires wrapping paragraph/validation copy to have parent layout that accounts for",
                 "keeps `fret-imui` policy-light by rejecting a public `TextRole` enum",
+                "construction under `fret-ui-kit::imui` fails",
+                "covers both `TextProps::new(...)` and",
                 "tightened `UiWriterImUiFacadeExt::text(...)` to match Dear ImGui",
                 "`UiWriterImUiFacadeExt::text_wrapped(...)`",
                 "imui_text_item_is_single_line_and_shrinkable",
@@ -987,6 +1040,18 @@ def main() -> None:
                 "`fret-ui-ai` now owns a crate-local `empty_placeholder(...)` helper",
                 "hidden_ai_element_paths_use_non_text_placeholder",
                 "cargo check -p fret-examples",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs"),
+            required=[
+                "row.layout.size.height = fixed_height.map_or(Length::Auto, Length::Px);",
+                "if fixed_height.is_some()",
+                "row.layout.overflow = Overflow::Clip;",
+                "fn fixed_virtual_list_rows_clip_content_to_row_height",
+                "fn known_virtual_list_rows_clip_content_to_known_row_height",
+                "fn measured_virtual_list_rows_keep_content_overflow_visible_for_measurement",
             ],
             forbidden=[],
         ),
@@ -1052,13 +1117,22 @@ def main() -> None:
             required=[
                 "fn default_tree_row_label",
                 "fn tree_toggle_glyph",
+                "fn retained_tree_row_layout",
                 "crate::declarative::text::text_list_row_label(cx, label)",
                 "crate::declarative::text::text_chrome_glyph(cx, glyph)",
+                "layout.size.height = Length::Px(row_h);",
+                "layout.overflow = Overflow::Clip;",
+                "layout: retained_tree_row_layout(row_h, measure_mode)",
                 "default_tree_row_label_uses_shared_list_row_text_role",
                 "tree_toggle_glyph_uses_shared_chrome_glyph_text_role",
                 "fn tree_missing_virtual_row_placeholder",
                 "tree_missing_virtual_row_placeholder(cx)",
                 "missing_tree_virtual_row_placeholder_is_not_text",
+                "retained_tree_fixed_rows_clip_to_row_height",
+                "retained_tree_known_rows_clip_to_row_height",
+                "retained_tree_measured_rows_keep_overflow_visible_for_measurement",
+                "retained_tree_fixed_rows_mount_as_clip_boundaries",
+                "retained_tree_measured_rows_do_not_force_row_clip",
             ],
             forbidden=[
                 "crate::ui::text(entry.label.as_ref())",
@@ -1071,13 +1145,19 @@ def main() -> None:
             required=[
                 "fn file_tree_row_icon",
                 "fn file_tree_row_label",
+                "fn file_tree_retained_row_layout",
                 "crate::declarative::text::text_chrome_glyph(cx, icon)",
                 "crate::declarative::text::text_list_row_label(cx, label)",
+                "layout.size.height = Length::Px(row_h);",
+                "layout.overflow = Overflow::Clip;",
+                "layout: file_tree_retained_row_layout(row_h)",
                 "file_tree_row_icon_uses_shared_chrome_glyph_text_role",
                 "file_tree_row_label_uses_shared_list_row_text_role",
                 "fn file_tree_missing_virtual_row_placeholder",
                 "file_tree_missing_virtual_row_placeholder(cx)",
                 "missing_file_tree_virtual_row_placeholder_is_not_text",
+                "file_tree_retained_row_layout_clips_to_row_height",
+                "file_tree_retained_rows_mount_as_clip_boundaries",
             ],
             forbidden=[
                 "crate::ui::text(icon).flex_shrink_0()",
@@ -1089,8 +1169,17 @@ def main() -> None:
             Path("ecosystem/fret-ui-kit/src/declarative/table.rs"),
             required=[
                 "fn table_cell_text",
+                "fn table_body_row_layout",
                 "crate::declarative::text::text_table_cell(cx, text)",
+                "layout.size.height = Length::Px(row_h);",
+                "layout.overflow = Overflow::Clip;",
+                "layout: table_body_row_layout(",
+                "layout: row_wrapper_layout",
                 "retained_table_text_uses_shared_table_cell_role",
+                "table_fixed_body_row_layout_clips_to_row_height",
+                "table_measured_body_row_layout_keeps_overflow_visible_for_measurement",
+                "table_virtualized_retained_fixed_rows_mount_as_clip_boundaries",
+                "table_virtualized_retained_measured_rows_do_not_force_row_clip",
                 "table_cell_text(\n                                                                    _cx,\n                                                                    header_text.clone(),",
                 "vec![table_cell_text(cx, text.clone())]",
                 "v.map(|v| vec![table_cell_text(cx, v)])",
@@ -1422,31 +1511,68 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/options/collections.rs"),
             required=[
-                "pub visible: bool",
+                "visible: bool",
                 "visible: true",
                 "pub fn hidden(mut self) -> Self",
                 "pub fn with_visible(mut self, visible: bool) -> Self",
+                "pub fn header(&self) -> Option<&str>",
+                "pub fn id(&self) -> Option<&str>",
+                "pub fn width(&self) -> TableColumnWidth",
+                "pub fn visible(&self) -> bool",
+                "pub fn is_sortable(&self) -> bool",
+                "pub fn sort_direction(&self) -> Option<TableSortDirection>",
+                "pub fn resize_options(&self) -> Option<TableColumnResizeOptions>",
+                "pub fn pin(&self) -> TableColumnPin",
+                "pub(crate) fn set_visible_for_policy",
                 "self.visible = false;",
                 "self.visible = visible;",
+                "pub enum TableColumnPin",
+                "pin: TableColumnPin",
+                "pub horizontal_scroll: Option<ScrollHandle>",
+                "pub fn pinned_left(mut self) -> Self",
+                "pub fn pinned_right(mut self) -> Self",
+                "pub fn with_pin(mut self, pin: TableColumnPin) -> Self",
             ],
-            forbidden=[],
+            forbidden=[
+                "pub header: Option<Arc<str>>",
+                "pub id: Option<Arc<str>>",
+                "pub width: TableColumnWidth",
+                "pub visible: bool",
+                "pub sortable: bool",
+                "pub sort_direction: Option<TableSortDirection>",
+                "pub resize: Option<TableColumnResizeOptions>",
+                "pub pin: TableColumnPin",
+            ],
         ),
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/table_controls.rs"),
             required=[
+                "use fret_ui::scroll::ScrollHandle;",
+                "TableColumnPin",
+                ".horizontal_scroll",
+                "fn wrap_pinned_table_row_groups",
+                "fn split_pinned_table_cells",
+                "fn wrap_table_center_scroll",
+                "horizontal_scroll_option_wraps_unpinned_header_and_body_center_groups",
+                "ScrollProps {",
+                "axis: ScrollAxis::X",
                 "fn table_header_label_text",
                 "crate::declarative::text::text_table_cell(cx, label)",
                 "fn table_sort_indicator_text",
                 "crate::declarative::text::text_chrome_glyph(",
                 "table_header_label_uses_shared_table_cell_text_role",
                 "table_sort_indicator_uses_shared_chrome_glyph_text_role",
-                ".filter(|(_, column)| column.visible)",
-                "if !column.visible",
+                ".filter(|(_, column)| column.visible())",
+                "if !column.visible()",
                 "visible_columns.len()",
                 "hidden_table_columns_do_not_render_header_body_or_response",
                 "contains_text(&el, \"Hidden Body\")",
             ],
             forbidden=[
+                ".filter(|(_, column)| column.visible)\n",
+                "if !column.visible {\n",
+                "column.sortable || column.sort_direction.is_some()",
+                "cell.layout = table_cell_layout(column.width,",
                 "children.push(cx.text(label));",
                 "children.push(cx.text(Arc::<str>::from(sort_direction_indicator(direction))));",
                 ".map(|label| cx.text(label))",
@@ -1455,12 +1581,18 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/tests/imui_table_smoke.rs"),
             required=[
-                "assert!(fill.visible);",
-                "assert!(weighted.visible);",
-                "assert!(px.visible);",
+                "assert!(fill.visible());",
+                "assert!(weighted.visible());",
+                "assert!(px.visible());",
+                "assert_eq!(fill.width(), TableColumnWidth::Fill(1.0));",
+                "assert!(!fill.is_sortable());",
+                "assert_eq!(fill.pin(), TableColumnPin::None);",
                 "fn table_column_visibility_helpers_compile()",
                 "TableColumn::px(\"Internal###internal\", Px(64.0)).hidden()",
                 "hidden.with_visible(true)",
+                "TableColumnPin::Left",
+                "TableColumnPin::Right",
+                "fn table_column_pinning_helpers_compile()",
             ],
             forbidden=[],
         ),
@@ -1479,7 +1611,17 @@ def main() -> None:
                 "fn table_column_visibility_menu_item_updates_visibility_state()",
                 "table_column_visibility_menu_item(",
                 "\"imui-table-column-visibility-menu.status\"",
-                "state.is_visible(\"status\", column.visible)",
+                "state.is_visible(\"status\", column.visible())",
+                "fn table_column_visibility_header_context_menu_opens_and_updates_state()",
+                "table_column_visibility_header_context_menu(",
+                "\"imui-table-header-visibility-menu.menu.item.status\"",
+                "fn table_helper_pins_left_and_right_columns_while_center_columns_scroll()",
+                "TableColumn::px(\"ID###id\", Px(48.0)).pinned_left()",
+                "TableColumn::px(\"Score###score\", Px(64.0)).pinned_right()",
+                "horizontal_scroll: Some(scroll)",
+                "left pinned column should not move with center scroll",
+                "right pinned column should not move with center scroll",
+                "center column should move left with horizontal scroll",
             ],
             forbidden=[],
         ),
@@ -1823,6 +1965,8 @@ def main() -> None:
         SourceCheck(
             Path("apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs"),
             required=[
+                "fn editor_code_view_header_uses_paragraph_roles()",
+                "fn editor_text_conformance_headers_use_text_roles()",
                 "fn gallery_table_retained_torture_uses_structured_table_debug_ids()",
                 "fn gallery_data_table_torture_exposes_header_row_anchor()",
                 "fn gallery_data_grid_uses_table_cell_text_roles()",
@@ -1871,7 +2015,15 @@ def main() -> None:
                 "overlay_status_text(cx,text).test_id(\\\"ui-gallery-overlay-last-action\\\")",
                 "overlay_scroll_row_text(cx,format!(\\\"Scrollitem{i:02}\\\"))",
                 "doc_layout::paragraph_text(cx,\\\"HoverCardcontent(overlay-root)\\\")",
+                "doc_layout::paragraph_text(cx,\\\"Goal:stresslargescrollablecode/textsurfaces(candidateforprepaint-windowedlines).\\\")",
                 "doc_layout::control_label_text(cx,\\\"Textinput\\\")",
+                "doc_layout::paragraph_text(cx,\\\"Goal:validateOpenTypefeatureoverrides(`TextShapingStyle.features`)end-to-end.\\\")",
+                "doc_layout::paragraph_text(cx,\\\"Goal:visualizemeasuredtextboundsvsallocatedcontainerbounds.\\\")",
+                "doc_layout::paragraph_text(cx,\\\"Goal:ensuremixed-scriptfallbackstaystofu-freewithbundledfonts.\\\")",
+                "doc_layout::paragraph_text(cx,\\\"Goal:exercise`SceneOp::Text.outline:Option<TextOutlineV1>`end-to-end.\\\")",
+                "doc_layout::paragraph_text(cx,\\\"Goal:trackselectionrectcountforlargeselections.\\\")",
+                "doc_layout::paragraph_text(cx,\\\"Goal:sanity-checkBiDi/RTLgeometryqueries(hit-test,caretrects,selectionrects).\\\")",
+                "doc_layout::control_readout_text(cx,\\\"SelectableTextsamples:\\\")",
                 "retained_table_cell_text(cx,row.status.clone())",
                 "data_table_torture_cell_text(cx,row.status.clone())",
                 "data_grid_cell_text(cx,ifrow%3==0{\\\"Running\\\"}else{\\\"Idle\\\"})",
@@ -1911,14 +2063,25 @@ def main() -> None:
                 "`TableRowOptions::background` and `TableCellOptions::background`",
                 "In-window floating windows / overlay areas",
                 "Covered for in-window drag, z-order hit-testing, focus/input policy, close, resize, and collapse",
-                "`TableOptions::striped`, `TableRowOptions::background`, `TableCellOptions::background`, sort/resize/header responses",
+                "`TableOptions::striped`, `TableOptions::horizontal_scroll`, `TableRowOptions::background`, `TableCellOptions::background`, sort/resize/header responses",
                 "`ImUiTableColumnVisibilityState`",
                 "header menu-item composition",
+                "`table_column_visibility_header_context_menu(...)`",
+                "`TableColumnVisibilitySnapshot`",
+                "`TableColumnVisibilityEntry`",
+                "`TableColumn::pinned_left`",
+                "`TableColumn::pinned_right`",
+                "`TableOptions::horizontal_scroll`",
                 "Sorting, resize handles, alternating row backgrounds, explicit per-row/per-cell background",
-                "override targets, and a narrow runtime hideable-column helper already have proof.",
-                "the remaining table axes are automatic",
+                "override targets, a narrow runtime hideable-column helper, caller-owned visibility",
+                "snapshot/restore, default header visibility-menu wiring, and column pinning/freeze-pane seam",
+                "`TableColumn` is now builder/accessor-first with private fields",
+                "old public field-bag API shape is closed",
+                "old columns API shape as wholly missing",
                 "`TableOptions::striped` is already the current alternating row-background policy, while",
                 "`TableColumn::hidden()` / `TableColumn::with_visible(bool)` cover static",
+                "`TableColumn::pinned_left()` / `TableColumn::pinned_right()` plus",
+                "caller-owned save/restore data without moving file storage or a mutable table runtime",
                 "`window(...)` is no longer a v1 posture with z-order/focus arbitration deferred",
                 "the inherent `ImUiFacade` wrappers",
                 "for button/actions, menu items, selection/combo, disclosure, text/value/boolean models, and",
@@ -1931,6 +2094,9 @@ def main() -> None:
             forbidden=[
                 "Z-order and focus arbitration are tracked as a separate work item",
                 "Sorting and resize handles have proof, but row background targets",
+                "Freeze panes and old columns API remain candidate-only",
+                "Freeze panes and old columns API should stay narrow follow-ons",
+                "remaining table axes are freeze panes and old columns API shape",
             ],
         ),
         SourceCheck(
@@ -1967,9 +2133,7 @@ def main() -> None:
             Path("ecosystem/fret-ui-kit/src/imui/facade_writer.rs"),
             required=[
                 "fn text(&mut self, text: impl Into<Arc<str>>)",
-                "props.wrap = fret_core::TextWrap::None;",
-                "props.overflow = fret_core::TextOverflow::Ellipsis;",
-                "props.layout.size.min_width =",
+                "crate::declarative::text::text_section_chrome_label(cx, text)",
                 "fn text_wrapped(&mut self, text: impl Into<Arc<str>>)",
                 "crate::declarative::text::text_compact_paragraph(cx, text)",
                 "imui_text_item_is_single_line_and_shrinkable",
@@ -1981,6 +2145,7 @@ def main() -> None:
                 "/// - OS-window tear-out and multi-viewport behavior are docking/runner concerns, not this",
             ],
             forbidden=[
+                "TextProps::new(text)",
                 "Render a minimal in-window floating window.",
                 "This is intentionally v1-small",
                 "Z-order and focus arbitration are tracked as a separate work item",
@@ -4882,12 +5047,17 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/tooltip_overlay.rs"),
             required=[
+                "fn tooltip_body_text",
+                "crate::declarative::text::text_compact_paragraph(cx, text)",
+                "let element = ui.with_cx_mut(|cx| tooltip_body_text(cx, text));",
+                "tooltip_body_text_uses_compact_paragraph_role",
                 "let Some(trigger_id) = trigger.id() else",
                 "trigger.focused()",
                 "trigger.rect()",
                 "trigger.pointer_hovered_raw()",
             ],
             forbidden=[
+                "ui.text(text);",
                 "trigger.core.",
                 "let Some(trigger_id) = trigger.id else",
                 "trigger.pointer_hovered_raw,",
@@ -4986,16 +5156,25 @@ def main() -> None:
                 "pub fn apply_to_columns(&self, columns: &[TableColumn]) -> Vec<TableColumn>",
                 "pub fn table_column_visibility_use_model<H: UiHost>",
                 "pub fn table_column_visibility_menu_item<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>",
+                "pub fn table_column_visibility_menu_items<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>",
+                "pub fn table_column_visibility_header_context_menu<",
+                "pub struct TableColumnVisibilityHeaderContextMenuOptions {",
+                "pub popup: PopupMenuOptions",
+                "ui.begin_popup_context_menu_with_options(id, trigger, options.popup, |ui|",
+                "pub struct TableColumnVisibilityMenuResponse {",
+                "pub struct TableColumnVisibilityHeaderContextMenuResponse {",
+                "pub struct TableColumnVisibilityMenuItemResponse {",
+                "pub fn items(&self) -> &TableColumnVisibilityMenuResponse",
+                "pub fn items(&self) -> &[TableColumnVisibilityMenuItemResponse]",
                 "ui.menu_item_checkbox_with_options(label, visible, options)",
                 "state.apply_to_columns(&columns)",
-                "Persistence, automatic header context-menu wiring, and",
+                "Persistence, freeze panes, and",
             ],
             forbidden=[
                 "pub overrides",
                 "pub visible",
                 "pub id",
                 "fn persist",
-                "header_menu",
                 "freeze_pane",
             ],
         ),
@@ -5126,6 +5305,15 @@ def main() -> None:
                 "wrap: TextWrap::None,",
                 "overflow: TextOverflow::Ellipsis,",
             ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-imui/src/tests/composition/layout_collections.rs"),
+            required=[
+                "fn virtual_list_fixed_rows_clip_oversized_row_content",
+                "debug_node_clips_hit_test(row_node)",
+                "fixed virtual-list row should clip oversized row contents",
+            ],
+            forbidden=[],
         ),
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/composites/inspector_panel.rs"),
@@ -8526,6 +8714,17 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-examples/src/echarts_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(",
+                "std::sync::Arc::clone(&chart.title)",
+            ],
+            forbidden=[
+                "cx.text(std::sync::Arc::clone(&chart.title))",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-examples/src/components_gallery.rs"),
             required=[
                 "use fret_ui_kit::declarative::text as decl_text;",
@@ -8574,6 +8773,30 @@ def main() -> None:
                 "cx.text(\"overlays: tooltip / dropdown / context-menu / popover / dialog / alert-dialog / sheet\")",
                 "cx.text(format!(\n                                                \"last action: {}\",",
                 "cx.text(\n                                                \"cmdk: Ctrl/Cmd+P opens, arrows/hover highlight, Enter selects\",",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/src/markdown_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "fn markdown_demo_readout_text<H: fret_ui::UiHost>(",
+                "fn markdown_demo_title_text<H: fret_ui::UiHost>(",
+                "fn markdown_demo_paragraph_text<H: fret_ui::UiHost>(",
+                "decl_text::text_control_readout(cx, text)",
+                "decl_text::text_section_chrome_label(cx, text)",
+                "decl_text::text_paragraph(cx, text)",
+                "markdown_demo_readout_text(\n                    cx,\n                    format!(\"wrap code: {}\", if wrap_enabled { \"on\" } else { \"off\" }),",
+                "markdown_demo_readout_text(\n                    cx,\n                    format!(\n                        \"cap code height: {}\"",
+                "markdown_demo_readout_text(cx, format!(\"expanded code blocks: {expanded_count}\"))",
+                "markdown_demo_title_text(cx, \"markdown_demo\")",
+                "markdown_demo_paragraph_text(\n                    cx,\n                    \"Scrollable markdown preview (links open via platform shell).\",",
+            ],
+            forbidden=[
+                "cx.text(format!(\"wrap code: {}\", if wrap_enabled { \"on\" } else { \"off\" }))",
+                "cx.text(format!(\n                    \"cap code height: {}\"",
+                "cx.text(format!(\"expanded code blocks: {expanded_count}\"))",
+                "cx.text(\"markdown_demo\")",
+                "cx.text(\"Scrollable markdown preview (links open via platform shell).\")",
             ],
         ),
         SourceCheck(
@@ -8684,6 +8907,17 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("apps/fret-examples/tests/echarts_demo_surface.rs"),
+            required=[
+                "fn echarts_demo_chart_titles_use_section_chrome_role()",
+                "usefret_ui_kit::declarative::textasdecl_text;",
+                "decl_text::text_section_chrome_label(",
+                "std::sync::Arc::clone(&chart.title)",
+                "cx.text(std::sync::Arc::clone(&chart.title))",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("apps/fret-examples/tests/components_gallery_surface.rs"),
             required=[
                 "fn components_gallery_table_torture_uses_text_roles()",
@@ -8700,6 +8934,49 @@ def main() -> None:
                 "decl_text::text_paragraph(cx,\\\"HoverCardcontent(overlay-root)\\\")",
                 "decl_text::text_control_readout(cx,format!(\\\"lastaction:{}\\\",last_action_value.as_ref()))",
                 "cx.text(\\\"Popovercontent\\\")",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/tests/markdown_demo_surface.rs"),
+            required=[
+                "fn markdown_demo_chrome_text_uses_shared_roles()",
+                "fnmarkdown_demo_readout_text<H:fret_ui::UiHost>(",
+                "fnmarkdown_demo_title_text<H:fret_ui::UiHost>(",
+                "fnmarkdown_demo_paragraph_text<H:fret_ui::UiHost>(",
+                "decl_text::text_control_readout(cx,text)",
+                "decl_text::text_section_chrome_label(cx,text)",
+                "decl_text::text_paragraph(cx,text)",
+                "cx.text(format!(\\\"expandedcodeblocks:{expanded_count}\\\"))",
+                "cx.text(\\\"markdown_demo\\\")",
+                "cx.text(\\\"Scrollablemarkdownpreview(linksopenviaplatformshell).\\\")",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/tests/text_role_residual_surface.rs"),
+            required=[
+                "fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface()",
+                "text_props_literal: usize",
+                "matches(\"cx.text_props(TextProps {\")",
+                "matches(\"cx.text_props(fret_ui::element::TextProps {\")",
+                "\"src/components_gallery.rs\".to_string()",
+                "DirectTextCounts {\n                cx_text: 4,\n                text_props_new: 3,\n                text_props_literal: 0,",
+                "\"src/cjk_conformance_demo.rs\".to_string()",
+                "text_props_literal: 7,",
+                "\"src/custom_effect_v2_web_demo.rs\".to_string()",
+                "text_props_literal: 3,",
+                "\"src/emoji_conformance_demo.rs\".to_string()",
+                "text_props_literal: 5,",
+                "\"src/ime_smoke_demo.rs\".to_string()",
+                "DirectTextCounts {\n                cx_text: 8,\n                text_props_new: 0,\n                text_props_literal: 0,",
+                "\"src/text_heavy_memory_demo.rs\".to_string()",
+                "\"remaining direct text construction in fret-examples must stay limited to explicit text/IME/rendering capability proofs\"",
+                "\"text_smoke_title\"",
+                "\"TextProps::new(line.clone())\"",
+                "\"out.push(cx.text(line));\"",
+                "\"cx.text(last)\"",
+                "\"focus traversal\"",
             ],
             forbidden=[],
         ),
@@ -10025,6 +10302,7 @@ def main() -> None:
         "editor",
         failures,
     )
+    check_table_column_accessors(failures)
     check_property_row_value_slot_overflow(failures)
     for failure in collect_docking_multiwindow_failures():
         failures.append(f"docking multiwindow source: {failure}")

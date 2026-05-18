@@ -8,6 +8,9 @@ use fret_ui::element::{
     SemanticsDecoration, SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_headless::boolean_control::{
+    switch_checked_from_optional_bool, switch_toggle_optional_bool,
+};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -19,9 +22,7 @@ use fret_ui_kit::primitives::control_registry::{
     ControlAction, ControlEntry, ControlId, control_registry_model,
 };
 use fret_ui_kit::primitives::controllable_state;
-use fret_ui_kit::primitives::switch::{
-    switch_a11y, switch_checked_from_optional_bool, switch_use_checked_model, toggle_optional_bool,
-};
+use fret_ui_kit::primitives::switch::{switch_a11y, switch_use_checked_model};
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, OverrideSlot, Radius, WidgetState,
     WidgetStateProperty, WidgetStates, resolve_override_slot,
@@ -533,7 +534,7 @@ impl Switch {
                         SwitchModel::Determinate(model) => cx.pressable_toggle_bool(model),
                         SwitchModel::Optional(model) => {
                             cx.pressable_update_model(model, |v| {
-                                *v = toggle_optional_bool(*v);
+                                *v = switch_toggle_optional_bool(*v);
                             });
                         }
                         SwitchModel::Value(_) => {}

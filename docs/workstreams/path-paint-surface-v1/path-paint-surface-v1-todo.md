@@ -1,12 +1,12 @@
 ---
 title: Path Paint Surface v1 — TODO
-status: active
+status: closed
 date: 2026-02-16
 ---
 
 # Path Paint Surface v1 — TODO Tracker
 
-Status: Active (workstream tracker)
+Status: Closed (workstream tracker)
 
 Workstream narrative: `docs/workstreams/path-paint-surface-v1/path-paint-surface-v1.md`
 Milestone board: `docs/workstreams/path-paint-surface-v1/path-paint-surface-v1-milestones.md`
@@ -29,7 +29,7 @@ renderer conformance tests for correctness-sensitive semantics.
   - Evidence: `docs/adr/0278-path-paint-surface-v1.md` (Coordinate space)
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/path.rs` (`local_pos_px`)
 - [x] PPS-adr-030 Add an ADR that locks semantics + degradation policy.
-  - Evidence: `docs/adr/0278-path-paint-surface-v1.md`
+  - Evidence: `docs/adr/0278-path-paint-surface-v1.md` (Accepted)
 
 ## M1 — Renderer implementation (wgpu default)
 
@@ -43,6 +43,7 @@ renderer conformance tests for correctness-sensitive semantics.
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (upload + bind path paints)
 - [x] PPS-render-120 Ensure material paint is capability-gated and degrades deterministically.
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/path.rs` (`Paint::Material` deterministic degrade)
+  - Evidence: `crates/fret-render-wgpu/tests/path_material_paint_conformance.rs`
 
 ## M2 — Conformance (required)
 
@@ -54,5 +55,7 @@ renderer conformance tests for correctness-sensitive semantics.
 
 ## M3 — Adoption (optional)
 
-- [ ] PPS-adopt-300 Wire one real consumer to use non-solid path paint:
-  - pick a small demo surface (plot/node graph/canvas) to validate ergonomics.
+- [x] PPS-adopt-300 Decide whether consumer adoption blocks closeout:
+  - Decision: non-solid consumer adoption is optional and does not block closing the renderer/core
+    contract lane. Open a narrower product-surface follow-on only when a concrete plot/node/canvas
+    surface needs non-solid path paint.

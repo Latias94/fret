@@ -1,13 +1,15 @@
-//! `fret::FretApp` builder-chain entry points.
+//! `fret::FretApp` app-authoring entry points.
 //!
-//! This module provides an ergonomic, desktop-first entry surface (ecosystem-level) while
-//! preserving the golden-path driver's hotpatch-friendly posture (function-pointer hooks).
+//! This module keeps the app-authoring spec backend-free and adds desktop execution methods only
+//! when the native runner stack is enabled.
 
 use crate::{
-    AssetMount, Defaults, Result, UiAppBuilder, UiAppDriver,
+    AssetMount, Defaults,
     assets::{AssetBundleId, StaticAssetEntry},
     integration::InstallIntoApp,
 };
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+use crate::{Result, UiAppBuilder, UiAppDriver};
 
 type AppSetupHook = Box<dyn FnOnce(&mut crate::app::App)>;
 
@@ -23,36 +25,41 @@ struct MainWindowConfig {
     resizable: Option<bool>,
 }
 
-/// Builder-chain facade for creating and running a desktop-first Fret UI app.
+/// Builder-chain facade for creating a Fret UI app.
 ///
 /// Notes:
 /// - This is an ecosystem-level convenience layer (not a kernel contract).
-/// - The builder composes existing `fret` entry points (the view/runtime + driver wiring) and
-///   applies a default main window if none is configured.
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+/// - Backend-free app-authoring methods are always available.
+/// - Native window/runner methods are available only when the `desktop` feature is enabled.
 pub struct FretApp {
     root_name: &'static str,
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     main_window: MainWindowConfig,
     defaults: Defaults,
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     command_palette: bool,
     asset_mounts: Vec<AssetMount>,
     setup_hooks: Vec<AppSetupHook>,
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     install_hooks: Vec<fn(&mut crate::app::App, &mut dyn fret_core::UiServices)>,
 }
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 impl FretApp {
     /// Create a new app builder with a stable root name.
     ///
-    /// `root_name` is used by the golden-path driver for IDs, diagnostics, and dev tooling.
+    /// `root_name` is used for app-owned bundle IDs and, on desktop builds, by the golden-path
+    /// driver for IDs, diagnostics, and dev tooling.
     pub fn new(root_name: &'static str) -> Self {
         Self {
             root_name,
+            #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
             main_window: MainWindowConfig::default(),
             defaults: Defaults::default(),
+            #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
             command_palette: false,
             asset_mounts: Vec::new(),
             setup_hooks: Vec::new(),
+            #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
             install_hooks: Vec::new(),
         }
     }
@@ -138,12 +145,32 @@ impl FretApp {
         self
     }
 
-    /// Apply one explicit development-vs-packaged startup plan on the default app builder path.
+    /// Run app-level setup during bootstrap.
     ///
-    /// Use this when app/bootstrap code wants one named asset-publication decision instead of
-    /// manually branching between file-backed development inputs and packaged static entries at the
-    /// call site. Combine it with `asset_entries(...)`, `bundle_asset_entries(...)`, and
-    /// `embedded_asset_entries(...)` when startup intentionally layers additional static overrides.
+    /// This is the canonical ecosystem integration seam for app-level add-ons such as command
+    /// registration, theme/bootstrap setup, icon-pack app installers, optional recipe-crate
+    /// globals, or reusable app integration bundles that implement [`InstallIntoApp`]. Prefer
+    /// named installer functions, small tuples of installers, or named bundle types here. Keep
+    /// inline one-off closures on `UiAppBuilder::setup_with(...)` so the default `.setup(...)`
+    /// story stays stable and grep-friendly.
+    pub fn setup<T>(mut self, setup: T) -> Self
+    where
+        T: InstallIntoApp + 'static,
+    {
+        self.setup_hooks
+            .push(Box::new(move |app| setup.install_into_app(app)));
+        self
+    }
+}
+
+impl FretApp {
+    /// Record one explicit development-vs-packaged startup plan on the app-authoring spec.
+    ///
+    /// This is a backend-free authoring value. Desktop execution applies it later through the
+    /// launch-enabled builder path. Combine it with `asset_entries(...)`,
+    /// `bundle_asset_entries(...)`, and `embedded_asset_entries(...)` when startup intentionally
+    /// layers additional static overrides.
+    #[cfg(any(feature = "app", feature = "desktop"))]
     pub fn asset_startup(
         mut self,
         mode: crate::assets::AssetStartupMode,
@@ -157,35 +184,24 @@ impl FretApp {
         self
     }
 
-    /// Enable development asset reload polling for file-backed startup mounts.
+    /// Record the development asset reload policy for file-backed startup mounts.
+    ///
+    /// This remains an app-authoring value until a launch-enabled runner applies it.
+    #[cfg(any(feature = "app", feature = "desktop"))]
     pub fn asset_reload_policy(mut self, policy: crate::assets::AssetReloadPolicy) -> Self {
         self.asset_mounts.push(AssetMount::ReloadPolicy { policy });
         self
     }
+}
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+impl FretApp {
     /// Enable the command palette (driver-handled command + UI) if available.
     ///
     /// This is intentionally opt-in in the `fret` facade.
     #[cfg(feature = "command-palette")]
     pub fn command_palette(mut self, enabled: bool) -> Self {
         self.command_palette = enabled;
-        self
-    }
-
-    /// Run app-level setup during bootstrap.
-    ///
-    /// This is the canonical ecosystem integration seam for app-level add-ons such as command
-    /// registration, theme/bootstrap setup, icon-pack app installers, optional recipe-crate
-    /// globals, or reusable app integration bundles that implement [`InstallIntoApp`]. Prefer
-    /// named installer functions, small tuples of installers, or named bundle types here. Keep
-    /// inline one-off closures on [`UiAppBuilder::setup_with`](crate::UiAppBuilder::setup_with) so
-    /// the default `.setup(...)` story stays stable and grep-friendly.
-    pub fn setup<T>(mut self, setup: T) -> Self
-    where
-        T: InstallIntoApp + 'static,
-    {
-        self.setup_hooks
-            .push(Box::new(move |app| setup.install_into_app(app)));
         self
     }
 

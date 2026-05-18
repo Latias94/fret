@@ -1,7 +1,7 @@
 # P3 Component Surface Catalog - 2026-05-06
 
 Status: component surface audit; partially superseded by closed proof lanes
-Last updated: 2026-05-16
+Last updated: 2026-05-17
 
 Status note (2026-05-16): this catalog remains the current component-surface gap map, but the
 image-item and child-region manual-resize candidates below have since landed in narrow proof lanes:
@@ -16,8 +16,15 @@ backgrounds, explicit per-row/per-cell background overrides now have a narrow pr
 column visibility now has a narrow proof through `TableColumn::hidden()` /
 `TableColumn::with_visible(bool)`. Runtime hideable-column policy now has a narrow helper proof
 through `ImUiTableColumnVisibilityState`, and header menu-item composition has a bridge through
-`table_column_visibility_menu_item(...)`; automatic header context-menu popup wiring, persistence,
-freeze panes, and old columns API remain candidate-only.
+`table_column_visibility_menu_item(...)` plus a repeated-section helper through
+`table_column_visibility_menu_items(...)`; automatic header context-menu popup wiring now has a
+default helper through `table_column_visibility_header_context_menu(...)`. Runtime visibility also
+has a caller-owned snapshot/restore seam through `TableColumnVisibilitySnapshot` /
+`TableColumnVisibilityEntry`; storage and schema placement remain app/editor-owned. Column
+pinning now has a narrow freeze-pane proof through `TableColumn::pinned_left()` /
+`TableColumn::pinned_right()`, with pinned left/right groups staying outside the shared center
+horizontal scroll handle. The old columns API shape has since been closed by making `TableColumn`
+builder/accessor-first with private fields.
 
 ## Decision
 
@@ -51,7 +58,7 @@ Keep the owner split:
 | Menus / menu bars / popups / modals | `menu_bar`, `begin_menu`, `begin_submenu`, menu items, `open_popup`, `begin_popup_menu`, context menu helpers, modal helpers | Covered at policy layer; dismissal/focus policy stays in ecosystem |
 | Tooltips | `tooltip_text`, `tooltip`, `TooltipOptions` | Covered enough for current response-driven usage |
 | Tabs | `tab_bar`, `ImUiTabBar`, `tab_item`, response reporting | Covered for current shell/editor proofs |
-| Tables | `table`, `ImUiTable`, `TableColumn`, `TableColumn::hidden`, `TableColumn::with_visible`, `ImUiTableColumnVisibilityState`, `table_column_visibility_menu_item`, `TableOptions::striped`, `TableRowOptions::background`, `TableCellOptions::background`, sort/resize/header responses, virtual-list support | Covered for basic/sort/resize/striped-row, static column visibility, runtime hideable-column helper proof, header menu-item composition, and explicit row/cell background proof paths; remaining advanced table flags should be split by proof |
+| Tables | `table`, `ImUiTable`, `TableColumn`, `TableColumn::hidden`, `TableColumn::with_visible`, `TableColumn::pinned_left`, `TableColumn::pinned_right`, `ImUiTableColumnVisibilityState`, `TableColumnVisibilitySnapshot`, `table_column_visibility_menu_item`, `table_column_visibility_menu_items`, `table_column_visibility_header_context_menu`, `TableOptions::striped`, `TableOptions::horizontal_scroll`, `TableRowOptions::background`, `TableCellOptions::background`, sort/resize/header responses, virtual-list support | Covered for basic/sort/resize/striped-row, static column visibility, runtime hideable-column helper proof, caller-owned visibility snapshot/restore, header visibility-menu composition, column pinning/freeze-pane seam, explicit horizontal-scroll seam, and explicit row/cell background proof paths; remaining advanced table flags should be split by proof |
 | Drag and drop | response-driven `drag_source` / `drop_target` with typed payloads | Covered with Fret-native response style; do not copy begin/end mutable payload grammar |
 | Draw list / images | `debug_draw`, `ImUiDebugDrawList`, paths, channels, mesh, image/SVG variants | Strong local coverage; keep feature growth in debug-draw follow-ons |
 | Color edit / picker | `fret-ui-editor::ColorEdit` through `fret::imui::editor::color_edit` | Covered as editor-control policy, not generic kit vocabulary |
@@ -76,9 +83,10 @@ public helper widening:
      style editor API from this audit.
 4. **Advanced table flags**
    - Sorting, resize handles, alternating row backgrounds, explicit per-row/per-cell background
-     override targets, and a narrow runtime hideable-column helper already have proof.
-   - Automatic header context-menu popup wiring, freeze panes, persistence, and old columns API
-     should stay narrow follow-ons.
+     override targets, a narrow runtime hideable-column helper, caller-owned visibility
+     snapshot/restore, default header visibility-menu wiring, and column pinning/freeze-pane seam
+     already have proof.
+   - Old columns API shape should stay a narrow follow-on.
 5. **Child-region flag mirrors beyond manual resize**
    - `ResizeY` and `ResizeX` now have closed proof lanes.
    - Auto-resize, nav flattening, and clipping-return behavior still need behavior-specific proof
@@ -103,10 +111,15 @@ public helper widening:
   override targets. `TableColumn::hidden()` / `TableColumn::with_visible(bool)` cover static
   author-declared visibility, `ImUiTableColumnVisibilityState` gives runtime visibility overrides
   a narrow stable-id helper before table render, and `table_column_visibility_menu_item(...)`
-  provides the menu checkbox bridge for callers that own a popup/menu surface. Do not treat Dear
-  ImGui `RowBg` or visibility parity as wholly missing; the remaining table axes are automatic
-  header context-menu popup wiring, freeze panes, persistence, and old columns API shape, which
-  still need narrow proofs.
+  plus `table_column_visibility_menu_items(...)` provide the menu checkbox bridge and repeated
+  section composition. `table_column_visibility_header_context_menu(...)` provides the default
+  header context-menu popup wiring, and `TableColumnVisibilitySnapshot` provides serde-friendly
+  caller-owned save/restore data without moving file storage or a mutable table runtime into
+  `fret-imui`. `TableColumn::pinned_left()` / `TableColumn::pinned_right()` plus
+  `TableOptions::horizontal_scroll` provide the narrow freeze-pane seam without moving a mutable
+  table runtime into `fret-imui`. `TableColumn` is now builder/accessor-first with private fields,
+  so the old public field-bag API shape is closed. Do not treat Dear ImGui `RowBg`, visibility
+  parity, column pinning, or the old columns API shape as wholly missing.
 - `ecosystem/fret-ui-editor/src/imui.rs` is only a thin adapter layer that forwards editor controls
   and composites through `into_element(...)`.
 - `repo-ref/imgui/imgui.h` still groups the upstream surface by Windows, Child Windows, Widgets,
@@ -129,7 +142,7 @@ Suggested follow-on names:
 
 - `imui-list-box-proof-v1`
 - `imui-plot-adapter-proof-v1`
-- `imui-table-advanced-flags-v1`
+- `imui-table-column-api-shape-v1`
 - `imui-child-region-auto-resize-v1`
 - `imui-child-region-visibility-return-v1`
 

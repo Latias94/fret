@@ -62,8 +62,12 @@ pub(in crate::ui) fn preview_text_measure_overlay(
 
     let header = ui::v_flex(|cx| {
         vec![
-            cx.text("Goal: visualize measured text bounds vs allocated container bounds."),
-            cx.text(
+            doc_layout::paragraph_text(
+                cx,
+                "Goal: visualize measured text bounds vs allocated container bounds.",
+            ),
+            doc_layout::paragraph_text(
+                cx,
                 "Green = container bounds; Yellow = measured TextMetrics.size; Cyan = baseline.",
             ),
         ]

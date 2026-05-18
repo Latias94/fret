@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "slug": "path-base-conformance-v1",
+  "title": "Path Base Conformance v1",
+  "status": "closed",
+  "updated": "2026-05-18",
+  "scope_kind": "closeout",
+  "problem": "ADR 0080 locks the prepared vector path contract, but the base fill-rule overlap semantics, transform-plus-clip behavior, and PathMetrics bounds guarantees needed dedicated conformance evidence beyond implementation review.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/path-base-conformance-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/path-base-conformance-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/path-base-conformance-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/path-base-conformance-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/path-base-conformance-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/path-base-conformance-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    }
+  ],
+  "repro": {
+    "summary": "Prepared vector path rendering and metrics must match ADR 0080 for fill-rule overlap semantics, conservative bounds, and transformed path draws under clips.",
+    "commands": [
+      "cargo test -p fret-render-wgpu --locked --test path_base_conformance -j 1"
+    ]
+  },
+  "gates": [
+    {
+      "name": "path-base-conformance",
+      "command": "cargo test -p fret-render-wgpu --locked --test path_base_conformance -j 1"
+    },
+    {
+      "name": "path-module-bounds-tests",
+      "command": "cargo test -p fret-render-wgpu --locked --lib renderer::path::tests::path_metrics_bounds_contain_tessellated_vertices -j 1"
+    },
+    {
+      "name": "backend-tests-compile",
+      "command": "cargo check -p fret-render-wgpu --locked --tests -j 1"
+    },
+    {
+      "name": "layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "docs/adr/0080-vector-path-contract.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md",
+    "crates/fret-render-wgpu/src/renderer/path.rs",
+    "crates/fret-render-wgpu/tests/path_base_conformance.rs",
+    "docs/workstreams/path-base-conformance-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0080-vector-path-contract.md",
+    "docs/adr/0078-scene-transform-and-clip-composition.md",
+    "docs/adr/0277-path-stroke-style-v2.md",
+    "docs/adr/0278-path-paint-surface-v1.md",
+    "docs/adr/IMPLEMENTATION_ALIGNMENT.md"
+  ],
+  "continue_policy": {
+    "default_action": "stay_closed",
+    "notes": "ADR 0080's recorded base conformance gap is closed for the default WGPU backend. Start a narrower additive follow-on only for new path contract, backend, or style surface changes."
+  }
+}

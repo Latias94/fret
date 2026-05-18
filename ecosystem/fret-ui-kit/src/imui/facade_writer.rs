@@ -251,14 +251,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     }
 
     fn text(&mut self, text: impl Into<Arc<str>>) {
-        let element = self.with_cx_mut(|cx| {
-            let mut props = fret_ui::element::TextProps::new(text);
-            props.layout.flex.shrink = 1.0;
-            props.layout.size.min_width = Some(fret_ui::element::Length::Px(fret_core::Px(0.0)));
-            props.wrap = fret_core::TextWrap::None;
-            props.overflow = fret_core::TextOverflow::Ellipsis;
-            cx.text_props(props)
-        });
+        let text = text.into();
+        let element =
+            self.with_cx_mut(|cx| crate::declarative::text::text_section_chrome_label(cx, text));
         self.add(element);
     }
 
@@ -1326,6 +1321,7 @@ mod tests {
                 assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
                 assert_eq!(props.wrap, TextWrap::None);
                 assert_eq!(props.overflow, TextOverflow::Ellipsis);
+                assert!(out[0].inherited_text_style.is_some());
             },
         );
     }

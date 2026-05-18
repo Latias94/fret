@@ -1,13 +1,18 @@
 //! Batteries-included desktop-first entry points for Fret.
 //!
 //! This crate is intentionally **ecosystem-level**:
-//! - it composes `fret-bootstrap` (golden-path wiring) with a default component surface,
-//! - it enables a practical desktop-first default stack,
+//! - it exposes a backend-free app-authoring surface under `app`,
+//! - it composes `fret-bootstrap` (golden-path wiring) with a default component surface under
+//!   `desktop`,
+//! - it enables a practical desktop-first default stack by default,
 //! - it remains optional: advanced users can depend on `fret-framework` + `fret-bootstrap` directly.
 //! - it is **not** the repository?s canonical example host; runnable lessons stay in app-owned
 //!   surfaces such as `apps/fret-cookbook`, `apps/fret-ui-gallery`, and other app shells.
 //!
 //! ## Choosing a native entry path
+//!
+//! `FretApp::new(...)` is available in the backend-free `app` profile as an app-authoring spec.
+//! Native window creation, `view::<V>()?`, `UiAppBuilder`, and `.run()` are `desktop` surfaces.
 //!
 //! - `fret::FretApp::new(...).window(...).view::<V>()?` is the recommended app-author path.
 //! - `fret::FretApp::new(...).window(...).view_with_hooks::<V>(...)?` is the recommended advanced
@@ -88,9 +93,10 @@
 //!   default app story stays declarative-first
 //! - use `fret::assets::{AssetBundleId, AssetLocator, AssetRequest, StaticAssetEntry, ...}`
 //!   for logical bundle/embedded assets; prefer `AssetBundleId::app(...)` /
-//!   `AssetBundleId::package(...)` over raw global strings; keep app-facing startup on
-//!   `AssetStartupPlan` + `AssetStartupMode` through `FretApp::asset_startup(...)` or
-//!   `UiAppBuilder::with_asset_startup(...)`; when host/bootstrap code intentionally installs
+//!   `AssetBundleId::package(...)` over raw global strings; `AssetStartupPlan` +
+//!   `AssetStartupMode` are backend-free authoring values, `FretApp::asset_startup(...)` records
+//!   them on the app spec, and desktop-only `UiAppBuilder::with_asset_startup(...)` applies them to
+//!   a concrete runner builder; when host/bootstrap code intentionally installs
 //!   file-backed resolver layers directly, construct
 //!   `FileAssetManifestResolver::from_bundle_dir(...)` /
 //!   `FileAssetManifestResolver::from_manifest_path(...)` and register the result with
@@ -158,6 +164,7 @@ pub use fret_ui_shadcn::facade as shadcn;
 /// authoring.
 pub mod icons {
     pub use fret_icons::IconId;
+    #[cfg(feature = "icons")]
     pub use fret_ui_kit::declarative::icon;
 }
 
@@ -288,6 +295,7 @@ pub mod assets {
         FileAssetManifestV1, ResolvedAssetBytes, ResolvedAssetReference, StaticAssetEntry,
         UrlPassthroughAssetResolver, asset_app_bundle_id, asset_package_bundle_id,
     };
+    #[cfg(any(feature = "app", feature = "desktop"))]
     pub use fret_bootstrap::{
         AssetReloadPolicy, AssetStartupMode, AssetStartupPlan, AssetStartupPlanError,
     };
@@ -346,8 +354,11 @@ pub mod assets {
     pub use fret_runtime::resolve_asset_locator_reference as resolve_locator_reference;
 }
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 #[derive(Debug, Clone)]
+#[cfg_attr(
+    not(all(not(target_arch = "wasm32"), feature = "desktop")),
+    allow(dead_code)
+)]
 pub(crate) enum AssetMount {
     BundleEntries {
         bundle: fret_assets::AssetBundleId,
@@ -357,11 +368,13 @@ pub(crate) enum AssetMount {
         owner: fret_assets::AssetBundleId,
         entries: Vec<fret_assets::StaticAssetEntry>,
     },
+    #[cfg(any(feature = "app", feature = "desktop"))]
     Startup {
         bundle: fret_assets::AssetBundleId,
         mode: fret_bootstrap::AssetStartupMode,
         plan: fret_bootstrap::AssetStartupPlan,
     },
+    #[cfg(any(feature = "app", feature = "desktop"))]
     ReloadPolicy {
         policy: fret_bootstrap::AssetReloadPolicy,
     },
@@ -374,9 +387,7 @@ mod view;
 /// Explicit app-integration contracts for reusable ecosystem bundles.
 pub mod integration;
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 mod app_entry;
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub use app_entry::FretApp;
 
 /// Canonical app-facing UI context alias for the default authoring surface.
@@ -526,7 +537,6 @@ pub mod app {
 
     /// Common imports for app code on the default authoring surface.
     pub mod prelude {
-        #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
         pub use crate::FretApp;
         pub use crate::app::App;
         pub use crate::app::AppRenderContext;
@@ -991,12 +1001,15 @@ pub mod advanced {
 #[derive(Debug, thiserror::Error)]
 /// Public error type for the `fret` facade.
 pub enum Error {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     #[error(transparent)]
     Bootstrap(#[from] BootstrapError),
     #[error(transparent)]
     AssetManifest(#[from] AssetManifestError),
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     #[error(transparent)]
     AssetStartup(#[from] fret_bootstrap::AssetStartupPlanError),
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     #[error(transparent)]
     Runner(#[from] RunnerError),
 }
@@ -1004,6 +1017,7 @@ pub enum Error {
 /// Result type used by the `fret` facade.
 pub type Result<T> = std::result::Result<T, Error>;
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 #[derive(Debug, thiserror::Error)]
 #[error(transparent)]
 pub struct BootstrapError(#[from] fret_bootstrap::BootstrapError);
@@ -1012,10 +1026,12 @@ pub struct BootstrapError(#[from] fret_bootstrap::BootstrapError);
 #[error(transparent)]
 pub struct AssetManifestError(#[from] fret_assets::AssetManifestLoadError);
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 #[derive(Debug, thiserror::Error)]
 #[error(transparent)]
 pub struct RunnerError(#[from] fret_launch::RunnerError);
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 impl Error {
     /// Returns a structured bootstrap failure report when this facade error represents a known
     /// startup/install failure taxonomy case.
@@ -2688,6 +2704,15 @@ mod authoring_surface_policy_tests {
         exported
     }
 
+    fn pub_use_lines(source: &str) -> std::collections::BTreeSet<String> {
+        source
+            .lines()
+            .map(str::trim)
+            .filter(|line| line.starts_with("pub use "))
+            .map(str::to_owned)
+            .collect()
+    }
+
     fn markdown_table_row<'a>(doc: &'a str, label: &str) -> &'a str {
         doc.lines()
             .find(|line| line.starts_with('|') && line.contains(label))
@@ -3804,6 +3829,88 @@ mod authoring_surface_policy_tests {
         assert!(!app_prelude_exports_symbol("docking"));
         assert!(!app_prelude_exports_symbol("handle_dock_op"));
         assert!(!app_prelude_exports_symbol("InstallConfig"));
+    }
+
+    #[test]
+    fn app_prelude_pub_use_budget_is_curated_and_closed() {
+        let app_prelude = app_prelude_source();
+        let actual_lines = pub_use_lines(app_prelude);
+        let expected_lines = [
+            "pub use crate::FretApp;",
+            "pub use crate::app::App;",
+            "pub use crate::app::AppRenderContext;",
+            "pub use crate::app::AppRenderCx;",
+            "pub use crate::shadcn;",
+            "pub use crate::view::AppRenderActionsExt as _;",
+            "pub use crate::view::AppRenderDataExt as _;",
+            "pub use crate::view::MutationHandleReadLayoutExt as _;",
+            "pub use crate::view::QueryHandleReadLayoutExt as _;",
+            "pub use crate::view::TrackedStateExt as _;",
+            "pub use crate::view::View;",
+            "pub use crate::{AppUi, Ui, UiChild, WindowId};",
+            "pub use fret_core::Px;",
+            "pub use fret_ui_kit::IntoUiElement as _;",
+            "pub use fret_ui_kit::IntoUiElementInExt as _;",
+            "pub use fret_ui_kit::StyledExt as _;",
+            "pub use fret_ui_kit::UiExt as _;",
+            "pub use fret_ui_kit::declarative::AnyElementSemanticsExt as _;",
+            "pub use fret_ui_kit::declarative::UiElementA11yExt as _;",
+            "pub use fret_ui_kit::declarative::UiElementTestIdExt as _;",
+            "pub use fret_ui_kit::ui;",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect::<std::collections::BTreeSet<_>>();
+
+        assert_eq!(
+            actual_lines, expected_lines,
+            "app prelude pub-use statements should stay on the approved Golden Path budget"
+        );
+
+        let actual_symbols = exported_symbol_names(app_prelude);
+        let expected_symbols = [
+            "App",
+            "AppRenderContext",
+            "AppRenderCx",
+            "AppUi",
+            "FretApp",
+            "Px",
+            "Ui",
+            "UiChild",
+            "View",
+            "WindowId",
+            "shadcn",
+            "ui",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect::<std::collections::BTreeSet<_>>();
+
+        assert_eq!(
+            actual_symbols, expected_symbols,
+            "app prelude named exports should stay limited to first-contact app authoring nouns"
+        );
+
+        let compact = app_prelude.split_whitespace().collect::<String>();
+        assert!(compact.contains("#[cfg(feature=\"shadcn\")]pubusecrate::shadcn;"));
+        assert!(compact.contains(
+            "#[cfg(feature=\"state-mutation\")]pubusecrate::view::MutationHandleReadLayoutExtas_;"
+        ));
+        assert!(compact.contains(
+            "#[cfg(feature=\"state-query\")]pubusecrate::view::QueryHandleReadLayoutExtas_;"
+        ));
+
+        assert!(
+            CRATE_USAGE_GUIDE.contains("`fret::app::prelude::*` is a closed Golden Path budget")
+        );
+        assert!(CRATE_USAGE_GUIDE.contains("closed Golden Path budget"));
+        assert!(CRATE_USAGE_GUIDE.contains("first-contact app authoring nouns"));
+        assert!(CRATE_USAGE_GUIDE.contains("Anonymous extension"));
+        assert!(CRATE_USAGE_GUIDE.contains("traits are also part of the budget"));
+        assert!(
+            CRATE_USAGE_GUIDE
+                .contains("must stay on explicit modules unless the Golden Path budget is")
+        );
     }
 
     #[test]

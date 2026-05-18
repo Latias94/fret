@@ -568,6 +568,13 @@ mod tests {
         assert!(readme.contains("`generated_assets::mount(builder)?`"));
         assert!(readme.contains("`preferred_startup_plan()` / `preferred_startup_mode()`"));
         assert!(readme.contains(
+            "`generated_assets::mount(builder)?` applies the file-backed development lane"
+        ));
+        assert!(readme.contains("record manual app intent with `FretApp::asset_startup(...)`"));
+        assert!(readme.contains(
+            "apply it on the desktop builder with `UiAppBuilder::with_asset_startup(...)`"
+        ));
+        assert!(readme.contains(
             "`fretboard assets rust write --dir assets --out src/generated_assets.rs --app-bundle todo-app --force`"
         ));
         assert!(readme.contains("`AssetBundleId::app(\"todo-app\")`"));

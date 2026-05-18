@@ -5,16 +5,18 @@ use std::sync::Arc;
 use fret_core::{Color, Corners, CursorIcon, Edges, Px, SemanticsRole};
 use fret_ui::action::ActivateReason;
 use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PointerRegionProps, PressableA11y,
-    PressableProps, PressableState, SemanticsDecoration, SemanticsProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
+    PointerRegionProps, PressableA11y, PressableKeyActivation, PressableProps, PressableState,
+    ScrollAxis, ScrollProps, SemanticsDecoration, SemanticsProps, SpacingEdges, SpacingLength,
 };
+use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 
 use super::containers::build_imui_children_with_focus;
 use super::label_identity::parse_label_identity;
 use super::{
-    ImUiFacade, ResponseExt, TableCellOptions, TableColumn, TableColumnWidth, TableHeaderResponse,
-    TableOptions, TableResponse, TableRowOptions, TableSortDirection,
+    ImUiFacade, ResponseExt, TableCellOptions, TableColumn, TableColumnPin, TableColumnWidth,
+    TableHeaderResponse, TableOptions, TableResponse, TableRowOptions, TableSortDirection,
 };
 
 use super::TableColumnResizeResponse;
@@ -35,6 +37,17 @@ struct BuiltTableCell {
     explicit_test_id: Option<Arc<str>>,
     background: Option<Color>,
     content: AnyElement,
+}
+
+struct PreparedTableCell {
+    column: TableColumn,
+    element: AnyElement,
+}
+
+struct PinnedTableGroups {
+    left: Vec<AnyElement>,
+    center: Vec<AnyElement>,
+    right: Vec<AnyElement>,
 }
 
 pub struct ImUiTable<'cx, 'a, H: UiHost> {
@@ -167,12 +180,23 @@ fn render_table<H: UiHost>(
     let visible_columns = columns
         .iter()
         .enumerate()
-        .filter(|(_, column)| column.visible)
+        .filter(|(_, column)| column.visible())
         .collect::<Vec<_>>();
+    let has_pinned_columns = visible_columns
+        .iter()
+        .any(|(_, column)| column.pin() != TableColumnPin::None);
+    let scroll_x = if has_pinned_columns || options.horizontal_scroll.is_some() {
+        options
+            .horizontal_scroll
+            .clone()
+            .or_else(|| Some(cx.slot_state(ScrollHandle::default, |h| h.clone())))
+    } else {
+        None
+    };
     let show_header = options.show_header
         && visible_columns
             .iter()
-            .any(|(_, column)| column.header.is_some());
+            .any(|(_, column)| column.header().is_some());
     let column_test_id_suffixes = columns
         .iter()
         .enumerate()
@@ -185,7 +209,7 @@ fn render_table<H: UiHost>(
             let cells = columns
                 .iter()
                 .enumerate()
-                .filter(|(_, column)| column.visible)
+                .filter(|(_, column)| column.visible())
                 .map(|(index, column)| {
                     let visible_label = visible_header_label(column);
                     let test_id = root_test_id.as_ref().map(|base| {
@@ -195,10 +219,10 @@ fn render_table<H: UiHost>(
                         ))
                     });
                     let sortable = column_is_sortable(column);
-                    let resize_options = column.resize;
+                    let resize_options = column.resize_options();
                     let mut resize = TableColumnResizeResponse {
                         column_index: index,
-                        column_id: column.id.clone(),
+                        column_id: column.id_arc(),
                         enabled: resize_options.is_some(),
                         min_width: resize_options.and_then(|options| options.min_width),
                         max_width: resize_options.and_then(|options| options.max_width),
@@ -215,28 +239,28 @@ fn render_table<H: UiHost>(
                             &mut resize,
                         )
                     } else {
-                        BuiltHeaderCell {
-                            element: wrap_plain_header_cell(
-                                cx,
-                                column,
-                                index,
-                                visible_label,
-                                test_id,
-                                &options,
-                                &mut resize,
-                            ),
-                            trigger: ResponseExt::default(),
-                        }
+                        wrap_plain_header_cell(
+                            cx,
+                            column,
+                            index,
+                            visible_label,
+                            test_id,
+                            &options,
+                            &mut resize,
+                        )
                     };
                     header_responses.push(TableHeaderResponse {
                         column_index: index,
-                        column_id: column.id.clone(),
+                        column_id: column.id_arc(),
                         sortable,
-                        sort_direction: column.sort_direction,
+                        sort_direction: column.sort_direction(),
                         trigger: built.trigger,
                         resize,
                     });
-                    built.element
+                    PreparedTableCell {
+                        column: column.clone(),
+                        element: built.element,
+                    }
                 })
                 .collect::<Vec<_>>();
             wrap_table_row(
@@ -250,6 +274,7 @@ fn render_table<H: UiHost>(
                 None,
                 &palette,
                 &options,
+                scroll_x.clone(),
             )
         }))
     } else {
@@ -272,7 +297,7 @@ fn render_table<H: UiHost>(
                         background: None,
                         content: empty_cell(cx),
                     });
-                    if !column.visible {
+                    if !column.visible() {
                         continue;
                     }
                     let default_test_id = row
@@ -286,15 +311,18 @@ fn render_table<H: UiHost>(
                         })
                         .or(built.test_id);
                     let test_id = built.explicit_test_id.or(default_test_id);
-                    cells.push(wrap_table_cell(
-                        cx,
-                        column,
-                        built.content,
-                        test_id,
-                        false,
-                        built.background,
-                        &options,
-                    ));
+                    cells.push(PreparedTableCell {
+                        column: column.clone(),
+                        element: wrap_table_cell(
+                            cx,
+                            column,
+                            built.content,
+                            test_id,
+                            false,
+                            built.background,
+                            &options,
+                        ),
+                    });
                 }
                 debug_assert!(
                     iter.next().is_none(),
@@ -309,6 +337,7 @@ fn render_table<H: UiHost>(
                     row.background,
                     &palette,
                     &options,
+                    scroll_x.clone(),
                 )
             })
         })
@@ -368,13 +397,14 @@ struct TableResizeHandleDragState {
 
 fn wrap_table_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    cells: Vec<AnyElement>,
+    cells: Vec<PreparedTableCell>,
     test_id: Option<Arc<str>>,
     header: bool,
     striped: bool,
     background: Option<Color>,
     palette: &TablePalette,
     options: &TableOptions,
+    scroll_x: Option<ScrollHandle>,
 ) -> AnyElement {
     let background = background.or_else(|| {
         if header {
@@ -392,14 +422,7 @@ fn wrap_table_row<H: UiHost>(
     row.background = background;
 
     let row = cx.container(row, move |cx| {
-        vec![
-            crate::ui::h_flex(move |_cx| cells)
-                .gap_metric(options.column_gap.clone())
-                .justify(crate::Justify::Start)
-                .items(crate::Items::Stretch)
-                .no_wrap()
-                .into_element(cx),
-        ]
+        vec![wrap_pinned_table_row_groups(cx, cells, options, scroll_x)]
     });
 
     if let Some(test_id) = test_id {
@@ -412,10 +435,167 @@ fn wrap_table_row<H: UiHost>(
     }
 }
 
+fn wrap_pinned_table_row_groups<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    cells: Vec<PreparedTableCell>,
+    options: &TableOptions,
+    scroll_x: Option<ScrollHandle>,
+) -> AnyElement {
+    let has_pinned_cells = cells
+        .iter()
+        .any(|cell| cell.column.pin() != TableColumnPin::None);
+    if !has_pinned_cells {
+        let cells = cells.into_iter().map(|cell| cell.element).collect();
+        return if scroll_x.is_some() {
+            let center = table_scroll_content_row_group(cx, cells, options);
+            wrap_table_center_scroll(cx, scroll_x, center)
+        } else {
+            table_fill_row_group(cx, cells, options)
+        };
+    }
+
+    let groups = split_pinned_table_cells(cells);
+    let mut children = Vec::new();
+    if !groups.left.is_empty() {
+        children.push(table_pinned_row_group(cx, groups.left, options));
+    }
+    if !groups.center.is_empty() {
+        let center = table_scroll_content_row_group(cx, groups.center, options);
+        children.push(wrap_table_center_scroll(cx, scroll_x, center));
+    }
+    if !groups.right.is_empty() {
+        children.push(table_pinned_row_group(cx, groups.right, options));
+    }
+
+    table_row_outer_group(cx, children)
+}
+
+fn split_pinned_table_cells(cells: Vec<PreparedTableCell>) -> PinnedTableGroups {
+    let mut left = Vec::new();
+    let mut center = Vec::new();
+    let mut right = Vec::new();
+
+    for cell in cells {
+        match cell.column.pin() {
+            TableColumnPin::Left => left.push(cell.element),
+            TableColumnPin::Right => right.push(cell.element),
+            TableColumnPin::None => center.push(cell.element),
+        }
+    }
+
+    PinnedTableGroups {
+        left,
+        center,
+        right,
+    }
+}
+
+fn table_row_outer_group<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+    layout.flex.grow = 1.0;
+    layout.flex.shrink = 1.0;
+    layout.flex.basis = Length::Px(Px(0.0));
+
+    table_h_flex(
+        cx,
+        children,
+        crate::MetricRef::space(crate::Space::N0),
+        layout,
+    )
+}
+
+fn table_fill_row_group<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    cells: Vec<AnyElement>,
+    options: &TableOptions,
+) -> AnyElement {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+    layout.flex.grow = 1.0;
+    layout.flex.shrink = 1.0;
+    layout.flex.basis = Length::Px(Px(0.0));
+
+    table_h_flex(cx, cells, options.column_gap.clone(), layout)
+}
+
+fn table_pinned_row_group<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    cells: Vec<AnyElement>,
+    options: &TableOptions,
+) -> AnyElement {
+    let mut layout = LayoutStyle::default();
+    layout.flex.shrink = 0.0;
+
+    table_h_flex(cx, cells, options.column_gap.clone(), layout)
+}
+
+fn table_scroll_content_row_group<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    cells: Vec<AnyElement>,
+    options: &TableOptions,
+) -> AnyElement {
+    table_h_flex(
+        cx,
+        cells,
+        options.column_gap.clone(),
+        LayoutStyle::default(),
+    )
+}
+
+fn wrap_table_center_scroll<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    scroll_x: Option<ScrollHandle>,
+    row: AnyElement,
+) -> AnyElement {
+    if let Some(scroll_x) = scroll_x {
+        let mut layout = LayoutStyle::default();
+        layout.size.width = Length::Fill;
+        layout.size.height = Length::Fill;
+        layout.flex.grow = 1.0;
+        layout.flex.shrink = 1.0;
+        layout.flex.basis = Length::Px(Px(0.0));
+        cx.scroll(
+            ScrollProps {
+                axis: ScrollAxis::X,
+                scroll_handle: Some(scroll_x),
+                layout,
+                ..Default::default()
+            },
+            |_cx| vec![row],
+        )
+    } else {
+        row
+    }
+}
+
+fn table_h_flex<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    children: Vec<AnyElement>,
+    gap: crate::MetricRef,
+    layout: LayoutStyle,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app);
+    cx.flex(
+        FlexProps {
+            layout,
+            direction: fret_core::Axis::Horizontal,
+            gap: SpacingLength::Px(gap.resolve(theme)),
+            padding: SpacingEdges::all(SpacingLength::Px(Px(0.0))),
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
+            wrap: false,
+        },
+        |_cx| children,
+    )
+}
+
 fn column_test_id_suffix(column: &TableColumn, index: usize) -> String {
     column
-        .id
-        .as_deref()
+        .id()
         .map(test_id_slug)
         .filter(|slug| !slug.is_empty())
         .unwrap_or_else(|| index.to_string())
@@ -443,14 +623,14 @@ fn test_id_slug(s: &str) -> String {
 }
 
 fn visible_header_label(column: &TableColumn) -> Option<Arc<str>> {
-    column.header.as_ref().map(|label| {
-        let parts = parse_label_identity(label.as_ref());
+    column.header().map(|label| {
+        let parts = parse_label_identity(label);
         Arc::<str>::from(parts.visible)
     })
 }
 
 fn column_is_sortable(column: &TableColumn) -> bool {
-    column.sortable || column.sort_direction.is_some()
+    column.is_sortable()
 }
 
 fn sort_direction_indicator(direction: TableSortDirection) -> &'static str {
@@ -484,9 +664,9 @@ fn sortable_header_a11y_label(
 ) -> Arc<str> {
     let base = visible_label
         .cloned()
-        .or_else(|| column.id.clone())
+        .or_else(|| column.id_arc())
         .unwrap_or_else(|| Arc::from(format!("Column {}", column_index + 1)));
-    match column.sort_direction {
+    match column.sort_direction() {
         Some(direction) => Arc::from(format!(
             "{base}, sorted {}",
             sort_direction_a11y_label(direction)
@@ -504,15 +684,63 @@ fn wrap_sortable_header_cell<H: UiHost>(
     options: &TableOptions,
     resize_response: &mut TableColumnResizeResponse,
 ) -> BuiltHeaderCell {
-    let mut trigger = ResponseExt::default();
     let column_key = column
-        .id
-        .clone()
+        .id_arc()
         .unwrap_or_else(|| Arc::from(column_index.to_string()));
-    let sort_direction = column.sort_direction;
+    let sort_direction = column.sort_direction();
     let a11y_label = sortable_header_a11y_label(column, visible_label.as_ref(), column_index);
 
-    let trigger_element = cx.keyed(("sortable-header-cell", column_key), |cx| {
+    let BuiltHeaderTrigger {
+        element: trigger_element,
+        trigger,
+    } = header_trigger_surface(
+        cx,
+        ("sortable-header-cell", column_key),
+        Some(a11y_label),
+        true,
+        move |cx, enabled, state| {
+            vec![sortable_header_visual(
+                cx,
+                visible_label.clone(),
+                sort_direction,
+                enabled,
+                state,
+            )]
+        },
+    );
+
+    let element = wrap_table_header_cell(
+        cx,
+        column,
+        column_index,
+        trigger_element,
+        test_id,
+        options,
+        resize_response,
+    );
+
+    BuiltHeaderCell { element, trigger }
+}
+
+struct BuiltHeaderTrigger {
+    element: AnyElement,
+    trigger: ResponseExt,
+}
+
+fn header_trigger_surface<H, K, F>(
+    cx: &mut ElementContext<'_, H>,
+    key: K,
+    a11y_label: Option<Arc<str>>,
+    activates_on_primary: bool,
+    render: F,
+) -> BuiltHeaderTrigger
+where
+    H: UiHost,
+    K: std::hash::Hash + Eq + Clone + 'static,
+    F: Fn(&mut ElementContext<'_, H>, bool, PressableState) -> Vec<AnyElement> + 'static,
+{
+    let mut trigger = ResponseExt::default();
+    let trigger_element = cx.keyed(key, |cx| {
         let trigger = &mut trigger;
         let enabled = !super::imui_is_disabled(cx);
         let mut props = PressableProps::default();
@@ -521,9 +749,16 @@ fn wrap_sortable_header_cell<H: UiHost>(
         props.layout.size.width = Length::Fill;
         props.layout.flex.grow = 1.0;
         props.layout.flex.shrink = 1.0;
+        if !activates_on_primary {
+            props.key_activation = PressableKeyActivation::None;
+        }
         props.a11y = PressableA11y {
-            role: Some(SemanticsRole::Button),
-            label: Some(a11y_label.clone()),
+            role: Some(if activates_on_primary {
+                SemanticsRole::Button
+            } else {
+                SemanticsRole::Group
+            }),
+            label: a11y_label.clone(),
             ..Default::default()
         };
 
@@ -531,11 +766,14 @@ fn wrap_sortable_header_cell<H: UiHost>(
             let behavior = super::active_trigger_behavior::install_active_trigger_behavior(
                 cx,
                 element_id,
-                super::active_trigger_behavior::ActiveTriggerBehaviorOptions::default(),
+                super::active_trigger_behavior::ActiveTriggerBehaviorOptions {
+                    primary_active: activates_on_primary,
+                    ..Default::default()
+                },
             );
             let lifecycle_model_for_activate = behavior.lifecycle_model.clone();
 
-            if enabled {
+            if enabled && activates_on_primary {
                 cx.pressable_on_activate(crate::on_activate(move |host, acx, reason| {
                     if reason == ActivateReason::Keyboard {
                         super::mark_lifecycle_instant_if_inactive(
@@ -550,7 +788,12 @@ fn wrap_sortable_header_cell<H: UiHost>(
                 }));
             }
 
-            let clicked = cx.take_transient_for(element_id, super::KEY_CLICKED);
+            let clicked = if activates_on_primary {
+                cx.take_transient_for(element_id, super::KEY_CLICKED)
+            } else {
+                let _ = cx.take_transient_for(element_id, super::KEY_CLICKED);
+                false
+            };
             super::active_trigger_behavior::populate_active_trigger_response(
                 cx,
                 element_id,
@@ -565,27 +808,14 @@ fn wrap_sortable_header_cell<H: UiHost>(
                 trigger,
             );
 
-            vec![sortable_header_visual(
-                cx,
-                visible_label.clone(),
-                sort_direction,
-                enabled,
-                state,
-            )]
+            render(cx, enabled, state)
         })
     });
 
-    let element = wrap_table_header_cell(
-        cx,
-        column,
-        column_index,
-        trigger_element,
-        test_id,
-        options,
-        resize_response,
-    );
-
-    BuiltHeaderCell { element, trigger }
+    BuiltHeaderTrigger {
+        element: trigger_element,
+        trigger,
+    }
 }
 
 fn sortable_header_visual<H: UiHost>(
@@ -644,20 +874,43 @@ fn wrap_plain_header_cell<H: UiHost>(
     test_id: Option<Arc<str>>,
     options: &TableOptions,
     resize_response: &mut TableColumnResizeResponse,
-) -> AnyElement {
-    let content = visible_label
-        .map(|label| table_header_label_text(cx, label))
-        .unwrap_or_else(|| empty_cell(cx));
-    let content = table_header_content_box(cx, content);
-    wrap_table_header_cell(
+) -> BuiltHeaderCell {
+    let column_key = column
+        .id_arc()
+        .unwrap_or_else(|| Arc::from(column_index.to_string()));
+    let a11y_label = visible_label
+        .clone()
+        .or_else(|| column.id_arc())
+        .or_else(|| Some(Arc::from(format!("Column {}", column_index + 1))));
+
+    let BuiltHeaderTrigger {
+        element: trigger_element,
+        trigger,
+    } = header_trigger_surface(
+        cx,
+        ("plain-header-cell", column_key),
+        a11y_label,
+        false,
+        move |cx, _enabled, _state| {
+            let content = visible_label
+                .clone()
+                .map(|label| table_header_label_text(cx, label))
+                .unwrap_or_else(|| empty_cell(cx));
+            vec![table_header_content_box(cx, content)]
+        },
+    );
+
+    let element = wrap_table_header_cell(
         cx,
         column,
         column_index,
-        content,
+        trigger_element,
         test_id,
         options,
         resize_response,
-    )
+    );
+
+    BuiltHeaderCell { element, trigger }
 }
 
 fn table_header_content_box<H: UiHost>(
@@ -689,7 +942,7 @@ fn wrap_table_header_cell<H: UiHost>(
     options: &TableOptions,
     resize_response: &mut TableColumnResizeResponse,
 ) -> AnyElement {
-    let resize_handle = column.resize.map(|_| {
+    let resize_handle = column.resize_options().map(|_| {
         let handle_test_id = test_id
             .as_ref()
             .map(|base| Arc::from(format!("{base}.resize")));
@@ -697,7 +950,7 @@ fn wrap_table_header_cell<H: UiHost>(
     });
 
     let mut cell = ContainerProps::default();
-    cell.layout = table_cell_layout(column.width, options.clip_cells);
+    cell.layout = table_cell_layout(column.width(), options.clip_cells);
 
     let cell = cx.container(cell, move |cx| {
         let mut children = vec![content];
@@ -729,9 +982,8 @@ fn table_resize_handle<H: UiHost>(
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let column_key = column
-        .id
-        .clone()
-        .or_else(|| column.header.clone())
+        .id_arc()
+        .or_else(|| column.header_arc())
         .unwrap_or_else(|| Arc::from(format!("column-{column_index}")));
     let enabled = !super::imui_is_disabled(cx);
     response.enabled = enabled;
@@ -844,7 +1096,7 @@ fn wrap_table_cell<H: UiHost>(
     options: &TableOptions,
 ) -> AnyElement {
     let mut cell = ContainerProps::default();
-    cell.layout = table_cell_layout(column.width, options.clip_cells);
+    cell.layout = table_cell_layout(column.width(), options.clip_cells);
     cell.padding = table_cell_padding().into();
     cell.background = background;
     let cell = cx.container(cell, move |_cx| vec![content]);
@@ -982,6 +1234,14 @@ mod tests {
         }
     }
 
+    fn count_x_scrolls(root: &AnyElement) -> usize {
+        let here = match &root.kind {
+            ElementKind::Scroll(props) if props.axis == ScrollAxis::X => 1,
+            _ => 0,
+        };
+        here + root.children.iter().map(count_x_scrolls).sum::<usize>()
+    }
+
     #[test]
     fn table_header_label_uses_shared_table_cell_text_role() {
         let window = AppWindowId::default();
@@ -1074,5 +1334,51 @@ mod tests {
         assert!(contains_text(&el, "Name Body"));
         assert!(!contains_text(&el, "Hidden Body"));
         assert!(contains_text(&el, "Owner Body"));
+    }
+
+    #[test]
+    fn horizontal_scroll_option_wraps_unpinned_header_and_body_center_groups() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let columns = vec![
+            TableColumn::px("Name###name", Px(180.0)),
+            TableColumn::px("Status###status", Px(120.0)),
+        ];
+        let (el, response) =
+            elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
+                let rows = vec![BuiltTableRow {
+                    key: Arc::from("row-0"),
+                    test_id: None,
+                    background: None,
+                    cells: vec![
+                        BuiltTableCell {
+                            test_id: None,
+                            explicit_test_id: None,
+                            background: None,
+                            content: cx.text("Name Body"),
+                        },
+                        BuiltTableCell {
+                            test_id: None,
+                            explicit_test_id: None,
+                            background: None,
+                            content: cx.text("Status Body"),
+                        },
+                    ],
+                }];
+                render_table(
+                    cx,
+                    "horizontal-scroll",
+                    columns,
+                    rows,
+                    TableOptions {
+                        horizontal_scroll: Some(ScrollHandle::default()),
+                        ..Default::default()
+                    },
+                )
+            });
+
+        assert_eq!(response.headers().len(), 2);
+        assert_eq!(count_x_scrolls(&el), 2);
     }
 }

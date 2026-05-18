@@ -11,6 +11,7 @@
     clippy::type_complexity
 )]
 
+pub mod boolean_control;
 pub mod calendar;
 pub mod calendar_solar_hijri;
 pub mod carousel;
@@ -19,6 +20,7 @@ pub mod cmdk_score;
 pub mod cmdk_selection;
 pub mod easing;
 pub mod embla;
+pub mod entry_focus;
 pub mod form_state;
 pub mod form_validation;
 pub mod grid_viewport;
