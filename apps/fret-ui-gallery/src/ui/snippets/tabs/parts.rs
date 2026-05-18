@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("parts.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn panel(
@@ -61,7 +62,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 .trigger(
                     shadcn::TabsTrigger::new("activity", "Activity")
                         .children([
-                            cx.text("Activity"),
+                            decl_text::text_button_label(cx, "Activity"),
                             shadcn::Badge::new("2").into_element(cx),
                         ])
                         .test_id("ui-gallery-tabs-parts-trigger-activity"),

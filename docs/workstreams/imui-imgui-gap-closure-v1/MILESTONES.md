@@ -622,6 +622,9 @@ Exit criteria:
   2026-05-18 gallery Button children text result: the custom command-menu child label in the
   copyable Button children snippet now uses the shared button-label role instead of bare
   `cx.text(...)`.
+  2026-05-18 gallery Tabs custom text result: icon+label custom tab triggers now use the shared
+  button-label role, and usage-panel prose uses paragraph text; built-in tab label recipe paths
+  remain recipe-owned.
   2026-05-17 gallery editor preview text result: code-editor, Markdown, and Web IME preview
   headers now use paragraph text for prose, control readout text for fixed status/debug values,
   and button label text for custom pointer-region actions. The slice keeps editor-proof resize

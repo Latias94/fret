@@ -3168,6 +3168,39 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/tabs/icons.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_button_label(cx, \"Preview\")",
+                "decl_text::text_button_label(cx, \"Code\")",
+            ],
+            forbidden=[
+                "cx.text(\"Preview\")",
+                "cx.text(\"Code\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/tabs/parts.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_button_label(cx, \"Activity\")",
+            ],
+            forbidden=[
+                "cx.text(\"Activity\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/tabs/usage.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph(cx, \"Make changes to your account here.\")",
+                "decl_text::text_paragraph(cx, \"Change your password here.\")",
+            ],
+            forbidden=[
+                "ui::text(",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/toggle/label.rs"),
             required=[
                 "decl_text::text_control_readout(cx, format!(\"Pressed: {pressed_now}\"))",
@@ -3242,6 +3275,7 @@ def main() -> None:
                 "fn toggle_group_snippet_item_text_uses_button_label_role()",
                 "fn toggle_snippet_item_text_uses_button_label_role()",
                 "fn button_children_snippet_text_uses_button_label_role()",
+                "fn tabs_snippet_custom_text_uses_shared_roles()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",
             ],

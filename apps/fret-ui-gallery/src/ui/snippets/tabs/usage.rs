@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("usage.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -11,12 +12,12 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::TabsItem::new(
                 "account",
                 "Account",
-                ui::children![cx; ui::text("Make changes to your account here.")],
+                ui::children![cx; decl_text::text_paragraph(cx, "Make changes to your account here.")],
             ),
             shadcn::TabsItem::new(
                 "password",
                 "Password",
-                ui::children![cx; ui::text("Change your password here.")],
+                ui::children![cx; decl_text::text_paragraph(cx, "Change your password here.")],
             ),
         ]
     })

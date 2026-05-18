@@ -669,6 +669,10 @@ Readiness order for the next locally testable review slices:
    routes its custom command button label through `text_button_label(...)` instead of
    `cx.text(...)`, keeping slotted button children on the same single-line/shrinkable role as other
    button-like chrome.
+   2026-05-18 gallery Tabs custom text follow-up: copyable Tabs snippets now route custom
+   icon+label trigger text through `text_button_label(...)` and usage-panel body copy through
+   `text_paragraph(...)`, while leaving built-in `TabsItem` / `TabsTrigger` label handling inside
+   shadcn recipes.
    2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
    headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
    through `control_readout_text(...)`, and custom pointer-region labels through

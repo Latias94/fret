@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("icons.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -11,13 +12,13 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::TabsItem::new("preview", "Preview", Vec::<AnyElement>::new())
                 .trigger_children([
                     icon::icon(cx, IconId::new_static("lucide.app-window")),
-                    cx.text("Preview"),
+                    decl_text::text_button_label(cx, "Preview"),
                 ])
                 .trigger_test_id("ui-gallery-tabs-icons-trigger-preview"),
             shadcn::TabsItem::new("code", "Code", Vec::<AnyElement>::new())
                 .trigger_children([
                     icon::icon(cx, IconId::new_static("lucide.code")),
-                    cx.text("Code"),
+                    decl_text::text_button_label(cx, "Code"),
                 ])
                 .trigger_test_id("ui-gallery-tabs-icons-trigger-code"),
         ]

@@ -6096,6 +6096,36 @@ fn selected_tabs_snippets_prefer_builder_preserving_helpers() {
 }
 
 #[test]
+fn tabs_snippet_custom_text_uses_shared_roles() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/tabs/icons.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_button_label(cx, \"Preview\")",
+            "decl_text::text_button_label(cx, \"Code\")",
+        ],
+        &["cx.text(\"Preview\")", "cx.text(\"Code\")"],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/tabs/parts.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_button_label(cx, \"Activity\")",
+        ],
+        &["cx.text(\"Activity\")"],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/tabs/usage.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_paragraph(cx, \"Make changes to your account here.\")",
+            "decl_text::text_paragraph(cx, \"Change your password here.\")",
+        ],
+        &["ui::text("],
+    );
+}
+
+#[test]
 fn tabs_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/tabs.rs",
