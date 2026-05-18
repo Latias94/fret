@@ -3917,6 +3917,33 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `cargo fmt -p fret-ui --check`
   - result: passed.
 
+## Layout Primitive Relative Inset Flow-Sibling Gate
+
+- invariant:
+  `PositionStyle::Relative` inset offsets must move the target's final layout and hit-test
+  position without changing sibling flow placement. This locks ADR 0062's typed position/inset
+  primitive and `element.rs`'s contract that relative inset offsets tweak final position without
+  affecting siblings.
+- finding:
+  `relative-inset-offsets-final-position-without-affecting-flow-siblings` did not reproduce a new
+  mechanism defect. It proves a `20 x 10` Pressable in a horizontal flex row with `top: 12px`
+  lands at `0,12`, while the following `30 x 10` sibling stays at `20,0`. The original flow-slot
+  center misses the moved Pressable and the final-position center hits it.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/tests/layout/mechanism_harness.rs`,
+  `crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json`,
+  `crates/fret-ui/src/element.rs`,
+  `crates/fret-ui/src/declarative/layout_helpers.rs`,
+  `crates/fret-ui/src/declarative/host_widget/layout/flex.rs`, and
+  `docs/adr/0062-tailwind-layout-primitives-margin-position-grid-aspect-ratio.md`.
+- JSON fixture validation:
+  `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\layout_primitives_v1.json`
+  - result: passed.
+- gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+- result:
+  passed; Nextest run id `6a87d598-b4f7-4b0d-83c6-c9842cdb9d25`.
+
 ## Layout Primitive Pressable Absolute-Only Wrapper Envelope Gate
 
 - invariant:

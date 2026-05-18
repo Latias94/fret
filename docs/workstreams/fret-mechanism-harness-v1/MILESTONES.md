@@ -1790,3 +1790,20 @@ Status: complete for BackdropSourceGroup bounds versus hit-test clipping semanti
   with Nextest run id `05c28589-9f50-4aa2-b1d5-3ab3a3700de2`.
 - JSON fixture validation passes:
   `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\hit_test_routing_v1.json`.
+
+## M102: Relative Inset Flow-Sibling Layout Primitive Fixture
+
+Status: complete for `PositionStyle::Relative` final-position and flow-sibling semantics.
+
+- Added `relative-inset-offsets-final-position-without-affecting-flow-siblings` to the layout
+  primitive fixture.
+- The case locks ADR 0062 and `element.rs` semantics: relative inset offsets move the element's
+  final layout and hit-test position, but siblings still consume the original flow slot.
+- No new mechanism defect was reproduced. The current flex layout path keeps the moved Pressable at
+  `0,12`, the sibling at `20,0`, and routes hit-testing to the moved final position rather than the
+  original flow slot.
+- The gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+  with Nextest run id `6a87d598-b4f7-4b0d-83c6-c9842cdb9d25`.
+- JSON fixture validation passes:
+  `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\layout_primitives_v1.json`.

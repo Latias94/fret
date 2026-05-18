@@ -975,3 +975,9 @@ date: 2026-05-12
     and `missing_glyphs=0`. No Button Group recipe or renderer defect was reproduced; the first
     runtime draft exposed an over-eager script precondition on the direct control's pre-value
     `0 x 0` semantics bounds, so the precondition now checks the owning group root instead.
+- [x] Add relative inset final-position and flow-sibling layout primitive coverage.
+  - Result: `relative-inset-offsets-final-position-without-affecting-flow-siblings` now locks the
+    `PositionStyle::Relative` contract from ADR 0062 and `element.rs`: inset offsets move the
+    target's final layout and hit-test position, but its sibling keeps the original flow slot. The
+    fixture proves the old flow-slot center misses the moved Pressable while the final-position
+    center hits it. No new `fret-ui` mechanism defect was reproduced.
