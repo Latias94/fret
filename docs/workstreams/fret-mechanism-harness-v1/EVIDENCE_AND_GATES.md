@@ -4099,3 +4099,29 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
 - formatting:
   `cargo fmt -p fret-ui-gallery -p fret-diag-protocol --check`
   - result: passed.
+
+## ViewCache Relative Inset Semantics Movement Gate
+
+- invariant:
+  clean ViewCache reuse must keep semantics nodes observable exactly once and must translate their
+  semantics bounds when the cache root moves, even when the cached child uses
+  `PositionStyle::Relative` inset offsets. The semantics snapshot must not retain stale
+  final-position bounds from the old cache-root origin.
+- finding:
+  `view_cache_semantics_moving_relative_inset_updates_bounds_without_rerender` did not reproduce a
+  new mechanism defect. The current runtime keeps one semantics node for the cached Pressable and
+  moves its bounds from `0,12` to `40,12` while the cached render closure runs once.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/tests/view_cache.rs`,
+  `crates/fret-ui/src/elements/runtime.rs`,
+  `crates/fret-ui/src/tree/ui_tree_semantics.rs`,
+  `crates/fret-ui/src/tree/prepaint/interaction.rs`,
+  `crates/fret-ui/src/element.rs`,
+  `docs/adr/0213-cache-roots-and-cached-subtree-semantics-v1.md`, and
+  `docs/adr/0062-tailwind-layout-primitives-margin-position-grid-aspect-ratio.md`.
+- focused gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui view_cache_semantics_moving_relative_inset_updates_bounds_without_rerender --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `c013f3b5-819d-45ba-8722-ddea5139213d`.
+- formatting:
+  `cargo fmt -p fret-ui --check`
+  - result: passed.

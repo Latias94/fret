@@ -1865,3 +1865,20 @@ Status: complete for disabled leaf TextInput action-state semantics.
 - Build and formatting pass:
   `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev` and
   `cargo fmt -p fret-ui-gallery -p fret-diag-protocol --check`.
+
+## M106: ViewCache Relative Inset Semantics Movement Gate
+
+Status: complete for clean ViewCache reuse with relative-inset semantics bounds movement.
+
+- Added `view_cache_semantics_moving_relative_inset_updates_bounds_without_rerender` as a focused
+  `fret-ui` test.
+- The case locks the semantics companion to M104: a `PositionStyle::Relative` Pressable with
+  `top: 12px` must keep one semantics node and move that node's bounds when a clean ViewCache
+  subtree moves without rerendering the cached child.
+- No new mechanism defect was reproduced. The current runtime moves the semantics bounds from
+  `0,12` to `40,12` while rendering the cached subtree once.
+- The focused gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui view_cache_semantics_moving_relative_inset_updates_bounds_without_rerender --no-fail-fast --no-capture`
+  with Nextest run id `c013f3b5-819d-45ba-8722-ddea5139213d`.
+- Formatting passes:
+  `cargo fmt -p fret-ui --check`.

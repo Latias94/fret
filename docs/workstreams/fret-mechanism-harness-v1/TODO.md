@@ -1003,3 +1003,9 @@ date: 2026-05-12
     visual bounds, fallback hit-testing, and runtime routing all follow the moved final position,
     while the old final-position center no longer hits. No new `fret-ui` mechanism defect was
     reproduced.
+- [x] Add ViewCache clean-reuse semantics movement coverage for relative inset final-position
+  replay.
+  - Result: `view_cache_semantics_moving_relative_inset_updates_bounds_without_rerender` now proves
+    a cached `PositionStyle::Relative` Pressable with `top: 12px` keeps one stable semantics node
+    and moves its semantics bounds from `0,12` to `40,12` when the cache root moves without
+    rerendering the cached subtree. No new `fret-ui` mechanism defect was reproduced.
