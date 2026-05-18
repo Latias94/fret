@@ -495,6 +495,10 @@ Exit criteria:
   uses `doc_layout::paragraph_text(...)` for explanatory copy instead of bare `cx.text(...)`,
   keeping scrollable code/text preview prose on the same paragraph role as the other editor
   preview headers.
+  2026-05-18 text editor/conformance header prose result: the UI Gallery text
+  editor/conformance headers now use paragraph text for explanatory copy and a control-readout role
+  for the BiDi sample-list heading. Explicit text capability probes remain on direct
+  `TextProps`, `SelectableTextProps`, and canvas text paths.
   2026-05-17 code-editor IME gate button-label result: the MVP IME gate action labels now use
   `doc_layout::button_label_text(...)`, and focused source/test guards prevent those custom
   pointer-region buttons from drifting back to bare `cx.text(...)` under fixed row chrome.
