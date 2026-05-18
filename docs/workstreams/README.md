@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 410
+- Dedicated directories: 411
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2314,6 +2314,7 @@ Rule:
 - `docs/workstreams/wgpu-standard-effects-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating standard effect/postprocess WGPU conformance tests onto the shared readback/render harness)
 - `docs/workstreams/wgpu-stroke-dash-shadow-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating stroke, dash, and shadow WGPU conformance tests onto the shared readback/render harness)
 - `docs/workstreams/wgpu-text-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating text paint/outline WGPU conformance tests onto the shared readback/render harness)
+- `docs/workstreams/wgpu-text-measure-dead-branch-prune-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for deleting unreachable WGPU text measurement `cfg(any())` implementation copies after shared `TextMeasureCaches` ownership)
 - `docs/workstreams/wgpu-viewport-metadata-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating viewport metadata WGPU conformance final render/readback helpers onto shared support while preserving metadata assertions)
 - `docs/workstreams/wgpu-vulkan-path-msaa-visibility-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating Vulkan path-MSAA visibility WGPU conformance readback helpers onto shared support while preserving env and safety-valve assertions)
 - `docs/workstreams/window-command-availability-snapshot-v2/` — first n/a, latest n/a, 4 markdown docs (active runtime command/action availability publication lane; includes `WORKSTREAM.json`)

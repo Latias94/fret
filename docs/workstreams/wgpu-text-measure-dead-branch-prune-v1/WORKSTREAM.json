@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "slug": "wgpu-text-measure-dead-branch-prune-v1",
+  "title": "WGPU Text Measure Dead Branch Prune v1",
+  "status": "closed",
+  "updated": "2026-05-18",
+  "scope_kind": "follow-on",
+  "problem": "fret-render-wgpu text measurement kept two always-false cfg(any()) inline implementation copies after the active behavior had moved behind TextLayoutCacheState::measure and fret_render_text::TextMeasureCaches.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/wgpu-text-measure-dead-branch-prune-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/wgpu-text-measure-dead-branch-prune-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/wgpu-text-measure-dead-branch-prune-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/wgpu-text-measure-dead-branch-prune-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/wgpu-text-measure-dead-branch-prune-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/wgpu-text-measure-dead-branch-prune-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    }
+  ],
+  "repro": {
+    "summary": "Renderer text measurement should compile and keep measure/prepare parity after deleting unreachable WGPU-local measurement copies.",
+    "commands": [
+      "cargo check -p fret-render-wgpu --locked --tests -j 1",
+      "cargo nextest run -p fret-render-wgpu --locked text_measure_matches_prepare_across_fractional_scale_factors wrapped_measure_matches_prepare_under_fractional_scale_factor grapheme_wrapped_measure_matches_prepare_under_fractional_scale_factor grapheme_wrapped_measure_attributed_matches_prepare_under_fractional_scale_factor"
+    ]
+  },
+  "gates": [
+    {
+      "name": "fmt",
+      "command": "cargo fmt --package fret-render-wgpu"
+    },
+    {
+      "name": "dead-branch-scan",
+      "command": "rg -n \"#\\\\[cfg\\\\(any\\\\(\\\\)\\\\)\\\\]|cfg\\\\(any\\\\(\\\\)\\\\)\" crates/fret-render-wgpu/src/text/measure.rs"
+    },
+    {
+      "name": "backend-tests-compile",
+      "command": "cargo check -p fret-render-wgpu --locked --tests -j 1"
+    },
+    {
+      "name": "measure-parity",
+      "command": "cargo nextest run -p fret-render-wgpu --locked text_measure_matches_prepare_across_fractional_scale_factors wrapped_measure_matches_prepare_under_fractional_scale_factor grapheme_wrapped_measure_matches_prepare_under_fractional_scale_factor grapheme_wrapped_measure_attributed_matches_prepare_under_fractional_scale_factor"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json",
+      "command": "python -m json.tool docs/workstreams/wgpu-text-measure-dead-branch-prune-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "crates/fret-render-wgpu/src/text/measure.rs",
+    "crates/fret-render-wgpu/src/text/layout_cache_state.rs",
+    "crates/fret-render-text/src/measure.rs",
+    "crates/fret-render-wgpu/tests/text_measure_matches_prepare.rs",
+    "docs/workstreams/wgpu-text-measure-dead-branch-prune-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+  ],
+  "adr_refs": [],
+  "continue_policy": {
+    "default_action": "stay_closed",
+    "notes": "The WGPU-local dead branch prune is complete. Broader text platform cfg cleanup should use a separate follow-on."
+  }
+}
