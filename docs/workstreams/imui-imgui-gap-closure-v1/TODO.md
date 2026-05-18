@@ -554,6 +554,9 @@ Readiness order for the next locally testable review slices:
    through `text_button_label(...)`, and fixed outer title/body copy through shared roles.
    PromptInput docs now routes the custom Search label through button-label text and fixed outer
    title/body copy through section-chrome/paragraph roles.
+   2026-05-19 AI PromptInput cursor custom-text follow-up: Cursor-style PromptInput command rows,
+   file/path labels, rules hover-card text, tabs footer copy, and custom trigger counts now use
+   shared list-row/code/readout/button text roles instead of local `ui::text(...)` styling.
    2026-05-18 AI chrome/readout text-role follow-up: Reasoning, StackTrace, and VoiceSelector now
    route fixed outer title/body copy through shared section-chrome/paragraph roles; StackTrace and
    VoiceSelector compact status/diagnostics readouts use `text_control_readout(...)` instead of

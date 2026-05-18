@@ -1434,6 +1434,57 @@ fn ai_prompt_input_provider_and_docs_use_shared_text_roles_and_non_text_markers(
 }
 
 #[test]
+fn ai_prompt_input_cursor_custom_text_uses_shared_roles() {
+    let source = include_str!("../src/ui/snippets/ai/prompt_input_cursor_demo.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_list_row_label(cx, title)",
+        "decl_text::text_code_label(cx, filename)",
+        "decl_text::text_code_label(cx, path)",
+        "decl_text::text_list_row_label(cx, \"Active Tabs\")",
+        "decl_text::text_control_readout(cx, \"✓\")",
+        "decl_text::text_section_chrome_label(cx, \"Attached Project Rules\")",
+        "decl_text::text_control_readout(cx, \"Always Apply:\")",
+        "decl_text::text_code_label(cx, \"ultracite.mdc\")",
+        "decl_text::text_control_readout(cx, \"Click to manage\")",
+        "decl_text::text_button_label(cx, \"1\")",
+        "decl_text::text_button_label(cx, \"1 Tab\")",
+        "decl_text::text_control_readout( cx, \"Only file paths are included\", )",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "prompt_input_cursor_demo should route command/rules/tabs custom text through shared roles; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "ui::text(title)",
+        "ui::text(filename)",
+        "ui::text(path)",
+        "ui::text(\"Active Tabs\")",
+        "ui::text(\"✓\")",
+        "ui::text(\"Attached Project Rules\")",
+        "ui::text(\"Always Apply:\")",
+        "ui::text(\"ultracite.mdc\")",
+        "ui::text(\"Click to manage\")",
+        "ui::text(\"1\")",
+        "ui::text(\"1 Tab\")",
+        "ui::text(\"Only file paths are included\")",
+        ".text_size_px(Px(",
+        ".font_weight(",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "prompt_input_cursor_demo reintroduced local custom text policy: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
 fn ai_reasoning_stack_trace_and_voice_selector_use_shared_chrome_text_roles() {
     for (name, source, title, body) in [
         (

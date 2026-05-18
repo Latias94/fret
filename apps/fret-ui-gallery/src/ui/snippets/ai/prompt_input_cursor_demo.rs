@@ -6,6 +6,7 @@ use fret_core::Px;
 use fret_icons::IconId;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, LengthRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -26,17 +27,13 @@ fn source_item(
 ) -> ui_ai::PromptInputCommandItem {
     let text = ui::v_flex(move |cx| {
         vec![
-            ui::text(title)
-                .font_weight(fret_core::FontWeight::MEDIUM)
-                .text_size_px(Px(14.0))
-                .into_element(cx),
-            ui::text(filename)
-                .text_size_px(Px(12.0))
-                .text_color(fret_ui_kit::ColorRef::Token {
+            decl_text::text_list_row_label(cx, title),
+            decl_text::text_code_label(cx, filename).inherit_foreground(
+                fret_ui_kit::ColorRef::Token {
                     key: "muted-foreground",
                     fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
-                })
-                .into_element(cx),
+                },
+            ),
         ]
     })
     .gap(Space::N0p5)
@@ -56,10 +53,7 @@ fn path_item(
 ) -> ui_ai::PromptInputTabItem {
     ui_ai::PromptInputTabItem::new([
         decl_icon::icon(cx, IconId::new("lucide.globe")),
-        ui::text(path)
-            .truncate()
-            .layout(LayoutRefinement::default().min_w_0().flex_1())
-            .into_element(cx),
+        decl_text::text_code_label(cx, path).layout(LayoutRefinement::default().min_w_0().flex_1()),
     ])
     .test_id(test_id)
 }
@@ -83,14 +77,13 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                             .test_id("ui-gallery-ai-prompt-input-cursor-active-tabs-item")
                             .children([
                                 decl_icon::icon(cx, IconId::new("lucide.globe")),
-                                ui::text("Active Tabs").into_element(cx),
-                                ui::text("✓")
+                                decl_text::text_list_row_label(cx, "Active Tabs"),
+                                decl_text::text_control_readout(cx, "✓")
                                     .layout(LayoutRefinement::default().ml_auto())
-                                    .text_color(fret_ui_kit::ColorRef::Token {
+                                    .inherit_foreground(fret_ui_kit::ColorRef::Token {
                                         key: "muted-foreground",
                                         fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
-                                    })
-                                    .into_element(cx),
+                                    }),
                             ]),
                     ),
                 )
@@ -120,26 +113,19 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         vec![
             ui::v_flex(move |cx| {
                 vec![
-                    ui::text("Attached Project Rules")
-                        .font_weight(fret_core::FontWeight::MEDIUM)
-                        .text_size_px(Px(14.0))
-                        .text_color(fret_ui_kit::ColorRef::Token {
+                    decl_text::text_section_chrome_label(cx, "Attached Project Rules")
+                        .inherit_foreground(fret_ui_kit::ColorRef::Token {
+                            key: "muted-foreground",
+                            fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
+                        }),
+                    decl_text::text_control_readout(cx, "Always Apply:")
+                        .inherit_foreground(fret_ui_kit::ColorRef::Token {
                             key: "muted-foreground",
                             fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
                         })
-                        .into_element(cx),
-                    ui::text("Always Apply:")
-                        .text_size_px(Px(14.0))
-                        .text_color(fret_ui_kit::ColorRef::Token {
-                            key: "muted-foreground",
-                            fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
-                        })
-                        .layout(LayoutRefinement::default().ml(Space::N4))
-                        .into_element(cx),
-                    ui::text("ultracite.mdc")
-                        .text_size_px(Px(14.0))
-                        .layout(LayoutRefinement::default().ml(Space::N8))
-                        .into_element(cx),
+                        .layout(LayoutRefinement::default().ml(Space::N4)),
+                    decl_text::text_code_label(cx, "ultracite.mdc")
+                        .layout(LayoutRefinement::default().ml(Space::N8)),
                 ]
             })
             .gap(Space::N2)
@@ -148,13 +134,12 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::Separator::new().into_element(cx),
             ui::h_flex(move |cx| {
                 vec![
-                    ui::text("Click to manage")
-                        .text_size_px(Px(14.0))
-                        .text_color(fret_ui_kit::ColorRef::Token {
+                    decl_text::text_control_readout(cx, "Click to manage").inherit_foreground(
+                        fret_ui_kit::ColorRef::Token {
                             key: "muted-foreground",
                             fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
-                        })
-                        .into_element(cx),
+                        },
+                    ),
                 ]
             })
             .px(Space::N4)
@@ -248,7 +233,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         ui_ai::PromptInputButton::new("Rules")
                             .children([
                                 decl_icon::icon(cx, IconId::new("lucide.ruler")),
-                                ui::text("1").into_element(cx),
+                                decl_text::text_button_label(cx, "1"),
                             ])
                             .size(shadcn::ButtonSize::Sm)
                             .variant(shadcn::ButtonVariant::Outline)
@@ -266,7 +251,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         ui_ai::PromptInputButton::new("Tabs")
                             .children([
                                 decl_icon::icon(cx, IconId::new("lucide.files")),
-                                ui::text("1 Tab").into_element(cx),
+                                decl_text::text_button_label(cx, "1 Tab"),
                             ])
                             .size(shadcn::ButtonSize::Sm)
                             .variant(shadcn::ButtonVariant::Outline)
@@ -279,13 +264,16 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                             shadcn::Separator::new().into_element(cx),
                             ui::h_flex(move |cx| {
                                 vec![
-                                    ui::text("Only file paths are included")
-                                        .text_size_px(Px(12.0))
-                                        .text_color(fret_ui_kit::ColorRef::Token {
+                                    decl_text::text_control_readout(
+                                        cx,
+                                        "Only file paths are included",
+                                    )
+                                    .inherit_foreground(
+                                        fret_ui_kit::ColorRef::Token {
                                             key: "muted-foreground",
                                             fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
-                                        })
-                                        .into_element(cx),
+                                        },
+                                    ),
                                 ]
                             })
                             .px(Space::N3)

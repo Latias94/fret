@@ -740,6 +740,14 @@ Run evidence:
   fixed outer title/body copy through section-chrome/paragraph roles. Gates: `cargo nextest run -p
   fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` and `python
   tools/gate_imui_workstream_source.py`.
+- 2026-05-19: extended the AI visible text-role migration to Cursor-style PromptInput custom text.
+  Command item titles now use `text_list_row_label(...)`, filenames/paths use
+  `text_code_label(...)`, rules/tabs hover-card readouts use `text_control_readout(...)`, and
+  custom trigger counts use `text_button_label(...)` instead of local `ui::text(...)` styling.
+  PromptInput placeholders, command headings, and component-owned labels were intentionally left to
+  `fret-ui-ai` component policy. Gates: `cargo nextest run -p fret-ui-gallery --test
+  ai_visible_text_role_surface ai_prompt_input_cursor_custom_text_uses_shared_roles
+  --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
 - 2026-05-18: extended the AI visible text-role migration to Reasoning, StackTrace, and
   VoiceSelector fixed chrome/readouts. Fixed outer title/body copy uses shared
   section-chrome/paragraph roles; StackTrace status and VoiceSelector selected/open diagnostics use
@@ -3100,6 +3108,30 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - Final focused test:
   `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
   ai_prompt_and_plan_snippets_use_shared_outer_text_roles --no-fail-fast` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.
+
+2026-05-19 AI PromptInput cursor custom-text slice:
+
+- Source gap before fix: `prompt_input_cursor_demo.rs` still used local `ui::text(...)` styling for
+  command item labels, filenames/paths, hover-card rules text, trigger counts, and the tabs footer
+  readout. Those are fixed chrome/readout/identifier roles rather than free-form text capability
+  probes.
+- `apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_cursor_demo.rs` now routes those custom
+  child text nodes through shared list-row, code-label, control-readout, section-chrome, and
+  button-label roles.
+- First post-fix
+  `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
+  ai_prompt_input_cursor_custom_text_uses_shared_roles --no-fail-fast` timed out while a background
+  Cargo/Rustc compile continued; Cargo/Rustc processes were allowed to exit.
+- `cargo fmt -p fret-ui-gallery` passed and applied the expected rustfmt wrapping.
+- Retried after the compile finished:
+  `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
+  ai_prompt_input_cursor_custom_text_uses_shared_roles --no-fail-fast` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `cargo fmt --check -p fret-ui-gallery` passed.
