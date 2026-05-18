@@ -96,6 +96,134 @@ fn scroll_intrinsic_content_mode_measures_children() {
 }
 
 #[test]
+fn absolute_interactivity_gate_preserves_scrollbar_track_bounds() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(240.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "absolute-interactivity-gate-scrollbar-track",
+        |cx| {
+            let mut stack_layout = crate::element::LayoutStyle::default();
+            stack_layout.size.width = crate::element::Length::Fill;
+            stack_layout.size.height = crate::element::Length::Fill;
+
+            vec![cx.stack_props(
+                crate::element::StackProps {
+                    layout: stack_layout,
+                },
+                |cx| {
+                    let mut scroll_layout = crate::element::LayoutStyle::default();
+                    scroll_layout.size.width = crate::element::Length::Fill;
+                    scroll_layout.size.height = crate::element::Length::Fill;
+                    scroll_layout.overflow = crate::element::Overflow::Clip;
+
+                    let scroll = cx.scroll(
+                        crate::element::ScrollProps {
+                            layout: scroll_layout,
+                            scroll_handle: Some(scroll_handle.clone()),
+                            ..Default::default()
+                        },
+                        |cx| {
+                            vec![cx.column(
+                                crate::element::ColumnProps {
+                                    gap: Px(0.0).into(),
+                                    ..Default::default()
+                                },
+                                |cx| (0..40).map(|_| cx.text("row")).collect::<Vec<_>>(),
+                            )]
+                        },
+                    );
+
+                    let gate_layout = crate::element::LayoutStyle {
+                        position: crate::element::PositionStyle::Absolute,
+                        inset: crate::element::InsetStyle {
+                            top: Some(Px(0.0)).into(),
+                            right: Some(Px(0.0)).into(),
+                            bottom: Some(Px(0.0)).into(),
+                            left: None.into(),
+                        },
+                        size: crate::element::SizeStyle {
+                            width: crate::element::Length::Px(Px(10.0)),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+
+                    let mut scrollbar_layout = crate::element::LayoutStyle::default();
+                    scrollbar_layout.size.width = crate::element::Length::Fill;
+                    scrollbar_layout.size.height = crate::element::Length::Fill;
+
+                    let scrollbar = cx.scrollbar(crate::element::ScrollbarProps {
+                        layout: scrollbar_layout,
+                        axis: crate::element::ScrollbarAxis::Vertical,
+                        scroll_target: Some(scroll.id),
+                        scroll_handle: scroll_handle.clone(),
+                        style: crate::element::ScrollbarStyle::default(),
+                    });
+
+                    let gate = cx.interactivity_gate_props(
+                        crate::element::InteractivityGateProps {
+                            layout: gate_layout,
+                            present: true,
+                            interactive: true,
+                        },
+                        move |cx| vec![cx.opacity(1.0, |_cx| vec![scrollbar])],
+                    );
+
+                    vec![scroll, gate]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let stack_node = ui.children(root)[0];
+    let gate_node = ui.children(stack_node)[1];
+    let opacity_node = ui.children(gate_node)[0];
+    let scrollbar_node = ui.children(opacity_node)[0];
+
+    for (name, node) in [
+        ("gate", gate_node),
+        ("opacity", opacity_node),
+        ("scrollbar", scrollbar_node),
+    ] {
+        let actual = ui.debug_node_bounds(node).expect("node bounds");
+        assert_eq!(
+            actual,
+            Rect::new(
+                fret_core::Point::new(Px(390.0), Px(0.0)),
+                Size::new(Px(10.0), Px(240.0)),
+            ),
+            "expected {name} to stay constrained to the right scrollbar track"
+        );
+    }
+
+    let content_point = Point::new(Px(200.0), Px(120.0));
+    let track_point = Point::new(Px(395.0), Px(120.0));
+    assert_ne!(
+        ui.debug_hit_test(content_point).hit,
+        ui.debug_hit_test(track_point).hit,
+        "expected scrollbar hit region not to cover the scroll content"
+    );
+}
+
+#[test]
 fn scroll_post_layout_reuses_known_extent_for_invalidated_definite_surface_without_remeasuring() {
     use std::sync::{
         Arc,

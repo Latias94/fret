@@ -4200,3 +4200,43 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - follow-up:
     click step 10 intended `ui-gallery-table-retained-row-0`, but hit-tested the enclosing
     `scroll_bar` node. Split that as a hit-test/routing or diagnostics click-targeting slice.
+
+## Absolute Positioned Explicit-Size Hit Region Gate
+
+- invariant:
+  manual absolute-child layout must preserve a child's explicit `SizeStyle` when the child is
+  positioned with one pinned edge on an axis. A `right: 0; width: 10px` scrollbar overlay must not
+  expand to the full probe/viewport width and cover underlying content hits.
+- finding:
+  the retained Table runtime follow-up from F191 exposed a real `fret-ui` positioned-layout defect.
+  `PositionedLayoutStyle::Absolute` carried only `InsetStyle`, so manual absolute layout paths laid
+  out the shadcn ScrollArea scrollbar gate without its explicit width. Its fill-sized
+  `Opacity -> Scrollbar` descendants expanded to the viewport and intercepted row clicks.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/layout_helpers.rs`,
+  `crates/fret-ui/src/declarative/host_widget/layout.rs`,
+  `crates/fret-ui/src/declarative/host_widget/layout/positioned_container.rs`,
+  `crates/fret-ui/src/declarative/tests/layout/scroll.rs`, and
+  `tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-sort-select-scroll.json`.
+- focused mechanism regression:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui absolute_interactivity_gate_preserves_scrollbar_track_bounds --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `ae114762-9f8e-4ac9-9594-606305eee7ec`.
+- layout companion gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `7163fc89-31dd-4f1d-a2ef-ba2e522dac41`.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_table_retained_sort_select_scroll --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `67a19613-9301-4ef6-98a4-e20af5bff6b4`.
+- runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\table\ui-gallery-table-retained-sort-select-scroll.json --dir target\fret-diag-table-retained-selected-sort-select-scroll-after-absolute-size-fix-current --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness`
+  - result: passed; run id `1779121343180`.
+  - artifacts:
+    `target/fret-diag-table-retained-selected-sort-select-scroll-after-absolute-size-fix-current/sessions/1779121262133-76528/1779121343180/ai.packet` and
+    `target/fret-diag-table-retained-selected-sort-select-scroll-after-absolute-size-fix-current/sessions/1779121262133-76528/share/1779121343180.zip`.
+- formatting/static checks:
+  `cargo fmt -p fret-ui --check`
+  - result: passed.
+  `python -m json.tool tools\diag-scripts\ui-gallery\table\ui-gallery-table-retained-sort-select-scroll.json > $null`
+  - result: passed.
+  `git diff --check`
+  - result: passed.

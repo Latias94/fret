@@ -1025,3 +1025,12 @@ date: 2026-05-12
     retained Table regression test proves the header row converges to non-zero bounds. The runtime
     diagnostics script now reaches the selected-state click path, where a separate follow-up remains:
     clicking row 0 currently hit-tests the enclosing scroll bar instead of the row.
+- [x] Fix retained Table sort/select/scroll row click hit region after scrollbar overlay expansion.
+  - Result: the follow-up click miss from F191 was a real `fret-ui` positioned-layout defect, not a
+    Table selection or diagnostics-targeting issue. Manual absolute-child layout paths dropped the
+    child's explicit `SizeStyle`, so the shadcn ScrollArea scrollbar gate measured its fill child
+    against the full probe bounds and expanded the hit region over table content. Absolute layout
+    now carries `InsetStyle + SizeStyle`, the focused ScrollArea-style mechanism test proves the
+    gate/opacity/scrollbar stay on the `10px` right track, and the retained Table
+    sort/select/scroll runtime gate now passes through selected-state and retained-window movement
+    assertions.

@@ -1930,3 +1930,31 @@ Status: complete for the retained Table direct-start header-row bounds convergen
 - Runtime diagnostics now pass the previous header-row bounds precondition and fail later at the row
   selected-state assertion because the row click hit-tests the enclosing `scroll_bar`; that is the
   next isolated follow-up, not part of this flex fix.
+
+## M109: Retained Table Scrollbar Hit Region Absolute-Size Fix
+
+Status: complete for the retained Table sort/select/scroll row-click hit-region defect.
+
+- Fixed a `fret-ui` positioned-layout mechanism defect: manual absolute-child layout paths carried
+  only `InsetStyle`, so an absolute wrapper with explicit size could lose that size and let
+  fill-sized descendants expand to the full probe bounds.
+- The concrete runtime symptom was the retained Table row click from F191 landing on the enclosing
+  ScrollArea `scroll_bar` instead of `ui-gallery-table-retained-row-0`.
+- `PositionedLayoutStyle::Absolute` now carries `InsetStyle + SizeStyle`, and
+  `layout_absolute_child_with_probe_bounds` resolves explicit width/height for absolute children
+  whose axis is pinned on only one side.
+- Added `absolute_interactivity_gate_preserves_scrollbar_track_bounds` in `fret-ui` to lock the
+  ScrollArea-style gate/opacity/scrollbar chain to a `10px` right track and prove content hits do
+  not share the scrollbar target.
+- Updated the retained Table sort/select/scroll script's post-scroll unselected-row oracle to the
+  stable visible row `ui-gallery-table-retained-row-10015`.
+- Focused gates pass:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui absolute_interactivity_gate_preserves_scrollbar_track_bounds --no-fail-fast --no-capture`
+  with Nextest run id `ae114762-9f8e-4ac9-9594-606305eee7ec`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+  with Nextest run id `7163fc89-31dd-4f1d-a2ef-ba2e522dac41`; and
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_table_retained_sort_select_scroll --no-fail-fast --no-capture`
+  with Nextest run id `67a19613-9301-4ef6-98a4-e20af5bff6b4`.
+- Runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\table\ui-gallery-table-retained-sort-select-scroll.json --dir target\fret-diag-table-retained-selected-sort-select-scroll-after-absolute-size-fix-current --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness`
+  with run id `1779121343180`.

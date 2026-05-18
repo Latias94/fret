@@ -300,13 +300,14 @@ impl ElementHostWidget {
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     match positioned_layout_style(layout_style) {
-                        PositionedLayoutStyle::Absolute(inset) => {
+                        PositionedLayoutStyle::Absolute { inset, size } => {
                             layout_absolute_child_with_probe_bounds(
                                 cx,
                                 child,
                                 inner_bounds,
                                 probe_inner_bounds,
                                 inset,
+                                size,
                             )
                         }
                         PositionedLayoutStyle::Static => {
@@ -503,13 +504,14 @@ impl ElementHostWidget {
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     match positioned_layout_style(layout_style) {
-                        PositionedLayoutStyle::Absolute(inset) => {
+                        PositionedLayoutStyle::Absolute { inset, size } => {
                             layout_absolute_child_with_probe_bounds(
                                 cx,
                                 child,
                                 base,
                                 probe_bounds,
                                 inset,
+                                size,
                             )
                         }
                         style => layout_positioned_child(cx, child, base, style),
@@ -553,13 +555,14 @@ impl ElementHostWidget {
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     match positioned_layout_style(layout_style) {
-                        PositionedLayoutStyle::Absolute(inset) => {
+                        PositionedLayoutStyle::Absolute { inset, size } => {
                             layout_absolute_child_with_probe_bounds(
                                 cx,
                                 child,
                                 base,
                                 probe_bounds,
                                 inset,
+                                size,
                             )
                         }
                         style => layout_positioned_child(cx, child, base, style),
@@ -603,13 +606,14 @@ impl ElementHostWidget {
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     match positioned_layout_style(layout_style) {
-                        PositionedLayoutStyle::Absolute(inset) => {
+                        PositionedLayoutStyle::Absolute { inset, size } => {
                             layout_absolute_child_with_probe_bounds(
                                 cx,
                                 child,
                                 base,
                                 probe_bounds,
                                 inset,
+                                size,
                             )
                         }
                         style => layout_positioned_child(cx, child, base, style),
@@ -642,13 +646,14 @@ impl ElementHostWidget {
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     match positioned_layout_style(layout_style) {
-                        PositionedLayoutStyle::Absolute(inset) => {
+                        PositionedLayoutStyle::Absolute { inset, size } => {
                             layout_absolute_child_with_probe_bounds(
                                 cx,
                                 child,
                                 base,
                                 probe_bounds,
                                 inset,
+                                size,
                             )
                         }
                         style => layout_positioned_child(cx, child, base, style),
@@ -707,13 +712,14 @@ impl ElementHostWidget {
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     match positioned_layout_style(layout_style) {
-                        PositionedLayoutStyle::Absolute(inset) => {
+                        PositionedLayoutStyle::Absolute { inset, size } => {
                             layout_absolute_child_with_probe_bounds(
                                 cx,
                                 child,
                                 base,
                                 probe_bounds,
                                 inset,
+                                size,
                             )
                         }
                         style => layout_positioned_child(cx, child, base, style),
@@ -768,13 +774,14 @@ impl ElementHostWidget {
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     match positioned_layout_style(layout_style) {
-                        PositionedLayoutStyle::Absolute(inset) => {
+                        PositionedLayoutStyle::Absolute { inset, size } => {
                             layout_absolute_child_with_probe_bounds(
                                 cx,
                                 child,
                                 base,
                                 probe_bounds,
                                 inset,
+                                size,
                             )
                         }
                         style => layout_positioned_child(cx, child, base, style),
@@ -877,13 +884,14 @@ impl ElementHostWidget {
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     match positioned_layout_style(layout_style) {
-                        PositionedLayoutStyle::Absolute(inset) => {
+                        PositionedLayoutStyle::Absolute { inset, size } => {
                             layout_absolute_child_with_probe_bounds(
                                 cx,
                                 child,
                                 base,
                                 probe_bounds,
                                 inset,
+                                size,
                             )
                         }
                         style => layout_positioned_child(cx, child, base, style),
@@ -1699,12 +1707,16 @@ fn try_layout_children_from_engine_with_manual_absolute<H: UiHost>(
 
     let mut any_engine_child = false;
     let mut non_absolute: Vec<(NodeId, Rect)> = Vec::new();
-    let mut absolute: Vec<(NodeId, crate::element::InsetStyle)> = Vec::new();
+    let mut absolute: Vec<(
+        NodeId,
+        crate::element::InsetStyle,
+        crate::element::SizeStyle,
+    )> = Vec::new();
 
     for &child in cx.children {
         let style = layout_style_for_node(cx.app, window, child);
         if style.position == crate::element::PositionStyle::Absolute {
-            absolute.push((child, style.inset));
+            absolute.push((child, style.inset, style.size));
             continue;
         }
 
@@ -1726,7 +1738,7 @@ fn try_layout_children_from_engine_with_manual_absolute<H: UiHost>(
             probe_constraints.available.height = AvailableSpace::MaxContent;
         }
         let mut desired = Size::new(Px(0.0), Px(0.0));
-        for (child, inset) in absolute.iter().copied() {
+        for (child, inset, _size) in absolute.iter().copied() {
             let child_size = cx.measure_in(child, probe_constraints);
             let required = absolute_child_envelope_size(child_size, inset);
             desired.width = Px(desired.width.0.max(required.width.0));
@@ -1734,8 +1746,8 @@ fn try_layout_children_from_engine_with_manual_absolute<H: UiHost>(
         }
 
         let base = Rect::new(base_for_absolute.origin, desired);
-        for (child, inset) in absolute {
-            layout_absolute_child_with_probe_bounds(cx, child, base, base, inset);
+        for (child, inset, size) in absolute {
+            layout_absolute_child_with_probe_bounds(cx, child, base, base, inset, size);
         }
 
         return Some(desired);
@@ -1750,7 +1762,7 @@ fn try_layout_children_from_engine_with_manual_absolute<H: UiHost>(
         probe_constraints.available.height = AvailableSpace::MaxContent;
     }
 
-    for (child, inset) in absolute.iter().copied() {
+    for (child, inset, _size) in absolute.iter().copied() {
         let child_size = cx.measure_in(child, probe_constraints);
         let required = absolute_child_envelope_size(child_size, inset);
         desired.width = Px(desired.width.0.max(required.width.0));
@@ -1763,8 +1775,13 @@ fn try_layout_children_from_engine_with_manual_absolute<H: UiHost>(
         let _ = cx.layout_in(child, bounds);
     }
 
-    for (child, inset) in absolute {
-        layout_positioned_child(cx, child, base, PositionedLayoutStyle::Absolute(inset));
+    for (child, inset, size) in absolute {
+        layout_positioned_child(
+            cx,
+            child,
+            base,
+            PositionedLayoutStyle::Absolute { inset, size },
+        );
     }
 
     Some(desired)
