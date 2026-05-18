@@ -812,6 +812,12 @@ fn ai_prompt_input_provider_and_docs_use_shared_text_roles_and_non_text_markers(
             "Prompt Input (AI Elements)",
             "Docs-aligned chat example: transcript + prompt composer, add attachments/screenshot actions, model picker, and upstream-like onSubmit(message).",
         ),
+        (
+            "prompt_input_referenced_sources_demo",
+            include_str!("../src/ui/snippets/ai/prompt_input_referenced_sources_demo.rs"),
+            "Prompt Input Referenced Sources (AI Elements)",
+            "Add a source and remove it via the chip's hover affordance.",
+        ),
     ] {
         let canonical = canonicalize_rust_fragment(source);
 

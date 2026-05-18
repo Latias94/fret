@@ -516,6 +516,9 @@ Exit criteria:
   2026-05-18 AI Image demo text-role result: fixed explanatory copy now uses shared paragraph text,
   and the image-ready/loading readouts use shared control-readout text instead of bare
   `cx.text(...)`.
+  2026-05-18 AI PromptInput referenced sources text-role result: fixed referenced-sources
+  title/body copy now uses shared section-chrome and paragraph roles instead of bare
+  `cx.text(...)`.
   2026-05-17 gallery data-grid text result: the UI Gallery DataGrid preview now routes virtualized
   grid cells through `text_table_cell(...)` and the selected-row status line through
   `control_readout_text(...)`.

@@ -558,6 +558,9 @@ Readiness order for the next locally testable review slices:
    2026-05-18 AI Image demo text-role follow-up: the image demo now routes fixed explanatory copy
    through paragraph text and status/loading readouts through shared control-readout text instead of
    bare `cx.text(...)`.
+   2026-05-18 AI PromptInput referenced sources text-role follow-up: fixed referenced-sources
+   title/body copy now routes through section-chrome and paragraph roles instead of bare
+   `cx.text(...)`.
    2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
    virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
    `control_readout_text(...)`.

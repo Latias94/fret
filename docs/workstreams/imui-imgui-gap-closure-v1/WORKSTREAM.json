@@ -613,6 +613,7 @@
     "apps/fret-ui-gallery/src/ui/snippets/ai/chat_demo.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_provider_demo.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_docs_demo.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_referenced_sources_demo.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/reasoning_demo.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/stack_trace_demo.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/voice_selector_demo.rs",

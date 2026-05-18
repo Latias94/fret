@@ -484,6 +484,7 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/snippets/ai/chat_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_provider_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_docs_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_referenced_sources_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/reasoning_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/stack_trace_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/voice_selector_demo.rs",
@@ -1117,6 +1118,18 @@ def main() -> None:
                 "cx.text(\"Search\")",
                 "cx.text(\"Prompt Input (AI Elements)\")",
                 "cx.text(\n                \"Docs-aligned chat example: transcript + prompt composer, add attachments/screenshot actions, model picker, and upstream-like onSubmit(message).\",\n            )",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_referenced_sources_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(\n                cx,\n                \"Prompt Input Referenced Sources (AI Elements)\",\n            )",
+                "Add a source and remove it via the chip's hover affordance.",
+            ],
+            forbidden=[
+                "cx.text(\"Prompt Input Referenced Sources (AI Elements)\")",
+                "cx.text(\"Add a source and remove it via the chip's hover affordance.\")",
             ],
         ),
         SourceCheck(

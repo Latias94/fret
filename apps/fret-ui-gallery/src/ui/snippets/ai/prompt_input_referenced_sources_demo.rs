@@ -4,6 +4,7 @@ pub const SOURCE: &str = include_str!("prompt_input_referenced_sources_demo.rs")
 use fret::app::AppRenderActionsExt as _;
 use fret::{AppComponentCx, UiChild};
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -44,8 +45,14 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("Prompt Input Referenced Sources (AI Elements)"),
-            cx.text("Add a source and remove it via the chip's hover affordance."),
+            decl_text::text_section_chrome_label(
+                cx,
+                "Prompt Input Referenced Sources (AI Elements)",
+            ),
+            decl_text::text_paragraph(
+                cx,
+                "Add a source and remove it via the chip's hover affordance.",
+            ),
             add,
             input,
         ]
