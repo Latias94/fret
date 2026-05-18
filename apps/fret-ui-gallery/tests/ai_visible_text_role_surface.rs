@@ -1121,3 +1121,54 @@ fn ai_conversation_demo_uses_non_text_instrumentation_and_button_label() {
         );
     }
 }
+
+#[test]
+fn ai_usage_snippets_use_shared_chrome_and_paragraph_roles() {
+    let attachments =
+        canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/attachments_usage.rs"));
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_paragraph",
+        "Display uploaded files in a message surface with a shared Attachments container. The image preview comes from the gallery demo asset bundle through a logical asset request so the snippet teaches shipped asset ownership.",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            attachments.contains(&marker),
+            "attachments_usage should route fixed explanatory copy through paragraph text; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(\"Display uploaded files in a message surface with a shared Attachments container. The image preview comes from the gallery demo asset bundle through a logical asset request so the snippet teaches shipped asset ownership.\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !attachments.contains(&forbidden),
+            "attachments_usage reintroduced bare fixed explanatory text: `{forbidden}`"
+        );
+    }
+
+    let stack_trace =
+        canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/stack_trace_usage.rs"));
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_section_chrome_label(cx, \"StackTrace usage\")",
+        "decl_text::text_paragraph",
+        "Minimal compound-parts composition aligned with the official AI Elements usage example.",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            stack_trace.contains(&marker),
+            "stack_trace_usage should route fixed title/body text through shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(\"StackTrace usage\")",
+        "cx.text(\"Minimal compound-parts composition aligned with the official AI Elements usage example.\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !stack_trace.contains(&forbidden),
+            "stack_trace_usage reintroduced bare fixed text: `{forbidden}`"
+        );
+    }
+}

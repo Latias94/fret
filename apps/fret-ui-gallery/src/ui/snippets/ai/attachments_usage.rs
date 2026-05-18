@@ -7,6 +7,7 @@ use fret_core::Px;
 use fret_ui::Theme;
 use fret_ui::element::{ContainerProps, InteractivityGateProps};
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
@@ -66,7 +67,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text(
+            decl_text::text_paragraph(
+                cx,
                 "Display uploaded files in a message surface with a shared Attachments container. The image preview comes from the gallery demo asset bundle through a logical asset request so the snippet teaches shipped asset ownership.",
             ),
             ui::h_flex(move |cx| {

@@ -547,6 +547,8 @@ Readiness order for the next locally testable review slices:
    2026-05-18 AI Conversation instrumentation text-role follow-up: Conversation length/export
    diagnostics now use generic semantics instead of text semantics, and the custom scroll-bottom
    label routes through `text_button_label(...)`.
+   2026-05-18 AI usage snippet text-role follow-up: Attachments usage explanatory copy now uses
+   paragraph text, and StackTrace usage title/body copy uses section-chrome/paragraph roles.
    2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
    virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
    `control_readout_text(...)`.

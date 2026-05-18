@@ -504,6 +504,9 @@ Exit criteria:
   2026-05-18 AI Conversation instrumentation text-role result: Conversation export/message-count
   diagnostics now use generic semantics instead of text semantics, and the custom scroll-bottom
   label uses the shared `text_button_label(...)` role.
+  2026-05-18 AI usage snippet text-role result: Attachments usage explanatory copy now uses the
+  shared paragraph role, and StackTrace usage fixed title/body copy uses shared
+  section-chrome/paragraph roles.
   2026-05-17 gallery data-grid text result: the UI Gallery DataGrid preview now routes virtualized
   grid cells through `text_table_cell(...)` and the selected-row status line through
   `control_readout_text(...)`.

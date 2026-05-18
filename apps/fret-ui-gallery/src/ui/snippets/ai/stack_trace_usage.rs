@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("stack_trace_usage.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use std::sync::Arc;
@@ -39,8 +40,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("StackTrace usage"),
-            cx.text("Minimal compound-parts composition aligned with the official AI Elements usage example."),
+            decl_text::text_section_chrome_label(cx, "StackTrace usage"),
+            decl_text::text_paragraph(
+                cx,
+                "Minimal compound-parts composition aligned with the official AI Elements usage example.",
+            ),
             stack,
         ]
     })

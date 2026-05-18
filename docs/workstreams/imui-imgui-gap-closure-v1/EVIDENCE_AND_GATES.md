@@ -702,6 +702,11 @@ Run evidence:
   numeric values instead of text semantics, while the custom `Latest` scroll-bottom label uses
   `text_button_label(...)`. Gates: `cargo nextest run -p fret-ui-gallery --test
   ai_visible_text_role_surface --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: extended the AI visible text-role migration to fixed usage snippet chrome/prose.
+  Attachments usage explanatory copy now uses `text_paragraph(...)`, and StackTrace usage fixed
+  title/body copy uses `text_section_chrome_label(...)` / `text_paragraph(...)`. Gates: `cargo
+  nextest run -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` and `python
+  tools/gate_imui_workstream_source.py`.
 - 2026-05-18: `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
   --no-fail-fast` passed after the large/status snippet slice landed. `python
   tools/gate_imui_workstream_source.py`, `python -m py_compile
@@ -2136,6 +2141,16 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `git diff --check` passed.
 
 2026-05-18 AI Conversation instrumentation text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ai_visible_text_role_surface` passed.
+- `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 AI usage snippet text-role slice:
 
 - `cargo fmt -p fret-ui-gallery` passed.
 - `cargo check -p fret-ui-gallery --test ai_visible_text_role_surface` passed.

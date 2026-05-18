@@ -492,6 +492,8 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/snippets/ai/confirmation_request.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/task_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/conversation_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/attachments_usage.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/stack_trace_usage.rs",
                 "apps/fret-ui-gallery/tests/ai_visible_text_role_surface.rs",
                 "ecosystem/fret-ui-ai/src/elements/mod.rs",
                 "ecosystem/fret-ui-ai/src/surface_policy_tests.rs",
@@ -1252,6 +1254,30 @@ def main() -> None:
                 "role: SemanticsRole::Text",
                 "role: fret_core::SemanticsRole::Text",
                 "cx.text(\"Latest\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/attachments_usage.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph(",
+                "Display uploaded files in a message surface with a shared Attachments container. The image preview comes from the gallery demo asset bundle through a logical asset request so the snippet teaches shipped asset ownership.",
+            ],
+            forbidden=[
+                "cx.text(\n                \"Display uploaded files in a message surface with a shared Attachments container. The image preview comes from the gallery demo asset bundle through a logical asset request so the snippet teaches shipped asset ownership.\",\n            )",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/stack_trace_usage.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(cx, \"StackTrace usage\")",
+                "decl_text::text_paragraph(",
+                "Minimal compound-parts composition aligned with the official AI Elements usage example.",
+            ],
+            forbidden=[
+                "cx.text(\"StackTrace usage\")",
+                "cx.text(\"Minimal compound-parts composition aligned with the official AI Elements usage example.\")",
             ],
         ),
         SourceCheck(
