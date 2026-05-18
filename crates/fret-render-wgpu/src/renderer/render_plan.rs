@@ -1833,8 +1833,6 @@ fn append_downsample_chain(
 #[derive(Debug, Clone)]
 struct DownsampleHalfQuarter {
     half_target: PlanTarget,
-    #[allow(dead_code)]
-    half_size: (u32, u32),
     quarter_target: PlanTarget,
     quarter_size: (u32, u32),
     stack: Vec<((u32, u32), u32)>,
@@ -1885,7 +1883,6 @@ fn append_downsample_half_quarter(
 
     DownsampleHalfQuarter {
         half_target,
-        half_size,
         quarter_target,
         quarter_size,
         stack: vec![(src_size, 2), (half_size, 2)],
