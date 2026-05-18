@@ -243,3 +243,115 @@ fn virtual_list_measurement_updates_preserve_scroll_anchor_under_overscan() {
         expected
     );
 }
+
+#[test]
+fn auto_height_virtual_list_len_growth_reflows_following_siblings() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(200.0)),
+    );
+    let mut text = FakeTextService::default();
+    let mut len = 3;
+
+    fn fixed_row<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let mut style = crate::element::LayoutStyle::default();
+        style.size.width = crate::element::Length::Fill;
+        style.size.height = crate::element::Length::Px(Px(10.0));
+        cx.container(
+            crate::element::ContainerProps {
+                layout: style,
+                ..Default::default()
+            },
+            |_| Vec::new(),
+        )
+    }
+
+    fn following_sibling<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let mut style = crate::element::LayoutStyle::default();
+        style.size.width = crate::element::Length::Fill;
+        style.size.height = crate::element::Length::Px(Px(20.0));
+        cx.container(
+            crate::element::ContainerProps {
+                layout: style,
+                ..Default::default()
+            },
+            |_| Vec::new(),
+        )
+    }
+
+    let mut render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, len: usize| {
+        let root = render_root(
+            ui,
+            app,
+            &mut text,
+            window,
+            bounds,
+            "auto-height-vlist-len-growth-reflow",
+            |cx| {
+                vec![cx.flex(
+                    crate::element::FlexProps {
+                        direction: fret_core::Axis::Vertical,
+                        layout: {
+                            let mut layout = crate::element::LayoutStyle::default();
+                            layout.size.width = crate::element::Length::Fill;
+                            layout.size.height = crate::element::Length::Auto;
+                            layout
+                        },
+                        ..Default::default()
+                    },
+                    |cx| {
+                        let mut list_layout = crate::element::LayoutStyle::default();
+                        list_layout.size.width = crate::element::Length::Fill;
+                        list_layout.size.height = crate::element::Length::Auto;
+                        let mut options = crate::element::VirtualListOptions::fixed(Px(10.0), 0);
+                        options.items_revision = len as u64;
+                        vec![
+                            cx.virtual_list_keyed_with_layout(
+                                list_layout,
+                                len,
+                                options,
+                                &scroll_handle,
+                                |index| index as crate::ItemKey,
+                                |cx, _index| fixed_row(cx),
+                            ),
+                            following_sibling(cx),
+                        ]
+                    },
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(app, &mut text, bounds, 1.0);
+        root
+    };
+
+    let root = render(&mut ui, &mut app, len);
+    let column = ui.children(root)[0];
+    let list = ui.children(column)[0];
+    let sibling = ui.children(column)[1];
+    let list_bounds = ui.debug_node_bounds(list).expect("initial list bounds");
+    let sibling_bounds = ui
+        .debug_node_bounds(sibling)
+        .expect("initial sibling bounds");
+    assert_eq!(list_bounds.size.height, Px(30.0));
+    assert_eq!(sibling_bounds.origin.y, Px(30.0));
+
+    app.advance_frame();
+    len = 6;
+    let root = render(&mut ui, &mut app, len);
+    let column = ui.children(root)[0];
+    let list = ui.children(column)[0];
+    let sibling = ui.children(column)[1];
+    let list_bounds = ui.debug_node_bounds(list).expect("expanded list bounds");
+    let sibling_bounds = ui
+        .debug_node_bounds(sibling)
+        .expect("expanded sibling bounds");
+    assert_eq!(list_bounds.size.height, Px(60.0));
+    assert_eq!(sibling_bounds.origin.y, Px(60.0));
+}

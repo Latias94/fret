@@ -761,6 +761,44 @@ mod tests {
         )
     }
 
+    struct EnvVarGuard {
+        key: &'static str,
+        old_value: Option<std::ffi::OsString>,
+    }
+
+    impl EnvVarGuard {
+        fn set(key: &'static str, value: &str) -> Self {
+            let old_value = std::env::var_os(key);
+            unsafe {
+                std::env::set_var(key, value);
+            }
+            Self { key, old_value }
+        }
+    }
+
+    impl Drop for EnvVarGuard {
+        fn drop(&mut self) {
+            unsafe {
+                match &self.old_value {
+                    Some(value) => std::env::set_var(self.key, value),
+                    None => std::env::remove_var(self.key),
+                }
+            }
+        }
+    }
+
+    fn run_with_large_test_stack(name: &'static str, f: impl FnOnce() + Send + 'static) {
+        let join = std::thread::Builder::new()
+            .name(name.to_owned())
+            .stack_size(32 * 1024 * 1024)
+            .spawn(f)
+            .expect("large-stack test thread should spawn")
+            .join();
+        if let Err(payload) = join {
+            std::panic::resume_unwind(payload);
+        }
+    }
+
     #[derive(Debug, Clone, Copy)]
     struct WebGeometryRect {
         x: f32,
@@ -3153,27 +3191,38 @@ mod tests {
 
     #[test]
     fn gallery_resizable_core_examples_keep_upstream_aligned_targets_present() {
-        let mut rendered = render_gallery_page(PAGE_RESIZABLE);
-        let page_bounds = visual_bounds_by_test_id(&rendered, "ui-gallery-resizable");
-        assert!(
-            page_bounds.size.width.0 > 0.0 && page_bounds.size.height.0 > 0.0,
-            "expected Resizable component root to render with non-zero bounds: bounds={page_bounds:?}"
-        );
-
-        for target in [
-            "ui-gallery-resizable-demo-content",
-            "ui-gallery-resizable-usage-content",
-            "ui-gallery-resizable-handle-content",
-            "ui-gallery-resizable-vertical-content",
-            "ui-gallery-resizable-rtl-content",
-        ] {
-            scroll_test_id_into_gallery_viewport(&mut rendered, target);
-            let bounds = visual_bounds_by_test_id(&rendered, target);
-            assert!(
-                bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
-                "expected Resizable page target to render with non-zero bounds: target={target} bounds={bounds:?}"
-            );
-        }
+        run_with_large_test_stack("gallery-resizable-core-examples", || {
+            for (section, target) in [
+                ("Demo", "ui-gallery-resizable-demo-content"),
+                ("Usage", "ui-gallery-resizable-usage-content"),
+                ("Handle", "ui-gallery-resizable-handle-content"),
+                ("Vertical", "ui-gallery-resizable-vertical-content"),
+                ("RTL", "ui-gallery-resizable-rtl-content"),
+            ] {
+                if let Ok(filter) = std::env::var(ENV_UI_GALLERY_START_SECTION) {
+                    if !filter
+                        .split(',')
+                        .map(str::trim)
+                        .any(|value| value.eq_ignore_ascii_case(section))
+                    {
+                        continue;
+                    }
+                }
+                let _section_guard = EnvVarGuard::set(ENV_UI_GALLERY_START_SECTION, section);
+                let mut rendered = render_gallery_page(PAGE_RESIZABLE);
+                let page_bounds = visual_bounds_by_test_id(&rendered, "ui-gallery-resizable");
+                assert!(
+                    page_bounds.size.width.0 > 0.0 && page_bounds.size.height.0 > 0.0,
+                    "expected Resizable component root to render with non-zero bounds: section={section} bounds={page_bounds:?}"
+                );
+                scroll_test_id_into_gallery_viewport(&mut rendered, target);
+                let bounds = visual_bounds_by_test_id(&rendered, target);
+                assert!(
+                    bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0,
+                    "expected Resizable page target to render with non-zero bounds: target={target} bounds={bounds:?}"
+                );
+            }
+        });
     }
 
     #[test]

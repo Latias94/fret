@@ -1,8 +1,9 @@
 use super::super::ElementHostWidget;
 use crate::declarative::frame::layout_style_for_node;
 use crate::declarative::layout_helpers::{
-    PositionedLayoutStyle, clamp_to_constraints, clamp_to_constraints_with_overflow_context,
-    layout_absolute_child_with_probe_bounds, layout_positioned_child, positioned_layout_style,
+    PositionedLayoutStyle, absolute_child_envelope_size, clamp_to_constraints,
+    clamp_to_constraints_with_overflow_context, layout_absolute_child_with_probe_bounds,
+    layout_positioned_child, positioned_layout_style,
 };
 use crate::declarative::prelude::*;
 use crate::layout_constraints::AvailableSpace;
@@ -28,6 +29,7 @@ impl ElementHostWidget {
             child_measure_constraints.available.height = AvailableSpace::MaxContent;
         }
         let mut max_child = Size::new(Px(0.0), Px(0.0));
+        let mut non_absolute_sizes: Vec<(NodeId, Size)> = Vec::new();
         let mut absolute_children: Vec<(NodeId, crate::element::InsetStyle)> = Vec::new();
         for &child in cx.children {
             let child_style = layout_style_for_node(cx.app, window, child);
@@ -36,57 +38,35 @@ impl ElementHostWidget {
                 continue;
             }
             let child_size = cx.measure_in(child, child_measure_constraints);
+            non_absolute_sizes.push((child, child_size));
             max_child.width = Px(max_child.width.0.max(child_size.width.0));
             max_child.height = Px(max_child.height.0.max(child_size.height.0));
         }
 
-        // If the container has only absolute-positioned children, it can collapse to zero during
-        // intrinsic sizing probes (e.g. auto-height shells). That breaks hit-testing for
-        // overflow-visible overlays (cmdk/listbox style popovers). When we see a zero available
-        // size placeholder, include absolute children in the sizing estimate.
-        if (cx.available.width.0 <= 0.0 || cx.available.height.0 <= 0.0)
-            && (max_child.width.0 <= 0.0 || max_child.height.0 <= 0.0)
-            && !absolute_children.is_empty()
-        {
+        if !absolute_children.is_empty() {
             let mut abs_constraints = probe_constraints;
-            if cx.available.width.0 <= 0.0 {
+            let envelope_width = matches!(layout.size.width, Length::Auto)
+                || cx.available.width.0 <= 0.0
+                || max_child.width.0 <= 0.0;
+            let envelope_height = matches!(layout.size.height, Length::Auto)
+                || cx.available.height.0 <= 0.0
+                || max_child.height.0 <= 0.0;
+            if envelope_width {
                 abs_constraints.available.width = AvailableSpace::MaxContent;
             }
-            if cx.available.height.0 <= 0.0 {
+            if envelope_height {
                 abs_constraints.available.height = AvailableSpace::MaxContent;
             }
 
             for (child, inset) in absolute_children.iter().copied() {
                 let child_size = cx.measure_in(child, abs_constraints);
-                let px = |edge: crate::element::InsetEdge| match edge {
-                    crate::element::InsetEdge::Px(px) => Some(px.0),
-                    crate::element::InsetEdge::Auto
-                    | crate::element::InsetEdge::Fill
-                    | crate::element::InsetEdge::Fraction(_) => None,
-                };
-                let left = px(inset.left);
-                let right = px(inset.right);
-                let top = px(inset.top);
-                let bottom = px(inset.bottom);
+                let required = absolute_child_envelope_size(child_size, inset);
 
-                let required_w = match (left, right) {
-                    (Some(l), Some(r)) => Px(l + r + child_size.width.0),
-                    (Some(l), None) => Px(l + child_size.width.0),
-                    (None, Some(r)) => Px(r + child_size.width.0),
-                    (None, None) => child_size.width,
-                };
-                let required_h = match (top, bottom) {
-                    (Some(t), Some(b)) => Px(t + b + child_size.height.0),
-                    (Some(t), None) => Px(t + child_size.height.0),
-                    (None, Some(b)) => Px(b + child_size.height.0),
-                    (None, None) => child_size.height,
-                };
-
-                if cx.available.width.0 <= 0.0 {
-                    max_child.width = Px(max_child.width.0.max(required_w.0));
+                if envelope_width {
+                    max_child.width = Px(max_child.width.0.max(required.width.0));
                 }
-                if cx.available.height.0 <= 0.0 {
-                    max_child.height = Px(max_child.height.0.max(required_h.0));
+                if envelope_height {
+                    max_child.height = Px(max_child.height.0.max(required.height.0));
                 }
             }
         }
@@ -121,7 +101,25 @@ impl ElementHostWidget {
                 PositionedLayoutStyle::Absolute(inset) => {
                     layout_absolute_child_with_probe_bounds(cx, child, base, probe_bounds, inset)
                 }
-                style => layout_positioned_child(cx, child, base, style),
+                PositionedLayoutStyle::Static => {
+                    let child_size = non_absolute_sizes
+                        .iter()
+                        .find_map(|(id, size)| (*id == child).then_some(*size))
+                        .unwrap_or(Size::new(Px(0.0), Px(0.0)));
+                    let _ = cx.layout_in(child, Rect::new(base.origin, child_size));
+                }
+                PositionedLayoutStyle::Relative(inset) => {
+                    let child_size = non_absolute_sizes
+                        .iter()
+                        .find_map(|(id, size)| (*id == child).then_some(*size))
+                        .unwrap_or(Size::new(Px(0.0), Px(0.0)));
+                    layout_positioned_child(
+                        cx,
+                        child,
+                        Rect::new(base.origin, child_size),
+                        PositionedLayoutStyle::Relative(inset),
+                    );
+                }
             }
         }
         desired
@@ -161,32 +159,7 @@ impl ElementHostWidget {
             let child_size = cx.measure_in(child, child_measure_constraints);
 
             let required = if child_style.position == crate::element::PositionStyle::Absolute {
-                let px = |edge: crate::element::InsetEdge| match edge {
-                    crate::element::InsetEdge::Px(px) => Some(px.0),
-                    crate::element::InsetEdge::Auto
-                    | crate::element::InsetEdge::Fill
-                    | crate::element::InsetEdge::Fraction(_) => None,
-                };
-                let left = px(child_style.inset.left);
-                let right = px(child_style.inset.right);
-                let top = px(child_style.inset.top);
-                let bottom = px(child_style.inset.bottom);
-
-                let required_w = match (left, right) {
-                    (Some(l), Some(r)) => Px(l + r + child_size.width.0),
-                    (Some(l), None) => Px(l + child_size.width.0),
-                    (None, Some(r)) => Px(r + child_size.width.0),
-                    (None, None) => child_size.width,
-                };
-
-                let required_h = match (top, bottom) {
-                    (Some(t), Some(b)) => Px(t + b + child_size.height.0),
-                    (Some(t), None) => Px(t + child_size.height.0),
-                    (None, Some(b)) => Px(b + child_size.height.0),
-                    (None, None) => child_size.height,
-                };
-
-                Size::new(required_w, required_h)
+                absolute_child_envelope_size(child_size, child_style.inset)
             } else {
                 child_size
             };

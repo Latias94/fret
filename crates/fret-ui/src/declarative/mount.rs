@@ -2524,6 +2524,11 @@ fn declarative_instance_change_mask(
                 paint_changed = true;
             }
         }
+        (ElementInstance::VirtualList(a), ElementInstance::VirtualList(b)) => {
+            if virtual_list_layout_inputs_changed(a, b) {
+                layout_changed = true;
+            }
+        }
         _ => {}
     }
 
@@ -2548,6 +2553,22 @@ fn virtual_list_can_be_layout_barrier(props: &crate::element::VirtualListProps) 
             !matches!(props.layout.size.width, crate::element::Length::Auto)
         }
     }
+}
+
+fn virtual_list_layout_inputs_changed(
+    previous: &crate::element::VirtualListProps,
+    next: &crate::element::VirtualListProps,
+) -> bool {
+    previous.axis != next.axis
+        || previous.len != next.len
+        || previous.items_revision != next.items_revision
+        || previous.estimate_row_height != next.estimate_row_height
+        || previous.measure_mode != next.measure_mode
+        || previous.key_cache != next.key_cache
+        || previous.overscan != next.overscan
+        || previous.keep_alive != next.keep_alive
+        || previous.scroll_margin != next.scroll_margin
+        || previous.gap != next.gap
 }
 
 fn apply_pending_invalidations<H: UiHost>(ui: &mut UiTree<H>, pending: &mut HashMap<NodeId, u8>) {

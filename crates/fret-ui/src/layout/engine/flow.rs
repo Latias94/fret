@@ -642,9 +642,11 @@ fn build_flow_subtree_impl<H: UiHost>(
             let children = tree.children_ref(node);
             let mut has_flow_child_fill_w = false;
             let mut has_flow_child_fill_h = false;
+            let mut has_absolute_child = false;
             for &child in children {
                 let child_style = layout_style_for_node(app, window, child);
                 if child_style.position == crate::element::PositionStyle::Absolute {
+                    has_absolute_child = true;
                     continue;
                 }
                 has_flow_child_fill_w |=
@@ -652,6 +654,9 @@ fn build_flow_subtree_impl<H: UiHost>(
                 has_flow_child_fill_h |=
                     matches!(child_style.size.height, crate::element::Length::Fill);
             }
+            let absolute_envelope_placeholder = has_absolute_child
+                && matches!(wrapper_style.size.width, crate::element::Length::Auto)
+                && matches!(wrapper_style.size.height, crate::element::Length::Auto);
 
             // Wrapper nodes (container/opacity/semantics/...) should remain shrink-wrapped by
             // default, but still provide a definite containing block when percent/fill sizing is
@@ -708,9 +713,20 @@ fn build_flow_subtree_impl<H: UiHost>(
                 style.size.height = Dimension::percent(1.0);
             }
 
-            engine.set_style(node, style);
-            engine.set_children(node, children);
-            engine.set_measured(node, false);
+            if absolute_envelope_placeholder {
+                style.display = Display::Block;
+                engine.set_style(node, style);
+                engine.set_children(node, &[]);
+                engine.set_measured(node, true);
+                if tree.node_layout_invalidated(node) {
+                    engine.mark_measured_node_dirty(node);
+                }
+                engine.set_measure_min_content_width_as_max(node, false);
+            } else {
+                engine.set_style(node, style);
+                engine.set_children(node, children);
+                engine.set_measured(node, false);
+            }
             for &child in children {
                 build_flow_subtree(
                     engine,

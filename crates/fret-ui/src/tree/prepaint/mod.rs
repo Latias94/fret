@@ -89,6 +89,7 @@ pub(crate) struct VirtualListPrepaintWindowOutput {
 pub(super) struct InteractionCacheEntry {
     pub(super) generation: u64,
     pub(super) key: PaintCacheKey,
+    pub(super) origin: Point,
     pub(super) start: u32,
     pub(super) end: u32,
 }

@@ -847,6 +847,17 @@ pub enum UiActionStepV2 {
         #[serde(default)]
         repeat: bool,
     },
+    /// Inject a sequence of key down/up pairs in one script turn.
+    ///
+    /// Use this for component-owned typeahead buffers where per-step script latency can exceed the
+    /// widget's typeahead timeout.
+    PressKeys {
+        keys: Vec<String>,
+        #[serde(default)]
+        modifiers: UiKeyModifiersV1,
+        #[serde(default)]
+        repeat: bool,
+    },
     PressShortcut {
         shortcut: String,
         #[serde(default)]

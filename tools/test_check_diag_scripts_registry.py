@@ -327,6 +327,299 @@ class DiagScriptRegistryLintTests(unittest.TestCase):
             self.assertEqual(1, len(violations))
             self.assertIn("ui-gallery-page-combobox", violations[0])
 
+    def test_button_group_page_local_selector_requires_page_entry(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/button-group/bad.json"
+            self.write_script(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "click_stable",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-button-group-demo-tabs-trigger-code",
+                        },
+                    },
+                ],
+            )
+
+            violations = REGISTRY.lint_strict_page_entry(
+                root, self.registry_for(rel, ["ui-gallery-button-group"])
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertIn("ui-gallery-page-button-group", violations[0])
+            self.assertIn("ui-gallery-button-group-demo-tabs-trigger-code", violations[0])
+
+    def test_button_group_start_page_default_allows_page_local_selector(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/button-group/start-page.json"
+            self.write_script_with_meta(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "click_stable",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-button-group-demo-tabs-trigger-code",
+                        },
+                    },
+                ],
+                {"env_defaults": {"FRET_UI_GALLERY_START_PAGE": "button_group"}},
+            )
+
+            violations = REGISTRY.lint_strict_page_entry(
+                root, self.registry_for(rel, ["ui-gallery-button-group"])
+            )
+
+            self.assertEqual([], violations)
+
+    def test_dropdown_menu_page_local_selector_requires_page_entry(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/dropdown-menu/bad.json"
+            self.write_script(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "click_stable",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-dropdown-menu-demo-trigger",
+                        },
+                    },
+                ],
+            )
+
+            violations = REGISTRY.lint_strict_page_entry(
+                root, self.registry_for(rel, ["ui-gallery-dropdown-menu"])
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertIn("ui-gallery-page-dropdown-menu", violations[0])
+            self.assertIn("ui-gallery-dropdown-menu-demo-trigger", violations[0])
+
+    def test_dropdown_menu_start_page_default_allows_page_local_selector(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/dropdown-menu/start-page.json"
+            self.write_script_with_meta(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "click_stable",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-dropdown-menu-demo-trigger",
+                        },
+                    },
+                ],
+                {"env_defaults": {"FRET_UI_GALLERY_START_PAGE": "dropdown_menu"}},
+            )
+
+            violations = REGISTRY.lint_strict_page_entry(
+                root, self.registry_for(rel, ["ui-gallery-dropdown-menu"])
+            )
+
+            self.assertEqual([], violations)
+
+    def test_context_menu_page_local_selector_requires_page_entry(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/context-menu/bad.json"
+            self.write_script(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "click_stable",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-context-menu-submenu-trigger",
+                        },
+                    },
+                ],
+            )
+
+            violations = REGISTRY.lint_strict_page_entry(
+                root, self.registry_for(rel, ["ui-gallery-context-menu"])
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertIn("ui-gallery-page-context-menu", violations[0])
+            self.assertIn("ui-gallery-context-menu-submenu-trigger", violations[0])
+
+    def test_context_menu_start_page_default_allows_page_local_selector(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/context-menu/start-page.json"
+            self.write_script_with_meta(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "click_stable",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-context-menu-submenu-trigger",
+                        },
+                    },
+                ],
+                {"env_defaults": {"FRET_UI_GALLERY_START_PAGE": "context_menu"}},
+            )
+
+            violations = REGISTRY.lint_strict_page_entry(
+                root, self.registry_for(rel, ["ui-gallery-context-menu"])
+            )
+
+            self.assertEqual([], violations)
+
+    def test_hover_card_page_local_selector_requires_page_entry(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/hover-card/bad.json"
+            self.write_script(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "move_pointer",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-hover-card-trigger-top",
+                        },
+                    },
+                ],
+            )
+
+            violations = REGISTRY.lint_strict_page_entry(
+                root, self.registry_for(rel, ["ui-gallery-hover-card"])
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertIn("ui-gallery-page-hover-card", violations[0])
+            self.assertIn("ui-gallery-hover-card-trigger-top", violations[0])
+
+    def test_hover_card_start_page_default_allows_page_local_selector(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/hover-card/start-page.json"
+            self.write_script_with_meta(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "move_pointer",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-hover-card-trigger-top",
+                        },
+                    },
+                ],
+                {"env_defaults": {"FRET_UI_GALLERY_START_PAGE": "hover_card"}},
+            )
+
+            violations = REGISTRY.lint_strict_page_entry(
+                root, self.registry_for(rel, ["ui-gallery-hover-card"])
+            )
+
+            self.assertEqual([], violations)
+
+    def test_menubar_page_local_selector_requires_page_entry(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/menubar/bad.json"
+            self.write_script(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "click_stable",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-menubar-demo-file",
+                        },
+                    },
+                ],
+            )
+
+            violations = REGISTRY.lint_strict_page_entry(
+                root, self.registry_for(rel, ["ui-gallery-menubar-placement"])
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertIn("ui-gallery-page-menubar", violations[0])
+            self.assertIn("ui-gallery-menubar-demo-file", violations[0])
+
+    def test_menubar_start_page_default_allows_page_local_selector(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/menubar/start-page.json"
+            self.write_script_with_meta(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "click_stable",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-menubar-demo-file",
+                        },
+                    },
+                ],
+                {"env_defaults": {"FRET_UI_GALLERY_START_PAGE": "menubar"}},
+            )
+
+            violations = REGISTRY.lint_strict_page_entry(
+                root, self.registry_for(rel, ["ui-gallery-menubar-placement"])
+            )
+
+            self.assertEqual([], violations)
+
+    def test_menubar_long_page_click_stable_requires_visibility_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/menubar/bad-click.json"
+            self.write_script_with_meta(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "click_stable",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-menubar-demo-file",
+                        },
+                    },
+                ],
+                {"env_defaults": {"FRET_UI_GALLERY_START_PAGE": "menubar"}},
+            )
+
+            violations = REGISTRY.lint_strict_click_visibility(
+                root, self.registry_for(rel, ["ui-gallery-menubar-placement"])
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertIn("ui-gallery-menubar-demo-file", violations[0])
+            self.assertIn("bounds_within_window", violations[0])
+
     def test_data_table_page_entry_allows_variant_root(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
@@ -451,6 +744,118 @@ class DiagScriptRegistryLintTests(unittest.TestCase):
             self.assertEqual(1, len(violations))
             self.assertIn("ui-gallery-sidebar-demo-toggle", violations[0])
             self.assertIn("scroll_into_view", violations[0])
+
+    def test_button_group_long_page_click_stable_requires_visibility_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/button-group/bad-click.json"
+            self.write_script_with_meta(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "click_stable",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-button-group-demo-tabs-trigger-code",
+                        },
+                    },
+                ],
+                {"env_defaults": {"FRET_UI_GALLERY_START_PAGE": "button_group"}},
+            )
+
+            violations = REGISTRY.lint_strict_click_visibility(
+                root, self.registry_for(rel, ["ui-gallery-button-group"])
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertIn("ui-gallery-button-group-demo-tabs-trigger-code", violations[0])
+            self.assertIn("bounds_within_window", violations[0])
+
+    def test_hover_card_long_page_click_stable_requires_visibility_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/hover-card/bad-click.json"
+            self.write_script_with_meta(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "click_stable",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-hover-card-trigger-top",
+                        },
+                    },
+                ],
+                {"env_defaults": {"FRET_UI_GALLERY_START_PAGE": "hover_card"}},
+            )
+
+            violations = REGISTRY.lint_strict_click_visibility(
+                root, self.registry_for(rel, ["ui-gallery-hover-card"])
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertIn("ui-gallery-hover-card-trigger-top", violations[0])
+            self.assertIn("bounds_within_window", violations[0])
+
+    def test_dropdown_menu_long_page_click_stable_requires_visibility_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/dropdown-menu/bad-click.json"
+            self.write_script_with_meta(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "click_stable",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-dropdown-menu-demo-trigger",
+                        },
+                    },
+                ],
+                {"env_defaults": {"FRET_UI_GALLERY_START_PAGE": "dropdown_menu"}},
+            )
+
+            violations = REGISTRY.lint_strict_click_visibility(
+                root, self.registry_for(rel, ["ui-gallery-dropdown-menu"])
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertIn("ui-gallery-dropdown-menu-demo-trigger", violations[0])
+            self.assertIn("bounds_within_window", violations[0])
+
+    def test_context_menu_long_page_click_stable_requires_visibility_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            rel = "tools/diag-scripts/ui-gallery/context-menu/bad-click.json"
+            self.write_script_with_meta(
+                root,
+                rel,
+                [
+                    {"type": "reset_diagnostics"},
+                    {
+                        "type": "click_stable",
+                        "target": {
+                            "kind": "test_id",
+                            "id": "ui-gallery-context-menu-submenu-trigger",
+                        },
+                    },
+                ],
+                {"env_defaults": {"FRET_UI_GALLERY_START_PAGE": "context_menu"}},
+            )
+
+            violations = REGISTRY.lint_strict_click_visibility(
+                root, self.registry_for(rel, ["ui-gallery-context-menu"])
+            )
+
+            self.assertEqual(1, len(violations))
+            self.assertIn("ui-gallery-context-menu-submenu-trigger", violations[0])
+            self.assertIn("bounds_within_window", violations[0])
 
     def test_scroll_area_long_page_plain_click_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as td:

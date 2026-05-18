@@ -15,6 +15,49 @@ pub(super) fn positioned_layout_style(layout: LayoutStyle) -> PositionedLayoutSt
     }
 }
 
+pub(super) fn absolute_child_envelope_size(
+    child_size: Size,
+    inset: crate::element::InsetStyle,
+) -> Size {
+    fn edge_components(edge: crate::element::InsetEdge) -> (f32, f32) {
+        match edge {
+            crate::element::InsetEdge::Px(px) => (px.0, 0.0),
+            crate::element::InsetEdge::Fraction(f) => {
+                let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                (0.0, f)
+            }
+            crate::element::InsetEdge::Auto | crate::element::InsetEdge::Fill => (0.0, 0.0),
+        }
+    }
+
+    fn axis_extent(
+        child_extent: Px,
+        start: crate::element::InsetEdge,
+        end: crate::element::InsetEdge,
+    ) -> Px {
+        let (start_px, start_fraction) = edge_components(start);
+        let (end_px, end_fraction) = edge_components(end);
+        let required = start_px + end_px + child_extent.0;
+        let denom = 1.0 - start_fraction - end_fraction;
+        let extent = if denom > f32::EPSILON {
+            (required / denom).max(0.0)
+        } else {
+            required.max(0.0)
+        };
+
+        if start_fraction > 0.0 || end_fraction > 0.0 {
+            Px(extent.ceil())
+        } else {
+            Px(extent)
+        }
+    }
+
+    Size::new(
+        axis_extent(child_size.width, inset.left, inset.right),
+        axis_extent(child_size.height, inset.top, inset.bottom),
+    )
+}
+
 pub(super) fn layout_positioned_child<H: UiHost>(
     cx: &mut LayoutCx<'_, H>,
     child: NodeId,

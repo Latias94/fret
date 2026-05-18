@@ -225,6 +225,21 @@ fn script_v2_roundtrip_command_palette_shortcut_primary() {
 }
 
 #[test]
+fn script_v2_roundtrip_press_keys() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "press_keys",
+      "keys": ["9", "0", "0", "0"]
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_menubar_active_mnemonic() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-active-mnemonic.json"
@@ -473,6 +488,13 @@ fn script_v2_roundtrip_ui_gallery_avatar_dropdown_activate_open_trigger() {
 fn script_v2_roundtrip_ui_gallery_table_retained_multi_sort_shift_click() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-table-retained-multi-sort-shift-click.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_table_retained_keyboard_typeahead() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-table-retained-keyboard-typeahead.json"
     ));
 }
 

@@ -1,48 +1,12 @@
 {
   "schema_version": 2,
+  "meta": {
+    "required_launch_features": ["gallery-dev"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "table_retained_torture"
+    }
+  },
   "steps": [
-    {
-      "predicate": {
-        "kind": "exists",
-        "target": {
-          "id": "ui-gallery-nav-search",
-          "kind": "test_id"
-        }
-      },
-      "timeout_frames": 240,
-      "type": "wait_until"
-    },
-    {
-      "button": "left",
-      "target": {
-        "id": "ui-gallery-nav-search",
-        "kind": "test_id"
-      },
-      "type": "click"
-    },
-    {
-      "text": "table retained",
-      "type": "type_text"
-    },
-    {
-      "predicate": {
-        "kind": "exists",
-        "target": {
-          "id": "ui-gallery-nav-table-retained-torture",
-          "kind": "test_id"
-        }
-      },
-      "timeout_frames": 240,
-      "type": "wait_until"
-    },
-    {
-      "button": "left",
-      "target": {
-        "id": "ui-gallery-nav-table-retained-torture",
-        "kind": "test_id"
-      },
-      "type": "click"
-    },
     {
       "predicate": {
         "kind": "exists",
@@ -98,7 +62,7 @@
       "type": "wait_frames"
     },
     {
-      "key": "9",
+      "keys": ["9", "0", "0", "0"],
       "modifiers": {
         "alt": false,
         "ctrl": false,
@@ -106,40 +70,7 @@
         "shift": false
       },
       "repeat": false,
-      "type": "press_key"
-    },
-    {
-      "key": "0",
-      "modifiers": {
-        "alt": false,
-        "ctrl": false,
-        "meta": false,
-        "shift": false
-      },
-      "repeat": false,
-      "type": "press_key"
-    },
-    {
-      "key": "0",
-      "modifiers": {
-        "alt": false,
-        "ctrl": false,
-        "meta": false,
-        "shift": false
-      },
-      "repeat": false,
-      "type": "press_key"
-    },
-    {
-      "key": "0",
-      "modifiers": {
-        "alt": false,
-        "ctrl": false,
-        "meta": false,
-        "shift": false
-      },
-      "repeat": false,
-      "type": "press_key"
+      "type": "press_keys"
     },
     {
       "predicate": {

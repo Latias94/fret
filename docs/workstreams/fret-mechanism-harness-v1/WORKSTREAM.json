@@ -3,7 +3,7 @@
   "slug": "fret-mechanism-harness-v1",
   "title": "Fret Mechanism Harness v1",
   "status": "active",
-  "updated": "2026-05-17",
+  "updated": "2026-05-18",
   "scope_kind": "execution",
   "problem": "Self-drawn UI parity work needs a mechanism-first harness that can discover layout, invalidation, hit-test, overlay, and focus defects before they appear as manual component screenshots. This lane turns controlled mechanism fixtures plus UI Gallery or focused diagnostics gates into an end-to-end defect-finding loop.",
   "authoritative_docs": [
@@ -50,6 +50,10 @@
     {
       "role": "audit",
       "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-17.md"
+    },
+    {
+      "role": "audit",
+      "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-18.md"
     }
   ],
   "repro": {
@@ -60,6 +64,10 @@
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_view_cache_lifecycle_matches_oracles -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_scroll_handle_invalidation_matches_oracles -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_environment_view_cache_invalidation_matches_oracles -- --nocapture",
+      "cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-capture",
+      "cargo nextest run --cargo-profile dev-fast -p fret-ui declarative::tests::layout::basics --no-capture",
+      "cargo nextest run --cargo-profile dev-fast -p fret-ui declarative::tests::layout::interactivity --no-capture",
+      "cargo nextest run --cargo-profile dev-fast -p fret-ui declarative::tests::layout::viewport_roots --no-capture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_hit_test_routing_matches_oracles -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_pointer_occlusion_routing_matches_oracles -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_focus_barrier_routing_matches_oracles -- --nocapture",
@@ -167,7 +175,17 @@
       "$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib dropdown_menu_portal_escapes_overflow_clip_ancestor -- --nocapture",
       "$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib context_menu_submenu_keyboard_open_transfers_focus_and_arrow_left_restores_focus -- --nocapture",
       "$env:CARGO_BUILD_JOBS='1'; cargo test -p fret-ui-shadcn --lib menubar_submenu_opens_on_arrow_right_and_closes_on_arrow_left_restoring_focus -- --nocapture",
-      "python tools/check_diag_scripts_registry.py"
+      "python tools/check_diag_scripts_registry.py",
+      "python tools/test_check_diag_scripts_registry.py",
+      "cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev",
+      "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-hover-card --dir target/fret-diag-hover-card-strict-authoring-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe",
+      "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-menubar-placement --dir target/fret-diag-menubar-placement-strict-authoring-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe",
+      "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-dropdown-menu --dir target/fret-diag-dropdown-menu-strict-authoring-v2 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe",
+      "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-context-menu --dir target/fret-diag-context-menu-strict-authoring-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe",
+      "cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_respects_keep_pinned_rows_false_across_pagination table_virtualized_retained_keeps_pinned_rows_true_across_pagination --no-fail-fast",
+      "cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_press_keys script_v2_roundtrip_ui_gallery_table_retained_keyboard_typeahead --no-fail-fast",
+      "cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics history_predicates_can_match_stale_latest_snapshot retained_virtual_list_reconciles_matching_predicate_counts_ring_snapshots no_frame_keepalive_does_not_consume_wait_frames --no-fail-fast",
+      "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-table-retained --dir target/fret-diag-table-retained-suite-candidate-v4 --session-auto --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery"
     ]
   },
   "gates": [
@@ -193,7 +211,7 @@
     },
     {
       "name": "layout-primitives-fixture",
-      "command": "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_primitives_match_oracles -- --nocapture"
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-capture"
     },
     {
       "name": "hit-test-routing-fixture",
@@ -792,6 +810,10 @@
       "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json --dir .fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation-rerun --timeout-ms 240000 --pack --include-triage --include-screenshots --launch target/dev-fast/fret-ui-gallery.exe"
     },
     {
+      "name": "ui-gallery-platform-preferences-runtime-environment-mutation-dev-fast-diag",
+      "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json --dir target/fret-diag-platform-preferences-runtime-environment-mutation-v2 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
       "name": "workstream-catalog",
       "command": "python tools/check_workstream_catalog.py"
     },
@@ -802,6 +824,54 @@
     {
       "name": "diag-script-registry-lint-tests",
       "command": "python tools/test_check_diag_scripts_registry.py"
+    },
+    {
+      "name": "ui-gallery-hover-card-strict-authoring-suite",
+      "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-hover-card --dir target/fret-diag-hover-card-strict-authoring-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
+      "name": "ui-gallery-menubar-placement-strict-authoring-suite",
+      "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-menubar-placement --dir target/fret-diag-menubar-placement-strict-authoring-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
+      "name": "ui-gallery-dropdown-menu-strict-authoring-suite",
+      "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-dropdown-menu --dir target/fret-diag-dropdown-menu-strict-authoring-v2 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
+      "name": "ui-gallery-context-menu-strict-authoring-suite",
+      "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-context-menu --dir target/fret-diag-context-menu-strict-authoring-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
+      "name": "ui-gallery-button-group-strict-authoring-suite",
+      "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-button-group --dir target/fret-diag-button-group-strict-authoring-v2 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
+      "name": "fret-ui-prepaint-moving-cache-root-interaction-replay",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-ui prepaint_interaction_cache_replay_translates_records_when_cache_root_moves --no-capture"
+    },
+    {
+      "name": "ui-gallery-resizable-moving-cached-combobox-diag",
+      "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json --dir target/fret-diag-resizable-moving-cached-combobox-v6 --session-auto --pack --ai-packet --include-screenshots --timeout-ms 420000 --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
+      "name": "ui-gallery-resizable-suite-after-moving-cached-combobox",
+      "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-resizable --dir target/fret-diag-resizable-suite-after-moving-cached-combobox-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
+      "name": "ui-kit-retained-table-pagination-keep-pinned-focused",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_respects_keep_pinned_rows_false_across_pagination table_virtualized_retained_keeps_pinned_rows_true_across_pagination --no-fail-fast"
+    },
+    {
+      "name": "diag-protocol-table-retained-press-keys",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_press_keys script_v2_roundtrip_ui_gallery_table_retained_keyboard_typeahead --no-fail-fast"
+    },
+    {
+      "name": "diag-bootstrap-table-retained-history-and-no-frame",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics history_predicates_can_match_stale_latest_snapshot retained_virtual_list_reconciles_matching_predicate_counts_ring_snapshots no_frame_keepalive_does_not_consume_wait_frames --no-fail-fast"
+    },
+    {
+      "name": "ui-gallery-table-retained-suite",
+      "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-table-retained --dir target/fret-diag-table-retained-suite-candidate-v4 --session-auto --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery"
     }
   ],
   "evidence": [
@@ -876,6 +946,10 @@
     "ecosystem/fret-ui-kit/src/primitives/select.rs",
     "crates/fret-ui/src/declarative/tests/layout/scroll.rs",
     "crates/fret-ui/src/tree/tests/interactive_resize_flow_rebuild.rs",
+    "crates/fret-ui/src/declarative/layout_helpers.rs",
+    "crates/fret-ui/src/declarative/host_widget/layout/positioned_container.rs",
+    "crates/fret-ui/src/declarative/host_widget/measure.rs",
+    "crates/fret-ui/src/declarative/tests/layout/mechanism_harness.rs",
     "crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json",
     "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-demo-with-title-toggle-underflow.json",
     "tools/diag-scripts/suites/diag-hardening-smoke/suite.json",
@@ -981,8 +1055,25 @@
     ".fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation-rerun/script.result.json",
     ".fret/diag/runs/ui-gallery-platform-preferences-runtime-environment-mutation-rerun/share/1778922706072.zip",
     "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json",
+    "target/fret-diag-platform-preferences-runtime-environment-mutation-v2/sessions/1779029342505-133048/script.result.json",
+    "target/fret-diag-platform-preferences-runtime-environment-mutation-v2/sessions/1779029342505-133048/1779029357027/ai.packet",
+    "target/fret-diag-platform-preferences-runtime-environment-mutation-v2/sessions/1779029342505-133048/share/1779029357027.zip",
     "tools/check_diag_scripts_registry.py",
     "tools/test_check_diag_scripts_registry.py",
+    "tools/diag-scripts/suites/ui-gallery-hover-card/suite.json",
+    "target/fret-diag-hover-card-strict-authoring-v1/sessions/1779002136522-139728/suite.summary.json",
+    "tools/diag-scripts/suites/ui-gallery-menubar-placement/suite.json",
+    "target/fret-diag-menubar-placement-strict-authoring-v1/sessions/1779003319016-117380/suite.summary.json",
+    "tools/diag-scripts/suites/ui-gallery-dropdown-menu/suite.json",
+    "target/fret-diag-dropdown-menu-strict-authoring-v2/sessions/1779004799053-142764/suite.summary.json",
+    "tools/diag-scripts/suites/ui-gallery-context-menu/suite.json",
+    "target/fret-diag-context-menu-strict-authoring-v1/sessions/1779005731883-139360/suite.summary.json",
+    "tools/diag-scripts/suites/ui-gallery-button-group/suite.json",
+    "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-demo-screenshots.json",
+    "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-accessibility-screenshots.json",
+    "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-select-screenshots.json",
+    "target/fret-diag-button-group-select-strict-authoring-rerun-v1/sessions/1779007993048-40528/1779008006425/ai.packet",
+    "target/fret-diag-button-group-strict-authoring-v2/sessions/1779008052527-138688/suite.summary.json",
     "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json",
     "apps/fret-ui-gallery/src/driver/diag_snapshot.rs",
     "apps/fret-ui-gallery/src/ui/pages/motion_presets.rs",
@@ -1027,7 +1118,45 @@
     "ecosystem/fret-bootstrap/src/ui_diagnostics/selector.rs",
     "apps/fret-ui-gallery/src/ui/snippets/select/diag_surface.rs",
     "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-command-gated-action-state.json",
-    "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-preset-runtime-token-mutation.json"
+    "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-preset-runtime-token-mutation.json",
+    "crates/fret-ui/src/tree/prepaint/interaction.rs",
+    "crates/fret-ui/src/tree/prepaint/mod.rs",
+    "crates/fret-ui/src/tree/tests/prepaint.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/resizable/moving_cached_combobox.rs",
+    "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json",
+    "target/fret-diag-resizable-moving-cached-combobox-v6/sessions/1779027970415-65904/script.result.json",
+    "target/fret-diag-resizable-moving-cached-combobox-v6/sessions/1779027970415-65904/1779027983606/ai.packet",
+    "target/fret-diag-resizable-moving-cached-combobox-v6/sessions/1779027970415-65904/share/1779027983606.zip",
+    "target/fret-diag-resizable-suite-after-moving-cached-combobox-v1/sessions/1779029073205-16452/suite.summary.json",
+    "ecosystem/fret-ui-kit/src/declarative/table.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_predicates.rs",
+    "crates/fret-diag-protocol/src/lib.rs",
+    "crates/fret-diag-protocol/src/builder.rs",
+    "crates/fret-diag-protocol/tests/script_json_roundtrip.rs",
+    "tools/diag-scripts/suites/ui-gallery-table-retained/suite.json",
+    "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-keyboard-typeahead.json",
+    "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-sort-desc.json",
+    "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-sort-select-scroll.json",
+    "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-window-boundary-scroll.json",
+    "target/fret-diag-table-retained-sort-desc-fix-v1/sessions/1779035666721-164056/1779035679726/ai.packet",
+    "target/fret-diag-table-retained-window-boundary-scroll-focused-v4/sessions/1779037981653-160576/1779038066334/ai.packet",
+    "target/fret-diag-table-retained-suite-candidate-v4/sessions/1779038155054-118992/suite.summary.json",
+    "crates/fret-ui/src/declarative/mount.rs",
+    "crates/fret-ui/src/layout/engine.rs",
+    "crates/fret-ui/src/layout/engine/flow.rs",
+    "crates/fret-ui/src/declarative/tests/virtual_list/measurement.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/ai/file_tree_demo.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/ai/file_tree_large.rs",
+    "crates/fret-diag/src/lint.rs",
+    "tools/diag-scripts/suites/ui-gallery-ai-file-tree/suite.json",
+    "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-file-tree-demo-toggle.json",
+    "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-file-tree-demo-actions.json",
+    "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-file-tree-large-scroll.json",
+    "target/fret-diag-ai-file-tree-semantics-action-state-after-vlist-measured-leaf-dirty-v1/sessions/1779041323318-52900/suite.summary.json",
+    "target/fret-diag-ai-file-tree-zero-warning-hidden-markers-v2/sessions/1779043283276-169328/suite.summary.json",
+    "crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json",
+    "crates/fret-ui/src/declarative/tests/layout/mechanism_harness.rs"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",

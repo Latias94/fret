@@ -3570,6 +3570,139 @@ mod tests {
             assert_aligned(snap, col);
         }
     }
+
+    fn retained_table_row_ids_for_state(
+        state_value: TableState,
+        keep_pinned_rows: bool,
+    ) -> std::collections::HashSet<String> {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let state = app.models_mut().insert(state_value);
+        let data: Arc<[u32]> = Arc::from((0u32..20).collect::<Vec<_>>());
+        let columns: Arc<[ColumnDef<u32>]> = Arc::from(vec![{
+            let mut col = ColumnDef::new("name");
+            col.size = 220.0;
+            col
+        }]);
+        let scroll = VirtualListScrollHandle::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(320.0)),
+        );
+        let mut services = FakeServices;
+        let props = TableViewProps {
+            draw_frame: false,
+            enable_column_resizing: false,
+            keep_pinned_rows,
+            row_height: Some(Px(32.0)),
+            header_height: Some(Px(32.0)),
+            ..Default::default()
+        };
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![table_virtualized_retained_v0(
+                    cx,
+                    data.clone(),
+                    columns.clone(),
+                    state.clone(),
+                    &scroll,
+                    0,
+                    Arc::new(|_row: &u32, index: usize| RowKey::from_index(index)),
+                    None,
+                    props.clone(),
+                    Arc::new(|col: &ColumnDef<u32>| Arc::from(col.id.as_ref())),
+                    None,
+                    Arc::new(
+                        |cx: &mut dyn ElementContextAccess<'_, App>,
+                         _col: &ColumnDef<u32>,
+                         row: &u32| {
+                            crate::ui::text(format!("Row {row}")).into_element(cx.elements())
+                        },
+                    ),
+                    TableDebugIds {
+                        header_cell_test_id_prefix: Some(Arc::<str>::from(
+                            "table-retained-page-header-",
+                        )),
+                        row_test_id_prefix: Some(Arc::<str>::from("table-retained-page-row-")),
+                        ..Default::default()
+                    },
+                )]
+            })
+        };
+
+        for _ in 0..3 {
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("expected retained table semantics snapshot");
+
+        snap.nodes
+            .iter()
+            .filter_map(|node| node.test_id.as_deref())
+            .filter(|id| {
+                id.strip_prefix("table-retained-page-row-")
+                    .is_some_and(|rest| rest.chars().all(|c| c.is_ascii_digit()))
+            })
+            .map(ToString::to_string)
+            .collect()
+    }
+
+    #[test]
+    fn table_virtualized_retained_respects_keep_pinned_rows_false_across_pagination() {
+        let mut state = TableState::default();
+        state.pagination.page_index = 1;
+        state.pagination.page_size = 5;
+        state.row_pinning.top = vec![RowKey::from_index(0)];
+
+        let ids = retained_table_row_ids_for_state(state, false);
+
+        assert!(
+            !ids.contains("table-retained-page-row-0"),
+            "expected keep_pinned_rows=false to hide pinned row 0 outside page 2"
+        );
+        for row in 5..10 {
+            assert!(ids.contains(&format!("table-retained-page-row-{row}")));
+        }
+    }
+
+    #[test]
+    fn table_virtualized_retained_keeps_pinned_rows_true_across_pagination() {
+        let mut state = TableState::default();
+        state.pagination.page_index = 1;
+        state.pagination.page_size = 5;
+        state.row_pinning.top = vec![RowKey::from_index(0)];
+
+        let ids = retained_table_row_ids_for_state(state, true);
+
+        assert!(
+            ids.contains("table-retained-page-row-0"),
+            "expected keep_pinned_rows=true to keep pinned row 0 visible outside page 2"
+        );
+        for row in 5..10 {
+            assert!(ids.contains(&format!("table-retained-page-row-{row}")));
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -4067,7 +4200,7 @@ where
         let (order, _recomputed) = cache.row_order(data.as_ref(), columns.as_ref(), deps);
         order.clone()
     });
-    let entries: Arc<[RowEntry]> = row_order
+    let all_entries: Arc<[RowEntry]> = row_order
         .iter()
         .map(|&i| RowEntry {
             key: (row_key_at)(&data[i], i),
@@ -4075,6 +4208,93 @@ where
         })
         .collect::<Vec<_>>()
         .into();
+    let entries: Arc<[RowEntry]> = {
+        let total_rows = all_entries.len();
+        let bounds = pagination_bounds(total_rows, state_value.pagination);
+        if bounds.page_index != state_value.pagination.page_index {
+            let _ = cx.app.models_mut().update(&state, |st| {
+                st.pagination.page_index = bounds.page_index;
+            });
+        }
+
+        let page_entries: &[RowEntry] = if bounds.page_count == 0 {
+            &[]
+        } else {
+            all_entries
+                .get(bounds.page_start..bounds.page_end)
+                .unwrap_or_default()
+        };
+
+        if !is_some_rows_pinned(&state_value.row_pinning, None) {
+            Arc::from(page_entries.to_vec())
+        } else {
+            let pinned_keys: std::collections::HashSet<RowKey> = state_value
+                .row_pinning
+                .top
+                .iter()
+                .chain(state_value.row_pinning.bottom.iter())
+                .copied()
+                .collect();
+            let page_keys: std::collections::HashSet<RowKey> =
+                page_entries.iter().map(|entry| entry.key).collect();
+            let entry_by_key: std::collections::HashMap<RowKey, RowEntry> = all_entries
+                .iter()
+                .copied()
+                .map(|entry| (entry.key, entry))
+                .collect();
+
+            let mut next = Vec::with_capacity(
+                page_entries
+                    .len()
+                    .saturating_add(state_value.row_pinning.top.len())
+                    .saturating_add(state_value.row_pinning.bottom.len()),
+            );
+
+            for row_key in &state_value.row_pinning.top {
+                let visible = if props.keep_pinned_rows {
+                    entry_by_key.get(row_key).copied()
+                } else if page_keys.contains(row_key) {
+                    entry_by_key.get(row_key).copied()
+                } else {
+                    None
+                };
+                if let Some(entry) = visible {
+                    next.push(entry);
+                }
+            }
+
+            next.extend(
+                page_entries
+                    .iter()
+                    .copied()
+                    .filter(|entry| !pinned_keys.contains(&entry.key)),
+            );
+
+            for row_key in &state_value.row_pinning.bottom {
+                let visible = if props.keep_pinned_rows {
+                    entry_by_key.get(row_key).copied()
+                } else if page_keys.contains(row_key) {
+                    entry_by_key.get(row_key).copied()
+                } else {
+                    None
+                };
+                if let Some(entry) = visible {
+                    next.push(entry);
+                }
+            }
+
+            Arc::from(next)
+        }
+    };
+    let entries_revision = entries.iter().fold(
+        items_revision ^ (entries.len() as u64).rotate_left(11),
+        |acc, entry| {
+            acc.rotate_left(5)
+                ^ entry.key.0
+                ^ (entry.data_index as u64).rotate_left(17)
+                ^ u64::from(props.keep_pinned_rows)
+        },
+    );
 
     let mut fill_layout = LayoutStyle::default();
     fill_layout.size.width = Length::Fill;
@@ -4083,7 +4303,7 @@ where
     fill_layout.flex.basis = Length::Px(Px(0.0));
 
     let mut options = VirtualListOptions::new(row_h, props.overscan);
-    options.items_revision = items_revision;
+    options.items_revision = entries_revision;
     options.keep_alive = props
         .keep_alive
         .unwrap_or_else(|| props.overscan.saturating_mul(2));
@@ -4445,8 +4665,8 @@ where
         typeahead,
         typeahead_timer,
     ) = cx.slot_state(RetainedTableKeyboardNavState::default, |nav| {
-        if nav.last_labels_revision.get() != Some(items_revision) {
-            nav.last_labels_revision.set(Some(items_revision));
+        if nav.last_labels_revision.get() != Some(entries_revision) {
+            nav.last_labels_revision.set(Some(entries_revision));
 
             if let Some(typeahead_label_at) = &typeahead_label_at {
                 let mut next_labels: Vec<Arc<str>> = Vec::with_capacity(entries.len());

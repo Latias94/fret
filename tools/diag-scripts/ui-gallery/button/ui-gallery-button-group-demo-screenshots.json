@@ -45,10 +45,25 @@
     { "type": "wait_frames", "n": 5 },
     { "type": "capture_bundle", "label": "ui-gallery-button-group-demo-preview" },
     { "type": "capture_screenshot", "label": "ui-gallery-button-group-demo-preview" },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-button-group-demo-tabs-trigger-code" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-group-demo-tabs-trigger-code" },
+        "padding_px": 4.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-button-group-demo-tabs-trigger-code" },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
     { "type": "wait_frames", "n": 2 },
     { "type": "capture_screenshot", "label": "ui-gallery-button-group-demo-code" },
     { "type": "capture_bundle", "label": "ui-gallery-button-group-demo-code" }
   ]
 }
-

@@ -31,6 +31,7 @@ fn invisible_marker(cx: &mut AppComponentCx<'_>, test_id: &'static str) -> AnyEl
     .attach_semantics(
         SemanticsDecoration::default()
             .role(fret_core::SemanticsRole::Group)
+            .hidden(true)
             .test_id(Arc::<str>::from(test_id)),
     )
 }

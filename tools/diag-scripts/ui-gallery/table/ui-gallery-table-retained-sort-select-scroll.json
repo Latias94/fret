@@ -1,48 +1,12 @@
 {
   "schema_version": 2,
+  "meta": {
+    "required_launch_features": ["gallery-dev"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "table_retained_torture"
+    }
+  },
   "steps": [
-    {
-      "predicate": {
-        "kind": "exists",
-        "target": {
-          "id": "ui-gallery-nav-search",
-          "kind": "test_id"
-        }
-      },
-      "timeout_frames": 240,
-      "type": "wait_until"
-    },
-    {
-      "button": "left",
-      "target": {
-        "id": "ui-gallery-nav-search",
-        "kind": "test_id"
-      },
-      "type": "click"
-    },
-    {
-      "text": "table retained",
-      "type": "type_text"
-    },
-    {
-      "predicate": {
-        "kind": "exists",
-        "target": {
-          "id": "ui-gallery-nav-table-retained-torture",
-          "kind": "test_id"
-        }
-      },
-      "timeout_frames": 240,
-      "type": "wait_until"
-    },
-    {
-      "button": "left",
-      "target": {
-        "id": "ui-gallery-nav-table-retained-torture",
-        "kind": "test_id"
-      },
-      "type": "click"
-    },
     {
       "predicate": {
         "kind": "exists",
@@ -162,7 +126,8 @@
     },
     {
       "delta_x": 0.0,
-      "delta_y": 120.0,
+      "delta_y": -120.0,
+      "pointer_kind": "touch",
       "target": {
         "id": "ui-gallery-table-retained-torture-root",
         "kind": "test_id"
@@ -175,7 +140,8 @@
     },
     {
       "delta_x": 0.0,
-      "delta_y": 120.0,
+      "delta_y": -120.0,
+      "pointer_kind": "touch",
       "target": {
         "id": "ui-gallery-table-retained-torture-root",
         "kind": "test_id"
@@ -188,7 +154,8 @@
     },
     {
       "delta_x": 0.0,
-      "delta_y": 120.0,
+      "delta_y": -120.0,
+      "pointer_kind": "touch",
       "target": {
         "id": "ui-gallery-table-retained-torture-root",
         "kind": "test_id"

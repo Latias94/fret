@@ -26,14 +26,26 @@ enum LayoutPrimitiveScenario {
     TextMeasurePaintOverflowScale,
     ScrollRootPreservesChildLayoutBounds,
     AbsoluteInsetFractionResolvesAgainstContainingBlock,
+    PressableFractionalAbsoluteChildEnvelopeMatchesLayout,
+    PressableMixedFlowAbsoluteChildEnvelopeMatchesLayout,
     AutoContainerChildMarginMeasureMatchesLayout,
+    HoverRegionAbsoluteChildMeasureMatchesLayout,
+    HoverRegionFractionalInsetEnvelopeMatchesLayout,
+    HoverRegionRightBottomInsetEnvelopeMatchesLayout,
     FlexCrossAxisStretch,
     FlexPercentBasisKeepsAutoHeightFixedSibling,
+    FixedContainerPassesDefiniteHeightToFillFlexIntrinsicMeasure,
     TransparentWrapperPreservesFill,
     ChromeContainerStretchKeepsOuterBox,
     GridFrAutoTrackNegotiation,
+    GridGapMeasureMatchesLayout,
+    FlexGapMeasureMatchesLayout,
+    FlexWrapGapMeasureMatchesLayout,
     FlexOrderAffectsLayoutPosition,
     FlexOrderWrapMeasureUsesVisualOrder,
+    FlexOrderAutoMarginUsesVisualOrder,
+    FlexOrderMarginRightAutoUsesVisualOrder,
+    FlexOrderMarginTopAutoUsesVisualOrder,
     VisualVsHitBoundsFollowRenderTransform,
 }
 
@@ -129,6 +141,66 @@ fn observe_case(
         );
         observed.push_hit_test_sample(hit_sample(&ui, &snapshot, "layout-center", layout_center));
         observed.push_hit_test_sample(hit_sample(&ui, &snapshot, "visual-center", visual_center));
+    }
+
+    if matches!(
+        case.scenario,
+        LayoutPrimitiveScenario::HoverRegionAbsoluteChildMeasureMatchesLayout
+    ) {
+        observed.push_hit_test_sample(hit_sample(
+            &ui,
+            &snapshot,
+            "hover-region-absolute-child-center",
+            Point::new(Px(22.0), Px(13.0)),
+        ));
+    }
+
+    if matches!(
+        case.scenario,
+        LayoutPrimitiveScenario::PressableFractionalAbsoluteChildEnvelopeMatchesLayout
+    ) {
+        observed.push_hit_test_sample(hit_sample(
+            &ui,
+            &snapshot,
+            "pressable-fractional-absolute-child-near-edge",
+            Point::new(Px(24.5), Px(10.5)),
+        ));
+    }
+
+    if matches!(
+        case.scenario,
+        LayoutPrimitiveScenario::PressableMixedFlowAbsoluteChildEnvelopeMatchesLayout
+    ) {
+        observed.push_hit_test_sample(hit_sample(
+            &ui,
+            &snapshot,
+            "pressable-mixed-absolute-child-near-edge",
+            Point::new(Px(33.25), Px(10.75)),
+        ));
+    }
+
+    if matches!(
+        case.scenario,
+        LayoutPrimitiveScenario::HoverRegionFractionalInsetEnvelopeMatchesLayout
+    ) {
+        observed.push_hit_test_sample(hit_sample(
+            &ui,
+            &snapshot,
+            "hover-region-fractional-child-near-edge",
+            Point::new(Px(24.5), Px(10.5)),
+        ));
+    }
+
+    if matches!(
+        case.scenario,
+        LayoutPrimitiveScenario::HoverRegionRightBottomInsetEnvelopeMatchesLayout
+    ) {
+        observed.push_hit_test_sample(hit_sample(
+            &ui,
+            &snapshot,
+            "hover-region-right-bottom-child-near-edge",
+            Point::new(Px(19.5), Px(9.5)),
+        ));
     }
 
     Ok(observed)
@@ -331,6 +403,157 @@ fn observe_post_layout_scalar_metrics(
                 ("flex_order.wrap.measured_height", measured.height.0),
             ])
         }
+        LayoutPrimitiveScenario::FixedContainerPassesDefiniteHeightToFillFlexIntrinsicMeasure => {
+            let container = child_at(ui, root, 0, "fixed-height fill flex container")?;
+            let constraints = crate::layout_constraints::LayoutConstraints::new(
+                crate::layout_constraints::LayoutSize::new(None, None),
+                crate::layout_constraints::LayoutSize::new(
+                    crate::layout_constraints::AvailableSpace::Definite(Px(160.0)),
+                    crate::layout_constraints::AvailableSpace::MaxContent,
+                ),
+            );
+            let measured = ui.measure_in(app, &mut *services, container, constraints, 1.0);
+
+            Ok(vec![
+                (
+                    "fixed_container_fill_intrinsic.measured_width",
+                    measured.width.0,
+                ),
+                (
+                    "fixed_container_fill_intrinsic.measured_height",
+                    measured.height.0,
+                ),
+            ])
+        }
+        LayoutPrimitiveScenario::GridGapMeasureMatchesLayout => {
+            let grid = child_at(ui, root, 0, "grid gap root")?;
+            let layout_bounds = ui
+                .debug_node_bounds(grid)
+                .ok_or_else(|| ScenarioObserveError::new("missing grid gap layout bounds"))?;
+            let constraints = crate::layout_constraints::LayoutConstraints::new(
+                crate::layout_constraints::LayoutSize::new(None, None),
+                crate::layout_constraints::LayoutSize::new(
+                    crate::layout_constraints::AvailableSpace::MaxContent,
+                    crate::layout_constraints::AvailableSpace::MaxContent,
+                ),
+            );
+            let measured = ui.measure_in(app, &mut *services, grid, constraints, 1.0);
+
+            Ok(vec![
+                ("grid_gap.layout_width", layout_bounds.size.width.0),
+                ("grid_gap.layout_height", layout_bounds.size.height.0),
+                ("grid_gap.measured_width", measured.width.0),
+                ("grid_gap.measured_height", measured.height.0),
+            ])
+        }
+        LayoutPrimitiveScenario::FlexGapMeasureMatchesLayout => {
+            let flex = child_at(ui, root, 0, "flex gap root")?;
+            let layout_bounds = ui
+                .debug_node_bounds(flex)
+                .ok_or_else(|| ScenarioObserveError::new("missing flex gap layout bounds"))?;
+            let constraints = crate::layout_constraints::LayoutConstraints::new(
+                crate::layout_constraints::LayoutSize::new(None, None),
+                crate::layout_constraints::LayoutSize::new(
+                    crate::layout_constraints::AvailableSpace::MaxContent,
+                    crate::layout_constraints::AvailableSpace::MaxContent,
+                ),
+            );
+            let measured = ui.measure_in(app, &mut *services, flex, constraints, 1.0);
+
+            Ok(vec![
+                ("flex_gap.layout_width", layout_bounds.size.width.0),
+                ("flex_gap.layout_height", layout_bounds.size.height.0),
+                ("flex_gap.measured_width", measured.width.0),
+                ("flex_gap.measured_height", measured.height.0),
+            ])
+        }
+        LayoutPrimitiveScenario::PressableFractionalAbsoluteChildEnvelopeMatchesLayout => {
+            let pressable = child_at(ui, root, 0, "pressable with fractional absolute child")?;
+            let layout_bounds = ui.debug_node_bounds(pressable).ok_or_else(|| {
+                ScenarioObserveError::new("missing pressable fractional absolute layout bounds")
+            })?;
+            let constraints = crate::layout_constraints::LayoutConstraints::new(
+                crate::layout_constraints::LayoutSize::new(None, None),
+                crate::layout_constraints::LayoutSize::new(
+                    crate::layout_constraints::AvailableSpace::Definite(Px(0.0)),
+                    crate::layout_constraints::AvailableSpace::Definite(Px(0.0)),
+                ),
+            );
+            let measured = ui.measure_in(app, &mut *services, pressable, constraints, 1.0);
+
+            Ok(vec![
+                (
+                    "pressable_fractional_absolute.layout_width",
+                    layout_bounds.size.width.0,
+                ),
+                (
+                    "pressable_fractional_absolute.layout_height",
+                    layout_bounds.size.height.0,
+                ),
+                (
+                    "pressable_fractional_absolute.placeholder_measured_width",
+                    measured.width.0,
+                ),
+                (
+                    "pressable_fractional_absolute.placeholder_measured_height",
+                    measured.height.0,
+                ),
+            ])
+        }
+        LayoutPrimitiveScenario::PressableMixedFlowAbsoluteChildEnvelopeMatchesLayout => {
+            let pressable = child_at(ui, root, 0, "pressable with mixed flow and absolute child")?;
+            let layout_bounds = ui.debug_node_bounds(pressable).ok_or_else(|| {
+                ScenarioObserveError::new("missing pressable mixed absolute layout bounds")
+            })?;
+            let constraints = crate::layout_constraints::LayoutConstraints::new(
+                crate::layout_constraints::LayoutSize::new(None, None),
+                crate::layout_constraints::LayoutSize::new(
+                    crate::layout_constraints::AvailableSpace::Definite(Px(0.0)),
+                    crate::layout_constraints::AvailableSpace::Definite(Px(0.0)),
+                ),
+            );
+            let measured = ui.measure_in(app, &mut *services, pressable, constraints, 1.0);
+
+            Ok(vec![
+                (
+                    "pressable_mixed_absolute.layout_width",
+                    layout_bounds.size.width.0,
+                ),
+                (
+                    "pressable_mixed_absolute.layout_height",
+                    layout_bounds.size.height.0,
+                ),
+                (
+                    "pressable_mixed_absolute.placeholder_measured_width",
+                    measured.width.0,
+                ),
+                (
+                    "pressable_mixed_absolute.placeholder_measured_height",
+                    measured.height.0,
+                ),
+            ])
+        }
+        LayoutPrimitiveScenario::FlexWrapGapMeasureMatchesLayout => {
+            let flex = child_at(ui, root, 0, "flex wrap gap root")?;
+            let layout_bounds = ui
+                .debug_node_bounds(flex)
+                .ok_or_else(|| ScenarioObserveError::new("missing flex wrap gap layout bounds"))?;
+            let constraints = crate::layout_constraints::LayoutConstraints::new(
+                crate::layout_constraints::LayoutSize::new(None, None),
+                crate::layout_constraints::LayoutSize::new(
+                    crate::layout_constraints::AvailableSpace::Definite(Px(68.0)),
+                    crate::layout_constraints::AvailableSpace::MaxContent,
+                ),
+            );
+            let measured = ui.measure_in(app, &mut *services, flex, constraints, 1.0);
+
+            Ok(vec![
+                ("flex_wrap_gap.layout_width", layout_bounds.size.width.0),
+                ("flex_wrap_gap.layout_height", layout_bounds.size.height.0),
+                ("flex_wrap_gap.measured_width", measured.width.0),
+                ("flex_wrap_gap.measured_height", measured.height.0),
+            ])
+        }
         LayoutPrimitiveScenario::AutoContainerChildMarginMeasureMatchesLayout => {
             let container = child_at(ui, root, 0, "auto margin container")?;
             let layout_bounds = ui
@@ -356,6 +579,90 @@ fn observe_post_layout_scalar_metrics(
                 ),
                 ("auto_container_margin.measured_width", measured.width.0),
                 ("auto_container_margin.measured_height", measured.height.0),
+            ])
+        }
+        LayoutPrimitiveScenario::HoverRegionAbsoluteChildMeasureMatchesLayout => {
+            let hover = child_at(ui, root, 0, "hover region with absolute child")?;
+            let layout_bounds = ui.debug_node_bounds(hover).ok_or_else(|| {
+                ScenarioObserveError::new("missing hover region absolute-child layout bounds")
+            })?;
+            let constraints = crate::layout_constraints::LayoutConstraints::new(
+                crate::layout_constraints::LayoutSize::new(None, None),
+                crate::layout_constraints::LayoutSize::new(
+                    crate::layout_constraints::AvailableSpace::MaxContent,
+                    crate::layout_constraints::AvailableSpace::MaxContent,
+                ),
+            );
+            let measured = ui.measure_in(app, &mut *services, hover, constraints, 1.0);
+
+            Ok(vec![
+                (
+                    "hover_region_absolute.layout_width",
+                    layout_bounds.size.width.0,
+                ),
+                (
+                    "hover_region_absolute.layout_height",
+                    layout_bounds.size.height.0,
+                ),
+                ("hover_region_absolute.measured_width", measured.width.0),
+                ("hover_region_absolute.measured_height", measured.height.0),
+            ])
+        }
+        LayoutPrimitiveScenario::HoverRegionFractionalInsetEnvelopeMatchesLayout => {
+            let hover = child_at(ui, root, 0, "hover region with fractional absolute child")?;
+            let layout_bounds = ui.debug_node_bounds(hover).ok_or_else(|| {
+                ScenarioObserveError::new("missing hover region fractional-child layout bounds")
+            })?;
+            let constraints = crate::layout_constraints::LayoutConstraints::new(
+                crate::layout_constraints::LayoutSize::new(None, None),
+                crate::layout_constraints::LayoutSize::new(
+                    crate::layout_constraints::AvailableSpace::MaxContent,
+                    crate::layout_constraints::AvailableSpace::MaxContent,
+                ),
+            );
+            let measured = ui.measure_in(app, &mut *services, hover, constraints, 1.0);
+
+            Ok(vec![
+                (
+                    "hover_region_fractional.layout_width",
+                    layout_bounds.size.width.0,
+                ),
+                (
+                    "hover_region_fractional.layout_height",
+                    layout_bounds.size.height.0,
+                ),
+                ("hover_region_fractional.measured_width", measured.width.0),
+                ("hover_region_fractional.measured_height", measured.height.0),
+            ])
+        }
+        LayoutPrimitiveScenario::HoverRegionRightBottomInsetEnvelopeMatchesLayout => {
+            let hover = child_at(ui, root, 0, "hover region with right/bottom absolute child")?;
+            let layout_bounds = ui.debug_node_bounds(hover).ok_or_else(|| {
+                ScenarioObserveError::new("missing hover region right/bottom-child layout bounds")
+            })?;
+            let constraints = crate::layout_constraints::LayoutConstraints::new(
+                crate::layout_constraints::LayoutSize::new(None, None),
+                crate::layout_constraints::LayoutSize::new(
+                    crate::layout_constraints::AvailableSpace::MaxContent,
+                    crate::layout_constraints::AvailableSpace::MaxContent,
+                ),
+            );
+            let measured = ui.measure_in(app, &mut *services, hover, constraints, 1.0);
+
+            Ok(vec![
+                (
+                    "hover_region_right_bottom.layout_width",
+                    layout_bounds.size.width.0,
+                ),
+                (
+                    "hover_region_right_bottom.layout_height",
+                    layout_bounds.size.height.0,
+                ),
+                ("hover_region_right_bottom.measured_width", measured.width.0),
+                (
+                    "hover_region_right_bottom.measured_height",
+                    measured.height.0,
+                ),
             ])
         }
         _ => Ok(Vec::new()),
@@ -708,6 +1015,52 @@ fn build_scenario(
                 ]
             })]
         }
+        LayoutPrimitiveScenario::PressableFractionalAbsoluteChildEnvelopeMatchesLayout => {
+            let pressable = crate::element::PressableProps::default();
+
+            vec![
+                cx.pressable(pressable, |cx, _state| {
+                    let mut child = crate::element::ContainerProps::default();
+                    child.layout.position = crate::element::PositionStyle::Absolute;
+                    child.layout.inset.left = crate::element::InsetEdge::Fraction(0.25);
+                    child.layout.inset.top = crate::element::InsetEdge::Fraction(0.1);
+                    child.layout.size.width = Length::Px(Px(20.0));
+                    child.layout.size.height = Length::Px(Px(10.0));
+
+                    vec![
+                        cx.container(child, |_cx| Vec::new())
+                            .test_id("pressable-fractional-absolute-child"),
+                    ]
+                })
+                .test_id("pressable-fractional-absolute"),
+            ]
+        }
+        LayoutPrimitiveScenario::PressableMixedFlowAbsoluteChildEnvelopeMatchesLayout => {
+            let pressable = crate::element::PressableProps::default();
+
+            vec![
+                cx.pressable(pressable, |cx, _state| {
+                    let mut flow_child = crate::element::ContainerProps::default();
+                    flow_child.layout.size.width = Length::Px(Px(20.0));
+                    flow_child.layout.size.height = Length::Px(Px(10.0));
+
+                    let mut absolute_child = crate::element::ContainerProps::default();
+                    absolute_child.layout.position = crate::element::PositionStyle::Absolute;
+                    absolute_child.layout.inset.left = crate::element::InsetEdge::Fraction(0.25);
+                    absolute_child.layout.inset.top = crate::element::InsetEdge::Fraction(0.1);
+                    absolute_child.layout.size.width = Length::Px(Px(25.0));
+                    absolute_child.layout.size.height = Length::Px(Px(10.0));
+
+                    vec![
+                        cx.container(flow_child, |_cx| Vec::new())
+                            .test_id("pressable-mixed-flow-child"),
+                        cx.container(absolute_child, |_cx| Vec::new())
+                            .test_id("pressable-mixed-absolute-child"),
+                    ]
+                })
+                .test_id("pressable-mixed-absolute"),
+            ]
+        }
         LayoutPrimitiveScenario::AutoContainerChildMarginMeasureMatchesLayout => {
             let parent = crate::element::ContainerProps::default();
 
@@ -727,6 +1080,66 @@ fn build_scenario(
                     ]
                 })
                 .test_id("auto-margin-container"),
+            ]
+        }
+        LayoutPrimitiveScenario::HoverRegionAbsoluteChildMeasureMatchesLayout => {
+            let parent = crate::element::HoverRegionProps::default();
+
+            let mut child = crate::element::ContainerProps::default();
+            child.layout.position = crate::element::PositionStyle::Absolute;
+            child.layout.inset.left = crate::element::InsetEdge::Px(Px(12.0));
+            child.layout.inset.top = crate::element::InsetEdge::Px(Px(8.0));
+            child.layout.size.width = Length::Px(Px(20.0));
+            child.layout.size.height = Length::Px(Px(10.0));
+
+            vec![
+                cx.hover_region(parent, |cx, _hovered| {
+                    vec![
+                        cx.container(child, |_cx| Vec::new())
+                            .test_id("hover-region-absolute-child"),
+                    ]
+                })
+                .test_id("hover-region-absolute"),
+            ]
+        }
+        LayoutPrimitiveScenario::HoverRegionFractionalInsetEnvelopeMatchesLayout => {
+            let parent = crate::element::HoverRegionProps::default();
+
+            let mut child = crate::element::ContainerProps::default();
+            child.layout.position = crate::element::PositionStyle::Absolute;
+            child.layout.inset.left = crate::element::InsetEdge::Fraction(0.25);
+            child.layout.inset.top = crate::element::InsetEdge::Fraction(0.1);
+            child.layout.size.width = Length::Px(Px(20.0));
+            child.layout.size.height = Length::Px(Px(10.0));
+
+            vec![
+                cx.hover_region(parent, |cx, _hovered| {
+                    vec![
+                        cx.container(child, |_cx| Vec::new())
+                            .test_id("hover-region-fractional-child"),
+                    ]
+                })
+                .test_id("hover-region-fractional"),
+            ]
+        }
+        LayoutPrimitiveScenario::HoverRegionRightBottomInsetEnvelopeMatchesLayout => {
+            let parent = crate::element::HoverRegionProps::default();
+
+            let mut child = crate::element::ContainerProps::default();
+            child.layout.position = crate::element::PositionStyle::Absolute;
+            child.layout.inset.right = crate::element::InsetEdge::Px(Px(4.0));
+            child.layout.inset.bottom = crate::element::InsetEdge::Px(Px(6.0));
+            child.layout.size.width = Length::Px(Px(20.0));
+            child.layout.size.height = Length::Px(Px(10.0));
+
+            vec![
+                cx.hover_region(parent, |cx, _hovered| {
+                    vec![
+                        cx.container(child, |_cx| Vec::new())
+                            .test_id("hover-region-right-bottom-child"),
+                    ]
+                })
+                .test_id("hover-region-right-bottom"),
             ]
         }
         LayoutPrimitiveScenario::FlexCrossAxisStretch => {
@@ -783,6 +1196,47 @@ fn build_scenario(
                     ]
                 })
                 .test_id("flex-percent-stack"),
+            ]
+        }
+        LayoutPrimitiveScenario::FixedContainerPassesDefiniteHeightToFillFlexIntrinsicMeasure => {
+            let mut outer = crate::element::ContainerProps::default();
+            outer.layout.size.width = Length::Fill;
+            outer.layout.size.height = Length::Px(Px(36.0));
+            outer.padding = fret_core::Edges::all(Px(3.0)).into();
+
+            let mut row_layout = crate::element::LayoutStyle::default();
+            row_layout.size.width = Length::Fill;
+            row_layout.size.height = Length::Fill;
+            let row = crate::element::FlexProps {
+                layout: row_layout,
+                direction: fret_core::Axis::Horizontal,
+                align: CrossAlign::Center,
+                gap: Px(4.0).into(),
+                ..Default::default()
+            };
+
+            let mut label = crate::element::TextProps::new("preview");
+            label.layout.size.height = Length::Fill;
+            label.wrap = fret_core::TextWrap::None;
+
+            let mut fixed = crate::element::ContainerProps::default();
+            fixed.layout.size.width = Length::Px(Px(20.0));
+            fixed.layout.size.height = Length::Fill;
+
+            vec![
+                cx.container(outer, |cx| {
+                    vec![
+                        cx.flex(row, |cx| {
+                            vec![
+                                cx.text_props(label).test_id("fixed-fill-label"),
+                                cx.container(fixed, |_cx| Vec::new())
+                                    .test_id("fixed-fill-box"),
+                            ]
+                        })
+                        .test_id("fixed-fill-row"),
+                    ]
+                })
+                .test_id("fixed-fill-container"),
             ]
         }
         LayoutPrimitiveScenario::TransparentWrapperPreservesFill => {
@@ -905,6 +1359,112 @@ fn build_scenario(
                 ]
             })]
         }
+        LayoutPrimitiveScenario::GridGapMeasureMatchesLayout => {
+            let grid = crate::element::GridProps {
+                template_columns: Some(vec![
+                    crate::element::GridTrackSizing::Auto,
+                    crate::element::GridTrackSizing::Auto,
+                ]),
+                template_rows: Some(vec![
+                    crate::element::GridTrackSizing::Auto,
+                    crate::element::GridTrackSizing::Auto,
+                ]),
+                column_gap: Some(Px(8.0).into()),
+                row_gap: Some(Px(6.0).into()),
+                align: CrossAlign::Start,
+                justify_items: Some(CrossAlign::Start),
+                ..Default::default()
+            };
+
+            let cell = |col: i16, row: i16, width: f32, height: f32| {
+                let mut props = crate::element::ContainerProps::default();
+                props.layout.size.width = Length::Px(Px(width));
+                props.layout.size.height = Length::Px(Px(height));
+                props.layout.grid.column.start = Some(col);
+                props.layout.grid.row.start = Some(row);
+                props
+            };
+
+            vec![
+                cx.grid(grid, |cx| {
+                    vec![
+                        cx.container(cell(1, 1, 20.0, 10.0), |_cx| Vec::new())
+                            .test_id("grid-gap-a"),
+                        cx.container(cell(2, 1, 30.0, 10.0), |_cx| Vec::new())
+                            .test_id("grid-gap-b"),
+                        cx.container(cell(1, 2, 20.0, 12.0), |_cx| Vec::new())
+                            .test_id("grid-gap-c"),
+                        cx.container(cell(2, 2, 30.0, 12.0), |_cx| Vec::new())
+                            .test_id("grid-gap-d"),
+                    ]
+                })
+                .test_id("grid-gap-root"),
+            ]
+        }
+        LayoutPrimitiveScenario::FlexGapMeasureMatchesLayout => {
+            let row = crate::element::FlexProps {
+                direction: fret_core::Axis::Horizontal,
+                align: CrossAlign::Start,
+                gap: Px(8.0).into(),
+                ..Default::default()
+            };
+
+            let child = |width: f32, height: f32| {
+                let mut props = crate::element::ContainerProps::default();
+                props.layout.size.width = Length::Px(Px(width));
+                props.layout.size.height = Length::Px(Px(height));
+                props
+            };
+
+            vec![
+                cx.flex(row, |cx| {
+                    vec![
+                        cx.container(child(20.0, 10.0), |_cx| Vec::new())
+                            .test_id("flex-gap-a"),
+                        cx.container(child(30.0, 12.0), |_cx| Vec::new())
+                            .test_id("flex-gap-b"),
+                    ]
+                })
+                .test_id("flex-gap-root"),
+            ]
+        }
+        LayoutPrimitiveScenario::FlexWrapGapMeasureMatchesLayout => {
+            let row = crate::element::FlexProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Px(Px(68.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                direction: fret_core::Axis::Horizontal,
+                align: CrossAlign::Start,
+                gap: Px(8.0).into(),
+                wrap: true,
+                ..Default::default()
+            };
+
+            let child = |width: f32, height: f32| {
+                let mut props = crate::element::ContainerProps::default();
+                props.layout.size.width = Length::Px(Px(width));
+                props.layout.size.height = Length::Px(Px(height));
+                props
+            };
+
+            vec![
+                cx.flex(row, |cx| {
+                    vec![
+                        cx.container(child(30.0, 10.0), |_cx| Vec::new())
+                            .test_id("flex-wrap-gap-a"),
+                        cx.container(child(30.0, 12.0), |_cx| Vec::new())
+                            .test_id("flex-wrap-gap-b"),
+                        cx.container(child(20.0, 14.0), |_cx| Vec::new())
+                            .test_id("flex-wrap-gap-c"),
+                    ]
+                })
+                .test_id("flex-wrap-gap-root"),
+            ]
+        }
         LayoutPrimitiveScenario::FlexOrderAffectsLayoutPosition => {
             let row = crate::element::FlexProps {
                 layout: crate::element::LayoutStyle {
@@ -977,6 +1537,117 @@ fn build_scenario(
                 })
                 .test_id("flex-order-wrap-row"),
             ]
+        }
+        LayoutPrimitiveScenario::FlexOrderAutoMarginUsesVisualOrder => {
+            let row = crate::element::FlexProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Px(Px(100.0)),
+                        height: Length::Px(Px(10.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                direction: fret_core::Axis::Horizontal,
+                align: CrossAlign::Start,
+                ..Default::default()
+            };
+
+            let child = |order: i32, width: f32, margin_left_auto: bool| {
+                let mut props = crate::element::ContainerProps::default();
+                props.layout.flex.order = order;
+                props.layout.size.width = Length::Px(Px(width));
+                props.layout.size.height = Length::Px(Px(10.0));
+                if margin_left_auto {
+                    props.layout.margin.left = crate::element::MarginEdge::Auto;
+                }
+                props
+            };
+
+            vec![cx.flex(row, |cx| {
+                vec![
+                    cx.container(child(2, 30.0, false), |_cx| Vec::new())
+                        .test_id("flex-order-auto-margin-a"),
+                    cx.container(child(0, 40.0, true), |_cx| Vec::new())
+                        .test_id("flex-order-auto-margin-b"),
+                    cx.container(child(1, 20.0, false), |_cx| Vec::new())
+                        .test_id("flex-order-auto-margin-c"),
+                ]
+            })]
+        }
+        LayoutPrimitiveScenario::FlexOrderMarginRightAutoUsesVisualOrder => {
+            let row = crate::element::FlexProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Px(Px(100.0)),
+                        height: Length::Px(Px(10.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                direction: fret_core::Axis::Horizontal,
+                align: CrossAlign::Start,
+                ..Default::default()
+            };
+
+            let child = |order: i32, width: f32, margin_right_auto: bool| {
+                let mut props = crate::element::ContainerProps::default();
+                props.layout.flex.order = order;
+                props.layout.size.width = Length::Px(Px(width));
+                props.layout.size.height = Length::Px(Px(10.0));
+                if margin_right_auto {
+                    props.layout.margin.right = crate::element::MarginEdge::Auto;
+                }
+                props
+            };
+
+            vec![cx.flex(row, |cx| {
+                vec![
+                    cx.container(child(2, 30.0, false), |_cx| Vec::new())
+                        .test_id("flex-order-mr-auto-a"),
+                    cx.container(child(0, 40.0, true), |_cx| Vec::new())
+                        .test_id("flex-order-mr-auto-b"),
+                    cx.container(child(1, 20.0, false), |_cx| Vec::new())
+                        .test_id("flex-order-mr-auto-c"),
+                ]
+            })]
+        }
+        LayoutPrimitiveScenario::FlexOrderMarginTopAutoUsesVisualOrder => {
+            let column = crate::element::FlexProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Px(Px(10.0)),
+                        height: Length::Px(Px(100.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                direction: fret_core::Axis::Vertical,
+                align: CrossAlign::Start,
+                ..Default::default()
+            };
+
+            let child = |order: i32, height: f32, margin_top_auto: bool| {
+                let mut props = crate::element::ContainerProps::default();
+                props.layout.flex.order = order;
+                props.layout.size.width = Length::Px(Px(10.0));
+                props.layout.size.height = Length::Px(Px(height));
+                if margin_top_auto {
+                    props.layout.margin.top = crate::element::MarginEdge::Auto;
+                }
+                props
+            };
+
+            vec![cx.flex(column, |cx| {
+                vec![
+                    cx.container(child(2, 30.0, false), |_cx| Vec::new())
+                        .test_id("flex-order-mt-auto-a"),
+                    cx.container(child(0, 40.0, true), |_cx| Vec::new())
+                        .test_id("flex-order-mt-auto-b"),
+                    cx.container(child(1, 20.0, false), |_cx| Vec::new())
+                        .test_id("flex-order-mt-auto-c"),
+                ]
+            })]
         }
         LayoutPrimitiveScenario::VisualVsHitBoundsFollowRenderTransform => {
             let transform = Transform2D::translation(Point::new(Px(40.0), Px(0.0)));
