@@ -6,6 +6,7 @@ use fret_core::Px;
 use fret_icons::IconId;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 
@@ -20,7 +21,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 .children([ui::v_flex(move |cx| {
                     vec![
                         decl_icon::icon(cx, IconId::new_static("lucide.bot")),
-                        cx.text("Command"),
+                        decl_text::text_control_readout(cx, "Command"),
                     ]
                 })
                 .gap(Space::N1)

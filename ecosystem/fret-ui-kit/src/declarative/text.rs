@@ -558,6 +558,34 @@ pub fn text_code_wrap<H: UiHost>(
     scoped_text(cx, text, refinement, TextWrap::Grapheme, TextOverflow::Clip)
 }
 
+/// Declarative helper intended for code-like labels inside fixed-height chrome.
+///
+/// Use this for package names, env keys, dependency rows, and compact identifier labels that should
+/// stay single-line under resize. Use [`text_code_wrap`] when inline code is allowed to wrap.
+pub fn text_code_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_code_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
 /// Declarative helper for block code rendered inside a scrollable/code surface.
 ///
 /// This keeps code single-line per source line. The caller should provide horizontal scrolling or a
@@ -872,6 +900,26 @@ mod tests {
             Some(FontId::monospace())
         );
 
+        let code_label = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_code_label(cx, "pkg/runtime-with-a-long-name")
+        });
+        let ElementKind::Text(props) = &code_label.kind else {
+            panic!("expected text_code_label(...) to build a Text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(
+            code_label
+                .inherited_text_style
+                .as_ref()
+                .and_then(|style| style.font.clone()),
+            Some(FontId::monospace())
+        );
+
         let paragraph = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             text_paragraph(cx, "Paragraph body copy")
         });
@@ -1168,6 +1216,9 @@ mod tests {
             text_button_label(cx, long)
         });
         assert_single_line_text_role("table-cell", Px(18.0), move |cx| text_table_cell(cx, long));
+        assert_single_line_text_role("code-label", Px(18.0), move |cx| {
+            text_code_label(cx, "pkg/runtime-with-a-very-long-name")
+        });
         assert_single_line_text_role("code-block", Px(18.0), move |cx| {
             text_code_block(cx, "fn main() { println!(\"a very long line\"); }")
         });

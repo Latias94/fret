@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("package_info_demo.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 
@@ -59,22 +60,28 @@ pub fn render_custom_children(cx: &mut AppComponentCx<'_>) -> impl UiChild + use
         .change_type(ui_ai::PackageInfoChangeKind::Major)
         .header(ui_ai::PackageInfoHeader::new().children(vec![
             ui_ai::PackageInfoHeaderChild::Name(
-                ui_ai::PackageInfoName::new().children([cx.text("pkg/react")]),
+                ui_ai::PackageInfoName::new().children([decl_text::text_code_label(
+                    cx,
+                    "pkg/react",
+                )]),
             ),
             ui_ai::PackageInfoHeaderChild::ChangeType(
-                ui_ai::PackageInfoChangeType::new().children([cx.text("Breaking")]),
+                ui_ai::PackageInfoChangeType::new()
+                    .children([decl_text::text_button_label(cx, "Breaking")]),
             ),
         ]))
-        .version(ui_ai::PackageInfoVersion::new().children([cx.text("18.2.0 -> 19.0.0 (custom)")]))
-        .description(
-            ui_ai::PackageInfoDescription::new("ignored")
-                .children([cx.text("Custom summary supplied by the app.")]),
+        .version(
+            ui_ai::PackageInfoVersion::new()
+                .children([decl_text::text_code_label(cx, "18.2.0 -> 19.0.0 (custom)")]),
         )
+        .description(ui_ai::PackageInfoDescription::new("ignored").children([
+            decl_text::text_paragraph(cx, "Custom summary supplied by the app."),
+        ]))
         .content(ui_ai::PackageInfoContent::new(vec![
             ui_ai::PackageInfoContentChild::Dependencies(ui_ai::PackageInfoDependencies::new(
                 vec![
                     ui_ai::PackageInfoDependency::new("react-dom")
-                        .children([cx.text("react-dom @ ^19.0.0")]),
+                        .children([decl_text::text_code_label(cx, "react-dom @ ^19.0.0")]),
                 ],
             )),
         ]))

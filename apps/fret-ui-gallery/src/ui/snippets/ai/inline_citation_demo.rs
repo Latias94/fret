@@ -4,6 +4,7 @@ pub const SOURCE: &str = include_str!("inline_citation_demo.rs");
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
@@ -71,7 +72,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         Arc::<str>::from("src-5"),
     ]);
 
-    let citation_text = ui_ai::InlineCitationText::new([cx.text(
+    let citation_text = ui_ai::InlineCitationText::new([decl_text::text_paragraph(
+        cx,
         "The technology continues to evolve rapidly, with new breakthroughs being announced regularly",
     )]);
     let citation = ui_ai::InlineCitationRoot::new()
@@ -83,11 +85,12 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     centered_row(cx, |cx| {
         vec![
-            cx.text(
+            decl_text::text_paragraph(
+                cx,
                 "According to recent studies, artificial intelligence has shown remarkable progress in natural language processing.",
             ),
             citation,
-            cx.text("."),
+            decl_text::text_paragraph(cx, "."),
         ]
     })
     .test_id("ui-ai-inline-citation-demo-root")

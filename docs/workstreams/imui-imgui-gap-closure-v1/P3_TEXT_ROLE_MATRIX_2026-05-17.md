@@ -29,7 +29,7 @@ ad-hoc text policy.
 | Control readout | `text_control_readout(...)` | Single line, shrinkable, `min-width: 0`, muted, ellipsis. | Toolbar/status/value readouts, menu shortcuts, compact auxiliary values. |
 | Button label | `text_button_label(...)` | Single line, shrinkable, medium weight, ellipsis. | Buttons and button-like triggers. |
 | Paragraph | `text_paragraph(...)` / `text_paragraph_break_words(...)` | Wrapping body copy; parent layout must account for multi-line height. | Prose and explanatory copy outside fixed control rows. |
-| Code text | `text_code_block(...)` plus `text_code_wrap(...)` for inline wrapping code | Code blocks are monospace and horizontal-scroll-friendly; inline code may wrap by grapheme. | Docs code blocks, code-like readouts, identifiers. |
+| Code text | `text_code_block(...)`, `text_code_wrap(...)`, and `text_code_label(...)` | Code blocks are monospace and horizontal-scroll-friendly; inline code may wrap by grapheme; code labels are single-line, shrinkable, and ellipsized. | Docs code blocks, inline code prose, fixed-height package/env/dependency identifiers. |
 | Table cell text | `text_table_cell(...)` | Single line, shrinkable, `min-width: 0`, ellipsis. | Header/body table cells unless a future multi-line row-height policy is explicit. |
 
 These five names are the minimum stable vocabulary for future resize triage. If a new component text
@@ -48,6 +48,9 @@ component should construct `TextProps` locally.
 - `text_section_chrome_label(...)`, `text_chrome_title(...)`, and `text_chrome_glyph(...)`: section,
   title-bar, and glyph chrome roles. They keep fixed chrome rows single-line, with ellipsis or clip
   according to the slot.
+- `text_code_label(...)`: code-text derivative for fixed-height identifier slots such as package
+  names, env keys, and dependency rows. It is intentionally not a substitute for wrapping inline
+  prose code.
 - Editor readout primitives in `fret-ui-editor/src/primitives/readout.rs`: editor-specific status
   badges, inline errors, validation messages, section labels, preview captions, tooltip readouts,
   inspector panel titles, property-row labels, and property chrome. Direct editor `TextProps`
@@ -63,8 +66,9 @@ component should construct `TextProps` locally.
 2. If the text is paragraph, validation prose, or explanatory body copy, wrapping is allowed, but the
    parent must measure/grow for multiple lines. Painting a second line past a fixed row bottom is a
    layout bug, not an acceptable text role outcome.
-3. If the text is code-like, choose between `text_code_block(...)` for scrollable block code and
-   `text_code_wrap(...)` for inline code that can wrap long identifiers.
+3. If the text is code-like, choose among `text_code_block(...)` for scrollable block code,
+   `text_code_wrap(...)` for inline prose code that can wrap long identifiers, and
+   `text_code_label(...)` for fixed-height identifier slots that must truncate under resize.
 4. New direct `TextProps` construction under `fret-ui-kit::imui` or editor controls is a contract
    change. It must either move into a role helper or update the source gate with a documented owner
    and proof.

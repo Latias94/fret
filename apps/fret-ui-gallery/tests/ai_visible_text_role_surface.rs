@@ -1104,6 +1104,165 @@ fn ai_reasoning_hooks_and_transcript_torture_use_shared_text_roles() {
 }
 
 #[test]
+fn ai_custom_children_snippets_use_shared_text_roles() {
+    let environment = canonicalize_rust_fragment(include_str!(
+        "../src/ui/snippets/ai/environment_variables_custom_children.rs"
+    ));
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_section_chrome_label(cx, \"Runtime Secrets\")",
+        "decl_text::text_code_label(cx, \"Primary API Key\")",
+        "decl_text::text_control_readout(cx, \"Secret\")",
+        "decl_text::text_code_label",
+        "App-owned masked preview",
+        "decl_text::text_paragraph(cx, \"Custom children take ownership of the visible content.\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            environment.contains(&marker),
+            "environment_variables_custom_children should route custom child text through shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(\"Runtime Secrets\")",
+        "cx.text(\"Primary API Key\")",
+        "cx.text(\"Secret\")",
+        "cx.text(\"App-owned masked preview\")",
+        "cx.text(\"Custom children take ownership of the visible content.\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !environment.contains(&forbidden),
+            "environment_variables_custom_children reintroduced bare text: `{forbidden}`"
+        );
+    }
+
+    let package =
+        canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/package_info_demo.rs"));
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_code_label",
+        "pkg/react",
+        "decl_text::text_button_label(cx, \"Breaking\")",
+        "18.2.0 -> 19.0.0 (custom)",
+        "decl_text::text_paragraph",
+        "Custom summary supplied by the app.",
+        "decl_text::text_code_label(cx, \"react-dom @ ^19.0.0\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            package.contains(&marker),
+            "package_info_demo should route custom package text through shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(\"pkg/react\")",
+        "cx.text(\"Breaking\")",
+        "cx.text(\"18.2.0 -> 19.0.0 (custom)\")",
+        "cx.text(\"Custom summary supplied by the app.\")",
+        "cx.text(\"react-dom @ ^19.0.0\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !package.contains(&forbidden),
+            "package_info_demo reintroduced bare custom package text: `{forbidden}`"
+        );
+    }
+
+    let inline = canonicalize_rust_fragment(include_str!(
+        "../src/ui/snippets/ai/inline_citation_demo.rs"
+    ));
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_paragraph",
+        "The technology continues to evolve rapidly, with new breakthroughs being announced regularly",
+        "According to recent studies, artificial intelligence has shown remarkable progress in natural language processing.",
+        "decl_text::text_paragraph(cx, \".\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            inline.contains(&marker),
+            "inline_citation_demo should route citation prose through shared paragraph roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(\"The technology continues to evolve rapidly, with new breakthroughs being announced regularly\")",
+        "cx.text(\"According to recent studies, artificial intelligence has shown remarkable progress in natural language processing.\")",
+        "cx.text(\".\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !inline.contains(&forbidden),
+            "inline_citation_demo reintroduced bare citation text: `{forbidden}`"
+        );
+    }
+
+    let persona = canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/persona_demo.rs"));
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_button_label(cx, variant.label())",
+        "decl_text::text_control_readout",
+        "ui-ai-persona-demo-current-label",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            persona.contains(&marker),
+            "persona_demo should route toggle labels/readouts through shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in ["cx.text(variant.label())", "cx.text(format!("] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !persona.contains(&forbidden),
+            "persona_demo reintroduced bare persona text: `{forbidden}`"
+        );
+    }
+
+    let persona_custom = canonicalize_rust_fragment(include_str!(
+        "../src/ui/snippets/ai/persona_custom_visual.rs"
+    ));
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_control_readout(cx, \"Command\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            persona_custom.contains(&marker),
+            "persona_custom_visual should route custom center label through shared roles; missing `{marker}`"
+        );
+    }
+    let forbidden = canonicalize_rust_fragment("cx.text(\"Command\")");
+    assert!(
+        !persona_custom.contains(&forbidden),
+        "persona_custom_visual reintroduced bare custom center text: `{forbidden}`"
+    );
+
+    let sources =
+        canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/sources_custom_demo.rs"));
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_list_row_label(cx, title)",
+        "decl_text::text_button_label(cx, format!(\"Using {count} citations\"))",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            sources.contains(&marker),
+            "sources_custom_demo should route custom source labels through shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(title)",
+        "cx.text(format!(\"Using {count} citations\"))",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !sources.contains(&forbidden),
+            "sources_custom_demo reintroduced bare source text: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
 fn ai_chat_demo_uses_shared_outer_text_roles_and_non_text_markers() {
     let source = include_str!("../src/ui/snippets/ai/chat_demo.rs");
     let canonical = canonicalize_rust_fragment(source);
