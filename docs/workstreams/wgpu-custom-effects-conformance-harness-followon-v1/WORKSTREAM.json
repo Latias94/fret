@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "slug": "wgpu-custom-effects-conformance-harness-followon-v1",
+  "title": "WGPU Custom Effects Conformance Harness Follow-on v1",
+  "status": "closed",
+  "updated": "2026-05-18",
+  "scope_kind": "follow-on",
+  "problem": "The CustomV1, CustomV2, and CustomV3 WGPU conformance tests duplicated the same Rgba8Unorm final-render readback helpers already owned by the shared integration-test support module. The duplication made custom-effect evidence harder to audit without adding behavior coverage.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/wgpu-custom-effects-conformance-harness-followon-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/wgpu-custom-effects-conformance-harness-followon-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/wgpu-custom-effects-conformance-harness-followon-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/wgpu-custom-effects-conformance-harness-followon-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/wgpu-custom-effects-conformance-harness-followon-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/wgpu-custom-effects-conformance-harness-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    }
+  ],
+  "repro": {
+    "summary": "CustomV1/V2/V3 WGPU conformance should render and sample through shared test support while preserving ABI registration, image registration, source, budget, and perf assertions.",
+    "commands": [
+      "cargo nextest run -p fret-render-wgpu --locked --test effect_custom_v1_conformance --test effect_custom_v2_conformance --test effect_custom_v3_conformance -j 1"
+    ]
+  },
+  "gates": [
+    {
+      "name": "custom-effects-conformance",
+      "command": "cargo nextest run -p fret-render-wgpu --locked --test effect_custom_v1_conformance --test effect_custom_v2_conformance --test effect_custom_v3_conformance -j 1"
+    },
+    {
+      "name": "backend-tests-compile",
+      "command": "cargo check -p fret-render-wgpu --locked --tests -j 1"
+    },
+    {
+      "name": "layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "crates/fret-render-wgpu/tests/support/mod.rs",
+    "crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs",
+    "crates/fret-render-wgpu/tests/effect_custom_v2_conformance.rs",
+    "crates/fret-render-wgpu/tests/effect_custom_v3_conformance.rs",
+    "docs/workstreams/wgpu-custom-effects-conformance-harness-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0299-custom-effect-abi-wgpu-only-mvp.md",
+    "docs/adr/0303-custom-effect-v2-user-image-input.md"
+  ],
+  "continue_policy": {
+    "default_action": "stay_closed",
+    "notes": "The named custom-effect conformance tests migrated successfully. Remaining conformance families should be handled in separate narrow follow-ons."
+  }
+}

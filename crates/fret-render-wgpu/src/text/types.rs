@@ -422,15 +422,6 @@ impl TextFontFaceUsage {
 
 pub use fret_render_text::TextLineLayout as TextLine;
 
-#[allow(dead_code)]
-pub(crate) fn subpixel_mask_to_alpha(data: &[u8]) -> Vec<u8> {
-    let mut out = Vec::with_capacity(data.len() / 4);
-    for rgba in data.chunks_exact(4) {
-        out.push(rgba[0].max(rgba[1]).max(rgba[2]));
-    }
-    out
-}
-
 #[derive(Debug, Default, Clone, Copy)]
 pub(crate) struct TextAtlasPerfSnapshot {
     pub(crate) uploads: u64,

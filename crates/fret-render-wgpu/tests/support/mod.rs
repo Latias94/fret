@@ -78,6 +78,7 @@ pub fn pixel_rgba(pixels: &[u8], width: u32, x: u32, y: u32) -> [u8; 4] {
     ]
 }
 
+#[allow(dead_code)]
 pub fn render_scene_rgba8(
     ctx: &WgpuContext,
     renderer: &mut Renderer,
@@ -85,7 +86,24 @@ pub fn render_scene_rgba8(
     size: (u32, u32),
     scale_factor: f32,
 ) -> Vec<u8> {
-    let format = wgpu::TextureFormat::Rgba8Unorm;
+    render_scene_rgba8_with_format(
+        ctx,
+        renderer,
+        scene,
+        size,
+        scale_factor,
+        wgpu::TextureFormat::Rgba8Unorm,
+    )
+}
+
+pub fn render_scene_rgba8_with_format(
+    ctx: &WgpuContext,
+    renderer: &mut Renderer,
+    scene: &Scene,
+    size: (u32, u32),
+    scale_factor: f32,
+    format: wgpu::TextureFormat,
+) -> Vec<u8> {
     let texture = ctx.device.create_texture(&wgpu::TextureDescriptor {
         label: Some("fret wgpu test output"),
         size: wgpu::Extent3d {

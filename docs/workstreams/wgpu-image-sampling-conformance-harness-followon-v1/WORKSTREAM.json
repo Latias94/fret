@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "slug": "wgpu-image-sampling-conformance-harness-followon-v1",
+  "title": "WGPU Image Sampling Conformance Harness Follow-on v1",
+  "status": "closed",
+  "updated": "2026-05-18",
+  "scope_kind": "follow-on",
+  "problem": "The image sampling WGPU conformance test duplicated RGBA8 readback and pixel helpers already owned by the shared integration-test support module. Its explicit render-target setup remains local because the test is validating image sampling behavior.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/wgpu-image-sampling-conformance-harness-followon-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/wgpu-image-sampling-conformance-harness-followon-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/wgpu-image-sampling-conformance-harness-followon-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/wgpu-image-sampling-conformance-harness-followon-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/wgpu-image-sampling-conformance-harness-followon-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/wgpu-image-sampling-conformance-harness-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    }
+  ],
+  "repro": {
+    "summary": "Image sampling WGPU conformance should use shared readback/pixel helpers while preserving explicit render-target setup.",
+    "commands": [
+      "cargo nextest run -p fret-render-wgpu --locked --test image_sampling_hint_conformance -j 1"
+    ]
+  },
+  "gates": [
+    {
+      "name": "image-sampling-conformance",
+      "command": "cargo nextest run -p fret-render-wgpu --locked --test image_sampling_hint_conformance -j 1"
+    },
+    {
+      "name": "backend-tests-compile",
+      "command": "cargo check -p fret-render-wgpu --locked --tests -j 1"
+    },
+    {
+      "name": "layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "crates/fret-render-wgpu/tests/support/mod.rs",
+    "crates/fret-render-wgpu/tests/image_sampling_hint_conformance.rs",
+    "docs/workstreams/wgpu-image-sampling-conformance-harness-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0276-image-sampling-hints-v1.md"
+  ],
+  "continue_policy": {
+    "default_action": "stay_closed",
+    "notes": "The named image sampling conformance test migrated successfully. Remaining backend/format/metadata tests should be handled in separate narrow follow-ons."
+  }
+}

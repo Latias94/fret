@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "slug": "wgpu-custom-effect-v3-raw-wanted-shape-v1",
+  "title": "WGPU Custom Effect V3 Raw Wanted Shape v1",
+  "status": "closed",
+  "updated": "2026-05-18",
+  "scope_kind": "follow-on",
+  "problem": "CustomEffectV3Pass::raw_wanted was a native-only field even though it describes cross-platform render-plan source semantics for diagnostics and summaries, causing cfg-shaped literals in V3 construction and reporting tests.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/wgpu-custom-effect-v3-raw-wanted-shape-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/wgpu-custom-effect-v3-raw-wanted-shape-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/wgpu-custom-effect-v3-raw-wanted-shape-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/wgpu-custom-effect-v3-raw-wanted-shape-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/wgpu-custom-effect-v3-raw-wanted-shape-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/wgpu-custom-effect-v3-raw-wanted-shape-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    }
+  ],
+  "repro": {
+    "summary": "Custom Effect V3 render-plan construction should compile with one raw-source flag shape on native and wasm.",
+    "commands": [
+      "cargo check -p fret-render-wgpu --locked --tests -j 1",
+      "cargo check -p fret-render-wgpu --locked --target wasm32-unknown-unknown --features wasm-webgpu-tests --tests -j 1"
+    ]
+  },
+  "gates": [
+    {
+      "name": "fmt",
+      "command": "cargo fmt --package fret-render-wgpu"
+    },
+    {
+      "name": "native-check",
+      "command": "cargo check -p fret-render-wgpu --locked --tests -j 1"
+    },
+    {
+      "name": "wasm-check",
+      "command": "cargo check -p fret-render-wgpu --locked --target wasm32-unknown-unknown --features wasm-webgpu-tests --tests -j 1"
+    },
+    {
+      "name": "custom-v3-reporting",
+      "command": "cargo nextest run -p fret-render-wgpu --locked encode_custom_effect_v3_pass_keeps_distinct_source_targets requested_and_emitted_custom_effect_counters_track_all_versions custom_effect_v3_summary_tracks_pyramid_levels_min_max_sum"
+    },
+    {
+      "name": "custom-v3-source-planning",
+      "command": "cargo nextest run -p fret-render-wgpu --locked unpadded_custom_v3_chain_reserves_distinct_raw_target_when_available custom_v3_sources_plan_records_raw_aliasing_vs_distinct custom_v3_sources_plan_honors_group_pyramid_choice_and_group_roi custom_v3_sources_plan_group_pyramid_degrade_to_one_records_reason"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json",
+      "command": "python -m json.tool docs/workstreams/wgpu-custom-effect-v3-raw-wanted-shape-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "crates/fret-render-wgpu/src/renderer/render_plan.rs",
+    "crates/fret-render-wgpu/src/renderer/render_plan_effects/custom.rs",
+    "crates/fret-render-wgpu/src/renderer/render_plan_reporting_perf.rs",
+    "docs/workstreams/wgpu-custom-effect-v3-raw-wanted-shape-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+  ],
+  "adr_refs": [],
+  "continue_policy": {
+    "default_action": "stay_closed",
+    "notes": "The raw-source flag shape cleanup is complete. Broader Custom Effect V3 source-planning or shader behavior changes should use a separate follow-on."
+  }
+}

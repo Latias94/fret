@@ -126,13 +126,6 @@ impl BindGroupCaches {
         self.uniform_mask_images.clear();
     }
 
-    #[allow(dead_code)]
-    pub(super) fn invalidate_all(&mut self) {
-        self.viewport.clear();
-        self.images.clear();
-        self.uniform_mask_images.clear();
-    }
-
     pub(super) fn get_viewport_bind_group(
         &self,
         id: fret_core::RenderTargetId,

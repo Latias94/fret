@@ -59,17 +59,6 @@ fn fret_custom_effect(tex: vec4<f32>, uv: vec2<f32>, pos_px: vec2<f32>, params: 
 }
 "#;
 
-#[allow(dead_code)]
-const CUSTOM_EFFECT_DERIVATIVES_SMOKE_WGSL: &str = r#"
-fn fret_custom_effect(tex: vec4<f32>, uv: vec2<f32>, pos_px: vec2<f32>, params: EffectParamsV1) -> vec4<f32> {
-  // WebGPU/Tint requires derivatives to be used from uniform control flow.
-  // This shader ensures the *host* custom effect fragment shaders do not guard the custom effect call
-  // behind non-uniform bounds checks or early returns.
-  let d = fwidth(pos_px.x);
-  return tex + vec4<f32>(0.0, 0.0, 0.0, 0.0) * d;
-}
-"#;
-
 #[test]
 fn shaders_parse_as_wgsl() {
     let quad_src = quad_shader_source();
@@ -278,12 +267,22 @@ mod webgpu_tint_guardrail {
     use super::*;
     use wasm_bindgen_test::*;
 
+    const CUSTOM_EFFECT_DERIVATIVES_SMOKE_WGSL: &str = r#"
+fn fret_custom_effect(tex: vec4<f32>, uv: vec2<f32>, pos_px: vec2<f32>, params: EffectParamsV1) -> vec4<f32> {
+  // WebGPU/Tint requires derivatives to be used from uniform control flow.
+  // This shader ensures the *host* custom effect fragment shaders do not guard the custom effect call
+  // behind non-uniform bounds checks or early returns.
+  let d = fwidth(pos_px.x);
+  return tex + vec4<f32>(0.0, 0.0, 0.0, 0.0) * d;
+}
+"#;
+
     wasm_bindgen_test_configure!(run_in_browser);
 
     async fn request_webgpu_device() -> (wgpu::Device, wgpu::Queue) {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::BROWSER_WEBGPU,
-            ..wgpu::InstanceDescriptor::default()
+            ..wgpu::InstanceDescriptor::new_without_display_handle()
         });
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions::default())
@@ -386,12 +385,12 @@ mod webgpu_tint_guardrail {
                 custom_effect_v2_mask_derivatives_src.as_str(),
             ),
         ] {
-            device.push_error_scope(wgpu::ErrorFilter::Validation);
+            let error_scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
             let _module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some(name),
                 source: wgpu::ShaderSource::Wgsl(src.into()),
             });
-            let err = device.pop_error_scope().await;
+            let err = error_scope.pop().await;
             assert!(
                 err.is_none(),
                 "WebGPU/Tint validation failed for {name} shader: {err:?}"
