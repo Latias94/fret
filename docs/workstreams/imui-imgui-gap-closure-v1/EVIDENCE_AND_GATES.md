@@ -2669,6 +2669,30 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   passed.
 - `git diff --check` passed.
 
+2026-05-19 gallery Kbd custom-copy text-role slice:
+
+- Red repro:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  kbd_snippets_route_custom_copy_through_shared_text_roles --no-fail-fast` failed before the fix
+  because `kbd/demo.rs` did not import shared text roles and still rendered the `+` key separator
+  through `ui::text("+")`.
+- `apps/fret-ui-gallery/src/ui/snippets/kbd/demo.rs` and
+  `apps/fret-ui-gallery/src/ui/snippets/kbd/rtl.rs` now route `+` separators through
+  `text_chrome_glyph(...)`.
+- `apps/fret-ui-gallery/src/ui/snippets/kbd/group.rs` and
+  `apps/fret-ui-gallery/src/ui/snippets/kbd/tooltip.rs` now route inline helper/tooltip copy
+  through `text_control_readout(...)` instead of local `ui::text(...).text_sm()` policy.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  kbd_snippets_route_custom_copy_through_shared_text_roles --no-fail-fast` passed.
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ui_authoring_surface_default_app` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.
+
 2026-05-19 gallery ContextMenu trigger text-role slice:
 
 - Red repro:

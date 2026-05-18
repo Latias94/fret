@@ -651,6 +651,10 @@ Exit criteria:
   text instead of bare `cx.text(...)`.
   2026-05-18 gallery Tooltip keyboard shortcut text result: the custom shortcut tooltip label now
   uses control-readout text instead of bare `cx.text(...)`.
+  2026-05-19 gallery Kbd custom-copy text result: Kbd demo/RTL separator glyphs now use shared
+  chrome-glyph text, while group/tooltip helper copy uses shared control-readout text. The keycap
+  text policy stays inside `fret-ui-shadcn::Kbd`, so this remains a caller-composition cleanup
+  rather than a shadcn recipe rewrite.
   2026-05-19 gallery Dialog scroll-row text result: scrollable-content and sticky-footer dialog
   filler rows now use shared list-row label text instead of `ui::raw_text(format!(...))`, keeping
   the scroll proof rows on a fixed-row text role without changing shadcn dialog recipes.

@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -16,7 +17,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .into_element(cx),
             shadcn::KbdGroup::new([
                 shadcn::Kbd::new("Ctrl").into_element(cx),
-                ui::text("+").into_element(cx),
+                decl_text::text_chrome_glyph(cx, "+"),
                 shadcn::Kbd::new("B").into_element(cx),
             ])
             .into_element(cx),

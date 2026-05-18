@@ -4715,6 +4715,43 @@ fn kbd_page_records_docs_path_and_narrow_children_surface() {
 }
 
 #[test]
+fn kbd_snippets_route_custom_copy_through_shared_text_roles() {
+    for relative_path in ["src/ui/snippets/kbd/demo.rs", "src/ui/snippets/kbd/rtl.rs"] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_chrome_glyph(cx, \"+\")",
+            ],
+            &["ui::text(\"+\")"],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/kbd/group.rs",
+        &[
+            "use fret_ui_kit::{declarative::text as decl_text, ui};",
+            "decl_text::text_control_readout(cx, \"Use\")",
+            "decl_text::text_control_readout(cx, \"to open the command palette\")",
+        ],
+        &[
+            "ui::text(\"Use\")",
+            "ui::text(\"to open the command palette\")",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/kbd/tooltip.rs",
+        &[
+            "use fret_ui_kit::{declarative::text as decl_text, ui};",
+            "decl_text::text_control_readout(cx, \"Save Changes\")",
+            "decl_text::text_control_readout(cx, \"Print Document\")",
+        ],
+        &["ui::text(\"Save Changes\")", "ui::text(\"Print Document\")"],
+    );
+}
+
+#[test]
 fn icons_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[

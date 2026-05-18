@@ -3861,6 +3861,50 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/kbd/demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_chrome_glyph(cx, \"+\")",
+            ],
+            forbidden=[
+                "ui::text(\"+\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/kbd/rtl.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_chrome_glyph(cx, \"+\")",
+            ],
+            forbidden=[
+                "ui::text(\"+\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/kbd/group.rs"),
+            required=[
+                "use fret_ui_kit::{declarative::text as decl_text, ui};",
+                "decl_text::text_control_readout(cx, \"Use\")",
+                "decl_text::text_control_readout(cx, \"to open the command palette\")",
+            ],
+            forbidden=[
+                "ui::text(\"Use\")",
+                "ui::text(\"to open the command palette\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/kbd/tooltip.rs"),
+            required=[
+                "use fret_ui_kit::{declarative::text as decl_text, ui};",
+                "decl_text::text_control_readout(cx, \"Save Changes\")",
+                "decl_text::text_control_readout(cx, \"Print Document\")",
+            ],
+            forbidden=[
+                "ui::text(\"Save Changes\")",
+                "ui::text(\"Print Document\")",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/toggle/label.rs"),
             required=[
                 "decl_text::text_control_readout(cx, format!(\"Pressed: {pressed_now}\"))",
@@ -3944,6 +3988,7 @@ def main() -> None:
                 "fn drawer_scroll_and_side_body_text_uses_shared_roles()",
                 "fn drawer_remaining_custom_text_uses_shared_roles()",
                 "fn tooltip_keyboard_shortcut_text_uses_shared_role()",
+                "fn kbd_snippets_route_custom_copy_through_shared_text_roles()",
                 "fn context_menu_trigger_copy_uses_shared_readout_text_role()",
                 "fn selected_pagination_page_number_helpers_use_shared_button_label_role()",
                 "fn selected_carousel_status_readouts_use_shared_control_readout_role()",

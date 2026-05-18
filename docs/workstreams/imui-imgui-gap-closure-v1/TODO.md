@@ -704,6 +704,10 @@ Readiness order for the next locally testable review slices:
    2026-05-18 gallery Tooltip keyboard shortcut text follow-up: the custom keyboard-shortcut
    tooltip label now routes through shared control-readout text instead of bare `cx.text(...)`,
    while built-in `TooltipContent::text(...)` recipe paths stay recipe-owned.
+   2026-05-19 gallery Kbd custom-copy text follow-up: copyable Kbd snippets now route key
+   separators through shared chrome-glyph text and tooltip/inline helper copy through
+   control-readout text instead of local `ui::text(...).text_sm()` policy. `Kbd` keycap text
+   itself remains recipe-owned by `fret-ui-shadcn`.
    2026-05-19 gallery Dialog scroll-row text follow-up: scrollable-content and sticky-footer
    filler rows now route through shared list-row label text instead of `ui::raw_text(format!(...))`,
    keeping scroll proof rows single-line/shrinkable under resize while dialog title/description
