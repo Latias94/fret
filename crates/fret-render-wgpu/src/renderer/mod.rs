@@ -44,22 +44,14 @@ mod render_plan_dump;
 #[cfg(not(target_arch = "wasm32"))]
 mod render_plan_dump_assemble;
 #[cfg(target_arch = "wasm32")]
-mod render_plan_dump_assemble {
-    #[derive(Debug, Default)]
-    pub(super) struct RenderPlanJsonDumpScratch;
-}
+#[path = "render_plan_dump_assemble_wasm.rs"]
+mod render_plan_dump_assemble;
 #[cfg(not(target_arch = "wasm32"))]
 mod render_plan_dump_emit;
-#[cfg(target_arch = "wasm32")]
-mod render_plan_dump_emit {}
 #[cfg(not(target_arch = "wasm32"))]
 mod render_plan_dump_encode;
-#[cfg(target_arch = "wasm32")]
-mod render_plan_dump_encode {}
 #[cfg(not(target_arch = "wasm32"))]
 mod render_plan_dump_summary;
-#[cfg(target_arch = "wasm32")]
-mod render_plan_dump_summary {}
 mod render_plan_effects;
 mod render_plan_reporting;
 mod render_plan_reporting_perf;
@@ -68,17 +60,8 @@ mod render_scene_config;
 #[cfg(not(target_arch = "wasm32"))]
 mod render_text_dump;
 #[cfg(target_arch = "wasm32")]
-mod render_text_dump {
-    impl super::Renderer {
-        pub(super) fn maybe_dump_render_text_json(
-            &mut self,
-            _frame_index: u64,
-            _viewport_size: (u32, u32),
-            _encoding: &super::SceneEncoding,
-        ) {
-        }
-    }
-}
+#[path = "render_text_dump_wasm.rs"]
+mod render_text_dump;
 mod resources;
 mod scene_encoding_cache;
 mod scene_encoding_cache_diagnostics;

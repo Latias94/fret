@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 414
+- Dedicated directories: 415
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2213,6 +2213,7 @@ Rule:
 - `docs/workstreams/render-text-dead-code-prune-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for removing all `fret-render-text/src` dead-code allowances and deleting stale wrapper-level hit-testing)
 - `docs/workstreams/renderer-clip-mask-closure-v1/` — first 2026-02-17, latest 2026-02-18, 3 markdown docs
 - `docs/workstreams/renderer-debug-dump-gate-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for centralizing native renderer debug dump frame gating while preserving dump-specific JSON owners)
+- `docs/workstreams/renderer-dump-wasm-stub-owner-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for moving renderer dump wasm stubs out of `renderer/mod.rs` and deleting unused wasm empty modules)
 - `docs/workstreams/renderer-drop-shadow-effect-v1/` — first 2026-02-17, latest 2026-02-18, 3 markdown docs
 - `docs/workstreams/renderer-effect-backdrop-warp-v1/` — first 2026-02-17, latest 2026-02-18, 3 markdown docs
 - `docs/workstreams/renderer-effect-backdrop-warp-v2/` — first 2026-02-18, latest 2026-02-20, 3 markdown docs
