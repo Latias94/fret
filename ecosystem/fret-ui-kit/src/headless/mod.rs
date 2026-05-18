@@ -4,6 +4,7 @@ pub mod tab_strip_arbitration;
 pub mod tab_strip_controller;
 pub mod text_assist;
 
+pub use fret_ui_headless::boolean_control;
 pub use fret_ui_headless::calendar;
 pub use fret_ui_headless::carousel;
 pub use fret_ui_headless::checked_state;
@@ -11,6 +12,7 @@ pub use fret_ui_headless::cmdk_score;
 pub use fret_ui_headless::cmdk_selection;
 pub use fret_ui_headless::easing;
 pub use fret_ui_headless::embla;
+pub use fret_ui_headless::entry_focus;
 pub use fret_ui_headless::form_state;
 pub use fret_ui_headless::form_validation;
 pub use fret_ui_headless::grid_viewport;

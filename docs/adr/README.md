@@ -303,6 +303,8 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0078-scene-transform-and-clip-composition.md`
 - `docs/adr/0079-scene-layers-marker-only-v1.md`
 - `docs/adr/0080-vector-path-contract.md`
+- `docs/adr/0277-path-stroke-style-v2.md`
+- `docs/adr/0278-path-paint-surface-v1.md`
 - `docs/adr/0081-draworder-is-non-semantic.md`
 
 ## UI Runtime (`fret-ui`)

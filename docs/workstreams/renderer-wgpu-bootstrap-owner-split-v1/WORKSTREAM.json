@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "slug": "renderer-wgpu-bootstrap-owner-split-v1",
+  "title": "Renderer WGPU Bootstrap Owner Split v1",
+  "status": "closed",
+  "updated": "2026-05-17",
+  "scope_kind": "closeout",
+  "follow_on_of": "renderer-modularity-fearless-refactor-v1",
+  "problem": "The closed renderer-modularity lane settled the facade and Renderer ownership, but the wgpu backend crate root still mixes public export glue with WgpuContext bootstrap, adapter diagnostics, environment parsing, and validation policy. This narrow follow-on moves that backend bootstrap implementation behind a private owner while preserving public paths and facade buckets.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/renderer-wgpu-bootstrap-owner-split-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/renderer-wgpu-bootstrap-owner-split-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/renderer-wgpu-bootstrap-owner-split-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/renderer-wgpu-bootstrap-owner-split-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/renderer-wgpu-bootstrap-owner-split-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/renderer-wgpu-bootstrap-owner-split-v1/CLOSEOUT_AUDIT_2026-05-17.md"
+    }
+  ],
+  "repro": {
+    "summary": "The backend crate root currently owns WgpuContext implementation details; prove public paths stay stable while moving that implementation into a private owner.",
+    "commands": [
+      "cargo test -p fret-render --locked --test facade_surface_snapshot -j 1"
+    ]
+  },
+  "gates": [
+    {
+      "name": "facade-surface-snapshot",
+      "command": "cargo test -p fret-render --locked --test facade_surface_snapshot -j 1"
+    },
+    {
+      "name": "backend-context-parse-tests",
+      "command": "cargo test -p fret-render-wgpu --locked --lib parse_wgpu_backends -j 1"
+    },
+    {
+      "name": "backend-tests-compile",
+      "command": "cargo check -p fret-render-wgpu --locked --tests -j 1"
+    },
+    {
+      "name": "layering",
+      "command": "python tools/check_layering.py"
+    }
+  ],
+  "evidence": [
+    "crates/fret-render-wgpu/src/lib.rs",
+    "crates/fret-render-wgpu/src/context.rs",
+    "crates/fret-render/src/lib.rs",
+    "crates/fret-render/tests/facade_surface_snapshot.rs",
+    "docs/workstreams/renderer-wgpu-bootstrap-owner-split-v1/CLOSEOUT_AUDIT_2026-05-17.md",
+    "docs/workstreams/renderer-modularity-fearless-refactor-v1/CLOSEOUT_AUDIT.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0201-renderer-internals-modularization-and-gates-v1.md",
+    "docs/adr/0092-crate-structure-core-backends-apps.md",
+    "docs/adr/0116-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md"
+  ],
+  "continue_policy": {
+    "default_action": "stay_closed",
+    "notes": "This narrow owner split is closed after RWBO-010 and RWBO-020. Do not reopen it for renderer internals or render semantics; start a new semantic/capability workstream if fresh evidence appears."
+  }
+}

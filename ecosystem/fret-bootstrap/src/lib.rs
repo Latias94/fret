@@ -11,9 +11,10 @@
 
 //! Opinionated bootstrap utilities for Fret applications.
 //!
-//! This crate is intentionally *ecosystem-level* (not part of the portable kernel). It composes
-//! existing primitives from `fret-launch` and friends to provide a convenient “golden path”
-//! startup experience.
+//! This crate is intentionally *ecosystem-level* (not part of the portable kernel). Its default
+//! `no-default-features` profile stays backend-free and exposes bootstrap policy/default types,
+//! while the optional `launch` feature composes `fret-launch` and friends into a convenient
+//! “golden path” startup experience.
 //!
 //! ## Choosing an entry path
 //!
@@ -27,6 +28,8 @@
 //! Minimal example (native):
 //!
 //! ```no_run
+//! # #[cfg(feature = "launch")]
+//! # fn demo() -> Result<(), Box<dyn std::error::Error>> {
 //! use fret_app::App;
 //! use fret_bootstrap::BootstrapBuilder;
 //!
@@ -37,16 +40,17 @@
 //!     .with_default_config_files()?
 //!     .register_icon_pack(|_icons| {});
 //! builder.run()?;
-//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! UI app “golden path” example (native, requires the `ui-app-driver` feature):
 //!
 //! ```no_run
+//! # #[cfg(all(not(target_arch = "wasm32"), feature = "launch", feature = "ui-app-driver"))]
+//! # fn demo() -> Result<(), Box<dyn std::error::Error>> {
 //! use fret_bootstrap::BootstrapBuilder;
 //!
-//! # #[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
-//! # fn demo() -> Result<(), Box<dyn std::error::Error>> {
 //! let builder = fret_bootstrap::ui_app(
 //!     "todo",
 //!     |_app, _window| (),
@@ -60,22 +64,22 @@
 //! ```
 
 use std::rc::Rc;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "launch"))]
 use std::sync::Arc;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "launch"))]
 use std::path::Path;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "launch"))]
 use std::time::Duration;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "launch"))]
 use fret_app::SettingsFileV1;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "launch"))]
 use fret_app::config_files::LayeredConfigPaths;
 use fret_app::{App, KeymapFileError, MenuBarFileError, SettingsError, TextInteractionSettings};
 use fret_i18n::{I18nLookup, I18nService, LocaleId};
 use fret_i18n_fluent::{FluentCatalog, FluentLookup};
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "launch"))]
 use fret_icons::{
     IconPackRegistration, IconRegistry, InstalledIconPacks, panic_on_icon_pack_metadata_conflict,
     panic_on_icon_registry_freeze_failure,
@@ -383,14 +387,9 @@ impl BootstrapError {
     }
 }
 
-pub use fret_launch::assets::{
-    AssetReloadPolicy, AssetStartupMode, AssetStartupPlan, AssetStartupPlanError,
-};
-
 /// Explicit logical asset vocabulary and host registration helpers for `fret-bootstrap` users.
-pub mod assets {
-    pub use fret_launch::assets::*;
-}
+pub mod assets;
+pub use assets::{AssetReloadPolicy, AssetStartupMode, AssetStartupPlan, AssetStartupPlanError};
 
 /// Install the default shadcn command palette overlay on a bootstrap UI driver.
 #[cfg(feature = "ui-app-command-palette-shadcn")]
@@ -442,7 +441,7 @@ pub fn render_shadcn_command_palette_overlay(
 /// This is a convenience helper for the common pattern:
 /// - apply docking interaction settings to `App` globals
 /// - apply font family overrides to runner config
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "launch"))]
 pub fn apply_settings(
     app: &mut App,
     config: &mut fret_launch::WinitRunnerConfig,
@@ -558,7 +557,7 @@ core-command-title-app-quit = 退出
 /// - prefer `ui_app(...)` / `ui_app_with_hooks(...)` for app-author-facing UI code,
 /// - prefer `BootstrapBuilder::new_fn(...)` for new advanced integrations,
 /// - use `BootstrapBuilder::new(...)` for generic/compatibility low-level driver integration.
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "launch"))]
 pub struct BootstrapBuilder<D> {
     inner: fret_launch::WinitAppBuilder<D>,
     on_gpu_ready_hooks: Vec<
@@ -566,7 +565,7 @@ pub struct BootstrapBuilder<D> {
     >,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "launch"))]
 impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
     /// Create a bootstrap builder from an already-constructed low-level driver.
     ///
@@ -740,6 +739,9 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         mode: AssetStartupMode,
         plan: AssetStartupPlan,
     ) -> Result<Self, BootstrapError> {
+        let app_bundle = app_bundle.into();
+        let plan = plan.into_launch(app_bundle.clone(), mode)?;
+        let mode = mode.into();
         Ok(Self {
             inner: self
                 .inner
@@ -750,9 +752,9 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
     }
 
     /// Enable development asset reload polling for file-backed startup mounts.
-    pub fn with_asset_reload_policy(self, policy: fret_launch::assets::AssetReloadPolicy) -> Self {
+    pub fn with_asset_reload_policy(self, policy: AssetReloadPolicy) -> Self {
         Self {
-            inner: self.inner.with_asset_reload_policy(policy),
+            inner: self.inner.with_asset_reload_policy(policy.into_launch()),
             on_gpu_ready_hooks: self.on_gpu_ready_hooks,
         }
     }
@@ -984,7 +986,7 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
     }
 
     /// Initialize default diagnostics (tracing + panic logging) for application development.
-    #[cfg(feature = "diagnostics")]
+    #[cfg(all(feature = "launch", feature = "diagnostics"))]
     pub fn with_default_diagnostics(self) -> Self {
         init_diagnostics();
         self
@@ -1140,7 +1142,7 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
     /// Register a best-effort UI diagnostics debug extension writer.
     ///
     /// Requires enabling `fret-bootstrap/ui-app-driver` and `fret-bootstrap/diagnostics`.
-    #[cfg(all(feature = "ui-app-driver", feature = "diagnostics"))]
+    #[cfg(all(feature = "launch", feature = "ui-app-driver", feature = "diagnostics"))]
     pub fn register_diag_debug_extension(
         mut self,
         key: impl Into<String>,
@@ -1230,18 +1232,20 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "launch"))]
 fn map_asset_runner_error(err: fret_launch::RunnerError) -> BootstrapError {
     match err {
         fret_launch::RunnerError::AssetManifest(source) => BootstrapError::AssetManifest(source),
-        fret_launch::RunnerError::AssetStartup(source) => BootstrapError::AssetStartup(source),
+        fret_launch::RunnerError::AssetStartup(source) => {
+            BootstrapError::AssetStartup(source.into())
+        }
         other => unreachable!(
             "unexpected non-asset runner error while configuring bootstrap assets: {other}"
         ),
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "launch"))]
 impl<D: 'static, S: 'static> BootstrapBuilder<fret_launch::FnDriver<D, S>> {
     /// Create a bootstrap builder directly from `FnDriver` pieces.
     ///
@@ -1286,7 +1290,7 @@ impl<D: 'static, S: 'static> BootstrapBuilder<fret_launch::FnDriver<D, S>> {
     }
 }
 
-#[cfg(all(test, not(target_arch = "wasm32")))]
+#[cfg(all(test, not(target_arch = "wasm32"), feature = "launch"))]
 mod fn_driver_builder_tests {
     use std::path::PathBuf;
     use std::sync::atomic::{AtomicU64, Ordering};
@@ -1714,7 +1718,7 @@ mod fn_driver_builder_tests {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "launch"))]
 impl<D> From<fret_launch::WinitAppBuilder<D>> for BootstrapBuilder<D> {
     fn from(inner: fret_launch::WinitAppBuilder<D>) -> Self {
         Self {
@@ -1724,16 +1728,20 @@ impl<D> From<fret_launch::WinitAppBuilder<D>> for BootstrapBuilder<D> {
     }
 }
 
-#[cfg(feature = "ui-app-driver")]
+#[cfg(all(feature = "launch", feature = "ui-app-driver"))]
 pub mod ui_app_driver;
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    feature = "launch",
+    feature = "ui-app-driver"
+))]
 mod dev_reload;
 
-#[cfg(feature = "ui-app-driver")]
+#[cfg(all(feature = "launch", feature = "ui-app-driver"))]
 pub mod hot_literals;
 
-#[cfg(feature = "ui-app-driver")]
+#[cfg(all(feature = "launch", feature = "ui-app-driver"))]
 pub use hot_literals::{HotLiterals, HotLiteralsFile};
 
 #[cfg(feature = "window-style-profiles")]
@@ -1741,10 +1749,11 @@ pub mod window_style_profiles {
     pub use fret_window_style_profiles::*;
 }
 
-#[cfg(all(feature = "ui-app-driver", feature = "diagnostics"))]
+#[cfg(all(feature = "launch", feature = "ui-app-driver", feature = "diagnostics"))]
 pub mod ui_diagnostics;
 
 #[cfg(all(
+    feature = "launch",
     feature = "ui-app-driver",
     feature = "diagnostics",
     feature = "diagnostics-ws"
@@ -1760,19 +1769,23 @@ pub fn maybe_consume_event(
     window: fret_core::AppWindowId,
     event: &fret_core::Event,
 ) -> bool {
-    #[cfg(all(feature = "ui-app-driver", feature = "diagnostics"))]
+    #[cfg(all(feature = "launch", feature = "ui-app-driver", feature = "diagnostics"))]
     {
         crate::ui_diagnostics::maybe_consume_event(app, window, event)
     }
 
-    #[cfg(not(all(feature = "ui-app-driver", feature = "diagnostics")))]
+    #[cfg(not(all(feature = "launch", feature = "ui-app-driver", feature = "diagnostics")))]
     {
         let _ = (app, window, event);
         false
     }
 }
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "diagnostics"))]
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    feature = "launch",
+    feature = "diagnostics"
+))]
 pub fn init_diagnostics() {
     init_tracing();
     init_panic_hook();
@@ -1876,7 +1889,11 @@ pub fn init_tracing() {
         .try_init();
 }
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "diagnostics"))]
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    feature = "launch",
+    feature = "diagnostics"
+))]
 pub fn init_panic_hook() {
     use std::backtrace::Backtrace;
     use std::sync::Once;
@@ -1989,7 +2006,11 @@ pub fn init_panic_hook() {
 }
 
 /// Concrete `BootstrapBuilder` type returned by `ui_app` / `ui_app_with_app`.
-#[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    feature = "launch",
+    feature = "ui-app-driver"
+))]
 pub type UiAppBootstrapBuilder<S> = BootstrapBuilder<
     fret_launch::FnDriver<ui_app_driver::UiAppDriver<S>, ui_app_driver::UiAppWindowState<S>>,
 >;
@@ -2001,7 +2022,11 @@ pub type UiAppBootstrapBuilder<S> = BootstrapBuilder<
 /// defaults without dealing with runner-level driver details.
 ///
 /// Prefer passing a non-capturing closure so it can coerce to a `fn` pointer (hotpatch-friendly).
-#[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    feature = "launch",
+    feature = "ui-app-driver"
+))]
 pub fn ui_app_with_hooks<S: 'static>(
     root_name: &'static str,
     init_window: fn(&mut App, fret_core::AppWindowId) -> S,
@@ -2015,7 +2040,11 @@ pub fn ui_app_with_hooks<S: 'static>(
 ///
 /// This is the shortest recommended entry for general applications. It hides the `FnDriver`
 /// boilerplate and keeps example code short.
-#[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    feature = "launch",
+    feature = "ui-app-driver"
+))]
 pub fn ui_app<S: 'static>(
     root_name: &'static str,
     init_window: fn(&mut App, fret_core::AppWindowId) -> S,
@@ -2025,7 +2054,11 @@ pub fn ui_app<S: 'static>(
 }
 
 /// Same as `ui_app`, but allows providing a pre-configured `App`.
-#[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    feature = "launch",
+    feature = "ui-app-driver"
+))]
 pub fn ui_app_with_app<S: 'static>(
     app: App,
     root_name: &'static str,
@@ -2037,7 +2070,11 @@ pub fn ui_app_with_app<S: 'static>(
 
 /// Same as `ui_app_with_app`, but allows a hook to configure the driver before it is wrapped into
 /// `FnDriver`.
-#[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    feature = "launch",
+    feature = "ui-app-driver"
+))]
 pub fn ui_app_with_app_and_hooks<S: 'static>(
     app: App,
     root_name: &'static str,

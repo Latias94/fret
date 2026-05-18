@@ -1,12 +1,12 @@
 ---
 title: Path Stroke Style v2 — TODO
-status: active
+status: closed
 date: 2026-02-16
 ---
 
 # Path Stroke Style v2 — TODO Tracker
 
-Status: Active (workstream tracker)
+Status: Closed (workstream tracker)
 
 Workstream narrative: `docs/workstreams/path-stroke-style-v2/path-stroke-style-v2.md`
 Milestone board: `docs/workstreams/path-stroke-style-v2/path-stroke-style-v2-milestones.md`
@@ -40,7 +40,7 @@ renderer conformance tests for correctness-sensitive semantics.
   - join/cap/miter/dash rules
   - sanitize/clamp behavior for non-finite values
   - deterministic degradations
-  - Draft: `docs/adr/0277-path-stroke-style-v2.md`
+  - Evidence: `docs/adr/0277-path-stroke-style-v2.md` (Accepted)
 
 ## M1 — Core plumbing (cache keys + sanitize)
 
@@ -50,8 +50,10 @@ renderer conformance tests for correctness-sensitive semantics.
   - Note: dash fields are part of the cache key once dash segmentation is implemented (required for determinism).
   - Evidence: `crates/fret-render-wgpu/src/renderer/path.rs` (`mix_path_style`, `path_cache_key`)
 
-- [ ] PSSV2-core-110 Update any callsites that want v2 strokes (keep v1 working):
+- [x] PSSV2-core-110 Update any callsites that want v2 strokes (keep v1 working):
   - prefer leaving existing v1 callsites untouched unless a v2 feature is needed
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/paint.rs` uses `PathStyle::StrokeV2`; existing
+    v1 callsites remain valid.
 
 ## M2 — Renderer implementation (wgpu default)
 
@@ -65,9 +67,11 @@ renderer conformance tests for correctness-sensitive semantics.
    - cap coverage and dashed stroke periodicity / phase anchoring
    - Evidence: `crates/fret-render-wgpu/tests/path_stroke_style_v2_conformance.rs`
 
-- [ ] PSSV2-render-220 Add a “no perf cliff” check:
+- [x] PSSV2-render-220 Decide the “no perf cliff” check:
   - ensure v2 fields are zero-cost when not used (no extra allocations on v1 path)
   - only add a perf gate if evidence shows a regression
+  - Decision: no standing perf gate is added without regression evidence. Keep this as a future
+    perf lane only if a concrete tessellation/cache regression appears.
 
 ## M3 — Adoption (optional / follow-up)
 

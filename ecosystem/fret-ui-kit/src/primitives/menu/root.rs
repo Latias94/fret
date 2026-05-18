@@ -15,6 +15,7 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use fret_runtime::Model;
+use fret_ui_headless::entry_focus::{EntryFocusOpenModality, EntryFocusTargets};
 
 use std::sync::Arc;
 
@@ -25,33 +26,10 @@ use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
 /// Menu initial focus targets (Radix `onOpenAutoFocus` outcomes).
 ///
-/// When menu overlays open, Radix distinguishes between pointer-open and keyboard-open:
-/// - Pointer-open: focus the content container and prevent “entry focus”.
-/// - Keyboard-open: allow entry focus (typically the first enabled menu item).
-///
-/// In Fret, we encode this as a pair of optional element targets and choose between them based on
-/// the last observed input modality (ADR 0094).
-#[derive(Debug, Default, Clone, Copy)]
-pub struct MenuInitialFocusTargets {
-    pub keyboard_entry_focus: Option<GlobalElementId>,
-    pub pointer_content_focus: Option<GlobalElementId>,
-}
-
-impl MenuInitialFocusTargets {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn keyboard_entry_focus(mut self, id: Option<GlobalElementId>) -> Self {
-        self.keyboard_entry_focus = id;
-        self
-    }
-
-    pub fn pointer_content_focus(mut self, id: Option<GlobalElementId>) -> Self {
-        self.pointer_content_focus = id;
-        self
-    }
-}
+/// The pure modality-gated target selection lives in `fret-ui-headless::entry_focus`; this alias
+/// keeps menu wrappers on a Radix-named primitive surface while this module adapts runtime input
+/// modality into the headless policy.
+pub type MenuInitialFocusTargets = EntryFocusTargets<GlobalElementId>;
 
 /// Policy for suppressing close auto-focus based on how a menu overlay was dismissed.
 ///
@@ -397,12 +375,11 @@ pub fn dismissible_menu_request_with_modal_and_dismiss_handler<H: UiHost>(
     request.on_open_auto_focus = on_open_auto_focus;
     request.on_close_auto_focus = on_close_auto_focus;
 
-    let keyboard = fret_ui::input_modality::is_keyboard(cx.app, Some(cx.window));
-    request.initial_focus = if keyboard {
-        initial_focus.keyboard_entry_focus
-    } else {
-        initial_focus.pointer_content_focus
-    };
+    let modality = EntryFocusOpenModality::from_is_keyboard(fret_ui::input_modality::is_keyboard(
+        cx.app,
+        Some(cx.window),
+    ));
+    request.initial_focus = initial_focus.resolve_menu(modality);
     request
 }
 

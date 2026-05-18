@@ -19,6 +19,8 @@ Embla-inspired authoring outcomes.
 ## Fret implementation
 
 - Component code: `ecosystem/fret-ui-shadcn/src/carousel.rs`
+- Headless engines: `fret_ui_headless::{carousel, embla, snap_points}` (consumed directly by the
+  recipe; `fret-ui-kit` is not the owner of this pure behavior)
 - Gallery page: `apps/fret-ui-gallery/src/ui/pages/carousel.rs`
 - Copyable usage snippet: `apps/fret-ui-gallery/src/ui/snippets/carousel/usage.rs`
 - Compact shorthand snippet: `apps/fret-ui-gallery/src/ui/snippets/carousel/compact_builder.rs`

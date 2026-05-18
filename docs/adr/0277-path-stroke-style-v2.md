@@ -1,10 +1,12 @@
 ---
 title: Path Stroke Style v2 (Join/Cap/Miter + Dash)
-status: Draft
+status: Accepted
 date: 2026-02-16
 ---
 
 # ADR 0277: Path Stroke Style v2 (Join/Cap/Miter + Dash)
+
+Status: Accepted
 
 ## Context
 

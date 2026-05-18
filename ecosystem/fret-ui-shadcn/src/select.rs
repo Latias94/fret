@@ -3310,15 +3310,12 @@ fn select_impl<H: UiHost>(
                                 if !state.was_open {
                                     state.was_open = true;
 
-                                    // Radix Select does not pre-highlight an option when opened via
-                                    // pointer interaction; items become highlighted as the pointer
-                                    // moves (or via keyboard navigation).
-                                    let initial_active_row = if state.opened_by_pointer {
-                                        None
-                                    } else {
-                                        initial_active_row
-                                    };
-
+                                    // Radix Select focuses the selected item after content is
+                                    // positioned; when no value is selected, that selected-item
+                                    // fallback is the first valid item. Fret keeps DOM-style focus
+                                    // on the listbox container for pointer-open, but active
+                                    // descendant should still start at the same row so ArrowDown
+                                    // advances from that item instead of landing on it.
                                     state.content.reset_on_open(initial_active_row);
                                     state.trigger.reset_typeahead_buffer();
                                     state.pending_active_align_top_scroll = !state.opened_by_pointer;
@@ -4603,10 +4600,11 @@ fn select_impl<H: UiHost>(
                         on_dismiss_request.clone(),
                         overlay_children,
                     );
-                    request.initial_focus = radix_select::SelectInitialFocusTargets::new()
+                    let initial_focus = radix_select::SelectInitialFocusTargets::new()
                         .pointer_content_focus(Some(listbox_id_for_trigger))
-                        .keyboard_entry_focus(selected_item_id_for_request_cell.get())
-                        .resolve(cx, cx.window);
+                        .keyboard_entry_focus(selected_item_id_for_request_cell.get());
+                    request.initial_focus =
+                        radix_select::select_resolve_initial_focus(cx, cx.window, initial_focus);
                     radix_select::request_select(cx, request);
                 } else {
             let portal_ctx = portal_inherited::PortalInherited::capture(cx);
@@ -4641,10 +4639,11 @@ fn select_impl<H: UiHost>(
                         on_dismiss_request.clone(),
                         overlay_children,
                     );
-                    request.initial_focus = radix_select::SelectInitialFocusTargets::new()
+                    let initial_focus = radix_select::SelectInitialFocusTargets::new()
                         .pointer_content_focus(Some(listbox_id_for_trigger))
-                        .keyboard_entry_focus(None)
-                        .resolve(cx, cx.window);
+                        .keyboard_entry_focus(None);
+                    request.initial_focus =
+                        radix_select::select_resolve_initial_focus(cx, cx.window, initial_focus);
                     radix_select::request_select(cx, request);
                 }
             }
@@ -6944,6 +6943,7 @@ mod tests {
             .find(|n| n.role == SemanticsRole::ListBox)
             .expect("listbox node");
         assert_eq!(ui.focus(), Some(listbox.id));
+        assert_select_active_descendant_label(&ui, "Apple");
 
         dispatch_key(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
         let _ = render_frame_with_entries(
@@ -6956,7 +6956,7 @@ mod tests {
             open.clone(),
             entries.clone(),
         );
-        assert_select_active_descendant_label(&ui, "Apple");
+        assert_select_active_descendant_label(&ui, "Banana");
 
         dispatch_key(&mut ui, &mut app, &mut services, KeyCode::Home);
         let _ = render_frame_with_entries(

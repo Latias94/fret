@@ -13,10 +13,12 @@ use fret_ui::element::{
     PressableProps, RingPlacement, RingStyle, SizeStyle, SpacingLength,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::ColorRef;
-use fret_ui_kit::primitives::checkbox::{
-    CheckedState, checkbox_a11y, checked_state_from_optional_bool, toggle_optional_bool,
+use fret_ui_headless::boolean_control::{
+    checkbox_checked_state_from_optional_bool, checkbox_toggle_optional_bool,
 };
+use fret_ui_headless::checked_state::CheckedState;
+use fret_ui_kit::ColorRef;
+use fret_ui_kit::primitives::checkbox::checkbox_a11y;
 
 use crate::primitives::EditorTokenKeys;
 use crate::primitives::style::EditorStyle;
@@ -151,7 +153,7 @@ impl Checkbox {
                 let v = cx
                     .get_model_cloned(model, Invalidation::Paint)
                     .unwrap_or(None);
-                checked_state_from_optional_bool(v)
+                checkbox_checked_state_from_optional_bool(v)
             }
         };
 
@@ -202,7 +204,7 @@ impl Checkbox {
                 CheckboxModel::OptionalBool(model) => {
                     let _ = host
                         .models_mut()
-                        .update(model, |v| *v = toggle_optional_bool(*v));
+                        .update(model, |v| *v = checkbox_toggle_optional_bool(*v));
                 }
             }
             host.request_redraw(action_cx.window);

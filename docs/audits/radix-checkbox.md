@@ -28,8 +28,10 @@ Key upstream concepts:
 
 Fret models Radix checkbox outcomes as:
 
-- Headless tri-state: `crate::headless::checked_state::CheckedState`
-- Radix-named facade: `ecosystem/fret-ui-kit/src/primitives/checkbox.rs`
+- Headless tri-state: `fret_ui_headless::checked_state::CheckedState`
+- Headless optional-bool transitions:
+  `fret_ui_headless::boolean_control::{checkbox_checked_state_from_optional_bool, checkbox_toggle_optional_bool}`
+- Radix-named runtime/a11y facade: `ecosystem/fret-ui-kit/src/primitives/checkbox.rs`
 - Authoring layers (recipes) build on top of the facade, e.g. `ecosystem/fret-ui-shadcn/src/checkbox.rs`.
 
 ## Current parity notes
@@ -37,8 +39,8 @@ Fret models Radix checkbox outcomes as:
 - Pass: Tri-state behavior is modeled via `CheckedState` (checked / unchecked / indeterminate).
 - Pass: Semantics maps indeterminate to `checked: None` (equivalent to Radix `aria-checked="mixed"`).
 - Pass: Keyboard activation matches Radix outcomes: Space toggles, Enter is consumed (does not toggle).
-- Pass: Optional boolean bindings (`Option<bool>`) can be mapped/toggled via primitives helpers
-  (`checked_state_from_optional_bool`, `toggle_optional_bool`), keeping recipes thin.
+- Pass: Optional boolean bindings (`Option<bool>`) are mapped/toggled in `fret-ui-headless`, so
+  recipes can consume the deterministic owner directly.
 - Pass: Controlled/uncontrolled checked state (`checked` / `defaultChecked`) can be modeled via
   `checkbox_use_checked_model(...)`.
 - Note: Fret currently does not model DOM-style `name`/form submission semantics.

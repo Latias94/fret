@@ -1,6 +1,6 @@
 ---
 title: Path Stroke Style v2 (Join/Cap/Miter + Dash) — Workstream
-status: active
+status: closed
 date: 2026-02-16
 scope: fret-core vector paths, tessellation/cache keys, fret-render-wgpu path pipeline, portability + conformance
 ---
@@ -57,6 +57,8 @@ layers tend to approximate via many quads or per-widget hacks, which is:
 - Default renderer (`fret-render-wgpu`) supports v2 join/cap/miter/dash via lyon tessellation and
   deterministic dash segmentation.
 - GPU readback conformance covers join/cap/dash properties across multiple scale factors.
+- Closed on 2026-05-17 after ADR 0277 was promoted to Accepted and implementation alignment was
+  updated.
 
 ## Non-goals (v2)
 
@@ -143,3 +145,9 @@ but the contract must still define fallbacks for future backends.
   at multiple scale factors (1.0 / 1.5 / 2.0) and compares sampled pixels or fingerprints.
 - Add a small headless perf probe (optional) only if tessellation becomes a hotspot; do not add
   new gates without evidence.
+
+## Closure
+
+Closed on 2026-05-17. The required contract, renderer, conformance, and adoption milestones are
+complete. The optional no-perf-cliff probe remains deferred until there is concrete regression
+evidence; it should not keep this semantic contract lane open.

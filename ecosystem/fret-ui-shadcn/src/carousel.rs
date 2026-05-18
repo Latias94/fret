@@ -15,14 +15,14 @@ use fret_ui::element::{
     MainAlign, PointerRegionProps, RenderTransformProps, SemanticsDecoration, VisualTransformProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_headless::carousel as headless_carousel;
+use fret_ui_headless::embla as headless_embla;
+use fret_ui_headless::snap_points as headless_snap_points;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::prefers_reduced_motion;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::transition as decl_transition;
-use fret_ui_kit::headless::carousel as headless_carousel;
-use fret_ui_kit::headless::embla as headless_embla;
-use fret_ui_kit::headless::snap_points as headless_snap_points;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, LengthRefinement, MetricRef, Radius, Space};
 
 use crate::button::{Button, ButtonSize, ButtonVariant};

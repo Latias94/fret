@@ -187,6 +187,16 @@ intentionally empty. This bridge stays off `fret::app::prelude::*`; default app 
 only import it for truly activation-only custom/third-party widgets that have not yet graduated to
 their own app-facing action surface.
 
+`fret::app::prelude::*` is a closed Golden Path budget, not a staging area. Named exports are
+limited to first-contact app authoring nouns: `FretApp`, `App`, `AppRenderContext`, `AppRenderCx`,
+`AppUi`, `Ui`, `UiChild`, `WindowId`, `View`, `Px`, `ui`, and optional `shadcn`. Anonymous extension
+traits are also part of the budget: grouped app action/data helpers, `LocalState` observation,
+state query/mutation read helpers when their features are enabled, `.ui()` / `.into_element*()`,
+style refinement, and a11y/test-id/semantics refinements. New styling nouns, command IDs, assets,
+environment/adaptive helpers, router/docking/editor ecosystems, activation bridges, raw model
+hooks, and low-level mechanism types must stay on explicit modules unless the Golden Path budget is
+deliberately revised.
+
 When app code needs explicit styling or icon nouns, keep them off the default prelude and import
 them intentionally from `fret::style::{...}` and `fret::icons::{icon, IconId}`.
 When extracted app helpers need hover shells or attributed text leaves, prefer
@@ -222,19 +232,21 @@ Do the same for logical assets: import them intentionally from `fret::assets::{.
 `register_bundle_entries(...)` as the portable default story, and keep
 `AssetLocator::file(...)` / `AssetLocator::url(...)` as explicit capability-gated escape hatches.
 For startup that needs one explicit development-vs-packaged switch, prefer
-`AssetStartupPlan` + `AssetStartupMode` from `fret::assets::{AssetStartupPlan, AssetStartupMode}`
-plus
-`FretApp::asset_startup(...)` / `UiAppBuilder::with_asset_startup(...)`. Keep
+`AssetStartupPlan` + `AssetStartupMode` from `fret::assets::{AssetStartupPlan, AssetStartupMode}`.
+`FretApp::asset_startup(...)` records that backend-free startup spec on the app authoring surface;
+`UiAppBuilder::with_asset_startup(...)` applies it on the desktop builder surface. Keep
 `development_dir(...)` / `development_manifest(...)` for native/package-dev file-backed inputs,
 and keep `packaged_entries(...)`, `packaged_bundle_entries(...)`, or
 `packaged_embedded_entries(...)` for packaged/web/mobile-friendly bytes. Generated asset modules
 remain the packaged lane because they already expose `ENTRIES`, `bundle_id()`, `Bundle`,
 `install(app)`, and `mount(builder)`.
 When you are on `fret-bootstrap` directly instead of `fret`, use the same startup contract from
-`fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` plus
-`BootstrapBuilder::with_asset_startup(...)`; keep file-backed native/package-dev inputs on
-`AssetStartupPlan::development_dir(...)` / `AssetStartupPlan::development_manifest(...)`, and use
-`AssetStartupPlan::packaged_entries(...)`, `AssetStartupPlan::packaged_bundle_entries(...)`, or
+`fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}`. That plan/default vocabulary is
+available under `fret-bootstrap --no-default-features`; applying it to
+`BootstrapBuilder::with_asset_startup(...)` requires the `launch` adapter feature. Keep file-backed
+native/package-dev inputs on `AssetStartupPlan::development_dir(...)` /
+`AssetStartupPlan::development_manifest(...)`, and use `AssetStartupPlan::packaged_entries(...)`,
+`AssetStartupPlan::packaged_bundle_entries(...)`, or
 `AssetStartupPlan::packaged_embedded_entries(...)` for packaged/web/mobile-friendly bytes.
 On native/package-dev lanes, `FileAssetManifestResolver::from_bundle_dir(...)` is the first-party
 generated-manifest convenience path when you want one directory to become one logical bundle
@@ -255,10 +267,11 @@ that should be reviewed, versioned, or packaged directly.
 For a first-party manifest artifact command, use
 `fretboard assets manifest write --dir assets --out assets.manifest.json --app-bundle my-app`.
 If you are already on the `fret` builder path, keep both development and packaged startup on
-`FretApp::asset_startup(...)` / `UiAppBuilder::with_asset_startup(...)` with `AssetStartupPlan` +
-`AssetStartupMode`, so validation fails early during startup configuration instead of being buried
-in app-local setup glue. On the builder path, asset registrations preserve call order, so later
-registrations can intentionally override earlier ones for the same logical locator.
+`FretApp::asset_startup(...)` for spec recording or `UiAppBuilder::with_asset_startup(...)` for
+desktop builder application, both with `AssetStartupPlan` + `AssetStartupMode`, so validation fails
+early during startup configuration instead of being buried in app-local setup glue. On the builder
+path, asset registrations preserve call order, so later registrations can intentionally override
+earlier ones for the same logical locator.
 For package-owned or generated compile-time bytes, the same ordered builder surface now includes
 `FretApp::{asset_entries, bundle_asset_entries, embedded_asset_entries}` and
 `UiAppBuilder::{with_bundle_asset_entries, with_embedded_asset_entries}`.
@@ -318,23 +331,48 @@ authoring vocabulary through a hidden umbrella import.
 - `default` = `desktop` + `app` (recommended for native desktop apps).
   - Includes: shadcn integration.
   - Intentionally excludes: config files, UI asset caches, icon packs, icon preloading, command palette.
+- `app` with `default-features = false` = backend-free app-authoring baseline.
+  - Includes: the default app vocabulary, shadcn authoring surface, `FretApp::new(...)` authoring
+    spec, setup bundles, static asset registrations, and asset startup planning values.
+  - Excludes: `wgpu`, `winit`, `fret-launch`, `fret-render`, native platform crates, and runner
+    crates.
+  - Use this for reusable app-facing helpers or compile-test crates that should not own a native
+    process entry point.
+- `desktop` = explicit native runner/render opt-in.
+  - Pulls the `fret-framework/native-wgpu`, `fret-bootstrap`, and `fret-launch` path.
+  - Required for native startup methods that create windows, build `UiAppBuilder`, or run a
+    windowed app.
 - `batteries` = a bigger opt-in bundle for app/dev convenience:
-  - includes diagnostics wiring, config files, UI assets, icons, and (optional) icon SVG preloading.
+  - includes desktop-bound diagnostics wiring, config files, UI assets, icons, and icon SVG
+    preloading.
   - includes `state` (selector/query helpers).
 
 **Common feature combos (practical map):**
 
 | Goal | Suggested `fret` features | Notes |
 | --- | --- | --- |
+| Backend-free app-authoring check | `default-features = false, features = ["app"]` | No native runner/render stack; useful for reusable app-facing helpers and compile gates. |
 | Small desktop app (shadcn UI only) | `["desktop","shadcn"]` | Minimal explicit profile (no config files, no diagnostics, no assets/icons). |
 | Add derived + async state helpers | `["state"]` | Enables `AppUi` data helpers (`cx.data().selector_layout(...)`, raw `cx.data().selector(...)`, `cx.data().query(...)`) plus explicit `fret::selector::*` / `fret::query::*` secondary lanes. |
 | Add routing integration | `["router"]` | Exposes the explicit app-level router extension surface (`fret::router::*`). |
-| Add icons | `["icons"]` | Installs default icon packs (Lucide) via bootstrap wiring. |
-| Add image/SVG caches | `["ui-assets"]` | Wires UI asset caches + budgets (compile/runtime cost). |
+| Add icons | `["icons"]` | Desktop-bound; installs default icon packs (Lucide) via bootstrap wiring. |
+| Add image/SVG caches | `["ui-assets"]` | Desktop-bound; wires UI asset caches + budgets (compile/runtime cost). |
 | Enable layered `.fret/*` config | `["config-files"]` | Filesystem side effects; opt-in for embed/minimal builds. |
-| Opt into “everything convenient” | `["batteries"]` | Convenience bundle; may increase cold compile time. |
+| Opt into “everything convenient” | `["batteries"]` | Desktop-bound convenience bundle; may increase cold compile time. |
 
-Minimal / explicit profile (useful for embed/minimal builds that must avoid filesystem side effects):
+Backend-free app-authoring profile:
+
+```toml
+[dependencies]
+fret = { path = "../path/to/fret/ecosystem/fret", default-features = false, features = ["app"] }
+```
+
+This profile can compile app-facing helper crates that use `FretApp::new(...)`, `.setup(...)`,
+static asset entries, `FretApp::asset_startup(...)`, `View`, and `AppUi` without inheriting the
+native runner. The `.window(...).view::<V>()?.run()` chain and `UiAppBuilder::with_asset_startup(...)`
+are intentionally `desktop` profile surfaces.
+
+Minimal / explicit native desktop profile (useful for apps that must avoid filesystem side effects):
 
 ```toml
 [dependencies]
@@ -365,10 +403,12 @@ fret = { path = "../path/to/fret/ecosystem/fret", features = ["batteries"] }
 Notes:
 
 - `config-files` is opt-in because it reads layered `.fret/*` files (settings/keymap/menubar).
-- `ui-assets` is opt-in because it wires caches/budgets and can increase compile + runtime cost.
-- `icons` / `preload-icon-svgs` are opt-in (GPU-time tradeoff; apps can install custom packs).
-- `devloop` and `tracing` are kept only as advanced/maintainer aliases on `fret`; prefer the
-  owning crates (`fret-launch/dev-state`, `fret-bootstrap/tracing`) for new integrations.
+- `diagnostics`, `ui-assets`, `icons`, `preload-icon-svgs`, `command-palette`, `devloop`, and
+  `tracing` are desktop-bound convenience features because their current implementation goes
+  through bootstrap/launch or GPU-ready app-driver wiring.
+- `devloop` and `tracing` are kept only as advanced/maintainer aliases on `fret`; prefer the owning
+  crates (`fret-launch/dev-state`, `fret-bootstrap/tracing`) for new integrations that already live
+  on the desktop/bootstrap lane.
 - Docking and editor-theming ecosystems should be used from their owning crates
   (`fret-docking`, `fret-ui-editor`) instead of expecting `fret` root feature proxies.
 - Design-system- or domain-specific crates that do not form a stable `fret` root story
@@ -492,15 +532,27 @@ or helper surfaces that are intentionally not curated by the `fret-render` facad
 
 These crates are “real” but **policy-heavy and fast-moving**. They should remain portable unless explicitly runner-oriented.
 
+### `fret-ui-headless`
+
+**What it is:** deterministic, renderer-free state machines and transition helpers for reusable UI
+behavior.
+
+**Use it when:** you need shared component behavior without `ElementContext`, theme, styling, or
+runtime wiring. Example: boolean control transitions such as
+`boolean_control::checkbox_toggle_optional_bool(...)` and table/menu/roving-focus engines.
+
 ### `fret-ui-kit`
 
 **What it is:** reusable component infrastructure on top of `fret-ui`:
 
 - styling refinements (`ChromeRefinement`, `LayoutRefinement`),
-- headless primitives (roving focus, typeahead, popper/tooltip primitives),
+- Radix-named UI primitive facades and runtime/a11y wiring,
+- declarative helper surfaces for reusable component authors,
 - overlay controller/policy surfaces.
 
-**Use it when:** you are authoring reusable components and want shared policy primitives.
+**Use it when:** you are authoring reusable components and need `fret-ui` runtime wiring, shared
+style infrastructure, or higher-level component composition helpers. Prefer `fret-ui-headless`
+directly for pure state transitions.
 
 ### `fret-ui-shadcn`
 
@@ -648,8 +700,8 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   `fret`'s `ui-assets` feature when you want the default image/SVG caches driven from the event pipeline.
   App-owned resources should normally live under `AssetBundleId::app(...)`; ecosystem/package-owned
   shipped resources should normally live under `AssetBundleId::package(...)`.
-  On native/package-dev lanes, keep the builder path on `FretApp::asset_startup(...)` /
-  `UiAppBuilder::with_asset_startup(...)` with
+  On native/package-dev lanes, record app-level intent with `FretApp::asset_startup(...)` or keep
+  generated/module mounting on `UiAppBuilder::with_asset_startup(...)` with
   `AssetStartupPlan::{development_dir(...), development_manifest(...)}` before dropping to
   `FileAssetManifestResolver::{from_bundle_dir(...), from_manifest_path(...)}` plus
   `fret::assets::register_resolver(...)`.
@@ -665,13 +717,15 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
   Direct host registrations preserve order across `set_primary_resolver(...)`,
   `register_resolver(...)`, `register_bundle_entries(...)`, and `register_embedded_entries(...)`,
   so later registrations intentionally override earlier ones for the same logical locator.
-- **Apps using `fret-bootstrap` directly:** enable `fret-bootstrap/ui-assets` so `UiAppDriver` drives the caches from the event pipeline; optionally override
+- **Apps using `fret-bootstrap` directly:** enable `fret-bootstrap/ui-app-driver` plus
+  `fret-bootstrap/ui-assets` so `UiAppDriver` drives the caches from the event pipeline; optionally override
   budgets via `BootstrapBuilder::with_ui_assets_budgets(...)`. Keep logical asset identity on
   `fret_bootstrap::assets::{AssetBundleId, AssetLocator, AssetRequest, StaticAssetEntry, ...}`.
   For startup that needs one explicit development-vs-packaged switch, prefer
-  `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` plus
-  `BootstrapBuilder::with_asset_startup(...)`. Keep native/package-dev file-backed inputs on
-  `AssetStartupPlan::development_dir(...)` / `AssetStartupPlan::development_manifest(...)`, and
+  `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}`; applying that plan to
+  `BootstrapBuilder::with_asset_startup(...)` requires the `launch` adapter feature. Keep
+  native/package-dev file-backed inputs on `AssetStartupPlan::development_dir(...)` /
+  `AssetStartupPlan::development_manifest(...)`, and
   keep packaged bytes on `AssetStartupPlan::packaged_entries(...)`,
   `AssetStartupPlan::packaged_bundle_entries(...)`, or
   `AssetStartupPlan::packaged_embedded_entries(...)`.
@@ -693,13 +747,15 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 
 ### `fret-bootstrap`
 
-**What it is:** an opinionated bootstrap layer for apps (golden-path defaults) on top of `fret-launch`.
+**What it is:** an opinionated bootstrap layer for apps. Its default profile owns backend-free
+policy/defaults and logical asset vocabulary; the `launch` feature enables the concrete
+`fret-launch` / `fret-render` adapter layer.
 
 **Use it when:** you want:
 
 - layered settings/keymap loading,
-- the same named asset startup contract as `fret`, via
-  `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` and
+- the same named asset startup contract as `fret`, via backend-free
+  `fret_bootstrap::assets::{AssetStartupPlan, AssetStartupMode}` and launch-enabled
   `BootstrapBuilder::with_asset_startup(...)`,
 - icon pack registration (built-in packs or custom),
 - optional UI app driver wiring,
@@ -707,8 +763,9 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 - optional diagnostics + tracing wiring.
 
 **Command palette note:** `fret-bootstrap/ui-app-command-palette` keeps the app-driver capability
-layer only. If you want the default shadcn `CommandDialog` presentation on top of that capability,
-enable `fret-bootstrap/ui-app-command-palette-shadcn` or use `fret`'s `command-palette` feature.
+layer only and therefore opts into the launch adapter lane. If you want the default shadcn
+`CommandDialog` presentation on top of that capability, enable
+`fret-bootstrap/ui-app-command-palette-shadcn` or use `fret`'s `command-palette` feature.
 
 **Diagnostics note:** `fret-bootstrap/diagnostics` now keeps the generic diagnostics/export path
 leaner. Enable `fret-bootstrap/diagnostics-canvas` only when you need retained canvas cache stats

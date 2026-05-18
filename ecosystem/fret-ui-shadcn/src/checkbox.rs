@@ -7,6 +7,10 @@ use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, PressableProps,
 };
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
+use fret_ui_headless::boolean_control::{
+    checkbox_checked_state_from_optional_bool, checkbox_toggle_optional_bool,
+};
+use fret_ui_headless::checked_state::CheckedState;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -15,10 +19,7 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::motion::drive_tween_f32_for_element;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::primitives::checkbox::{
-    CheckedState, checkbox_a11y, checkbox_use_checked_model, checked_state_from_optional_bool,
-    toggle_optional_bool,
-};
+use fret_ui_kit::primitives::checkbox::{checkbox_a11y, checkbox_use_checked_model};
 use fret_ui_kit::primitives::control_registry::{
     ControlAction, ControlEntry, ControlId, control_registry_model,
 };
@@ -430,7 +431,7 @@ impl Checkbox {
                     CheckboxCheckedModel::Bool(model) => cx.pressable_toggle_bool(model),
                     CheckboxCheckedModel::OptionalBool(model) => {
                         cx.pressable_update_model(model, |v| {
-                            *v = toggle_optional_bool(*v);
+                            *v = checkbox_toggle_optional_bool(*v);
                         });
                     }
                     CheckboxCheckedModel::TriState(model) => {
@@ -445,7 +446,9 @@ impl Checkbox {
                         CheckedState::from(cx.watch_model(model).copied().unwrap_or(false))
                     }
                     CheckboxCheckedModel::OptionalBool(model) => {
-                        checked_state_from_optional_bool(cx.watch_model(model).copied().flatten())
+                        checkbox_checked_state_from_optional_bool(
+                            cx.watch_model(model).copied().flatten(),
+                        )
                     }
                     CheckboxCheckedModel::TriState(model) => {
                         cx.watch_model(model).copied().unwrap_or_default()

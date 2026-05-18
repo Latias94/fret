@@ -2,8 +2,9 @@
 
 Opinionated bootstrap utilities for Fret applications.
 
-`fret-bootstrap` is an ecosystem-level crate that composes `fret-launch`, `fret-app`, and related
-runtime services into a practical desktop-first startup story.
+`fret-bootstrap` is an ecosystem-level crate for app bootstrap policy, defaults, logical assets,
+icons, and optional runner adapters. Its `no-default-features` profile stays backend-free; enable
+`launch` when you want the concrete `fret-launch` / `fret-render` adapter layer.
 
 Related workstream: `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/`
 
@@ -15,21 +16,25 @@ Related workstream: `docs/workstreams/fret-launch-app-surface-fearless-refactor-
 
 Recommended mental model:
 
-- `ui_app(...)` is the primary author-facing path.
-- `BootstrapBuilder::new_fn(...)` is the recommended advanced escape hatch.
+- `fret_bootstrap::assets::*` is the backend-free planning/defaults lane.
+- `ui_app(...)` is the primary author-facing path once `ui-app-driver` is enabled.
+- `BootstrapBuilder::new_fn(...)` is the recommended advanced escape hatch once `launch` is enabled.
 - `BootstrapBuilder::new(...)` is for existing `WinitAppDriver` integrations or callers that
   already hold a fully built driver value.
 
 ## Surface map
 
 - `ui_app(...)` / `ui_app_with_hooks(...)`
+  - requires `ui-app-driver`, which enables `launch`
   - wraps `ui_app_driver::UiAppDriver`
   - converts it into `fret_launch::FnDriver`
   - applies bootstrap conveniences through `BootstrapBuilder`
 - `BootstrapBuilder::new_fn(...)`
+  - requires `launch`
   - builds `fret_launch::FnDriver` from function pointers
   - keeps the hotpatch-friendly advanced path explicit
 - `BootstrapBuilder::new(...)`
+  - requires `launch`
   - accepts any low-level driver implementing `fret_launch::WinitAppDriver`
   - keeps compatibility/generic integration available without making it the default story
 

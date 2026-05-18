@@ -1,14 +1,16 @@
 ---
 title: SceneOp::Path Paint Surface v1
-status: Draft
+status: Accepted
 date: 2026-02-16
 ---
 
 # ADR 0278: SceneOp::Path Paint Surface v1
 
+Status: Accepted
+
 ## Context
 
-`SceneOp::Path` currently renders prepared vector paths using a **solid `Color`** only. This blocks
+Before this ADR, `SceneOp::Path` rendered prepared vector paths using a **solid `Color`** only. That blocked
 common UI rendering needs such as:
 
 - gradient-filled vector icons,
@@ -55,8 +57,8 @@ The default renderer (`fret-render-wgpu`) must support:
 - `Paint::LinearGradient`
 - `Paint::RadialGradient`
 
-`Paint::Material` is capability-gated and budgeted. For v1, the wgpu path pipeline does not sample
-materials; it deterministically degrades `Paint::Material` to a solid base color (see below).
+`Paint::Material` is capability-gated and budgeted. The default wgpu path pipeline supports
+registered material paints, and still degrades deterministically when a material cannot be used.
 
 ### Deterministic degradation (portability)
 
@@ -69,8 +71,10 @@ Backends must degrade deterministically when a `Paint` variant is unsupported:
 
 wgpu path v1 degradation policy:
 
-- `Paint::Material { params, .. }` degrades to `Paint::Solid(base_color)`, where `base_color` is
-  `params.vec4s[0]` (premultiplied + opacity applied by the encoder).
+- When the material is registered and supported, the path pipeline samples/evaluates it.
+- When the material cannot be used, `Paint::Material { params, .. }` degrades to
+  `Paint::Solid(base_color)`, where `base_color` is `params.vec4s[0]` (premultiplied + opacity
+  applied by the encoder).
 
 Degradations must not introduce unbounded state surfaces.
 
@@ -88,4 +92,5 @@ Degradations must not introduce unbounded state surfaces.
   `crates/fret-render-wgpu/src/renderer/types.rs`
 - Renderer shader/pipeline: `crates/fret-render-wgpu/src/renderer/shaders.rs` (`PATH_SHADER`),
   `crates/fret-render-wgpu/src/renderer/pipelines/path.rs`
-- Conformance: `crates/fret-render-wgpu/tests/path_paint_conformance.rs`
+- Conformance: `crates/fret-render-wgpu/tests/path_paint_conformance.rs`,
+  `crates/fret-render-wgpu/tests/path_material_paint_conformance.rs`

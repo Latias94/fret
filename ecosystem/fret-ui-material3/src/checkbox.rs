@@ -16,11 +16,12 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui_headless::boolean_control::{
+    checkbox_checked_state_from_optional_bool, checkbox_toggle_optional_bool,
+};
+use fret_ui_headless::checked_state::CheckedState;
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::controllable_state;
-use fret_ui_kit::primitives::checkbox::{
-    CheckedState, checked_state_from_optional_bool, toggle_optional_bool,
-};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
     resolve_override_slot_with,
@@ -256,7 +257,9 @@ impl Checkbox {
                                 let _ = host.update_model(model, |v| *v = !*v);
                             }
                             CheckboxModel::OptionalBool(model) => {
-                                let _ = host.update_model(model, |v| *v = toggle_optional_bool(*v));
+                                let _ = host.update_model(model, |v| {
+                                    *v = checkbox_toggle_optional_bool(*v)
+                                });
                             }
                         }
                         host.request_redraw(action_cx.window);
@@ -277,10 +280,12 @@ impl Checkbox {
                         cx.get_model_copied(model, Invalidation::Layout)
                             .unwrap_or(false),
                     ),
-                    CheckboxModel::OptionalBool(model) => checked_state_from_optional_bool(
-                        cx.get_model_cloned(model, Invalidation::Layout)
-                            .unwrap_or(None),
-                    ),
+                    CheckboxModel::OptionalBool(model) => {
+                        checkbox_checked_state_from_optional_bool(
+                            cx.get_model_cloned(model, Invalidation::Layout)
+                                .unwrap_or(None),
+                        )
+                    }
                 };
 
                 let (corner_radii, layout, focus_ring) = {
@@ -336,10 +341,12 @@ impl Checkbox {
                                 cx.get_model_copied(model, Invalidation::Paint)
                                     .unwrap_or(false),
                             ),
-                            CheckboxModel::OptionalBool(model) => checked_state_from_optional_bool(
-                                cx.get_model_cloned(model, Invalidation::Paint)
-                                    .unwrap_or(None),
-                            ),
+                            CheckboxModel::OptionalBool(model) => {
+                                checkbox_checked_state_from_optional_bool(
+                                    cx.get_model_cloned(model, Invalidation::Paint)
+                                        .unwrap_or(None),
+                                )
+                            }
                         };
                         let selected = checked_state.is_on();
 

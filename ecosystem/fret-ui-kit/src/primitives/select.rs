@@ -31,6 +31,7 @@ use fret_ui::element::{
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::Side;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_headless::entry_focus::{EntryFocusOpenModality, EntryFocusTargets};
 
 use crate::declarative::ModelWatchExt;
 use crate::headless::roving_focus;
@@ -221,41 +222,20 @@ pub fn select_listbox_semantics_id<H: UiHost>(
 
 /// Input-modality-gated initial focus targets for a select-like overlay.
 ///
-/// This mirrors the Radix/shadcn "hand feel" contract:
-/// - pointer-open focuses the content container (not the active/selected entry)
-/// - keyboard-open focuses the selected/active entry when available
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub struct SelectInitialFocusTargets {
-    pointer_content_focus: Option<GlobalElementId>,
-    keyboard_entry_focus: Option<GlobalElementId>,
-}
+/// The pure target selection lives in `fret-ui-headless::entry_focus`; select keeps the runtime
+/// adapter because the current input modality is provided by `fret-ui`.
+pub type SelectInitialFocusTargets = EntryFocusTargets<GlobalElementId>;
 
-impl SelectInitialFocusTargets {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn pointer_content_focus(mut self, focus: Option<GlobalElementId>) -> Self {
-        self.pointer_content_focus = focus;
-        self
-    }
-
-    pub fn keyboard_entry_focus(mut self, focus: Option<GlobalElementId>) -> Self {
-        self.keyboard_entry_focus = focus;
-        self
-    }
-
-    pub fn resolve<H: UiHost>(
-        self,
-        cx: &mut ElementContext<'_, H>,
-        window: AppWindowId,
-    ) -> Option<GlobalElementId> {
-        if fret_ui::input_modality::is_keyboard(cx.app, Some(window)) {
-            self.keyboard_entry_focus.or(self.pointer_content_focus)
-        } else {
-            self.pointer_content_focus
-        }
-    }
+pub fn select_resolve_initial_focus<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    window: AppWindowId,
+    targets: SelectInitialFocusTargets,
+) -> Option<GlobalElementId> {
+    let modality = EntryFocusOpenModality::from_is_keyboard(fret_ui::input_modality::is_keyboard(
+        cx.app,
+        Some(window),
+    ));
+    targets.resolve_select(modality)
 }
 
 /// Builds the select listbox element using a stable call path.
@@ -2080,10 +2060,13 @@ mod tests {
                 }),
             );
             assert_eq!(
-                SelectInitialFocusTargets::new()
-                    .pointer_content_focus(Some(pointer_focus))
-                    .keyboard_entry_focus(Some(keyboard_focus))
-                    .resolve(cx, window),
+                select_resolve_initial_focus(
+                    cx,
+                    window,
+                    SelectInitialFocusTargets::new()
+                        .pointer_content_focus(Some(pointer_focus))
+                        .keyboard_entry_focus(Some(keyboard_focus)),
+                ),
                 Some(pointer_focus)
             );
 
@@ -2098,10 +2081,13 @@ mod tests {
                 },
             );
             assert_eq!(
-                SelectInitialFocusTargets::new()
-                    .pointer_content_focus(Some(pointer_focus))
-                    .keyboard_entry_focus(Some(keyboard_focus))
-                    .resolve(cx, window),
+                select_resolve_initial_focus(
+                    cx,
+                    window,
+                    SelectInitialFocusTargets::new()
+                        .pointer_content_focus(Some(pointer_focus))
+                        .keyboard_entry_focus(Some(keyboard_focus)),
+                ),
                 Some(keyboard_focus)
             );
         });

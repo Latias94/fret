@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "slug": "wgpu-conformance-harness-v1",
+  "title": "WGPU Conformance Harness v1",
+  "status": "closed",
+  "updated": "2026-05-18",
+  "scope_kind": "closeout",
+  "problem": "WGPU renderer conformance tests repeatedly open textures, render scenes, map readback buffers, and sample pixels in each integration-test crate. That duplication makes new semantic tests expensive to add and lets harness behavior drift across path/stroke/paint gates.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/wgpu-conformance-harness-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/wgpu-conformance-harness-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/wgpu-conformance-harness-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/wgpu-conformance-harness-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/wgpu-conformance-harness-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/wgpu-conformance-harness-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    }
+  ],
+  "repro": {
+    "summary": "Path-related WGPU conformance tests should render and sample through one shared integration-test support module while preserving existing pixel assertions.",
+    "commands": [
+      "cargo test -p fret-render-wgpu --locked --test path_base_conformance --test path_stroke_style_v2_conformance --test path_paint_conformance --test path_material_paint_conformance -j 1"
+    ]
+  },
+  "gates": [
+    {
+      "name": "path-conformance-batch",
+      "command": "cargo test -p fret-render-wgpu --locked --test path_base_conformance --test path_stroke_style_v2_conformance --test path_paint_conformance --test path_material_paint_conformance -j 1"
+    },
+    {
+      "name": "backend-tests-compile",
+      "command": "cargo check -p fret-render-wgpu --locked --tests -j 1"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "crates/fret-render-wgpu/tests/support/mod.rs",
+    "crates/fret-render-wgpu/tests/path_base_conformance.rs",
+    "crates/fret-render-wgpu/tests/path_stroke_style_v2_conformance.rs",
+    "crates/fret-render-wgpu/tests/path_paint_conformance.rs",
+    "crates/fret-render-wgpu/tests/path_material_paint_conformance.rs",
+    "docs/workstreams/wgpu-conformance-harness-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0080-vector-path-contract.md",
+    "docs/adr/0277-path-stroke-style-v2.md",
+    "docs/adr/0278-path-paint-surface-v1.md"
+  ],
+  "continue_policy": {
+    "default_action": "stay_closed",
+    "notes": "The first path-related batch is complete. Start a narrower follow-on only if another test family clearly needs the same harness extraction."
+  }
+}

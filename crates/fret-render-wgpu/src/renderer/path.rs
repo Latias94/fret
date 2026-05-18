@@ -1016,4 +1016,83 @@ mod tests {
         assert!(state.prepared(path_a0).is_none());
         assert!(state.prepared(path_b).is_some());
     }
+
+    #[test]
+    fn path_metrics_bounds_contain_tessellated_vertices() {
+        let cases = [
+            (
+                "fill-intersecting-overlap",
+                vec![
+                    fret_core::PathCommand::MoveTo(Point::new(Px(8.0), Px(16.0))),
+                    fret_core::PathCommand::LineTo(Point::new(Px(56.0), Px(16.0))),
+                    fret_core::PathCommand::LineTo(Point::new(Px(56.0), Px(64.0))),
+                    fret_core::PathCommand::LineTo(Point::new(Px(8.0), Px(64.0))),
+                    fret_core::PathCommand::Close,
+                    fret_core::PathCommand::MoveTo(Point::new(Px(32.0), Px(8.0))),
+                    fret_core::PathCommand::LineTo(Point::new(Px(64.0), Px(40.0))),
+                    fret_core::PathCommand::LineTo(Point::new(Px(32.0), Px(72.0))),
+                    fret_core::PathCommand::LineTo(Point::new(Px(0.0), Px(40.0))),
+                    fret_core::PathCommand::Close,
+                ],
+                fret_core::PathStyle::Fill(fret_core::FillStyle {
+                    rule: fret_core::FillRule::EvenOdd,
+                }),
+            ),
+            (
+                "stroke-v1-round",
+                vec![
+                    fret_core::PathCommand::MoveTo(Point::new(Px(10.0), Px(24.0))),
+                    fret_core::PathCommand::LineTo(Point::new(Px(54.0), Px(24.0))),
+                    fret_core::PathCommand::LineTo(Point::new(Px(54.0), Px(54.0))),
+                ],
+                fret_core::PathStyle::Stroke(fret_core::StrokeStyle { width: Px(16.0) }),
+            ),
+            (
+                "stroke-v2-miter",
+                vec![
+                    fret_core::PathCommand::MoveTo(Point::new(Px(12.0), Px(54.0))),
+                    fret_core::PathCommand::LineTo(Point::new(Px(36.0), Px(10.0))),
+                    fret_core::PathCommand::LineTo(Point::new(Px(60.0), Px(54.0))),
+                ],
+                fret_core::PathStyle::StrokeV2(fret_core::StrokeStyleV2 {
+                    width: Px(12.0),
+                    join: fret_core::StrokeJoinV1::Miter,
+                    cap: fret_core::StrokeCapV1::Butt,
+                    miter_limit: 8.0,
+                    dash: None,
+                }),
+            ),
+        ];
+
+        for (name, commands, style) in cases {
+            let metrics = metrics_from_path_commands(&commands, style);
+            let (triangles, _mode) = tessellate_path_commands(
+                &commands,
+                style,
+                fret_core::PathConstraints { scale_factor: 2.0 },
+            );
+
+            assert!(
+                !triangles.is_empty(),
+                "{name}: expected representative path to tessellate"
+            );
+
+            let min_x = metrics.bounds.origin.x.0;
+            let min_y = metrics.bounds.origin.y.0;
+            let max_x = min_x + metrics.bounds.size.width.0;
+            let max_y = min_y + metrics.bounds.size.height.0;
+            let epsilon = 0.25;
+
+            for vertex in triangles {
+                let [x, y] = vertex.pos;
+                assert!(
+                    x >= min_x - epsilon
+                        && x <= max_x + epsilon
+                        && y >= min_y - epsilon
+                        && y <= max_y + epsilon,
+                    "{name}: tessellated vertex ({x:.3}, {y:.3}) escaped metrics bounds ({min_x:.3}, {min_y:.3})..({max_x:.3}, {max_y:.3})"
+                );
+            }
+        }
+    }
 }
