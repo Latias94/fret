@@ -2633,6 +2633,42 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   passed.
 - `git diff --check` passed.
 
+2026-05-19 compact paragraph line-clamp text-role slice:
+
+- Red repro:
+  `cargo nextest run -p fret-ui-kit --features imui --lib
+  compact_paragraph_line_clamp_text_uses_two_line_clamped_layout --no-fail-fast` failed before the
+  fix because `text_compact_paragraph_line_clamp(...)` did not exist.
+- Red repro:
+  `cargo nextest run -p fret-ui-gallery --test navigation_menu_docs_surface
+  navigation_menu_list_item_copy_uses_shared_title_and_clamped_paragraph_roles --no-fail-fast`
+  first timed out while a background Cargo compile continued, then failed before the fix because
+  `navigation_menu/demo.rs` list-item titles/descriptions still used local `TextProps` policy.
+- `ecosystem/fret-ui-kit/src/declarative/text.rs` now provides
+  `text_compact_paragraph_line_clamp(...)` as a paragraph-family dense clamp helper with fill width,
+  min-width-zero flex behavior, `max-height` derived from the theme line height, word wrapping, and
+  ellipsis overflow.
+- `apps/fret-ui-gallery/src/ui/snippets/navigation_menu/demo.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/navigation_menu/docs_demo.rs`, and
+  `apps/fret-ui-gallery/src/ui/snippets/navigation_menu/rtl.rs` now route ordinary list-item titles
+  through `text_button_label(...)` and descriptions through
+  `text_compact_paragraph_line_clamp(..., 2)`. Featured home-card brand copy remains explicit
+  visual styling outside this slice.
+- `cargo nextest run -p fret-ui-kit --features imui --lib
+  compact_paragraph_line_clamp_text_uses_two_line_clamped_layout --no-fail-fast` passed.
+- `cargo nextest run -p fret-ui-gallery --test navigation_menu_docs_surface
+  navigation_menu_list_item_copy_uses_shared_title_and_clamped_paragraph_roles --no-fail-fast`
+  passed.
+- `cargo fmt -p fret-ui-kit -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-kit --features imui --lib` passed.
+- `cargo check -p fret-ui-gallery --test navigation_menu_docs_surface` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo fmt --check -p fret-ui-kit -p fret-ui-gallery` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.
+
 2026-05-19 gallery ContextMenu trigger text-role slice:
 
 - Red repro:

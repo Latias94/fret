@@ -2339,6 +2339,7 @@ def main() -> None:
                 "pub fn text_paragraph",
                 "pub fn text_paragraph_break_words",
                 "pub fn text_compact_paragraph",
+                "pub fn text_compact_paragraph_line_clamp",
                 "fn shrinkable_single_line_layout",
                 "fn fill_shrinkable_single_line_layout",
                 "fn fill_growing_zero_min_layout",
@@ -2353,6 +2354,7 @@ def main() -> None:
                 "list_row_label_text_uses_fill_width_single_line_truncation",
                 "control_readout_text_uses_muted_compact_single_line_truncation",
                 "compact_paragraph_text_uses_wrapping_fill_width_layout",
+                "compact_paragraph_line_clamp_text_uses_two_line_clamped_layout",
                 "button_label_text_uses_medium_single_line_truncation",
                 "control_label_text_uses_fill_width_single_line_truncation",
                 "chrome_glyph_text_uses_fixed_slot_single_line_clip",
@@ -3954,8 +3956,11 @@ def main() -> None:
             Path("apps/fret-ui-gallery/tests/navigation_menu_docs_surface.rs"),
             required=[
                 "fn navigation_menu_custom_link_labels_use_shared_button_label_role()",
+                "fn navigation_menu_list_item_copy_uses_shared_title_and_clamped_paragraph_roles()",
                 "decl_text::text_button_label(cx,label)",
+                "decl_text::text_compact_paragraph_line_clamp(cx,description,2)",
                 "!normalized.contains(\"cx.text(label)\")",
+                "!normalized.contains(\"description_layout.size.max_height=Some(Length::Px(Px(40.0)))\")",
             ],
             forbidden=[],
         ),
@@ -4132,9 +4137,13 @@ def main() -> None:
             required=[
                 "use fret_ui_kit::declarative::text as decl_text;",
                 "let label_el = decl_text::text_button_label(cx, label);",
+                "let title_el = decl_text::text_button_label(cx, title);",
+                "decl_text::text_compact_paragraph_line_clamp(cx, description, 2)",
             ],
             forbidden=[
                 "let label_el = cx.text(label);",
+                "description_layout.size.max_height = Some(Length::Px(Px(40.0)));",
+                "text: Arc::from(description),",
             ],
         ),
         SourceCheck(
@@ -4142,11 +4151,15 @@ def main() -> None:
             required=[
                 "use fret_ui_kit::declarative::text as decl_text;",
                 "let label_el = decl_text::text_button_label(cx, label);",
+                "let title_el = decl_text::text_button_label(cx, title);",
+                "decl_text::text_compact_paragraph_line_clamp(cx, description, 2)",
                 "shadcn::NavigationMenuLink::new(model, [label_el])",
             ],
             forbidden=[
                 "let label_el = cx.text(label);",
                 "shadcn::NavigationMenuLink::new(model, [cx.text(label)])",
+                "description_layout.size.max_height = Some(Length::Px(Px(40.0)));",
+                "text: Arc::from(description),",
             ],
         ),
         SourceCheck(
@@ -4154,11 +4167,15 @@ def main() -> None:
             required=[
                 "use fret_ui_kit::declarative::text as decl_text;",
                 "let label_el = decl_text::text_button_label(cx, label);",
+                "let title_el = decl_text::text_button_label(cx, title);",
+                "decl_text::text_compact_paragraph_line_clamp(cx, description, 2)",
                 "shadcn::NavigationMenuLink::new(model, [label_el])",
             ],
             forbidden=[
                 "let label_el = cx.text(label);",
                 "shadcn::NavigationMenuLink::new(model, [cx.text(label)])",
+                "description_layout.size.max_height = Some(Length::Px(Px(40.0)));",
+                "text: Arc::from(description),",
             ],
         ),
         SourceCheck(

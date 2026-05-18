@@ -530,6 +530,46 @@ pub fn text_compact_paragraph<H: UiHost>(
     )
 }
 
+/// Compact paragraph/body copy clamped to a fixed number of dense text lines.
+///
+/// This role is for list/card descriptions where prose should wrap, but the surrounding item has a
+/// fixed visual rhythm. Use plain [`text_compact_paragraph`] when the parent should grow to fit all
+/// lines.
+pub fn text_compact_paragraph_line_clamp<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+    max_lines: u16,
+) -> AnyElement {
+    let (refinement, line_height) = {
+        let theme = Theme::global(&*cx.app);
+        let style = text_sm_style(theme);
+        let line_height = style
+            .line_height
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
+        (
+            ui_typography::composable_refinement_from_style(&style),
+            line_height,
+        )
+    };
+
+    let mut layout = fill_growing_zero_min_layout();
+    layout.size.max_height = Some(Length::Px(Px(line_height.0 * max_lines.max(1) as f32)));
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout,
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
 /// Bold variant of [`text_prose`], intended for typography table headers (`<th className="... font-bold">`).
 pub fn text_prose_bold<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -1030,6 +1070,38 @@ mod tests {
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(props.wrap, TextWrap::Word);
         assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
+    }
+
+    #[test]
+    fn compact_paragraph_line_clamp_text_uses_two_line_clamped_layout() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_compact_paragraph_line_clamp(
+                cx,
+                "Dense card description that may occupy at most two lines",
+                2,
+            )
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_compact_paragraph_line_clamp(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.layout.size.max_height, Some(Length::Px(Px(36.0))));
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
         assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
     }
 

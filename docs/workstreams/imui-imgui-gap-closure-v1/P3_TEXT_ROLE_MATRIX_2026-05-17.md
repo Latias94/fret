@@ -41,6 +41,10 @@ component should construct `TextProps` locally.
 - `text_compact_paragraph(...)`: dense wrapping paragraph for editor/IMUI panels. It may grow
   height and must not be used inside fixed-height control chrome unless that parent measures
   multi-line height.
+- `text_compact_paragraph_line_clamp(...)`: dense wrapping paragraph for list/card descriptions
+  with a fixed maximum line count. It is still paragraph-family text, but the helper owns the
+  `max-height + ellipsis` clamp contract so snippets/components do not hand-roll local
+  `TextProps`.
 - `text_list_row_label(...)`: dense command/list/tree row labels. It is not a button label; it fills
   row width, shrinks to zero, and ellipsizes to keep row height stable.
 - `text_control_label(...)`: fill-width checkbox/radio/switch/combo/slider label text. It keeps

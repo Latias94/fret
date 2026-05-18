@@ -738,6 +738,11 @@ Readiness order for the next locally testable review slices:
    the NavigationMenu docs/demo/RTL snippets now route through `text_button_label(...)` instead of
    bare `cx.text(label)`. Card title/body line-clamp text remains a separate candidate because it
    may need a list/card description role rather than a mechanical button-label migration.
+   2026-05-19 compact paragraph line-clamp follow-up: `text_compact_paragraph_line_clamp(...)`
+   now owns the dense paragraph-family `max-lines + ellipsis` contract for list/card descriptions,
+   and NavigationMenu list-item titles/descriptions use shared button-label plus clamped paragraph
+   roles instead of local `TextProps` line-clamp blocks. Featured NavigationMenu home-card brand
+   copy remains explicit visual styling outside this slice.
    2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
    headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
    through `control_readout_text(...)`, and custom pointer-region labels through
