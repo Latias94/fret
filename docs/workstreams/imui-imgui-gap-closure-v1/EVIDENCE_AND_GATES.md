@@ -1960,6 +1960,24 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
 - `git diff --check` passed.
 
+2026-05-19 typography table-cell text-role slice:
+
+- Red repro: `cargo nextest run -p fret-ui-gallery --test typography_docs_surface
+  typography_table_snippets_keep_fixed_cell_text_on_table_role --no-fail-fast` failed before the
+  fix because `typography/mod.rs` was missing the shared table-cell text helper.
+- `apps/fret-ui-gallery/src/ui/snippets/typography/table.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/typography/demo.rs`, and
+  `apps/fret-ui-gallery/src/ui/snippets/typography/rtl.rs` now route fixed table body cells through
+  a typography-local helper backed by `text_table_cell(...)`. Typography prose, headings, and rich
+  inline-link examples are intentionally unchanged.
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test typography_docs_surface typography_table_snippets_keep_fixed_cell_text_on_table_role --no-fail-fast` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed with `PYTHONIOENCODING=utf-8`.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
 2026-05-17 gallery data-grid text-role slice:
 
 - `cargo fmt -p fret-ui-gallery` passed.

@@ -452,6 +452,9 @@ Exit criteria:
   select-all model/action surface while moving member/role fixed cells to a local helper backed by
   `text_table_cell(...)`, closing another fixed-row bare text escape without changing checkbox
   recipe behavior.
+  2026-05-19 typography table-cell text result: Typography table samples in standalone, demo, and
+  RTL snippets now share a local helper backed by `text_table_cell(...)`, preserving typography
+  prose/rich-link behavior while keeping table rows on fixed-cell text semantics.
   2026-05-18 AI AudioPlayer state-marker result: the copyable AudioPlayer local/remote snippets
   now use zero-size `SpacerProps` children under generic semantics for state-only diagnostics
   markers, instead of mounting empty `Text` nodes for non-visible test anchors.
