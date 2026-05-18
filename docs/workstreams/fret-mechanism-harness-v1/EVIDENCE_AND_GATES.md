@@ -4281,3 +4281,54 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - result: passed.
   `git diff --check`
   - result: passed; only Git's line-ending notice for `WORKSTREAM.json` was printed.
+
+## Node Graph Cull Runtime Gate Coverage
+
+- invariant:
+  retained Node Graph cull windows must produce observable `node_graph_cull_window_shift` prepaint
+  actions when panning far enough to cross cull-window boundaries, while small reversible pans
+  should stay within the current cull window and produce zero cull-window shifts.
+- finding:
+  no new mechanism defect was reproduced. The promoted suites passed against the rebuilt
+  `target/dev-fast/fret-ui-gallery.exe` binary. A previous `ensure_visible_timeout` came from a
+  stale `target/debug/fret-ui-gallery.exe` binary: after nav search, selector resolution reported
+  `match_count=0` for `ui-gallery-nav-node-graph-cull-torture`.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/previews/pages/torture/node_graph_cull_torture.rs`,
+  `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_cull_window.rs`,
+  `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_cull_window_shift.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/prepaint_diagnostics.rs`,
+  `crates/fret-diag/src/diag_suite.rs`,
+  `crates/fret-diag/src/stats/debug_stats_gates.rs`,
+  `tools/diag-scripts/ui-gallery-node-graph-cull-torture-pan-zoom.json`,
+  `tools/diag-scripts/ui-gallery-node-graph-cull-window-shifts.json`,
+  `tools/diag-scripts/ui-gallery-node-graph-cull-window-no-shifts-small-pan.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_node_graph_cull --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `fad3a59e-43d7-47b4-9183-81ae290e61d5`.
+- runtime diagnostics:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-node-graph-cull --dir target/fret-diag-node-graph-cull-suite-current --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed; suite summary
+    `target/fret-diag-node-graph-cull-suite-current/sessions/1779124193835-97600/suite.summary.json`;
+    run id `1779124205290`.
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-node-graph-cull-window-shifts --dir target/fret-diag-node-graph-cull-window-shifts-suite-current --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed; suite summary
+    `target/fret-diag-node-graph-cull-window-shifts-suite-current/sessions/1779124242539-101504/suite.summary.json`;
+    run id `1779124258887`.
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-node-graph-cull-window-no-shifts-small-pan --dir target/fret-diag-node-graph-cull-window-no-shifts-small-pan-suite-current --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed; suite summary
+    `target/fret-diag-node-graph-cull-window-no-shifts-small-pan-suite-current/sessions/1779124242622-103812/suite.summary.json`;
+    run id `1779124253283`.
+- stale-binary false-failure evidence:
+  `target/fret-diag-node-graph-cull-suite/sessions/1779123851758-104128/script.result.json`
+  - result: failed with `ensure_visible_timeout`; selector trace had `match_count=0` for
+    `ui-gallery-nav-node-graph-cull-torture`. The same scripts passed after rebuilding and using
+    `target/dev-fast/fret-ui-gallery.exe`.
+- formatting/static checks:
+  `cargo fmt -p fret-diag-protocol --check`
+  - result: passed.
+  `python tools/check_diag_scripts_registry.py`
+  - result: passed; registry is up to date.
+  `git diff --check`
+  - result: passed.

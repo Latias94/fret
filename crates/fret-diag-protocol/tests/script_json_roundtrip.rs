@@ -261,6 +261,27 @@ fn script_v2_roundtrip_chart_torture_pan_zoom() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_node_graph_cull_torture_pan_zoom() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-node-graph-cull-torture-pan-zoom.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_node_graph_cull_window_shifts() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-node-graph-cull-window-shifts.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_node_graph_cull_window_no_shifts_small_pan() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-node-graph-cull-window-no-shifts-small-pan.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_imui_editor_proof_advanced_axis_composites() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/imui-editor-proof-advanced-axis-composites.json"

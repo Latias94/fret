@@ -1041,3 +1041,12 @@ date: 2026-05-12
     the real UI Gallery DataTable torture page with `FRET_UI_GALLERY_DATA_TABLE_RETAINED=1`, passes
     with zero tooling warnings, and keeps the selected-state proof in diagnostics rather than only
     in retained Table-focused unit coverage.
+- [x] Promote UI Gallery Node Graph Cull runtime gates into protocol roundtrip coverage.
+  - Result: the existing `ui-gallery-node-graph-cull`,
+    `ui-gallery-node-graph-cull-window-shifts`, and
+    `ui-gallery-node-graph-cull-window-no-shifts-small-pan` suites now have direct
+    `fret-diag-protocol` roundtrip coverage for their redirect scripts. The runtime suites pass
+    against the rebuilt `target/dev-fast/fret-ui-gallery.exe` binary: pan/zoom and large-pan
+    cull-window-shift paths stay live, and the small-pan guard stays under the zero-shift budget.
+    A prior `ensure_visible_timeout` was traced to an old `target/debug/fret-ui-gallery.exe`
+    binary whose nav search did not expose the Node Graph Cull entry, not to a mechanism defect.

@@ -1975,3 +1975,30 @@ Status: complete for the retained DataTable sort/select/scroll selected-state di
 - Runtime diagnostics pass:
   `$env:FRET_UI_GALLERY_DATA_TABLE_RETAINED='1'; target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-retained-sort-select-scroll.json --dir target\fret-diag-data-table-retained-selected-sort-select-scroll-current --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev`
   with run id `1779122449287`.
+
+## M111: UI Gallery Node Graph Cull Runtime Gate Coverage
+
+Status: complete for Node Graph Cull cull-window runtime evidence and protocol roundtrip coverage.
+
+- Reused the existing Node Graph Cull diagnostics scripts and suite manifests rather than creating a
+  new script surface.
+- Added protocol roundtrip tests for the three redirect entry points:
+  `ui-gallery-node-graph-cull-torture-pan-zoom`,
+  `ui-gallery-node-graph-cull-window-shifts`, and
+  `ui-gallery-node-graph-cull-window-no-shifts-small-pan`.
+- The runtime suites cover complementary cull-window behavior: pan/zoom smoke, large-pan cull
+  window shifts, and a small-pan zero-shift guard.
+- No mechanism defect was reproduced. The earlier `ensure_visible_timeout` was a stale-binary
+  false failure: `target/debug/fret-ui-gallery.exe` did not expose
+  `ui-gallery-nav-node-graph-cull-torture` after nav search, while the rebuilt
+  `target/dev-fast/fret-ui-gallery.exe` did.
+- Protocol roundtrip passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_node_graph_cull --no-fail-fast --no-capture`
+  with Nextest run id `fad3a59e-43d7-47b4-9183-81ae290e61d5`.
+- Runtime diagnostics suites pass:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-node-graph-cull --dir target/fret-diag-node-graph-cull-suite-current --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
+  with run id `1779124205290`;
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-node-graph-cull-window-shifts --dir target/fret-diag-node-graph-cull-window-shifts-suite-current --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
+  with run id `1779124258887`; and
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-node-graph-cull-window-no-shifts-small-pan --dir target/fret-diag-node-graph-cull-window-no-shifts-small-pan-suite-current --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
+  with run id `1779124253283`.
