@@ -1485,6 +1485,69 @@ fn ai_prompt_input_cursor_custom_text_uses_shared_roles() {
 }
 
 #[test]
+fn ai_shimmer_demo_chrome_text_uses_shared_roles() {
+    for (name, source) in [
+        (
+            "shimmer_typography_demo",
+            include_str!("../src/ui/snippets/ai/shimmer_typography_demo.rs"),
+        ),
+        (
+            "shimmer_duration_demo",
+            include_str!("../src/ui/snippets/ai/shimmer_duration_demo.rs"),
+        ),
+        (
+            "shimmer_elements_demo",
+            include_str!("../src/ui/snippets/ai/shimmer_elements_demo.rs"),
+        ),
+    ] {
+        let canonical = canonicalize_rust_fragment(source);
+        for marker in [
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_control_readout(cx, label)",
+        ] {
+            let marker = canonicalize_rust_fragment(marker);
+            assert!(
+                canonical.contains(&marker),
+                "{name} should route demo labels through shared readout roles; missing `{marker}`"
+            );
+        }
+        for forbidden in [
+            "ui::text(label)",
+            ".text_sm().text_color(muted)",
+            "ColorRef::Color(typography::muted_foreground_color",
+        ] {
+            let forbidden = canonicalize_rust_fragment(forbidden);
+            assert!(
+                !canonical.contains(&forbidden),
+                "{name} reintroduced local shimmer demo label text policy: `{forbidden}`"
+            );
+        }
+    }
+
+    let elements = canonicalize_rust_fragment(include_str!(
+        "../src/ui/snippets/ai/shimmer_elements_demo.rs"
+    ));
+    for marker in [
+        "decl_text::text_section_chrome_label(cx, \"Processing your request\")",
+        "ui_ai::Shimmer::new(\"with AI magic\")",
+        "decl_text::text_control_readout(cx, \"...\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            elements.contains(&marker),
+            "shimmer_elements_demo should keep inline non-shimmer text on shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in ["ui::text(\"Processing your request\")", "ui::text(\"...\")"] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !elements.contains(&forbidden),
+            "shimmer_elements_demo reintroduced bare inline text outside Shimmer: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
 fn ai_reasoning_stack_trace_and_voice_selector_use_shared_chrome_text_roles() {
     for (name, source, title, body) in [
         (

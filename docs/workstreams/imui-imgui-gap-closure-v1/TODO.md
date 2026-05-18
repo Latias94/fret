@@ -603,6 +603,10 @@ Readiness order for the next locally testable review slices:
    2026-05-18 AI Suggestions/reasoning/transcript text-role follow-up: suggestions custom
    children, reasoning hook status, transcript torture header copy, and chat exported-status marker
    now use shared text roles or generic marker semantics instead of bare/default text surfaces.
+   2026-05-19 AI Shimmer demo chrome text follow-up: Shimmer typography/duration/elements demo
+   labels and inline non-shimmer text now use shared readout/section roles instead of local
+   `ui::text(...)` styling, while `Shimmer::new(...)` remains the explicit shimmer text capability
+   surface.
    2026-05-18 AI custom-children text-role follow-up: environment variables, package info,
    inline citations, persona, and sources custom-child snippets now route visible app-owned text
    through shared roles, including the new single-line `text_code_label(...)` identifier role.

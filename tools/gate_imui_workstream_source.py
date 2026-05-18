@@ -501,6 +501,9 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/snippets/ai/tool_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/suggestions_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/reasoning_hooks.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/shimmer_duration_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/shimmer_elements_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/shimmer_typography_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/transcript_torture.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/queue_prompt_input_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/transcription_demo.rs",
@@ -1320,6 +1323,50 @@ def main() -> None:
             forbidden=[
                 "cx.text(\"Reasoning controller unavailable\")",
                 "cx.text(status)",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/shimmer_typography_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, label)",
+                "ui_ai::Shimmer::new(\"Explicit typography override\")",
+                "ui_ai::Shimmer::new(\"Inherited shimmer from subtree typography\")",
+            ],
+            forbidden=[
+                "ui::text(label)",
+                ".text_sm().text_color(muted)",
+                "ColorRef::Color(typography::muted_foreground_color",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/shimmer_duration_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, label)",
+                "ui_ai::Shimmer::new(text).duration(secs).into_element(cx)",
+            ],
+            forbidden=[
+                "ui::text(label)",
+                ".text_sm()",
+                "ColorRef::Color(typography::muted_foreground_color",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/shimmer_elements_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, label)",
+                "decl_text::text_section_chrome_label(cx, \"Processing your request\")",
+                "ui_ai::Shimmer::new(\"with AI magic\")",
+                "decl_text::text_control_readout(cx, \"...\")",
+            ],
+            forbidden=[
+                "ui::text(label)",
+                "ui::text(\"Processing your request\")",
+                "ui::text(\"...\")",
+                ".text_sm().text_color(muted)",
+                "ColorRef::Color(fret_ui_kit::typography::muted_foreground_color",
             ],
         ),
         SourceCheck(

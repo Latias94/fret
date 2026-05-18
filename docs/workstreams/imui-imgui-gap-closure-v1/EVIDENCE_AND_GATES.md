@@ -748,6 +748,13 @@ Run evidence:
   `fret-ui-ai` component policy. Gates: `cargo nextest run -p fret-ui-gallery --test
   ai_visible_text_role_surface ai_prompt_input_cursor_custom_text_uses_shared_roles
   --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-19: extended the AI visible text-role migration to Shimmer demo chrome. Typography,
+  duration, and elements demo labels now use `text_control_readout(...)`; the inline non-shimmer
+  prefix/suffix in the elements demo uses section-chrome/control-readout roles instead of bare
+  `ui::text(...)`. `Shimmer::new(...)` calls intentionally remain because Shimmer itself is the
+  explicit animated text capability surface. Gates: `cargo nextest run -p fret-ui-gallery --test
+  ai_visible_text_role_surface ai_shimmer_demo_chrome_text_uses_shared_roles --no-fail-fast` and
+  `python tools/gate_imui_workstream_source.py`.
 - 2026-05-18: extended the AI visible text-role migration to Reasoning, StackTrace, and
   VoiceSelector fixed chrome/readouts. Fixed outer title/body copy uses shared
   section-chrome/paragraph roles; StackTrace status and VoiceSelector selected/open diagnostics use
@@ -3138,3 +3145,31 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
   passed.
 - `git diff --check` passed.
+
+2026-05-19 AI Shimmer demo chrome text-role slice:
+
+- Source gap before fix: Shimmer typography/duration/elements demos still used local
+  `ui::text(...)` styling for demo labels and inline non-shimmer text. These nodes are gallery
+  chrome/readout text, not the Shimmer text capability itself.
+- `apps/fret-ui-gallery/src/ui/snippets/ai/shimmer_typography_demo.rs`,
+  `shimmer_duration_demo.rs`, and `shimmer_elements_demo.rs` now route demo labels through
+  `decl_text::text_control_readout(...)`; the inline non-shimmer prefix/suffix in
+  `shimmer_elements_demo.rs` uses section-chrome/control-readout roles. `Shimmer::new(...)` calls
+  remain as the explicit animated text capability surface.
+- First post-fix
+  `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
+  ai_shimmer_demo_chrome_text_uses_shared_roles --no-fail-fast` timed out while a background
+  Cargo/Rustc compile continued; Cargo/Rustc processes were allowed to exit.
+- `cargo fmt -p fret-ui-gallery` passed and applied the expected rustfmt wrapping.
+- Retried after the compile finished:
+  `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
+  ai_shimmer_demo_chrome_text_uses_shared_roles --no-fail-fast` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.
+- `rg -n "ui::text\(|cx\.text\(" apps\fret-ui-gallery\src\ui\snippets\ai -g "*.rs"` returned no
+  matches after this slice; remaining AI snippet text rendering is component-owned surfaces such as
+  `Shimmer::new(...)` or other explicit AI text-capability APIs.
