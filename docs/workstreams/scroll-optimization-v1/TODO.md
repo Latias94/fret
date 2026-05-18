@@ -574,6 +574,30 @@ Status: Active
     small, and root `Scroll` remains a side-effect boundary.
   - Decision: close this as a narrow gallery authoring cleanup. Do not widen the mechanism layer
     for `text_reflow` until there is a dedicated text computed-box / line-break stability proof.
+- [x] Audit the remaining content `text_reflow / Text` blocker as a stop condition.
+  - Source audit: the top remaining content solve maps to
+    `apps/fret-ui-gallery/src/ui/content.rs:744`, where the preview card uses
+    `shadcn::CardDescription::new("Interactive preview for validating behaviors.")`.
+    `ecosystem/fret-ui-shadcn/src/card.rs` renders text descriptions as
+    `ui::raw_text(text).w_full().wrap(TextWrap::Word)`.
+  - Mechanism audit: layout, measure, and paint all derive a wrapped text max width from the
+    current text box width. `maybe_bucket_text_wrap_width` can reduce repeated text work during
+    interactive resize, but it does not make the computed text box or paint max-width independent
+    of width. The clean-geometry preflight only has a safe `StableComputedBox` text contract today,
+    and that contract correctly rejects when the text bounds size changes.
+  - Focused gate:
+    `cargo nextest run -p fret-ui clean_geometry_small_resize_rejects_auto_height_text_reflow --no-fail-fast`.
+  - Local evidence:
+    `target/fret-diag/local-next-gallery-header-stretch-clean-geometry-20260518-r2/1779069580027/bundle.schema2.json`.
+  - Result: the content preview card still rejects with `text_reflow / Text` at
+    `apps/fret-ui-gallery/src/ui/content.rs:744` with about `158-160us` solves. A smaller header
+    text path also rejects with `text_reflow`, while the only non-text blockers left in this sample
+    are the small editor `Canvas` solve and root `Scroll` side-effect boundary.
+  - Decision: do not widen clean geometry for `TextWrap::Word` / `CardDescription` in this lane.
+    Wrapped text can change line breaks, computed height, cached metrics, and paint preparation
+    constraints when width changes. A future text optimization should be a separate proof, likely
+    starting from `TextWrap::None` / single-line text or an explicit cached line-break stability
+    contract, not from this gallery description.
 
 ## Current slice — Deferred probe seed vs authoritative extent
 

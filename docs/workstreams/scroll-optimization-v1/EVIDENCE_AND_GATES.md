@@ -1318,6 +1318,53 @@ Gallery content-header stretch authoring cleanup (2026-05-18):
   - Keep the remaining `text_reflow / Text` blocker as a mechanism stop condition until a focused
     text computed-box / line-break stability proof exists.
 
+Content `text_reflow / Text` stop-condition audit (2026-05-18):
+
+- Source audit:
+  - `apps/fret-ui-gallery/src/ui/content.rs:744`
+  - `ecosystem/fret-ui-shadcn/src/card.rs:2761-2766`
+  - The top content blocker is the preview card's `CardDescription` text. shadcn text
+    descriptions intentionally render as `raw_text(...).w_full().wrap(TextWrap::Word)`, matching a
+    wrapping description recipe instead of a single-line chrome label.
+- Mechanism audit:
+  - `crates/fret-ui/src/tree/layout/node.rs` classifies `Text`, `StyledText`, and
+    `SelectableText` as `StableComputedBox` clean-geometry leaves.
+  - `crates/fret-ui/src/declarative/host_widget/layout.rs`,
+    `crates/fret-ui/src/declarative/host_widget/measure.rs`, and
+    `crates/fret-ui/src/declarative/host_widget/paint.rs` all compute text constraints from the
+    current text box width and `TextWrap`.
+  - `crates/fret-ui/src/tree/layout/state.rs::maybe_bucket_text_wrap_width` can snap wrap widths
+    during small-step interactive resize, but the final text box bounds and paint constraints still
+    depend on the current propagated width. The bucket is a cache/churn reduction tool, not a proof
+    that line breaks or computed height are unchanged.
+- Focused gate:
+  - `cargo nextest run -p fret-ui clean_geometry_small_resize_rejects_auto_height_text_reflow --no-fail-fast`
+    - Result: `1/1` passed.
+- Local evidence:
+  - Bundle:
+    `target/fret-diag/local-next-gallery-header-stretch-clean-geometry-20260518-r2/1779069580027/bundle.schema2.json`
+  - Stats:
+    `target/fret-diag/local-next-gallery-header-stretch-clean-geometry-20260518-r2/worst.stats.json`
+  - Result:
+    - Content preview card rejection remains `text_reflow / Text` at
+      `apps/fret-ui-gallery/src/ui/content.rs:744`, with sampled solves around `158-160us`.
+    - The same raw bundle also shows a smaller header text `text_reflow` path around `42-43us`.
+    - The only non-text blockers left in this evidence are `unsupported_kind / Canvas` around
+      `4us` and root `side_effect_boundary / Scroll` at `0us`.
+    - The repeat=1 sample's p95/max total/layout/layout-roots/layout-engine-solve/prepaint/paint /
+      renderer-text-prepare remains `3062/2458/2325/209/256/388/66us`; view-cache reuse and
+      code-editor row replay guardrails remain stable.
+- Decision:
+  - Keep wrapped text on the authoritative solve path. Do not make `TextWrap::Word` /
+    `CardDescription` a clean-geometry propagated leaf from the current data.
+  - A future text lane may be worthwhile, but it needs its own proof surface: either a
+    `TextWrap::None` / single-line fixed-height subset, or an explicit line-break and computed-box
+    stability cache that can prove layout and paint constraints are identical across the width
+    delta.
+  - With text stopped, the only immediate non-text candidates in this local resize-jitter sample are
+    a very small `Canvas` proof, root `Scroll` side-effect-boundary redesign, or collecting
+    RTX4090/other-machine closeout evidence. None should be folded into the current text audit.
+
 ## Current slice — Deferred probe seed vs authoritative extent
 
 This slice locks the contract that:

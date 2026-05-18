@@ -196,3 +196,16 @@ Status: Active
 - Fresh no-4090 evidence has no `flex_cross_align` in the raw bundle or `diag stats`. Remaining
   blockers are `text_reflow / Text`, small editor `Canvas`, and root `Scroll` as a side-effect
   boundary.
+
+## M16 — Wrapped text clean-geometry stop condition
+
+- Audit the remaining `text_reflow / Text` blocker before attempting any text fast-path expansion.
+- Treat shadcn `CardDescription` text as wrapped recipe text: it uses `TextWrap::Word`, `w_full`,
+  and width-derived layout/measure/paint constraints.
+- Keep `TextWrap::Word` text on the authoritative solve path until a dedicated line-break /
+  computed-box stability proof exists.
+- 2026-05-18 audit landed: the preview card description at
+  `apps/fret-ui-gallery/src/ui/content.rs:744` remains a correct `text_reflow / Text` stop
+  condition. The focused negative gate
+  `clean_geometry_small_resize_rejects_auto_height_text_reflow` passed, and local evidence leaves
+  only small `Canvas` and root `Scroll` non-text blockers outside the text stop condition.
