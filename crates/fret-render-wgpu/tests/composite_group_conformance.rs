@@ -4,6 +4,7 @@ use fret_core::scene::{
 };
 use fret_render_wgpu::{Renderer, WgpuContext};
 
+#[path = "support/render_format.rs"]
 mod support;
 
 use support::{pixel_rgba, render_scene_rgba8_with_format};

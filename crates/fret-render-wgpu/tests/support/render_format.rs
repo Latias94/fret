@@ -3,24 +3,7 @@ use fret_render_wgpu::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
 
 mod readback;
 
-pub use readback::{pixel_rgba, read_texture_rgba8};
-
-pub fn render_scene_rgba8(
-    ctx: &WgpuContext,
-    renderer: &mut Renderer,
-    scene: &Scene,
-    size: (u32, u32),
-    scale_factor: f32,
-) -> Vec<u8> {
-    render_scene_rgba8_with_format(
-        ctx,
-        renderer,
-        scene,
-        size,
-        scale_factor,
-        wgpu::TextureFormat::Rgba8Unorm,
-    )
-}
+pub use readback::pixel_rgba;
 
 pub fn render_scene_rgba8_with_format(
     ctx: &WgpuContext,
@@ -60,5 +43,5 @@ pub fn render_scene_rgba8_with_format(
     );
     ctx.queue.submit([cb]);
     let _ = ctx.device.poll(wgpu::PollType::wait_indefinitely());
-    read_texture_rgba8(&ctx.device, &ctx.queue, &texture, size)
+    readback::read_texture_rgba8(&ctx.device, &ctx.queue, &texture, size)
 }

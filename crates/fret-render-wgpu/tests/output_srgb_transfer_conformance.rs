@@ -2,6 +2,7 @@ use fret_core::geometry::{Edges, Point, Px, Rect, Size};
 use fret_core::scene::{Color, DrawOrder, Paint, Scene, SceneOp};
 use fret_render_wgpu::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
 
+#[path = "support/readback.rs"]
 mod support;
 
 use support::{pixel_rgba, read_texture_rgba8};
