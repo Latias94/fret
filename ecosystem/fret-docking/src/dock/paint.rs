@@ -6,6 +6,7 @@ use super::hit_test::{tab_close_rect, tab_scroll_for_node};
 use super::layout::{dock_hint_rects_with_font, drop_zone_rect, split_tab_bar};
 use super::manager::DockManager;
 use super::prelude_core::*;
+use super::split_geometry::{self, SplitHandle};
 use super::tab_bar_geometry::TabBarGeometry;
 use super::tab_bar_geometry::dock_tab_width_for_title;
 use super::tab_overflow::{
@@ -13,8 +14,6 @@ use super::tab_overflow::{
     overflow_menu_row_count, overflow_menu_row_height, overflow_menu_row_rect,
     tab_overflow_button_rect, tab_overflow_menu_rect, tab_strip_rect_with_overflow_button,
 };
-use fret_ui::retained_bridge::ResizeHandle;
-use fret_ui::retained_bridge::resizable_panel_group as resizable;
 
 fn tab_title_clip_rect(
     theme: fret_ui::ThemeSnapshot,
@@ -557,7 +556,7 @@ pub(super) fn paint_split_handles(
         if children.len() < 2 {
             continue;
         }
-        let computed = resizable::compute_layout(
+        let computed = split_geometry::compute_layout(
             *axis,
             bounds,
             children.len(),
@@ -573,9 +572,8 @@ pub(super) fn paint_split_handles(
             theme.color_token("border")
         };
 
-        let handle = ResizeHandle {
+        let handle = SplitHandle {
             axis: *axis,
-            hit_thickness: split_handle_hit_thickness,
             paint_device_px: 1.0,
         };
         for center in computed.handle_centers {
@@ -943,7 +941,7 @@ pub(super) fn paint_drop_overlay(
                         next[anchor_index] = keep;
                         next.insert(insert_index.min(next.len()), take);
 
-                        let computed = resizable::compute_layout(
+                        let computed = split_geometry::compute_layout(
                             *axis,
                             bounds,
                             children.len().saturating_add(1),

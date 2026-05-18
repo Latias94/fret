@@ -61,7 +61,7 @@ Related plan:
     - `RBX-M1-020`
   - Handoff: do this before broad node/chart/plot migration work so the editor-grade backbone
     proves the exit strategy first.
-- [ ] RBX-M1-020 Extract docking split geometry and handle painting from `fret_ui::retained_bridge`.
+- [x] RBX-M1-020 Extract docking split geometry and handle painting from `fret_ui::retained_bridge`.
   - Scope:
     - `ecosystem/fret-docking/src/dock/layout.rs`
     - `ecosystem/fret-docking/src/dock/hit_test.rs`
@@ -78,6 +78,34 @@ Related plan:
     - `rg -n "retained_bridge::resizable_panel_group|retained_bridge::ResizeHandle" ecosystem/fret-docking crates apps`
   - Evidence:
     - `docs/workstreams/retained-bridge-exit-v1/RBX_M1_010_DOCKING_RETAINED_BRIDGE_AUDIT_2026-05-18.md#first-slice-chosen`
+    - `docs/workstreams/retained-bridge-exit-v1/RBX_M1_020_READINESS_NOTE_2026-05-18.md`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-18---rbx-m1-020-docking-private-split-helper-extraction`
+  - Result:
+    - Added docking-private split geometry in `ecosystem/fret-docking/src/dock/split_geometry.rs`.
+    - Migrated `fret-docking` source/tests off `retained_bridge::resizable_panel_group` and
+      `retained_bridge::ResizeHandle`.
+    - Removed no-user bridge exports/functions: `retained_bridge::ResizeHandle`,
+      `retained_bridge::ResizablePanelGroupStyle`,
+      `retained_bridge::resizable_panel_group::drag_update_fractions`, and
+      `retained_bridge::resizable_panel_group::drag_update_adjacent_fractions`.
+    - Kept `retained_bridge::resizable_panel_group::compute_layout` because
+      `apps/fret-examples/src/docking_arbitration_demo.rs` still consumes it; that is tracked by
+      `RBX-M1-021`.
+  - Decision checkpoint:
+    - Proceed now with the docking-private extraction slice.
+    - Do not force deletion of `retained_bridge::resizable_panel_group` in this task if
+      `apps/fret-examples/src/docking_arbitration_demo.rs` still consumes it.
+    - If the app diagnostics harness remains the only consumer, split that migration to
+      `RBX-M1-021`.
+- [ ] RBX-M1-021 Migrate `docking_arbitration_demo` diagnostics geometry off retained bridge split helpers.
+  - Scope:
+    - `apps/fret-examples/src/docking_arbitration_demo.rs`
+    - `crates/fret-ui/src/retained_bridge.rs` only after repo-wide proof of no remaining users.
+  - Goal:
+    - Remove the final direct app/demo dependency on `retained_bridge::resizable_panel_group`, then
+      delete the bridge helper module if possible.
+  - Evidence:
+    - `docs/workstreams/retained-bridge-exit-v1/RBX_M1_020_READINESS_NOTE_2026-05-18.md`
 - [ ] Identify the minimal declarative primitives missing for docking (if any).
 - [ ] Replace retained subtree hosting in docking with declarative composition where feasible.
 - [ ] Add/upgrade `fretboard-dev diag` scripts to lock in docking drag + tear-off correctness.

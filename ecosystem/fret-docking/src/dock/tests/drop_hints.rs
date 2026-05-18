@@ -593,7 +593,7 @@ fn dock_edge_drop_overlay_previews_insert_into_same_axis_split_slot() {
     next_fractions[anchor_index] = old * 0.5;
     next_fractions.insert(insert_index.min(next_fractions.len()), old * 0.5);
 
-    let computed = resizable::compute_layout(
+    let computed = split_geometry::compute_layout(
         axis,
         split_bounds,
         children_len.saturating_add(1),

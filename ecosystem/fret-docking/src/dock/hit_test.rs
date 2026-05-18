@@ -6,9 +6,9 @@
 use super::layout::dock_hint_pick_zone;
 use super::layout::split_tab_bar;
 use super::prelude_core::*;
+use super::split_geometry;
 use super::tab_bar_geometry::TabBarGeometry;
 use super::tab_bar_kernel::compute_tab_bar_overflow_candidate_geometry;
-use fret_ui::retained_bridge::resizable_panel_group as resizable;
 use fret_ui_headless::tab_strip_hit_test;
 
 pub(super) fn tab_scroll_for_node(tab_scroll: &HashMap<DockNodeId, Px>, node: DockNodeId) -> Px {
@@ -152,7 +152,7 @@ pub(super) fn hit_test_split_handle(
         }
 
         let min_px = min_px_for_split(node, *axis, children);
-        let computed = resizable::compute_layout(
+        let computed = split_geometry::compute_layout(
             *axis,
             bounds,
             children.len(),

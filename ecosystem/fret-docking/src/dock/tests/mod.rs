@@ -6,6 +6,7 @@ use super::layout::{
 use super::prelude_core::*;
 use super::prelude_runtime::*;
 use super::prelude_ui::*;
+use super::split_geometry;
 use super::tab_bar_geometry::TabBarGeometry;
 use super::{
     DockManager, DockPanel, DockPanelContentService, DockPanelFactory, DockPanelRegistry,
@@ -22,7 +23,6 @@ use fret_runtime::DRAG_KIND_DOCK_PANEL;
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
-use fret_ui::retained_bridge::resizable_panel_group as resizable;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 

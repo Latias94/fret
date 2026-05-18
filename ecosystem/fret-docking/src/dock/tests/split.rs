@@ -4,7 +4,7 @@ use super::*;
 fn drag_update_fractions_updates_two_panel_split() {
     let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(300.0), Px(40.0)));
     let fractions = vec![0.5, 0.5];
-    let next = resizable::drag_update_fractions(
+    let next = split_geometry::drag_update_fractions(
         fret_core::Axis::Horizontal,
         bounds,
         2,
@@ -26,7 +26,7 @@ fn drag_update_adjacent_fractions_updates_only_adjacent_panels_in_three_panel_sp
     let fractions = vec![0.33, 0.34, 0.33];
     let min_px = [Px(120.0), Px(120.0), Px(120.0)];
 
-    let layout0 = resizable::compute_layout(
+    let layout0 = split_geometry::compute_layout(
         fret_core::Axis::Horizontal,
         bounds,
         3,
@@ -38,7 +38,7 @@ fn drag_update_adjacent_fractions_updates_only_adjacent_panels_in_three_panel_sp
     let center0 = layout0.handle_centers[0];
 
     // Try to drag far enough that the middle panel would hit its min size.
-    let next = resizable::drag_update_adjacent_fractions(
+    let next = split_geometry::drag_update_adjacent_fractions(
         fret_core::Axis::Horizontal,
         bounds,
         3,
@@ -52,7 +52,7 @@ fn drag_update_adjacent_fractions_updates_only_adjacent_panels_in_three_panel_sp
     )
     .expect("expected drag to update fractions");
 
-    let layout1 = resizable::compute_layout(
+    let layout1 = split_geometry::compute_layout(
         fret_core::Axis::Horizontal,
         bounds,
         3,
@@ -87,7 +87,7 @@ fn drag_update_adjacent_fractions_handle1_keeps_left_panel_stable() {
     let fractions = vec![0.33, 0.34, 0.33];
     let min_px = [Px(120.0), Px(120.0), Px(120.0)];
 
-    let layout0 = resizable::compute_layout(
+    let layout0 = split_geometry::compute_layout(
         fret_core::Axis::Horizontal,
         bounds,
         3,
@@ -99,7 +99,7 @@ fn drag_update_adjacent_fractions_handle1_keeps_left_panel_stable() {
     let center1 = layout0.handle_centers[1];
 
     // Drag handle 1 left: shrink the middle panel, grow the right panel.
-    let next = resizable::drag_update_adjacent_fractions(
+    let next = split_geometry::drag_update_adjacent_fractions(
         fret_core::Axis::Horizontal,
         bounds,
         3,
@@ -113,7 +113,7 @@ fn drag_update_adjacent_fractions_handle1_keeps_left_panel_stable() {
     )
     .expect("expected drag to update fractions");
 
-    let layout1 = resizable::compute_layout(
+    let layout1 = split_geometry::compute_layout(
         fret_core::Axis::Horizontal,
         bounds,
         3,
@@ -172,7 +172,7 @@ fn nary_split_handle_hit_test_reports_correct_handle_index() {
     );
 
     let split_bounds = layout.get(&split).copied().expect("expected split bounds");
-    let computed = resizable::compute_layout(
+    let computed = split_geometry::compute_layout(
         fret_core::Axis::Horizontal,
         split_bounds,
         3,
@@ -212,7 +212,7 @@ fn drag_update_fractions_handles_nan_bounds() {
         Size::new(Px(f32::NAN), Px(300.0)),
     );
     let fractions = vec![0.5, 0.5];
-    let next = resizable::drag_update_fractions(
+    let next = split_geometry::drag_update_fractions(
         fret_core::Axis::Horizontal,
         bounds,
         2,
@@ -389,7 +389,7 @@ fn dock_split_handle_drag_respects_panel_min_size_policy() {
         .expect("expected split root with fractions");
 
     let settings = fret_runtime::DockingInteractionSettings::default();
-    let computed = resizable::compute_layout(
+    let computed = split_geometry::compute_layout(
         fret_core::Axis::Horizontal,
         dock_bounds,
         2,
@@ -526,7 +526,7 @@ fn dock_split_handle_drag_uses_default_viewport_min_size_even_with_policy_instal
         .expect("expected split root with fractions");
 
     let settings = fret_runtime::DockingInteractionSettings::default();
-    let computed = resizable::compute_layout(
+    let computed = split_geometry::compute_layout(
         fret_core::Axis::Horizontal,
         dock_bounds,
         2,
@@ -615,7 +615,7 @@ fn dock_nary_split_handle_drag_updates_only_adjacent_and_respects_min_size_polic
         })
         .expect("expected split root with fractions");
 
-    let layout0 = resizable::compute_layout(
+    let layout0 = split_geometry::compute_layout(
         fret_core::Axis::Horizontal,
         dock_bounds,
         3,
@@ -678,7 +678,7 @@ fn dock_nary_split_handle_drag_updates_only_adjacent_and_respects_min_size_polic
         })
         .expect("expected split root with fractions");
 
-    let layout1 = resizable::compute_layout(
+    let layout1 = split_geometry::compute_layout(
         fret_core::Axis::Horizontal,
         dock_bounds,
         3,

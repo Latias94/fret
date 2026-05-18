@@ -19,6 +19,7 @@ use super::prelude_ui::*;
 use super::services::{
     DockFocusRequestService, DockPanelContentService, DockViewportOverlayHooksService,
 };
+use super::split_geometry;
 use super::tab_bar_geometry::TabBarGeometry;
 use super::tab_bar_geometry::dock_tab_width_for_title;
 use super::tab_overflow::{
@@ -33,7 +34,6 @@ use super::viewport::{
 };
 use super::{DockingPolicy, DockingPolicyService, default_viewport_min_content_size};
 use crate::invalidation::DockInvalidationService;
-use fret_ui::retained_bridge::resizable_panel_group as resizable;
 use fret_ui_headless::easing as headless_easing;
 use fret_ui_headless::tab_strip_controller as tabstrip_controller;
 
@@ -5389,7 +5389,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     else {
                                         return;
                                     };
-                                    if let Some(next) = resizable::drag_update_adjacent_fractions(
+                                    if let Some(next) = split_geometry::drag_update_adjacent_fractions(
                                         divider.handle.axis,
                                         divider.handle.bounds,
                                         children_len,
@@ -5400,7 +5400,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         &divider.min_px,
                                         divider.handle.grab_offset,
                                         *position,
-                                    ) {
+                                    )
+                                    {
                                         dock.graph
                                             .update_split_fractions(divider.handle.split, next);
                                         invalidate_layout = true;

@@ -8,8 +8,7 @@ use fret_core::NodeId;
 use std::any::Any;
 use std::sync::Arc;
 
-pub use crate::resizable_panel_group::{ResizablePanelGroupLayout, ResizablePanelGroupStyle};
-pub use crate::resize_handle::ResizeHandle;
+pub use crate::resizable_panel_group::ResizablePanelGroupLayout;
 pub use crate::text_input::{BoundTextInput, TextInput};
 pub use crate::widget::{
     CommandAvailability, CommandAvailabilityCx, CommandCx, EventCx, Invalidation, LayoutCx,
@@ -96,11 +95,10 @@ impl RetainedSubtreeProps {
 
 /// Unstable mechanism helpers for splitter / panel-group sizing.
 pub mod resizable_panel_group {
-    use fret_core::{Axis, Point, Px, Rect};
+    use fret_core::{Axis, Px, Rect};
 
     use crate::resizable_panel_group::{
-        ResizablePanelGroupLayout, apply_handle_delta, compute_resizable_panel_group_layout,
-        fractions_from_sizes,
+        ResizablePanelGroupLayout, compute_resizable_panel_group_layout,
     };
 
     pub fn compute_layout(
@@ -121,133 +119,6 @@ pub mod resizable_panel_group {
             hit_thickness,
             min_px,
         )
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub fn drag_update_fractions(
-        axis: Axis,
-        bounds: Rect,
-        children_len: usize,
-        fractions: &[f32],
-        handle_ix: usize,
-        gap: Px,
-        hit_thickness: Px,
-        min_px: &[Px],
-        grab_offset: f32,
-        position: Point,
-    ) -> Option<Vec<f32>> {
-        if children_len < 2 || handle_ix + 1 >= children_len {
-            return None;
-        }
-
-        let layout = compute_layout(
-            axis,
-            bounds,
-            children_len,
-            fractions,
-            gap,
-            hit_thickness,
-            min_px,
-        );
-        let old_center = *layout.handle_centers.get(handle_ix)?;
-
-        let axis_pos = match axis {
-            Axis::Horizontal => position.x.0,
-            Axis::Vertical => position.y.0,
-        };
-
-        let desired_center = axis_pos - grab_offset;
-        let desired_delta = desired_center - old_center;
-        if !desired_delta.is_finite() {
-            return None;
-        }
-
-        let mut sizes = layout.sizes.clone();
-        let actual = apply_handle_delta(handle_ix, desired_delta, &mut sizes, &layout.mins);
-        if actual.abs() <= 1.0e-6 {
-            return None;
-        }
-        Some(fractions_from_sizes(&sizes, layout.avail))
-    }
-
-    /// Updates fractions by resizing only the two panels adjacent to the dragged handle.
-    ///
-    /// This matches the "adjacent-only" semantics expected by docking N-ary split sizing:
-    /// moving handle `i` adjusts only panels `i` and `i + 1` (subject to min sizes).
-    #[allow(clippy::too_many_arguments)]
-    pub fn drag_update_adjacent_fractions(
-        axis: Axis,
-        bounds: Rect,
-        children_len: usize,
-        fractions: &[f32],
-        handle_ix: usize,
-        gap: Px,
-        hit_thickness: Px,
-        min_px: &[Px],
-        grab_offset: f32,
-        position: Point,
-    ) -> Option<Vec<f32>> {
-        if children_len < 2 || handle_ix + 1 >= children_len {
-            return None;
-        }
-
-        let layout = compute_layout(
-            axis,
-            bounds,
-            children_len,
-            fractions,
-            gap,
-            hit_thickness,
-            min_px,
-        );
-        let old_center = *layout.handle_centers.get(handle_ix)?;
-
-        let axis_pos = match axis {
-            Axis::Horizontal => position.x.0,
-            Axis::Vertical => position.y.0,
-        };
-
-        let desired_center = axis_pos - grab_offset;
-        let desired_delta = desired_center - old_center;
-        if !desired_delta.is_finite() {
-            return None;
-        }
-
-        let i = handle_ix;
-        let j = handle_ix + 1;
-        if layout.sizes.len() != children_len || layout.mins.len() != children_len {
-            return None;
-        }
-
-        let pair_sum = layout.sizes[i] + layout.sizes[j];
-        if !pair_sum.is_finite() || pair_sum <= 0.0 {
-            return None;
-        }
-
-        let min_i = layout.mins[i].max(0.0);
-        let min_j = layout.mins[j].max(0.0);
-        let max_i = (pair_sum - min_j).clamp(0.0, pair_sum);
-        let min_i = min_i.clamp(0.0, max_i);
-
-        let mut next_i = (layout.sizes[i] + desired_delta).clamp(min_i, max_i);
-        if !next_i.is_finite() {
-            return None;
-        }
-        let mut next_j = (pair_sum - next_i).max(0.0);
-        if next_j < min_j {
-            next_j = min_j.clamp(0.0, pair_sum);
-            next_i = (pair_sum - next_j).clamp(min_i, max_i);
-        }
-
-        let actual = next_i - layout.sizes[i];
-        if actual.abs() <= 1.0e-6 {
-            return None;
-        }
-
-        let mut sizes = layout.sizes.clone();
-        sizes[i] = next_i;
-        sizes[j] = next_j;
-        Some(fractions_from_sizes(&sizes, layout.avail))
     }
 }
 
