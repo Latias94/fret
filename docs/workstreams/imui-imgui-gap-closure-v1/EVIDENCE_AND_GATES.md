@@ -2718,6 +2718,26 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   passed.
 - `git diff --check` passed.
 
+2026-05-19 gallery Separator menu text-role slice:
+
+- Red repro:
+  `cargo nextest run -p fret-ui-gallery --test separator_docs_surface
+  separator_menu_snippet_routes_section_copy_through_shared_roles --no-fail-fast` failed before the
+  fix because `separator/menu.rs` still used local `Theme` plus `ui::text(...).fixed_line_box_px`
+  policy.
+- `apps/fret-ui-gallery/src/ui/snippets/separator/menu.rs` now routes section titles through
+  `text_section_chrome_label(...)` and descriptions through `text_control_readout(...)`.
+- `cargo nextest run -p fret-ui-gallery --test separator_docs_surface
+  separator_menu_snippet_routes_section_copy_through_shared_roles --no-fail-fast` passed.
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test separator_docs_surface` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.
+
 2026-05-19 gallery ContextMenu trigger text-role slice:
 
 - Red repro:

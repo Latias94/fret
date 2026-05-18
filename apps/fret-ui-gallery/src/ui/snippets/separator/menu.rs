@@ -2,10 +2,11 @@ pub const SOURCE: &str = include_str!("menu.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
-use fret_core::Px;
 use fret_ui::Invalidation;
-use fret_ui_kit::IntoUiElement;
-use fret_ui_kit::declarative::viewport_queries;
+use fret_ui_kit::{
+    IntoUiElement,
+    declarative::{text as decl_text, viewport_queries},
+};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn section<H: UiHost>(
@@ -13,19 +14,10 @@ fn section<H: UiHost>(
     title: &'static str,
     description: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
-    let muted_fg = Theme::global(&*cx.app).color_token("muted-foreground");
     ui::v_stack(move |cx| {
         vec![
-            ui::text(title)
-                .text_sm()
-                .font_medium()
-                .fixed_line_box_px(Px(20.0))
-                .into_element(cx),
-            ui::text(description)
-                .text_xs()
-                .fixed_line_box_px(Px(16.0))
-                .text_color(ColorRef::Color(muted_fg))
-                .into_element(cx),
+            decl_text::text_section_chrome_label(cx, title),
+            decl_text::text_control_readout(cx, description),
         ]
     })
     .gap(Space::N1)

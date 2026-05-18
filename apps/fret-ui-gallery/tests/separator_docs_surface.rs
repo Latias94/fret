@@ -132,3 +132,33 @@ fn separator_snippets_stay_docs_aligned_and_copyable() {
         );
     }
 }
+
+#[test]
+fn separator_menu_snippet_routes_section_copy_through_shared_roles() {
+    let menu = include_str!("../src/ui/snippets/separator/menu.rs");
+
+    for needle in [
+        "declarative::{text as decl_text, viewport_queries}",
+        "decl_text::text_section_chrome_label(cx, title)",
+        "decl_text::text_control_readout(cx, description)",
+    ] {
+        assert!(
+            menu.contains(needle),
+            "separator menu snippet should route section copy through shared text roles; missing `{needle}`",
+        );
+    }
+
+    for forbidden in [
+        "let muted_fg = Theme::global(&*cx.app).color_token(\"muted-foreground\");",
+        "ui::text(title)",
+        "ui::text(description)",
+        ".fixed_line_box_px(Px(20.0))",
+        ".fixed_line_box_px(Px(16.0))",
+        ".text_color(ColorRef::Color(muted_fg))",
+    ] {
+        assert!(
+            !menu.contains(forbidden),
+            "separator menu snippet reintroduced local text policy: `{forbidden}`",
+        );
+    }
+}

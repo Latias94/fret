@@ -3914,6 +3914,22 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/separator/menu.rs"),
+            required=[
+                "declarative::{text as decl_text, viewport_queries}",
+                "decl_text::text_section_chrome_label(cx, title)",
+                "decl_text::text_control_readout(cx, description)",
+            ],
+            forbidden=[
+                "let muted_fg = Theme::global(&*cx.app).color_token(\"muted-foreground\");",
+                "ui::text(title)",
+                "ui::text(description)",
+                ".fixed_line_box_px(Px(20.0))",
+                ".fixed_line_box_px(Px(16.0))",
+                ".text_color(ColorRef::Color(muted_fg))",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/toggle/label.rs"),
             required=[
                 "decl_text::text_control_readout(cx, format!(\"Pressed: {pressed_now}\"))",
@@ -4004,6 +4020,17 @@ def main() -> None:
                 "fn table_children_snippet_routes_custom_text_through_shared_roles()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/tests/separator_docs_surface.rs"),
+            required=[
+                "fn separator_menu_snippet_routes_section_copy_through_shared_roles()",
+                "decl_text::text_section_chrome_label(cx, title)",
+                "decl_text::text_control_readout(cx, description)",
+                "ui::text(title)",
+                "ui::text(description)",
             ],
             forbidden=[],
         ),

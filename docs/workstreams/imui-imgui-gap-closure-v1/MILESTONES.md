@@ -659,6 +659,9 @@ Exit criteria:
   chrome-glyph text, while group/tooltip helper copy uses shared control-readout text. The keycap
   text policy stays inside `fret-ui-shadcn::Kbd`, so this remains a caller-composition cleanup
   rather than a shadcn recipe rewrite.
+  2026-05-19 gallery Separator menu text result: the menu snippet's section helper now uses
+  shared section-chrome and control-readout roles instead of local `ui::text(...)` line-box/color
+  policy, keeping separator copy resize-safe while leaving the Separator primitive leaf-shaped.
   2026-05-19 gallery Dialog scroll-row text result: scrollable-content and sticky-footer dialog
   filler rows now use shared list-row label text instead of `ui::raw_text(format!(...))`, keeping
   the scroll proof rows on a fixed-row text role without changing shadcn dialog recipes.
