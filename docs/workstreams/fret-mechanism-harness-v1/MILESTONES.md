@@ -1581,3 +1581,26 @@ hit-test envelope consistency.
   with Nextest run id `fd0237ae-17ff-435d-a416-b34b2e8f5345`.
 - JSON fixture validation passes:
   `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\layout_primitives_v1.json`.
+
+## M91: ViewCache Mixed Flow/Absolute Movement Fixture
+
+Status: complete for clean-reuse ViewCache movement of a mixed flow plus absolute child wrapper.
+
+- Added `view_cache_hit_moving_mixed_absolute_wrapper_updates_bounds_and_hit_test`, a focused
+  declarative ViewCache test that reuses the F172 mixed Pressable flow/absolute envelope while a
+  parent spacer moves the cached subtree from `x=0` to `x=40`.
+- No new mechanism defect was reproduced. The current mechanism keeps the child render closure
+  clean (`renders == 1`), moves the wrapper layout bounds to `40,0 34 x 12`, moves element visual
+  bounds with layout bounds, places the absolute child at `48.5,1.2 25 x 10`, and keeps fallback
+  hit-testing plus runtime routing aligned.
+- The first red assertion was a harness oracle mistake: after the spacer is inserted, the old
+  sample point legitimately hits the expanded outer row. The corrected oracle verifies that the old
+  point no longer hits the cached absolute child and that the translated point does hit it.
+- The focused gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui view_cache_hit_moving_mixed_absolute_wrapper_updates_bounds_and_hit_test --no-fail-fast --no-capture`
+  with Nextest run id `7e88f25a-7ea4-42c2-96d6-781f9da9482d`.
+- The ViewCache family gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui view_cache --no-fail-fast`
+  with Nextest run id `a49ebb69-7e9a-4b66-bc83-7f5f52d35a0e`.
+- Formatting passes:
+  `cargo fmt -p fret-ui --check`.

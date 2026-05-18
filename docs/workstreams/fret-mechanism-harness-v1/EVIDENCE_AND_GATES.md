@@ -130,6 +130,29 @@ Current synthetic evidence anchors:
     `cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_view_cache_lifecycle_matches_oracles -- --nocapture`
   - current result:
     passed.
+- Moving mixed flow/absolute wrapper focused gate:
+  `crates/fret-ui/src/declarative/tests/view_cache.rs`
+  - proof:
+    `view_cache_hit_moving_mixed_absolute_wrapper_updates_bounds_and_hit_test` keeps the ViewCache
+    child render closure clean while a parent spacer moves a mixed flow/absolute `Pressable`
+    subtree. It asserts moved layout bounds, moved element visual bounds, moved absolute-child
+    bounds, fallback hit-testing, and runtime routing via `debug_hit_test_routing`.
+  - first red command:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui view_cache_hit_moving_mixed_absolute_wrapper_updates_bounds_and_hit_test --no-fail-fast --no-capture`
+  - first red result:
+    failed with Nextest run id `ff29d5c0-ec02-45d7-bc41-63956a5020fb`; the harness expected the
+    old point to hit nothing, but it legitimately hit the expanded outer row after spacer
+    insertion. The stale absolute-child hit condition did not reproduce.
+  - current focused command:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui view_cache_hit_moving_mixed_absolute_wrapper_updates_bounds_and_hit_test --no-fail-fast --no-capture`
+  - current focused result:
+    passed with Nextest run id `7e88f25a-7ea4-42c2-96d6-781f9da9482d`.
+  - family command:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui view_cache --no-fail-fast`
+  - family result:
+    passed, 66/66 tests, with Nextest run id `a49ebb69-7e9a-4b66-bc83-7f5f52d35a0e`.
+  - formatting:
+    `cargo fmt -p fret-ui --check` passed.
 
 ## Timer Dispatch Lifecycle Gates
 

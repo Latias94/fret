@@ -904,3 +904,11 @@ date: 2026-05-12
     translation, and both layout-space miss plus visual-space near-edge absolute-child hit. No new
     mechanism defect was reproduced; the F171/F172 absolute-envelope fixes already carry through
     transform visual and hit spaces.
+- [x] Add ViewCache clean-reuse movement coverage for a mixed flow/absolute wrapper.
+  - Result: `view_cache_hit_moving_mixed_absolute_wrapper_updates_bounds_and_hit_test` moves a
+    cached Pressable mixed flow/absolute subtree by inserting a parent spacer while the ViewCache
+    child render closure stays clean. The focused test locks the moved wrapper bounds, moved
+    element visual bounds, moved absolute-child bounds, fallback hit-testing, and runtime routing
+    via `debug_hit_test_routing`. No new mechanism defect was reproduced; the first red assertion
+    was a harness-oracle issue because the old point legitimately hit the expanded outer row, not
+    the moved absolute child.
