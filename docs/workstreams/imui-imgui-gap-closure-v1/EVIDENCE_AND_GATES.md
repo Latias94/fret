@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-05-17
+Last updated: 2026-05-18
 
 ## Evidence Anchors
 
@@ -376,6 +376,11 @@ Run evidence:
   compact_paragraph_text_uses_wrapping_fill_width_layout
   bullet_text_uses_shared_compact_paragraph_role imui_text_wrapped_is_explicit_wrapping_text
   --no-fail-fast`.
+- 2026-05-18: routed IMUI `tooltip_text(...)` / `tooltip_text_with_options(...)` body copy through
+  a private `tooltip_body_text(...)` helper backed by `text_compact_paragraph(...)`. This keeps the
+  convenience tooltip path on dense wrapping body/help text, while rich-content `tooltip(...)`
+  closures remain caller-owned. Gate: `cargo nextest run -p fret-ui-kit --features imui --lib
+  tooltip_body_text_uses_compact_paragraph_role --no-fail-fast`.
 - 2026-05-16: routed IMUI tab triggers and menubar triggers through the shared
   `text_button_label(...)` role. This keeps button-like trigger labels single-line and truncating
   while leaving menu item/selectable row labels out of the button-label role. Gate: `cargo nextest
@@ -1803,6 +1808,15 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 
 - `cargo fmt -p fret-ui-gallery` passed.
 - `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews page_chrome_torture_uses_control_label_roles --no-fail-fast` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 tooltip body text role slice:
+
+- `cargo fmt -p fret-ui-kit` passed.
+- `cargo nextest run -p fret-ui-kit --features imui --lib tooltip_body_text_uses_compact_paragraph_role --no-fail-fast` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.

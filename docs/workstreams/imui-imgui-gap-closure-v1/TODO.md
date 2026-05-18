@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-05-17
+Last updated: 2026-05-18
 
 ## P0 - Source Baseline
 
@@ -269,6 +269,10 @@ Readiness order for the next locally testable review slices:
    2026-05-17 compact paragraph text follow-up: `text_compact_paragraph(...)` now owns dense
    wrapping body copy for editor/IMUI panels, and both `bullet_text(...)` labels and
    `UiWriterImUiFacadeExt::text_wrapped(...)` route through it instead of local `TextProps`.
+   2026-05-18 tooltip body text follow-up: `tooltip_text(...)` / `tooltip_text_with_options(...)`
+   now route their default body copy through a crate-local `tooltip_body_text(...)` helper backed
+   by `text_compact_paragraph(...)`, while rich-content `tooltip(...)` closures still let callers
+   choose their own text role.
    2026-05-16 trigger label reuse follow-up: IMUI tab triggers and menubar triggers now reuse
    `text_button_label(...)` because they are button-like trigger labels.
    2026-05-16 list row text role follow-up: `text_list_row_label(...)` now owns dense

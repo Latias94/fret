@@ -5047,12 +5047,17 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/tooltip_overlay.rs"),
             required=[
+                "fn tooltip_body_text",
+                "crate::declarative::text::text_compact_paragraph(cx, text)",
+                "let element = ui.with_cx_mut(|cx| tooltip_body_text(cx, text));",
+                "tooltip_body_text_uses_compact_paragraph_role",
                 "let Some(trigger_id) = trigger.id() else",
                 "trigger.focused()",
                 "trigger.rect()",
                 "trigger.pointer_hovered_raw()",
             ],
             forbidden=[
+                "ui.text(text);",
                 "trigger.core.",
                 "let Some(trigger_id) = trigger.id else",
                 "trigger.pointer_hovered_raw,",

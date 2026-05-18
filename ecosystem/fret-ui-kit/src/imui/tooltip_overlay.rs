@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
+use fret_authoring::UiWriter;
 use fret_core::{Edges, PointerType, Px, SemanticsRole};
 use fret_ui::action::DismissReason;
 use fret_ui::element::{
-    ColumnProps, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
-    SemanticsDecoration, SpacingLength,
+    AnyElement, ColumnProps, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow,
+    PositionStyle, SemanticsDecoration, SpacingLength,
 };
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
@@ -74,8 +75,16 @@ pub(super) fn tooltip_text_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
     options: TooltipOptions,
 ) -> bool {
     tooltip_with_options(ui, id, trigger, options, move |ui| {
-        ui.text(text);
+        let element = ui.with_cx_mut(|cx| tooltip_body_text(cx, text));
+        ui.add(element);
     })
+}
+
+fn tooltip_body_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    crate::declarative::text::text_compact_paragraph(cx, text)
 }
 
 pub(super) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
@@ -293,7 +302,9 @@ mod tests {
 
     use fret_app::App;
     use fret_authoring::UiWriter;
-    use fret_ui::element::AnyElement;
+    use fret_core::{AppWindowId, Rect, TextOverflow, TextWrap};
+    use fret_ui::element::{ElementKind, Length};
+    use fret_ui::elements;
 
     struct TestWriter<'cx, 'a, H: UiHost> {
         cx: &'cx mut ElementContext<'a, H>,
@@ -329,6 +340,47 @@ mod tests {
                     TooltipOptions::default(),
                 ));
                 assert!(out.is_empty());
+            },
+        );
+    }
+
+    #[test]
+    fn tooltip_body_text_uses_compact_paragraph_role() {
+        let mut app = App::new();
+        elements::with_element_cx(
+            &mut app,
+            AppWindowId::default(),
+            Rect::default(),
+            "imui-tooltip-text-role",
+            |cx| {
+                let mut out = Vec::new();
+                {
+                    let mut ui = TestWriter { cx, out: &mut out };
+
+                    let mounted = tooltip_text_with_options(
+                        &mut ui,
+                        "tooltip",
+                        ResponseExt::default(),
+                        Arc::from("Tooltip body copy may wrap when it needs to explain an action"),
+                        TooltipOptions::default(),
+                    );
+
+                    assert!(!mounted);
+                }
+                assert!(out.is_empty());
+
+                let element = tooltip_body_text(
+                    cx,
+                    "Tooltip body copy may wrap when it needs to explain an action",
+                );
+                let ElementKind::Text(props) = &element.kind else {
+                    panic!("expected tooltip text role to produce a Text element");
+                };
+                assert_eq!(props.layout.size.width, Length::Fill);
+                assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+                assert_eq!(props.layout.flex.shrink, 1.0);
+                assert_eq!(props.wrap, TextWrap::Word);
+                assert_eq!(props.overflow, TextOverflow::Clip);
             },
         );
     }
