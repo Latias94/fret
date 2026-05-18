@@ -1250,6 +1250,81 @@
       }
     },
     {
+      "id": "fractional-render-transform-derives-visual-hit-from-layout-size",
+      "scenario": { "kind": "fractional_render_transform_derives_visual_hit_from_layout_size" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_metric",
+            "target": { "kind": "test_id", "id": "fractional-transformed-pressable" },
+            "metric": "left",
+            "comparison": "eq",
+            "value_px": 0.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "fractional-transformed-pressable" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 0.0 },
+              "size": { "width": 20.0, "height": 20.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_space_metric_delta",
+            "target": { "kind": "test_id", "id": "fractional-transformed-pressable" },
+            "a_space": "visual",
+            "b_space": "layout",
+            "metric": "left",
+            "comparison": "eq",
+            "value_px": 40.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_space_metric_delta",
+            "target": { "kind": "test_id", "id": "fractional-transformed-pressable" },
+            "a_space": "visual",
+            "b_space": "layout",
+            "metric": "top",
+            "comparison": "eq",
+            "value_px": 10.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_space_metric_delta",
+            "target": { "kind": "test_id", "id": "fractional-transformed-pressable" },
+            "a_space": "hit",
+            "b_space": "layout",
+            "metric": "left",
+            "comparison": "eq",
+            "value_px": 40.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_space_metric_delta",
+            "target": { "kind": "test_id", "id": "fractional-transformed-pressable" },
+            "a_space": "hit",
+            "b_space": "layout",
+            "metric": "top",
+            "comparison": "eq",
+            "value_px": 10.0,
+            "eps_px": 0.01
+          },
+          {
+            "kind": "hit_test_sample_not",
+            "sample_id": "fractional-transform-layout-center",
+            "target": { "kind": "test_id", "id": "fractional-transformed-pressable" }
+          },
+          {
+            "kind": "hit_test_sample",
+            "sample_id": "fractional-transform-visual-center",
+            "target": { "kind": "test_id", "id": "fractional-transformed-pressable" }
+          }
+        ]
+      }
+    },
+    {
       "id": "render-transform-mixed-flow-absolute-envelope-matches-visual-hit",
       "scenario": { "kind": "render_transform_mixed_flow_absolute_envelope_matches_visual_hit" },
       "oracle": {

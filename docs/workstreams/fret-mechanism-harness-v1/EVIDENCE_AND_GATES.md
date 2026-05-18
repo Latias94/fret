@@ -53,6 +53,13 @@ It reuses the mixed Pressable flow/absolute envelope case under a `RenderTransfo
 The layout-space near-edge sample misses the absolute child, while the translated visual-space
 near-edge sample hits the absolute child. No new mechanism fix was required.
 
+The same fixture now also includes
+`fractional-render-transform-derives-visual-hit-from-layout-size`. It proves
+`FractionalRenderTransform` computes a size-derived `40 x 10` translation from a `20 x 20`
+interactive child while keeping layout bounds authoritative and moving visual/hit spaces together.
+The layout-space center misses the target, and the translated visual-space center hits it. No new
+mechanism fix was required.
+
 Evidence anchor:
 
 - `crates/fret-ui/src/declarative/host_widget/measure.rs`
@@ -62,7 +69,9 @@ Evidence anchor:
 Run result:
 
 - `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
-  - Result: passed; Nextest run id `fd0237ae-17ff-435d-a416-b34b2e8f5345`.
+  - Result: passed; Nextest run id `8a831141-fd89-4656-be5b-59a3d206bdef`.
+- `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\layout_primitives_v1.json`
+  - Result: passed.
 
 ## Suite Lint Policy Gates
 

@@ -46,6 +46,7 @@ enum LayoutPrimitiveScenario {
     FlexOrderAutoMarginUsesVisualOrder,
     FlexOrderMarginRightAutoUsesVisualOrder,
     FlexOrderMarginTopAutoUsesVisualOrder,
+    FractionalRenderTransformDerivesVisualHitFromLayoutSize,
     VisualVsHitBoundsFollowRenderTransform,
     RenderTransformMixedFlowAbsoluteEnvelopeMatchesVisualHit,
 }
@@ -162,6 +163,28 @@ fn observe_case(
                     visual_center,
                 ));
             }
+            LayoutPrimitiveScenario::FractionalRenderTransformDerivesVisualHitFromLayoutSize => {
+                let layout_center = Point::new(
+                    Px(layout.origin.x.0 + layout.size.width.0 * 0.5),
+                    Px(layout.origin.y.0 + layout.size.height.0 * 0.5),
+                );
+                let visual_center = Point::new(
+                    Px(visual.origin.x.0 + visual.size.width.0 * 0.5),
+                    Px(visual.origin.y.0 + visual.size.height.0 * 0.5),
+                );
+                observed.push_hit_test_sample(hit_sample(
+                    &ui,
+                    &snapshot,
+                    "fractional-transform-layout-center",
+                    layout_center,
+                ));
+                observed.push_hit_test_sample(hit_sample(
+                    &ui,
+                    &snapshot,
+                    "fractional-transform-visual-center",
+                    visual_center,
+                ));
+            }
             LayoutPrimitiveScenario::RenderTransformMixedFlowAbsoluteEnvelopeMatchesVisualHit => {
                 observed.push_hit_test_sample(hit_sample(
                     &ui,
@@ -254,6 +277,7 @@ fn scenario_needs_paint(scenario: &LayoutPrimitiveScenario) -> bool {
     matches!(
         scenario,
         LayoutPrimitiveScenario::VisualVsHitBoundsFollowRenderTransform
+            | LayoutPrimitiveScenario::FractionalRenderTransformDerivesVisualHitFromLayoutSize
             | LayoutPrimitiveScenario::RenderTransformMixedFlowAbsoluteEnvelopeMatchesVisualHit
             | LayoutPrimitiveScenario::TextMeasurePaintWrapWidthColumn
             | LayoutPrimitiveScenario::TextMeasurePaintWrapWidthMaxWidthRow
@@ -1736,6 +1760,23 @@ fn build_scenario(
                         Vec::new()
                     })
                     .test_id("transformed-pressable"),
+                ]
+            })]
+        }
+        LayoutPrimitiveScenario::FractionalRenderTransformDerivesVisualHitFromLayoutSize => {
+            vec![cx.fractional_render_transform(2.0, 0.5, |cx| {
+                let mut props = crate::element::PressableProps::default();
+                props.layout.size.width = Length::Px(Px(20.0));
+                props.layout.size.height = Length::Px(Px(20.0));
+                vec![
+                    cx.pressable_with_id(props, |_cx, _state, id| {
+                        *transformed = Some(TrackedTransform {
+                            element: id,
+                            test_id: "fractional-transformed-pressable",
+                        });
+                        Vec::new()
+                    })
+                    .test_id("fractional-transformed-pressable"),
                 ]
             })]
         }

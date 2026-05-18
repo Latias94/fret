@@ -912,6 +912,13 @@ date: 2026-05-12
     via `debug_hit_test_routing`. No new mechanism defect was reproduced; the first red assertion
     was a harness-oracle issue because the old point legitimately hit the expanded outer row, not
     the moved absolute child.
+- [x] Add FractionalRenderTransform layout/visual/hit contract coverage.
+  - Result: `fractional-render-transform-derives-visual-hit-from-layout-size` now locks
+    size-derived render-transform translation in the layout primitive fixture. A `20 x 20`
+    Pressable wrapped with `FractionalRenderTransform(2.0, 0.5)` keeps layout bounds at
+    `0,0 20 x 20` while visual and hit spaces move by `40 x 10`; the layout-space center misses
+    the target and the translated visual-space center hits it. No new mechanism defect was
+    reproduced.
 - [x] Add renderer-level font trace predicates to the Combobox long-text gate.
   - Result: diagnostics could already capture renderer font trace bundles, but scripts could not
     assert the text-preparation facts directly. The new

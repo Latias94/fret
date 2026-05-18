@@ -1701,3 +1701,20 @@ gate.
 - The full `script_json_roundtrip` gate passes with Nextest run id
   `72429701-d2a0-4d9f-9742-563fc421a36f`.
 - The runtime diagnostics gate passes with run id `1779082851147`.
+
+## M97: FractionalRenderTransform Visual/Hit Fixture
+
+Status: complete for size-derived render-transform visual and hit-space consistency.
+
+- Added `fractional-render-transform-derives-visual-hit-from-layout-size`, a focused layout
+  primitive case that wraps a `20 x 20` Pressable in `FractionalRenderTransform(2.0, 0.5)`.
+- The fixture locks ADR 0082 semantics for the fractional wrapper: layout stays at `0,0 20 x 20`,
+  while visual and hit spaces move by `40 x 10` from the laid-out size.
+- No new mechanism defect was reproduced. The current mechanism computes the fractional transform
+  during layout, records transformed visual bounds during paint, and routes hit-testing through the
+  translated visual center.
+- The gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+  with Nextest run id `8a831141-fd89-4656-be5b-59a3d206bdef`.
+- JSON fixture validation passes:
+  `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\layout_primitives_v1.json`.
