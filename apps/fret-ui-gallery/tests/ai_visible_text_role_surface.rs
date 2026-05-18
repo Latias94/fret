@@ -721,3 +721,46 @@ fn ai_web_preview_uses_shared_text_roles_and_non_text_markers() {
         );
     }
 }
+
+#[test]
+fn ai_chat_demo_uses_shared_outer_text_roles_and_non_text_markers() {
+    let source = include_str!("../src/ui/snippets/ai/chat_demo.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "fn empty_spacer(cx: &mut AppComponentCx<'_>) -> AnyElement",
+        "fn state_marker(cx: &mut AppComponentCx<'_>, test_id: &'static str) -> AnyElement",
+        "role: fret_core::SemanticsRole::Generic",
+        "cx.spacer(SpacerProps",
+        "state_marker(cx, \"ui-gallery-ai-chat-prompt-nonempty\")",
+        "decl_text::text_paragraph",
+        "\"Goal: interactive demo for PromptInput + transcript append.\"",
+        "\"Send triggers a short \\\"loading\\\" window where Stop is available.\"",
+        "decl_text::text_control_readout",
+        "format!(\"Exported markdown: {len} chars\")",
+        "prompt_non_empty_marker.unwrap_or_else(|| empty_spacer(cx))",
+        "exported.unwrap_or_else(|| empty_spacer(cx))",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "chat_demo should route fixed outer text, readouts, and state markers through shared roles; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "role: fret_core::SemanticsRole::Text, test_id: Some(Arc::<str>::from(\"ui-gallery-ai-chat-prompt-nonempty\"))",
+        "cx.text(\"Goal: interactive demo for PromptInput + transcript append.\")",
+        "cx.text(\"Send triggers a short \\\"loading\\\" window where Stop is available.\")",
+        "vec![cx.text(format!(\"Exported markdown: {len} chars\"))]",
+        "prompt_non_empty_marker.unwrap_or_else(|| cx.text(\"\"))",
+        "exported.unwrap_or_else(|| cx.text(\"\"))",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "chat_demo reintroduced bare outer text/readout/marker text: `{forbidden}`"
+        );
+    }
+}

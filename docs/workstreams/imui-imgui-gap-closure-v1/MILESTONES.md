@@ -481,6 +481,10 @@ Exit criteria:
   2026-05-18 AI WebPreview text-role result: WebPreview state diagnostics now use generic
   zero-size spacer markers instead of empty `Text`, navigation glyphs use `text_chrome_glyph(...)`,
   and composable child fixed body/footer copy uses shared section-chrome/paragraph roles.
+  2026-05-18 AI Chat text-role result: Chat's prompt-nonempty diagnostics marker now uses a
+  generic zero-size spacer, empty marker fallbacks use spacers instead of empty `Text`, fixed header
+  instructions use paragraph roles, and exported markdown length uses control-readout text. Chat
+  message body rendering stays app/content-owned for a separate semantics pass.
   2026-05-17 gallery data-grid text result: the UI Gallery DataGrid preview now routes virtualized
   grid cells through `text_table_cell(...)` and the selected-row status line through
   `control_readout_text(...)`.

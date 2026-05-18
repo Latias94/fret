@@ -665,6 +665,13 @@ Run evidence:
   glyphs use `text_chrome_glyph(...)`, and composable child fixed body/footer copy routes through
   shared section-chrome/paragraph roles. Gates: `cargo nextest run -p fret-ui-gallery --test
   ai_visible_text_role_surface --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: extended the AI visible text-role migration to Chat's outer surface. The
+  prompt-nonempty diagnostics marker now uses a generic zero-size spacer, empty marker fallbacks use
+  spacers instead of empty `Text`, fixed header instructions route through paragraph roles, and the
+  exported markdown length readout uses `text_control_readout(...)`. Chat message body rendering
+  remains app/content-owned for a separate semantics pass. Gates: `cargo nextest run -p
+  fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` and `python
+  tools/gate_imui_workstream_source.py`.
 - 2026-05-18: `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
   --no-fail-fast` passed after the large/status snippet slice landed. `python
   tools/gate_imui_workstream_source.py`, `python -m py_compile
@@ -2039,6 +2046,16 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `git diff --check` passed.
 
 2026-05-18 AI WebPreview text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ai_visible_text_role_surface` passed.
+- `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 AI Chat text-role slice:
 
 - `cargo fmt -p fret-ui-gallery` passed.
 - `cargo check -p fret-ui-gallery --test ai_visible_text_role_surface` passed.
