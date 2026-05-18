@@ -2,17 +2,15 @@ pub const SOURCE: &str = include_str!("compact_helper.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
-use fret_core::TextWrap;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let content = ui::container(move |cx| {
-        [ui::text(
+        [decl_text::text_paragraph(
+            cx,
             "Use `scroll_area(cx, |cx| [...])` when you want the compact Fret-first shorthand and do not need explicit scrollbar parts.",
-        )
-        .text_sm()
-        .wrap(TextWrap::Word)
-        .into_element(cx)]
+        )]
     })
     .p_4()
     .into_element(cx);

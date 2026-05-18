@@ -4,17 +4,14 @@ pub const SOURCE: &str = include_str!("demo.rs");
 use fret::{AppComponentCx, UiChild};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 fn tag_row(tag: Arc<str>) -> impl IntoUiElement<fret_app::App> + use<> {
     ui::v_flex(move |cx| {
         vec![
-            ui::text(tag.clone())
-                .text_size_px(Px(14.0))
-                .line_height_px(Px(20.0))
-                .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
-                .into_element(cx),
+            decl_text::text_list_row_label(cx, tag.clone()),
             shadcn::Separator::new()
                 .refine_layout(LayoutRefinement::default().w_full().my(Space::N2))
                 .into_element(cx),
@@ -31,12 +28,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .collect();
 
     let content = ui::container(move |cx| {
-        let heading = ui::text("Tags")
-            .text_size_px(Px(14.0))
-            .line_height_px(Px(14.0))
-            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
-            .font_medium()
-            .into_element(cx);
+        let heading = decl_text::text_section_chrome_label(cx, "Tags");
 
         let tags_list = ui::v_flex(move |cx| {
             let mut out: Vec<AnyElement> = Vec::with_capacity(tags.len());

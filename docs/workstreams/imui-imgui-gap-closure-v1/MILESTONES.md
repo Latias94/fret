@@ -660,6 +660,9 @@ Exit criteria:
   2026-05-19 gallery Drawer goal/diagnostics text result: demo/RTL goal numbers and unit labels
   now use shared control-readout text, nested drawer guidance uses paragraph text, and outside-press
   probe copy/status no longer emits bare `ui::text`.
+  2026-05-19 gallery ScrollArea visible text result: demo/RTL fixed scroll rows now use shared
+  list-row text, headings use section-chrome text, horizontal/nested captions use control-readout
+  text, and usage/compact prose uses paragraph text instead of local text styling.
   2026-05-17 gallery editor preview text result: code-editor, Markdown, and Web IME preview
   headers now use paragraph text for prose, control readout text for fixed status/debug values,
   and button label text for custom pointer-region actions. The slice keeps editor-proof resize

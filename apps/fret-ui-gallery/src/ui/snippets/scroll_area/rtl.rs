@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_ui::element::SemanticsDecoration;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -10,25 +11,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         let content = ui::container(|cx| {
             vec![
                 ui::v_flex(|cx| {
-                    let mut rows: Vec<AnyElement> = vec![
-                        ui::text("العلامات")
-                            .text_sm()
-                            .line_height_px(Px(14.0))
-                            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
-                            .font_medium()
-                            .w_full()
-                            .into_element(cx),
-                    ];
+                    let mut rows: Vec<AnyElement> =
+                        vec![decl_text::text_section_chrome_label(cx, "العلامات")];
 
                     for idx in 1..=40 {
-                        rows.push(
-                            ui::text((41 - idx).to_string())
-                                .text_sm()
-                                .line_height_px(Px(20.0))
-                                .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
-                                .w_full()
-                                .into_element(cx),
-                        );
+                        rows.push(decl_text::text_list_row_label(cx, (41 - idx).to_string()));
                         rows.push(
                             shadcn::Separator::new()
                                 .refine_layout(LayoutRefinement::default().w_full().my(Space::N2))

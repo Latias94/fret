@@ -7,6 +7,7 @@ use fret_core::{Point, Px};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui::scroll::ScrollHandle;
 use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 fn row<H: UiHost>(cx: &mut ElementContext<'_, H>, i: usize) -> impl IntoUiElement<H> + use<H> {
     let zebra = (i % 2) == 0;
@@ -70,8 +71,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         .refine_style(ChromeRefinement::default().rounded(Radius::Md))
                         .refine_layout(LayoutRefinement::default().w_px(Px(160.0)).h_px(Px(96.0)))
                         .into_element(cx);
-                    let caption =
-                        shadcn::raw::typography::muted(format!("Item {i}")).into_element(cx);
+                    let caption = decl_text::text_control_readout(cx, format!("Item {i}"));
                     ui::v_stack(|_cx| vec![card, caption])
                         .gap(Space::N2)
                         .items_start()

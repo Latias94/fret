@@ -2609,6 +2609,37 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   passed.
 - `git diff --check` passed.
 
+2026-05-19 gallery ScrollArea visible text-role slice:
+
+- Red repro:
+  `cargo nextest run -p fret-ui-gallery --test scroll_area_docs_surface
+  scroll_area_snippets_route_visible_text_through_shared_roles --no-fail-fast` failed before the fix
+  because `scroll_area/demo.rs` was missing the shared `decl_text` role import.
+- `apps/fret-ui-gallery/src/ui/snippets/scroll_area/demo.rs` and
+  `apps/fret-ui-gallery/src/ui/snippets/scroll_area/rtl.rs` route fixed tag/RTL rows through
+  `text_list_row_label(...)` and headings through `text_section_chrome_label(...)`.
+- `apps/fret-ui-gallery/src/ui/snippets/scroll_area/usage.rs` and
+  `apps/fret-ui-gallery/src/ui/snippets/scroll_area/compact_helper.rs` route body copy through
+  `text_paragraph(...)`.
+- `apps/fret-ui-gallery/src/ui/snippets/scroll_area/horizontal.rs` and
+  `apps/fret-ui-gallery/src/ui/snippets/scroll_area/nested_scroll_routing.rs` route figure/card
+  captions through `text_control_readout(...)`.
+- First post-fix
+  `cargo nextest run -p fret-ui-gallery --test scroll_area_docs_surface
+  scroll_area_snippets_route_visible_text_through_shared_roles --no-fail-fast` timed out while a
+  background Cargo/Rustc compile continued; Cargo/Rustc processes were allowed to exit.
+- Retried after the compile finished:
+  `cargo nextest run -p fret-ui-gallery --test scroll_area_docs_surface
+  scroll_area_snippets_route_visible_text_through_shared_roles --no-fail-fast` passed.
+- `cargo fmt -p fret-ui-gallery` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `cargo check -p fret-ui-gallery --test scroll_area_docs_surface` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.
+
 2026-05-19 gallery Drawer goal/diagnostics text-role slice:
 
 - Red repro:

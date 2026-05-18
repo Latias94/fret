@@ -2274,6 +2274,14 @@ def main() -> None:
                 "`apps/fret-ui-gallery/src/ui/snippets/drawer/outside_press.rs`",
                 "`apps/fret-ui-gallery/src/ui/snippets/drawer/rtl.rs`",
                 "drawer_remaining_custom_text_uses_shared_roles --no-fail-fast",
+                "2026-05-19 gallery ScrollArea visible text-role slice",
+                "`apps/fret-ui-gallery/src/ui/snippets/scroll_area/demo.rs`",
+                "`apps/fret-ui-gallery/src/ui/snippets/scroll_area/usage.rs`",
+                "`apps/fret-ui-gallery/src/ui/snippets/scroll_area/compact_helper.rs`",
+                "`apps/fret-ui-gallery/src/ui/snippets/scroll_area/rtl.rs`",
+                "`apps/fret-ui-gallery/src/ui/snippets/scroll_area/horizontal.rs`",
+                "`apps/fret-ui-gallery/src/ui/snippets/scroll_area/nested_scroll_routing.rs`",
+                "scroll_area_snippets_route_visible_text_through_shared_roles --no-fail-fast",
                 "2026-05-19 checkbox table-cell text-role slice",
                 "`apps/fret-ui-gallery/src/ui/snippets/checkbox/table.rs`",
                 "checkbox_table_snippet_keeps_fixed_cell_text_on_table_role --no-fail-fast",
@@ -3923,6 +3931,84 @@ def main() -> None:
                 "return cx.text(\"\");",
             ],
             forbidden=[],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/tests/scroll_area_docs_surface.rs"),
+            required=[
+                "fn scroll_area_snippets_route_visible_text_through_shared_roles()",
+                "decl_text::text_list_row_label(cx, tag.clone())",
+                "decl_text::text_paragraph(cx, story)",
+                "decl_text::text_section_chrome_label(cx,",
+                "Photo by {artist}",
+                "Item {i}",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/scroll_area/demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(cx, \"Tags\")",
+                "decl_text::text_list_row_label(cx, tag.clone())",
+            ],
+            forbidden=[
+                "ui::text(\"Tags\")",
+                "ui::text(tag.clone())",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/scroll_area/usage.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph(cx, story)",
+            ],
+            forbidden=[
+                "use fret_core::TextWrap;",
+                "ui::text(story)",
+                ".wrap(TextWrap::Word)",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/scroll_area/compact_helper.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph(",
+            ],
+            forbidden=[
+                "use fret_core::TextWrap;",
+                ".wrap(TextWrap::Word)",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/scroll_area/rtl.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(cx, \"العلامات\")",
+                "decl_text::text_list_row_label(cx, (41 - idx).to_string())",
+            ],
+            forbidden=[
+                "ui::text((41 - idx).to_string())",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/scroll_area/horizontal.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, format!(\"Photo by {artist}\"))",
+            ],
+            forbidden=[
+                "shadcn::raw::typography::muted(format!(\"Photo by {artist}\"))",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/scroll_area/nested_scroll_routing.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, format!(\"Item {i}\"))",
+            ],
+            forbidden=[
+                "shadcn::raw::typography::muted(format!(\"Item {i}\"))",
+            ],
         ),
         SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/doc_layout.rs"),

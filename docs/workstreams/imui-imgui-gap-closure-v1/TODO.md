@@ -715,6 +715,10 @@ Readiness order for the next locally testable review slices:
    2026-05-19 gallery Drawer goal/diagnostics text follow-up: demo and RTL goal readouts now use
    shared control-readout text, nested drawer guidance uses paragraph text, and the outside-press
    probe status/description now use shared paragraph/control-readout roles instead of `ui::text`.
+   2026-05-19 gallery ScrollArea visible text follow-up: copyable ScrollArea snippets now route
+   fixed tag/RTL rows through `text_list_row_label(...)`, section headings through
+   `text_section_chrome_label(...)`, figure captions through `text_control_readout(...)`, and body
+   prose through `text_paragraph(...)` instead of local `ui::text(...)` / raw typography policy.
    2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
    headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
    through `control_readout_text(...)`, and custom pointer-region labels through
