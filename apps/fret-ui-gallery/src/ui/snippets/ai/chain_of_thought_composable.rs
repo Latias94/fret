@@ -4,6 +4,7 @@ pub const SOURCE: &str = include_str!("chain_of_thought_composable.rs");
 use fret::{AppComponentCx, UiChild};
 use fret_core::FontWeight;
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{Items, LayoutRefinement, Space, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -14,7 +15,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .header(ui_ai::ChainOfThoughtHeader::new().children([
                     ui::h_row(|cx| {
                         [
-                            cx.text("Reasoning trace"),
+                            decl_text::text_section_chrome_label(cx, "Reasoning trace"),
                             shadcn::Badge::new("Docs-style children")
                                 .variant(shadcn::BadgeVariant::Secondary)
                                 .label_weight(FontWeight::NORMAL)
@@ -32,7 +33,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     .label_children([
                         ui::h_row(|cx| {
                             [
-                                cx.text("Collect evidence"),
+                                decl_text::text_section_chrome_label(cx, "Collect evidence"),
                                 shadcn::Badge::new("complete")
                                     .variant(shadcn::BadgeVariant::Secondary)
                                     .label_weight(FontWeight::NORMAL)
@@ -45,7 +46,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         .into_element(cx),
                     ])
                     .description_children([
-                        cx.text(
+                        decl_text::text_paragraph(
+                            cx,
                             "Header text, step labels, and descriptions can all be composed from full child elements.",
                         ),
                     ])

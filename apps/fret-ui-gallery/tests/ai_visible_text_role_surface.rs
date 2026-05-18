@@ -379,6 +379,38 @@ fn ai_image_demo_routes_visible_text_through_roles() {
 }
 
 #[test]
+fn ai_chain_of_thought_composable_routes_child_text_through_roles() {
+    let source = include_str!("../src/ui/snippets/ai/chain_of_thought_composable.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_section_chrome_label(cx, \"Reasoning trace\")",
+        "decl_text::text_section_chrome_label(cx, \"Collect evidence\")",
+        "decl_text::text_paragraph",
+        "Header text, step labels, and descriptions can all be composed from full child elements.",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "chain_of_thought_composable should route composed child text through shared roles; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "cx.text(\"Reasoning trace\")",
+        "cx.text(\"Collect evidence\")",
+        "cx.text(\"Header text, step labels, and descriptions can all be composed from full child elements.\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "chain_of_thought_composable reintroduced bare composed child text: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
 fn ai_selector_branch_snippets_use_shared_text_roles_and_non_text_markers() {
     for (name, source, title, body) in [
         (

@@ -522,6 +522,9 @@ Exit criteria:
   2026-05-18 AI Artifact code display status-marker result: the docs action status now preserves
   its diagnostic label on a generic zero-size semantics marker instead of an invisible bare text
   element.
+  2026-05-18 AI ChainOfThought composable text-role result: composed header, step-label, and
+  description child text now uses shared section-chrome and paragraph roles instead of bare
+  `cx.text(...)`.
   2026-05-17 gallery data-grid text result: the UI Gallery DataGrid preview now routes virtualized
   grid cells through `text_table_cell(...)` and the selected-row status line through
   `control_readout_text(...)`.

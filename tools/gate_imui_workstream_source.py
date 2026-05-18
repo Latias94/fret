@@ -468,6 +468,7 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/snippets/ai/code_block_usage.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/environment_variables_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/open_in_chat_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/chain_of_thought_composable.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/message_branch_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/mic_selector_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/model_selector_demo.rs",
@@ -807,6 +808,21 @@ def main() -> None:
             forbidden=[
                 "cx.text(\"OpenIn (AI Elements)\")",
                 "cx.text(\"Selecting a provider emits Effect::OpenUrl (URLs match upstream).\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/chain_of_thought_composable.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(cx, \"Reasoning trace\")",
+                "decl_text::text_section_chrome_label(cx, \"Collect evidence\")",
+                "decl_text::text_paragraph(",
+                "Header text, step labels, and descriptions can all be composed from full child elements.",
+            ],
+            forbidden=[
+                "cx.text(\"Reasoning trace\")",
+                "cx.text(\"Collect evidence\")",
+                "cx.text(\n                            \"Header text, step labels, and descriptions can all be composed from full child elements.\",\n                        )",
             ],
         ),
         SourceCheck(
