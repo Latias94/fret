@@ -6,6 +6,7 @@ use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -185,9 +186,15 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     ),
                     shadcn::card_content(|cx| {
                         vec![
-                            cx.text("Use a main content panel next to Sidebar when controlled."),
-                            cx.text(format!("open={}", open_now)),
-                            cx.text(format!("selected={}", selected_value.as_ref())),
+                            decl_text::text_paragraph(
+                                cx,
+                                "Use a main content panel next to Sidebar when controlled.",
+                            ),
+                            decl_text::text_control_readout(cx, format!("open={}", open_now)),
+                            decl_text::text_control_readout(
+                                cx,
+                                format!("selected={}", selected_value.as_ref()),
+                            ),
                         ]
                     }),
                 ]
@@ -219,7 +226,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     content
         .into_iter()
         .next()
-        .unwrap_or_else(|| cx.text("Missing sidebar controlled content."))
+        .unwrap_or_else(|| decl_text::text_paragraph(cx, "Missing sidebar controlled content."))
 }
 
 // endregion: example

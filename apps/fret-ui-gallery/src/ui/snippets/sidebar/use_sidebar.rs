@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("use_sidebar.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -49,16 +50,28 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     shadcn::card_content(|cx| {
                         vec![
                             shadcn::SidebarTrigger::new().into_element(cx),
-                            cx.text(format!("state={state_label}")),
-                            cx.text(format!("open={open_now}")),
-                            cx.text(format!("open_mobile={open_mobile_now}")),
-                            cx.text(format!(
+                            decl_text::text_control_readout(cx, format!("state={state_label}")),
+                            decl_text::text_control_readout(cx, format!("open={open_now}")),
+                            decl_text::text_control_readout(
+                                cx,
+                                format!("open_mobile={open_mobile_now}"),
+                            ),
+                            decl_text::text_control_readout(cx, format!(
                                 "device_shell_mode={:?}",
                                 sidebar_ctx.device_shell_mode
                             )),
-                            cx.text(format!("width={:.0}px", sidebar_ctx.width.0)),
-                            cx.text(format!("width_icon={:.0}px", sidebar_ctx.width_icon.0)),
-                            cx.text(format!("width_mobile={:.0}px", sidebar_ctx.width_mobile.0)),
+                            decl_text::text_control_readout(
+                                cx,
+                                format!("width={:.0}px", sidebar_ctx.width.0),
+                            ),
+                            decl_text::text_control_readout(
+                                cx,
+                                format!("width_icon={:.0}px", sidebar_ctx.width_icon.0),
+                            ),
+                            decl_text::text_control_readout(
+                                cx,
+                                format!("width_mobile={:.0}px", sidebar_ctx.width_mobile.0),
+                            ),
                         ]
                     }),
                 ]
@@ -79,7 +92,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     content
         .into_iter()
         .next()
-        .unwrap_or_else(|| cx.text("Missing use_sidebar example content."))
+        .unwrap_or_else(|| decl_text::text_paragraph(cx, "Missing use_sidebar example content."))
 }
 
 // endregion: example

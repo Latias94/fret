@@ -6,6 +6,7 @@ use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -121,8 +122,14 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 shadcn::card_header(|cx| ui::children![cx; shadcn::card_title("RTL")]),
                 shadcn::card_content(|cx| {
                     vec![
-                        cx.text("This section validates RTL direction + icon alignment."),
-                        cx.text(format!("active={}", selected_value.as_ref())),
+                        decl_text::text_paragraph(
+                            cx,
+                            "This section validates RTL direction + icon alignment.",
+                        ),
+                        decl_text::text_control_readout(
+                            cx,
+                            format!("active={}", selected_value.as_ref()),
+                        ),
                     ]
                 }),
             ]

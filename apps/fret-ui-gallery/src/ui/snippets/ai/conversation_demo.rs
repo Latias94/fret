@@ -12,6 +12,7 @@ use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::icon;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Justify, LayoutRefinement, Radius, Space};
 use std::sync::Arc;
@@ -182,7 +183,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .unwrap_or(0);
     let instrumentation = cx.semantics(
         SemanticsProps {
-            role: SemanticsRole::Text,
+            role: SemanticsRole::Generic,
             test_id: Some(Arc::<str>::from("ui-ai-conversation-demo-exported-md-len")),
             numeric_value: Some(exported_md_len as f64),
             ..Default::default()
@@ -191,7 +192,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     );
     let instrumentation = cx.semantics(
         SemanticsProps {
-            role: SemanticsRole::Text,
+            role: SemanticsRole::Generic,
             test_id: Some(Arc::<str>::from("ui-ai-conversation-demo-messages-len")),
             numeric_value: Some(messages.len() as f64),
             ..Default::default()
@@ -245,7 +246,7 @@ fn custom_scroll_button(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             ui::h_row(move |cx| {
                 vec![
                     icon::icon(cx, IconId::new_static("lucide.chevrons-down")),
-                    cx.text("Latest"),
+                    decl_text::text_button_label(cx, "Latest"),
                 ]
             })
             .gap(Space::N1)

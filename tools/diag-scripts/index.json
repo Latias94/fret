@@ -8535,6 +8535,29 @@
       ]
     },
     {
+      "id": "ui-gallery-input-disabled-action-state",
+      "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-disabled-action-state.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "action-state",
+        "disabled",
+        "input",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Input page.",
+        "Verifies that a disabled Input exposes disabled=true and set_value=false on the concrete TextInput semantics node."
+      ]
+    },
+    {
       "id": "ui-gallery-input-docs-screenshots",
       "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-docs-screenshots.json",
       "required_capabilities": [

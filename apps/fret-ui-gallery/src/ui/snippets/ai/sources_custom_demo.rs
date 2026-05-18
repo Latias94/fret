@@ -8,6 +8,7 @@ use fret_icons_lucide::generated_ids::lucide;
 use fret_markdown::OnLinkActivate;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::text as decl_text;
 use std::sync::Arc;
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -33,7 +34,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             ui_ai::Source::new(title)
                 .href(href)
                 .on_open_url(on_open_url.clone())
-                .children([cx.text(title), external_icon])
+                .children([decl_text::text_list_row_label(cx, title), external_icon])
                 .into_element(cx)
         })
         .collect::<Vec<_>>();
@@ -45,7 +46,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .into_element_parts(
             ui_ai::SourcesTrigger::new(count)
                 .title("Using {count} citations")
-                .children([cx.text(format!("Using {count} citations")), trigger_chevron]),
+                .children([
+                    decl_text::text_button_label(cx, format!("Using {count} citations")),
+                    trigger_chevron,
+                ]),
             ui_ai::SourcesContent::new(items),
             cx,
         )

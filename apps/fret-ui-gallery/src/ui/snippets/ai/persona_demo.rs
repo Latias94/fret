@@ -11,6 +11,7 @@ use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::model_watch::TrackedModelExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -60,9 +61,12 @@ fn variant_item(
     cx: &mut AppComponentCx<'_>,
     variant: ui_ai::PersonaVariant,
 ) -> shadcn::ToggleGroupItem {
-    shadcn::ToggleGroupItem::new(variant.as_str(), [cx.text(variant.label())])
-        .a11y_label(variant.label())
-        .test_id(format!("ui-ai-persona-demo-variant-{}", variant.as_str()))
+    shadcn::ToggleGroupItem::new(
+        variant.as_str(),
+        [decl_text::text_button_label(cx, variant.label())],
+    )
+    .a11y_label(variant.label())
+    .test_id(format!("ui-ai-persona-demo-variant-{}", variant.as_str()))
 }
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -163,11 +167,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 .size(Px(128.0))
                 .test_id("ui-ai-persona-demo-current")
                 .into_element(cx),
-            cx.text(format!(
-                "{} / {}",
-                current_variant.label(),
-                current_state.label()
-            ))
+            decl_text::text_control_readout(
+                cx,
+                format!("{} / {}", current_variant.label(), current_state.label()),
+            )
             .test_id("ui-ai-persona-demo-current-label"),
         ]
     })

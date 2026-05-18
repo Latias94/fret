@@ -5,6 +5,7 @@ use fret::{AppComponentCx, UiChild};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, Radius, Space,
@@ -62,14 +63,18 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         ])
         .test_id("ui-ai-workflow-node-demo-header")
         .into_element(cx),
-        ui_ai::WorkflowNodeContent::new([
-            cx.text("Node content is app-owned; this is the shadcn-aligned chrome surface.")
-        ])
+        ui_ai::WorkflowNodeContent::new([decl_text::text_compact_paragraph(
+            cx,
+            "Node content is app-owned; this is the shadcn-aligned chrome surface.",
+        )])
         .test_id("ui-ai-workflow-node-demo-content")
         .into_element(cx),
-        ui_ai::WorkflowNodeFooter::new([cx.text("Footer area (optional).")])
-            .test_id("ui-ai-workflow-node-demo-footer")
-            .into_element(cx),
+        ui_ai::WorkflowNodeFooter::new([decl_text::text_control_readout(
+            cx,
+            "Footer area (optional).",
+        )])
+        .test_id("ui-ai-workflow-node-demo-footer")
+        .into_element(cx),
     ])
     .handles(ui_ai::WorkflowNodeHandles {
         target: true,
@@ -149,8 +154,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 .items_center()
                 .layout(LayoutRefinement::default().w_full().min_w_0())
                 .into_element(cx),
-            cx.text("Workflow panel (chrome-only)."),
-            cx.text("Apps own node/canvas engines and interaction policy."),
+            decl_text::text_section_chrome_label(cx, "Workflow panel (chrome-only)."),
+            decl_text::text_compact_paragraph(
+                cx,
+                "Apps own node/canvas engines and interaction policy.",
+            ),
             node,
             {
                 let stage_layout = LayoutRefinement::default()
@@ -224,8 +232,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("Workflow chrome (AI Elements)"),
-            cx.text("UI-only ports of @xyflow/react wrappers (Panel/Toolbar)."),
+            decl_text::text_section_chrome_label(cx, "Workflow chrome (AI Elements)"),
+            decl_text::text_paragraph(
+                cx,
+                "UI-only ports of @xyflow/react wrappers (Panel/Toolbar).",
+            ),
             panel,
         ]
     })

@@ -9,6 +9,7 @@ use fret_ui::action::{ActionCx, OnActivate, UiActionHost};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Justify, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::prelude::*;
@@ -138,7 +139,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                                         )))
                                         .into_element(cx),
                                 ),
-                                _ => Some(cx.text(text.clone())),
+                                _ => Some(decl_text::text_paragraph(cx, text.clone())),
                             },
                             _ => None,
                         })
@@ -230,15 +231,15 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     });
     let frame = cx.container(props, move |_cx| vec![body]);
 
-    let marker = cx
-        .text(format!("last_action={last_action}"))
+    let marker = decl_text::text_control_readout(cx, format!("last_action={last_action}"))
         .test_id("ui-ai-message-usage-last-action");
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("Message usage (AI Elements)")
+            decl_text::text_section_chrome_label(cx, "Message usage (AI Elements)")
                 .test_id("ui-ai-message-usage-title"),
-            cx.text(
+            decl_text::text_paragraph(
+                cx,
                 "Docs-aligned composition: Conversation + Message + MessageActions + PromptInput.",
             ),
             marker,

@@ -6,6 +6,7 @@ use fret::app::AppRenderActionsExt as _;
 use fret::{AppComponentCx, UiChild};
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -133,7 +134,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     shadcn::card_header(|cx| ui::children![cx; shadcn::card_title("Mobile Sheet")]),
                     shadcn::card_content(|cx| {
                         vec![
-                            cx.text(
+                            decl_text::text_paragraph(
+                                cx,
                                 "Open the sidebar via SidebarTrigger. Escape should close and restore focus.",
                             ),
                             shadcn::Button::new("Focus")
@@ -164,7 +166,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     content
         .into_iter()
         .next()
-        .unwrap_or_else(|| cx.text("Missing sidebar mobile content."))
+        .unwrap_or_else(|| decl_text::text_paragraph(cx, "Missing sidebar mobile content."))
 }
 
 // endregion: example

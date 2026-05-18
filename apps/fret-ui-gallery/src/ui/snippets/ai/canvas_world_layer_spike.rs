@@ -5,6 +5,7 @@ use fret::{AppComponentCx, UiChild};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -57,8 +58,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     let header = ui::v_flex(|cx| {
         vec![
-            cx.text("Canvas world layer (spike)"),
-            cx.text("Goal: nodes as element subtrees under a pan/zoom view transform."),
+            decl_text::text_section_chrome_label(cx, "Canvas world layer (spike)"),
+            decl_text::text_paragraph(
+                cx,
+                "Goal: nodes as element subtrees under a pan/zoom view transform.",
+            ),
         ]
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -597,7 +601,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         ])
                         .into_element(cx),
                         ui_ai::WorkflowNodeContent::new([
-                            cx.text(format!("Clicks: {node_clicks_value}"))
+                            decl_text::text_control_readout(
+                                cx,
+                                format!("Clicks: {node_clicks_value}"),
+                            )
                         ])
                         .into_element(cx),
                         ui_ai::WorkflowNodeFooter::new([shadcn::Button::new("Click node")
@@ -1000,7 +1007,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         ])
                         .into_element(cx),
                         ui_ai::WorkflowNodeContent::new([
-                            cx.text("Try zooming/panning and click again.")
+                            decl_text::text_paragraph(cx, "Try zooming/panning and click again.")
                         ])
                         .into_element(cx),
                     ])
@@ -1564,7 +1571,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             }
 
             let layout_settled = layout_settled.then(|| {
-                cx.text("Layout settled").attach_semantics(
+                decl_text::text_control_readout(cx, "Layout settled").attach_semantics(
                     SemanticsDecoration::default()
                         .role(fret_core::SemanticsRole::Text)
                         .test_id("ui-ai-cwl-layout-settled"),
@@ -1575,7 +1582,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 .get_model_copied(&reset_epoch, fret_ui::Invalidation::Layout)
                 .unwrap_or(0);
             let reset_done = (reset_epoch_value > 0).then(|| {
-                cx.text("Reset done").attach_semantics(
+                decl_text::text_control_readout(cx, "Reset done").attach_semantics(
                     SemanticsDecoration::default()
                         .role(fret_core::SemanticsRole::Text)
                         .test_id("ui-ai-cwl-reset-done"),
@@ -1658,7 +1665,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 .read_model_ref(&connections, fret_ui::Invalidation::Layout, |v| v.clone())
                 .unwrap_or_default();
             let connections_committed = (!connections_value.is_empty()).then(|| {
-                cx.text(format!("Connections: {}", connections_value.len()))
+                decl_text::text_control_readout(
+                    cx,
+                    format!("Connections: {}", connections_value.len()),
+                )
                     .attach_semantics(
                         SemanticsDecoration::default()
                             .role(fret_core::SemanticsRole::Text)
@@ -1751,7 +1761,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             }
             out.push(canvas_input_exempt_region(cx, overlay_region, move |cx| {
                     let blocked = (marquee_blocked_count_value > 0).then(|| {
-                        cx.text("Marquee blocked (node hit)").attach_semantics(
+                        decl_text::text_control_readout(cx, "Marquee blocked (node hit)").attach_semantics(
                             SemanticsDecoration::default()
                                 .role(fret_core::SemanticsRole::Text)
                                 .test_id("ui-ai-cwl-marquee-blocked"),
@@ -1769,7 +1779,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         cx.request_frame();
                     }
                     let bounds_ready = bounds_nodes_ready.then(|| {
-                        cx.text(format!("Bounds items: {bounds_count}"))
+                        decl_text::text_control_readout(cx, format!("Bounds items: {bounds_count}"))
                             .attach_semantics(
                                 SemanticsDecoration::default()
                                     .role(fret_core::SemanticsRole::Text)
@@ -1778,7 +1788,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     });
 
                     let connect_overlay_ready = connect_enabled.then(|| {
-                        cx.text("Connect overlay source region ready").attach_semantics(
+                        decl_text::text_control_readout(cx, "Connect overlay source region ready").attach_semantics(
                             SemanticsDecoration::default()
                                 .role(fret_core::SemanticsRole::Text)
                                 .test_id("ui-ai-cwl-connect-overlay-ready"),
@@ -1786,7 +1796,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     });
 
                     let node_dragged = (node_dragged_count_value > 0).then(|| {
-                        cx.text(format!("Node dragged count: {node_dragged_count_value}"))
+                        decl_text::text_control_readout(
+                            cx,
+                            format!("Node dragged count: {node_dragged_count_value}"),
+                        )
                             .attach_semantics(
                                 SemanticsDecoration::default()
                                     .role(fret_core::SemanticsRole::Text)
@@ -1795,7 +1808,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     });
 
                     let selected_nonzero = (selected_count_value > 0).then(|| {
-                        cx.text(format!("Selected nonzero: {selected_count_value}"))
+                        decl_text::text_control_readout(
+                            cx,
+                            format!("Selected nonzero: {selected_count_value}"),
+                        )
                             .attach_semantics(
                                 SemanticsDecoration::default()
                                     .role(fret_core::SemanticsRole::Text)
@@ -1804,28 +1820,28 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     });
 
                     let connect_started = (connect_drag_started_value > 0).then(|| {
-                        cx.text("Connect drag started").attach_semantics(
+                        decl_text::text_control_readout(cx, "Connect drag started").attach_semantics(
                             SemanticsDecoration::default()
                                 .role(fret_core::SemanticsRole::Text)
                                 .test_id("ui-ai-cwl-connect-started"),
                         )
                     });
                     let connect_up = (connect_drag_up_value > 0).then(|| {
-                        cx.text("Connect drag ended").attach_semantics(
+                        decl_text::text_control_readout(cx, "Connect drag ended").attach_semantics(
                             SemanticsDecoration::default()
                                 .role(fret_core::SemanticsRole::Text)
                                 .test_id("ui-ai-cwl-connect-up"),
                         )
                     });
                     let connect_hit = (connect_drag_hit_value > 0).then(|| {
-                        cx.text("Connect drag hit target").attach_semantics(
+                        decl_text::text_control_readout(cx, "Connect drag hit target").attach_semantics(
                             SemanticsDecoration::default()
                                 .role(fret_core::SemanticsRole::Text)
                                 .test_id("ui-ai-cwl-connect-hit"),
                         )
                     });
                     let target_bounds_ready = (node_b_screen_bounds_value.is_some()).then(|| {
-                        cx.text("Target screen bounds ready").attach_semantics(
+                        decl_text::text_control_readout(cx, "Target screen bounds ready").attach_semantics(
                             SemanticsDecoration::default()
                                 .role(fret_core::SemanticsRole::Text)
                                 .test_id("ui-ai-cwl-target-screen-bounds-ready"),
@@ -1839,19 +1855,26 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         commit_connection,
                         fit_view,
                         overlay,
-                        cx.text(format!("Selected: {selected_count_value}"))
+                        decl_text::text_control_readout(
+                            cx,
+                            format!("Selected: {selected_count_value}"),
+                        )
                             .attach_semantics(
                                 SemanticsDecoration::default()
                                     .role(fret_core::SemanticsRole::Text)
                                     .test_id("ui-ai-cwl-selected-count"),
                             ),
-                        cx.text(bounds_text),
-                        cx.text(format!(
-                            "Marquee blocked count: {marquee_blocked_count_value}"
-                        )),
-                        cx.text(format!(
-                            "Connect drag stats: started={connect_drag_started_value} up={connect_drag_up_value} hit={connect_drag_hit_value}"
-                        ))
+                        decl_text::text_control_readout(cx, bounds_text),
+                        decl_text::text_control_readout(
+                            cx,
+                            format!("Marquee blocked count: {marquee_blocked_count_value}"),
+                        ),
+                        decl_text::text_control_readout(
+                            cx,
+                            format!(
+                                "Connect drag stats: started={connect_drag_started_value} up={connect_drag_up_value} hit={connect_drag_hit_value}"
+                            ),
+                        )
                         .attach_semantics(
                             SemanticsDecoration::default()
                                 .role(fret_core::SemanticsRole::Text)
@@ -1880,12 +1903,12 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         );
 
                         [
-                            cx.text(debug_view_text).attach_semantics(
+                            decl_text::text_control_readout(cx, debug_view_text).attach_semantics(
                                 SemanticsDecoration::default()
                                     .role(fret_core::SemanticsRole::Text)
                                     .test_id("ui-ai-cwl-debug-view"),
                             ),
-                            cx.text(debug_nodes_text).attach_semantics(
+                            decl_text::text_control_readout(cx, debug_nodes_text).attach_semantics(
                                 SemanticsDecoration::default()
                                     .role(fret_core::SemanticsRole::Text)
                                     .test_id("ui-ai-cwl-debug-node-canvas-pos"),

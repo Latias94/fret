@@ -603,7 +603,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let exported = exported_value.map(|len| {
         cx.semantics(
             SemanticsProps {
-                role: fret_core::SemanticsRole::Text,
+                role: fret_core::SemanticsRole::Generic,
                 test_id: Some(Arc::<str>::from("ui-gallery-ai-chat-exported-md-len")),
                 ..Default::default()
             },

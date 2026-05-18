@@ -4,6 +4,7 @@ use fret_core::scene::{Color, DrawOrder, Scene, SceneOp};
 use fret_core::{PathCommand, PathConstraints, PathService, PathStyle, StrokeStyle};
 use fret_render_wgpu::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
 
+#[path = "support/readback.rs"]
 mod support;
 
 use support::{pixel_rgba as pixel_bgra, read_texture_rgba8};

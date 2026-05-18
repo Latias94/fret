@@ -5,6 +5,7 @@ use fret::app::AppRenderActionsExt as _;
 use fret::{AppComponentCx, UiChild};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -501,8 +502,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     let body = ui::v_flex(move |cx| {
         vec![
-            cx.text("Workflow editor (engine-backed)"),
-            cx.text("Uses fret-node for graph interaction + fret-ui-ai for chrome wrappers."),
+            decl_text::text_section_chrome_label(cx, "Workflow editor (engine-backed)"),
+            decl_text::text_paragraph(
+                cx,
+                "Uses fret-node for graph interaction + fret-ui-ai for chrome wrappers.",
+            ),
             stage,
         ]
     })

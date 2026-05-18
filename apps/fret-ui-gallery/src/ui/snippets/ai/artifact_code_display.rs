@@ -7,10 +7,34 @@ use fret_core::Px;
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::action::{ActionCx, UiActionHost};
+use fret_ui::element::{AnyElement, Length, SemanticsDecoration, SpacerProps};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
 use std::sync::Arc;
+
+fn empty_spacer(cx: &mut AppComponentCx<'_>) -> AnyElement {
+    cx.spacer(SpacerProps {
+        layout: fret_ui::element::LayoutStyle {
+            size: fret_ui::element::SizeStyle {
+                width: Length::Px(Px(0.0)),
+                height: Length::Px(Px(0.0)),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        min: Px(0.0),
+    })
+}
+
+fn status_marker(cx: &mut AppComponentCx<'_>, status_text: Arc<str>) -> AnyElement {
+    empty_spacer(cx).attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Generic)
+            .label(format!("Status: {}", status_text.as_ref()))
+            .test_id("ui-ai-artifact-docs-status"),
+    )
+}
 
 fn status_action(
     status: Model<Arc<str>>,
@@ -150,23 +174,9 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     .test_id_root("ui-ai-artifact-docs-root")
     .into_element(cx);
 
-    let hidden_status_marker = ui::v_flex(move |cx| {
-        vec![cx.opacity(0.0, |cx| {
-            vec![
-                cx.text(format!("Status: {status_text}"))
-                    .test_id("ui-ai-artifact-docs-status"),
-            ]
-        })]
-    })
-    .layout(
-        LayoutRefinement::default()
-            .w_full()
-            .h_px(Px(0.0))
-            .overflow_hidden(),
-    )
-    .into_element(cx);
+    let status_marker = status_marker(cx, status_text);
 
-    ui::v_flex(move |_cx| vec![artifact, hidden_status_marker])
+    ui::v_flex(move |_cx| vec![artifact, status_marker])
         .layout(LayoutRefinement::default().w_full().min_w_0())
         .gap(Space::N0)
         .items_start()

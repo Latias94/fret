@@ -106,6 +106,39 @@ fn ai_artifact_demo_visible_text_uses_shared_roles() {
 }
 
 #[test]
+fn ai_artifact_code_display_uses_non_text_status_marker() {
+    let source = include_str!("../src/ui/snippets/ai/artifact_code_display.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui::element::{AnyElement, Length, SemanticsDecoration, SpacerProps};",
+        "fn empty_spacer(cx: &mut AppComponentCx<'_>) -> AnyElement",
+        "fn status_marker(cx: &mut AppComponentCx<'_>, status_text: Arc<str>) -> AnyElement",
+        "role(fret_core::SemanticsRole::Generic)",
+        "label(format!(\"Status: {}\", status_text.as_ref()))",
+        "test_id(\"ui-ai-artifact-docs-status\")",
+        "empty_spacer(cx).attach_semantics",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "artifact_code_display should expose status as a non-text semantics marker; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "cx.opacity(0.0",
+        "cx.text(format!(\"Status: {status_text}\"))",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "artifact_code_display reintroduced hidden bare text status marker: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
 fn ai_code_block_demo_visible_text_and_state_marker_use_shared_roles() {
     let source = include_str!("../src/ui/snippets/ai/code_block_demo.rs");
     let canonical = canonicalize_rust_fragment(source);
@@ -308,6 +341,274 @@ fn ai_simple_chrome_snippets_use_shared_title_and_paragraph_roles() {
             assert!(
                 !canonical.contains(&forbidden),
                 "{name} reintroduced bare fixed visible text: `{forbidden}`"
+            );
+        }
+    }
+}
+
+#[test]
+fn ai_image_demo_routes_visible_text_through_roles() {
+    let source = include_str!("../src/ui/snippets/ai/image_demo.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_paragraph",
+        "Image (AI Elements): presentation surface backed by the shared gallery demo asset bundle.",
+        "decl_text::text_control_readout(cx, format!(\"image_ready={}\", image_id.is_some()))",
+        "decl_text::text_control_readout(cx, \"Loading image...\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "image_demo should route fixed visible text and status/loading readouts through shared roles; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "cx.text(format!(\"image_ready={}\", image_id.is_some()))",
+        "cx.text(\"Loading image...\")",
+        "cx.text(\"Image (AI Elements): presentation surface backed by the shared gallery demo asset bundle.\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "image_demo reintroduced bare visible text/readout text: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
+fn ai_chain_of_thought_composable_routes_child_text_through_roles() {
+    let source = include_str!("../src/ui/snippets/ai/chain_of_thought_composable.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_section_chrome_label(cx, \"Reasoning trace\")",
+        "decl_text::text_section_chrome_label(cx, \"Collect evidence\")",
+        "decl_text::text_paragraph",
+        "Header text, step labels, and descriptions can all be composed from full child elements.",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "chain_of_thought_composable should route composed child text through shared roles; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "cx.text(\"Reasoning trace\")",
+        "cx.text(\"Collect evidence\")",
+        "cx.text(\"Header text, step labels, and descriptions can all be composed from full child elements.\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "chain_of_thought_composable reintroduced bare composed child text: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
+fn ai_test_results_composable_routes_custom_child_text_through_roles() {
+    let source = include_str!("../src/ui/snippets/ai/test_results_composable.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_control_readout(cx, \"12 of 15 checks are healthy\")",
+        "decl_text::text_control_readout(cx, \"2 failures still need follow-up\")",
+        "decl_text::text_list_row_label(cx, \"Authentication\")",
+        "decl_text::text_control_readout(cx, \"2 pass / 1 fail\")",
+        "decl_text::text_control_readout(cx, \"FAIL\")",
+        "decl_text::text_control_readout(cx, \"PASS\")",
+        "should reject stale refresh tokens",
+        "should rotate keys after password reset",
+        "decl_text::text_control_readout(cx, \"85ms cold cache\")",
+        "decl_text::text_control_readout(cx, \"41ms warm path\")",
+        "decl_text::text_control_readout(cx, \"12 passing\")",
+        "decl_text::text_control_readout(cx, \"2 failing\")",
+        "decl_text::text_control_readout(cx, \"1 skipped\")",
+        "decl_text::text_control_readout(cx, \"3.25s wall time\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "test_results_composable should route fixed row/readout child text through shared roles; missing `{marker}`"
+        );
+    }
+
+    assert!(
+        canonical.contains(&canonicalize_rust_fragment(
+            "decl_text::text_list_row_label"
+        )),
+        "test_results_composable should use list-row labels for fixed suite/test names"
+    );
+
+    for forbidden in [
+        "cx.text(\"12 of 15 checks are healthy\")",
+        "cx.text(\"2 failures still need follow-up\")",
+        "cx.text(\"Authentication\")",
+        "cx.text(\"2 pass / 1 fail\")",
+        "cx.text(\"FAIL\")",
+        "cx.text(\"should reject stale refresh tokens\")",
+        "cx.text(\"85ms cold cache\")",
+        "cx.text(\"PASS\")",
+        "cx.text(\"should rotate keys after password reset\")",
+        "cx.text(\"41ms warm path\")",
+        "cx.text(\"12 passing\")",
+        "cx.text(\"2 failing\")",
+        "cx.text(\"1 skipped\")",
+        "cx.text(\"3.25s wall time\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "test_results_composable reintroduced bare fixed row/readout text: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
+fn ai_workflow_snippets_route_fixed_text_through_roles() {
+    let snippets: &[(&str, &str, &[&str], &[&str])] = &[
+        (
+            "workflow_panel_demo",
+            include_str!("../src/ui/snippets/ai/workflow_panel_demo.rs"),
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(cx, \"WorkflowPanel (AI Elements)\")",
+                "decl_text::text_compact_paragraph",
+                "Container chrome only. Apps own placement + interactions.",
+                "WorkflowPanel (AI Elements): bordered container chrome.",
+            ],
+            &[
+                "cx.text(\"WorkflowPanel (AI Elements)\")",
+                "cx.text(\"Container chrome only. Apps own placement + interactions.\")",
+                "cx.text(\"WorkflowPanel (AI Elements): bordered container chrome.\")",
+            ],
+        ),
+        (
+            "workflow_toolbar_demo",
+            include_str!("../src/ui/snippets/ai/workflow_toolbar_demo.rs"),
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label",
+                "WorkflowToolbar (AI Elements): compact tool row chrome.",
+            ],
+            &["cx.text(\"WorkflowToolbar (AI Elements): compact tool row chrome.\")"],
+        ),
+        (
+            "workflow_controls_demo",
+            include_str!("../src/ui/snippets/ai/workflow_controls_demo.rs"),
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, format!(\"clicks={clicks}\"))",
+                "WorkflowControls (AI Elements): button stack chrome.",
+            ],
+            &[
+                "cx.text(format!(\"clicks={clicks}\"))",
+                "cx.text(\"WorkflowControls (AI Elements): button stack chrome.\")",
+            ],
+        ),
+        (
+            "workflow_canvas_demo",
+            include_str!("../src/ui/snippets/ai/workflow_canvas_demo.rs"),
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "WorkflowCanvas (AI Elements): pan/zoom host + overlay slot.",
+            ],
+            &["cx.text(\"WorkflowCanvas (AI Elements): pan/zoom host + overlay slot.\")"],
+        ),
+        (
+            "workflow_connection_demo",
+            include_str!("../src/ui/snippets/ai/workflow_connection_demo.rs"),
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "WorkflowConnection (AI Elements): in-progress connection line chrome.",
+            ],
+            &["cx.text(\"WorkflowConnection (AI Elements): in-progress connection line chrome.\")"],
+        ),
+        (
+            "workflow_edge_demo",
+            include_str!("../src/ui/snippets/ai/workflow_edge_demo.rs"),
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "WorkflowEdge (AI Elements): dashed + animated stroke renderers.",
+            ],
+            &["cx.text(\"WorkflowEdge (AI Elements): dashed + animated stroke renderers.\")"],
+        ),
+        (
+            "workflow_node_demo",
+            include_str!("../src/ui/snippets/ai/workflow_node_demo.rs"),
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_compact_paragraph",
+                "Node content slot: apps own interaction + state.",
+                "Use handles as a styling seam (not an engine).",
+                "decl_text::text_control_readout(cx, \"Footer slot\")",
+                "WorkflowNode (AI Elements): header/content/footer chrome.",
+            ],
+            &[
+                "cx.text(\"Node content slot: apps own interaction + state.\")",
+                "cx.text(\"Use handles as a styling seam (not an engine).\")",
+                "cx.text(\"Footer slot\")",
+                "cx.text(\"WorkflowNode (AI Elements): header/content/footer chrome.\")",
+            ],
+        ),
+        (
+            "workflow_chrome_demo",
+            include_str!("../src/ui/snippets/ai/workflow_chrome_demo.rs"),
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_compact_paragraph",
+                "Node content is app-owned; this is the shadcn-aligned chrome surface.",
+                "decl_text::text_control_readout",
+                "Footer area (optional).",
+                "Workflow panel (chrome-only).",
+                "Apps own node/canvas engines and interaction policy.",
+                "Workflow chrome (AI Elements)",
+                "UI-only ports of @xyflow/react wrappers (Panel/Toolbar).",
+            ],
+            &[
+                "cx.text(\"Node content is app-owned; this is the shadcn-aligned chrome surface.\")",
+                "cx.text(\"Footer area (optional).\")",
+                "cx.text(\"Workflow panel (chrome-only).\")",
+                "cx.text(\"Apps own node/canvas engines and interaction policy.\")",
+                "cx.text(\"Workflow chrome (AI Elements)\")",
+                "cx.text(\"UI-only ports of @xyflow/react wrappers (Panel/Toolbar).\")",
+            ],
+        ),
+        (
+            "workflow_node_graph_demo",
+            include_str!("../src/ui/snippets/ai/workflow_node_graph_demo.rs"),
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "Workflow editor (engine-backed)",
+                "Uses fret-node for graph interaction + fret-ui-ai for chrome wrappers.",
+            ],
+            &[
+                "cx.text(\"Workflow editor (engine-backed)\")",
+                "cx.text(\"Uses fret-node for graph interaction + fret-ui-ai for chrome wrappers.\")",
+            ],
+        ),
+    ];
+
+    for (name, source, required, forbidden) in snippets {
+        let canonical = canonicalize_rust_fragment(source);
+        for marker in *required {
+            let marker = canonicalize_rust_fragment(marker);
+            assert!(
+                canonical.contains(&marker),
+                "{name} should route fixed workflow text through shared roles; missing `{marker}`"
+            );
+        }
+        for marker in *forbidden {
+            let marker = canonicalize_rust_fragment(marker);
+            assert!(
+                !canonical.contains(&marker),
+                "{name} reintroduced bare workflow text: `{marker}`"
             );
         }
     }
@@ -583,6 +884,32 @@ fn ai_tool_and_suggestions_use_shared_text_roles_and_non_text_markers() {
             "tool_demo reintroduced bare section label text: `{bare_marker}`"
         );
     }
+
+    let suggestions =
+        canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/suggestions_demo.rs"));
+    for marker in [
+        "decl_text::text_button_label(cx, \"Summarize the release notes\")",
+        "decl_text::text_button_label(cx, \"Draft a Tokyo travel brief\")",
+        "decl_text::text_paragraph",
+        "Composable children let callers add icons or extra inline structure while the suggestion payload stays app-owned.",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            suggestions.contains(&marker),
+            "suggestions_demo should route custom children labels/body text through shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(\"Summarize the release notes\")",
+        "cx.text(\"Draft a Tokyo travel brief\")",
+        "cx.text(\"Composable children let callers add icons or extra inline structure while the suggestion payload stays app-owned.\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !suggestions.contains(&forbidden),
+            "suggestions_demo reintroduced bare custom children text: `{forbidden}`"
+        );
+    }
 }
 
 #[test]
@@ -723,6 +1050,219 @@ fn ai_web_preview_uses_shared_text_roles_and_non_text_markers() {
 }
 
 #[test]
+fn ai_reasoning_hooks_and_transcript_torture_use_shared_text_roles() {
+    let reasoning_hooks =
+        canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/reasoning_hooks.rs"));
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_control_readout",
+        "Reasoning controller unavailable",
+        "decl_text::text_control_readout(cx, status)",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            reasoning_hooks.contains(&marker),
+            "reasoning_hooks should route custom trigger status text through shared readout roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(\"Reasoning controller unavailable\")",
+        "cx.text(status)",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !reasoning_hooks.contains(&forbidden),
+            "reasoning_hooks reintroduced bare status text: `{forbidden}`"
+        );
+    }
+
+    let transcript =
+        canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/transcript_torture.rs"));
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_section_chrome_label",
+        "Goal: baseline harness for long AI transcripts (scrolling + virtualization + caching).",
+        "decl_text::text_paragraph",
+        "Use scripted wheel-scroll to validate view-cache reuse stability and stale-paint safety.",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            transcript.contains(&marker),
+            "transcript_torture should route fixed header copy through shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(\"Goal: baseline harness for long AI transcripts (scrolling + virtualization + caching).\")",
+        "cx.text(\"Use scripted wheel-scroll to validate view-cache reuse stability and stale-paint safety.\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !transcript.contains(&forbidden),
+            "transcript_torture reintroduced bare header text: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
+fn ai_custom_children_snippets_use_shared_text_roles() {
+    let environment = canonicalize_rust_fragment(include_str!(
+        "../src/ui/snippets/ai/environment_variables_custom_children.rs"
+    ));
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_section_chrome_label(cx, \"Runtime Secrets\")",
+        "decl_text::text_code_label(cx, \"Primary API Key\")",
+        "decl_text::text_control_readout(cx, \"Secret\")",
+        "decl_text::text_code_label",
+        "App-owned masked preview",
+        "decl_text::text_paragraph(cx, \"Custom children take ownership of the visible content.\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            environment.contains(&marker),
+            "environment_variables_custom_children should route custom child text through shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(\"Runtime Secrets\")",
+        "cx.text(\"Primary API Key\")",
+        "cx.text(\"Secret\")",
+        "cx.text(\"App-owned masked preview\")",
+        "cx.text(\"Custom children take ownership of the visible content.\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !environment.contains(&forbidden),
+            "environment_variables_custom_children reintroduced bare text: `{forbidden}`"
+        );
+    }
+
+    let package =
+        canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/package_info_demo.rs"));
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_code_label",
+        "pkg/react",
+        "decl_text::text_button_label(cx, \"Breaking\")",
+        "18.2.0 -> 19.0.0 (custom)",
+        "decl_text::text_paragraph",
+        "Custom summary supplied by the app.",
+        "decl_text::text_code_label(cx, \"react-dom @ ^19.0.0\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            package.contains(&marker),
+            "package_info_demo should route custom package text through shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(\"pkg/react\")",
+        "cx.text(\"Breaking\")",
+        "cx.text(\"18.2.0 -> 19.0.0 (custom)\")",
+        "cx.text(\"Custom summary supplied by the app.\")",
+        "cx.text(\"react-dom @ ^19.0.0\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !package.contains(&forbidden),
+            "package_info_demo reintroduced bare custom package text: `{forbidden}`"
+        );
+    }
+
+    let inline = canonicalize_rust_fragment(include_str!(
+        "../src/ui/snippets/ai/inline_citation_demo.rs"
+    ));
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_paragraph",
+        "The technology continues to evolve rapidly, with new breakthroughs being announced regularly",
+        "According to recent studies, artificial intelligence has shown remarkable progress in natural language processing.",
+        "decl_text::text_paragraph(cx, \".\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            inline.contains(&marker),
+            "inline_citation_demo should route citation prose through shared paragraph roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(\"The technology continues to evolve rapidly, with new breakthroughs being announced regularly\")",
+        "cx.text(\"According to recent studies, artificial intelligence has shown remarkable progress in natural language processing.\")",
+        "cx.text(\".\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !inline.contains(&forbidden),
+            "inline_citation_demo reintroduced bare citation text: `{forbidden}`"
+        );
+    }
+
+    let persona = canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/persona_demo.rs"));
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_button_label(cx, variant.label())",
+        "decl_text::text_control_readout",
+        "ui-ai-persona-demo-current-label",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            persona.contains(&marker),
+            "persona_demo should route toggle labels/readouts through shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in ["cx.text(variant.label())", "cx.text(format!("] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !persona.contains(&forbidden),
+            "persona_demo reintroduced bare persona text: `{forbidden}`"
+        );
+    }
+
+    let persona_custom = canonicalize_rust_fragment(include_str!(
+        "../src/ui/snippets/ai/persona_custom_visual.rs"
+    ));
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_control_readout(cx, \"Command\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            persona_custom.contains(&marker),
+            "persona_custom_visual should route custom center label through shared roles; missing `{marker}`"
+        );
+    }
+    let forbidden = canonicalize_rust_fragment("cx.text(\"Command\")");
+    assert!(
+        !persona_custom.contains(&forbidden),
+        "persona_custom_visual reintroduced bare custom center text: `{forbidden}`"
+    );
+
+    let sources =
+        canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/sources_custom_demo.rs"));
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_list_row_label(cx, title)",
+        "decl_text::text_button_label(cx, format!(\"Using {count} citations\"))",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            sources.contains(&marker),
+            "sources_custom_demo should route custom source labels through shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(title)",
+        "cx.text(format!(\"Using {count} citations\"))",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !sources.contains(&forbidden),
+            "sources_custom_demo reintroduced bare source text: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
 fn ai_chat_demo_uses_shared_outer_text_roles_and_non_text_markers() {
     let source = include_str!("../src/ui/snippets/ai/chat_demo.rs");
     let canonical = canonicalize_rust_fragment(source);
@@ -739,6 +1279,7 @@ fn ai_chat_demo_uses_shared_outer_text_roles_and_non_text_markers() {
         "\"Send triggers a short \\\"loading\\\" window where Stop is available.\"",
         "decl_text::text_control_readout",
         "format!(\"Exported markdown: {len} chars\")",
+        "test_id: Some(Arc::<str>::from(\"ui-gallery-ai-chat-exported-md-len\"))",
         "prompt_non_empty_marker.unwrap_or_else(|| empty_spacer(cx))",
         "exported.unwrap_or_else(|| empty_spacer(cx))",
     ] {
@@ -751,6 +1292,7 @@ fn ai_chat_demo_uses_shared_outer_text_roles_and_non_text_markers() {
 
     for forbidden in [
         "role: fret_core::SemanticsRole::Text, test_id: Some(Arc::<str>::from(\"ui-gallery-ai-chat-prompt-nonempty\"))",
+        "role: fret_core::SemanticsRole::Text, test_id: Some(Arc::<str>::from(\"ui-gallery-ai-chat-exported-md-len\"))",
         "cx.text(\"Goal: interactive demo for PromptInput + transcript append.\")",
         "cx.text(\"Send triggers a short \\\"loading\\\" window where Stop is available.\")",
         "vec![cx.text(format!(\"Exported markdown: {len} chars\"))]",
@@ -779,6 +1321,12 @@ fn ai_prompt_input_provider_and_docs_use_shared_text_roles_and_non_text_markers(
             include_str!("../src/ui/snippets/ai/prompt_input_docs_demo.rs"),
             "Prompt Input (AI Elements)",
             "Docs-aligned chat example: transcript + prompt composer, add attachments/screenshot actions, model picker, and upstream-like onSubmit(message).",
+        ),
+        (
+            "prompt_input_referenced_sources_demo",
+            include_str!("../src/ui/snippets/ai/prompt_input_referenced_sources_demo.rs"),
+            "Prompt Input Referenced Sources (AI Elements)",
+            "Add a source and remove it via the chip's hover affordance.",
         ),
     ] {
         let canonical = canonicalize_rust_fragment(source);
@@ -947,6 +1495,312 @@ fn ai_reasoning_stack_trace_and_voice_selector_use_shared_chrome_text_roles() {
         assert!(
             !voice_selector.contains(&forbidden),
             "voice_selector_demo reintroduced bare diagnostics readout text: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
+fn ai_confirmation_snippets_use_shared_content_text_roles() {
+    for (name, source) in [
+        (
+            "confirmation_demo",
+            include_str!("../src/ui/snippets/ai/confirmation_demo.rs"),
+        ),
+        (
+            "confirmation_accepted",
+            include_str!("../src/ui/snippets/ai/confirmation_accepted.rs"),
+        ),
+        (
+            "confirmation_rejected",
+            include_str!("../src/ui/snippets/ai/confirmation_rejected.rs"),
+        ),
+    ] {
+        let canonical = canonicalize_rust_fragment(source);
+
+        for marker in [
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_paragraph(cx, \"This tool wants to delete the file\")",
+            "decl_text::text_code_wrap(cx, \"/tmp/example.txt\")",
+            "decl_text::text_paragraph(cx, \". Do you approve this action?\")",
+            "decl_text::text_control_readout(cx, \"You approved this tool execution\")",
+            "decl_text::text_control_readout(cx, \"You rejected this tool execution\")",
+        ] {
+            let marker = canonicalize_rust_fragment(marker);
+            assert!(
+                canonical.contains(&marker),
+                "{name} should route confirmation request/result content through shared roles; missing `{marker}`"
+            );
+        }
+
+        for forbidden in [
+            "cx.text(\"This tool wants to delete the file\")",
+            "shadcn::raw::typography::inline_code(\"/tmp/example.txt\").into_element(cx)",
+            "cx.text(\". Do you approve this action?\")",
+            "cx.text(\"You approved this tool execution\")",
+            "cx.text(\"You rejected this tool execution\")",
+        ] {
+            let forbidden = canonicalize_rust_fragment(forbidden);
+            assert!(
+                !canonical.contains(&forbidden),
+                "{name} reintroduced bare confirmation content text: `{forbidden}`"
+            );
+        }
+    }
+
+    let demo =
+        canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/confirmation_demo.rs"));
+    for marker in [
+        "decl_text::text_section_chrome_label(cx, \"Confirmation (AI Elements)\")",
+        "decl_text::text_paragraph",
+        "\"Docs-aligned tool approval workflow: request a destructive action, confirm or reject it, then inspect the final output state.\"",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            demo.contains(&marker),
+            "confirmation_demo should route fixed outer title/body through shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(\"Confirmation (AI Elements)\")",
+        "cx.text(\"Docs-aligned tool approval workflow: request a destructive action, confirm or reject it, then inspect the final output state.\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !demo.contains(&forbidden),
+            "confirmation_demo reintroduced bare outer text: `{forbidden}`"
+        );
+    }
+
+    let request = canonicalize_rust_fragment(include_str!(
+        "../src/ui/snippets/ai/confirmation_request.rs"
+    ));
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_paragraph",
+        "\"This tool wants to execute a query on the production database:\"",
+        "decl_text::text_code_wrap",
+        "SELECT * FROM users WHERE role = 'admin'",
+        "decl_text::text_control_readout(cx, \"You approved this tool execution\")",
+        "decl_text::text_control_readout(cx, \"You rejected this tool execution\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            request.contains(&marker),
+            "confirmation_request should route query request/result content through shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(\"This tool wants to execute a query on the production database:\")",
+        "cx.text(\"You approved this tool execution\")",
+        "cx.text(\"You rejected this tool execution\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !request.contains(&forbidden),
+            "confirmation_request reintroduced bare confirmation content text: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
+fn ai_task_demo_uses_shared_content_text_roles() {
+    let source = include_str!("../src/ui/snippets/ai/task_demo.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::{icon, style as decl_style, text as decl_text};",
+        "decl_text::text_list_row_label(cx, text)",
+        "decl_text::text_code_wrap(cx, file_name)",
+        "decl_text::text_section_chrome_label(cx, \"Task (AI Elements)\")",
+        "decl_text::text_paragraph",
+        "\"Collapsible task list demo aligned with the official AI Elements Task structure.\"",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "task_demo should route task rows, file labels, and fixed outer text through shared roles; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "cx.text(text)",
+        "cx.text(file_name)",
+        "cx.text(\"Task (AI Elements)\")",
+        "cx.text(\"Collapsible task list demo aligned with the official AI Elements Task structure.\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "task_demo reintroduced bare task content text: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
+fn ai_conversation_demo_uses_non_text_instrumentation_and_button_label() {
+    let source = include_str!("../src/ui/snippets/ai/conversation_demo.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "role: SemanticsRole::Generic",
+        "test_id: Some(Arc::<str>::from(\"ui-ai-conversation-demo-exported-md-len\"))",
+        "test_id: Some(Arc::<str>::from(\"ui-ai-conversation-demo-messages-len\"))",
+        "numeric_value: Some(exported_md_len as f64)",
+        "numeric_value: Some(messages.len() as f64)",
+        "decl_text::text_button_label(cx, \"Latest\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "conversation_demo should keep diagnostics out of text layout and custom button text on the shared role; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "role: SemanticsRole::Text",
+        "role: fret_core::SemanticsRole::Text",
+        "cx.text(\"Latest\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "conversation_demo reintroduced text-role diagnostics or bare button text: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
+fn ai_usage_snippets_use_shared_chrome_and_paragraph_roles() {
+    let attachments =
+        canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/attachments_usage.rs"));
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_paragraph",
+        "Display uploaded files in a message surface with a shared Attachments container. The image preview comes from the gallery demo asset bundle through a logical asset request so the snippet teaches shipped asset ownership.",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            attachments.contains(&marker),
+            "attachments_usage should route fixed explanatory copy through paragraph text; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(\"Display uploaded files in a message surface with a shared Attachments container. The image preview comes from the gallery demo asset bundle through a logical asset request so the snippet teaches shipped asset ownership.\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !attachments.contains(&forbidden),
+            "attachments_usage reintroduced bare fixed explanatory text: `{forbidden}`"
+        );
+    }
+
+    let stack_trace =
+        canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/stack_trace_usage.rs"));
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_section_chrome_label(cx, \"StackTrace usage\")",
+        "decl_text::text_paragraph",
+        "Minimal compound-parts composition aligned with the official AI Elements usage example.",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            stack_trace.contains(&marker),
+            "stack_trace_usage should route fixed title/body text through shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "cx.text(\"StackTrace usage\")",
+        "cx.text(\"Minimal compound-parts composition aligned with the official AI Elements usage example.\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !stack_trace.contains(&forbidden),
+            "stack_trace_usage reintroduced bare fixed text: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
+fn ai_message_usage_uses_shared_outer_and_user_text_roles() {
+    let source = include_str!("../src/ui/snippets/ai/message_usage.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_paragraph(cx, text.clone())",
+        "decl_text::text_control_readout(cx, format!(\"last_action={last_action}\"))",
+        "decl_text::text_section_chrome_label(cx, \"Message usage (AI Elements)\")",
+        "decl_text::text_paragraph",
+        "Docs-aligned composition: Conversation + Message + MessageActions + PromptInput.",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "message_usage should route user content, readout, and fixed outer copy through shared roles; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "_ => Some(cx.text(text.clone()))",
+        "cx.text(format!(\"last_action={last_action}\"))",
+        "cx.text(\"Message usage (AI Elements)\")",
+        "cx.text(\"Docs-aligned composition: Conversation + Message + MessageActions + PromptInput.\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "message_usage reintroduced bare user/readout/outer text: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
+fn ai_canvas_world_spike_routes_visible_text_through_roles() {
+    let source = include_str!("../src/ui/snippets/ai/canvas_world_layer_spike.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_section_chrome_label(cx, \"Canvas world layer (spike)\")",
+        "decl_text::text_paragraph",
+        "Goal: nodes as element subtrees under a pan/zoom view transform.",
+        "format!(\"Clicks: {node_clicks_value}\")",
+        "decl_text::text_paragraph(cx, \"Try zooming/panning and click again.\")",
+        "decl_text::text_control_readout(cx, \"Layout settled\")",
+        "decl_text::text_control_readout(cx, \"Reset done\")",
+        "format!(\"Connections: {}\", connections_value.len())",
+        "decl_text::text_control_readout(cx, \"Marquee blocked (node hit)\")",
+        "format!(\"Selected: {selected_count_value}\")",
+        "decl_text::text_control_readout(cx, bounds_text)",
+        "decl_text::text_control_readout(cx, debug_view_text)",
+        "decl_text::text_control_readout(cx, debug_nodes_text)",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "canvas_world_layer_spike should route visible chrome/readouts through shared text roles; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "cx.text(\"Canvas world layer (spike)\")",
+        "cx.text(\"Goal: nodes as element subtrees under a pan/zoom view transform.\")",
+        "cx.text(format!(\"Clicks: {node_clicks_value}\"))",
+        "cx.text(\"Try zooming/panning and click again.\")",
+        "cx.text(\"Layout settled\")",
+        "cx.text(\"Reset done\")",
+        "cx.text(format!(\"Connections: {}\", connections_value.len()))",
+        "cx.text(\"Marquee blocked (node hit)\")",
+        "cx.text(format!(\"Selected: {selected_count_value}\"))",
+        "cx.text(bounds_text)",
+        "cx.text(debug_view_text)",
+        "cx.text(debug_nodes_text)",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "canvas_world_layer_spike reintroduced bare visible text: `{forbidden}`"
         );
     }
 }

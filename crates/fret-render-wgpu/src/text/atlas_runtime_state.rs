@@ -1,7 +1,8 @@
-#[cfg(not(target_arch = "wasm32"))]
-use super::DebugGlyphAtlasLookup;
 use super::TextAtlasPerfSnapshot;
 use super::atlas::{GlyphAtlas, GlyphKey, TEXT_ATLAS_MAX_PAGES};
+
+#[cfg(not(target_arch = "wasm32"))]
+mod debug;
 
 const TEXT_ATLAS_WIDTH: u32 = 2048;
 const TEXT_ATLAS_HEIGHT: u32 = 2048;
@@ -149,21 +150,6 @@ impl TextAtlasRuntimeState {
         self.reset_generation
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
-    pub(super) fn mask_dimensions(&self) -> (u32, u32) {
-        self.dimensions(AtlasSelector::Mask)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    pub(super) fn color_dimensions(&self) -> (u32, u32) {
-        self.dimensions(AtlasSelector::Color)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    pub(super) fn subpixel_dimensions(&self) -> (u32, u32) {
-        self.dimensions(AtlasSelector::Subpixel)
-    }
-
     fn atlas_for_key(&self, key: GlyphKey) -> &GlyphAtlas {
         self.atlas(Self::selector_for_key(key))
     }
@@ -248,42 +234,6 @@ impl TextAtlasRuntimeState {
         self.atlas_for_key(key).pending_upload_bytes_for_key(key)
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
-    pub(super) fn debug_lookup_mask_entry(
-        &self,
-        page: u16,
-        x: u32,
-        y: u32,
-        w: u32,
-        h: u32,
-    ) -> Option<DebugGlyphAtlasLookup> {
-        self.debug_lookup_entry(AtlasSelector::Mask, page, x, y, w, h)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    pub(super) fn debug_lookup_color_entry(
-        &self,
-        page: u16,
-        x: u32,
-        y: u32,
-        w: u32,
-        h: u32,
-    ) -> Option<DebugGlyphAtlasLookup> {
-        self.debug_lookup_entry(AtlasSelector::Color, page, x, y, w, h)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    pub(super) fn debug_lookup_subpixel_entry(
-        &self,
-        page: u16,
-        x: u32,
-        y: u32,
-        w: u32,
-        h: u32,
-    ) -> Option<DebugGlyphAtlasLookup> {
-        self.debug_lookup_entry(AtlasSelector::Subpixel, page, x, y, w, h)
-    }
-
     fn selector_for_key(key: GlyphKey) -> AtlasSelector {
         if key.is_color() {
             AtlasSelector::Color
@@ -312,24 +262,6 @@ impl TextAtlasRuntimeState {
 
     fn bind_group(&self, selector: AtlasSelector, page: u16) -> &wgpu::BindGroup {
         self.atlas(selector).bind_group(page)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    fn dimensions(&self, selector: AtlasSelector) -> (u32, u32) {
-        self.atlas(selector).dimensions()
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    fn debug_lookup_entry(
-        &self,
-        selector: AtlasSelector,
-        page: u16,
-        x: u32,
-        y: u32,
-        w: u32,
-        h: u32,
-    ) -> Option<DebugGlyphAtlasLookup> {
-        self.atlas(selector).debug_lookup_entry(page, x, y, w, h)
     }
 }
 

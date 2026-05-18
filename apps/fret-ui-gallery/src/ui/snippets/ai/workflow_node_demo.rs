@@ -6,6 +6,7 @@ use fret_core::Px;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 
@@ -17,12 +18,15 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .test_id("ui-ai-workflow-node-demo-header")
         .into_element(cx),
         ui_ai::WorkflowNodeContent::new([
-            cx.text("Node content slot: apps own interaction + state."),
-            cx.text("Use handles as a styling seam (not an engine)."),
+            decl_text::text_compact_paragraph(
+                cx,
+                "Node content slot: apps own interaction + state.",
+            ),
+            decl_text::text_compact_paragraph(cx, "Use handles as a styling seam (not an engine)."),
         ])
         .test_id("ui-ai-workflow-node-demo-content")
         .into_element(cx),
-        ui_ai::WorkflowNodeFooter::new([cx.text("Footer slot")])
+        ui_ai::WorkflowNodeFooter::new([decl_text::text_control_readout(cx, "Footer slot")])
             .test_id("ui-ai-workflow-node-demo-footer")
             .into_element(cx),
     ])
@@ -49,7 +53,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("WorkflowNode (AI Elements): header/content/footer chrome."),
+            decl_text::text_section_chrome_label(
+                cx,
+                "WorkflowNode (AI Elements): header/content/footer chrome.",
+            ),
             cx.container(props, move |_cx| vec![node]),
         ]
     })

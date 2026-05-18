@@ -494,6 +494,48 @@ Exit criteria:
   fixed outer title/body copy through shared section-chrome/paragraph roles; StackTrace and
   VoiceSelector compact status/diagnostics readouts use `text_control_readout(...)` instead of
   default wrapping text.
+  2026-05-18 AI Confirmation content text-role result: Confirmation request/body snippets now route
+  prose through `text_paragraph(...)`, inline/code payloads through `text_code_wrap(...)`,
+  approval/rejection result text through `text_control_readout(...)`, and the demo's fixed outer
+  title/body copy through shared section-chrome/paragraph roles.
+  2026-05-18 AI Task content text-role result: Task item labels now route through
+  `text_list_row_label(...)`, attached file names through `text_code_wrap(...)`, and the demo's
+  fixed outer title/body copy through shared section-chrome/paragraph roles.
+  2026-05-18 AI Conversation instrumentation text-role result: Conversation export/message-count
+  diagnostics now use generic semantics instead of text semantics, and the custom scroll-bottom
+  label uses the shared `text_button_label(...)` role.
+  2026-05-18 AI usage snippet text-role result: Attachments usage explanatory copy now uses the
+  shared paragraph role, and StackTrace usage fixed title/body copy uses shared
+  section-chrome/paragraph roles.
+  2026-05-18 AI Message usage text-role result: Message usage user text now uses paragraph text,
+  the last-action marker uses control-readout text, and fixed outer title/body copy uses
+  section-chrome/paragraph roles.
+  2026-05-18 AI Canvas world spike text-role result: the canvas spike visible chrome, node copy,
+  and debug/status readouts now use shared section-chrome, paragraph, and control-readout roles
+  instead of bare `cx.text(...)`.
+  2026-05-18 AI Image demo text-role result: fixed explanatory copy now uses shared paragraph text,
+  and the image-ready/loading readouts use shared control-readout text instead of bare
+  `cx.text(...)`.
+  2026-05-18 AI PromptInput referenced sources text-role result: fixed referenced-sources
+  title/body copy now uses shared section-chrome and paragraph roles instead of bare
+  `cx.text(...)`.
+  2026-05-18 AI Artifact code display status-marker result: the docs action status now preserves
+  its diagnostic label on a generic zero-size semantics marker instead of an invisible bare text
+  element.
+  2026-05-18 AI ChainOfThought composable text-role result: composed header, step-label, and
+  description child text now uses shared section-chrome and paragraph roles instead of bare
+  `cx.text(...)`.
+  2026-05-18 AI TestResults composable text-role result: custom summary/progress/status/name and
+  duration child text now uses shared readout/list-row roles instead of bare `cx.text(...)`.
+  2026-05-18 AI Workflow snippet text-role result: workflow fixed chrome, panel copy,
+  node-content sample copy, footer labels, and click readouts now use shared text roles instead of
+  bare `cx.text(...)`.
+  2026-05-18 AI Suggestions/reasoning/transcript text-role result: suggestions custom children,
+  reasoning hook status, transcript torture header copy, and chat exported-status marker now use
+  shared text roles or generic marker semantics instead of bare/default text surfaces.
+  2026-05-18 AI custom-children text-role result: environment variables, package info, inline
+  citations, persona, and sources custom-child snippets now use shared roles for app-owned visible
+  text; `text_code_label(...)` covers fixed-height package/env/dependency identifiers.
   2026-05-17 gallery data-grid text result: the UI Gallery DataGrid preview now routes virtualized
   grid cells through `text_table_cell(...)` and the selected-row status line through
   `control_readout_text(...)`.
@@ -558,6 +600,9 @@ Exit criteria:
   2026-05-17 gallery shell content/nav text result: page header title/source and sidebar group
   headings now use shared chrome/readout roles instead of hand-rolled `TextProps` in the gallery
   app shell.
+  2026-05-18 gallery sidebar snippet chrome text result: copyable Sidebar examples now keep
+  body/fallback prose on shared paragraph roles and status/debug lines on shared control-readout
+  text, so sidebar docs no longer teach bare wrapping `cx.text(...)` in fixed example chrome.
   2026-05-17 gallery editor preview text result: code-editor, Markdown, and Web IME preview
   headers now use paragraph text for prose, control readout text for fixed status/debug values,
   and button label text for custom pointer-region actions. The slice keeps editor-proof resize

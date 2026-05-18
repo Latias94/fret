@@ -537,6 +537,47 @@ Readiness order for the next locally testable review slices:
    route fixed outer title/body copy through shared section-chrome/paragraph roles; StackTrace and
    VoiceSelector compact status/diagnostics readouts use `text_control_readout(...)` instead of
    default wrapping text.
+   2026-05-18 AI Confirmation content text-role follow-up: Confirmation request/body snippets now
+   route prose through `text_paragraph(...)`, inline/code payloads through `text_code_wrap(...)`,
+   approval/rejection result text through `text_control_readout(...)`, and the demo's fixed outer
+   title/body copy through shared section-chrome/paragraph roles.
+   2026-05-18 AI Task content text-role follow-up: Task item labels now route through
+   `text_list_row_label(...)`, attached file names through `text_code_wrap(...)`, and the demo's
+   fixed outer title/body copy through shared section-chrome/paragraph roles.
+   2026-05-18 AI Conversation instrumentation text-role follow-up: Conversation length/export
+   diagnostics now use generic semantics instead of text semantics, and the custom scroll-bottom
+   label routes through `text_button_label(...)`.
+   2026-05-18 AI usage snippet text-role follow-up: Attachments usage explanatory copy now uses
+   paragraph text, and StackTrace usage title/body copy uses section-chrome/paragraph roles.
+   2026-05-18 AI Message usage text-role follow-up: Message usage now routes user message text
+   through paragraph text, the last-action marker through control-readout text, and fixed outer
+   title/body copy through section-chrome/paragraph roles.
+   2026-05-18 AI Canvas world spike text-role follow-up: the canvas spike now routes visible
+   chrome, node copy, and debug/status readouts through shared section-chrome, paragraph, and
+   control-readout roles instead of bare `cx.text(...)`.
+   2026-05-18 AI Image demo text-role follow-up: the image demo now routes fixed explanatory copy
+   through paragraph text and status/loading readouts through shared control-readout text instead of
+   bare `cx.text(...)`.
+   2026-05-18 AI PromptInput referenced sources text-role follow-up: fixed referenced-sources
+   title/body copy now routes through section-chrome and paragraph roles instead of bare
+   `cx.text(...)`.
+   2026-05-18 AI Artifact code display status-marker follow-up: the docs status marker now keeps
+   the diagnostic `label_contains` contract on a generic semantics marker with a zero-size spacer
+   instead of an invisible bare text element.
+   2026-05-18 AI ChainOfThought composable text-role follow-up: composed header, step-label, and
+   description child text now uses shared section-chrome and paragraph roles instead of bare
+   `cx.text(...)`.
+   2026-05-18 AI TestResults composable text-role follow-up: custom summary/progress/status/name
+   and duration child text now uses shared readout/list-row roles instead of bare `cx.text(...)`.
+   2026-05-18 AI Workflow snippet text-role follow-up: workflow fixed chrome, panel copy,
+   node-content sample copy, footer labels, and click readouts now use shared text roles instead of
+   bare `cx.text(...)`.
+   2026-05-18 AI Suggestions/reasoning/transcript text-role follow-up: suggestions custom
+   children, reasoning hook status, transcript torture header copy, and chat exported-status marker
+   now use shared text roles or generic marker semantics instead of bare/default text surfaces.
+   2026-05-18 AI custom-children text-role follow-up: environment variables, package info,
+   inline citations, persona, and sources custom-child snippets now route visible app-owned text
+   through shared roles, including the new single-line `text_code_label(...)` identifier role.
    2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
    virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
    `control_readout_text(...)`.
@@ -604,6 +645,9 @@ Readiness order for the next locally testable review slices:
    2026-05-17 gallery shell content/nav text follow-up: the page header title/source and sidebar
    group headings now route through shared chrome/readout roles instead of local `TextProps`,
    keeping app-shell text policy centralized while staying outside `fret-imui`.
+   2026-05-18 gallery sidebar snippet chrome text follow-up: the copyable Sidebar examples now
+   route card body prose and missing-content fallbacks through paragraph roles, and debug/status
+   lines through `text_control_readout(...)` instead of bare `cx.text(...)`.
    2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
    headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
    through `control_readout_text(...)`, and custom pointer-region labels through

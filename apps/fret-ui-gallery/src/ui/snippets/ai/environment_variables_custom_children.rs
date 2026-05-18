@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("environment_variables_custom_children.rs"
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -12,8 +13,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .default_show_values(false)
         .into_element_with_children(cx, move |cx, _controller| {
             let header = ui_ai::EnvironmentVariablesHeader::new([
-                ui_ai::EnvironmentVariablesTitle::new_children([cx.text("Runtime Secrets")])
-                    .into_element(cx),
+                ui_ai::EnvironmentVariablesTitle::new_children([
+                    decl_text::text_section_chrome_label(cx, "Runtime Secrets"),
+                ])
+                .into_element(cx),
                 ui_ai::EnvironmentVariablesToggle::new().into_element(cx),
             ])
             .into_element(cx);
@@ -23,16 +26,19 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     vec![
                         ui_ai::EnvironmentVariableGroup::new([
                             ui_ai::EnvironmentVariableName::new()
-                                .children([cx.text("Primary API Key")])
+                                .children([decl_text::text_code_label(cx, "Primary API Key")])
                                 .into_element(cx),
                             ui_ai::EnvironmentVariableRequired::new()
-                                .children([cx.text("Secret")])
+                                .children([decl_text::text_control_readout(cx, "Secret")])
                                 .into_element(cx),
                         ])
                         .into_element(cx),
                         ui_ai::EnvironmentVariableGroup::new([
                             ui_ai::EnvironmentVariableValue::new()
-                                .children([cx.text("App-owned masked preview")])
+                                .children([decl_text::text_code_label(
+                                    cx,
+                                    "App-owned masked preview",
+                                )])
                                 .into_element(cx),
                             ui_ai::EnvironmentVariableCopyButton::new()
                                 .copy_format(ui_ai::EnvironmentVariableCopyFormat::Export)
@@ -49,7 +55,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("Custom children take ownership of the visible content."),
+            decl_text::text_paragraph(cx, "Custom children take ownership of the visible content."),
             env,
         ]
     })

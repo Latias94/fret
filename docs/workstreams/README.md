@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 416
+- Dedicated directories: 427
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2212,7 +2212,10 @@ Rule:
 - `docs/workstreams/quad-border-styles-v1/` — first 2026-02-13, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/query-lifecycle-v1/` — first 2026-02-06, latest 2026-02-11, 2 markdown docs
 - `docs/workstreams/release-surface-fearless-refactor-v1/` — first 2026-03-31, latest 2026-04-02, 4 markdown docs
+- `docs/workstreams/render-text-dead-code-prune-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for removing all `fret-render-text/src` dead-code allowances and deleting stale wrapper-level hit-testing)
 - `docs/workstreams/renderer-clip-mask-closure-v1/` — first 2026-02-17, latest 2026-02-18, 3 markdown docs
+- `docs/workstreams/renderer-debug-dump-gate-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for centralizing native renderer debug dump frame gating while preserving dump-specific JSON owners)
+- `docs/workstreams/renderer-dump-wasm-stub-owner-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for moving renderer dump wasm stubs out of `renderer/mod.rs` and deleting unused wasm empty modules)
 - `docs/workstreams/renderer-drop-shadow-effect-v1/` — first 2026-02-17, latest 2026-02-18, 3 markdown docs
 - `docs/workstreams/renderer-effect-backdrop-warp-v1/` — first 2026-02-17, latest 2026-02-18, 3 markdown docs
 - `docs/workstreams/renderer-effect-backdrop-warp-v2/` — first 2026-02-18, latest 2026-02-20, 3 markdown docs
@@ -2220,6 +2223,10 @@ Rule:
 - `docs/workstreams/renderer-execute-pass-recorders-modularization-v1/` — first 2026-02-22, latest 2026-02-22, 5 markdown docs
 - `docs/workstreams/renderer-modularity-fearless-refactor-v1/` — first 2026-03-12, latest 2026-03-13, 8 markdown docs
 - `docs/workstreams/renderer-paint-gpu-storage-unification-v1/` — first 2026-02-16, latest 2026-02-16, 3 markdown docs
+- `docs/workstreams/renderer-render-plan-analysis-owner-v1/` — first 2026-05-18, latest 2026-05-18, 7 markdown docs (closed narrow follow-on for moving render-plan pass-list analysis helpers into a sibling owner)
+- `docs/workstreams/renderer-render-plan-debug-validation-owner-v1/` — first 2026-05-18, latest 2026-05-18, 7 markdown docs (closed narrow follow-on for moving debug-only render-plan validation helpers into a sibling owner)
+- `docs/workstreams/renderer-render-plan-postprocess-owner-v1/` — first 2026-05-18, latest 2026-05-18, 7 markdown docs (closed narrow follow-on for moving debug postprocess lowering helpers into a sibling owner)
+- `docs/workstreams/renderer-render-plan-postprocess-tests-owner-v1/` — first 2026-05-18, latest 2026-05-18, 7 markdown docs (closed narrow follow-on for moving postprocess render-plan tests into a sibling owner)
 - `docs/workstreams/renderer-render-plan-semantics-audit-v1/` — first 2026-02-22, latest 2026-02-23, 3 markdown docs
 - `docs/workstreams/renderer-scene-encoding-semantics-audit-v1/` — first 2026-02-23, latest 2026-02-23, 3 markdown docs
 - `docs/workstreams/renderer-upstream-semantics-parity-v1/` — first 2026-02-22, latest 2026-02-22, 3 markdown docs
@@ -2259,6 +2266,9 @@ Rule:
 - `docs/workstreams/state-management-v1/` — first 2026-02-05, latest 2026-03-12, 3 markdown docs
 - `docs/workstreams/subtree-layout-dirty-fearless-refactor-v1/` — first 2026-03-02, latest 2026-03-02, 6 markdown docs
 - `docs/workstreams/svg-presentation-analysis-scaffolding-v1/` — first 2026-04-09, latest 2026-04-09, 8 markdown docs (closed closeout record for conservative local SVG-directory analysis that scaffolds per-icon `original-colors` overrides and an optional review report without inferring pack-level defaults or changing import behavior)
+- `docs/workstreams/text-atlas-debug-facade-owner-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for moving native atlas debug dump facade methods out of general text diagnostics)
+- `docs/workstreams/text-atlas-debug-internals-owner-v1/` — first 2026-05-18, latest 2026-05-18, 7 markdown docs (closed narrow follow-on for moving native atlas debug lookup internals into sibling debug modules)
+- `docs/workstreams/text-bootstrap-platform-owner-v1/` — first 2026-05-18, latest 2026-05-18, 7 markdown docs (closed narrow follow-on for moving text bootstrap platform startup policy into a dedicated owner)
 - `docs/workstreams/text-infrastructure-v1/` — first 2026-02-19, latest 2026-02-22, 2 markdown docs
 - `docs/workstreams/text-interactive-spans-v1/` — first 2026-02-19, latest 2026-02-28, 2 markdown docs
 - `docs/workstreams/text-intrinsic-sizing-and-wrap-v1/` — first 2026-02-19, latest 2026-02-20, 3 markdown docs
@@ -2320,6 +2330,7 @@ Rule:
 - `docs/workstreams/wgpu-stroke-dash-shadow-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating stroke, dash, and shadow WGPU conformance tests onto the shared readback/render harness)
 - `docs/workstreams/wgpu-text-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating text paint/outline WGPU conformance tests onto the shared readback/render harness)
 - `docs/workstreams/wgpu-text-measure-dead-branch-prune-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for deleting unreachable WGPU text measurement `cfg(any())` implementation copies after shared `TextMeasureCaches` ownership)
+- `docs/workstreams/wgpu-test-support-dead-code-prune-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for removing the final fret-render-wgpu test-support `dead_code` allowance by splitting readback and explicit-format support entry points)
 - `docs/workstreams/wgpu-viewport-metadata-conformance-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating viewport metadata WGPU conformance final render/readback helpers onto shared support while preserving metadata assertions)
 - `docs/workstreams/wgpu-vulkan-path-msaa-visibility-harness-followon-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for migrating Vulkan path-MSAA visibility WGPU conformance readback helpers onto shared support while preserving env and safety-valve assertions)
 - `docs/workstreams/window-command-availability-snapshot-v2/` — first n/a, latest n/a, 4 markdown docs (active runtime command/action availability publication lane; includes `WORKSTREAM.json`)

@@ -345,6 +345,13 @@ fn script_v2_roundtrip_ui_gallery_input_basic_and_file_long_text() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_input_disabled_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/input/ui-gallery-input-disabled-action-state.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_button_group_input_group_long_text() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-button-group-input-group-long-text.json"
@@ -530,6 +537,20 @@ fn script_v2_roundtrip_ui_gallery_table_retained_row_pinning_keep_pinned_true() 
 fn script_v2_roundtrip_ui_gallery_table_retained_row_pinning_keep_pinned_false() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-table-retained-row-pinning-keep-pinned-false.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_table_retained_sort_select_scroll() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-table-retained-sort-select-scroll.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_table_retained_window_boundary_scroll() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-table-retained-window-boundary-scroll.json"
     ));
 }
 

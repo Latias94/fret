@@ -18,6 +18,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .control_id(email_id)
             .placeholder("Email")
             .disabled(true)
+            .test_id("ui-gallery-input-disabled-control")
             .into_element(cx),
         shadcn::FieldDescription::new("This field is currently disabled.")
             .for_control(email_id)

@@ -5,14 +5,18 @@ use fret::{AppComponentCx, UiChild};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let panel = ui_ai::WorkflowPanel::new([ui::v_flex(|cx| {
         vec![
-            cx.text("WorkflowPanel (AI Elements)"),
-            cx.text("Container chrome only. Apps own placement + interactions."),
+            decl_text::text_section_chrome_label(cx, "WorkflowPanel (AI Elements)"),
+            decl_text::text_compact_paragraph(
+                cx,
+                "Container chrome only. Apps own placement + interactions.",
+            ),
         ]
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -33,7 +37,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("WorkflowPanel (AI Elements): bordered container chrome."),
+            decl_text::text_section_chrome_label(
+                cx,
+                "WorkflowPanel (AI Elements): bordered container chrome.",
+            ),
             cx.container(props, move |_cx| vec![panel]),
         ]
     })

@@ -1,6 +1,5 @@
 use crate::parley_shaper::{ParleyShaper, ShapedLineLayout};
 use crate::wrapper_balance::balanced_word_wrap_width_px;
-use crate::wrapper_boundaries::hit_test_x;
 #[cfg(test)]
 use crate::wrapper_boundaries::is_grapheme_boundary;
 use crate::wrapper_paragraphs::{
@@ -10,7 +9,7 @@ use crate::wrapper_ranges::{
     wrap_grapheme_range, wrap_grapheme_range_measure_only, wrap_word_break_range,
     wrap_word_break_range_measure_only, wrap_word_range, wrap_word_range_measure_only,
 };
-use fret_core::{CaretAffinity, TextConstraints, TextInputRef, TextOverflow, TextWrap};
+use fret_core::{TextConstraints, TextInputRef, TextOverflow, TextWrap};
 use std::ops::Range;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -54,23 +53,6 @@ impl WrappedLayout {
 
     pub fn into_parts(self) -> (usize, usize, Vec<Range<usize>>, Vec<ShapedLineLayout>) {
         (self.text_len, self.kept_end, self.line_ranges, self.lines)
-    }
-
-    #[allow(dead_code)]
-    pub fn hit_test_x(&self, line_index: usize, x: f32) -> (usize, CaretAffinity) {
-        let Some(line) = self.lines.get(line_index) else {
-            return (0, CaretAffinity::Downstream);
-        };
-        let Some(range) = self.line_ranges.get(line_index) else {
-            return (0, CaretAffinity::Downstream);
-        };
-
-        let (idx_local, affinity) = hit_test_x(line.clusters(), x, range.len());
-        let mut idx = range.start.saturating_add(idx_local);
-        if idx > self.kept_end {
-            idx = self.kept_end;
-        }
-        (idx, affinity)
     }
 }
 
@@ -454,9 +436,6 @@ mod tests {
                 .any(|c| c.text_range() == (wrapped.kept_end..wrapped.kept_end)),
             "expected a synthetic zero-length cluster for ellipsis mapping"
         );
-
-        let (hit, _affinity) = wrapped.hit_test_x(0, 79.0);
-        assert_eq!(hit, wrapped.kept_end);
     }
 
     #[test]

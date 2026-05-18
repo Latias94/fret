@@ -6,6 +6,7 @@ use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -209,8 +210,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 shadcn::card_header(|cx| ui::children![cx; shadcn::card_title("Content")]),
                 shadcn::card_content(|cx| {
                     vec![
-                        cx.text("A sidebar that collapses to icon mode."),
-                        cx.text("Select any menu item to verify active and hover states."),
+                        decl_text::text_paragraph(cx, "A sidebar that collapses to icon mode."),
+                        decl_text::text_paragraph(
+                            cx,
+                            "Select any menu item to verify active and hover states.",
+                        ),
                     ]
                 }),
             ]
@@ -242,7 +246,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     content
         .into_iter()
         .next()
-        .unwrap_or_else(|| cx.text("Missing sidebar demo content."))
+        .unwrap_or_else(|| decl_text::text_paragraph(cx, "Missing sidebar demo content."))
 }
 
 // endregion: example

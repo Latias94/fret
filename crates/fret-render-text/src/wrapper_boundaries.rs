@@ -1,5 +1,4 @@
 use crate::parley_shaper::ShapedCluster;
-use fret_core::CaretAffinity;
 use std::ops::Range;
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -111,43 +110,4 @@ pub(crate) fn clamp_to_grapheme_boundary_up(text: &str, idx: usize) -> usize {
 
 pub(crate) fn empty_range_at(idx: usize) -> Range<usize> {
     idx..idx
-}
-
-#[allow(dead_code)]
-pub(crate) fn hit_test_x(
-    clusters: &[ShapedCluster],
-    x: f32,
-    text_len: usize,
-) -> (usize, CaretAffinity) {
-    if clusters.is_empty() {
-        return (0, CaretAffinity::Downstream);
-    }
-
-    if x.is_nan() || x <= clusters[0].x0() {
-        return (0, CaretAffinity::Downstream);
-    }
-
-    for c in clusters {
-        if x > c.x1() {
-            continue;
-        }
-        let text_range = c.text_range();
-        if text_range.start == text_range.end {
-            return (text_range.start, CaretAffinity::Downstream);
-        }
-        let mid = c.x0() + (c.x1() - c.x0()) * 0.5;
-        let left_half = x <= mid;
-        if c.is_rtl() {
-            if left_half {
-                return (text_range.end, CaretAffinity::Upstream);
-            }
-            return (text_range.start, CaretAffinity::Downstream);
-        }
-        if left_half {
-            return (text_range.start, CaretAffinity::Downstream);
-        }
-        return (text_range.end, CaretAffinity::Upstream);
-    }
-
-    (text_len, CaretAffinity::Downstream)
 }

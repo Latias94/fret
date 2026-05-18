@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "slug": "render-text-dead-code-prune-v1",
+  "title": "Render Text Dead Code Prune v1",
+  "status": "closed",
+  "updated": "2026-05-18",
+  "scope_kind": "follow-on",
+  "problem": "fret-render-text retained three dead_code allowances after text measurement and hit-testing had moved to shared measurement and prepared-line geometry owners.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/render-text-dead-code-prune-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/render-text-dead-code-prune-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/render-text-dead-code-prune-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/render-text-dead-code-prune-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/render-text-dead-code-prune-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/render-text-dead-code-prune-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    }
+  ],
+  "repro": {
+    "summary": "Shared text shaping/wrapping should compile without dead_code allowances while preserving fallback and current geometry hit-test behavior.",
+    "commands": [
+      "cargo check -p fret-render-text --locked --tests -j 1",
+      "cargo nextest run -p fret-render-text --locked merged_static_family_lists_preserves_order_and_dedupes_case_insensitively none_ellipsis_adds_zero_len_cluster_at_cut_end ellipsis_truncation_hit_test_maps_ellipsis_region_to_kept_end"
+    ]
+  },
+  "gates": [
+    {
+      "name": "fmt",
+      "command": "cargo fmt --package fret-render-text --check"
+    },
+    {
+      "name": "dead-code-scan",
+      "command": "rg -n \"allow\\\\(dead_code\\\\)|dead_code|cfg_attr\\\\([^\\\\n]*dead_code\" crates/fret-render-text/src -g \"*.rs\""
+    },
+    {
+      "name": "render-text-tests-compile",
+      "command": "cargo check -p fret-render-text --locked --tests -j 1"
+    },
+    {
+      "name": "text-targeted",
+      "command": "cargo nextest run -p fret-render-text --locked merged_static_family_lists_preserves_order_and_dedupes_case_insensitively none_ellipsis_adds_zero_len_cluster_at_cut_end ellipsis_truncation_hit_test_maps_ellipsis_region_to_kept_end"
+    },
+    {
+      "name": "wgpu-downstream-check",
+      "command": "cargo check -p fret-render-wgpu --locked --tests -j 1"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json",
+      "command": "python -m json.tool docs/workstreams/render-text-dead-code-prune-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "crates/fret-render-text/src/fallback_policy.rs",
+    "crates/fret-render-text/src/wrapper.rs",
+    "crates/fret-render-text/src/wrapper_boundaries.rs",
+    "crates/fret-render-text/src/geometry.rs",
+    "crates/fret-render-wgpu/src/text/queries.rs",
+    "docs/workstreams/render-text-dead-code-prune-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+  ],
+  "adr_refs": [],
+  "continue_policy": {
+    "default_action": "stay_closed",
+    "notes": "The dead-code allowance prune is complete. Future hit-test API changes should start from prepared-line geometry, not the deleted wrapper-level method."
+  }
+}
