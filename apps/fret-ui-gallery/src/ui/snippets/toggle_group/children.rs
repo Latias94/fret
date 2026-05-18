@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("children.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -11,7 +12,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 "list",
                 [
                     shadcn::raw::icon::icon(cx, IconId::new_static("lucide.list")),
-                    ui::text("List").into_element(cx),
+                    decl_text::text_button_label(cx, "List"),
                 ],
             )
             .a11y_label("Toggle list"),
@@ -19,7 +20,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 "grid",
                 [
                     shadcn::raw::icon::icon(cx, IconId::new_static("lucide.grid-2x2")),
-                    ui::text("Grid").into_element(cx),
+                    decl_text::text_button_label(cx, "Grid"),
                 ],
             )
             .a11y_label("Toggle grid"),
@@ -27,7 +28,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 "cards",
                 [
                     shadcn::raw::icon::icon(cx, IconId::new_static("lucide.layout-panel-top")),
-                    ui::text("Cards").into_element(cx),
+                    decl_text::text_button_label(cx, "Cards"),
                 ],
             )
             .a11y_label("Toggle cards"),

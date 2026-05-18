@@ -3109,6 +3109,31 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/snippets/accordion/usage.rs",
             ]
         ],
+        *[
+            SourceCheck(
+                Path(path),
+                required=[
+                    "use fret_ui_kit::declarative::text as decl_text;",
+                    "decl_text::text_button_label(",
+                ],
+                forbidden=[
+                    "cx.text(",
+                    'ui::text("List")',
+                    'ui::text("Grid")',
+                    'ui::text("Cards")',
+                ],
+            )
+            for path in [
+                "apps/fret-ui-gallery/src/ui/snippets/toggle_group/children.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/toggle_group/flex_1_items.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/toggle_group/full_width_items.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/toggle_group/label.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/toggle_group/outline.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/toggle_group/rtl.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/toggle_group/spacing.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/toggle_group/usage.rs",
+            ]
+        ],
         SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/command/composable_shell.rs"),
             required=[
@@ -3172,6 +3197,7 @@ def main() -> None:
                 "fn sidebar_snippet_chrome_text_uses_shared_roles()",
                 "fn command_snippet_chrome_text_uses_shared_roles()",
                 "fn accordion_snippet_trigger_text_uses_button_label_role()",
+                "fn toggle_group_snippet_item_text_uses_button_label_role()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",
             ],

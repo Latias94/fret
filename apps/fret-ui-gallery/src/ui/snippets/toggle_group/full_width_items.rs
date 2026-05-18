@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("full_width_items.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn text_item<H: UiHost>(
@@ -9,7 +10,8 @@ fn text_item<H: UiHost>(
     value: &'static str,
     label: &'static str,
 ) -> shadcn::ToggleGroupItem {
-    shadcn::ToggleGroupItem::new(value, [cx.text(label)]).a11y_label(format!("Toggle {label}"))
+    shadcn::ToggleGroupItem::new(value, [decl_text::text_button_label(cx, label)])
+        .a11y_label(format!("Toggle {label}"))
 }
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {

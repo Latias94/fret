@@ -612,6 +612,10 @@ Exit criteria:
   labels on the shared button-label role, so these button-like rows truncate instead of teaching
   default wrapping text under resize. The slice stays in UI Gallery snippets/tests/gates and does
   not change shadcn component internals.
+  2026-05-18 gallery ToggleGroup item text result: copyable ToggleGroup examples now keep ordinary
+  item captions on the shared button-label role, covering text-only, icon+text, RTL, spacing,
+  full-width, and flex-1 item snippets. The custom weight-card snippet keeps its local visual sample
+  typography outside this default-role migration.
   2026-05-17 gallery editor preview text result: code-editor, Markdown, and Web IME preview
   headers now use paragraph text for prose, control readout text for fixed status/debug values,
   and button label text for custom pointer-region actions. The slice keeps editor-proof resize

@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("label.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::primitives::control_registry::ControlId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -13,7 +14,7 @@ fn icon_item<H: UiHost>(
     icon: &'static str,
 ) -> shadcn::ToggleGroupItem {
     shadcn::ToggleGroupItem::icon(value, IconId::new_static(icon))
-        .child(cx.text(label))
+        .child(decl_text::text_button_label(cx, label))
         .a11y_label(format!("Toggle {label}"))
 }
 

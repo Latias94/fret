@@ -656,6 +656,11 @@ Readiness order for the next locally testable review slices:
    trigger labels through `text_button_label(...)` instead of bare `cx.text(...)`, keeping those
    button-like trigger rows single-line/shrinkable under resize while leaving shadcn component
    internals and upstream parity tests untouched.
+   2026-05-18 gallery ToggleGroup item text follow-up: copyable ToggleGroup examples now route
+   ordinary item captions through `text_button_label(...)` instead of bare `cx.text(...)` /
+   `ui::text(...)`, keeping toggle buttons single-line/shrinkable under resize. The custom
+   weight-card snippet remains an explicitly styled visual sample rather than a default text-role
+   migration target.
    2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
    headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
    through `control_readout_text(...)`, and custom pointer-region labels through

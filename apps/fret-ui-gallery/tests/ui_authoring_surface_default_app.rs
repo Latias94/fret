@@ -9478,6 +9478,34 @@ fn toggle_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
 }
 
 #[test]
+fn toggle_group_snippet_item_text_uses_button_label_role() {
+    for relative_path in [
+        "src/ui/snippets/toggle_group/children.rs",
+        "src/ui/snippets/toggle_group/flex_1_items.rs",
+        "src/ui/snippets/toggle_group/full_width_items.rs",
+        "src/ui/snippets/toggle_group/label.rs",
+        "src/ui/snippets/toggle_group/outline.rs",
+        "src/ui/snippets/toggle_group/rtl.rs",
+        "src/ui/snippets/toggle_group/spacing.rs",
+        "src/ui/snippets/toggle_group/usage.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_button_label(cx,",
+            ],
+            &[
+                "cx.text(",
+                "ui::text(\"List\")",
+                "ui::text(\"Grid\")",
+                "ui::text(\"Cards\")",
+            ],
+        );
+    }
+}
+
+#[test]
 fn toggle_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/toggle_group.rs",
