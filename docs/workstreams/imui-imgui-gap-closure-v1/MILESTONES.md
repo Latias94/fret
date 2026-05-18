@@ -502,6 +502,17 @@ Exit criteria:
   `container_queries_docking_demo` now use local helpers over shared list-row, control-readout, and
   button-label text roles for fixed panel text. This closes the simple docking demo resize escape
   hatch while leaving docking topology/policy ownership unchanged.
+  2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
+  virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
+  stay auto-height/visible so runtime measurement still works.
+  2026-05-18 retained tree fixed-row clip result: retained tree rows now align their pressable row
+  owner with the virtualizer contract: fixed/known rows clip at the configured row height, and
+  measured rows keep visible overflow for variable-height content.
+  2026-05-18 retained file-tree fixed-row clip result: `file_tree_view_retained_v0(...)` now clips
+  at the retained pressable row owner instead of relying only on inner row content containers.
+  2026-05-18 retained table fixed-row clip result: retained/eager table body rows now share the
+  same owner-side contract through `table_body_row_layout(...)`; fixed rows clip to row height and
+  measured rows keep measurement-friendly overflow.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

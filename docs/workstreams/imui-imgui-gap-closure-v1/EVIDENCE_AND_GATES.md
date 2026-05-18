@@ -1431,6 +1431,18 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
 - `git diff --check` passed.
 
+2026-05-18 fixed-row clip milestone traceability slice:
+
+- `MILESTONES.md` now records the IMUI virtual-list, retained tree, retained file-tree, and
+  retained/eager table fixed-row clip results.
+- `tools/gate_imui_workstream_source.py` now checks those milestone anchors so the row-owner clip
+  contract does not disappear from the lane summary.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\check_workstream_catalog.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
 2026-05-17 canvas datagrid stress proof text-role slice:
 
 - `cargo fmt -p fret-examples` passed.

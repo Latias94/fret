@@ -747,6 +747,22 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("docs/workstreams/imui-imgui-gap-closure-v1/MILESTONES.md"),
+            required=[
+                "2026-05-18 IMUI virtual-list fixed-row clip result",
+                "fixed/known-height `fret-ui-kit::imui`",
+                "fixed-height `Overflow::Clip` row containers",
+                "2026-05-18 retained tree fixed-row clip result",
+                "retained tree rows now align their pressable row",
+                "2026-05-18 retained file-tree fixed-row clip result",
+                "`file_tree_view_retained_v0(...)` now clips",
+                "2026-05-18 retained table fixed-row clip result",
+                "`table_body_row_layout(...)`",
+                "measured rows keep measurement-friendly overflow",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("docs/workstreams/imui-imgui-gap-closure-v1/P3_TEXT_ROLE_MATRIX_2026-05-17.md"),
             required=[
                 "status: contract slice; no new runtime API",
