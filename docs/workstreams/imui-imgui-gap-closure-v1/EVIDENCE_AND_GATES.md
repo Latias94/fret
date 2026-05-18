@@ -278,7 +278,7 @@ Run evidence:
   `TableColumnVisibilityHeaderContextMenuOptions` exposes popup and menu-item policy instead of
   hard-coding placement/sizing. Callers still own when to apply `ImUiTableColumnVisibilityState` to
   their columns; persistence, freeze panes, and old columns API shape were still separate
-  follow-ons at this point.
+  follow-ons at that historical point.
   Gates: `cargo nextest run -p fret-imui
   table_column_visibility_header_context_menu_opens_from_plain_header
   table_column_visibility_header_context_menu_opens_and_updates_state
@@ -339,6 +339,12 @@ Run evidence:
   nextest run -p fret-imui table_helper_pins_left_and_right_columns_while_center_columns_scroll
   table_column_visibility_menu_item_updates_visibility_state --no-fail-fast`, and `python
   tools/gate_imui_workstream_source.py`.
+- 2026-05-18: refreshed the current table-gap wording after the visibility snapshot,
+  freeze-pane pinning, and `TableColumn` private-field slices landed. These are no longer current table gaps in this workstream.
+  Future table work should only open app/editor storage/schema policy or concrete Dear ImGui
+  table-runtime parity lanes with a new proof and gate. Gates:
+  `python tools/gate_imui_workstream_source.py`, `python -m py_compile
+  tools/gate_imui_workstream_source.py`, and `git diff --check`.
 - 2026-05-16: introduced `text_control_readout(...)` as the shared compact control-readout text
   role. The UI Gallery code-editor toolbar keeps its doc-layout helper, but that helper now
   delegates to `fret-ui-kit::declarative::text::text_control_readout(...)`, so dense status/readout

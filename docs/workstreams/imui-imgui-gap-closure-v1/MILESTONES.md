@@ -203,7 +203,8 @@ Exit criteria:
   in `TableRowOptions::background` and `TableCellOptions::background`, with scene-paint proof that
   cell overrides paint after row overrides. `ImUiTableRow::cell_text(...)` now uses the shared
   `text_table_cell(...)` role helper, so default table text no longer inherits paragraph wrapping
-  semantics. Freeze panes, persistence, and old columns API remain advanced-table candidates.
+  semantics. At that point, freeze panes, visibility persistence, and old columns API shape were
+  still advanced-table candidates; later results below narrow or close those axes.
   2026-05-16 table header text result: sortable and plain table header labels also use
   `text_table_cell(...)`, preserving the same compact single-line ellipsis semantics as body cells.
   2026-05-16 static table column visibility result: `TableColumn::hidden()` and
@@ -215,13 +216,13 @@ Exit criteria:
   runtime stable-id visibility overrides as a policy-layer helper in `fret-ui-kit::imui`. It
   produces an adjusted `TableColumn` list and reuses the existing hidden-column render contract.
   Header menu policy is now covered by the helper chain below; persistence, freeze panes, and old
-  columns API shape were still candidate-only at this point. A `fret-imui` composition gate proves the helper can drive
-  table rendering while the runtime facade remains policy-light.
+  columns API shape were still candidate-only at that historical point. A `fret-imui` composition
+  gate proves the helper can drive table rendering while the runtime facade remains policy-light.
   2026-05-17 table visibility menu-item result: `table_column_visibility_menu_item(...)` now
   bridges `TableColumn`, existing checkbox menu item behavior, and
   `ImUiTableColumnVisibilityState`. Callers can still own a custom menu surface; the default header
   context-menu surface is covered by the helper below. Persistence, freeze panes, and old columns
-  API shape were still candidate-only at this point.
+  API shape were still candidate-only at that historical point.
   2026-05-17 table visibility menu-items group result:
   `table_column_visibility_menu_items(...)` now covers the repeated "show/hide columns" menu
   section for stable-id, human-labeled columns. The helper returns opaque/accessor-first item
@@ -236,22 +237,22 @@ Exit criteria:
   requests from both sortable and plain headers, popup placement, and column visibility menu items.
   It returns an opaque/accessor-first response, exposes popup/menu policy through
   `TableColumnVisibilityHeaderContextMenuOptions`, keeps the visibility model caller-owned, and
-  leaves persistence, freeze panes, and old columns API shape candidate-only at this point.
+  left persistence, freeze panes, and old columns API shape candidate-only at that historical point.
   2026-05-17 table visibility snapshot result:
   `TableColumnVisibilitySnapshot` and `TableColumnVisibilityEntry` now close the narrow
   persistence seam for runtime column visibility without introducing a table-state runtime.
   `ImUiTableColumnVisibilityState::snapshot()`, `from_snapshot(...)`, and
   `replace_from_snapshot(...)` round-trip stable column ids and visible flags through a serde data
   shape. Empty ids are ignored on restore and duplicate ids use last-entry-wins; applications still
-  own storage, schema placement, and when to apply restored state. Freeze panes and old columns API
-  shape were still candidate-only at this point.
+  own storage, schema placement, and when to apply restored state. Later entries below close the
+  freeze-pane seam and old API-shape cleanup.
   2026-05-17 table column pinning result: `TableColumn::pinned_left()` and
   `TableColumn::pinned_right()` now cover the first IMUI freeze-pane slice without copying Dear
   ImGui's table runtime. The helper render path splits visible header/body cells into frozen
   left/right groups plus a shared-scroll center group, keeps scroll state caller-owned when a
   `horizontal_scroll` handle is supplied, and falls back to an element-local scroll handle inside
   `fret-ui-kit::imui` when pinned columns need one. `fret-imui` stays a thin composition facade.
-  Old columns API shape was still candidate-only at this point.
+  Old columns API shape was still candidate-only at that historical point.
   2026-05-18 table column API-shape first-pass result: `TableColumn` now exposes accessor-first
   reads for its public option data, and table rendering, column-visibility policy, `fret-imui`
   composition tests, and public smoke tests use those accessors. This reduces the teaching/API
@@ -260,6 +261,10 @@ Exit criteria:
   `TableColumn` is no longer a public field bag. The fields are private, public callers stay on
   builder/accessor methods, internal render/policy code uses crate-local Arc/mutator seams, and the
   IMUI workstream source gate now fails if the old public fields return.
+  2026-05-18 current advanced-table gap read: visibility snapshot/restore, freeze-pane pinning, and
+  the old `TableColumn` public field-bag API shape are closed or narrowed. Remaining broad table
+  work should not reopen them as current gaps; only app/editor storage/schema policy or a concrete
+  Dear ImGui table-runtime parity proof should open a new lane.
   2026-05-16 control readout text role result: `text_control_readout(...)` now sits in
   `fret-ui-kit::declarative::text` beside `text_table_cell(...)`. The UI Gallery code-editor
   readouts still use the doc-layout app helper, but that helper delegates to the shared role, so

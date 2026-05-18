@@ -186,8 +186,9 @@ Readiness order for the next locally testable review slices:
    2026-05-16 table background/text role follow-up: explicit per-row/per-cell background overrides
    now live in `TableRowOptions::background` / `TableCellOptions::background`, and
    `ImUiTableRow::cell_text(...)` routes through the shared `text_table_cell(...)` helper instead
-   of bare paragraph text. Remaining advanced-table candidates are freeze panes, persistence, and
-   old columns API shape.
+   of bare paragraph text. At that point the still-open advanced-table axes were freeze panes,
+   runtime visibility persistence, and old columns API shape; later follow-ups below narrow or close
+   those axes.
    2026-05-16 table header text follow-up: sortable/plain table header labels now reuse
    `text_table_cell(...)` too, so header text follows the same single-line ellipsis role as body
    cells instead of falling back to default word wrapping.
@@ -204,13 +205,14 @@ Readiness order for the next locally testable review slices:
    provides a narrow stable-id visibility override helper in `fret-ui-kit::imui`. It applies to
    `TableColumn` lists before render and reuses the existing hidden-column path; menu/popup policy
    is covered by the subsequent helpers below, while persistence, freeze panes, and old columns API
-   shape were still separate follow-ons at this point. A `fret-imui` composition test proves the helper drives the
-   existing table render path without moving the state policy into `fret-imui`.
+   shape were still separate follow-ons at that historical point. A `fret-imui` composition test
+   proves the helper drives the existing table render path without moving the state policy into
+   `fret-imui`.
    2026-05-17 table visibility menu-item follow-up: `table_column_visibility_menu_item(...)` now
    provides the checkbox menu-item bridge between `TableColumn` and
    `ImUiTableColumnVisibilityState`. It reuses existing menu item policy; automatic header
    context-menu popup wiring is now covered by the helper below, while persistence, freeze panes,
-   and old columns API shape were still separate follow-ons at this point.
+   and old columns API shape were still separate follow-ons at that historical point.
    2026-05-17 table visibility menu-items group follow-up:
    `table_column_visibility_menu_items(...)` now composes the repeated checkbox menu section for
    stable-id, human-labeled table columns and returns accessor-first per-column responses. It still
@@ -234,13 +236,13 @@ Readiness order for the next locally testable review slices:
    for `ImUiTableColumnVisibilityState`. The snapshot stores only stable column ids plus visible
    flags, round-trips through serde, ignores empty ids on restore, and uses last-entry-wins for
    duplicate ids. Apps/editors still own storage, schema placement, and when to apply the restored
-   state; freeze panes and old columns API shape were still separate follow-ons at this point.
+   state. Later entries below close the freeze-pane seam and old API-shape cleanup.
    2026-05-17 table column pinning follow-up: `TableColumn::pinned_left()` and
    `TableColumn::pinned_right()` now provide the narrow freeze-pane seam for IMUI tables. The
    render path splits visible cells into left/center/right groups and keeps left/right frozen
    outside the shared center horizontal scroll handle. This stays in `fret-ui-kit::imui`, reuses
-   `fret-ui` scroll mechanics, and does not add a table-state runtime to `fret-imui`; old columns
-   API shape was still a separate follow-on at this point.
+   `fret-ui` scroll mechanics, and does not add a table-state runtime to `fret-imui`. The old
+   columns API shape stayed as the separate cleanup closed below.
    2026-05-18 table column API-shape first pass: `TableColumn` now has accessor-first read methods
    for header, stable id, width, visibility, sortability, sort direction, resize options, and pin
    state. The IMUI table render path, visibility helper, `fret-imui` composition tests, and public
@@ -252,6 +254,10 @@ Readiness order for the next locally testable review slices:
    `header_arc(...)`, `id_arc(...)`, and `set_visible_for_policy(...)` seams for render/policy
    internals, and `tools/gate_imui_workstream_source.py` prevents the public field bag from
    returning. This closes the old columns API-shape table follow-on.
+   2026-05-18 table gap current read: visibility snapshot/restore, freeze-pane pinning, and the old
+   `TableColumn` public field-bag shape are no longer current table gaps. Broader storage/schema
+   ownership and any full Dear ImGui-style mutable table runtime remain outside `fret-imui` until a
+   separate proof needs them.
    2026-05-16 control readout text role follow-up: `text_control_readout(...)` now lives beside
    `text_table_cell(...)` in `fret-ui-kit::declarative::text`, and the UI Gallery code-editor
    toolbar readouts route through that shared role instead of carrying app-local text layout policy.
