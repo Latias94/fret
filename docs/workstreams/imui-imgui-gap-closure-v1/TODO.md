@@ -510,6 +510,12 @@ Readiness order for the next locally testable review slices:
    PromptInputActionMenu, and PromptInputTooltip now put their outer demo titles/body copy on the
    same shared roles while leaving inner plan prose and shadcn/Button composition for a separate
    semantics pass.
+   2026-05-18 AI large/status snippet text-role follow-up: StackTraceLarge and TestResultsLarge
+   now use generic zero-size spacer markers for opened/activated diagnostics anchors, while
+   StackTraceLarge, TestResultsLarge, Tool, and Suggestions route fixed outer title/body text
+   through shared section-chrome/paragraph roles. Tool's fixed state-section labels also use
+   section-chrome text; Suggestions custom-children content stays app-owned for a later custom
+   content semantics pass.
    2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
    virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
    `control_readout_text(...)`.

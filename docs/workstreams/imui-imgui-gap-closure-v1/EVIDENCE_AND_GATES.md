@@ -645,6 +645,19 @@ Run evidence:
   section-chrome/paragraph roles. Inner Plan prose/Button composition stays out of this slice until
   a separate semantics pass. Gates: `cargo nextest run -p fret-ui-gallery --test
   ai_visible_text_role_surface --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: extended the AI visible text-role migration to large/status snippets:
+  StackTraceLarge, TestResultsLarge, Tool, and Suggestions. StackTraceLarge/TestResultsLarge
+  opened/activated markers and Tool/Suggestions test markers now use generic zero-size
+  `SpacerProps` anchors instead of empty `Text`; fixed outer title/body copy routes through shared
+  section-chrome/paragraph roles, and Tool's fixed state-section labels use section-chrome text.
+  Suggestions custom-children content stays app-owned for a later custom-content semantics pass.
+  Gates: `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
+  --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
+  --no-fail-fast` passed after the large/status snippet slice landed. `python
+  tools/gate_imui_workstream_source.py`, `python -m py_compile
+  tools/gate_imui_workstream_source.py`, `python -m json.tool
+  docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json`, and `git diff --check` also passed.
 - 2026-05-18: `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
   --no-fail-fast` passed after the Artifact/CodeBlock/Sandbox slice landed. `python
   tools/gate_imui_workstream_source.py`, `python -m json.tool

@@ -455,3 +455,132 @@ fn ai_commit_large_uses_shared_outer_text_roles_and_non_text_marker() {
         );
     }
 }
+
+#[test]
+fn ai_large_stack_and_test_results_use_shared_text_roles_and_non_text_markers() {
+    for (name, source, title, body, marker_id) in [
+        (
+            "stack_trace_large_demo",
+            include_str!("../src/ui/snippets/ai/stack_trace_large_demo.rs"),
+            "StackTrace (Large)",
+            "Scroll in the frames viewport and click a file path.",
+            "ui-ai-stack-trace-large-opened-marker",
+        ),
+        (
+            "test_results_large_demo",
+            include_str!("../src/ui/snippets/ai/test_results_large_demo.rs"),
+            "Test Results Large (AI Elements)",
+            "Scroll the page and click a deep row to set a marker.",
+            "ui-ai-test-results-large-activated-marker",
+        ),
+    ] {
+        let canonical = canonicalize_rust_fragment(source);
+
+        for marker in [
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "fn state_marker",
+            "SemanticsRole::Generic",
+            "cx.spacer(SpacerProps",
+            marker_id,
+            "decl_text::text_section_chrome_label",
+            title,
+            "decl_text::text_paragraph",
+            body,
+        ] {
+            let marker = canonicalize_rust_fragment(marker);
+            assert!(
+                canonical.contains(&marker),
+                "{name} should route fixed visible text and state markers through shared non-bare roles; missing `{marker}`"
+            );
+        }
+
+        for forbidden in [
+            "role: fret_core::SemanticsRole::Text",
+            "cx.text(\"\")",
+            &format!("cx.text(\"{title}\")"),
+            &format!("cx.text(\"{body}\")"),
+        ] {
+            let forbidden = canonicalize_rust_fragment(forbidden);
+            assert!(
+                !canonical.contains(&forbidden),
+                "{name} reintroduced bare visible text/state marker text: `{forbidden}`"
+            );
+        }
+    }
+}
+
+#[test]
+fn ai_tool_and_suggestions_use_shared_text_roles_and_non_text_markers() {
+    for (name, source, title, body, marker_id) in [
+        (
+            "tool_demo",
+            include_str!("../src/ui/snippets/ai/tool_demo.rs"),
+            "Tool (AI Elements)",
+            "Docs-shaped compound composition with the four official Tool states.",
+            "ui-ai-tool-demo-content-marker",
+        ),
+        (
+            "suggestions_demo",
+            include_str!("../src/ui/snippets/ai/suggestions_demo.rs"),
+            "Suggestions (AI Elements)",
+            "Suggestion pills emit intents; apps own prompt insertion.",
+            "ui-ai-suggestions-clicked-marker",
+        ),
+    ] {
+        let canonical = canonicalize_rust_fragment(source);
+
+        for marker in [
+            "use fret_ui_kit::declarative",
+            "text as decl_text",
+            "fn state_marker",
+            "SemanticsRole::Generic",
+            "cx.spacer(SpacerProps",
+            marker_id,
+            "decl_text::text_section_chrome_label",
+            title,
+            "decl_text::text_paragraph",
+            body,
+        ] {
+            let marker = canonicalize_rust_fragment(marker);
+            assert!(
+                canonical.contains(&marker),
+                "{name} should route fixed visible text and state markers through shared non-bare roles; missing `{marker}`"
+            );
+        }
+
+        for forbidden in [
+            "role: SemanticsRole::Text",
+            "role: fret_core::SemanticsRole::Text",
+            "cx.text(\"\")",
+            &format!("cx.text(\"{title}\")"),
+            &format!("cx.text(\"{body}\")"),
+        ] {
+            let forbidden = canonicalize_rust_fragment(forbidden);
+            assert!(
+                !canonical.contains(&forbidden),
+                "{name} reintroduced bare visible text/state marker text: `{forbidden}`"
+            );
+        }
+    }
+
+    let tool = canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/tool_demo.rs"));
+    for section in [
+        "Input Streaming (Pending)",
+        "Input Available (Running)",
+        "Output Available (Completed)",
+        "Output Error",
+    ] {
+        let role_marker = canonicalize_rust_fragment(&format!(
+            "decl_text::text_section_chrome_label(cx, \"{section}\")"
+        ));
+        assert!(
+            tool.contains(&role_marker),
+            "tool_demo should route `{section}` section labels through shared section chrome roles"
+        );
+        let bare_marker = canonicalize_rust_fragment(&format!("cx.text(\"{section}\")"));
+        assert!(
+            !tool.contains(&bare_marker),
+            "tool_demo reintroduced bare section label text: `{bare_marker}`"
+        );
+    }
+}
