@@ -45,6 +45,24 @@
     },
     { "type": "wait_frames", "n": 30 },
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/engine_present",
+        "value": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/x_data_zoom/active",
+        "value": false
+      },
+      "timeout_frames": 60
+    },
+    {
       "type": "capture_bundle",
       "label": "ui-gallery-chart-torture-pan-zoom-before"
     },
@@ -77,6 +95,15 @@
       "steps": 18
     },
     { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/x_data_zoom/active",
+        "value": true
+      },
+      "timeout_frames": 600
+    },
     {
       "type": "capture_bundle",
       "label": "ui-gallery-chart-torture-pan-zoom-after"

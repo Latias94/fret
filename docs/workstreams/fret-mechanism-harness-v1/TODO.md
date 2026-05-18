@@ -1072,3 +1072,10 @@ date: 2026-05-12
     delinea `ChartEngine` in a stable local model, uses dataZoom-backed axes, and the suite passes
     with `distinct_key_count=2` plus a delinea headless gate proving interactive pan/zoom updates
     `output.axis_windows`.
+- [x] Add a Chart Torture dataZoom runtime oracle through UI Gallery app snapshots.
+  - Result: the Chart Torture page now exposes its shared engine dataZoom state through
+    `app_snapshot.chart_torture`, and the promoted pan/zoom script asserts
+    `x_data_zoom.active=false` before interaction and `true` after drag/wheel. The first draft
+    exposed an oracle design issue: `ChartCanvasOutput` is paint-published, so ViewCache replay can
+    keep the output model at revision `0` before interaction. The final oracle reads the shared
+    engine state and keeps `ChartCanvasOutput` as supplemental snapshot evidence.

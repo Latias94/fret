@@ -1,5 +1,7 @@
 use fret_app::App;
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
+#[cfg(feature = "gallery-dev")]
+use fret_core::AppWindowId;
 use std::sync::Arc;
 
 use crate::spec::{
@@ -18,6 +20,8 @@ use crate::harness::{
     UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER, UiGalleryCodeEditorHandlesStore,
     UiGalleryMarkdownEditorHandlesStore,
 };
+#[cfg(feature = "gallery-dev")]
+use crate::harness::UiGalleryChartTortureOutputStore;
 
 use super::UiGalleryHarnessDiagnosticsStore;
 
@@ -129,6 +133,78 @@ fn theme_runtime_snapshot_json(app: &App) -> serde_json::Value {
             "easing_stack_shift_milli": cubic_bezier_milli_json(easing_stack_shift),
         },
     })
+}
+
+#[cfg(feature = "gallery-dev")]
+fn rounded_f64_json(value: f64) -> serde_json::Value {
+    if value.is_finite() && value >= i64::MIN as f64 && value <= i64::MAX as f64 {
+        serde_json::json!(value.round() as i64)
+    } else {
+        serde_json::Value::Null
+    }
+}
+
+#[cfg(feature = "gallery-dev")]
+fn chart_window_json(pair: Option<(f64, f64)>) -> serde_json::Value {
+    pair.map(|(min, max)| {
+        let span = max - min;
+        serde_json::json!({
+            "present": true,
+            "min_ms_rounded": rounded_f64_json(min),
+            "max_ms_rounded": rounded_f64_json(max),
+            "span_ms_rounded": rounded_f64_json(span),
+        })
+    })
+    .unwrap_or_else(|| {
+        serde_json::json!({
+            "present": false,
+        })
+    })
+}
+
+#[cfg(feature = "gallery-dev")]
+fn chart_torture_snapshot_json(app: &App, window: AppWindowId) -> Option<serde_json::Value> {
+    let handle = app
+        .global::<UiGalleryChartTortureOutputStore>()?
+        .per_window
+        .get(&window)?;
+    let output = app.models().get_cloned(&handle.output)?;
+    let x_axis = delinea::ids::AxisId::new(1);
+    let (engine_state_revision, x_data_zoom_pair, x_axis_output_pair) = {
+        let engine = handle.shared_engine.borrow();
+        let x_data_zoom_pair = engine
+            .state()
+            .data_zoom_x
+            .get(&x_axis)
+            .and_then(|state| state.window)
+            .filter(|window| window.is_valid())
+            .map(|window| (window.min, window.max));
+        let x_axis_output_pair = engine
+            .output()
+            .axis_windows
+            .get(&x_axis)
+            .copied()
+            .filter(|window| window.is_valid())
+            .map(|window| (window.min, window.max));
+        (engine.state().revision.0, x_data_zoom_pair, x_axis_output_pair)
+    };
+
+    Some(serde_json::json!({
+        "schema_version": 1,
+        "engine_present": true,
+        "engine_state_revision": engine_state_revision,
+        "x_data_zoom": {
+            "active": x_data_zoom_pair.is_some(),
+            "window": chart_window_json(x_data_zoom_pair),
+        },
+        "x_axis_output_window": chart_window_json(x_axis_output_pair),
+        "output_model": {
+            "revision": output.revision,
+            "link_events_revision": output.link_events_revision,
+            "domain_windows_count": output.snapshot.domain_windows_by_key.len() as u64,
+            "tooltip_lines_count": output.snapshot.tooltip_lines.len() as u64,
+        },
+    }))
 }
 
 fn command_registry_string_bytes_estimate(app: &App) -> serde_json::Value {
@@ -888,6 +964,10 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                     "selected_page".to_string(),
                     serde_json::Value::String(selected_page.to_string()),
                 );
+                #[cfg(feature = "gallery-dev")]
+                if let Some(chart_torture) = chart_torture_snapshot_json(app, window) {
+                    out.insert("chart_torture".to_string(), chart_torture);
+                }
                 out.insert(
                     "code_editor".to_string(),
                     serde_json::json!({

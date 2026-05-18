@@ -4432,3 +4432,46 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - sampling-window post-run proof:
     `target/fret-diag-chart-torture-suite-shared-engine-v2/sessions/1779129994544-98640/check.chart_sampling_window_shifts_min.json`
     records `total_actions=3`, `distinct_key_count=2`, and two unique nonzero sampling keys.
+
+## Chart Torture DataZoom Runtime Oracle
+
+- invariant:
+  Chart Torture pan/zoom diagnostics must prove a chart-specific interaction state changes, not
+  only that screenshot pixels or prepaint sampling keys changed. The shared delinea engine should
+  report inactive dataZoom before scripted input and an active X dataZoom window after drag/wheel.
+- finding:
+  the first output-model oracle failed before interaction because `ChartCanvasOutput` is published
+  from `ChartCanvas::paint`. Under ViewCache replay, the app snapshot can see the page and shared
+  engine while the output model is still at revision `0`. This was an oracle design issue, not a
+  chart runtime defect.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/harness.rs`,
+  `apps/fret-ui-gallery/src/driver/diag_snapshot.rs`,
+  `apps/fret-ui-gallery/src/ui/previews/pages/torture/chart_torture.rs`, and
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-chart-torture-pan-zoom.json`.
+- app snapshot proof:
+  `target/fret-diag-chart-torture-suite-output-oracle-v2/sessions/1779131582955-88188/1779131647234/bundle.schema2.json`
+  records `app_snapshot.chart_torture.x_data_zoom.active=true`,
+  `output_model.domain_windows_count=2`, and `output_model.tooltip_lines_count=2` after
+  interaction.
+- initial failed oracle evidence:
+  `target/fret-diag-chart-torture-suite-output-oracle-v1/sessions/1779131062370-101204/script.result.json`
+  failed at step 10 waiting for `/chart_torture/x_window/present=true`; the timeout bundle showed
+  `output_model.revision=0` throughout the pre-interaction ViewCache replay.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_chart_torture_pan_zoom --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `b48b7c47-8d4a-4d7d-8923-c3451a4060fe`.
+- registry:
+  `python tools/check_diag_scripts_registry.py`
+  - result: passed; registry is up to date.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-chart,gallery-dev`
+  - result: passed.
+- runtime diagnostics:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-chart-torture --dir target/fret-diag-chart-torture-suite-output-oracle-v2 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  - result: passed; suite summary
+    `target/fret-diag-chart-torture-suite-output-oracle-v2/sessions/1779131582955-88188/suite.summary.json`;
+    run id `1779131647234`.
+  - sampling-window post-run companion:
+    `target/fret-diag-chart-torture-suite-output-oracle-v2/sessions/1779131582955-88188/check.chart_sampling_window_shifts_min.json`
+    records `total_actions=3`, `distinct_key_count=2`, and two unique nonzero sampling keys.

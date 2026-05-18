@@ -1,4 +1,5 @@
 use super::super::super::super::*;
+use crate::harness::{UiGalleryChartTortureOutputHandle, UiGalleryChartTortureOutputStore};
 use crate::ui::doc_layout::{self, DocSection};
 use fret::AppComponentCx;
 
@@ -140,6 +141,20 @@ pub(in crate::ui) fn preview_chart_torture(
     let shared_engine = shared_engine
         .read(cx.app, |_, engine| engine.clone())
         .expect("chart torture engine model should be readable");
+    let output = cx.local_model_keyed(
+        "chart_torture_output",
+        fret_chart::ChartCanvasOutput::default,
+    );
+    cx.app
+        .with_global_mut(UiGalleryChartTortureOutputStore::default, |store, _app| {
+            store.per_window.insert(
+                cx.window,
+                UiGalleryChartTortureOutputHandle {
+                    output: output.clone(),
+                    shared_engine: shared_engine.clone(),
+                },
+            );
+        });
 
     let chart = cx.cached_subtree_with(
         CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
@@ -149,11 +164,13 @@ pub(in crate::ui) fn preview_chart_torture(
             layout.size.height = Length::Px(Px(520.0));
 
             let shared_engine = shared_engine.clone();
+            let output = output.clone();
             let props = RetainedSubtreeProps::new::<App>(move |ui| {
                 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 
                 let mut canvas = ChartCanvas::new_shared(shared_engine.clone());
                 canvas.set_input_map(fret_chart::input_map::ChartInputMap::default());
+                canvas = canvas.output_model(output.clone());
 
                 let node = ui.create_node_retained(canvas);
                 ui.set_node_view_cache_flags(node, true, true, false);

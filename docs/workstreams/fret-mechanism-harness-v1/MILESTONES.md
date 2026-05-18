@@ -2069,3 +2069,26 @@ Status: complete for Chart Torture pan/zoom sampling-window telemetry.
 - Runtime diagnostics pass:
   `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-chart-torture --dir target/fret-diag-chart-torture-suite-shared-engine-v2 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
   with run id `1779130059382`; the sampling-window evidence records `distinct_key_count=2`.
+
+## M115: Chart Torture DataZoom Runtime Oracle
+
+Status: complete for Chart Torture shared-engine dataZoom state assertions.
+
+- Added a Gallery app snapshot payload for Chart Torture:
+  `app_snapshot.chart_torture.engine_present`,
+  `app_snapshot.chart_torture.x_data_zoom.active`, the rounded dataZoom window, and supplemental
+  `ChartCanvasOutput` model counters.
+- Updated `ui-gallery-chart-torture-pan-zoom.json` so the runtime gate asserts the shared engine
+  starts with `x_data_zoom.active=false` and becomes `true` after scripted drag/wheel interaction.
+- The first runtime draft exposed an oracle design bug, not a chart defect: `ChartCanvasOutput` is
+  paint-published, so ViewCache replay can leave the output model at revision `0` before
+  interaction. The final gate reads the shared `ChartEngine` state and still records output-model
+  counters when paint later publishes them.
+- Gates pass:
+  `cargo fmt -p fret-ui-gallery --check`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_chart_torture_pan_zoom --no-fail-fast --no-capture`
+  with Nextest run id `b48b7c47-8d4a-4d7d-8923-c3451a4060fe`;
+  `python tools/check_diag_scripts_registry.py`;
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-chart,gallery-dev`; and
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-chart-torture --dir target/fret-diag-chart-torture-suite-output-oracle-v2 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  with run id `1779131647234`.
