@@ -583,6 +583,7 @@
     "apps/fret-ui-gallery/tests/code_editor_control_readout_surface.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/audio_player_demo.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/audio_player_remote_demo.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/ai/image_demo.rs",
     "apps/fret-ui-gallery/tests/ai_audio_player_text_role_surface.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/message_demo.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/terminal_demo.rs",

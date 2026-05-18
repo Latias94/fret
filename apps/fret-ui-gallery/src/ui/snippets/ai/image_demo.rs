@@ -7,14 +7,15 @@ use fret_core::Px;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let image_id = shared_preview_image_id(cx);
-    let status_line = cx
-        .text(format!("image_ready={}", image_id.is_some()))
-        .test_id("ui-ai-image-demo-status");
+    let status_line =
+        decl_text::text_control_readout(cx, format!("image_ready={}", image_id.is_some()))
+            .test_id("ui-ai-image-demo-status");
 
     let border = cx.with_theme(|theme| theme.color_token("border"));
     let image = image_id.map(|id| {
@@ -32,8 +33,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     });
 
     let image = image.unwrap_or_else(|| {
-        cx.text("Loading image...")
-            .test_id("ui-ai-image-demo-loading")
+        decl_text::text_control_readout(cx, "Loading image...").test_id("ui-ai-image-demo-loading")
     });
 
     let props = cx.with_theme(|theme| {
@@ -44,7 +44,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("Image (AI Elements): presentation surface backed by the shared gallery demo asset bundle."),
+            decl_text::text_paragraph(
+                cx,
+                "Image (AI Elements): presentation surface backed by the shared gallery demo asset bundle.",
+            ),
             status_line,
             cx.container(props, move |cx| {
                 vec![

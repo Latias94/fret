@@ -513,6 +513,9 @@ Exit criteria:
   2026-05-18 AI Canvas world spike text-role result: the canvas spike visible chrome, node copy,
   and debug/status readouts now use shared section-chrome, paragraph, and control-readout roles
   instead of bare `cx.text(...)`.
+  2026-05-18 AI Image demo text-role result: fixed explanatory copy now uses shared paragraph text,
+  and the image-ready/loading readouts use shared control-readout text instead of bare
+  `cx.text(...)`.
   2026-05-17 gallery data-grid text result: the UI Gallery DataGrid preview now routes virtualized
   grid cells through `text_table_cell(...)` and the selected-row status line through
   `control_readout_text(...)`.

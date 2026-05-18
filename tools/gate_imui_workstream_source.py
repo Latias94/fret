@@ -455,6 +455,7 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/snippets/ai/audio_player_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/audio_player_remote_demo.rs",
                 "apps/fret-ui-gallery/tests/ai_audio_player_text_role_surface.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/image_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/message_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/terminal_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/artifact_demo.rs",
@@ -592,6 +593,21 @@ def main() -> None:
             forbidden=[
                 "role: fret_core::SemanticsRole::Text",
                 "vec![cx.text(\"\")]",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/image_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, format!(\"image_ready={}\", image_id.is_some()))",
+                "decl_text::text_control_readout(cx, \"Loading image...\")",
+                "decl_text::text_paragraph(",
+                "Image (AI Elements): presentation surface backed by the shared gallery demo asset bundle.",
+            ],
+            forbidden=[
+                "cx\n        .text(format!(\"image_ready={}\", image_id.is_some()))",
+                "cx.text(\"Loading image...\")",
+                "cx.text(\"Image (AI Elements): presentation surface backed by the shared gallery demo asset bundle.\")",
             ],
         ),
         SourceCheck(

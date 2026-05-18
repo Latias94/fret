@@ -314,6 +314,38 @@ fn ai_simple_chrome_snippets_use_shared_title_and_paragraph_roles() {
 }
 
 #[test]
+fn ai_image_demo_routes_visible_text_through_roles() {
+    let source = include_str!("../src/ui/snippets/ai/image_demo.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_paragraph",
+        "Image (AI Elements): presentation surface backed by the shared gallery demo asset bundle.",
+        "decl_text::text_control_readout(cx, format!(\"image_ready={}\", image_id.is_some()))",
+        "decl_text::text_control_readout(cx, \"Loading image...\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "image_demo should route fixed visible text and status/loading readouts through shared roles; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "cx.text(format!(\"image_ready={}\", image_id.is_some()))",
+        "cx.text(\"Loading image...\")",
+        "cx.text(\"Image (AI Elements): presentation surface backed by the shared gallery demo asset bundle.\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "image_demo reintroduced bare visible text/readout text: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
 fn ai_selector_branch_snippets_use_shared_text_roles_and_non_text_markers() {
     for (name, source, title, body) in [
         (
