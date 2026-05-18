@@ -166,6 +166,12 @@ Last updated: 2026-05-18
   - `apps/fret-ui-gallery/src/ui/snippets/tabs/icons.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/tabs/parts.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/tabs/usage.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/collapsible/basic.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/collapsible/controlled_state.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/collapsible/demo.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/collapsible/file_tree.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/collapsible/rtl.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/collapsible/usage.rs`
   - `apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/mvp/gates.rs`
   - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
   - `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs`
@@ -2171,6 +2177,28 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
   tabs_snippet_custom_text_uses_shared_roles --no-fail-fast` passed.
 - `python tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 gallery Collapsible text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- `cargo check -p fret-ui-gallery --test ui_authoring_surface_default_app` passed.
+- First `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  collapsible_snippet_text_uses_shared_roles --no-fail-fast` timed out at 300s while background
+  compilation continued.
+- Retried after the compile finished:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  collapsible_snippet_text_uses_shared_roles --no-fail-fast` passed.
+- After adding `collapsible/rtl.rs` and `collapsible/demo.rs` to the same source test, the final
+  long-timeout run of
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  collapsible_snippet_text_uses_shared_roles --no-fail-fast` passed.
+- First `python tools/gate_imui_workstream_source.py` failed on rustfmt-sensitive markers in
+  `collapsible/usage.rs` and later `collapsible/demo.rs`; after splitting those markers into helper
+  calls and text payloads, the gate passed.
 - `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
 - `git diff --check` passed.
 

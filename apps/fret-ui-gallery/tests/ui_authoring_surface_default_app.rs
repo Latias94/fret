@@ -4138,6 +4138,79 @@ fn collapsible_snippets_prefer_ui_cx_on_the_default_app_surface() {
 }
 
 #[test]
+fn collapsible_snippet_text_uses_shared_roles() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/collapsible/basic.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_button_label(cx, \"Product details\")",
+        ],
+        &["cx.text(\"Product details\")"],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/collapsible/demo.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_code_label(cx, name)",
+            "decl_text::text_section_chrome_label(",
+            "\"@peduarte starred 3 repositories\"",
+        ],
+        &[
+            "shadcn::raw::typography::small(name)",
+            "shadcn::raw::typography::small(\"@peduarte starred 3 repositories\")",
+        ],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/collapsible/controlled_state.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_control_readout(cx,",
+            "decl_text::text_paragraph(",
+        ],
+        &["shadcn::raw::typography::muted(", "cx.text("],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/collapsible/file_tree.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_list_row_label(cx, label)",
+        ],
+        &["cx.text(label)"],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/collapsible/usage.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_button_label(",
+            "\"Can I use this in my project?\"",
+            "decl_text::text_paragraph_break_words(",
+        ],
+        &[
+            "ui::text(\"Can I use this in my project?\")",
+            "ui::text_block(",
+        ],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/collapsible/rtl.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_section_chrome_label(cx, title)",
+            "decl_text::text_paragraph(cx, detail)",
+            "decl_text::text_section_chrome_label(cx, \"الطلب #4189\")",
+            "decl_text::text_control_readout(cx, \"الحالة\")",
+            "decl_text::text_control_readout(cx, \"تم الشحن\")",
+        ],
+        &[
+            "shadcn::raw::typography::small(title)",
+            "shadcn::raw::typography::muted(detail)",
+            "shadcn::raw::typography::small(\"الطلب #4189\")",
+            "shadcn::raw::typography::muted(\"الحالة\")",
+            "shadcn::raw::typography::small(\"تم الشحن\")",
+        ],
+    );
+}
+
+#[test]
 fn collapsible_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/collapsible.rs",

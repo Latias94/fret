@@ -3201,6 +3201,82 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/collapsible/basic.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_button_label(cx, \"Product details\")",
+            ],
+            forbidden=[
+                "cx.text(\"Product details\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/collapsible/demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_code_label(cx, name)",
+                "decl_text::text_section_chrome_label(",
+                "\"@peduarte starred 3 repositories\"",
+            ],
+            forbidden=[
+                "shadcn::raw::typography::small(name)",
+                "shadcn::raw::typography::small(\"@peduarte starred 3 repositories\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/collapsible/controlled_state.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx,",
+                "decl_text::text_paragraph(",
+            ],
+            forbidden=[
+                "shadcn::raw::typography::muted(",
+                "cx.text(",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/collapsible/file_tree.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_list_row_label(cx, label)",
+            ],
+            forbidden=[
+                "cx.text(label)",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/collapsible/usage.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_button_label(",
+                "\"Can I use this in my project?\"",
+                "decl_text::text_paragraph_break_words(",
+            ],
+            forbidden=[
+                "ui::text(\"Can I use this in my project?\")",
+                "ui::text_block(",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/collapsible/rtl.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(cx, title)",
+                "decl_text::text_paragraph(cx, detail)",
+                "decl_text::text_section_chrome_label(cx, \"الطلب #4189\")",
+                "decl_text::text_control_readout(cx, \"الحالة\")",
+                "decl_text::text_control_readout(cx, \"تم الشحن\")",
+            ],
+            forbidden=[
+                "shadcn::raw::typography::small(title)",
+                "shadcn::raw::typography::muted(detail)",
+                "shadcn::raw::typography::small(\"الطلب #4189\")",
+                "shadcn::raw::typography::muted(\"الحالة\")",
+                "shadcn::raw::typography::small(\"تم الشحن\")",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/toggle/label.rs"),
             required=[
                 "decl_text::text_control_readout(cx, format!(\"Pressed: {pressed_now}\"))",
@@ -3276,6 +3352,7 @@ def main() -> None:
                 "fn toggle_snippet_item_text_uses_button_label_role()",
                 "fn button_children_snippet_text_uses_button_label_role()",
                 "fn tabs_snippet_custom_text_uses_shared_roles()",
+                "fn collapsible_snippet_text_uses_shared_roles()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",
             ],

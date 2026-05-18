@@ -7,6 +7,7 @@ use fret_ui::Theme;
 use fret_ui::element::VisualTransformProps;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[derive(Clone, Copy)]
@@ -226,7 +227,7 @@ fn file_leaf<H: UiHost>(
                 Some(Px(16.0)),
                 None,
             ),
-            cx.text(label),
+            decl_text::text_list_row_label(cx, label),
         ]
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -273,7 +274,7 @@ fn folder<H: UiHost>(
                     vec![
                         chevron,
                         icon::icon_with(cx, icon, Some(Px(16.0)), None),
-                        cx.text(label),
+                        decl_text::text_list_row_label(cx, label),
                     ]
                 })
                 .layout(LayoutRefinement::default().w_full().min_w_0())

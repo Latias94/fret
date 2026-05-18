@@ -5,6 +5,7 @@ use fret::{AppComponentCx, UiChild};
 use fret_ui::Theme;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn detail_card<H: UiHost>(
@@ -28,8 +29,8 @@ fn detail_card<H: UiHost>(
         vec![
             ui::v_flex(|cx| {
                 vec![
-                    shadcn::raw::typography::small(title).into_element(cx),
-                    shadcn::raw::typography::muted(detail).into_element(cx),
+                    decl_text::text_section_chrome_label(cx, title),
+                    decl_text::text_paragraph(cx, detail),
                 ]
             })
             .gap(Space::N1)
@@ -50,7 +51,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .into_element_with_open_model(
                 cx,
                 |cx, open, _is_open| {
-                    let title = shadcn::raw::typography::small("الطلب #4189").into_element(cx);
+                    let title = decl_text::text_section_chrome_label(cx, "الطلب #4189");
                     let button = shadcn::Button::new("")
                         .a11y_label("Toggle details")
                         .variant(shadcn::ButtonVariant::Ghost)
@@ -92,8 +93,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                             vec![
                                 ui::h_flex(|cx| {
                                     vec![
-                                        shadcn::raw::typography::muted("الحالة").into_element(cx),
-                                        shadcn::raw::typography::small("تم الشحن").into_element(cx),
+                                        decl_text::text_control_readout(cx, "الحالة"),
+                                        decl_text::text_control_readout(cx, "تم الشحن"),
                                     ]
                                 })
                                 .gap(Space::N2)

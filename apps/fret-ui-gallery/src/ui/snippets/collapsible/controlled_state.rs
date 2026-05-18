@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("controlled_state.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_ui::Invalidation;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -13,13 +14,13 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     ui::v_flex(|cx| {
             vec![
-                shadcn::raw::typography::muted(
+                decl_text::text_control_readout(cx,
                     if open_now {
                         "open=true (controlled)"
                     } else {
                         "open=false (controlled)"
                     },
-                ).into_element(cx),
+                ),
                 shadcn::Collapsible::new(open.clone()).into_element_with_open_model(
                     cx,
                     |cx, open, is_open| {
@@ -30,7 +31,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                             .into_element(cx)
                     },
                     |cx| {
-                        shadcn::CollapsibleContent::new(vec![cx.text(
+                        shadcn::CollapsibleContent::new(vec![decl_text::text_paragraph(
+                            cx,
                             "This panel is controlled by `Model<bool>` and mirrors shadcn open/onOpenChange behavior.",
                         )])
                         .refine_layout(LayoutRefinement::default().w_full().mt(Space::N2))
