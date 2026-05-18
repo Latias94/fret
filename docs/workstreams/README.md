@@ -2224,6 +2224,7 @@ Rule:
 - `docs/workstreams/renderer-modularity-fearless-refactor-v1/` — first 2026-03-12, latest 2026-03-13, 8 markdown docs
 - `docs/workstreams/renderer-paint-gpu-storage-unification-v1/` — first 2026-02-16, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/renderer-render-plan-analysis-owner-v1/` — first 2026-05-18, latest 2026-05-18, 7 markdown docs (closed narrow follow-on for moving render-plan pass-list analysis helpers into a sibling owner)
+- `docs/workstreams/renderer-render-plan-debug-validation-tests-owner-v1/` — first 2026-05-18, latest 2026-05-18, 7 markdown docs (closed narrow follow-on for moving debug validation render-plan tests into a sibling owner)
 - `docs/workstreams/renderer-render-plan-debug-validation-owner-v1/` — first 2026-05-18, latest 2026-05-18, 7 markdown docs (closed narrow follow-on for moving debug-only render-plan validation helpers into a sibling owner)
 - `docs/workstreams/renderer-render-plan-postprocess-owner-v1/` — first 2026-05-18, latest 2026-05-18, 7 markdown docs (closed narrow follow-on for moving debug postprocess lowering helpers into a sibling owner)
 - `docs/workstreams/renderer-render-plan-postprocess-tests-owner-v1/` — first 2026-05-18, latest 2026-05-18, 7 markdown docs (closed narrow follow-on for moving postprocess render-plan tests into a sibling owner)
