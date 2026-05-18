@@ -368,3 +368,90 @@ fn ai_selector_branch_snippets_use_shared_text_roles_and_non_text_markers() {
         }
     }
 }
+
+#[test]
+fn ai_prompt_and_plan_snippets_use_shared_outer_text_roles() {
+    for (name, source, title, body) in [
+        (
+            "plan_demo",
+            include_str!("../src/ui/snippets/ai/plan_demo.rs"),
+            "Plan (AI Elements)",
+            "Toggle the chevron button to expand/collapse.",
+        ),
+        (
+            "prompt_input_action_menu_demo",
+            include_str!("../src/ui/snippets/ai/prompt_input_action_menu_demo.rs"),
+            "Prompt Input Action Menu (AI Elements)",
+            "Use the + menu to add attachments.",
+        ),
+        (
+            "prompt_input_tooltip_demo",
+            include_str!("../src/ui/snippets/ai/prompt_input_tooltip_demo.rs"),
+            "Prompt Input Button Tooltips (AI Elements)",
+            "Hover the toolbar actions to preview a simple tooltip, a shortcut hint, and a bottom-positioned tooltip.",
+        ),
+    ] {
+        let canonical = canonicalize_rust_fragment(source);
+
+        for marker in [
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_section_chrome_label",
+            title,
+            "decl_text::text_paragraph",
+            body,
+        ] {
+            let marker = canonicalize_rust_fragment(marker);
+            assert!(
+                canonical.contains(&marker),
+                "{name} should route fixed outer title/body text through shared roles; missing `{marker}`"
+            );
+        }
+
+        for forbidden in [
+            format!("cx.text(\"{title}\")"),
+            format!("cx.text(\"{body}\")"),
+        ] {
+            let forbidden = canonicalize_rust_fragment(&forbidden);
+            assert!(
+                !canonical.contains(&forbidden),
+                "{name} reintroduced bare outer visible text: `{forbidden}`"
+            );
+        }
+    }
+}
+
+#[test]
+fn ai_commit_large_uses_shared_outer_text_roles_and_non_text_marker() {
+    let source = include_str!("../src/ui/snippets/ai/commit_large_demo.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "fn state_marker(cx: &mut AppComponentCx<'_>, test_id: &'static str) -> AnyElement",
+        "SemanticsRole::Generic",
+        "cx.spacer(SpacerProps",
+        "opened_now.is_some().then(|| state_marker(cx, \"ui-ai-commit-large-opened-marker\"))",
+        "decl_text::text_section_chrome_label(cx, \"Commit (Large)\")",
+        "decl_text::text_paragraph",
+        "\"Scroll-heavy surface for hit testing + viewport scrolling.\"",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "commit_large_demo should route fixed visible text and state marker through shared non-bare roles; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "role: fret_core::SemanticsRole::Text",
+        "cx.text(\"\")",
+        "cx.text(\"Commit (Large)\")",
+        "cx.text(\"Scroll-heavy surface for hit testing + viewport scrolling.\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "commit_large_demo reintroduced bare visible text/state marker text: `{forbidden}`"
+        );
+    }
+}

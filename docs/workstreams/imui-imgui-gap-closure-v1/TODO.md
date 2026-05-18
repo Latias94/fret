@@ -504,6 +504,12 @@ Readiness order for the next locally testable review slices:
    2026-05-18 AI selector/branch marker follow-up: MessageBranch, MicSelector, and ModelSelector
    snippets now expose state-only diagnostics anchors through generic zero-size spacer markers
    instead of empty `Text`, while their fixed demo titles/body copy use shared text roles.
+   2026-05-18 AI prompt/plan/commit-large text-role follow-up: CommitLarge now routes its
+   opened-file diagnostics marker through a generic zero-size spacer anchor instead of empty
+   `Text`, and its fixed title/body copy uses shared section-chrome/paragraph roles. Plan,
+   PromptInputActionMenu, and PromptInputTooltip now put their outer demo titles/body copy on the
+   same shared roles while leaving inner plan prose and shadcn/Button composition for a separate
+   semantics pass.
    2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
    virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
    `control_readout_text(...)`.

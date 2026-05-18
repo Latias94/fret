@@ -5,6 +5,7 @@ use fret::{AppComponentCx, UiChild};
 use fret_icons_lucide::generated_ids::lucide::FILE_TEXT;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
@@ -135,8 +136,8 @@ library from React to SolidJS, ensuring compatibility and maintaining existing f
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("Plan (AI Elements)"),
-            cx.text("Toggle the chevron button to expand/collapse."),
+            decl_text::text_section_chrome_label(cx, "Plan (AI Elements)"),
+            decl_text::text_paragraph(cx, "Toggle the chevron button to expand/collapse."),
             shadcn::Button::new("Toggle streaming")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .size(shadcn::ButtonSize::Sm)

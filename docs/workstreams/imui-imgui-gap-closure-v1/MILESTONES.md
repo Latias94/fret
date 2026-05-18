@@ -465,6 +465,10 @@ Exit criteria:
   2026-05-18 AI selector/branch marker result: MessageBranch, MicSelector, and ModelSelector
   snippets now use generic zero-size spacer markers for state-only diagnostics anchors instead of
   empty `Text`, and their demo titles/body copy route through shared section-chrome/paragraph roles.
+  2026-05-18 AI prompt/plan/commit-large text-role result: CommitLarge now keeps its opened-file
+  diagnostics anchor out of text layout semantics with a generic zero-size spacer marker, and
+  CommitLarge, Plan, PromptInputActionMenu, and PromptInputTooltip route their outer fixed
+  title/body text through shared section-chrome/paragraph roles.
   2026-05-17 gallery data-grid text result: the UI Gallery DataGrid preview now routes virtualized
   grid cells through `text_table_cell(...)` and the selected-row status line through
   `control_readout_text(...)`.

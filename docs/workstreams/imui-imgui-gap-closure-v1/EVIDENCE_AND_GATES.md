@@ -638,6 +638,13 @@ Run evidence:
   diagnostics-only state anchors instead of empty `Text`, and their fixed demo title/body copy uses
   shared section-chrome/paragraph roles. Gates: `cargo nextest run -p fret-ui-gallery --test
   ai_visible_text_role_surface --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: extended the AI visible text-role migration to CommitLarge, Plan,
+  PromptInputActionMenu, and PromptInputTooltip. CommitLarge now uses a generic zero-size
+  `SpacerProps` marker for its opened-file diagnostics anchor instead of an empty `Text`, and the
+  four snippets route their outer fixed demo title/body copy through shared
+  section-chrome/paragraph roles. Inner Plan prose/Button composition stays out of this slice until
+  a separate semantics pass. Gates: `cargo nextest run -p fret-ui-gallery --test
+  ai_visible_text_role_surface --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
 - 2026-05-18: `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
   --no-fail-fast` passed after the Artifact/CodeBlock/Sandbox slice landed. `python
   tools/gate_imui_workstream_source.py`, `python -m json.tool
@@ -1978,6 +1985,20 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - Retried after the compile finished: `cargo nextest run -p fret-ui-gallery --test
   ai_visible_text_role_surface --no-fail-fast` passed.
 - `python tools/gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 AI prompt/plan/commit-large text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ai_visible_text_role_surface` passed.
+- First `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast`
+  timed out at 300s while a background `rustc` compile continued.
+- Retried after the compile finished: `cargo nextest run -p fret-ui-gallery --test
+  ai_visible_text_role_surface --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed after replacing a rustfmt-sensitive
+  CommitLarge marker check with stable split markers.
 - `python -m py_compile tools/gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
 - `git diff --check` passed.

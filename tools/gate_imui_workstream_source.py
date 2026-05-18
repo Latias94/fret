@@ -469,6 +469,10 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/snippets/ai/message_branch_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/mic_selector_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/model_selector_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/commit_large_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/plan_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_action_menu_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_tooltip_demo.rs",
                 "apps/fret-ui-gallery/tests/ai_visible_text_role_surface.rs",
                 "ecosystem/fret-ui-ai/src/elements/mod.rs",
                 "ecosystem/fret-ui-ai/src/surface_policy_tests.rs",
@@ -802,6 +806,62 @@ def main() -> None:
                 "|cx| vec![cx.text(\"\")]",
                 "cx.text(\"ModelSelector (AI Elements)\")",
                 "cx.text(\"Dialog + Command surfaces; selection is app-owned.\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/commit_large_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "fn state_marker(cx: &mut AppComponentCx<'_>, test_id: &'static str) -> AnyElement",
+                "role: fret_core::SemanticsRole::Generic",
+                "cx.spacer(SpacerProps {",
+                "let opened_marker = opened_now",
+                ".is_some()",
+                ".then(|| state_marker(cx, \"ui-ai-commit-large-opened-marker\"))",
+                "decl_text::text_section_chrome_label(cx, \"Commit (Large)\")",
+                "Scroll-heavy surface for hit testing + viewport scrolling.",
+            ],
+            forbidden=[
+                "role: fret_core::SemanticsRole::Text",
+                "cx.text(\"\")",
+                "cx.text(\"Commit (Large)\")",
+                "cx.text(\"Scroll-heavy surface for hit testing + viewport scrolling.\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/plan_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(cx, \"Plan (AI Elements)\")",
+                "decl_text::text_paragraph(cx, \"Toggle the chevron button to expand/collapse.\")",
+            ],
+            forbidden=[
+                "cx.text(\"Plan (AI Elements)\")",
+                "cx.text(\"Toggle the chevron button to expand/collapse.\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_action_menu_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(cx, \"Prompt Input Action Menu (AI Elements)\")",
+                "decl_text::text_paragraph(cx, \"Use the + menu to add attachments.\")",
+            ],
+            forbidden=[
+                "cx.text(\"Prompt Input Action Menu (AI Elements)\")",
+                "cx.text(\"Use the + menu to add attachments.\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_tooltip_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(cx, \"Prompt Input Button Tooltips (AI Elements)\")",
+                "Hover the toolbar actions to preview a simple tooltip, a shortcut hint, and a bottom-positioned tooltip.",
+            ],
+            forbidden=[
+                "cx.text(\"Prompt Input Button Tooltips (AI Elements)\")",
+                "cx.text(\n                \"Hover the toolbar actions to preview a simple tooltip, a shortcut hint, and a bottom-positioned tooltip.\",\n            )",
             ],
         ),
         SourceCheck(
