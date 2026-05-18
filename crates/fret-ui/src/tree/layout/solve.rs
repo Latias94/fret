@@ -250,6 +250,7 @@ impl<H: UiHost> UiTree<H> {
                 root,
                 root_bounds,
                 prev_bounds,
+                scale_factor,
             )
         {
             self.note_interactive_resize_cached_flow_reuse();
@@ -303,6 +304,7 @@ impl<H: UiHost> UiTree<H> {
                     root,
                     root_bounds,
                     node.bounds,
+                    scale_factor,
                 )
             {
                 self.note_interactive_resize_cached_flow_reuse();

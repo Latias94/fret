@@ -26,12 +26,16 @@ This is the task-level checklist for `docs/workstreams/text-intrinsic-sizing-and
   - [ ] `max_content_width`
   - [ ] `min_content_width` (wrap-dependent)
 - [x] Wire intrinsic widths into the layout engine integration (Taffy min/max-content probes).
+- [x] Prove clean-geometry resize skip for `TextWrap::None` cached metrics:
+  - Safe subset: nowrap + clip + start alignment + matching `TextWrapNoneMeasureCache` fingerprint.
+  - Guard retained: height deltas and wrapped text still require the authoritative solve.
 - [ ] Ensure measurement and paint use the same resolved wrap width for definite layouts.
 
 ## Tests (fast, deterministic)
 
 - [x] `fret-render-wgpu`: unit tests for intrinsic width behavior per wrap mode.
 - [x] `fret-render-wgpu`: wasm conformance gate runs the same wrap fixtures (Parley/UAX#14) under `wasm-bindgen-test`.
+- [x] `fret-ui`: clean-geometry tests cover nowrap cached-metrics skip and text/height rejection paths.
 - [ ] `fret-ui`: integration test that validates no “vertical text” under shrink-wrap container.
 - [ ] Add at least one selection/hit-test test case for wrapped text (ensure indices remain stable).
 

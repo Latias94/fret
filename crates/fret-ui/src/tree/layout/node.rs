@@ -4,6 +4,7 @@ use std::any::TypeId;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints};
 use crate::layout_pass::LayoutPassKind;
 use crate::tree::UiDebugCleanGeometrySolveSkipRejection;
+use fret_core::{TextAlign, TextOverflow, TextWrap};
 
 #[derive(Debug, Clone, Copy)]
 enum CleanGeometrySolveSkipDecision {
@@ -114,8 +115,9 @@ enum CleanGeometryChildBoundsStrategy {
 enum CleanGeometryWidthDeltaSizeStability {
     /// The node may take the propagated bounds size.
     Propagated,
-    /// The node is stable only when the computed box size does not change.
-    StableComputedBox,
+    /// `TextWrap::None` text with cached width-independent metrics may keep stable height while
+    /// its parent-provided width changes.
+    NoWrapTextCachedMetrics,
 }
 
 impl CleanGeometryNodeContract {
@@ -124,14 +126,6 @@ impl CleanGeometryNodeContract {
             layout_effect: CleanGeometryLayoutEffect::Pure,
             child_bounds,
             size_stability: CleanGeometryWidthDeltaSizeStability::Propagated,
-        }
-    }
-
-    fn stable_leaf() -> Self {
-        Self {
-            layout_effect: CleanGeometryLayoutEffect::Pure,
-            child_bounds: CleanGeometryChildBoundsStrategy::None,
-            size_stability: CleanGeometryWidthDeltaSizeStability::StableComputedBox,
         }
     }
 
@@ -624,6 +618,7 @@ impl<H: UiHost> UiTree<H> {
             &children,
             bounds,
             prev_bounds,
+            scale_factor,
         )?;
         let manual_child_bounds_required =
             self.clean_engine_geometry_propagation_requires_manual_child_bounds(app, window, node);
@@ -635,6 +630,7 @@ impl<H: UiHost> UiTree<H> {
             &children,
             bounds,
             prev_bounds,
+            scale_factor,
         ) {
             child_bounds
         } else {
@@ -722,8 +718,15 @@ impl<H: UiHost> UiTree<H> {
         root: NodeId,
         bounds: Rect,
         prev_bounds: Rect,
+        scale_factor: f32,
     ) -> bool {
-        match self.clean_geometry_engine_solve_skip_decision(app, root, bounds, prev_bounds) {
+        match self.clean_geometry_engine_solve_skip_decision(
+            app,
+            root,
+            bounds,
+            prev_bounds,
+            scale_factor,
+        ) {
             CleanGeometrySolveSkipDecision::Supported => {
                 if self.debug_enabled {
                     self.debug_clean_geometry_solve_skip_rejections
@@ -748,6 +751,7 @@ impl<H: UiHost> UiTree<H> {
         root: NodeId,
         bounds: Rect,
         prev_bounds: Rect,
+        scale_factor: f32,
     ) -> CleanGeometrySolveSkipDecision {
         if !self.interactive_resize_is_small_step() {
             return CleanGeometrySolveSkipDecision::Rejected(CleanGeometrySolveSkipRejection::new(
@@ -778,6 +782,7 @@ impl<H: UiHost> UiTree<H> {
             root,
             bounds,
             prev_bounds,
+            scale_factor,
             true,
         ) {
             Ok(()) => CleanGeometrySolveSkipDecision::Supported,
@@ -863,6 +868,7 @@ impl<H: UiHost> UiTree<H> {
         node: NodeId,
         bounds: Rect,
         prev_bounds: Rect,
+        scale_factor: f32,
         is_root: bool,
     ) -> Result<(), CleanGeometrySolveSkipRejection> {
         if self.clean_geometry_absent_interactivity_gate_leaf(app, window, node) {
@@ -927,6 +933,7 @@ impl<H: UiHost> UiTree<H> {
                 &children,
                 bounds,
                 prev_bounds,
+                scale_factor,
             )
             .map_err(|rejection| rejection.at_node_if_missing(node))?;
         for (child, child_bounds) in child_bounds {
@@ -952,6 +959,7 @@ impl<H: UiHost> UiTree<H> {
                 child,
                 child_bounds,
                 child_prev_bounds,
+                scale_factor,
                 false,
             )?;
         }
@@ -1031,6 +1039,7 @@ impl<H: UiHost> UiTree<H> {
         children: &[NodeId],
         bounds: Rect,
         prev_bounds: Rect,
+        scale_factor: f32,
     ) -> Option<Vec<(NodeId, Rect)>> {
         self.clean_manual_geometry_child_bounds_checked(
             app,
@@ -1039,6 +1048,7 @@ impl<H: UiHost> UiTree<H> {
             children,
             bounds,
             prev_bounds,
+            scale_factor,
         )
         .ok()
     }
@@ -1051,6 +1061,7 @@ impl<H: UiHost> UiTree<H> {
         children: &[NodeId],
         bounds: Rect,
         prev_bounds: Rect,
+        scale_factor: f32,
     ) -> Result<Vec<(NodeId, Rect)>, CleanGeometrySolveSkipRejection> {
         let record = crate::declarative::frame::element_record_for_node(app, window, node)
             .ok_or_else(|| {
@@ -1074,14 +1085,17 @@ impl<H: UiHost> UiTree<H> {
         }
         match contract.size_stability {
             CleanGeometryWidthDeltaSizeStability::Propagated => {}
-            CleanGeometryWidthDeltaSizeStability::StableComputedBox => {
-                if !Self::clean_size_matches(bounds.size, prev_bounds.size) {
-                    return Err(CleanGeometrySolveSkipRejection::for_kind(
-                        CleanGeometrySolveSkipRejectionReason::TextReflow,
-                        kind,
-                    )
-                    .at_node(node));
-                }
+            CleanGeometryWidthDeltaSizeStability::NoWrapTextCachedMetrics => {
+                self.clean_nowrap_text_cached_metrics_supported(
+                    app,
+                    window,
+                    node,
+                    bounds,
+                    prev_bounds,
+                    &record.instance,
+                    kind,
+                    scale_factor,
+                )?;
             }
         }
         match contract.child_bounds {
@@ -1199,7 +1213,11 @@ impl<H: UiHost> UiTree<H> {
             crate::declarative::frame::ElementInstance::Text(_)
             | crate::declarative::frame::ElementInstance::StyledText(_)
             | crate::declarative::frame::ElementInstance::SelectableText(_) => {
-                Ok(CleanGeometryNodeContract::stable_leaf())
+                Ok(CleanGeometryNodeContract {
+                    layout_effect: CleanGeometryLayoutEffect::Pure,
+                    child_bounds: CleanGeometryChildBoundsStrategy::None,
+                    size_stability: CleanGeometryWidthDeltaSizeStability::NoWrapTextCachedMetrics,
+                })
             }
             crate::declarative::frame::ElementInstance::Spacer(_)
             | crate::declarative::frame::ElementInstance::Image(_)
@@ -1216,6 +1234,136 @@ impl<H: UiHost> UiTree<H> {
                 kind,
             )),
         }
+    }
+
+    fn clean_nowrap_text_cached_metrics_supported(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        node: NodeId,
+        bounds: Rect,
+        prev_bounds: Rect,
+        instance: &crate::declarative::frame::ElementInstance,
+        element_kind: &'static str,
+        scale_factor: f32,
+    ) -> Result<(), CleanGeometrySolveSkipRejection> {
+        if Self::clean_size_matches(bounds.size, prev_bounds.size) {
+            return Ok(());
+        }
+        if (bounds.size.height.0 - prev_bounds.size.height.0).abs() > 0.01 {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                element_kind,
+            )
+            .at_node(node));
+        }
+        let Some((cached_fingerprint, cached_size)) = self.node_text_wrap_none_measure_cache(node)
+        else {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                element_kind,
+            )
+            .at_node(node));
+        };
+        if !Self::clean_size_matches(cached_size, bounds.size) {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                element_kind,
+            )
+            .at_node(node));
+        }
+
+        let theme = crate::Theme::global(&*app).snapshot();
+        let inherited_text_style =
+            crate::declarative::frame::inherited_text_style_for_node(app, window, node);
+        let font_stack_key = app
+            .global::<fret_runtime::TextFontStackKey>()
+            .map(|k| k.0)
+            .unwrap_or(0);
+        let fingerprint = match instance {
+            crate::declarative::frame::ElementInstance::Text(props) => {
+                if props.wrap != TextWrap::None
+                    || props.overflow != TextOverflow::Clip
+                    || props.align != TextAlign::Start
+                {
+                    return Err(CleanGeometrySolveSkipRejection::for_kind(
+                        CleanGeometrySolveSkipRejectionReason::TextReflow,
+                        element_kind,
+                    )
+                    .at_node(node));
+                }
+                let resolved_style =
+                    props.resolved_text_style_with_inherited(theme, inherited_text_style.as_ref());
+                crate::text_props::text_wrap_none_measure_fingerprint_plain(
+                    &props.text,
+                    &resolved_style,
+                    props.overflow,
+                    props.align,
+                    scale_factor,
+                    font_stack_key,
+                )
+            }
+            crate::declarative::frame::ElementInstance::StyledText(props) => {
+                if props.wrap != TextWrap::None
+                    || props.overflow != TextOverflow::Clip
+                    || props.align != TextAlign::Start
+                {
+                    return Err(CleanGeometrySolveSkipRejection::for_kind(
+                        CleanGeometrySolveSkipRejectionReason::TextReflow,
+                        element_kind,
+                    )
+                    .at_node(node));
+                }
+                let resolved_style =
+                    props.resolved_text_style_with_inherited(theme, inherited_text_style.as_ref());
+                crate::text_props::text_wrap_none_measure_fingerprint_rich(
+                    &props.rich,
+                    &resolved_style,
+                    props.overflow,
+                    props.align,
+                    scale_factor,
+                    font_stack_key,
+                )
+            }
+            crate::declarative::frame::ElementInstance::SelectableText(props) => {
+                if props.wrap != TextWrap::None
+                    || props.overflow != TextOverflow::Clip
+                    || props.align != TextAlign::Start
+                {
+                    return Err(CleanGeometrySolveSkipRejection::for_kind(
+                        CleanGeometrySolveSkipRejectionReason::TextReflow,
+                        element_kind,
+                    )
+                    .at_node(node));
+                }
+                let resolved_style =
+                    props.resolved_text_style_with_inherited(theme, inherited_text_style.as_ref());
+                crate::text_props::text_wrap_none_measure_fingerprint_rich(
+                    &props.rich,
+                    &resolved_style,
+                    props.overflow,
+                    props.align,
+                    scale_factor,
+                    font_stack_key,
+                )
+            }
+            _ => {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::TextReflow,
+                    element_kind,
+                )
+                .at_node(node));
+            }
+        };
+        if fingerprint != cached_fingerprint {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                element_kind,
+            )
+            .at_node(node));
+        }
+
+        Ok(())
     }
 
     fn clean_geometry_absent_interactivity_gate_leaf(
@@ -2431,20 +2579,21 @@ impl<H: UiHost> UiTree<H> {
     }
 
     fn clean_engine_geometry_propagation_supported_element(
-        &self,
+        &mut self,
         app: &mut H,
         window: AppWindowId,
         node: NodeId,
         children: &[NodeId],
         bounds: Rect,
         prev_bounds: Rect,
+        scale_factor: f32,
     ) -> Option<GlobalElementId> {
         let Some(record) = crate::declarative::frame::element_record_for_node(app, window, node)
         else {
             return None;
         };
 
-        let supported = match record.instance {
+        let supported = match &record.instance {
             crate::declarative::frame::ElementInstance::Stack(_) => true,
             crate::declarative::frame::ElementInstance::Container(_) => true,
             crate::declarative::frame::ElementInstance::Grid(_) => true,
@@ -2464,7 +2613,19 @@ impl<H: UiHost> UiTree<H> {
             crate::declarative::frame::ElementInstance::Text(_)
             | crate::declarative::frame::ElementInstance::StyledText(_)
             | crate::declarative::frame::ElementInstance::SelectableText(_) => {
-                children.is_empty() && prev_bounds.size == bounds.size
+                children.is_empty()
+                    && self
+                        .clean_nowrap_text_cached_metrics_supported(
+                            app,
+                            window,
+                            node,
+                            bounds,
+                            prev_bounds,
+                            &record.instance,
+                            record.instance.kind_name(),
+                            scale_factor,
+                        )
+                        .is_ok()
             }
             _ => false,
         };

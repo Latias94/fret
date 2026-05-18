@@ -16,6 +16,8 @@ Start: 2026-02-19
 ## M1 — True `min-content` for `TextWrap::Word` (core landing)
 
 - [x] Implement “longest token width” measurement for `TextWrap::Word` intrinsic sizing.
+- [x] Prove the resize clean-geometry safe subset for `TextWrap::None` cached metrics without
+  widening wrapped text (`TextWrap::Word`/`Balance` remain authoritative-solve paths).
 - [ ] Remove/relax UI-level placeholder-width normalization where it becomes redundant.
 - [ ] Add unit tests covering:
   - ASCII labels (no spaces),

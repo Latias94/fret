@@ -36,6 +36,11 @@ Landings:
 - Paint baseline alignment fixes to avoid double half-leading in fixed line boxes.
 - `TextWrap::Word` now participates in `min-content` intrinsic sizing by using a near-zero wrap width,
   which yields “longest unbreakable segment” semantics when mid-token breaks are disabled.
+- Clean-geometry proof:
+  - `TextWrap::None` leaves with cached metrics can skip the authoritative resize solve when the
+    height stays stable; the guarded path is covered by
+    `crates/fret-ui/src/declarative/tests/layout/layout_engine.rs::clean_geometry_small_resize_skips_nowrap_text_width_delta_when_height_stable`.
+  - Height deltas for the same subset still reject clean geometry as `text_reflow`.
 
 Known gaps:
 

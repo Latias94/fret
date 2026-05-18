@@ -2058,6 +2058,7 @@ impl<H: UiHost> UiTree<H> {
                     root,
                     bounds,
                     prev_bounds,
+                    sf,
                 )
             {
                 continue;
@@ -2364,6 +2365,7 @@ impl<H: UiHost> UiTree<H> {
                             item.root,
                             item.bounds,
                             item.prev_bounds,
+                            sf,
                         )
                     {
                         continue;

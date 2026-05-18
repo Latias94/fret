@@ -4882,6 +4882,228 @@ fn clean_geometry_small_resize_rejects_auto_height_text_reflow() {
 }
 
 #[test]
+fn clean_geometry_small_resize_skips_nowrap_text_width_delta_when_height_stable() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(324.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-nowrap-text-width-delta-child",
+        |cx| {
+            let mut container = crate::element::ContainerProps::default();
+            container.layout.size.width = Length::Fill;
+            container.layout.size.height = Length::Fill;
+
+            let mut text_props = crate::element::TextProps::new("nowrap text stays single-line");
+            text_props.wrap = fret_core::TextWrap::None;
+            text_props.layout.size.width = Length::Auto;
+            text_props.layout.size.height = Length::Auto;
+
+            vec![cx.container(container, |cx| {
+                vec![
+                    cx.text_props(text_props)
+                        .test_id("clean-geometry-nowrap-stable-text"),
+                ]
+            })]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(184.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+    let container_node = ui.children(child)[0];
+    let text_node = ui.children(container_node)[0];
+    let text_bounds_before = ui.debug_node_bounds(text_node).expect("text bounds before");
+    let text_measured_before = ui
+        .debug_node_measured_size(text_node)
+        .expect("text measured size before");
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "nowrap text with stable height should not force an authoritative engine solve"
+    );
+    assert_eq!(
+        ui.debug_node_bounds(text_node).expect("text bounds after"),
+        text_bounds_before,
+        "auto-sized nowrap text keeps its natural computed box across parent width deltas"
+    );
+    assert_eq!(
+        ui.debug_node_measured_size(text_node)
+            .expect("text measured size after"),
+        text_measured_before,
+        "cached nowrap text metrics should remain the measured size after clean propagation"
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_rejection,
+        None
+    );
+}
+
+#[test]
+fn clean_geometry_small_resize_rejects_nowrap_text_height_delta() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(324.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-nowrap-text-height-delta-child",
+        |cx| {
+            let mut container = crate::element::ContainerProps::default();
+            container.layout.size.width = Length::Fill;
+            container.layout.size.height = Length::Fill;
+
+            let mut text_props = crate::element::TextProps::new("nowrap text height guard");
+            text_props.wrap = fret_core::TextWrap::None;
+            text_props.layout.size.width = Length::Fill;
+            text_props.layout.size.height = Length::Fill;
+
+            vec![cx.container(container, |cx| vec![cx.text_props(text_props)])]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(184.0), Px(144.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert!(
+        ui.debug_stats().layout_engine_solves > 0,
+        "text height deltas need the authoritative solve even when wrapping is disabled"
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_rejection,
+        Some("height_delta")
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_element_kind,
+        None
+    );
+}
+
+#[test]
 fn clean_geometry_small_resize_rejects_container_fraction_padding() {
     struct PrecomputeThenResize {
         child: NodeId,
