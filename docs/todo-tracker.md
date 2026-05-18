@@ -1927,7 +1927,7 @@ It complements (but does not replace) ADRs:
   - Status: Done for the base path contract and v2 stroke semantics.
   - ADRs: `docs/adr/0080-vector-path-contract.md`, `docs/adr/0277-path-stroke-style-v2.md`, `docs/adr/0278-path-paint-surface-v1.md`, `docs/adr/0002-display-list.md`, `docs/adr/0030-shape-rendering-and-sdf-semantics.md`
   - Code: `crates/fret-core/src/vector_path.rs`, `crates/fret-core/src/scene/mod.rs`, `crates/fret-render-wgpu/src/renderer/path.rs`
-  - Update: base contract is locked by ADR 0080; join/cap/miter/dash is locked by ADR 0277 and conformance-gated by `crates/fret-render-wgpu/tests/path_stroke_style_v2_conformance.rs`. Future path work should start as narrower additive ADR/workstream slices only when new evidence appears.
+  - Update: base contract is locked by ADR 0080 and conformance-gated by `crates/fret-render-wgpu/tests/path_base_conformance.rs` plus `path_metrics_bounds_contain_tessellated_vertices`; join/cap/miter/dash is locked by ADR 0277 and conformance-gated by `crates/fret-render-wgpu/tests/path_stroke_style_v2_conformance.rs`. Future path work should start as narrower additive ADR/workstream slices only when new evidence appears.
 
 - **Clarify the runner vs platform split in docs and code**
   - Problem: winit glue (including optional AccessKit bridge) lives in `fret-runner-winit`, while effect draining/presentation live in `fret-launch`; keep responsibilities crisp to avoid duplicating window registries and event translation.

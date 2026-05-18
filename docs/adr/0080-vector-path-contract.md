@@ -99,9 +99,11 @@ To keep the contract tolerant of upstream command streams (SVG conversions, edit
 
 ## Remaining Work
 
-- Add renderer conformance tests that validate:
-  - fill rule correctness for self-intersecting paths,
-  - stroke width behavior and bounds conservativeness,
-  - transform + clip composition correctness for rotated paths (after full affine lands).
+- Keep the base conformance gates extended when new renderer backends or path-style variants are
+  added. Current WGPU coverage locks intersecting same-winding overlap fill rules, representative bounds
+  conservativeness against tessellated vertices, and transformed path rendering under clips:
+  `crates/fret-render-wgpu/tests/path_base_conformance.rs` and
+  `crates/fret-render-wgpu/src/renderer/path.rs`
+  (`path_metrics_bounds_contain_tessellated_vertices`).
 - Additional future path surface should be additive ADR work above this base contract. Stroke
   join/cap/dash is already owned by ADR 0277; path paint is already owned by ADR 0278.

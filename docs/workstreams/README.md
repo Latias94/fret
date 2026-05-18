@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-05-16
+Catalog updated: 2026-05-18
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 385
+- Dedicated directories: 386
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2201,6 +2201,7 @@ Rule:
 - `docs/workstreams/open-source-readiness-fearless-refactor-v1/` — first 2026-03-04, latest 2026-03-12, 4 markdown docs
 - `docs/workstreams/overlay-input-arbitration-v2/` — first 2026-01-24, latest 2026-02-11, 3 markdown docs
 - `docs/workstreams/paint-eval-space-v1/` — first 2026-02-28, latest 2026-03-02, 3 markdown docs
+- `docs/workstreams/path-base-conformance-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed ADR 0080 base path conformance lane for fill rules, metrics bounds, and transformed path clipping)
 - `docs/workstreams/path-paint-surface-v1/` — first 2026-02-16, latest 2026-05-17, 4 markdown docs (closed path paint contract lane; `SceneOp::Path` uses bounded `PaintBindingV1` with gradient/material conformance)
 - `docs/workstreams/path-stroke-style-v2/` — first 2026-02-16, latest 2026-05-17, 4 markdown docs (closed vector path stroke v2 lane for join/cap/miter/dash semantics and conformance)
 - `docs/workstreams/perf-baselines/` — first 2026-02-06, latest 2026-02-10, 1 markdown docs
