@@ -459,6 +459,9 @@ Exit criteria:
   conversation/prose text through paragraph roles, restore status through control-readout text,
   checkpoint trigger text through button-label text, and custom checkpoint icon symbols through
   chrome-glyph text.
+  2026-05-18 AI simple chrome text-role result: Agent, CodeBlock usage, Environment Variables, and
+  OpenIn snippets now route fixed demo titles through section-chrome text and explanatory body copy
+  through paragraph text instead of default bare `cx.text(...)`.
   2026-05-17 gallery data-grid text result: the UI Gallery DataGrid preview now routes virtualized
   grid cells through `text_table_cell(...)` and the selected-row status line through
   `control_readout_text(...)`.

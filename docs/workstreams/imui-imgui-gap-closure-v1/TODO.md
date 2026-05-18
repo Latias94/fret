@@ -498,6 +498,9 @@ Readiness order for the next locally testable review slices:
    2026-05-18 AI Checkpoint text-role follow-up: the Checkpoint copyable snippet now uses
    paragraph text for conversation/prose, control-readout text for restore status, button-label
    text for the checkpoint trigger, and chrome-glyph text for custom checkpoint icon glyphs.
+   2026-05-18 AI simple chrome text-role follow-up: Agent, CodeBlock usage, Environment Variables,
+   and OpenIn copyable snippets now route fixed demo titles through `text_section_chrome_label(...)`
+   and explanatory body copy through `text_paragraph(...)`.
    2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
    virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
    `control_readout_text(...)`.

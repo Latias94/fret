@@ -628,6 +628,11 @@ Run evidence:
   checkpoint icon symbols use `text_chrome_glyph(...)`. Gates: `cargo nextest run -p
   fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` and
   `python tools/gate_imui_workstream_source.py`.
+- 2026-05-18: extended the AI visible text-role migration to simple chrome/prose snippets:
+  Agent, CodeBlock usage, Environment Variables, and OpenIn. Each now routes fixed demo titles
+  through `text_section_chrome_label(...)` and explanatory body copy through `text_paragraph(...)`
+  instead of default bare `cx.text(...)`. Gates: `cargo nextest run -p fret-ui-gallery --test
+  ai_visible_text_role_surface --no-fail-fast` and `python tools/gate_imui_workstream_source.py`.
 - 2026-05-18: `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface
   --no-fail-fast` passed after the Artifact/CodeBlock/Sandbox slice landed. `python
   tools/gate_imui_workstream_source.py`, `python -m json.tool
@@ -1941,6 +1946,19 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `cargo fmt -p fret-ui-gallery` passed.
 - `cargo check -p fret-ui-gallery --test ai_visible_text_role_surface` passed.
 - `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+- `python -m py_compile tools/gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
+- `git diff --check` passed.
+
+2026-05-18 AI simple chrome visible snippet text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo check -p fret-ui-gallery --test ai_visible_text_role_surface` passed.
+- First `cargo nextest run -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast`
+  timed out at 300s while a background `rustc` compile continued.
+- Retried after the compile finished: `cargo nextest run -p fret-ui-gallery --test
+  ai_visible_text_role_surface --no-fail-fast` passed.
 - `python tools/gate_imui_workstream_source.py` passed.
 - `python -m py_compile tools/gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.

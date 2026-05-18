@@ -255,3 +255,60 @@ fn ai_checkpoint_demo_visible_text_uses_shared_roles() {
         );
     }
 }
+
+#[test]
+fn ai_simple_chrome_snippets_use_shared_title_and_paragraph_roles() {
+    for (name, source, title, body) in [
+        (
+            "agent_demo",
+            include_str!("../src/ui/snippets/ai/agent_demo.rs"),
+            "Agent",
+            "Composable agent chrome with model, instructions, expandable tool schemas, and structured output.",
+        ),
+        (
+            "code_block_usage",
+            include_str!("../src/ui/snippets/ai/code_block_usage.rs"),
+            "CodeBlock usage",
+            "Minimal compound-parts composition aligned with the official AI Elements usage block.",
+        ),
+        (
+            "environment_variables_demo",
+            include_str!("../src/ui/snippets/ai/environment_variables_demo.rs"),
+            "Environment Variables (AI Elements)",
+            "Toggle to reveal values; copy uses a clipboard effect.",
+        ),
+        (
+            "open_in_chat_demo",
+            include_str!("../src/ui/snippets/ai/open_in_chat_demo.rs"),
+            "OpenIn (AI Elements)",
+            "Selecting a provider emits Effect::OpenUrl (URLs match upstream).",
+        ),
+    ] {
+        let canonical = canonicalize_rust_fragment(source);
+
+        for marker in [
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_section_chrome_label",
+            title,
+            "decl_text::text_paragraph",
+            body,
+        ] {
+            let marker = canonicalize_rust_fragment(marker);
+            assert!(
+                canonical.contains(&marker),
+                "{name} should route fixed visible title/body text through shared roles; missing `{marker}`"
+            );
+        }
+
+        for forbidden in [
+            format!("cx.text(\"{title}\")"),
+            format!("cx.text(\"{body}\")"),
+        ] {
+            let forbidden = canonicalize_rust_fragment(&forbidden);
+            assert!(
+                !canonical.contains(&forbidden),
+                "{name} reintroduced bare fixed visible text: `{forbidden}`"
+            );
+        }
+    }
+}

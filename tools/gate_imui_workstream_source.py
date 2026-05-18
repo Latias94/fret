@@ -462,6 +462,10 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/snippets/ai/sandbox_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/queue_demo.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/ai/checkpoint_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/agent_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/code_block_usage.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/environment_variables_demo.rs",
+                "apps/fret-ui-gallery/src/ui/snippets/ai/open_in_chat_demo.rs",
                 "apps/fret-ui-gallery/tests/ai_visible_text_role_surface.rs",
                 "ecosystem/fret-ui-ai/src/elements/mod.rs",
                 "ecosystem/fret-ui-ai/src/surface_policy_tests.rs",
@@ -688,6 +692,57 @@ def main() -> None:
                 "cx.text(\"Docs-aligned composition: `Conversation` + `Message` + `Checkpoint`. Hover the trigger to preview the tooltip, then activate it to restore the conversation.\")",
                 "cx.text(\"⟲\")",
                 "cx.text(\"•\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/agent_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(cx, \"Agent\")",
+                "decl_text::text_paragraph(",
+                "Composable agent chrome with model, instructions, expandable tool schemas, and structured output.",
+            ],
+            forbidden=[
+                "cx.text(\"Agent\")",
+                "cx.text(\n                \"Composable agent chrome with model, instructions, expandable tool schemas, and structured output.\",\n            )",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/code_block_usage.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(cx, \"CodeBlock usage\")",
+                "decl_text::text_paragraph(",
+                "Minimal compound-parts composition aligned with the official AI Elements usage block.",
+            ],
+            forbidden=[
+                "cx.text(\"CodeBlock usage\")",
+                "cx.text(\"Minimal compound-parts composition aligned with the official AI Elements usage block.\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/environment_variables_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(cx, \"Environment Variables (AI Elements)\")",
+                "decl_text::text_paragraph(cx, \"Toggle to reveal values; copy uses a clipboard effect.\")",
+            ],
+            forbidden=[
+                "cx.text(\"Environment Variables (AI Elements)\")",
+                "cx.text(\"Toggle to reveal values; copy uses a clipboard effect.\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/ai/open_in_chat_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(cx, \"OpenIn (AI Elements)\")",
+                "decl_text::text_paragraph(",
+                "Selecting a provider emits Effect::OpenUrl (URLs match upstream).",
+            ],
+            forbidden=[
+                "cx.text(\"OpenIn (AI Elements)\")",
+                "cx.text(\"Selecting a provider emits Effect::OpenUrl (URLs match upstream).\")",
             ],
         ),
         SourceCheck(
