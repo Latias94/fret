@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "slug": "wgpu-backdrop-effects-conformance-harness-followon-v1",
+  "title": "WGPU Backdrop Effects Conformance Harness Follow-on v1",
+  "status": "closed",
+  "updated": "2026-05-18",
+  "scope_kind": "follow-on",
+  "problem": "Several backdrop-effect WGPU conformance tests still duplicated the same Rgba8Unorm final-render readback helpers already owned by the shared integration-test support module. The duplication made backdrop effect evidence harder to audit without adding behavior coverage.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/wgpu-backdrop-effects-conformance-harness-followon-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/wgpu-backdrop-effects-conformance-harness-followon-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/wgpu-backdrop-effects-conformance-harness-followon-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/wgpu-backdrop-effects-conformance-harness-followon-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/wgpu-backdrop-effects-conformance-harness-followon-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/wgpu-backdrop-effects-conformance-harness-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    }
+  ],
+  "repro": {
+    "summary": "Backdrop effect WGPU conformance tests should render and sample through shared test support while preserving Rgba8Unorm transparent-clear behavior.",
+    "commands": [
+      "cargo nextest run -p fret-render-wgpu --locked --test effect_backdrop_acrylic_recipe_conformance --test effect_backdrop_blur_conformance --test effect_backdrop_blur_rounded_clip_conformance --test effect_backdrop_color_adjust_conformance --test effect_backdrop_pixelate_conformance --test effect_backdrop_pixelate_rounded_clip_conformance --test effect_backdrop_warp_conformance -j 1"
+    ]
+  },
+  "gates": [
+    {
+      "name": "backdrop-effects-conformance",
+      "command": "cargo nextest run -p fret-render-wgpu --locked --test effect_backdrop_acrylic_recipe_conformance --test effect_backdrop_blur_conformance --test effect_backdrop_blur_rounded_clip_conformance --test effect_backdrop_color_adjust_conformance --test effect_backdrop_pixelate_conformance --test effect_backdrop_pixelate_rounded_clip_conformance --test effect_backdrop_warp_conformance -j 1"
+    },
+    {
+      "name": "backend-tests-compile",
+      "command": "cargo check -p fret-render-wgpu --locked --tests -j 1"
+    },
+    {
+      "name": "layering",
+      "command": "python tools/check_layering.py"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "crates/fret-render-wgpu/tests/support/mod.rs",
+    "crates/fret-render-wgpu/tests/effect_backdrop_acrylic_recipe_conformance.rs",
+    "crates/fret-render-wgpu/tests/effect_backdrop_blur_conformance.rs",
+    "crates/fret-render-wgpu/tests/effect_backdrop_blur_rounded_clip_conformance.rs",
+    "crates/fret-render-wgpu/tests/effect_backdrop_color_adjust_conformance.rs",
+    "crates/fret-render-wgpu/tests/effect_backdrop_pixelate_conformance.rs",
+    "crates/fret-render-wgpu/tests/effect_backdrop_pixelate_rounded_clip_conformance.rs",
+    "crates/fret-render-wgpu/tests/effect_backdrop_warp_conformance.rs",
+    "docs/workstreams/wgpu-backdrop-effects-conformance-harness-followon-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0277-composite-effect-isolation-v1.md",
+    "docs/adr/0281-effect-filter-content-v1.md"
+  ],
+  "continue_policy": {
+    "default_action": "stay_closed",
+    "notes": "The named backdrop effect tests migrated successfully. effect_backdrop_warp_v2_conformance.rs stays out of scope because it owns image registration setup and should be handled in a separate follow-on."
+  }
+}

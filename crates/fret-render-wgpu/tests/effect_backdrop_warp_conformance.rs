@@ -3,124 +3,11 @@ use fret_core::scene::{
     BackdropWarpKindV1, BackdropWarpV1, Color, DrawOrder, EffectChain, EffectMode, EffectQuality,
     EffectStep, Paint, Scene, SceneOp,
 };
-use fret_render_wgpu::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
-use std::sync::mpsc;
+use fret_render_wgpu::{Renderer, WgpuContext};
 
-fn read_texture_rgba8(
-    device: &wgpu::Device,
-    queue: &wgpu::Queue,
-    texture: &wgpu::Texture,
-    size: (u32, u32),
-) -> Vec<u8> {
-    let (width, height) = size;
-    let bytes_per_pixel: u32 = 4;
-    let unpadded_bytes_per_row = width * bytes_per_pixel;
-    let padded_bytes_per_row = unpadded_bytes_per_row.div_ceil(256) * 256;
-    let buffer_size = padded_bytes_per_row as u64 * height as u64;
+mod support;
 
-    let buffer = device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("effect_backdrop_warp_conformance readback buffer"),
-        size: buffer_size,
-        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
-        mapped_at_creation: false,
-    });
-
-    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        label: Some("effect_backdrop_warp_conformance readback encoder"),
-    });
-    encoder.copy_texture_to_buffer(
-        wgpu::TexelCopyTextureInfo {
-            texture,
-            mip_level: 0,
-            origin: wgpu::Origin3d::ZERO,
-            aspect: wgpu::TextureAspect::All,
-        },
-        wgpu::TexelCopyBufferInfo {
-            buffer: &buffer,
-            layout: wgpu::TexelCopyBufferLayout {
-                offset: 0,
-                bytes_per_row: Some(padded_bytes_per_row),
-                rows_per_image: Some(height),
-            },
-        },
-        wgpu::Extent3d {
-            width,
-            height,
-            depth_or_array_layers: 1,
-        },
-    );
-    queue.submit([encoder.finish()]);
-
-    let slice = buffer.slice(..);
-    let (tx, rx) = mpsc::channel();
-    slice.map_async(wgpu::MapMode::Read, move |res| {
-        let _ = tx.send(res);
-    });
-    let _ = device.poll(wgpu::PollType::wait_indefinitely());
-    rx.recv().expect("map_async channel closed").unwrap();
-
-    let mapped = slice.get_mapped_range();
-    let mut pixels = vec![0u8; (unpadded_bytes_per_row * height) as usize];
-    for row in 0..height as usize {
-        let src = row * padded_bytes_per_row as usize;
-        let dst = row * unpadded_bytes_per_row as usize;
-        pixels[dst..dst + unpadded_bytes_per_row as usize]
-            .copy_from_slice(&mapped[src..src + unpadded_bytes_per_row as usize]);
-    }
-    drop(mapped);
-    buffer.unmap();
-    pixels
-}
-
-fn pixel_rgba(pixels: &[u8], width: u32, x: u32, y: u32) -> [u8; 4] {
-    let idx = ((y * width + x) * 4) as usize;
-    [
-        pixels[idx],
-        pixels[idx + 1],
-        pixels[idx + 2],
-        pixels[idx + 3],
-    ]
-}
-
-fn render_and_readback(
-    ctx: &WgpuContext,
-    renderer: &mut Renderer,
-    scene: &Scene,
-    size: (u32, u32),
-) -> Vec<u8> {
-    let format = wgpu::TextureFormat::Rgba8Unorm;
-    let texture = ctx.device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("effect_backdrop_warp_conformance output"),
-        size: wgpu::Extent3d {
-            width: size.0,
-            height: size.1,
-            depth_or_array_layers: 1,
-        },
-        mip_level_count: 1,
-        sample_count: 1,
-        dimension: wgpu::TextureDimension::D2,
-        format,
-        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
-        view_formats: &[],
-    });
-    let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-
-    let cb = renderer.render_scene(
-        &ctx.device,
-        &ctx.queue,
-        RenderSceneParams {
-            format,
-            target_view: &view,
-            scene,
-            clear: ClearColor(wgpu::Color::TRANSPARENT),
-            scale_factor: 1.0,
-            viewport_size: size,
-        },
-    );
-    ctx.queue.submit([cb]);
-    let _ = ctx.device.poll(wgpu::PollType::wait_indefinitely());
-    read_texture_rgba8(&ctx.device, &ctx.queue, &texture, size)
-}
+use support::{pixel_rgba, render_scene_rgba8};
 
 fn stripe_scene_base(size: (u32, u32)) -> Scene {
     let mut base = Scene::default();
@@ -229,8 +116,8 @@ fn gpu_backdrop_warp_is_scissored_and_preserves_ordering() {
     with_effect.push(foreground);
     with_effect.push(SceneOp::PopEffect);
 
-    let direct = render_and_readback(&ctx, &mut renderer, &without_effect, size);
-    let warped = render_and_readback(&ctx, &mut renderer, &with_effect, size);
+    let direct = render_scene_rgba8(&ctx, &mut renderer, &without_effect, size, 1.0);
+    let warped = render_scene_rgba8(&ctx, &mut renderer, &with_effect, size, 1.0);
 
     // Outside bounds: unchanged (green).
     let outside = pixel_rgba(&direct, size.0, 8, 32);
@@ -322,8 +209,8 @@ fn gpu_filter_content_warp_is_deterministically_ignored() {
     filter_content_warp.push(quad);
     filter_content_warp.push(SceneOp::PopEffect);
 
-    let noop = render_and_readback(&ctx, &mut renderer, &filter_content_noop, size);
-    let filtered = render_and_readback(&ctx, &mut renderer, &filter_content_warp, size);
+    let noop = render_scene_rgba8(&ctx, &mut renderer, &filter_content_noop, size, 1.0);
+    let filtered = render_scene_rgba8(&ctx, &mut renderer, &filter_content_warp, size, 1.0);
 
     for (x, y) in [(25u32, 20u32), (30u32, 24u32), (39u32, 30u32)] {
         assert_eq!(
