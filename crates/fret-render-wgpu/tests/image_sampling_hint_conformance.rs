@@ -5,6 +5,7 @@ use fret_render_wgpu::{
     ClearColor, ImageColorSpace, ImageDescriptor, RenderSceneParams, Renderer, WgpuContext,
 };
 
+#[path = "support/readback.rs"]
 mod support;
 
 use support::{pixel_rgba, read_texture_rgba8};

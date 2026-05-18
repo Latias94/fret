@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "slug": "wgpu-test-support-dead-code-prune-v1",
+  "title": "WGPU Test Support Dead Code Prune v1",
+  "status": "closed",
+  "updated": "2026-05-18",
+  "scope_kind": "follow-on",
+  "follow_on_of": "wgpu-renderer-dead-code-prune-followon-v1",
+  "problem": "The only remaining fret-render-wgpu dead_code allowance lived in integration-test support because readback-only test crates imported the whole default scene-render support module without using render_scene_rgba8.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/wgpu-test-support-dead-code-prune-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/wgpu-test-support-dead-code-prune-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/wgpu-test-support-dead-code-prune-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/wgpu-test-support-dead-code-prune-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/wgpu-test-support-dead-code-prune-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/wgpu-test-support-dead-code-prune-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+    }
+  ],
+  "repro": {
+    "summary": "WGPU test support should compile without dead_code allowances while preserving default scene, explicit-format, and raw-readback helper paths.",
+    "commands": [
+      "cargo check -p fret-render-wgpu --locked --tests -j 1",
+      "rg -n \"allow\\\\(dead_code\\\\)|dead_code\" crates/fret-render-wgpu/src crates/fret-render-wgpu/tests -g \"*.rs\""
+    ]
+  },
+  "gates": [
+    {
+      "name": "fmt",
+      "command": "cargo fmt --package fret-render-wgpu"
+    },
+    {
+      "name": "dead-code-scan",
+      "command": "rg -n \"allow\\\\(dead_code\\\\)|dead_code\" crates/fret-render-wgpu/src crates/fret-render-wgpu/tests -g \"*.rs\""
+    },
+    {
+      "name": "backend-tests-compile",
+      "command": "cargo check -p fret-render-wgpu --locked --tests -j 1"
+    },
+    {
+      "name": "format-and-readback-targeted",
+      "command": "cargo nextest run -p fret-render-wgpu --locked gpu_composite_group_add_is_scissored_and_additive gpu_non_srgb_output_applies_explicit_srgb_transfer"
+    },
+    {
+      "name": "default-support-targeted",
+      "command": "cargo nextest run -p fret-render-wgpu --locked gpu_path_fill_rules_distinguish_overlapping_winding_regions"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "json",
+      "command": "python -m json.tool docs/workstreams/wgpu-test-support-dead-code-prune-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "crates/fret-render-wgpu/tests/support/mod.rs",
+    "crates/fret-render-wgpu/tests/support/readback.rs",
+    "crates/fret-render-wgpu/tests/support/render_format.rs",
+    "crates/fret-render-wgpu/tests/composite_group_conformance.rs",
+    "crates/fret-render-wgpu/tests/output_srgb_transfer_conformance.rs",
+    "crates/fret-render-wgpu/tests/path_base_conformance.rs",
+    "docs/workstreams/wgpu-test-support-dead-code-prune-v1/CLOSEOUT_AUDIT_2026-05-18.md"
+  ],
+  "adr_refs": [],
+  "continue_policy": {
+    "default_action": "stay_closed",
+    "notes": "The final dead_code allowance is removed. Larger WGPU conformance harness consolidation should use a separate fixture-driven follow-on."
+  }
+}

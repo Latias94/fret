@@ -6,6 +6,7 @@ use fret_render_wgpu::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
 use std::ffi::OsString;
 use std::sync::{Mutex, OnceLock};
 
+#[path = "support/readback.rs"]
 mod support;
 
 use support::{pixel_rgba, read_texture_rgba8};

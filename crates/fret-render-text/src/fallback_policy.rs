@@ -276,7 +276,6 @@ impl TextFallbackPolicyV1 {
     }
 }
 
-#[cfg_attr(not(any(test, target_arch = "wasm32")), allow(dead_code))]
 fn merged_static_family_lists(lists: &[&[&'static str]]) -> Box<[&'static str]> {
     let mut seen_lower: HashSet<String> = HashSet::new();
     let mut families: Vec<&'static str> = Vec::new();
