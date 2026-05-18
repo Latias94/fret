@@ -1753,3 +1753,21 @@ Status: complete for EffectLayer bounds versus hit-test clipping semantics.
   with Nextest run id `c31f8473-555a-4b65-996c-0648d8f85b75`.
 - JSON fixture validation passes:
   `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\hit_test_routing_v1.json`.
+
+## M100: CompositeGroup Computation-Bound Hit-Test Fixture
+
+Status: complete for CompositeGroup bounds versus hit-test clipping semantics.
+
+- Added `composite-group-bounds-do-not-clip-hit-testing-by-default` and
+  `composite-group-overflow-clip-suppresses-escaped-child-hit` to the hit-test routing fixture.
+- The cases lock ADR 0247 semantics: compositing group bounds are computation bounds, not an
+  implicit hit-test clip, while explicit `Overflow::Clip` on the `CompositeGroup` wrapper still
+  clips escaped descendants.
+- No new mechanism defect was reproduced. The existing `fret-ui` runtime already keeps compositing
+  group bounds separate from hit-testing and routes clipping through the explicit overflow
+  contract.
+- The gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_hit_test_routing_matches_oracles --no-fail-fast --no-capture`
+  with Nextest run id `eb30efc1-a5c9-40a1-84ae-8360753f0842`.
+- JSON fixture validation passes:
+  `python -m json.tool crates\fret-ui\src\declarative\tests\fixtures\hit_test_routing_v1.json`.

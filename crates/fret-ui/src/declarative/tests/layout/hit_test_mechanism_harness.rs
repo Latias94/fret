@@ -24,6 +24,8 @@ enum HitTestRoutingScenario {
     MaskLayerOverflowClipSuppressesEscapedChildHit,
     EffectLayerBoundsDoNotClipHitTestingByDefault,
     EffectLayerOverflowClipSuppressesEscapedChildHit,
+    CompositeGroupBoundsDoNotClipHitTestingByDefault,
+    CompositeGroupOverflowClipSuppressesEscapedChildHit,
     OverlayRootZOrderWins,
     ModalBarrierRootSuppressesUnderlay,
 }
@@ -183,6 +185,16 @@ fn observe_declarative_case(
                 &ui,
                 &snapshot,
                 "effect-escaped-child-area",
+                Point::new(Px(wrapper.origin.x.0 + 34.0), Px(wrapper.origin.y.0 + 10.0)),
+            ));
+        }
+        HitTestRoutingScenario::CompositeGroupBoundsDoNotClipHitTestingByDefault
+        | HitTestRoutingScenario::CompositeGroupOverflowClipSuppressesEscapedChildHit => {
+            let wrapper = bounds_for_test_id(&observed, "composite-wrapper", BoundsSpace::Layout)?;
+            observed.push_hit_test_sample(hit_sample(
+                &ui,
+                &snapshot,
+                "composite-escaped-child-area",
                 Point::new(Px(wrapper.origin.x.0 + 34.0), Px(wrapper.origin.y.0 + 10.0)),
             ));
         }
@@ -419,6 +431,18 @@ fn build_declarative_scenario(
                 crate::element::Overflow::Clip,
             )]
         }
+        HitTestRoutingScenario::CompositeGroupBoundsDoNotClipHitTestingByDefault => {
+            vec![composite_group_with_escaped_pressable(
+                cx,
+                crate::element::Overflow::Visible,
+            )]
+        }
+        HitTestRoutingScenario::CompositeGroupOverflowClipSuppressesEscapedChildHit => {
+            vec![composite_group_with_escaped_pressable(
+                cx,
+                crate::element::Overflow::Clip,
+            )]
+        }
         HitTestRoutingScenario::OverlayRootZOrderWins
         | HitTestRoutingScenario::ModalBarrierRootSuppressesUnderlay => unreachable!(),
     }
@@ -575,6 +599,31 @@ fn effect_layer_with_escaped_pressable(
         )]
     })
     .test_id("effect-wrapper")
+}
+
+fn composite_group_with_escaped_pressable(
+    cx: &mut ElementContext<'_, TestHost>,
+    overflow: crate::element::Overflow,
+) -> AnyElement {
+    let mut layout = absolute_layout(0.0, 0.0, 20.0, 20.0);
+    layout.overflow = overflow;
+    let props = crate::element::CompositeGroupProps {
+        layout,
+        mode: fret_core::scene::BlendMode::Add,
+        quality: fret_core::EffectQuality::Auto,
+    };
+
+    cx.composite_group_props(props, |cx| {
+        vec![absolute_pressable(
+            cx,
+            "composite-escaped-child",
+            30.0,
+            0.0,
+            20.0,
+            20.0,
+        )]
+    })
+    .test_id("composite-wrapper")
 }
 
 fn absolute_layout(x: f32, y: f32, w: f32, h: f32) -> crate::element::LayoutStyle {
