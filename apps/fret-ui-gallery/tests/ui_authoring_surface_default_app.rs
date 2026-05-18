@@ -1740,6 +1740,18 @@ fn button_snippets_prefer_ui_cx_on_the_default_app_surface() {
 }
 
 #[test]
+fn button_children_snippet_text_uses_button_label_role() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/button/children.rs",
+        &[
+            "use fret_ui_kit::{IntoUiElement, declarative::text as decl_text};",
+            "decl_text::text_button_label(cx, \"Command Menu\")",
+        ],
+        &[".child(cx.text(\"Command Menu\"))"],
+    );
+}
+
+#[test]
 fn button_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/button.rs",

@@ -619,6 +619,9 @@ Exit criteria:
   2026-05-18 gallery Toggle item text result: copyable Toggle examples now keep text-only and
   icon+text captions on the shared button-label role, and the label-association pressed-state line
   on the shared control-readout role.
+  2026-05-18 gallery Button children text result: the custom command-menu child label in the
+  copyable Button children snippet now uses the shared button-label role instead of bare
+  `cx.text(...)`.
   2026-05-17 gallery editor preview text result: code-editor, Markdown, and Web IME preview
   headers now use paragraph text for prose, control readout text for fixed status/debug values,
   and button label text for custom pointer-region actions. The slice keeps editor-proof resize

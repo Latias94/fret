@@ -665,6 +665,10 @@ Readiness order for the next locally testable review slices:
    toggle captions through `text_button_label(...)`, and the label-association pressed-state
    marker through `text_control_readout(...)`, so these fixed button-like snippets no longer teach
    wrapping text inside toggle chrome.
+   2026-05-18 gallery Button children text follow-up: the copyable Button children snippet now
+   routes its custom command button label through `text_button_label(...)` instead of
+   `cx.text(...)`, keeping slotted button children on the same single-line/shrinkable role as other
+   button-like chrome.
    2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
    headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
    through `control_readout_text(...)`, and custom pointer-region labels through

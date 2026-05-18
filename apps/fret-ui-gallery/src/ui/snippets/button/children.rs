@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("children.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
-use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::{IntoUiElement, declarative::text as decl_text};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn wrap_row<H: UiHost, F>(children: F) -> impl IntoUiElement<H> + use<H, F>
@@ -28,7 +28,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::Button::new("")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .a11y_label("Open command menu")
-                .child(cx.text("Command Menu"))
+                .child(decl_text::text_button_label(cx, "Command Menu"))
                 .child(shadcn::Kbd::new("Cmd+K").into_element(cx))
                 .test_id("ui-gallery-button-children-command")
                 .into_element(cx),

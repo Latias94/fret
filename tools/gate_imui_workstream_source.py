@@ -3158,6 +3158,16 @@ def main() -> None:
             ]
         ],
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/button/children.rs"),
+            required=[
+                "use fret_ui_kit::{IntoUiElement, declarative::text as decl_text};",
+                "decl_text::text_button_label(cx, \"Command Menu\")",
+            ],
+            forbidden=[
+                ".child(cx.text(\"Command Menu\"))",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/toggle/label.rs"),
             required=[
                 "decl_text::text_control_readout(cx, format!(\"Pressed: {pressed_now}\"))",
@@ -3231,6 +3241,7 @@ def main() -> None:
                 "fn accordion_snippet_trigger_text_uses_button_label_role()",
                 "fn toggle_group_snippet_item_text_uses_button_label_role()",
                 "fn toggle_snippet_item_text_uses_button_label_role()",
+                "fn button_children_snippet_text_uses_button_label_role()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",
             ],
