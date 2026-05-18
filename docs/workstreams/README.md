@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 412
+- Dedicated directories: 413
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2210,6 +2210,7 @@ Rule:
 - `docs/workstreams/quad-border-styles-v1/` — first 2026-02-13, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/query-lifecycle-v1/` — first 2026-02-06, latest 2026-02-11, 2 markdown docs
 - `docs/workstreams/release-surface-fearless-refactor-v1/` — first 2026-03-31, latest 2026-04-02, 4 markdown docs
+- `docs/workstreams/render-text-dead-code-prune-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for removing all `fret-render-text/src` dead-code allowances and deleting stale wrapper-level hit-testing)
 - `docs/workstreams/renderer-clip-mask-closure-v1/` — first 2026-02-17, latest 2026-02-18, 3 markdown docs
 - `docs/workstreams/renderer-drop-shadow-effect-v1/` — first 2026-02-17, latest 2026-02-18, 3 markdown docs
 - `docs/workstreams/renderer-effect-backdrop-warp-v1/` — first 2026-02-17, latest 2026-02-18, 3 markdown docs
