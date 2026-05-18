@@ -1,7 +1,7 @@
 # P3 Execution Priority Review - 2026-05-06
 
 Status: priority review; no new implementation lane opened from this note
-Last updated: 2026-05-06
+Last updated: 2026-05-18
 
 ## Decision
 
@@ -81,7 +81,7 @@ Use this interpretation when resuming the lane:
 | Design/style parity | Guardrail | Keep token/preset path; do not copy mutable style stack |
 | Porting sugar | Candidate-only | Wait for repeated pain across two proof surfaces |
 | Collection helper | Candidate-only | Current behavior remains app-owned despite second-surface evidence |
-| Child-region depth | Candidate-only | `ResizeY`/auto-resize/nav flattening need dedicated proof |
+| Child-region depth | Candidate-only | Manual resize and height-auto layout now have proof; visibility-return, nav flattening, and width/always auto-resize need dedicated proof |
 | Diagnostics discoverability | Product priority | Continue on diagnostics/DevTools lanes, not runtime/API widening |
 | Multi-window hand-feel | Execution priority | Continue in `docking-multiwindow-imgui-parity` |
 

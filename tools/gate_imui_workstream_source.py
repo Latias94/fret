@@ -842,11 +842,14 @@ def main() -> None:
                 "`fret::imui` is the right app-facing optional lane",
                 "The public/component/design/porting/child/collection P3 notes are **readiness catalogs**.",
                 "They do not justify starting implementation by list order.",
+                "Manual resize and height-auto layout now have proof",
+                "visibility-return, nav flattening, and width/always auto-resize need dedicated proof",
                 "Multi-window hand-feel | Execution priority",
             ],
             forbidden=[
                 "Start a widget backlog now",
                 "Mirror every Dear ImGui API now",
+                "`ResizeY`/auto-resize/nav flattening need dedicated proof",
             ],
         ),
         SourceCheck(
