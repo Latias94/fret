@@ -23,13 +23,16 @@ pub(in crate::ui) fn preview_text_feature_toggles(
 
     let header = ui::v_flex(|cx| {
         vec![
-            cx.text(
+            doc_layout::paragraph_text(
+                cx,
                 "Goal: validate OpenType feature overrides (`TextShapingStyle.features`) end-to-end.",
             ),
-            cx.text(
+            doc_layout::paragraph_text(
+                cx,
                 "This is best-effort: visible differences depend on the chosen font. Inter typically shows `liga` (fi/fl/ffi/ffl).",
             ),
-            cx.text(
+            doc_layout::paragraph_text(
+                cx,
                 "Tip: set FRET_TEXT_SYSTEM_FONTS=0 to validate the deterministic no-system-fonts path on native.",
             ),
         ]

@@ -3,7 +3,10 @@ use super::*;
 use fret_ui::ScrollHandle;
 use fret_ui_kit::imui::{
     ChildRegionChrome, ChildRegionOptions, ChildRegionResizeYOptions,
-    ImUiTableColumnVisibilityState, table_column_visibility_menu_item,
+    ImUiTableColumnVisibilityState, TableColumnVisibilityHeaderContextMenuOptions,
+    TableColumnVisibilityMenuOptions, TableColumnWidth,
+    table_column_visibility_header_context_menu, table_column_visibility_menu_item,
+    table_column_visibility_menu_items,
 };
 
 mod control_geometry;

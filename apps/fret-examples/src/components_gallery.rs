@@ -542,8 +542,8 @@ impl ComponentsGalleryDriver {
 
                 vec![ui::v_flex(|cx: &mut ElementContext<'_, App>| {
                                  vec![
-                                     cx.text(title),
-                                     cx.text(subtitle),
+                                     decl_text::text_chrome_title(cx, title),
+                                     decl_text::text_control_readout(cx, subtitle),
                                      markdown::Markdown::new(markdown_sample.clone())
                                         .into_element(cx),
                                     cx.flex(
@@ -558,7 +558,10 @@ impl ComponentsGalleryDriver {
                                         },
                                         |cx| {
                                             vec![
-                                                cx.text(Arc::<str>::from("Theme:")),
+                                                decl_text::text_control_label(
+                                                    cx,
+                                                    Arc::<str>::from("Theme:"),
+                                                ),
                                                 shadcn::Select::new(theme_preset, theme_preset_open)
                                                     .a11y_label(
                                                         "Demo theme preset (shadcn new-york-v4)",
@@ -617,10 +620,10 @@ impl ComponentsGalleryDriver {
                                             ]
                                         },
                                     ),
-                                    cx.text(Arc::<str>::from(format!(
-                                        "Theme config: {}",
-                                        theme_name
-                                    ))),
+                                    decl_text::text_control_readout(
+                                        cx,
+                                        Arc::<str>::from(format!("Theme config: {}", theme_name)),
+                                    ),
                                     cx.flex(
                                         FlexProps {
                                             layout: LayoutStyle::default(),
@@ -677,7 +680,9 @@ impl ComponentsGalleryDriver {
                                                                     },
                                                                     |_cx| Vec::new(),
                                                                 ),
-                                                                cx.text(label),
+                                                                decl_text::text_control_label(
+                                                                    cx, label,
+                                                                ),
                                                             ]
                                                         },
                                                     )
@@ -980,11 +985,17 @@ impl ComponentsGalleryDriver {
                                                 shadcn::Checkbox::new(checkbox)
                                                     .a11y_label("Demo checkbox")
                                                     .into_element(cx),
-                                                cx.text(format!("checkbox: {checkbox_value}")),
+                                                decl_text::text_control_readout(
+                                                    cx,
+                                                    format!("checkbox: {checkbox_value}"),
+                                                ),
                                                 shadcn::Switch::new(switch)
                                                     .a11y_label("Demo switch")
                                                     .into_element(cx),
-                                                cx.text(format!("switch: {switch_value}")),
+                                                decl_text::text_control_readout(
+                                                    cx,
+                                                    format!("switch: {switch_value}"),
+                                                ),
                                             ]
                                         },
                                     ),
@@ -1000,7 +1011,10 @@ impl ComponentsGalleryDriver {
                                     },
                                     |cx| {
                                             vec![
-                                                cx.text(format!("radio: {radio_label}")),
+                                                decl_text::text_control_readout(
+                                                    cx,
+                                                    format!("radio: {radio_label}"),
+                                                ),
                                                 shadcn::RadioGroup::new(radio)
                                                     .a11y_label("Demo radio group")
                                                     .item(shadcn::RadioGroupItem::new("a", "Alpha"))
@@ -1037,7 +1051,10 @@ impl ComponentsGalleryDriver {
 	                                                    shadcn::SelectItem::new("cherry", "Cherry"),
 	                                                ])
                                                 .into_element(cx),
-                                            cx.text(format!("select: {select_label}")),
+                                            decl_text::text_control_readout(
+                                                cx,
+                                                format!("select: {select_label}"),
+                                            ),
                                         ]
                                     },
                                 ),
@@ -1143,8 +1160,8 @@ impl ComponentsGalleryDriver {
                                                                             },
                                                                             |cx| {
                                                                                 vec![
-                                                                                    cx.text("HoverCard content (overlay-root)"),
-                                                                                    cx.text("Move pointer from trigger to content."),
+                                                                                    decl_text::text_paragraph(cx, "HoverCard content (overlay-root)"),
+                                                                                    decl_text::text_paragraph(cx, "Move pointer from trigger to content."),
                                                                                 ]
                                                                             },
                                                                         )]);
@@ -1238,7 +1255,7 @@ impl ComponentsGalleryDriver {
                                                         },
                                                         |cx| {
                                                             shadcn::PopoverContent::new(vec![
-                                                                cx.text("Popover content"),
+                                                                decl_text::text_paragraph(cx, "Popover content"),
                                                                 shadcn::Button::new("Close")
                                                                     .variant(shadcn::ButtonVariant::Secondary)
                                                                     .toggle_model(popover_open.clone())
@@ -1382,13 +1399,17 @@ impl ComponentsGalleryDriver {
                                         });
 
                                         vec![
-                                            cx.text("overlays: tooltip / dropdown / context-menu / popover / dialog / alert-dialog / sheet"),
+                                            decl_text::text_paragraph(
+                                                cx,
+                                                "overlays: tooltip / dropdown / context-menu / popover / dialog / alert-dialog / sheet",
+                                            ),
                                             overlays,
-                                            cx.text(format!(
+                                            decl_text::text_control_readout(cx, format!(
                                                 "last action: {}",
                                                 last_action_value.as_ref()
                                             )),
-                                            cx.text(
+                                            decl_text::text_paragraph(
+                                                cx,
                                                 "cmdk: Ctrl/Cmd+P opens, arrows/hover highlight, Enter selects",
                                             ),
                                              cmdk,

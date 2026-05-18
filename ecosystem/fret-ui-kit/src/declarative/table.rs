@@ -212,6 +212,16 @@ fn retained_table_row_fill_layout() -> LayoutStyle {
     }
 }
 
+fn table_body_row_layout(row_h: Px, measure_mode: TableRowMeasureMode) -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+    if matches!(measure_mode, TableRowMeasureMode::Fixed) {
+        layout.size.height = Length::Px(row_h);
+        layout.overflow = Overflow::Clip;
+    }
+    layout
+}
+
 fn table_scroll_fill_layout() -> LayoutStyle {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
@@ -712,6 +722,24 @@ mod tests {
         assert_eq!(props.layout.flex.shrink, 1.0);
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
+    }
+
+    #[test]
+    fn table_fixed_body_row_layout_clips_to_row_height() {
+        let layout = table_body_row_layout(Px(28.0), TableRowMeasureMode::Fixed);
+
+        assert_eq!(layout.size.width, Length::Fill);
+        assert_eq!(layout.size.height, Length::Px(Px(28.0)));
+        assert_eq!(layout.overflow, Overflow::Clip);
+    }
+
+    #[test]
+    fn table_measured_body_row_layout_keeps_overflow_visible_for_measurement() {
+        let layout = table_body_row_layout(Px(28.0), TableRowMeasureMode::Measured);
+
+        assert_eq!(layout.size.width, Length::Fill);
+        assert_eq!(layout.size.height, Length::Auto);
+        assert_eq!(layout.overflow, LayoutStyle::default().overflow);
     }
 
     #[test]
@@ -1270,6 +1298,87 @@ mod tests {
         )
     }
 
+    fn render_retained_table_for_row_layout(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut FakeServices,
+        window: AppWindowId,
+        bounds: Rect,
+        measure_mode: TableRowMeasureMode,
+    ) {
+        let mut state_value = TableState::default();
+        state_value.pagination.page_size = 1;
+        let state = app.models_mut().insert(state_value);
+
+        let data: Arc<[u32]> = Arc::from(vec![0u32]);
+        let columns: Arc<[ColumnDef<u32>]> = Arc::from(vec![{
+            let mut col = ColumnDef::new("name");
+            col.size = 160.0;
+            col
+        }]);
+        let scroll = VirtualListScrollHandle::new();
+
+        for _ in 0..3 {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "retained-table-row-layout-test",
+                |cx| {
+                    vec![table_virtualized_retained_v0(
+                        cx,
+                        data.clone(),
+                        columns.clone(),
+                        state.clone(),
+                        &scroll,
+                        0,
+                        Arc::new(|_row: &u32, index: usize| RowKey::from_index(index)),
+                        None,
+                        TableViewProps {
+                            enable_column_grouping: false,
+                            row_height: Some(Px(28.0)),
+                            row_measure_mode: measure_mode,
+                            ..TableViewProps::default()
+                        },
+                        Arc::new(|col: &ColumnDef<u32>| Arc::from(col.id.as_ref())),
+                        None,
+                        Arc::new(
+                            |cx: &mut dyn ElementContextAccess<'_, App>,
+                             col: &ColumnDef<u32>,
+                             row: &u32| {
+                                let cx = cx.elements();
+                                cx.text(format!("{}-{row}", col.id.as_ref()))
+                            },
+                        ),
+                        TableDebugIds {
+                            row_test_id_prefix: Some(Arc::<str>::from(
+                                "retained-table-row-layout-row-",
+                            )),
+                            ..TableDebugIds::default()
+                        },
+                    )]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(app, services, bounds, &mut scene, 1.0);
+        }
+    }
+
+    fn semantics_node_id_by_test_id(ui: &UiTree<App>, test_id: &str) -> fret_core::NodeId {
+        ui.semantics_snapshot()
+            .expect("semantics snapshot")
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some(test_id))
+            .map(|node| node.id)
+            .unwrap_or_else(|| panic!("expected semantics node with test_id {test_id:?}"))
+    }
+
     fn capture_layout_sidecar(
         ui: &UiTree<App>,
         app: &mut App,
@@ -1350,6 +1459,95 @@ mod tests {
                 Px(abs["h"].as_f64().expect("abs_rect.h should be a number") as f32),
             ),
         )
+    }
+
+    #[test]
+    fn table_virtualized_retained_fixed_rows_mount_as_clip_boundaries() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(240.0), Px(120.0)),
+        );
+        let mut services = FakeServices;
+
+        render_retained_table_for_row_layout(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            TableRowMeasureMode::Fixed,
+        );
+
+        let row_node = semantics_node_id_by_test_id(&ui, "retained-table-row-layout-row-0");
+        let row_bounds = ui.debug_node_bounds(row_node).expect("row bounds");
+
+        assert_eq!(
+            ui.debug_declarative_instance_kind(&mut app, window, row_node),
+            Some("Pressable")
+        );
+        assert!(
+            row_bounds.size.height.0 <= 28.5,
+            "fixed retained table row should keep configured row height, got {row_bounds:?}"
+        );
+        assert_eq!(
+            ui.debug_node_clips_hit_test(row_node),
+            Some(true),
+            "fixed retained table row should clip oversized/wrapping row content"
+        );
+    }
+
+    #[test]
+    fn table_virtualized_retained_measured_rows_do_not_force_row_clip() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(240.0), Px(120.0)),
+        );
+        let mut services = FakeServices;
+
+        render_retained_table_for_row_layout(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            TableRowMeasureMode::Measured,
+        );
+
+        let row_node = semantics_node_id_by_test_id(&ui, "retained-table-row-layout-row-0");
+
+        assert_eq!(
+            ui.debug_declarative_instance_kind(&mut app, window, row_node),
+            Some("Pressable")
+        );
+        assert_eq!(
+            ui.debug_node_clips_hit_test(row_node),
+            Some(false),
+            "measured retained table row should keep overflow visible for runtime measurement"
+        );
     }
 
     #[test]
@@ -4581,7 +4779,7 @@ where
                     let policy = props.pointer_row_selection_policy;
                     let pointer_row_selection_enabled =
                         props.enable_row_selection && props.pointer_row_selection;
-                    let row_wrapper_layout = retained_table_row_fill_layout();
+                    let row_wrapper_layout = table_body_row_layout(row_h, props.row_measure_mode);
 
                     let render_row_visuals =
                         |cx: &mut ElementContext<'_, H>, hovered: bool, pressed: bool| {
@@ -4618,6 +4816,7 @@ where
                     if pointer_row_selection_enabled {
                         cx.pressable_with_id(
                             PressableProps {
+                                layout: row_wrapper_layout,
                                 enabled: true,
                                 focusable: false,
                                 a11y: PressableA11y {
@@ -6872,6 +7071,10 @@ where
 
                                                         return cx.pressable_with_id(
                                                             PressableProps {
+                                                                layout: table_body_row_layout(
+                                                                    row_h,
+                                                                    props.row_measure_mode,
+                                                                ),
                                                                 enabled,
                                                                 focusable: false,
                                                                 a11y: PressableA11y {
@@ -7461,6 +7664,10 @@ where
 
                                             cx.pressable_with_id(
                                                 PressableProps {
+                                                    layout: table_body_row_layout(
+                                                        row_h,
+                                                        props.row_measure_mode,
+                                                    ),
                                                     enabled,
                                                     focusable: false,
                                                     a11y: PressableA11y {

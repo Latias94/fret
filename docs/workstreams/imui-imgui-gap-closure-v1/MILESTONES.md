@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-17
+Last updated: 2026-05-18
 
 ## M0 - Current Source Baseline
 
@@ -184,6 +184,10 @@ Exit criteria:
   `imui-child-region-resize-x-v1` are the closed proof lanes for axis-specific manual child-region
   resize. Height/width state stays app-owned through response helpers, and broader child-region
   behavior such as auto-resize, clipping-return, or nav-flattening remains candidate-only.
+  2026-05-18 child-region auto-height result: a focused `fret-imui` composition gate now proves the
+  Fret-native AutoResizeY-equivalent posture: width-constrained child regions with no explicit
+  height auto-size to measured content and push following siblings down. This keeps the current
+  layout contract explicit without adding a Dear ImGui `AutoResizeY` flag mirror.
   2026-05-16 selectable highlight result: `imui-selectable-highlight-policy-v1` is the closed proof
   lane for forced selectable highlight visuals. Keyboard-active picker rows now use highlighted
   policy instead of selected semantics, while broader selectable flags remain candidate-only.
@@ -199,27 +203,63 @@ Exit criteria:
   in `TableRowOptions::background` and `TableCellOptions::background`, with scene-paint proof that
   cell overrides paint after row overrides. `ImUiTableRow::cell_text(...)` now uses the shared
   `text_table_cell(...)` role helper, so default table text no longer inherits paragraph wrapping
-  semantics. Freeze panes, persistence, header-menu policy, and old columns API remain
-  advanced-table candidates.
+  semantics. Freeze panes, persistence, and old columns API remain advanced-table candidates.
   2026-05-16 table header text result: sortable and plain table header labels also use
   `text_table_cell(...)`, preserving the same compact single-line ellipsis semantics as body cells.
   2026-05-16 static table column visibility result: `TableColumn::hidden()` and
   `TableColumn::with_visible(bool)` now cover author-declared hidden columns without copying Dear
   ImGui's mutable table runtime. Hidden columns still consume submitted row cells in declared order
   but skip header/body rendering and header responses; runtime hideable-column policy is covered
-  by the follow-up state helper below, while persistence and header-menu policy stay
-  candidate-only.
+  by the follow-up state/helper chain below, while persistence stays candidate-only.
   2026-05-17 runtime table column visibility result: `ImUiTableColumnVisibilityState` now covers
   runtime stable-id visibility overrides as a policy-layer helper in `fret-ui-kit::imui`. It
-  produces an adjusted `TableColumn` list and reuses the existing hidden-column render contract;
-  persistence, header-menu policy, freeze panes, and old columns API shape stay candidate-only. A
-  `fret-imui` composition gate proves the helper can drive table rendering while the runtime
-  facade remains policy-light.
+  produces an adjusted `TableColumn` list and reuses the existing hidden-column render contract.
+  Header menu policy is now covered by the helper chain below; persistence, freeze panes, and old
+  columns API shape were still candidate-only at this point. A `fret-imui` composition gate proves the helper can drive
+  table rendering while the runtime facade remains policy-light.
   2026-05-17 table visibility menu-item result: `table_column_visibility_menu_item(...)` now
   bridges `TableColumn`, existing checkbox menu item behavior, and
-  `ImUiTableColumnVisibilityState`. Callers still own where that menu is presented; automatic
-  header context-menu popup wiring, persistence, freeze panes, and old columns API shape stay
-  candidate-only.
+  `ImUiTableColumnVisibilityState`. Callers can still own a custom menu surface; the default header
+  context-menu surface is covered by the helper below. Persistence, freeze panes, and old columns
+  API shape were still candidate-only at this point.
+  2026-05-17 table visibility menu-items group result:
+  `table_column_visibility_menu_items(...)` now covers the repeated "show/hide columns" menu
+  section for stable-id, human-labeled columns. The helper returns opaque/accessor-first item
+  responses and feeds the header context-menu helper below without moving popup/menu policy into
+  `fret-imui`.
+  2026-05-17 table header trigger surface result: sortable and plain table headers now share the
+  same private header trigger surface. Sortable headers keep button-like primary activation, while
+  plain headers expose context-menu request signals without reporting left-click click/activation
+  lifecycle.
+  2026-05-17 table header visibility menu wiring result:
+  `table_column_visibility_header_context_menu(...)` now bridges `TableResponse` header context
+  requests from both sortable and plain headers, popup placement, and column visibility menu items.
+  It returns an opaque/accessor-first response, exposes popup/menu policy through
+  `TableColumnVisibilityHeaderContextMenuOptions`, keeps the visibility model caller-owned, and
+  leaves persistence, freeze panes, and old columns API shape candidate-only at this point.
+  2026-05-17 table visibility snapshot result:
+  `TableColumnVisibilitySnapshot` and `TableColumnVisibilityEntry` now close the narrow
+  persistence seam for runtime column visibility without introducing a table-state runtime.
+  `ImUiTableColumnVisibilityState::snapshot()`, `from_snapshot(...)`, and
+  `replace_from_snapshot(...)` round-trip stable column ids and visible flags through a serde data
+  shape. Empty ids are ignored on restore and duplicate ids use last-entry-wins; applications still
+  own storage, schema placement, and when to apply restored state. Freeze panes and old columns API
+  shape were still candidate-only at this point.
+  2026-05-17 table column pinning result: `TableColumn::pinned_left()` and
+  `TableColumn::pinned_right()` now cover the first IMUI freeze-pane slice without copying Dear
+  ImGui's table runtime. The helper render path splits visible header/body cells into frozen
+  left/right groups plus a shared-scroll center group, keeps scroll state caller-owned when a
+  `horizontal_scroll` handle is supplied, and falls back to an element-local scroll handle inside
+  `fret-ui-kit::imui` when pinned columns need one. `fret-imui` stays a thin composition facade.
+  Old columns API shape was still candidate-only at this point.
+  2026-05-18 table column API-shape first-pass result: `TableColumn` now exposes accessor-first
+  reads for its public option data, and table rendering, column-visibility policy, `fret-imui`
+  composition tests, and public smoke tests use those accessors. This reduces the teaching/API
+  pressure from direct field reads and prepared the private-field cleanup below.
+  2026-05-18 table column private-field hardening result: after auditing current Fret call sites,
+  `TableColumn` is no longer a public field bag. The fields are private, public callers stay on
+  builder/accessor methods, internal render/policy code uses crate-local Arc/mutator seams, and the
+  IMUI workstream source gate now fails if the old public fields return.
   2026-05-16 control readout text role result: `text_control_readout(...)` now sits in
   `fret-ui-kit::declarative::text` beside `text_table_cell(...)`. The UI Gallery code-editor
   readouts still use the doc-layout app helper, but that helper delegates to the shared role, so
@@ -236,6 +276,14 @@ Exit criteria:
   2026-05-17 compact paragraph text result: `text_compact_paragraph(...)` now owns dense wrapping
   body copy for editor/IMUI panels. IMUI `bullet_text(...)` labels and `text_wrapped(...)` route
   through that shared role instead of carrying local fill-width/min-width-zero `TextProps` policy.
+  2026-05-18 tooltip body text result: IMUI `tooltip_text(...)` default body copy now routes
+  through a private `tooltip_body_text(...)` seam backed by `text_compact_paragraph(...)`, so
+  convenience tooltips wrap as dense body/help text instead of inheriting single-line chrome text
+  from `ui.text(...)`.
+  2026-05-18 collection proof text-role result: `imui_editor_proof_demo` collection fixed chrome
+  and readouts now use proof-local helpers over shared section-chrome/control-readout roles. Inline
+  rename explanatory copy is the explicit wrapping path, while collection state, asset metadata,
+  context-menu selection, and drop-status text stay single-line and shrinkable under resize.
   2026-05-16 trigger label reuse result: IMUI tab triggers and menubar triggers now reuse
   `text_button_label(...)`; selectable/menu item row labels stayed out of that role because they
   are command/list rows, not button labels.
@@ -256,10 +304,11 @@ Exit criteria:
   2026-05-17 chrome glyph text result: `text_chrome_glyph(...)` now owns compact fixed-slot
   chrome glyph text in `fret-ui-kit::declarative::text`. Disclosure/tree indicators use that
   shared role, so glyph-only chrome stays single-line and clipped without local `TextProps`.
-  2026-05-16 text role source-gate result: `tools/gate_imui_workstream_source.py` now freezes the
-  remaining direct `TextProps::new(...)` constructors under `fret-ui-kit::imui` behind an explicit
-  allowlist, forcing future compact text policy additions through the shared role vocabulary or an
-  intentional gate update.
+  2026-05-18 text role source-gate hardening result: `tools/gate_imui_workstream_source.py` now
+  freezes direct `TextProps` construction under `fret-ui-kit::imui` behind an explicit allowlist,
+  including both `TextProps::new(...)` and `TextProps { ... }` struct literals. Future compact
+  IMUI text policy additions must go through the shared role vocabulary or an intentional gate
+  update with evidence.
   2026-05-16 IMUI text item resize result: `UiWriterImUiFacadeExt::text(...)` now mirrors Dear
   ImGui's default `Text()` semantics by staying single-line and shrinkable with ellipsis under
   resize. `text_wrapped(...)` is the explicit wrapping escape hatch, and the editor/workspace proof
@@ -354,10 +403,30 @@ Exit criteria:
   one surface: status readouts use `text_control_readout(...)`, switch captions use
   `text_control_label(...)`, and keyboard instructions use `text_paragraph(...)`; source gates
   reject the old bare status/label/instruction `cx.text(...)` paths.
+  2026-05-17 form proof text result: `form_demo` now routes its header submit/valid/dirty/status
+  readout through `text_control_readout(...)`, and source gates reject the old bare fixed-header
+  `cx.text(Arc::from(format!(...)))` path.
+  2026-05-17 sonner proof text result: `sonner_demo` now routes its fixed demo title through
+  `text_section_chrome_label(...)` and promise/last-action status through
+  `text_control_readout(...)`; source gates reject the old bare title/status `cx.text(...)` paths.
+  2026-05-17 echarts proof text result: `echarts_demo` chart titles now route through
+  `text_section_chrome_label(...)`; source gates reject the old bare chart-title `cx.text(...)`
+  path.
   2026-05-17 components gallery table proof text result: the runnable `components_gallery`
   retained table torture path now routes fixed cell renderers through `text_table_cell(...)` and
-  the table explanation through `text_paragraph(...)`; source gates reject the old bare table-cell
-  and header `cx.text(...)` paths.
+  the table explanation through `text_paragraph(...)`. The same proof now routes top chrome,
+  tree-status, theme-control, color-swatch, and control-state text through shared chrome, label,
+  and readout roles. Overlay body copy now routes through paragraph text and overlay last-action
+  status routes through `text_control_readout(...)`; source gates reject the old bare table-cell,
+  header, fixed control, and overlay proof `cx.text(...)` paths.
+  2026-05-17 markdown proof chrome text result: `markdown_demo` now keeps fixed title, preview
+  description, and toolbar state text on shared section-chrome, paragraph, and control-readout
+  roles. Markdown body/image rendering remains a text-capability proof surface instead of being
+  folded into the fixed-chrome role migration.
+  2026-05-17 residual bare text capability result: a focused `fret-examples` source test now keeps
+  remaining bare `cx.text(...)` / `TextProps::new(...)` paths limited to explicit text/IME
+  capability proofs. This prevents both accidental fixed-chrome regressions and mechanical
+  migration of surfaces that intentionally test text/input rendering.
   2026-05-17 gallery retained-table torture text result: the UI Gallery retained-table torture page
   now uses `text_table_cell(...)` for fixed table cells and `control_readout_text(...)` for table
   state readouts, so the visible retained-table stress surface no longer teaches bare fixed-cell
@@ -434,6 +503,14 @@ Exit criteria:
   and button label text for custom pointer-region actions. The slice keeps editor-proof resize
   text semantics in gallery/doc-layout helpers and the shared kit role vocabulary, not in
   `fret-imui`.
+  2026-05-18 code-view editor preview prose result: the UI Gallery code-view torture header now
+  uses `doc_layout::paragraph_text(...)` for explanatory copy instead of bare `cx.text(...)`,
+  keeping scrollable code/text preview prose on the same paragraph role as the other editor
+  preview headers.
+  2026-05-18 text editor/conformance header prose result: the UI Gallery text
+  editor/conformance headers now use paragraph text for explanatory copy and a control-readout role
+  for the BiDi sample-list heading. Explicit text capability probes remain on direct
+  `TextProps`, `SelectableTextProps`, and canvas text paths.
   2026-05-17 code-editor IME gate button-label result: the MVP IME gate action labels now use
   `doc_layout::button_label_text(...)`, and focused source/test guards prevent those custom
   pointer-region buttons from drifting back to bare `cx.text(...)` under fixed row chrome.
@@ -445,6 +522,17 @@ Exit criteria:
   `container_queries_docking_demo` now use local helpers over shared list-row, control-readout, and
   button-label text roles for fixed panel text. This closes the simple docking demo resize escape
   hatch while leaving docking topology/policy ownership unchanged.
+  2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
+  virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
+  stay auto-height/visible so runtime measurement still works.
+  2026-05-18 retained tree fixed-row clip result: retained tree rows now align their pressable row
+  owner with the virtualizer contract: fixed/known rows clip at the configured row height, and
+  measured rows keep visible overflow for variable-height content.
+  2026-05-18 retained file-tree fixed-row clip result: `file_tree_view_retained_v0(...)` now clips
+  at the retained pressable row owner instead of relying only on inner row content containers.
+  2026-05-18 retained table fixed-row clip result: retained/eager table body rows now share the
+  same owner-side contract through `table_body_row_layout(...)`; fixed rows clip to row height and
+  measured rows keep measurement-friendly overflow.
   Current collection-helper audit result: keep collection behavior app-owned until a second IMUI
   proof repeats the same request/box-select/selection-repair shape. `fret-node` remains domain
   evidence, not an API-freezing proof surface.

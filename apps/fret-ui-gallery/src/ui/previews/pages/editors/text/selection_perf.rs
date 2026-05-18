@@ -31,14 +31,21 @@ pub(in crate::ui) fn preview_text_selection_perf(
     );
 
     let header = ui::v_flex(|cx| {
-            vec![
-                cx.text("Goal: track selection rect count for large selections."),
-                cx.text("Expectation: rect generation scales with visible lines when clipped to the viewport (not document length)."),
-                cx.text("Scroll with the mouse wheel over the demo surface."),
-            ]
-        })
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2).into_element(cx);
+        vec![
+            doc_layout::paragraph_text(
+                cx,
+                "Goal: track selection rect count for large selections.",
+            ),
+            doc_layout::paragraph_text(
+                cx,
+                "Expectation: rect generation scales with visible lines when clipped to the viewport (not document length).",
+            ),
+            doc_layout::paragraph_text(cx, "Scroll with the mouse wheel over the demo surface."),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .gap(Space::N2)
+    .into_element(cx);
 
     let source = selection_perf_source();
     let source_len = source.len();

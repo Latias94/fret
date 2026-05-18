@@ -21,7 +21,10 @@ use fret_ui_kit::recipes::imui_drag_preview::{
     DragPreviewGhostOptions, drag_preview_ghost_with_options,
 };
 
-use super::{KernelApp, named_demo_state, proof_drag_preview_card};
+use super::{
+    KernelApp, named_demo_state, proof_compact_readout_element, proof_drag_preview_card,
+    proof_section_chrome_label,
+};
 
 const PROOF_COLLECTION_BOX_SELECT_DRAG_THRESHOLD_PX: f32 = 6.0;
 const PROOF_COLLECTION_GRID_FALLBACK_COLUMNS: usize = 3;
@@ -1336,8 +1339,31 @@ fn authoring_parity_collection_drop_status_model<H: UiHost>(
     )
 }
 
+fn proof_collection_readout_text(
+    ui: &mut (impl UiWriterImUiFacadeExt<KernelApp> + ?Sized),
+    text: impl Into<Arc<str>>,
+    test_id: &'static str,
+) {
+    let element =
+        ui.with_cx_mut(|cx| proof_compact_readout_element(cx, text, Arc::<str>::from(test_id)));
+    ui.add(element);
+}
+
+fn proof_collection_section_label(
+    ui: &mut (impl UiWriterImUiFacadeExt<KernelApp> + ?Sized),
+    text: &'static str,
+    test_id: &'static str,
+) {
+    let element = ui.with_cx_mut(|cx| proof_section_chrome_label(cx, text, test_id));
+    ui.add(element);
+}
+
 pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, KernelApp>) {
-    ui.text("Collection-first asset browser proof");
+    proof_collection_section_label(
+        ui,
+        "Collection-first asset browser proof",
+        "imui-editor-proof.authoring.imui.collection.title",
+    );
     ui.text_wrapped(
         "Stable keys keep browser selection pinned while visible order flips and selected-set drag/drop stays app-defined.",
     );
@@ -1453,28 +1479,65 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
         &collection_keyboard,
     );
 
-    ui.text(proof_collection_assets_line(&collection_assets));
-    ui.text(proof_collection_visible_order_line(&collection_assets));
-    ui.text(proof_collection_selection_line(
-        &collection_assets,
-        &collection_selection,
-    ));
-    ui.text(proof_collection_active_line(
-        &collection_assets,
-        &collection_selection,
-        &collection_keyboard,
-    ));
-    ui.text(proof_collection_zoom_line(collection_layout));
-    ui.text(proof_collection_select_all_line());
-    ui.text(proof_collection_rename_line());
-    ui.text(proof_collection_context_menu_line());
-    ui.text(proof_collection_command_package_line());
-    ui.text(proof_collection_rename_status_line(
-        &collection_rename_status,
-    ));
-    ui.text(proof_collection_command_status_line(
-        &collection_command_status,
-    ));
+    proof_collection_readout_text(
+        ui,
+        proof_collection_assets_line(&collection_assets),
+        "imui-editor-proof.authoring.imui.collection.assets-readout",
+    );
+    proof_collection_readout_text(
+        ui,
+        proof_collection_visible_order_line(&collection_assets),
+        "imui-editor-proof.authoring.imui.collection.visible-order-readout",
+    );
+    proof_collection_readout_text(
+        ui,
+        proof_collection_selection_line(&collection_assets, &collection_selection),
+        "imui-editor-proof.authoring.imui.collection.selection-readout",
+    );
+    proof_collection_readout_text(
+        ui,
+        proof_collection_active_line(
+            &collection_assets,
+            &collection_selection,
+            &collection_keyboard,
+        ),
+        "imui-editor-proof.authoring.imui.collection.active-readout",
+    );
+    proof_collection_readout_text(
+        ui,
+        proof_collection_zoom_line(collection_layout),
+        "imui-editor-proof.authoring.imui.collection.zoom-readout",
+    );
+    proof_collection_readout_text(
+        ui,
+        proof_collection_select_all_line(),
+        "imui-editor-proof.authoring.imui.collection.select-all-readout",
+    );
+    proof_collection_readout_text(
+        ui,
+        proof_collection_rename_line(),
+        "imui-editor-proof.authoring.imui.collection.rename-readout",
+    );
+    proof_collection_readout_text(
+        ui,
+        proof_collection_context_menu_line(),
+        "imui-editor-proof.authoring.imui.collection.context-menu-readout",
+    );
+    proof_collection_readout_text(
+        ui,
+        proof_collection_command_package_line(),
+        "imui-editor-proof.authoring.imui.collection.command-package-readout",
+    );
+    proof_collection_readout_text(
+        ui,
+        proof_collection_rename_status_line(&collection_rename_status),
+        "imui-editor-proof.authoring.imui.collection.rename-status-readout",
+    );
+    proof_collection_readout_text(
+        ui,
+        proof_collection_command_status_line(&collection_command_status),
+        "imui-editor-proof.authoring.imui.collection.command-status-readout",
+    );
     let duplicate_selected = ui.button_with_options(
         "Duplicate selected assets",
         kit::ButtonOptions {
@@ -2347,7 +2410,7 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
                                                                         &focus_state,
                                                                     );
                                                                 }
-                                                                ui.text(
+                                                                ui.text_wrapped(
                                                                     "Inline rename stays app-owned: Enter commits; Escape or blur cancels without widening shared IMUI helpers.",
                                                                 );
                                                             }
@@ -2395,11 +2458,19 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
                                                                 );
                                                             }
 
-                                                            ui.text(format!(
-                                                                "{} | {} KiB",
-                                                                asset.kind, asset.size_kib
-                                                            ));
-                                                            ui.text(asset.path.clone());
+                                                            proof_collection_readout_text(
+                                                                ui,
+                                                                format!(
+                                                                    "{} | {} KiB",
+                                                                    asset.kind, asset.size_kib
+                                                                ),
+                                                                "imui-editor-proof.authoring.imui.collection.asset.metadata",
+                                                            );
+                                                            proof_collection_readout_text(
+                                                                ui,
+                                                                asset.path.clone(),
+                                                                "imui-editor-proof.authoring.imui.collection.asset.path",
+                                                            );
                                                         },
                                                     );
                                                 });
@@ -2495,10 +2566,14 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
             &popup_collection_selection,
             &popup_collection_keyboard,
         );
-        ui.text(format!(
-            "Selection: {} item(s)",
-            popup_collection_selection.selected_count()
-        ));
+        proof_collection_readout_text(
+            ui,
+            format!(
+                "Selection: {} item(s)",
+                popup_collection_selection.selected_count()
+            ),
+            "imui-editor-proof.authoring.imui.collection.context-menu.selection-readout",
+        );
         ui.separator();
 
         let duplicate_from_menu = ui.menu_item_with_options(
@@ -2691,7 +2766,11 @@ pub(super) fn render_collection_first_asset_browser_proof(ui: &mut ImUi<'_, '_, 
     } else {
         persisted_collection_status
     };
-    ui.text(visible_collection_status);
+    proof_collection_readout_text(
+        ui,
+        visible_collection_status,
+        "imui-editor-proof.authoring.imui.collection.drop-status-readout",
+    );
 }
 
 #[cfg(test)]

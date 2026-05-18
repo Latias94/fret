@@ -3,7 +3,7 @@
   "slug": "scroll-optimization-v1",
   "title": "Scroll Optimization Workstream v1",
   "status": "active",
-  "updated": "2026-05-15",
+  "updated": "2026-05-18",
   "scope_kind": "execution",
   "problem": "Keep scroll extent probing, deferred unbounded probes, and post-layout overflow observation coherent so scroll surfaces stay correct and smooth under resize, invalidation, view-cache reuse, and edge growth/shrink.",
   "authoritative_docs": [
@@ -26,6 +26,10 @@
     {
       "role": "audit",
       "path": "docs/workstreams/scroll-optimization-v1/M5_DIRTY_FRONTIER_RESIZE_MEASURE_AUDIT_2026-05-15.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/scroll-optimization-v1/HANDOFF.md"
     }
   ],
   "repro": {
@@ -141,6 +145,70 @@
     {
       "name": "internal-drag-ignores-detached-stale-frame-region",
       "command": "cargo nextest run -p fret-ui -E 'test(internal_drag_after_raw_rebuild_does_not_route_to_detached_stale_frame_region)'"
+    },
+    {
+      "name": "clean-root-solve-geometry-propagation",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_skips_barrier_root_engine_solve clean_geometry_small_resize_keeps_view_cache_root_solve_as_boundary clean_geometry_small_resize_reports_wrap_flex_rejection_reason clean_parent_geometry_skip_still_runs_scroll_layout_side_effects virtual_list_render_window_range_tracks_viewport_resize --no-fail-fast"
+    },
+    {
+      "name": "clean-root-solve-rejection-attribution",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_keeps_view_cache_root_solve_as_boundary clean_geometry_small_resize_reports_wrap_flex_rejection_reason --no-fail-fast"
+    },
+    {
+      "name": "clean-root-solve-view-cache-boundary-propagation",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_propagates_to_view_cache_boundary_without_root_solve clean_geometry_small_resize_keeps_view_cache_root_solve_as_boundary --no-fail-fast"
+    },
+    {
+      "name": "clean-root-solve-stable-auto-height-geometry",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_skips_px_container_and_updates_child_bounds clean_geometry_small_resize_rejects_container_fraction_padding clean_geometry_small_resize_skips_stable_auto_height_container_wrapper clean_geometry_small_resize_skips_stable_auto_height_vertical_flex_child clean_geometry_small_resize_rejects_auto_height_text_reflow --no-fail-fast"
+    },
+    {
+      "name": "clean-root-solve-horizontal-fixed-flex-geometry",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_skips_stable_auto_height_vertical_flex_child clean_geometry_small_resize_rejects_center_aligned_vertical_flex_child clean_geometry_small_resize_skips_fixed_horizontal_flex_children clean_geometry_small_resize_skips_center_aligned_fixed_horizontal_flex_children clean_geometry_small_resize_rejects_horizontal_flex_grow_children --no-fail-fast"
+    },
+    {
+      "name": "clean-root-solve-horizontal-basis-zero-grow-flex-geometry",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_skips_horizontal_flex_single_basis0_grow_child clean_geometry_small_resize_rejects_horizontal_flex_multiple_grow_children --no-fail-fast"
+    },
+    {
+      "name": "clean-root-solve-horizontal-auto-width-fixed-flex-geometry",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_skips_horizontal_flex_auto_width_no_shrink_child clean_geometry_small_resize_rejects_horizontal_flex_auto_width_child_fractional_max_constraint clean_geometry_small_resize_skips_horizontal_flex_single_basis0_grow_child clean_geometry_small_resize_rejects_horizontal_flex_multiple_grow_children --no-fail-fast"
+    },
+    {
+      "name": "clean-root-solve-missing-measured-size-attribution",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_keeps_view_cache_root_solve_as_boundary clean_geometry_rejection_reports_descendant_node_attribution clean_geometry_small_resize_reports_wrap_flex_rejection_reason clean_geometry_small_resize_skips_horizontal_flex_empty_grow_container_slot clean_geometry_small_resize_skips_horizontal_flex_auto_width_no_shrink_child clean_geometry_small_resize_skips_horizontal_roving_flex_auto_width_no_shrink_child clean_geometry_small_resize_rejects_horizontal_flex_auto_width_child_fractional_max_constraint --no-fail-fast"
+    },
+    {
+      "name": "clean-root-solve-centered-intrinsic-flex-geometry",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_skips_center_justified_intrinsic_horizontal_flex clean_geometry_small_resize_rejects_center_justified_fill_horizontal_flex_width_delta clean_geometry_small_resize_skips_horizontal_flex_single_basis0_grow_child clean_geometry_small_resize_rejects_horizontal_flex_multiple_grow_children clean_geometry_small_resize_skips_horizontal_flex_auto_width_no_shrink_child clean_geometry_small_resize_rejects_horizontal_flex_auto_width_child_fractional_max_constraint clean_geometry_small_resize_skips_horizontal_flex_empty_grow_container_slot clean_geometry_small_resize_skips_horizontal_roving_flex_auto_width_no_shrink_child --no-fail-fast"
+    },
+    {
+      "name": "clean-root-solve-horizontal-default-shrink-negative-guard",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_rejects_horizontal_flex_fixed_px_default_shrink_child clean_geometry_small_resize_skips_horizontal_flex_single_basis0_grow_child clean_geometry_small_resize_skips_horizontal_flex_auto_width_no_shrink_child clean_geometry_small_resize_rejects_horizontal_flex_multiple_grow_children --no-fail-fast"
+    },
+    {
+      "name": "clean-root-solve-text-input-side-effect-boundary",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_runs_text_input_layout_as_side_effect_boundary --no-fail-fast"
+    },
+    {
+      "name": "clean-root-solve-absolute-scrollarea-overlay-geometry",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_skips_px_absolute_stack_overlay_child clean_geometry_small_resize_rejects_fraction_absolute_stack_overlay_inset --no-fail-fast"
+    },
+    {
+      "name": "clean-root-solve-card-header-grid-geometry",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_skips_card_header_like_auto_grid clean_geometry_small_resize_rejects_flexible_grid_track --no-fail-fast"
+    },
+    {
+      "name": "clean-root-solve-absent-zero-absolute-overlay-geometry",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_skips_absent_zero_absolute_overlay_child clean_geometry_small_resize_skips_px_absolute_stack_overlay_child clean_geometry_small_resize_rejects_fraction_absolute_stack_overlay_inset clean_parent_geometry_skip_still_runs_scroll_layout_side_effects clean_geometry_small_resize_runs_text_input_layout_as_side_effect_boundary --no-fail-fast"
+    },
+    {
+      "name": "clean-root-solve-explicit-zero-driver-leaf-geometry",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_skips_explicit_zero_spacer_leaf clean_geometry_small_resize_rejects_implicit_zero_spacer_leaf clean_geometry_small_resize_skips_explicit_zero_container_leaf clean_geometry_small_resize_rejects_implicit_zero_container_leaf --no-fail-fast"
+    },
+    {
+      "name": "clean-root-solve-text-reflow-stop-condition",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_rejects_auto_height_text_reflow --no-fail-fast"
     }
   ],
   "evidence": [
@@ -152,6 +220,13 @@
     "crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs",
     "crates/fret-ui/src/declarative/host_widget/event/scroll.rs",
     "crates/fret-ui/src/declarative/tests/layout/scroll.rs",
+    "crates/fret-ui/src/declarative/tests/layout/layout_engine.rs",
+    "crates/fret-ui/src/tree/layout/node.rs",
+    "crates/fret-ui/src/tree/layout/solve.rs",
+    "crates/fret-ui/src/tree/layout/entrypoints.rs",
+    "crates/fret-ui/src/tree/debug/layout.rs",
+    "crates/fret-ui/src/tree/ui_tree_debug/record.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/layout_paint_hotspot_diagnostics.rs",
     "crates/fret-ui/src/declarative/tests/virtual_list/caching.rs",
     "crates/fret-ui/src/tree/ui_tree_subtree_layout_dirty.rs",
     "crates/fret-ui/src/declarative/mount.rs",
@@ -170,14 +245,27 @@
     "crates/fret-ui/src/declarative/tests/interactions/pointer_regions.rs",
     "ecosystem/fret-bootstrap/src/ui_diagnostics.rs",
     "ecosystem/fret-bootstrap/src/ui_diagnostics/inspect_overlay.rs",
+    "apps/fret-ui-gallery/src/ui/nav.rs",
+    "ecosystem/fret-workspace/src/frame.rs",
     "ecosystem/fret-ui-kit/src/window_overlays/render.rs",
     "ecosystem/fret-ui-kit/src/window_overlays/tests/cached_requests.rs",
     "ecosystem/fret-ui-kit/src/declarative/table.rs",
-    "ecosystem/fret-ui-shadcn/src/select.rs"
+    "ecosystem/fret-ui-shadcn/src/button.rs",
+    "ecosystem/fret-ui-shadcn/src/select.rs",
+    "ecosystem/fret-ui-shadcn/src/sonner.rs",
+    "ecosystem/fret-ui-shadcn/src/card.rs",
+    "apps/fret-ui-gallery/src/driver/settings_sheet.rs",
+    "apps/fret-ui-gallery/src/ui/content.rs",
+    "apps/fret-ui-gallery/src/driver/render_flow.rs",
+    "crates/fret-ui/src/declarative/host_widget/layout.rs",
+    "crates/fret-ui/src/declarative/host_widget/measure.rs",
+    "crates/fret-ui/src/declarative/host_widget/paint.rs",
+    "crates/fret-ui/src/tree/layout/state.rs",
+    "docs/workstreams/scroll-optimization-v1/HANDOFF.md"
   ],
   "adr_refs": [],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue this lane for mechanism-level scroll extent, deferred probe, post-layout observation, and resize apply-path churn. Keep contained view-cache-only dirty work on the contained relayout + nearest-scroll follow-up path, and profile the remaining direct-child-invalidated / resize-measure path before attempting another layout skip or apply-only branch."
+    "default_action": "split_follow_on",
+    "notes": "The local no-4090 clean-geometry resize-jitter phase is closed, but the broader scroll-optimization-v1 umbrella remains active for historical scroll correctness, wheel coalescing, scrollbar baseline, and extent-probing contracts. Do not continue widening clean geometry in this folder by default. The remaining content Semantics text_reflow / Text path at apps/fret-ui-gallery/src/ui/content.rs:744 is an explicit stop condition because shadcn CardDescription uses w_full TextWrap::Word and width-derived layout/measure/paint constraints. Remaining non-text pressure should split into separate lanes: text computed-box/line-break stability proof, low-priority Canvas proof, root Scroll side-effect-boundary redesign, RTX4090/other-machine evidence collection, or measured_size Option<Size> only if sentinel ambiguity recurs outside explicit driver leaves."
   }
 }

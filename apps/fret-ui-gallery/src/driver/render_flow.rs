@@ -269,6 +269,8 @@ fn render_root_contents(
                 layout.size.min_width = Some(Length::Px(Px(0.0)));
                 layout.size.min_height = Some(Length::Px(Px(0.0)));
                 layout.flex.grow = 1.0;
+                layout.flex.shrink = 1.0;
+                layout.flex.basis = Length::Px(Px(0.0));
                 layout
             },
             enabled: true,
@@ -291,6 +293,8 @@ fn render_root_contents(
                         layout.size.min_width = Some(Length::Px(Px(0.0)));
                         layout.size.min_height = Some(Length::Px(Px(0.0)));
                         layout.flex.grow = 1.0;
+                        layout.flex.shrink = 1.0;
+                        layout.flex.basis = Length::Px(Px(0.0));
                         layout
                     },
                     ..Default::default()
@@ -328,6 +332,8 @@ fn render_root_contents(
     center_layout.size.width = fret_ui::element::Length::Fill;
     center_layout.size.height = fret_ui::element::Length::Fill;
     center_layout.flex.grow = 1.0;
+    center_layout.flex.shrink = 1.0;
+    center_layout.flex.basis = fret_ui::element::Length::Px(Px(0.0));
 
     let center = cx
         .flex(
@@ -962,6 +968,34 @@ mod tests {
                 .is_some(),
             "expected helper render to expose the requested page semantics"
         );
+    }
+
+    #[test]
+    fn content_header_children_stretch_to_header_width() {
+        let rendered = render_gallery_page_with_bootstrapped_app(PAGE_INTRO);
+
+        let header = layout_bounds_by_test_id(&rendered, "ui-gallery-content-header");
+        let copy = layout_bounds_by_test_id(&rendered, "ui-gallery-content-header-copy");
+        let presets = layout_bounds_by_test_id(&rendered, "ui-gallery-content-header-presets");
+        let epsilon = 1.0;
+
+        for (name, bounds) in [
+            ("copy", copy),
+            ("presets", presets),
+        ] {
+            assert!(
+                (bounds.origin.x.0 - header.origin.x.0).abs() <= epsilon,
+                "expected content header {name} lane to share the header left edge: header={header:?} bounds={bounds:?}"
+            );
+            assert!(
+                (bounds.size.width.0 - header.size.width.0).abs() <= epsilon,
+                "expected content header {name} lane to stretch to the header width: header={header:?} bounds={bounds:?}"
+            );
+            assert!(
+                bounds.size.height.0 > 0.0,
+                "expected content header {name} lane to remain visible: bounds={bounds:?}"
+            );
+        }
     }
 
     #[test]

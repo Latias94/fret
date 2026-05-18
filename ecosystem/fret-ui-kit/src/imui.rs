@@ -123,9 +123,9 @@ pub use options::{
     InputTextMode, InputTextOptions, InputTextPickerFilter, InputTextPickerOptions, MenuBarOptions,
     MenuItemOptions, PopupMenuOptions, PopupModalOptions, RadioOptions, ScrollOptions,
     SelectableOptions, SeparatorTextOptions, SliderOptions, SwitchOptions, TabBarOptions,
-    TabItemOptions, TableCellOptions, TableColumn, TableColumnResizeOptions, TableColumnWidth,
-    TableOptions, TableRowOptions, TableSortDirection, TextAreaOptions, TextAreaSubmitKey,
-    TooltipOptions, TreeNodeOptions, VerticalOptions, VirtualListOptions,
+    TabItemOptions, TableCellOptions, TableColumn, TableColumnPin, TableColumnResizeOptions,
+    TableColumnWidth, TableOptions, TableRowOptions, TableSortDirection, TextAreaOptions,
+    TextAreaSubmitKey, TooltipOptions, TreeNodeOptions, VerticalOptions, VirtualListOptions,
 };
 use popup_store::{
     drop_popup_scope_for_id, popup_render_generation_for_window, with_popup_store_for_id,
@@ -139,7 +139,11 @@ pub use response::{
 };
 pub use tab_family_controls::ImUiTabBar;
 pub use table_column_visibility::{
-    ImUiTableColumnVisibilityState, table_column_visibility_menu_item,
-    table_column_visibility_use_model,
+    ImUiTableColumnVisibilityState, TableColumnVisibilityEntry,
+    TableColumnVisibilityHeaderContextMenuOptions, TableColumnVisibilityHeaderContextMenuResponse,
+    TableColumnVisibilityMenuItemResponse, TableColumnVisibilityMenuOptions,
+    TableColumnVisibilityMenuResponse, TableColumnVisibilitySnapshot,
+    table_column_visibility_header_context_menu, table_column_visibility_menu_item,
+    table_column_visibility_menu_items, table_column_visibility_use_model,
 };
 pub use table_controls::{ImUiTable, ImUiTableRow};

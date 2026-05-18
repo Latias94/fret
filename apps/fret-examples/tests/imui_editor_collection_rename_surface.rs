@@ -24,7 +24,8 @@ fn imui_editor_proof_demo_keeps_collection_inline_rename_app_owned_and_explicit(
         "TextFieldBlurBehavior::Cancel",
         "proof_collection_inline_rename_focus_state(",
         "proof_collection_sync_inline_rename_focus(",
-        "ui.text(proof_collection_rename_line());",
+        "proof_collection_readout_text(\n        ui,\n        proof_collection_rename_line(),",
+        "\"imui-editor-proof.authoring.imui.collection.rename-readout\"",
     ] {
         assert!(
             source.contains(needle),

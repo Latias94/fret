@@ -106,6 +106,11 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.layout_semantics_refresh_time = Duration::default();
         self.debug_stats.layout_focus_repair_time = Duration::default();
         self.debug_stats.layout_deferred_cleanup_time = Duration::default();
+        self.debug_stats.layout_clean_geometry_solve_skip_rejections = 0;
+        self.debug_stats
+            .layout_clean_geometry_solve_skip_first_rejection = None;
+        self.debug_stats
+            .layout_clean_geometry_solve_skip_first_element_kind = None;
         self.debug_stats.layout_subtree_dirty_agg_enabled = true;
         self.debug_stats.layout_subtree_dirty_agg_updates = 0;
         self.debug_stats.layout_subtree_dirty_agg_nodes_touched = 0;
@@ -172,6 +177,7 @@ impl<H: UiHost> UiTree<H> {
         self.debug_paint_cache_replays.clear();
         self.debug_layout_request_build_roots.clear();
         self.debug_layout_engine_solves.clear();
+        self.debug_clean_geometry_solve_skip_rejections.clear();
         self.debug_layout_hotspots.clear();
         self.debug_layout_inclusive_hotspots.clear();
         self.debug_layout_stack.clear();

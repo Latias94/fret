@@ -3073,6 +3073,7 @@ fn context_menu_submenu_panel<H: UiHost>(
 pub struct ContextMenu {
     open: Model<bool>,
     disabled: bool,
+    trigger_region_layout: Option<LayoutStyle>,
     test_id_prefix: Option<Arc<str>>,
     modal: bool,
     align: DropdownMenuAlign,
@@ -3099,6 +3100,7 @@ impl std::fmt::Debug for ContextMenu {
         f.debug_struct("ContextMenu")
             .field("open", &"<model>")
             .field("disabled", &self.disabled)
+            .field("trigger_region_layout", &self.trigger_region_layout)
             .field("align", &self.align)
             .field("side", &self.side)
             .field("side_offset", &self.side_offset)
@@ -3123,6 +3125,7 @@ impl ContextMenu {
         Self {
             open: open.into_bool_model(),
             disabled: false,
+            trigger_region_layout: None,
             test_id_prefix: None,
             modal: true,
             align: DropdownMenuAlign::Start,
@@ -3176,6 +3179,16 @@ impl ContextMenu {
     /// Whether trigger gestures/shortcuts should be ignored.
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Overrides the internal trigger event-region layout.
+    ///
+    /// The trigger region is the real flex/grid item emitted by `ContextMenu`; callers that place
+    /// a context-menu trigger inside policy-heavy rows can use this to forward the same outer
+    /// layout semantics they expect for the visible trigger.
+    pub fn trigger_region_layout(mut self, layout: LayoutStyle) -> Self {
+        self.trigger_region_layout = Some(layout);
         self
     }
 
@@ -3487,6 +3500,7 @@ impl ContextMenu {
             let open_for_region = open.clone();
             let cancel_open_for_region = cancel_open.clone();
             let anchor_store_model_for_trigger = anchor_store_model.clone();
+            let trigger_region_layout = self.trigger_region_layout.unwrap_or_default();
             let trigger = cx.keyed((open_model_id, "context-menu-trigger-region"), move |cx| {
                 let pointer_policy_for_region = pointer_policy_for_region.clone();
                 let cancel_open_for_region = cancel_open_for_region.clone();
@@ -3495,7 +3509,10 @@ impl ContextMenu {
                 let touch_long_press_for_timer = touch_long_press.clone();
                 let anchor_store_model_for_timer = anchor_store_model_for_trigger.clone();
                 let open_for_timer = open_for_region.clone();
-                cx.pointer_region(PointerRegionProps::default(), move |cx| {
+                cx.pointer_region(PointerRegionProps {
+                    layout: trigger_region_layout,
+                    ..Default::default()
+                }, move |cx| {
                     cx.pointer_region_on_pointer_down(pointer_policy_for_region);
                     let cancel_open_for_move = cancel_open_for_region.clone();
                     cx.pointer_region_on_pointer_move(Arc::new(move |host, acx, mv| {
@@ -5215,6 +5232,79 @@ mod tests {
         let menu = ContextMenuContent::from(content).apply_to(ContextMenu::from_open(open));
 
         assert_eq!(menu.side_offset, Px(9.0));
+    }
+
+    #[test]
+    fn context_menu_trigger_region_layout_can_forward_outer_flex_item_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+        let open = app.models_mut().insert(false);
+
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        let mut trigger_region_layout = LayoutStyle::default();
+        trigger_region_layout.size.width = Length::Auto;
+        trigger_region_layout.size.height = Length::Fill;
+        trigger_region_layout.size.min_width = Some(Length::Px(Px(0.0)));
+        trigger_region_layout.flex.shrink = 0.0;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "context-menu-trigger-region-layout",
+            move |cx| {
+                vec![
+                    ContextMenu::from_open(open)
+                        .trigger_region_layout(trigger_region_layout)
+                        .into_element(
+                            cx,
+                            |cx| {
+                                cx.container(
+                                    ContainerProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Px(Px(80.0));
+                                            layout.size.height = Length::Px(Px(24.0));
+                                            layout
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |_cx| Vec::new(),
+                                )
+                            },
+                            |_cx| Vec::new(),
+                        ),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let trigger_root = *ui
+            .children(root)
+            .first()
+            .expect("context menu trigger should mount as the root child");
+        assert_eq!(
+            ui.debug_declarative_instance_kind(&mut app, window, trigger_root),
+            Some("PointerRegion"),
+            "ContextMenu should expose its trigger event region as the direct parent-layout item"
+        );
+        let region_bounds = ui
+            .debug_node_bounds(trigger_root)
+            .expect("trigger region should have layout bounds");
+        assert_eq!(region_bounds.size.height, bounds.size.height);
+        assert!((region_bounds.size.width.0 - 80.0).abs() < 0.01);
     }
 
     #[test]

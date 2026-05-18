@@ -90,14 +90,24 @@ pub(in crate::ui) fn preview_text_bidi_rtl_conformance(
     );
 
     let header = ui::v_flex(|cx| {
-            vec![
-                cx.text("Goal: sanity-check BiDi/RTL geometry queries (hit-test, caret rects, selection rects)."),
-                cx.text("Use the selectable samples to validate editor-like selection behavior."),
-                cx.text("Use the diagnostic panel to verify `hit_test_point` → caret/selection rendering under mixed-direction strings."),
-            ]
-        })
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2).into_element(cx);
+        vec![
+            doc_layout::paragraph_text(
+                cx,
+                "Goal: sanity-check BiDi/RTL geometry queries (hit-test, caret rects, selection rects).",
+            ),
+            doc_layout::paragraph_text(
+                cx,
+                "Use the selectable samples to validate editor-like selection behavior.",
+            ),
+            doc_layout::paragraph_text(
+                cx,
+                "Use the diagnostic panel to verify `hit_test_point` -> caret/selection rendering under mixed-direction strings.",
+            ),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .gap(Space::N2)
+    .into_element(cx);
 
     let sample_buttons = {
         let mut buttons: Vec<AnyElement> = Vec::new();
@@ -147,7 +157,10 @@ pub(in crate::ui) fn preview_text_bidi_rtl_conformance(
 
     let selectable_samples = ui::v_flex(|cx| {
         let mut out: Vec<AnyElement> = Vec::new();
-        out.push(cx.text("SelectableText samples:"));
+        out.push(doc_layout::control_readout_text(
+            cx,
+            "SelectableText samples:",
+        ));
 
         for (i, s) in SAMPLES.iter().enumerate() {
             out.push(cx.keyed(format!("bidi-sample-row-{i}"), |cx| {

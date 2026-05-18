@@ -43,14 +43,24 @@ pub(in crate::ui) fn preview_text_outline_stroke(
     }
 
     let header = ui::v_flex(|cx| {
-            vec![
-                cx.text("Goal: exercise `SceneOp::Text.outline: Option<TextOutlineV1>` end-to-end."),
-                cx.text("This page draws the same text twice: fill-only vs fill+outline, on a high-contrast backdrop."),
-                cx.text("Tip: set FRET_TEXT_SYSTEM_FONTS=0 to validate deterministic bundled-font behavior."),
-            ]
-        })
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2).into_element(cx);
+        vec![
+            doc_layout::paragraph_text(
+                cx,
+                "Goal: exercise `SceneOp::Text.outline: Option<TextOutlineV1>` end-to-end.",
+            ),
+            doc_layout::paragraph_text(
+                cx,
+                "This page draws the same text twice: fill-only vs fill+outline, on a high-contrast backdrop.",
+            ),
+            doc_layout::paragraph_text(
+                cx,
+                "Tip: set FRET_TEXT_SYSTEM_FONTS=0 to validate deterministic bundled-font behavior.",
+            ),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .gap(Space::N2)
+    .into_element(cx);
 
     fn toggle_button(
         cx: &mut AppComponentCx<'_>,

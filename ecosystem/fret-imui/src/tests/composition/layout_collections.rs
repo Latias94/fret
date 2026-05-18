@@ -1,4 +1,5 @@
 use super::*;
+use fret_authoring::UiWriter as _;
 
 #[test]
 fn container_helpers_layout_horizontal_vertical_grid_and_scroll() {
@@ -804,6 +805,108 @@ fn child_region_helper_renders_resize_y_handle_without_breaking_scroll_chrome() 
 }
 
 #[test]
+fn child_region_without_height_constraint_auto_sizes_to_content() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(220.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-child-region-auto-height",
+        |cx| {
+            crate::imui_raw(cx, |ui| {
+                ui.vertical_with_options(
+                    VerticalOptions {
+                        gap: Px(8.0).into(),
+                        ..Default::default()
+                    },
+                    |ui| {
+                        ui.child_region_with_options(
+                            "imui-child-region.auto-height",
+                            ChildRegionOptions {
+                                layout: fret_ui_kit::LayoutRefinement::default().w_px(Px(180.0)),
+                                test_id: Some(Arc::from("imui-child-region.auto-height")),
+                                content_test_id: Some(Arc::from(
+                                    "imui-child-region.auto-height.content",
+                                )),
+                                scroll: fret_ui_kit::imui::ScrollOptions {
+                                    viewport_test_id: Some(Arc::from(
+                                        "imui-child-region.auto-height.viewport",
+                                    )),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            |ui| {
+                                for index in 0..3 {
+                                    ui.menu_item_with_options(
+                                        format!("Auto row {index}"),
+                                        MenuItemOptions {
+                                            test_id: Some(Arc::from(format!(
+                                                "imui-child-region.auto-height.row.{index}",
+                                            ))),
+                                            ..Default::default()
+                                        },
+                                    );
+                                }
+                            },
+                        );
+                        ui.menu_item_with_options(
+                            "After",
+                            MenuItemOptions {
+                                test_id: Some(Arc::from("imui-child-region.auto-height.after")),
+                                ..Default::default()
+                            },
+                        );
+                    },
+                );
+            })
+        },
+    );
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let region = bounds_for_test_id(&ui, "imui-child-region.auto-height");
+    let viewport = bounds_for_test_id(&ui, "imui-child-region.auto-height.viewport");
+    let content = bounds_for_test_id(&ui, "imui-child-region.auto-height.content");
+    let row0 = bounds_for_test_id(&ui, "imui-child-region.auto-height.row.0");
+    let row2 = bounds_for_test_id(&ui, "imui-child-region.auto-height.row.2");
+    let after = bounds_for_test_id(&ui, "imui-child-region.auto-height.after");
+
+    assert_eq!(region.size.width, Px(180.0));
+    assert!(
+        region.size.height.0 >= content.size.height.0,
+        "auto-height child region should contain measured content: region={region:?} content={content:?}"
+    );
+    assert!(
+        viewport.size.height.0 >= content.size.height.0,
+        "unbounded child-region viewport should remain auto-height instead of forcing a scroll box"
+    );
+    assert!(
+        row2.origin.y.0 >= row0.origin.y.0 + row0.size.height.0,
+        "rows should stack inside the auto-height child region"
+    );
+    assert!(
+        after.origin.y.0 >= region.origin.y.0 + region.size.height.0,
+        "following siblings should be pushed below the auto-height child region"
+    );
+}
+
+#[test]
 fn table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells() {
     let window = AppWindowId::default();
     let bounds = Rect::new(
@@ -1000,6 +1103,108 @@ fn table_helper_skips_hidden_columns_in_header_and_body() {
 }
 
 #[test]
+fn table_helper_pins_left_and_right_columns_while_center_columns_scroll() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+    let scroll = fret_ui::scroll::ScrollHandle::default();
+
+    let columns = [
+        TableColumn::px("ID###id", Px(48.0)).pinned_left(),
+        TableColumn::px("Name###name", Px(180.0)),
+        TableColumn::px("Kind###kind", Px(160.0)),
+        TableColumn::px("Score###score", Px(64.0)).pinned_right(),
+    ];
+
+    let build = |cx: &mut ElementContext<'_, TestHost>| {
+        let scroll = scroll.clone();
+        crate::imui_raw(cx, |ui| {
+            ui.table_with_options(
+                "imui-table-pinned-columns",
+                &columns,
+                TableOptions {
+                    horizontal_scroll: Some(scroll),
+                    test_id: Some(Arc::from("imui-table-pinned-columns")),
+                    ..Default::default()
+                },
+                |table| {
+                    table.row("alpha", |row| {
+                        row.cell_text("01");
+                        row.cell_text("Alpha asset");
+                        row.cell_text("Texture");
+                        row.cell_text("98");
+                    });
+                },
+            );
+        })
+    };
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-pinned-columns",
+        build,
+    );
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let before_id = bounds_for_test_id(&ui, "imui-table-pinned-columns.row.0.cell.id");
+    let before_name = bounds_for_test_id(&ui, "imui-table-pinned-columns.row.0.cell.name");
+    let before_score = bounds_for_test_id(&ui, "imui-table-pinned-columns.row.0.cell.score");
+
+    assert_eq!(columns[0].pin(), TableColumnPin::Left);
+    assert_eq!(columns[3].pin(), TableColumnPin::Right);
+    assert!(
+        scroll.max_offset().x.0 > 0.0,
+        "expected center columns to create a horizontal scroll range"
+    );
+
+    scroll.set_offset(Point::new(Px(96.0), Px(0.0)));
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-pinned-columns",
+        build,
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let after_id = bounds_for_test_id(&ui, "imui-table-pinned-columns.row.0.cell.id");
+    let after_name = bounds_for_test_id(&ui, "imui-table-pinned-columns.row.0.cell.name");
+    let after_score = bounds_for_test_id(&ui, "imui-table-pinned-columns.row.0.cell.score");
+
+    assert!(
+        (after_id.origin.x.0 - before_id.origin.x.0).abs() <= 0.5,
+        "left pinned column should not move with center scroll: before={before_id:?} after={after_id:?}"
+    );
+    assert!(
+        (after_score.origin.x.0 - before_score.origin.x.0).abs() <= 0.5,
+        "right pinned column should not move with center scroll: before={before_score:?} after={after_score:?}"
+    );
+    assert!(
+        after_name.origin.x.0 < before_name.origin.x.0 - 8.0,
+        "center column should move left with horizontal scroll: before={before_name:?} after={after_name:?}"
+    );
+}
+
+#[test]
 fn table_helper_applies_runtime_column_visibility_state() {
     let window = AppWindowId::default();
     let bounds = Rect::new(
@@ -1181,8 +1386,8 @@ fn table_column_visibility_menu_item_updates_visibility_state() {
                     .app
                     .models()
                     .get_cloned(&model)
-                    .map(|state| state.is_visible("status", column.visible))
-                    .unwrap_or(column.visible);
+                    .map(|state| state.is_visible("status", column.visible()))
+                    .unwrap_or(column.visible());
                 visible_out.set(value);
             })
         },
@@ -1190,6 +1395,1079 @@ fn table_column_visibility_menu_item_updates_visibility_state() {
 
     assert!(changed.get());
     assert!(!visible.get());
+}
+
+#[test]
+fn table_column_visibility_menu_items_update_shared_visibility_state_and_filter_columns() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(220.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let model = app
+        .models_mut()
+        .insert(ImUiTableColumnVisibilityState::default());
+    let columns = [
+        TableColumn::fill("Name###name"),
+        TableColumn::px("Status###status", Px(96.0)),
+        TableColumn::unlabeled(TableColumnWidth::px(Px(64.0))).with_id("actions"),
+        TableColumn::px("###internal", Px(48.0)),
+    ];
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-column-visibility-menu-items",
+        |cx| {
+            crate::imui_raw(cx, |ui| {
+                let response = table_column_visibility_menu_items(
+                    ui,
+                    &columns,
+                    &model,
+                    TableColumnVisibilityMenuOptions {
+                        test_id_prefix: Some(Arc::from(
+                            "imui-table-column-visibility-menu-items.item.",
+                        )),
+                        ..Default::default()
+                    },
+                );
+                assert_eq!(response.len(), 2);
+                assert!(response.item("name").is_some());
+                assert!(response.item("status").is_some());
+                assert!(response.item("actions").is_none());
+                assert!(response.item("internal").is_none());
+            })
+        },
+    );
+
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-column-visibility-menu-items.item.name",
+    ));
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-column-visibility-menu-items.item.status",
+    ));
+    assert!(!has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-column-visibility-menu-items.item.actions",
+    ));
+    assert!(!has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-column-visibility-menu-items.item.internal",
+    ));
+
+    let status = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-column-visibility-menu-items.item.status",
+    );
+    click_at(&mut ui, &mut app, &mut services, status);
+
+    app.advance_frame();
+    let changed = Rc::new(Cell::new(false));
+    let visible = Rc::new(Cell::new(true));
+    let changed_out = changed.clone();
+    let visible_out = visible.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-column-visibility-menu-items",
+        |cx| {
+            crate::imui_raw(cx, |ui| {
+                let response = table_column_visibility_menu_items(
+                    ui,
+                    &columns,
+                    &model,
+                    TableColumnVisibilityMenuOptions {
+                        test_id_prefix: Some(Arc::from(
+                            "imui-table-column-visibility-menu-items.item.",
+                        )),
+                        ..Default::default()
+                    },
+                );
+                changed_out.set(response.changed());
+                visible_out.set(
+                    response
+                        .item("status")
+                        .expect("status item response")
+                        .visible(),
+                );
+            })
+        },
+    );
+
+    assert!(changed.get());
+    assert!(!visible.get());
+
+    let applied_visible = app
+        .models()
+        .get_cloned(&model)
+        .expect("visibility model")
+        .apply_to_columns(&columns);
+    assert!(applied_visible[0].visible());
+    assert!(!applied_visible[1].visible());
+    assert!(applied_visible[2].visible());
+    assert!(applied_visible[3].visible());
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-column-visibility-menu-items",
+        |cx| {
+            crate::imui_raw(cx, |ui| {
+                let applied = ui
+                    .cx_mut()
+                    .app
+                    .models()
+                    .get_cloned(&model)
+                    .expect("visibility model")
+                    .apply_to_columns(&columns);
+                ui.table_with_options(
+                    "imui-table-column-visibility-menu-items-applied",
+                    &applied,
+                    TableOptions {
+                        test_id: Some(Arc::from("imui-table-column-visibility-menu-items-applied")),
+                        ..Default::default()
+                    },
+                    |table| {
+                        table.row("alpha", |row| {
+                            row.cell_text("Alpha");
+                            row.cell_text("Ready");
+                            row.cell_text("Open");
+                            row.cell_text("Internal");
+                        });
+                    },
+                );
+            })
+        },
+    );
+
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-column-visibility-menu-items-applied.header.cell.name",
+    ));
+    assert!(!has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-column-visibility-menu-items-applied.header.cell.status",
+    ));
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-column-visibility-menu-items-applied.row.0.cell.name",
+    ));
+    assert!(!has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-column-visibility-menu-items-applied.row.0.cell.status",
+    ));
+}
+
+#[test]
+fn table_column_visibility_header_context_menu_opens_and_updates_state() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(220.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let model = app
+        .models_mut()
+        .insert(ImUiTableColumnVisibilityState::default());
+    let columns = [
+        TableColumn::fill("Name###name").sortable(),
+        TableColumn::px("Status###status", Px(96.0)),
+        TableColumn::px("Owner###owner", Px(88.0)),
+    ];
+
+    let opened = Rc::new(Cell::new(false));
+    let render = {
+        let model = model.clone();
+        let opened = opened.clone();
+        move |cx: &mut ElementContext<'_, TestHost>| {
+            crate::imui_raw(cx, |ui| {
+                let applied = ui
+                    .cx_mut()
+                    .app
+                    .models()
+                    .get_cloned(&model)
+                    .expect("visibility model")
+                    .apply_to_columns(&columns);
+                let response = ui.table_with_options(
+                    "imui-table-header-visibility-menu",
+                    &applied,
+                    TableOptions {
+                        test_id: Some(Arc::from("imui-table-header-visibility-menu")),
+                        ..Default::default()
+                    },
+                    |table| {
+                        table.row("alpha", |row| {
+                            row.cell_text("Alpha");
+                            row.cell_text("Ready");
+                            row.cell_text("Alice");
+                        });
+                    },
+                );
+                let menu = table_column_visibility_header_context_menu(
+                    ui,
+                    "imui-table-header-visibility-menu.columns",
+                    &response,
+                    &columns,
+                    &model,
+                    TableColumnVisibilityHeaderContextMenuOptions {
+                        menu: TableColumnVisibilityMenuOptions {
+                            test_id_prefix: Some(Arc::from(
+                                "imui-table-header-visibility-menu.menu.item.",
+                            )),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                );
+                opened.set(menu.open());
+            })
+        }
+    };
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-header-visibility-menu",
+        &render,
+    );
+    assert!(!opened.get());
+    assert!(!has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-header-visibility-menu.menu.item.status",
+    ));
+
+    let header = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-header-visibility-menu.header.cell.name",
+    );
+    right_click_at(&mut ui, &mut app, &mut services, header);
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-header-visibility-menu",
+        &render,
+    );
+    assert!(opened.get());
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-header-visibility-menu.menu.item.name",
+    ));
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-header-visibility-menu.menu.item.status",
+    ));
+
+    let status_item = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-header-visibility-menu.menu.item.status",
+    );
+    click_at(&mut ui, &mut app, &mut services, status_item);
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-header-visibility-menu",
+        &render,
+    );
+    assert!(
+        !app.models()
+            .get_cloned(&model)
+            .expect("visibility model")
+            .is_visible("status", true)
+    );
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-header-visibility-menu",
+        &render,
+    );
+    assert!(!has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-header-visibility-menu.header.cell.status",
+    ));
+    assert!(!has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-header-visibility-menu.row.0.cell.status",
+    ));
+}
+
+#[test]
+fn table_column_visibility_header_context_menu_opens_from_plain_header() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(220.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let model = app
+        .models_mut()
+        .insert(ImUiTableColumnVisibilityState::default());
+    let columns = [
+        TableColumn::fill("Name###name"),
+        TableColumn::px("Status###status", Px(96.0)),
+        TableColumn::px("Owner###owner", Px(88.0)),
+    ];
+
+    let opened = Rc::new(Cell::new(false));
+    let plain_header_clicked = Rc::new(Cell::new(true));
+    let render = {
+        let model = model.clone();
+        let opened = opened.clone();
+        let plain_header_clicked = plain_header_clicked.clone();
+        move |cx: &mut ElementContext<'_, TestHost>| {
+            crate::imui_raw(cx, |ui| {
+                let applied = ui
+                    .cx_mut()
+                    .app
+                    .models()
+                    .get_cloned(&model)
+                    .expect("visibility model")
+                    .apply_to_columns(&columns);
+                let response = ui.table_with_options(
+                    "imui-table-plain-header-visibility-menu",
+                    &applied,
+                    TableOptions {
+                        test_id: Some(Arc::from("imui-table-plain-header-visibility-menu")),
+                        ..Default::default()
+                    },
+                    |table| {
+                        table.row("alpha", |row| {
+                            row.cell_text("Alpha");
+                            row.cell_text("Ready");
+                            row.cell_text("Alice");
+                        });
+                    },
+                );
+                plain_header_clicked.set(
+                    response
+                        .header("name")
+                        .expect("name header")
+                        .response()
+                        .clicked(),
+                );
+                let menu = table_column_visibility_header_context_menu(
+                    ui,
+                    "imui-table-plain-header-visibility-menu.columns",
+                    &response,
+                    &columns,
+                    &model,
+                    TableColumnVisibilityHeaderContextMenuOptions {
+                        menu: TableColumnVisibilityMenuOptions {
+                            test_id_prefix: Some(Arc::from(
+                                "imui-table-plain-header-visibility-menu.menu.item.",
+                            )),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                );
+                opened.set(menu.open());
+            })
+        }
+    };
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-plain-header-visibility-menu",
+        &render,
+    );
+    assert!(!opened.get());
+    assert!(!plain_header_clicked.get());
+
+    let header = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-plain-header-visibility-menu.header.cell.name",
+    );
+    right_click_at(&mut ui, &mut app, &mut services, header);
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-plain-header-visibility-menu",
+        &render,
+    );
+    assert!(opened.get());
+    assert!(!plain_header_clicked.get());
+    assert!(has_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-plain-header-visibility-menu.menu.item.status",
+    ));
+}
+
+#[test]
+fn table_plain_header_left_click_does_not_activate_or_click() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(180.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let columns = [
+        TableColumn::fill("Name###name"),
+        TableColumn::px("Status###status", Px(96.0)),
+    ];
+    let clicked = Rc::new(Cell::new(true));
+    let activated = Rc::new(Cell::new(true));
+    let deactivated = Rc::new(Cell::new(true));
+    let render = {
+        let clicked = clicked.clone();
+        let activated = activated.clone();
+        let deactivated = deactivated.clone();
+        move |cx: &mut ElementContext<'_, TestHost>| {
+            crate::imui_raw(cx, |ui| {
+                let response = ui.table_with_options(
+                    "imui-table-plain-header-left-click",
+                    &columns,
+                    TableOptions {
+                        test_id: Some(Arc::from("imui-table-plain-header-left-click")),
+                        ..Default::default()
+                    },
+                    |table| {
+                        table.row("alpha", |row| {
+                            row.cell_text("Alpha");
+                            row.cell_text("Ready");
+                        });
+                    },
+                );
+                let header = response.header("name").expect("name header").response();
+                clicked.set(header.clicked());
+                activated.set(header.activated());
+                deactivated.set(header.deactivated());
+            })
+        }
+    };
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-plain-header-left-click",
+        &render,
+    );
+    assert!(!clicked.get());
+    assert!(!activated.get());
+    assert!(!deactivated.get());
+
+    let header = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-plain-header-left-click.header.cell.name",
+    );
+    click_at(&mut ui, &mut app, &mut services, header);
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-plain-header-left-click",
+        &render,
+    );
+    assert!(!clicked.get());
+    assert!(!activated.get());
+    assert!(!deactivated.get());
+}
+
+#[test]
+fn table_plain_header_reports_context_menu_request_from_keyboard_without_clicking() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(180.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let columns = [
+        TableColumn::fill("Name###name"),
+        TableColumn::px("Status###status", Px(96.0)),
+    ];
+    let requested = Rc::new(Cell::new(false));
+    let clicked = Rc::new(Cell::new(false));
+    let header_id = Rc::new(Cell::new(None));
+    let header_id_out = header_id.clone();
+
+    let render = {
+        let requested = requested.clone();
+        let clicked = clicked.clone();
+        move |cx: &mut ElementContext<'_, TestHost>| {
+            crate::imui_raw(cx, |ui| {
+                let response = ui.table_with_options(
+                    "imui-table-plain-header-keyboard-context-menu",
+                    &columns,
+                    TableOptions {
+                        test_id: Some(Arc::from("imui-table-plain-header-keyboard-context-menu")),
+                        ..Default::default()
+                    },
+                    |table| {
+                        table.row("alpha", |row| {
+                            row.cell_text("Alpha");
+                            row.cell_text("Ready");
+                        });
+                    },
+                );
+                let header = response.header("name").expect("name header").response();
+                header_id_out.set(header.id());
+                requested.set(header.context_menu_requested());
+                clicked.set(header.clicked());
+            })
+        }
+    };
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-plain-header-keyboard-context-menu",
+        &render,
+    );
+    assert!(!requested.get());
+    assert!(!clicked.get());
+
+    let header_id = header_id.get().expect("plain header response id");
+    ui.request_focus_element(&mut app, header_id);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert!(
+        ui.focus().is_some(),
+        "expected plain header trigger to take focus"
+    );
+
+    key_down(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::ContextMenu,
+        Modifiers::default(),
+    );
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-plain-header-keyboard-context-menu",
+        &render,
+    );
+    assert!(requested.get());
+    assert!(!clicked.get());
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-plain-header-keyboard-context-menu",
+        &render,
+    );
+    assert!(!requested.get());
+    assert!(!clicked.get());
+
+    key_down(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::F10,
+        Modifiers {
+            shift: true,
+            ..Modifiers::default()
+        },
+    );
+
+    app.advance_frame();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-plain-header-keyboard-context-menu",
+        &render,
+    );
+    assert!(requested.get());
+    assert!(!clicked.get());
+}
+
+#[test]
+fn table_sortable_header_reports_context_menu_request_on_right_click() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(180.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let columns = [
+        TableColumn::fill("Name###name").sortable(),
+        TableColumn::px("Status###status", Px(96.0)),
+    ];
+    let requested = Rc::new(Cell::new(false));
+    let anchor_matches_click = Rc::new(Cell::new(false));
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-header-context-menu",
+        |cx| {
+            crate::imui_raw(cx, |ui| {
+                let response = ui.table_with_options(
+                    "imui-table-header-context-menu",
+                    &columns,
+                    TableOptions {
+                        test_id: Some(Arc::from("imui-table-header-context-menu")),
+                        ..Default::default()
+                    },
+                    |table| {
+                        table.row("alpha", |row| {
+                            row.cell_text("Alpha");
+                            row.cell_text("Ready");
+                        });
+                    },
+                );
+                assert!(
+                    !response
+                        .header("name")
+                        .expect("name header")
+                        .response()
+                        .context_menu_requested()
+                );
+            })
+        },
+    );
+
+    let at = point_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-table-header-context-menu.header.cell.name",
+    );
+    right_click_at(&mut ui, &mut app, &mut services, at);
+
+    app.advance_frame();
+    let requested_out = requested.clone();
+    let anchor_matches_click_out = anchor_matches_click.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-header-context-menu",
+        |cx| {
+            crate::imui_raw(cx, |ui| {
+                let response = ui.table_with_options(
+                    "imui-table-header-context-menu",
+                    &columns,
+                    TableOptions {
+                        test_id: Some(Arc::from("imui-table-header-context-menu")),
+                        ..Default::default()
+                    },
+                    |table| {
+                        table.row("alpha", |row| {
+                            row.cell_text("Alpha");
+                            row.cell_text("Ready");
+                        });
+                    },
+                );
+                let header = response.header("name").expect("name header").response();
+                requested_out.set(header.context_menu_requested());
+                anchor_matches_click_out.set(header.context_menu_anchor() == Some(at));
+            })
+        },
+    );
+
+    assert!(requested.get());
+    assert!(anchor_matches_click.get());
+
+    app.advance_frame();
+    let requested_out = requested.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-header-context-menu",
+        |cx| {
+            crate::imui_raw(cx, |ui| {
+                let response = ui.table_with_options(
+                    "imui-table-header-context-menu",
+                    &columns,
+                    TableOptions {
+                        test_id: Some(Arc::from("imui-table-header-context-menu")),
+                        ..Default::default()
+                    },
+                    |table| {
+                        table.row("alpha", |row| {
+                            row.cell_text("Alpha");
+                            row.cell_text("Ready");
+                        });
+                    },
+                );
+                requested_out.set(
+                    response
+                        .header("name")
+                        .expect("name header")
+                        .response()
+                        .context_menu_requested(),
+                );
+            })
+        },
+    );
+
+    assert!(!requested.get());
+}
+
+#[test]
+fn table_sortable_header_reports_context_menu_request_from_keyboard() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(180.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let columns = [
+        TableColumn::fill("Name###name").sortable(),
+        TableColumn::px("Status###status", Px(96.0)),
+    ];
+    let requested = Rc::new(Cell::new(false));
+    let header_id = Rc::new(Cell::new(None));
+    let header_id_out = header_id.clone();
+
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-header-keyboard-context-menu",
+        |cx| {
+            crate::imui_raw(cx, |ui| {
+                let response = ui.table_with_options(
+                    "imui-table-header-keyboard-context-menu",
+                    &columns,
+                    TableOptions {
+                        test_id: Some(Arc::from("imui-table-header-keyboard-context-menu")),
+                        ..Default::default()
+                    },
+                    |table| {
+                        table.row("alpha", |row| {
+                            row.cell_text("Alpha");
+                            row.cell_text("Ready");
+                        });
+                    },
+                );
+                header_id_out.set(
+                    response
+                        .header("name")
+                        .expect("name header")
+                        .response()
+                        .id(),
+                );
+                assert!(
+                    !response
+                        .header("name")
+                        .expect("name header")
+                        .response()
+                        .context_menu_requested()
+                );
+            })
+        },
+    );
+
+    let header_id = header_id.get().expect("name header response id");
+    ui.request_focus_element(&mut app, header_id);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert!(
+        ui.focus().is_some(),
+        "expected sortable header trigger to take focus"
+    );
+
+    key_down(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::ContextMenu,
+        Modifiers::default(),
+    );
+
+    app.advance_frame();
+    let requested_out = requested.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-header-keyboard-context-menu",
+        |cx| {
+            crate::imui_raw(cx, |ui| {
+                let response = ui.table_with_options(
+                    "imui-table-header-keyboard-context-menu",
+                    &columns,
+                    TableOptions {
+                        test_id: Some(Arc::from("imui-table-header-keyboard-context-menu")),
+                        ..Default::default()
+                    },
+                    |table| {
+                        table.row("alpha", |row| {
+                            row.cell_text("Alpha");
+                            row.cell_text("Ready");
+                        });
+                    },
+                );
+                requested_out.set(
+                    response
+                        .header("name")
+                        .expect("name header")
+                        .response()
+                        .context_menu_requested(),
+                );
+            })
+        },
+    );
+
+    assert!(requested.get());
+
+    app.advance_frame();
+    let requested_out = requested.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-header-keyboard-context-menu",
+        |cx| {
+            crate::imui_raw(cx, |ui| {
+                let response = ui.table_with_options(
+                    "imui-table-header-keyboard-context-menu",
+                    &columns,
+                    TableOptions {
+                        test_id: Some(Arc::from("imui-table-header-keyboard-context-menu")),
+                        ..Default::default()
+                    },
+                    |table| {
+                        table.row("alpha", |row| {
+                            row.cell_text("Alpha");
+                            row.cell_text("Ready");
+                        });
+                    },
+                );
+                requested_out.set(
+                    response
+                        .header("name")
+                        .expect("name header")
+                        .response()
+                        .context_menu_requested(),
+                );
+            })
+        },
+    );
+
+    assert!(!requested.get());
+
+    key_down(
+        &mut ui,
+        &mut app,
+        &mut services,
+        KeyCode::F10,
+        Modifiers {
+            shift: true,
+            ..Modifiers::default()
+        },
+    );
+
+    app.advance_frame();
+    let requested_out = requested.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-table-header-keyboard-context-menu",
+        |cx| {
+            crate::imui_raw(cx, |ui| {
+                let response = ui.table_with_options(
+                    "imui-table-header-keyboard-context-menu",
+                    &columns,
+                    TableOptions {
+                        test_id: Some(Arc::from("imui-table-header-keyboard-context-menu")),
+                        ..Default::default()
+                    },
+                    |table| {
+                        table.row("alpha", |row| {
+                            row.cell_text("Alpha");
+                            row.cell_text("Ready");
+                        });
+                    },
+                );
+                requested_out.set(
+                    response
+                        .header("name")
+                        .expect("name header")
+                        .response()
+                        .context_menu_requested(),
+                );
+            })
+        },
+    );
+
+    assert!(requested.get());
 }
 
 #[test]
@@ -1464,6 +2742,96 @@ fn virtual_list_helper_mounts_small_render_window_and_scrolls_to_target_row() {
         bounds,
         "imui-virtual-list.row.0",
     ));
+}
+
+#[test]
+fn virtual_list_fixed_rows_clip_oversized_row_content() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let render = |cx: &mut ElementContext<'_, TestHost>| {
+        crate::imui_raw(cx, |ui| {
+            ui.virtual_list_with_options(
+                "imui-virtual-list-fixed-clip",
+                4,
+                VirtualListOptions {
+                    viewport_height: Px(72.0),
+                    estimate_row_height: Px(20.0),
+                    overscan: 0,
+                    measure_mode: VirtualListMeasureMode::Fixed,
+                    test_id: Some(Arc::from("imui-virtual-list-fixed-clip")),
+                    ..Default::default()
+                },
+                |index| index as fret_ui::ItemKey,
+                |ui, index| {
+                    let content = ui.with_cx_mut(|cx| {
+                        let mut props = fret_ui::element::ContainerProps::default();
+                        props.layout.size.height = Length::Px(Px(64.0));
+                        cx.container(props, |_cx| Vec::new())
+                            .test_id(Arc::from(format!(
+                                "imui-virtual-list-fixed-clip.content.{index}"
+                            )))
+                    });
+                    ui.add(content);
+                },
+            );
+        })
+    };
+
+    for _ in 0..3 {
+        run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-virtual-list-fixed-clip",
+            &render,
+        );
+        app.advance_frame();
+    }
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let row_semantics = node_for_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds,
+        "imui-virtual-list-fixed-clip.row.0",
+    );
+    let row_node = ui
+        .debug_node_children(row_semantics)
+        .into_iter()
+        .next()
+        .expect("row semantics should wrap the fixed-row container");
+    let row = ui.debug_node_bounds(row_node).expect("row bounds");
+    let content = bounds_for_test_id(&ui, "imui-virtual-list-fixed-clip.content.0");
+
+    assert!(
+        row.size.height.0 <= 20.5,
+        "fixed virtual-list row should keep the configured row height, got {row:?}"
+    );
+    assert_eq!(
+        ui.debug_node_clips_hit_test(row_node),
+        Some(true),
+        "fixed virtual-list row should clip oversized row contents"
+    );
+    assert!(
+        content.size.height.0 > row.size.height.0,
+        "test must exercise oversized row content, row={row:?}, content={content:?}"
+    );
 }
 
 #[test]

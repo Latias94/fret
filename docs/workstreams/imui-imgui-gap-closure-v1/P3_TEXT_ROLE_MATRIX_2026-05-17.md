@@ -70,6 +70,11 @@ component should construct `TextProps` locally.
    and proof.
 5. Do not add a public `TextRole` enum until at least two consumers need a data-driven role value.
    The current API remains helper-based to avoid freezing unnecessary public surface.
+6. Remaining bare text in first-party proof apps is allowed only when the surface is itself testing
+   text/input rendering behavior. Current allowed residuals are `components_gallery` text
+   smoke/font override probes and `ime_smoke_demo` IME behavior instructions/status. Do not migrate
+   those mechanically into chrome roles; add a new role only when a non-proof surface repeats the
+   need.
 
 ## Gates
 
@@ -82,6 +87,8 @@ component should construct `TextProps` locally.
   - `cargo nextest run -p fret-ui-editor editor_input_value_text_is_single_line_and_shrinkable editor_inline_error_text_is_single_line_and_shrinkable editor_validation_message_text_wraps_and_shrinks popup_list_row_text_is_single_line_and_shrinkable editor_property_group_header_text_is_single_line_and_shrinkable editor_property_row_label_text_is_single_line_and_shrinkable editor_inspector_panel_title_text_is_single_line_and_shrinkable inspector_panel_title_stays_single_line_when_header_is_narrow --no-fail-fast`
 - Source contract:
   - `python tools/gate_imui_workstream_source.py`
+- First-party residual proof surface:
+  - `cargo nextest run -p fret-examples --test text_role_residual_surface remaining_bare_text_in_fret_examples_is_explicit_capability_surface --no-fail-fast`
 - Layout-container regression:
   - `cargo nextest run -p fret-ui-editor row_label_slot_keeps_fixed_line_box_when_label_text_wraps_under_narrow_layout --no-fail-fast`
   - `cargo nextest run -p fret-ui-editor row_value_slot_keeps_overflow_visible_for_wrapping_value_children row_value_slot_grows_to_wrapping_value_text_under_narrow_layout property_grid_keeps_rows_separated_when_value_text_wraps_under_narrow_layout --no-fail-fast`

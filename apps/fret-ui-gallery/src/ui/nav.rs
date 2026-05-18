@@ -240,7 +240,14 @@ pub(crate) fn sidebar_view(
             nav_body
         } else {
             shadcn::ScrollArea::new([nav_body])
-                .refine_layout(LayoutRefinement::default().w_full().h_full())
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .w_full()
+                        .h_full()
+                        .flex_1()
+                        .min_w_0()
+                        .min_h_0(),
+                )
                 .scroll_handle(nav_scroll_handle.clone())
                 .into_element(cx)
         };
@@ -257,7 +264,10 @@ pub(crate) fn sidebar_view(
                         .unwrap_or_else(|| theme.color_token("background")),
                 ))
                 .p(Space::N4),
-            LayoutRefinement::default().w_px(Px(280.0)).h_full(),
+            LayoutRefinement::default()
+                .w_px(Px(280.0))
+                .h_full()
+                .flex_shrink_0(),
         ),
         |cx| {
             [ui::v_flex(|_cx| [title_row, query_input, nav_scroll])

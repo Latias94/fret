@@ -3,7 +3,7 @@
   "slug": "imui-imgui-gap-closure-v1",
   "title": "ImUi Dear ImGui Gap Closure v1",
   "status": "active",
-  "updated": "2026-05-17",
+  "updated": "2026-05-18",
   "scope_kind": "execution",
   "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "Refresh the Dear ImGui gap read from current Fret sources and repo-ref/imgui before further fearless refactors: identify stale parity conclusions, rank the remaining gaps, name delete/refactor candidates, and keep each follow-on tied to repro, gate, and evidence.",
@@ -166,6 +166,10 @@
       "command": "cargo nextest run -p fret-ui-kit --features imui --lib imui_text_item_is_single_line_and_shrinkable imui_text_wrapped_is_explicit_wrapping_text compact_paragraph_text_uses_wrapping_fill_width_layout bullet_text_uses_shared_compact_paragraph_role --no-fail-fast"
     },
     {
+      "name": "imui virtual-list fixed-row clipping semantics",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --lib fixed_virtual_list_rows_clip_content_to_row_height known_virtual_list_rows_clip_content_to_known_row_height measured_virtual_list_rows_keep_content_overflow_visible_for_measurement --no-fail-fast && cargo nextest run -p fret-imui virtual_list_fixed_rows_clip_oversized_row_content --no-fail-fast"
+    },
+    {
       "name": "imui control chrome fill text semantics",
       "command": "cargo nextest run -p fret-ui-kit --features imui --lib control_label_text_uses_fill_width_single_line_truncation imui_fill_text_is_single_line_and_shrinkable imui_control_text_uses_shared_button_label_role --no-fail-fast"
     },
@@ -234,8 +238,28 @@
       "command": "cargo nextest run -p fret-examples --test date_picker_demo_surface date_picker_demo_keeps_fixed_chrome_text_on_roles --no-fail-fast"
     },
     {
+      "name": "form proof text roles",
+      "command": "cargo nextest run -p fret-examples --test form_demo_surface form_demo_header_status_uses_control_readout_role --no-fail-fast"
+    },
+    {
+      "name": "sonner proof text roles",
+      "command": "cargo nextest run -p fret-examples --test sonner_demo_surface sonner_demo_header_text_uses_fixed_chrome_roles --no-fail-fast"
+    },
+    {
+      "name": "echarts proof text roles",
+      "command": "cargo nextest run -p fret-examples --test echarts_demo_surface echarts_demo_chart_titles_use_section_chrome_role --no-fail-fast"
+    },
+    {
       "name": "components gallery table proof text roles",
-      "command": "cargo nextest run -p fret-examples --test components_gallery_surface components_gallery_table_torture_uses_text_roles --no-fail-fast"
+      "command": "cargo nextest run -p fret-examples --test components_gallery_surface components_gallery_table_torture_uses_text_roles components_gallery_chrome_and_controls_use_text_roles components_gallery_overlay_text_uses_text_roles --no-fail-fast"
+    },
+    {
+      "name": "markdown proof chrome text roles",
+      "command": "cargo nextest run -p fret-examples --test markdown_demo_surface markdown_demo_chrome_text_uses_shared_roles --no-fail-fast"
+    },
+    {
+      "name": "fret-examples residual bare text capability surfaces",
+      "command": "cargo nextest run -p fret-examples --test text_role_residual_surface remaining_bare_text_in_fret_examples_is_explicit_capability_surface --no-fail-fast"
     },
     {
       "name": "examples table proof bin check",
@@ -370,6 +394,34 @@
       "command": "cargo nextest run -p fret-imui table_helper_skips_hidden_columns_in_header_and_body --no-fail-fast"
     },
     {
+      "name": "fret-imui table visibility menu group test",
+      "command": "cargo nextest run -p fret-imui table_column_visibility_menu_items_update_shared_visibility_state_and_filter_columns --no-fail-fast"
+    },
+    {
+      "name": "fret-imui table header trigger surface tests",
+      "command": "cargo nextest run -p fret-imui table_plain_header_left_click_does_not_activate_or_click table_plain_header_reports_context_menu_request_from_keyboard_without_clicking table_column_visibility_header_context_menu_opens_from_plain_header table_sortable_header_reports_context_menu_request --no-fail-fast"
+    },
+    {
+      "name": "fret-imui table header visibility menu wiring tests",
+      "command": "cargo nextest run -p fret-imui table_column_visibility_header_context_menu_opens_from_plain_header table_column_visibility_header_context_menu_opens_and_updates_state --no-fail-fast"
+    },
+    {
+      "name": "fret-ui-kit table visibility snapshot tests",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --lib visibility_state_snapshot_roundtrips_stable_column_ids visibility_state_snapshot_restore_ignores_empty_ids_and_last_entry_wins --no-fail-fast"
+    },
+    {
+      "name": "fret-ui-kit table visibility snapshot smoke",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke table_column_visibility_snapshot_api_compiles_and_roundtrips table_column_visibility_snapshot_entries_are_public_data_shape --no-fail-fast"
+    },
+    {
+      "name": "imui table column pinning freeze seam",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --lib horizontal_scroll_option_wraps_unpinned_header_and_body_center_groups --no-fail-fast && cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke table_column_pinning_helpers_compile --no-fail-fast && cargo nextest run -p fret-imui table_helper_pins_left_and_right_columns_while_center_columns_scroll --no-fail-fast"
+    },
+    {
+      "name": "imui table column accessor-first API shape",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke table_column_helpers_compile table_column_visibility_helpers_compile table_resizable_column_api_compiles table_sortable_header_api_compiles --no-fail-fast && cargo nextest run -p fret-ui-kit --features imui --lib visibility_state_applies_runtime_overrides_by_stable_column_id visibility_state_leaves_unlisted_and_unidentified_columns_at_declared_visibility horizontal_scroll_option_wraps_unpinned_header_and_body_center_groups --no-fail-fast && cargo nextest run -p fret-imui table_helper_pins_left_and_right_columns_while_center_columns_scroll table_column_visibility_menu_item_updates_visibility_state --no-fail-fast"
+    },
+    {
       "name": "diff check",
       "command": "git diff --check"
     }
@@ -476,8 +528,12 @@
     "apps/fret-examples/src/container_queries_docking_demo.rs",
     "apps/fret-examples/src/datatable_demo.rs",
     "apps/fret-examples/src/components_gallery.rs",
+    "apps/fret-examples/src/markdown_demo.rs",
     "apps/fret-examples/src/canvas_datagrid_stress_demo.rs",
     "apps/fret-examples/src/date_picker_demo.rs",
+    "apps/fret-examples/src/form_demo.rs",
+    "apps/fret-examples/src/sonner_demo.rs",
+    "apps/fret-examples/src/echarts_demo.rs",
     "apps/fret-examples/src/virtual_list_stress_demo.rs",
     "apps/fret-examples/src/table_demo.rs",
     "apps/fret-examples/src/table_stress_demo.rs",
@@ -486,8 +542,13 @@
     "apps/fret-examples/tests/container_queries_docking_surface.rs",
     "apps/fret-examples/tests/datatable_demo_surface.rs",
     "apps/fret-examples/tests/components_gallery_surface.rs",
+    "apps/fret-examples/tests/markdown_demo_surface.rs",
+    "apps/fret-examples/tests/text_role_residual_surface.rs",
     "apps/fret-examples/tests/canvas_datagrid_stress_demo_surface.rs",
     "apps/fret-examples/tests/date_picker_demo_surface.rs",
+    "apps/fret-examples/tests/form_demo_surface.rs",
+    "apps/fret-examples/tests/sonner_demo_surface.rs",
+    "apps/fret-examples/tests/echarts_demo_surface.rs",
     "apps/fret-examples/tests/virtual_list_stress_demo_surface.rs",
     "apps/fret-examples/tests/table_demo_surface.rs",
     "apps/fret-examples/tests/table_stress_demo_surface.rs",
@@ -542,6 +603,7 @@
     "ecosystem/fret-imui/src/tests/interaction_shortcuts/mod.rs",
     "ecosystem/fret-imui/src/tests/label_identity/mod.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs",
     "ecosystem/fret-ui-kit/tests/imui_table_smoke.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
     "ecosystem/fret-imui/src/tests/floating/mod.rs",
