@@ -545,6 +545,12 @@ Readiness order for the next locally testable review slices:
    `file_tree_view_retained_v0(...)` now gives the retained Pressable row itself an explicit
    fill-width, fixed-height, `Overflow::Clip` layout, matching its known-height virtualizer
    contract instead of relying only on an inner content container to clip.
+   2026-05-18 retained table fixed-row clip follow-up:
+   `table_virtualized_retained_v0(...)` and grouped/eager table row owners now share
+   `table_body_row_layout(...)`: fixed rows become fill-width fixed-height clip boundaries, while
+   measured rows stay auto-height/visible for runtime measurement. This keeps table cell text and
+   table row containers aligned with the same resize contract without moving table state/runtime
+   policy into `fret-imui`.
    2026-05-17 code-editor IME gate button-label follow-up: code-editor MVP IME gate actions now
    route their custom pointer-region labels through `button_label_text(...)`, and both the gallery
    source test and IMUI workstream source gate forbid those fixed action labels from returning to
