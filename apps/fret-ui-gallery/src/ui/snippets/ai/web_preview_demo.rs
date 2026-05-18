@@ -5,7 +5,9 @@ use fret::app::AppRenderActionsExt as _;
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui::Invalidation;
+use fret_ui::element::{AnyElement, Length, SemanticsProps, SpacerProps};
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
@@ -16,6 +18,29 @@ mod act {
         NavigateBack = "ui-gallery.ai.web_preview.navigate_back.v1",
         NavigateForward = "ui-gallery.ai.web_preview.navigate_forward.v1",
     ]);
+}
+
+fn state_marker(cx: &mut AppComponentCx<'_>, test_id: &'static str) -> AnyElement {
+    cx.semantics(
+        SemanticsProps {
+            role: fret_core::SemanticsRole::Generic,
+            test_id: Some(Arc::<str>::from(test_id)),
+            ..Default::default()
+        },
+        |cx| {
+            vec![cx.spacer(SpacerProps {
+                layout: fret_ui::element::LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: Length::Px(Px(0.0)),
+                        height: Length::Px(Px(0.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                min: Px(0.0),
+            })]
+        },
+    )
 }
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -86,24 +111,18 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let markers = {
         let mut out: Vec<AnyElement> = Vec::new();
         if !loading_now {
-            out.push(cx.text("").test_id("ui-ai-web-preview-demo-loading-false"));
+            out.push(state_marker(cx, "ui-ai-web-preview-demo-loading-false"));
         }
         if committed_now {
-            out.push(cx.text("").test_id("ui-ai-web-preview-demo-committed-true"));
+            out.push(state_marker(cx, "ui-ai-web-preview-demo-committed-true"));
         }
         if can_back {
-            out.push(cx.text("").test_id("ui-ai-web-preview-demo-can-back-true"));
+            out.push(state_marker(cx, "ui-ai-web-preview-demo-can-back-true"));
         }
         if can_forward {
-            out.push(
-                cx.text("")
-                    .test_id("ui-ai-web-preview-demo-can-forward-true"),
-            );
+            out.push(state_marker(cx, "ui-ai-web-preview-demo-can-forward-true"));
         } else {
-            out.push(
-                cx.text("")
-                    .test_id("ui-ai-web-preview-demo-can-forward-false"),
-            );
+            out.push(state_marker(cx, "ui-ai-web-preview-demo-can-forward-false"));
         }
         out
     };
@@ -131,15 +150,16 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         }
     });
 
-    let back = ui_ai::WebPreviewNavigationButton::go_back([cx.text("←")])
+    let back = ui_ai::WebPreviewNavigationButton::go_back([decl_text::text_chrome_glyph(cx, "←")])
         .disabled(!can_back)
         .test_id("ui-ai-web-preview-demo-nav-back")
         .action(act::NavigateBack);
 
-    let forward = ui_ai::WebPreviewNavigationButton::go_forward([cx.text("→")])
-        .disabled(!can_forward)
-        .test_id("ui-ai-web-preview-demo-nav-forward")
-        .action(act::NavigateForward);
+    let forward =
+        ui_ai::WebPreviewNavigationButton::go_forward([decl_text::text_chrome_glyph(cx, "→")])
+            .disabled(!can_forward)
+            .test_id("ui-ai-web-preview-demo-nav-forward")
+            .action(act::NavigateForward);
 
     let nav = ui_ai::WebPreviewNavigation::default()
         .button(back)
@@ -186,8 +206,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 pub fn render_composable_children(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let custom_body = ui::v_flex(move |cx| {
         vec![
-            cx.text("Custom body content"),
-            cx.text("Use this lane when preview chrome is enough for the current build."),
+            decl_text::text_section_chrome_label(cx, "Custom body content"),
+            decl_text::text_paragraph(
+                cx,
+                "Use this lane when preview chrome is enough for the current build.",
+            ),
         ]
     })
     .layout(
@@ -202,8 +225,8 @@ pub fn render_composable_children(cx: &mut AppComponentCx<'_>) -> impl UiChild +
 
     let custom_console_note = ui::v_flex(move |cx| {
         vec![
-            cx.text("Custom console footer"),
-            cx.text("Backend navigation is app-owned and optional in Fret."),
+            decl_text::text_section_chrome_label(cx, "Custom console footer"),
+            decl_text::text_paragraph(cx, "Backend navigation is app-owned and optional in Fret."),
         ]
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -214,7 +237,9 @@ pub fn render_composable_children(cx: &mut AppComponentCx<'_>) -> impl UiChild +
         .default_url("https://fret.dev/docs")
         .navigation(
             ui_ai::WebPreviewNavigation::default()
-                .button(ui_ai::WebPreviewNavigationButton::reload([cx.text("↺")]))
+                .button(ui_ai::WebPreviewNavigationButton::reload([
+                    decl_text::text_chrome_glyph(cx, "↺"),
+                ]))
                 .url(ui_ai::WebPreviewUrl::new()),
         )
         .body(ui_ai::WebPreviewBody::new().child(custom_body))

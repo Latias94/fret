@@ -478,6 +478,9 @@ Exit criteria:
   through `text_button_label(...)`, and keeps fixed outer title/body copy on shared roles.
   Transcription now uses generic zero-size spacer markers for time/active diagnostics anchors while
   routing fixed title/body copy through shared section-chrome/paragraph roles.
+  2026-05-18 AI WebPreview text-role result: WebPreview state diagnostics now use generic
+  zero-size spacer markers instead of empty `Text`, navigation glyphs use `text_chrome_glyph(...)`,
+  and composable child fixed body/footer copy uses shared section-chrome/paragraph roles.
   2026-05-17 gallery data-grid text result: the UI Gallery DataGrid preview now routes virtualized
   grid cells through `text_table_cell(...)` and the selected-row status line through
   `control_readout_text(...)`.

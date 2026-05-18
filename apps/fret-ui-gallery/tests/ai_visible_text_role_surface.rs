@@ -671,3 +671,53 @@ fn ai_queue_prompt_input_and_transcription_use_shared_text_roles_and_non_text_ma
         );
     }
 }
+
+#[test]
+fn ai_web_preview_uses_shared_text_roles_and_non_text_markers() {
+    let source = include_str!("../src/ui/snippets/ai/web_preview_demo.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "fn state_marker(cx: &mut AppComponentCx<'_>, test_id: &'static str) -> AnyElement",
+        "role: fret_core::SemanticsRole::Generic",
+        "cx.spacer(SpacerProps",
+        "state_marker(cx, \"ui-ai-web-preview-demo-loading-false\")",
+        "state_marker(cx, \"ui-ai-web-preview-demo-committed-true\")",
+        "state_marker(cx, \"ui-ai-web-preview-demo-can-back-true\")",
+        "state_marker(cx, \"ui-ai-web-preview-demo-can-forward-true\")",
+        "state_marker(cx, \"ui-ai-web-preview-demo-can-forward-false\")",
+        "decl_text::text_chrome_glyph(cx, \"←\")",
+        "decl_text::text_chrome_glyph(cx, \"→\")",
+        "decl_text::text_chrome_glyph(cx, \"↺\")",
+        "decl_text::text_section_chrome_label(cx, \"Custom body content\")",
+        "decl_text::text_paragraph",
+        "\"Use this lane when preview chrome is enough for the current build.\"",
+        "decl_text::text_section_chrome_label(cx, \"Custom console footer\")",
+        "decl_text::text_paragraph(cx, \"Backend navigation is app-owned and optional in Fret.\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "web_preview_demo should route fixed visible text and state markers through shared non-bare roles; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "role: fret_core::SemanticsRole::Text",
+        "cx.text(\"\")",
+        "cx.text(\"←\")",
+        "cx.text(\"→\")",
+        "cx.text(\"↺\")",
+        "cx.text(\"Custom body content\")",
+        "cx.text(\"Use this lane when preview chrome is enough for the current build.\")",
+        "cx.text(\"Custom console footer\")",
+        "cx.text(\"Backend navigation is app-owned and optional in Fret.\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "web_preview_demo reintroduced bare visible text/state marker text: `{forbidden}`"
+        );
+    }
+}
