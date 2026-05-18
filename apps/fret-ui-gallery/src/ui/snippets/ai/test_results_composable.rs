@@ -7,14 +7,15 @@ use fret_ui::Theme;
 use fret_ui::element::AnyElement;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
 
 fn progress_section(cx: &mut AppComponentCx<'_>) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
     let progress = ui_ai::TestResultsProgress::from_context()
         .children([
-            cx.text("12 of 15 checks are healthy"),
-            cx.text("2 failures still need follow-up"),
+            decl_text::text_control_readout(cx, "12 of 15 checks are healthy"),
+            decl_text::text_control_readout(cx, "2 failures still need follow-up"),
         ])
         .into_element(cx);
 
@@ -40,9 +41,9 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let auth_suite = ui_ai::TestSuite::named("Authentication", ui_ai::TestStatusKind::Failed)
         .trigger(
             ui_ai::TestSuiteName::from_context().children([
-                cx.text("Authentication"),
+                decl_text::text_list_row_label(cx, "Authentication"),
                 ui_ai::TestSuiteStats::new(2, 1, 0)
-                    .children([cx.text("2 pass / 1 fail")])
+                    .children([decl_text::text_control_readout(cx, "2 pass / 1 fail")])
                     .into_element(cx),
             ]),
         )
@@ -63,13 +64,16 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .into_element_with_children(cx, |cx| {
                 vec![
                     ui_ai::TestStatus::from_context()
-                        .children([cx.text("FAIL")])
+                        .children([decl_text::text_control_readout(cx, "FAIL")])
                         .into_element(cx),
                     ui_ai::TestName::from_context()
-                        .children([cx.text("should reject stale refresh tokens")])
+                        .children([decl_text::text_list_row_label(
+                            cx,
+                            "should reject stale refresh tokens",
+                        )])
                         .into_element(cx),
                     ui_ai::TestDuration::from_context()
-                        .children([cx.text("85ms cold cache")])
+                        .children([decl_text::text_control_readout(cx, "85ms cold cache")])
                         .into_element(cx),
                 ]
             }),
@@ -81,13 +85,16 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .into_element_with_children(cx, |cx| {
                 vec![
                     ui_ai::TestStatus::from_context()
-                        .children([cx.text("PASS")])
+                        .children([decl_text::text_control_readout(cx, "PASS")])
                         .into_element(cx),
                     ui_ai::TestName::from_context()
-                        .children([cx.text("should rotate keys after password reset")])
+                        .children([decl_text::text_list_row_label(
+                            cx,
+                            "should rotate keys after password reset",
+                        )])
                         .into_element(cx),
                     ui_ai::TestDuration::from_context()
-                        .children([cx.text("41ms warm path")])
+                        .children([decl_text::text_control_readout(cx, "41ms warm path")])
                         .into_element(cx),
                 ]
             }),
@@ -102,13 +109,13 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 ui_ai::TestResultsHeader::new([
                     ui_ai::TestResultsSummary::from_context()
                         .children([
-                            cx.text("12 passing"),
-                            cx.text("2 failing"),
-                            cx.text("1 skipped"),
+                            decl_text::text_control_readout(cx, "12 passing"),
+                            decl_text::text_control_readout(cx, "2 failing"),
+                            decl_text::text_control_readout(cx, "1 skipped"),
                         ])
                         .into_element(cx),
                     ui_ai::TestResultsDuration::from_context()
-                        .children([cx.text("3.25s wall time")])
+                        .children([decl_text::text_control_readout(cx, "3.25s wall time")])
                         .into_element(cx),
                 ])
                 .into_element(cx),

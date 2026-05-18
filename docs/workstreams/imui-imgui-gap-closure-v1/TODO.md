@@ -567,6 +567,8 @@ Readiness order for the next locally testable review slices:
    2026-05-18 AI ChainOfThought composable text-role follow-up: composed header, step-label, and
    description child text now uses shared section-chrome and paragraph roles instead of bare
    `cx.text(...)`.
+   2026-05-18 AI TestResults composable text-role follow-up: custom summary/progress/status/name
+   and duration child text now uses shared readout/list-row roles instead of bare `cx.text(...)`.
    2026-05-17 gallery data-grid text follow-up: the UI Gallery DataGrid preview now routes
    virtualized grid cell text through `text_table_cell(...)` and the selected-row readout through
    `control_readout_text(...)`.

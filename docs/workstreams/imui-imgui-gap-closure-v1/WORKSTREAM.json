@@ -598,6 +598,7 @@
     "apps/fret-ui-gallery/src/ui/snippets/ai/environment_variables_demo.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/open_in_chat_demo.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/chain_of_thought_composable.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/ai/test_results_composable.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/message_branch_demo.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/mic_selector_demo.rs",
     "apps/fret-ui-gallery/src/ui/snippets/ai/model_selector_demo.rs",

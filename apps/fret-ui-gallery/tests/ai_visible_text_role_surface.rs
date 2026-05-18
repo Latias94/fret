@@ -411,6 +411,66 @@ fn ai_chain_of_thought_composable_routes_child_text_through_roles() {
 }
 
 #[test]
+fn ai_test_results_composable_routes_custom_child_text_through_roles() {
+    let source = include_str!("../src/ui/snippets/ai/test_results_composable.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_control_readout(cx, \"12 of 15 checks are healthy\")",
+        "decl_text::text_control_readout(cx, \"2 failures still need follow-up\")",
+        "decl_text::text_list_row_label(cx, \"Authentication\")",
+        "decl_text::text_control_readout(cx, \"2 pass / 1 fail\")",
+        "decl_text::text_control_readout(cx, \"FAIL\")",
+        "decl_text::text_control_readout(cx, \"PASS\")",
+        "should reject stale refresh tokens",
+        "should rotate keys after password reset",
+        "decl_text::text_control_readout(cx, \"85ms cold cache\")",
+        "decl_text::text_control_readout(cx, \"41ms warm path\")",
+        "decl_text::text_control_readout(cx, \"12 passing\")",
+        "decl_text::text_control_readout(cx, \"2 failing\")",
+        "decl_text::text_control_readout(cx, \"1 skipped\")",
+        "decl_text::text_control_readout(cx, \"3.25s wall time\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "test_results_composable should route fixed row/readout child text through shared roles; missing `{marker}`"
+        );
+    }
+
+    assert!(
+        canonical.contains(&canonicalize_rust_fragment(
+            "decl_text::text_list_row_label"
+        )),
+        "test_results_composable should use list-row labels for fixed suite/test names"
+    );
+
+    for forbidden in [
+        "cx.text(\"12 of 15 checks are healthy\")",
+        "cx.text(\"2 failures still need follow-up\")",
+        "cx.text(\"Authentication\")",
+        "cx.text(\"2 pass / 1 fail\")",
+        "cx.text(\"FAIL\")",
+        "cx.text(\"should reject stale refresh tokens\")",
+        "cx.text(\"85ms cold cache\")",
+        "cx.text(\"PASS\")",
+        "cx.text(\"should rotate keys after password reset\")",
+        "cx.text(\"41ms warm path\")",
+        "cx.text(\"12 passing\")",
+        "cx.text(\"2 failing\")",
+        "cx.text(\"1 skipped\")",
+        "cx.text(\"3.25s wall time\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "test_results_composable reintroduced bare fixed row/readout text: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
 fn ai_selector_branch_snippets_use_shared_text_roles_and_non_text_markers() {
     for (name, source, title, body) in [
         (
