@@ -132,6 +132,9 @@ Last updated: 2026-05-18
   - `apps/fret-examples/tests/echarts_demo_surface.rs`
   - `apps/fret-ui-gallery/src/driver/toaster.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/command/behavior_demos.rs`
+  - `apps/fret-ui-gallery/src/ui/snippets/command/composable_shell.rs`
   - `apps/fret-ui-gallery/src/ui/previews/pages/editors/code_editor/mvp/gates.rs`
   - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
   - `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs`
@@ -2047,6 +2050,20 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m py_compile tools/gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json` passed.
 - `git diff --check` passed.
+
+2026-05-18 gallery Command snippet chrome text-role slice:
+
+- `cargo fmt -p fret-ui-gallery` passed.
+- First `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  command_snippet_chrome_text_uses_shared_roles --no-fail-fast` failed because the view-runtime
+  closure already receives an `ElementContext`, so the attempted `cx.elements()` bridge was wrong.
+- After switching the view-runtime snippet to pass the closure `cx` directly, the focused gate
+  compiled but failed on a rustfmt-sensitive import marker. The source test now checks the stable
+  role import and `IntoUiElementInExt` markers separately.
+- A subsequent focused run timed out at 300s during compilation. Retried with a longer timeout:
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app
+  command_snippet_chrome_text_uses_shared_roles --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
 
 2026-05-18 AI Checkpoint visible snippet text-role slice:
 

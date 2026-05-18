@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("behavior_demos.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_ui::Invalidation;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -267,15 +268,19 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
         let controlled_value_block = ui::v_flex(|cx| {
             vec![
-                cx.text("Controlled selection demo (cmdk `value`)"),
-                cx.text(format!(
-                    "active value: {}",
-                    demo_filter_value_value.as_deref().unwrap_or("<none>")
-                )),
+                decl_text::text_paragraph(cx, "Controlled selection demo (cmdk `value`)"),
+                decl_text::text_control_readout(
+                    cx,
+                    format!(
+                        "active value: {}",
+                        demo_filter_value_value.as_deref().unwrap_or("<none>")
+                    ),
+                ),
                 controlled_selection_row,
                 demo_toggle_row,
                 demo_palette,
-                cx.text(
+                decl_text::text_paragraph(
+                    cx,
                     "Demo-only: cmdk `Group forceMount` keeps headings visible even when all items are filtered out.",
                 ),
                 group_force_palette,
@@ -287,12 +292,15 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .into_element(cx);
 
         vec![
-            cx.text("disablePointerSelection + vim/home/end navigation"),
-            cx.text(format!("Last action: {last_action_value}"))
+            decl_text::text_section_chrome_label(
+                cx,
+                "disablePointerSelection + vim/home/end navigation",
+            ),
+            decl_text::text_control_readout(cx, format!("Last action: {last_action_value}"))
                 .test_id("ui-gallery-command-behavior-last-action"),
             behavior_toggle_row,
             behavior_palette,
-            cx.text("Grouped keyboard navigation"),
+            decl_text::text_section_chrome_label(cx, "Grouped keyboard navigation"),
             behavior_group_palette,
             controlled_value_block,
         ]

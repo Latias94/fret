@@ -648,6 +648,10 @@ Readiness order for the next locally testable review slices:
    2026-05-18 gallery sidebar snippet chrome text follow-up: the copyable Sidebar examples now
    route card body prose and missing-content fallbacks through paragraph roles, and debug/status
    lines through `text_control_readout(...)` instead of bare `cx.text(...)`.
+   2026-05-18 gallery command snippet chrome text follow-up: copyable Command examples now route
+   last-action/count/active-value status through `text_control_readout(...)`, short subsection
+   headings through section-chrome text, and desktop-only/prose copy through paragraph text. The
+   retained active-descendant command snippet remains an explicit text-input capability surface.
    2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
    headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
    through `control_readout_text(...)`, and custom pointer-region labels through

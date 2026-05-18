@@ -603,6 +603,11 @@ Exit criteria:
   2026-05-18 gallery sidebar snippet chrome text result: copyable Sidebar examples now keep
   body/fallback prose on shared paragraph roles and status/debug lines on shared control-readout
   text, so sidebar docs no longer teach bare wrapping `cx.text(...)` in fixed example chrome.
+  2026-05-18 gallery command snippet chrome text result: copyable Command examples now keep
+  last-action/count/active-value status on shared control-readout roles, short subsection headings
+  on section-chrome text, and desktop-only/prose copy on paragraph text. The retained
+  active-descendant snippet stays outside this migration because it intentionally exercises the
+  command text-input capability surface.
   2026-05-17 gallery editor preview text result: code-editor, Markdown, and Web IME preview
   headers now use paragraph text for prose, control readout text for fixed status/debug values,
   and button label text for custom pointer-region actions. The slice keeps editor-proof resize

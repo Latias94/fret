@@ -4762,6 +4762,64 @@ fn sidebar_snippet_chrome_text_uses_shared_roles() {
 }
 
 #[test]
+fn command_snippet_chrome_text_uses_shared_roles() {
+    let cases: &[(&str, &[&str], &[&str])] = &[
+        (
+            "src/ui/snippets/command/composable_shell.rs",
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, format!(\"Last action: {last_action_value}\"))",
+            ],
+            &["cx.text(format!(\"Last action: {last_action_value}\"))"],
+        ),
+        (
+            "src/ui/snippets/command/behavior_demos.rs",
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph(cx, \"Controlled selection demo (cmdk `value`)\")",
+                "decl_text::text_control_readout(",
+                "\"active value: {}\"",
+                "decl_text::text_paragraph(\n                    cx,\n                    \"Demo-only: cmdk `Group forceMount` keeps headings visible even when all items are filtered out.\",\n                )",
+                "decl_text::text_section_chrome_label(cx, \"disablePointerSelection + vim/home/end navigation\")",
+                "decl_text::text_control_readout(cx, format!(\"Last action: {last_action_value}\"))",
+                "decl_text::text_section_chrome_label(cx, \"Grouped keyboard navigation\")",
+            ],
+            &[
+                "cx.text(\"Controlled selection demo (cmdk `value`)\")",
+                "cx.text(format!(\n                    \"active value: {}\"",
+                "cx.text(\n                    \"Demo-only: cmdk `Group forceMount` keeps headings visible even when all items are filtered out.\",\n                )",
+                "cx.text(\"disablePointerSelection + vim/home/end navigation\")",
+                "cx.text(format!(\"Last action: {last_action_value}\"))",
+                "cx.text(\"Grouped keyboard navigation\")",
+            ],
+        ),
+        (
+            "src/ui/snippets/command/action_first_view.rs",
+            &[
+                "declarative::text as decl_text",
+                "IntoUiElementInExt as _",
+                "decl_text::text_control_readout(cx, format!(\"Count: {count_value}\"))",
+                "decl_text::text_control_readout(cx, format!(\"Last action: {last_action_value}\"))",
+                "decl_text::text_paragraph(cx, \"This demo is desktop-only in v1.\")",
+            ],
+            &[
+                "cx.text(format!(\"Count: {count_value}\"))",
+                "cx.text(format!(\"Last action: {last_action_value}\"))",
+                "cx.text(\"This demo is desktop-only in v1.\")",
+            ],
+        ),
+    ];
+
+    for &(relative_path, required_markers, forbidden_markers) in cases {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            required_markers,
+            forbidden_markers,
+        );
+    }
+}
+
+#[test]
 fn date_picker_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[

@@ -3085,6 +3085,51 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/command/composable_shell.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, format!(\"Last action: {last_action_value}\"))",
+            ],
+            forbidden=[
+                "cx.text(format!(\"Last action: {last_action_value}\"))",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/command/behavior_demos.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph(cx, \"Controlled selection demo (cmdk `value`)\")",
+                "decl_text::text_control_readout(",
+                "\"active value: {}\"",
+                "decl_text::text_paragraph(\n                    cx,\n                    \"Demo-only: cmdk `Group forceMount` keeps headings visible even when all items are filtered out.\",\n                )",
+                "decl_text::text_section_chrome_label(\n                cx,\n                \"disablePointerSelection + vim/home/end navigation\",\n            )",
+                "decl_text::text_control_readout(cx, format!(\"Last action: {last_action_value}\"))",
+                "decl_text::text_section_chrome_label(cx, \"Grouped keyboard navigation\")",
+            ],
+            forbidden=[
+                "cx.text(\"Controlled selection demo (cmdk `value`)\")",
+                "cx.text(format!(\n                    \"active value: {}\"",
+                "cx.text(\n                    \"Demo-only: cmdk `Group forceMount` keeps headings visible even when all items are filtered out.\",\n                )",
+                "cx.text(\"disablePointerSelection + vim/home/end navigation\")",
+                "cx.text(format!(\"Last action: {last_action_value}\"))",
+                "cx.text(\"Grouped keyboard navigation\")",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs"),
+            required=[
+                "use fret_ui_kit::{IntoUiElementInExt as _, declarative::text as decl_text};",
+                "decl_text::text_control_readout(cx, format!(\"Count: {count_value}\"))",
+                "decl_text::text_control_readout(cx, format!(\"Last action: {last_action_value}\"))",
+                "decl_text::text_paragraph(cx, \"This demo is desktop-only in v1.\")",
+            ],
+            forbidden=[
+                "cx.text(format!(\"Count: {count_value}\"))",
+                "cx.text(format!(\"Last action: {last_action_value}\"))",
+                "cx.text(\"This demo is desktop-only in v1.\")",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/driver/toaster.rs"),
             required=[
                 "use fret_ui::element::{AnyElement, SpacerProps};",
@@ -3100,6 +3145,7 @@ def main() -> None:
                 "fn gallery_driver_disabled_toaster_does_not_emit_empty_text()",
                 "fn sidebar_app_collapsed_projects_do_not_emit_empty_text()",
                 "fn sidebar_snippet_chrome_text_uses_shared_roles()",
+                "fn command_snippet_chrome_text_uses_shared_roles()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",
             ],
