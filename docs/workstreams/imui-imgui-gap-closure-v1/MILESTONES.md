@@ -491,6 +491,10 @@ Exit criteria:
   and button label text for custom pointer-region actions. The slice keeps editor-proof resize
   text semantics in gallery/doc-layout helpers and the shared kit role vocabulary, not in
   `fret-imui`.
+  2026-05-18 code-view editor preview prose result: the UI Gallery code-view torture header now
+  uses `doc_layout::paragraph_text(...)` for explanatory copy instead of bare `cx.text(...)`,
+  keeping scrollable code/text preview prose on the same paragraph role as the other editor
+  preview headers.
   2026-05-17 code-editor IME gate button-label result: the MVP IME gate action labels now use
   `doc_layout::button_label_text(...)`, and focused source/test guards prevent those custom
   pointer-region buttons from drifting back to bare `cx.text(...)` under fixed row chrome.

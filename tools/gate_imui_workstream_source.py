@@ -743,12 +743,16 @@ def main() -> None:
                 "copyable app-sidebar snippet",
                 "2026-05-17 fret-ui-ai empty placeholder follow-up",
                 "crate-local spacer helper",
+                "2026-05-18 code-view editor preview prose follow-up",
+                "the UI Gallery code-view torture header",
             ],
             forbidden=[],
         ),
         SourceCheck(
             Path("docs/workstreams/imui-imgui-gap-closure-v1/MILESTONES.md"),
             required=[
+                "2026-05-18 code-view editor preview prose result",
+                "uses `doc_layout::paragraph_text(...)` for explanatory copy",
                 "2026-05-18 IMUI virtual-list fixed-row clip result",
                 "fixed/known-height `fret-ui-kit::imui`",
                 "fixed-height `Overflow::Clip` row containers",
@@ -1957,6 +1961,7 @@ def main() -> None:
         SourceCheck(
             Path("apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs"),
             required=[
+                "fn editor_code_view_header_uses_paragraph_roles()",
                 "fn gallery_table_retained_torture_uses_structured_table_debug_ids()",
                 "fn gallery_data_table_torture_exposes_header_row_anchor()",
                 "fn gallery_data_grid_uses_table_cell_text_roles()",
@@ -2005,6 +2010,7 @@ def main() -> None:
                 "overlay_status_text(cx,text).test_id(\\\"ui-gallery-overlay-last-action\\\")",
                 "overlay_scroll_row_text(cx,format!(\\\"Scrollitem{i:02}\\\"))",
                 "doc_layout::paragraph_text(cx,\\\"HoverCardcontent(overlay-root)\\\")",
+                "doc_layout::paragraph_text(cx,\\\"Goal:stresslargescrollablecode/textsurfaces(candidateforprepaint-windowedlines).\\\")",
                 "doc_layout::control_label_text(cx,\\\"Textinput\\\")",
                 "retained_table_cell_text(cx,row.status.clone())",
                 "data_table_torture_cell_text(cx,row.status.clone())",

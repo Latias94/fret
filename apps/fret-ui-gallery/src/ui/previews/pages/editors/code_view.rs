@@ -27,13 +27,20 @@ pub(in crate::ui) fn preview_code_view_torture(
     _theme: &Theme,
 ) -> Vec<AnyElement> {
     let header = ui::v_flex(|cx| {
-            vec![
-                cx.text("Goal: stress large scrollable code/text surfaces (candidate for prepaint-windowed lines)."),
-                cx.text("Use scripted wheel steps + stale-paint checks to validate scroll stability."),
-            ]
-        })
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2).into_element(cx);
+        vec![
+            doc_layout::paragraph_text(
+                cx,
+                "Goal: stress large scrollable code/text surfaces (candidate for prepaint-windowed lines).",
+            ),
+            doc_layout::paragraph_text(
+                cx,
+                "Use scripted wheel steps + stale-paint checks to validate scroll stability.",
+            ),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .gap(Space::N2)
+    .into_element(cx);
 
     let code = code_view_torture_source();
 

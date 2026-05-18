@@ -288,6 +288,27 @@ fn wrap_preview_page_callers_land_the_typed_preview_shell_explicitly() {
 }
 
 #[test]
+fn editor_code_view_header_uses_paragraph_roles() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/pages/editors/code_view.rs",
+        &[
+            "doc_layout::paragraph_text(cx,\"Goal:stresslargescrollablecode/textsurfaces(candidateforprepaint-windowedlines).\")",
+            "doc_layout::paragraph_text(cx,\"Usescriptedwheelsteps+stale-paintcheckstovalidatescrollstability.\")",
+        ],
+    );
+
+    for forbidden in [
+        "cx.text(\"Goal:stresslargescrollablecode/textsurfaces(candidateforprepaint-windowedlines).\")",
+        "cx.text(\"Usescriptedwheelsteps+stale-paintcheckstovalidatescrollstability.\")",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "code_view reintroduced bare explanatory header text: {forbidden}"
+        );
+    }
+}
+
+#[test]
 fn render_doc_page_callers_land_the_typed_doc_page_explicitly() {
     for path in rust_sources("src/ui/previews") {
         let source = read_path(&path);

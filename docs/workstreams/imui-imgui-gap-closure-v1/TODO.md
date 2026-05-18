@@ -531,6 +531,9 @@ Readiness order for the next locally testable review slices:
    through `control_readout_text(...)`, and custom pointer-region labels through
    `button_label_text(...)`. This keeps resize-sensitive editor proof chrome on the shared
    role vocabulary without adding a public `TextRole` enum or moving policy into `fret-imui`.
+   2026-05-18 code-view editor preview prose follow-up: the UI Gallery code-view torture header
+   now routes its explanatory copy through `paragraph_text(...)` instead of bare `cx.text(...)`,
+   keeping the scrollable code/text preview on the shared paragraph role vocabulary.
    2026-05-18 IMUI virtual-list fixed-row clip follow-up: fixed/known-height IMUI virtual-list
    rows now set `Overflow::Clip` on the row container, while measured rows keep visible overflow for
    runtime measurement. This closes the container side of the text-resize failure mode where a
