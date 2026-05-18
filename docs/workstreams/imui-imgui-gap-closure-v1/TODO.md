@@ -681,6 +681,10 @@ Readiness order for the next locally testable review slices:
    paragraph text, rich-content action children use button-label text, and small/RTL custom title
    and description children use section-chrome/paragraph roles instead of local wrap/overflow
    policy. Rich attributed-title text remains an explicit text capability surface.
+   2026-05-18 gallery HoverCard text follow-up: copyable HoverCard snippets now route app-owned
+   title/chrome labels through section-chrome text, body copy through paragraph/break-words roles,
+   date/status copy through control-readout text, and the usage trigger label through button-label
+   text instead of raw/default text builders.
    2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
    headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
    through `control_readout_text(...)`, and custom pointer-region labels through

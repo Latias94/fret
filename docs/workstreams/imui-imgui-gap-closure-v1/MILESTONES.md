@@ -632,6 +632,9 @@ Exit criteria:
   text, rich-content action child labels use button-label text, and small/RTL custom title/body
   children use section-chrome/paragraph roles. The rich attributed-title path stays as intentional
   text capability evidence.
+  2026-05-18 gallery HoverCard text result: app-owned HoverCard title/date/body/positioning copy
+  now uses shared section-chrome, paragraph, control-readout, and button-label roles instead of
+  raw/default text builders.
   2026-05-17 gallery editor preview text result: code-editor, Markdown, and Web IME preview
   headers now use paragraph text for prose, control readout text for fixed status/debug values,
   and button label text for custom pointer-region actions. The slice keeps editor-proof resize

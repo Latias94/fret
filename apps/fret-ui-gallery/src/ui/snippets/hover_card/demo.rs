@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("demo.rs");
 // region: example
 use super::super::avatar::demo_image;
 use fret::{AppComponentCx, UiChild};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -14,9 +15,6 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .test_id("ui-gallery-hover-card-demo-trigger")
         .into_element(cx);
 
-    let theme = Theme::global(&*cx.app).snapshot();
-    let muted_fg = theme.color_token("muted-foreground");
-
     let avatar_image = demo_image(cx);
     let avatar_image_el = shadcn::AvatarImage::maybe(avatar_image).into_element(cx);
     let avatar_fallback = shadcn::AvatarFallback::new("VC")
@@ -25,20 +23,14 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .into_element(cx);
     let avatar = shadcn::Avatar::new([avatar_image_el, avatar_fallback]).into_element(cx);
 
-    let heading = ui::text("@nextjs")
-        .text_sm()
-        .font_semibold()
-        .into_element(cx)
+    let heading = decl_text::text_section_chrome_label(cx, "@nextjs")
         .test_id("ui-gallery-hover-card-demo-content-title");
-    let body = ui::text_block("The React Framework – created and maintained by @vercel.")
-        .text_sm()
-        .wrap(TextWrap::WordBreak)
-        .into_element(cx)
-        .test_id("ui-gallery-hover-card-demo-content-desc");
-    let joined = ui::text("Joined December 2021")
-        .text_xs()
-        .text_color(ColorRef::Color(muted_fg))
-        .into_element(cx)
+    let body = decl_text::text_paragraph_break_words(
+        cx,
+        "The React Framework – created and maintained by @vercel.",
+    )
+    .test_id("ui-gallery-hover-card-demo-content-desc");
+    let joined = decl_text::text_control_readout(cx, "Joined December 2021")
         .test_id("ui-gallery-hover-card-demo-content-joined");
 
     let text_block = ui::v_flex(|_cx| vec![heading, body, joined])
@@ -46,8 +38,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         // text does not collapse to its min-content width (which can be a single grapheme).
         .layout(LayoutRefinement::default().w_full().flex_1().min_w_0())
         .gap(Space::N1)
-        // Keep children (text runs) stretched to the column width so `TextWrap` uses the expected
-        // wrap width rather than collapsing to min-content.
+        // Keep children (text runs) stretched to the column width so paragraph text uses the
+        // expected wrap width rather than collapsing to min-content.
         .items_stretch()
         .into_element(cx);
     let text_block = text_block.test_id("ui-gallery-hover-card-demo-text-block");

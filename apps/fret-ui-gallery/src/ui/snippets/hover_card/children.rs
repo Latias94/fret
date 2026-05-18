@@ -3,32 +3,23 @@ pub const SOURCE: &str = include_str!("children.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
-    let theme = Theme::global(&*cx.app).snapshot();
-    let muted_fg = theme.color_token("muted-foreground");
-
-    let title = ui::text("Release Notes")
-        .text_sm()
-        .font_semibold()
-        .into_element(cx)
+    let title = decl_text::text_section_chrome_label(cx, "Release Notes")
         .test_id("ui-gallery-hover-card-children-demo-title");
-    let summary =
-        ui::text_block("Already-built panel nodes can be passed directly into HoverCardContent::new([...]) when the content body is caller-owned.")
-            .text_sm()
-            .wrap(TextWrap::WordBreak)
-            .into_element(cx)
-            .test_id("ui-gallery-hover-card-children-demo-summary");
+    let summary = decl_text::text_paragraph_break_words(
+        cx,
+        "Already-built panel nodes can be passed directly into HoverCardContent::new([...]) when the content body is caller-owned.",
+    )
+    .test_id("ui-gallery-hover-card-children-demo-summary");
     let meta = ui::h_flex(|cx| {
         vec![
             shadcn::Badge::new("Caller-owned")
                 .variant(shadcn::BadgeVariant::Secondary)
                 .into_element(cx),
-            ui::text("Updated 2m ago")
-                .text_xs()
-                .text_color(ColorRef::Color(muted_fg))
-                .into_element(cx),
+            decl_text::text_control_readout(cx, "Updated 2m ago"),
         ]
     })
     .gap(Space::N2)

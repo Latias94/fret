@@ -2,20 +2,16 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
-    let theme = Theme::global(&*cx.app).snapshot();
-    let muted_fg = theme.color_token("muted-foreground");
-
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
         let body = ui::v_flex(move |cx| {
-            vec![
-                ui::text_block("تحقق من محاذاة HoverCard تحت RTL.")
-                    .wrap(TextWrap::WordBreak)
-                    .text_color(ColorRef::Color(muted_fg))
-                    .into_element(cx),
-            ]
+            vec![decl_text::text_paragraph_break_words(
+                cx,
+                "تحقق من محاذاة HoverCard تحت RTL.",
+            )]
         })
         .layout(LayoutRefinement::default().w_full().min_w_0())
         .gap(Space::N1)

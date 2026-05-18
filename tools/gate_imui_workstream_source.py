@@ -3325,6 +3325,115 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/hover_card/basic.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph_break_words(",
+                "HoverCard content: multiline description with WordBreak wrapping.",
+                "decl_text::text_control_readout(cx, \"Joined December 2021\")",
+            ],
+            forbidden=[
+                "ui::text(",
+                "ui::text_block(",
+                "TextWrap",
+                "ColorRef::Color",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/hover_card/children.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(cx, \"Release Notes\")",
+                "decl_text::text_paragraph_break_words(",
+                "decl_text::text_control_readout(cx, \"Updated 2m ago\")",
+            ],
+            forbidden=[
+                "ui::text(",
+                "ui::text_block(",
+                "TextWrap",
+                "ColorRef::Color",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/hover_card/demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(cx, \"@nextjs\")",
+                "The React Framework – created and maintained by @vercel.",
+                "decl_text::text_control_readout(cx, \"Joined December 2021\")",
+            ],
+            forbidden=[
+                "ui::text(",
+                "ui::text_block(",
+                "TextWrap",
+                "ColorRef::Color",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/hover_card/positioning.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(cx, side_label)",
+                "decl_text::text_paragraph(cx, \"Positioning is controlled by `side` and `align`.\")",
+            ],
+            forbidden=[
+                "ui::text(",
+                "ui::text_block(",
+                "TextWrap",
+                "ColorRef::Color",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/hover_card/rtl.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph_break_words(",
+                "ui-gallery-hover-card-rtl-content",
+            ],
+            forbidden=[
+                "ui::text_block(",
+                "TextWrap",
+                "ColorRef::Color",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/hover_card/sides.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph_break_words(cx, side_label)",
+            ],
+            forbidden=[
+                "ui::text_block(",
+                "TextWrap",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/hover_card/trigger_delays.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_section_chrome_label(cx, title)",
+                "decl_text::text_paragraph_break_words(cx, desc)",
+                "decl_text::text_control_readout(cx, joined)",
+            ],
+            forbidden=[
+                "ui::text(",
+                "ui::text_block(",
+                "TextWrap",
+                "ColorRef::Color",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/hover_card/usage.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph_break_words(",
+                "decl_text::text_button_label(cx, \"Hover\")",
+            ],
+            forbidden=[
+                "ui::raw_text(",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/toggle/label.rs"),
             required=[
                 "decl_text::text_control_readout(cx, format!(\"Pressed: {pressed_now}\"))",
@@ -3402,6 +3511,7 @@ def main() -> None:
                 "fn tabs_snippet_custom_text_uses_shared_roles()",
                 "fn collapsible_snippet_text_uses_shared_roles()",
                 "fn alert_dialog_snippet_custom_text_uses_shared_roles()",
+                "fn hover_card_snippet_text_uses_shared_roles()",
                 "return cx.spacer(SpacerProps::default());",
                 "return cx.text(\"\");",
             ],

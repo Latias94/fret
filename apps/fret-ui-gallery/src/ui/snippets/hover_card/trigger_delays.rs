@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("trigger_delays.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 use std::time::Duration;
@@ -13,29 +14,15 @@ fn demo_content<H: UiHost>(
     joined: &'static str,
     test_id: &'static str,
 ) -> impl IntoUiElement<H> + use<H> {
-    let theme = Theme::global(&*cx.app).snapshot();
-    let muted_fg = theme.color_token("muted-foreground");
-
     let title_test_id: Arc<str> = Arc::from(format!("{test_id}-title"));
     let desc_test_id: Arc<str> = Arc::from(format!("{test_id}-desc"));
     let joined_test_id: Arc<str> = Arc::from(format!("{test_id}-joined"));
 
     let body = ui::v_flex(move |cx| {
         vec![
-            ui::text(title)
-                .font_semibold()
-                .into_element(cx)
-                .test_id(title_test_id.clone()),
-            ui::text_block(desc)
-                .wrap(TextWrap::WordBreak)
-                .into_element(cx)
-                .test_id(desc_test_id.clone()),
-            ui::text(joined)
-                .text_xs()
-                .text_color(ColorRef::Color(muted_fg))
-                .mt(Space::N1)
-                .into_element(cx)
-                .test_id(joined_test_id.clone()),
+            decl_text::text_section_chrome_label(cx, title).test_id(title_test_id.clone()),
+            decl_text::text_paragraph_break_words(cx, desc).test_id(desc_test_id.clone()),
+            decl_text::text_control_readout(cx, joined).test_id(joined_test_id.clone()),
         ]
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())

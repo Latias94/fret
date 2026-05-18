@@ -2,23 +2,18 @@ pub const SOURCE: &str = include_str!("basic.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
-    let theme = Theme::global(&*cx.app).snapshot();
-    let muted_fg = theme.color_token("muted-foreground");
-
     let body = ui::v_flex(|cx| {
         vec![
-            ui::text_block("HoverCard content: multiline description with WordBreak wrapping.")
-                .text_sm()
-                .wrap(TextWrap::WordBreak)
-                .into_element(cx)
-                .test_id("ui-gallery-hover-card-basic-content-desc"),
-            ui::text("Joined December 2021")
-                .text_xs()
-                .text_color(ColorRef::Color(muted_fg))
-                .into_element(cx)
+            decl_text::text_paragraph_break_words(
+                cx,
+                "HoverCard content: multiline description with WordBreak wrapping.",
+            )
+            .test_id("ui-gallery-hover-card-basic-content-desc"),
+            decl_text::text_control_readout(cx, "Joined December 2021")
                 .test_id("ui-gallery-hover-card-basic-content-joined"),
         ]
     })

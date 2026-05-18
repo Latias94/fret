@@ -5374,6 +5374,109 @@ fn hover_card_children_snippet_prefers_explicit_content_children_followup() {
 }
 
 #[test]
+fn hover_card_snippet_text_uses_shared_roles() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/hover_card/basic.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_paragraph_break_words(",
+            "\"HoverCard content: multiline description with WordBreak wrapping.\"",
+            "decl_text::text_control_readout(cx, \"Joined December 2021\")",
+        ],
+        &[
+            "ui::text(",
+            "ui::text_block(",
+            "TextWrap",
+            "ColorRef::Color",
+        ],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/hover_card/children.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_section_chrome_label(cx, \"Release Notes\")",
+            "decl_text::text_paragraph_break_words(",
+            "decl_text::text_control_readout(cx, \"Updated 2m ago\")",
+        ],
+        &[
+            "ui::text(",
+            "ui::text_block(",
+            "TextWrap",
+            "ColorRef::Color",
+        ],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/hover_card/demo.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_section_chrome_label(cx, \"@nextjs\")",
+            "decl_text::text_paragraph_break_words(cx, \"The React Framework – created and maintained by @vercel.\")",
+            "decl_text::text_control_readout(cx, \"Joined December 2021\")",
+        ],
+        &[
+            "ui::text(",
+            "ui::text_block(",
+            "TextWrap",
+            "ColorRef::Color",
+        ],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/hover_card/positioning.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_section_chrome_label(cx, side_label)",
+            "decl_text::text_paragraph(cx, \"Positioning is controlled by `side` and `align`.\")",
+        ],
+        &[
+            "ui::text(",
+            "ui::text_block(",
+            "TextWrap",
+            "ColorRef::Color",
+        ],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/hover_card/rtl.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_paragraph_break_words(cx, \"تحقق من محاذاة HoverCard تحت RTL.\")",
+        ],
+        &["ui::text_block(", "TextWrap", "ColorRef::Color"],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/hover_card/sides.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_paragraph_break_words(cx, side_label)",
+        ],
+        &["ui::text_block(", "TextWrap"],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/hover_card/trigger_delays.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_section_chrome_label(cx, title)",
+            "decl_text::text_paragraph_break_words(cx, desc)",
+            "decl_text::text_control_readout(cx, joined)",
+        ],
+        &[
+            "ui::text(",
+            "ui::text_block(",
+            "TextWrap",
+            "ColorRef::Color",
+        ],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/hover_card/usage.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_paragraph_break_words(",
+            "decl_text::text_button_label(cx, \"Hover\")",
+        ],
+        &["ui::raw_text("],
+    );
+}
+
+#[test]
 fn tooltip_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[

@@ -2,11 +2,11 @@ pub const SOURCE: &str = include_str!("positioning.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn side_content<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    muted_fg: fret_core::Color,
     side_label: &'static str,
     test_id: &'static str,
     side: shadcn::HoverCardSide,
@@ -14,15 +14,8 @@ fn side_content<H: UiHost>(
 ) -> shadcn::HoverCardContent {
     let body = ui::v_flex(move |cx| {
         vec![
-            ui::text(side_label)
-                .text_sm()
-                .font_medium()
-                .into_element(cx),
-            ui::text_block("Positioning is controlled by `side` and `align`.")
-                .text_xs()
-                .text_color(ColorRef::Color(muted_fg))
-                .mt(Space::N1)
-                .into_element(cx),
+            decl_text::text_section_chrome_label(cx, side_label),
+            decl_text::text_paragraph(cx, "Positioning is controlled by `side` and `align`."),
         ]
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -37,11 +30,8 @@ fn side_content<H: UiHost>(
 }
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
-    let theme = Theme::global(&*cx.app).snapshot();
-    let muted_fg = theme.color_token("muted-foreground");
     let top_start_content = side_content(
         cx,
-        muted_fg,
         "top (align=start)",
         "ui-gallery-hover-card-pos-top-start-content",
         shadcn::HoverCardSide::Top,
@@ -49,7 +39,6 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     );
     let right_end_content = side_content(
         cx,
-        muted_fg,
         "right (align=end)",
         "ui-gallery-hover-card-pos-right-end-content",
         shadcn::HoverCardSide::Right,
