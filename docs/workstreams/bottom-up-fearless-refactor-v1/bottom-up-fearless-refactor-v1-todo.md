@@ -310,6 +310,13 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `tools/report_largest_files.py`
 
+- [~] BU-FR-guard-006 Maintain a lightweight architecture issues ledger for fearless-refactor triage.
+  - Goal: keep newly discovered architecture/refactor issues in a durable place instead of relying
+    on chat history.
+  - Evidence:
+    - `docs/workstreams/bottom-up-fearless-refactor-v1/ARCHITECTURE_ISSUES_LEDGER_2026-05-18.md`
+  - Next: promote each issue into a narrow owner lane only after it has a concrete repro/gate.
+
 ## M0.5 — Code-quality audit program (make best-practice reviews repeatable)
 
 - [x] BU-FR-audit-006 Add a stable per-crate audit template and an audits index.
