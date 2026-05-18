@@ -2609,6 +2609,30 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   passed.
 - `git diff --check` passed.
 
+2026-05-19 gallery NavigationMenu link-label text-role slice:
+
+- Red repro:
+  `cargo nextest run -p fret-ui-gallery --test navigation_menu_docs_surface
+  navigation_menu_custom_link_labels_use_shared_button_label_role --no-fail-fast` failed before
+  the fix because `navigation_menu/demo.rs` was missing the shared `decl_text` import and custom
+  link labels still used `cx.text(label)`.
+- `apps/fret-ui-gallery/src/ui/snippets/navigation_menu/demo.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/navigation_menu/docs_demo.rs`, and
+  `apps/fret-ui-gallery/src/ui/snippets/navigation_menu/rtl.rs` now route custom icon/text link
+  labels through `text_button_label(...)`.
+- Card title/body line-clamp text remains deliberately out of this slice because it likely needs a
+  separate list/card description role decision instead of a mechanical button-label migration.
+- `cargo fmt -p fret-ui-gallery` passed.
+- `cargo nextest run -p fret-ui-gallery --test navigation_menu_docs_surface
+  navigation_menu_custom_link_labels_use_shared_button_label_role --no-fail-fast` passed.
+- `cargo check -p fret-ui-gallery --test navigation_menu_docs_surface` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo fmt --check -p fret-ui-gallery` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.
+
 2026-05-19 gallery ContextMenu trigger text-role slice:
 
 - Red repro:

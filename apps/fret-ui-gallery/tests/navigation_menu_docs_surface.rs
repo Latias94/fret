@@ -81,3 +81,35 @@ fn navigation_menu_toggle_snippet_and_diag_gate_compare_viewport_vs_container_wi
         );
     }
 }
+
+#[test]
+fn navigation_menu_custom_link_labels_use_shared_button_label_role() {
+    for (name, source) in [
+        (
+            "demo.rs",
+            include_str!("../src/ui/snippets/navigation_menu/demo.rs"),
+        ),
+        (
+            "docs_demo.rs",
+            include_str!("../src/ui/snippets/navigation_menu/docs_demo.rs"),
+        ),
+        (
+            "rtl.rs",
+            include_str!("../src/ui/snippets/navigation_menu/rtl.rs"),
+        ),
+    ] {
+        let normalized = normalize_ws(source);
+        assert!(
+            normalized.contains("usefret_ui_kit::declarative::textasdecl_text;"),
+            "{name} should import the shared text role helpers"
+        );
+        assert!(
+            normalized.contains("decl_text::text_button_label(cx,label)"),
+            "{name} should route custom NavigationMenu link labels through button-label text"
+        );
+        assert!(
+            !normalized.contains("cx.text(label)"),
+            "{name} should not build custom NavigationMenu link labels with bare default text"
+        );
+    }
+}

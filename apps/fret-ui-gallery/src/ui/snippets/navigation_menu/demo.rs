@@ -8,6 +8,7 @@ use fret_ui::Invalidation;
 use fret_ui::element::LayoutQueryRegionProps;
 use fret_ui::element::{LayoutStyle, Length, TextProps};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -88,7 +89,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     test_id: &'static str,
                     command: &'static str| {
         let icon_el = icon::icon(cx, fret_icons::IconId::new_static(icon));
-        let label_el = cx.text(label);
+        let label_el = decl_text::text_button_label(cx, label);
         let row = ui::h_row(move |_cx| [icon_el, label_el])
             .gap(Space::N2)
             .items_center()

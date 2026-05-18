@@ -734,6 +734,10 @@ Readiness order for the next locally testable review slices:
    `TextProps` blocks with `TextWrap::Word`. The centering remains a layout concern in the
    snippet shell (`h_flex + justify_center`), while the resize contract stays on the shared
    control-readout role.
+   2026-05-19 gallery NavigationMenu link-label text follow-up: custom icon/text link labels in
+   the NavigationMenu docs/demo/RTL snippets now route through `text_button_label(...)` instead of
+   bare `cx.text(label)`. Card title/body line-clamp text remains a separate candidate because it
+   may need a list/card description role rather than a mechanical button-label migration.
    2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
    headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
    through `control_readout_text(...)`, and custom pointer-region labels through

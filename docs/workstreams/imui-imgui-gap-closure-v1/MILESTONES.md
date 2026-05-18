@@ -674,6 +674,9 @@ Exit criteria:
   lines now use shared control-readout text instead of local word-wrapping `TextProps` blocks,
   while centered placement stays in snippet layout (`h_flex + justify_center`) instead of becoming
   a new text role.
+  2026-05-19 gallery NavigationMenu link-label text result: custom icon/text NavigationMenu link
+  labels now use the shared button-label role in docs, demo, and RTL snippets. The line-clamped
+  card title/body text remains intentionally out of scope for a separate derived-role decision.
   2026-05-17 gallery editor preview text result: code-editor, Markdown, and Web IME preview
   headers now use paragraph text for prose, control readout text for fixed status/debug values,
   and button label text for custom pointer-region actions. The slice keeps editor-proof resize

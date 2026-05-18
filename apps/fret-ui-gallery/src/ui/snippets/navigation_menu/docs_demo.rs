@@ -7,6 +7,7 @@ use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::{LayoutStyle, Length, TextProps};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -82,7 +83,7 @@ fn icon_row(
     command: &'static str,
 ) -> impl IntoUiElement<fret_app::App> + use<> {
     let icon_el = icon::icon(cx, fret_icons::IconId::new_static(icon));
-    let label_el = cx.text(label);
+    let label_el = decl_text::text_button_label(cx, label);
     let row = ui::h_row(move |_cx| [icon_el, label_el])
         .gap(Space::N2)
         .items_center()
@@ -163,7 +164,8 @@ fn text_link(
     test_id: &'static str,
     command: &'static str,
 ) -> shadcn::NavigationMenuLink {
-    shadcn::NavigationMenuLink::new(model, [cx.text(label)])
+    let label_el = decl_text::text_button_label(cx, label);
+    shadcn::NavigationMenuLink::new(model, [label_el])
         .label(label)
         .test_id(test_id)
         .action(command)

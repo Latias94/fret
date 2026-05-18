@@ -3951,6 +3951,15 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("apps/fret-ui-gallery/tests/navigation_menu_docs_surface.rs"),
+            required=[
+                "fn navigation_menu_custom_link_labels_use_shared_button_label_role()",
+                "decl_text::text_button_label(cx,label)",
+                "!normalized.contains(\"cx.text(label)\")",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-shadcn/src/pagination.rs"),
             required=[
                 "text as decl_text",
@@ -4116,6 +4125,40 @@ def main() -> None:
             forbidden=[
                 "cx.text_props(TextProps {",
                 "wrap: TextWrap::Word,",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/navigation_menu/demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "let label_el = decl_text::text_button_label(cx, label);",
+            ],
+            forbidden=[
+                "let label_el = cx.text(label);",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/navigation_menu/docs_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "let label_el = decl_text::text_button_label(cx, label);",
+                "shadcn::NavigationMenuLink::new(model, [label_el])",
+            ],
+            forbidden=[
+                "let label_el = cx.text(label);",
+                "shadcn::NavigationMenuLink::new(model, [cx.text(label)])",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-ui-gallery/src/ui/snippets/navigation_menu/rtl.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "let label_el = decl_text::text_button_label(cx, label);",
+                "shadcn::NavigationMenuLink::new(model, [label_el])",
+            ],
+            forbidden=[
+                "let label_el = cx.text(label);",
+                "shadcn::NavigationMenuLink::new(model, [cx.text(label)])",
             ],
         ),
         SourceCheck(
