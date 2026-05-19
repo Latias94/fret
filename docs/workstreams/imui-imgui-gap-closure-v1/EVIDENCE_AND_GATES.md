@@ -669,6 +669,20 @@ Run evidence:
   `cargo fmt --check -p fret-examples`, `python -m json.tool
   docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json > $null`, and `git diff --check`
   passed.
+- 2026-05-19: migrated the `editor_notes_device_shell_demo` compact mobile header to the same
+  shared text-role vocabulary. The mobile title now uses `device_shell_section_text(...)` backed by
+  `text_section_chrome_label(...)`, and the explanatory header copy uses
+  `device_shell_paragraph_text(...)` backed by `text_paragraph(...)` instead of local
+  `ui::text(...).text_base().font_semibold()` / `ui::text(...).text_sm().text_color(...).wrap(...)`
+  styling. Gates: `cargo nextest run -p fret-examples --test editor_notes_device_shell_surface
+  editor_notes_device_shell_demo_keeps_shell_switch_explicit_and_reuses_inner_editor_content
+  --no-fail-fast`, `cargo check -p fret-demo --bin editor_notes_device_shell_demo`, `cargo nextest
+  run -p fret-examples --test text_role_residual_surface
+  remaining_bare_text_in_fret_examples_is_explicit_capability_surface --no-fail-fast`, and
+  `python tools/gate_imui_workstream_source.py`.
+  Verification note: the first focused nextest attempt timed out during background compile; after
+  Cargo/Rustc exited, the same focused nextest command passed. `cargo fmt --check -p
+  fret-examples` also passed.
 - 2026-05-17: migrated the `workspace_shell_demo` dirty-close prompt title/details to the same
   role vocabulary. The title now uses `workspace_shell_section_chrome_label(...)` backed by
   `text_section_chrome_label(...)`, while reason/dirty-detail lines use

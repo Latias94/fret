@@ -383,6 +383,9 @@ Readiness order for the next locally testable review slices:
    2026-05-19 editor notes center/collection text follow-up: collection summary/readouts and
    center preview chrome/prose now route through local helpers backed by shared readout, section,
    and paragraph roles instead of local `ui::text(...).wrap(...)` styling.
+   2026-05-19 editor notes device shell text follow-up: compact mobile header title/body copy now
+   use device-shell local helpers backed by shared section-chrome and paragraph roles instead of
+   local `ui::text(...).font_semibold()` / `.text_color(...).wrap(...)` styling.
    2026-05-17 workspace shell prompt text follow-up: the dirty-close prompt title/details now
    reuse the shared section-chrome and control-readout text roles instead of bare dialog text.
    2026-05-17 editor proof readout follow-up: `imui_editor_proof_demo` now routes selected

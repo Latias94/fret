@@ -8,7 +8,8 @@ use fret_ui::Invalidation;
 use fret_ui_kit::IntoUiElementInExt as _;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::{ColorRef, LayoutRefinement, Space};
+use fret_ui_kit::declarative::text as decl_text;
+use fret_ui_kit::{LayoutRefinement, Space};
 use fret_workspace::WorkspaceFrame;
 
 use crate::editor_notes_demo::{self, EditorAssetSelection, EditorAssetState};
@@ -29,6 +30,20 @@ const MOBILE_COMMITTED_NOTES_INTRO: &str = "This center region stays app-local o
 
 struct EditorNotesDeviceShellDemoView {
     assets: Arc<[EditorAssetState]>,
+}
+
+fn device_shell_section_text<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    decl_text::text_section_chrome_label(cx, text)
+}
+
+fn device_shell_paragraph_text<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    decl_text::text_paragraph(cx, text)
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -230,21 +245,16 @@ impl View for EditorNotesDeviceShellDemoView {
                     .into_element_in(cx);
 
                 let mobile_header = ui::h_flex(|cx| {
-                    let muted = cx.theme_snapshot().color_token("muted-foreground");
                     ui::children![
                         cx;
                         ui::v_flex(|cx| {
                                 ui::children![
                                 cx;
-                                ui::text("Compact device shell")
-                                    .text_base()
-                                    .font_semibold()
-                                    .into_element_in(cx),
-                                ui::text("Keep the center surface visible and move auxiliary panels behind a drawer trigger.")
-                                    .text_sm()
-                                    .text_color(ColorRef::Color(muted))
-                                    .wrap(fret_core::TextWrap::Word)
-                                    .into_element_in(cx),
+                                device_shell_section_text(cx, "Compact device shell"),
+                                device_shell_paragraph_text(
+                                    cx,
+                                    "Keep the center surface visible and move auxiliary panels behind a drawer trigger.",
+                                ),
                             ]
                         })
                         .gap(Space::N1)
