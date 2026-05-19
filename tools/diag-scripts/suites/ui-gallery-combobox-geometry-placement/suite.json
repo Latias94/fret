@@ -9,6 +9,7 @@
     "tools/diag-scripts/ui-gallery-combobox-long-text-geometry.json",
     "tools/diag-scripts/ui-gallery-combobox-rtl-long-text-geometry.json",
     "tools/diag-scripts/ui-gallery-combobox-popup-doc-intro-non-overlap.json",
+    "tools/diag-scripts/ui-gallery-combobox-full-page-startup-intro-non-overlap.json",
     "tools/diag-scripts/ui-gallery-combobox-popup-trigger-bottom-room.json",
     "tools/diag-scripts/ui-gallery-combobox-popup-trigger.json",
     "tools/diag-scripts/ui-gallery-combobox-responsive-open.json",

@@ -582,6 +582,23 @@ fn wrapped_text_paint_width_shrink_reinvalidates_layout_when_height_grows() {
             .any(|effect| matches!(effect, Effect::Redraw(w) if w == window)),
         "layout repair should request another frame"
     );
+
+    let ops = scene.ops();
+    assert!(
+        matches!(
+            ops,
+            [
+                fret_core::SceneOp::PushClipRRect { rect, .. },
+                fret_core::SceneOp::Text { .. },
+                fret_core::SceneOp::PopClip,
+            ] if *rect
+                == Rect::new(
+                    fret_core::Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(80.0), Px(10.0)),
+                )
+        ),
+        "the repair frame should clip the taller paint-prepared text to the stale layout bounds"
+    );
 }
 
 #[test]

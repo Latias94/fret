@@ -97,21 +97,33 @@ fn maybe_repair_text_layout_after_paint_prepare<H: UiHost>(
     metrics: fret_core::TextMetrics,
     ink_pad_top: fret_core::Px,
     ink_pad_bottom: fret_core::Px,
-) {
+) -> bool {
     if !(width_changed || font_stack_changed) {
-        return;
+        return false;
     }
     if !matches!(layout.size.height, crate::element::Length::Auto) {
-        return;
+        return false;
     }
 
     let prepared_height = metrics.size.height.0 + ink_pad_top.0 + ink_pad_bottom.0;
     if prepared_height <= cx.bounds.size.height.0 + 0.5 {
-        return;
+        return false;
     }
 
     cx.tree.invalidate(cx.node, Invalidation::Layout);
     cx.app.request_redraw(window);
+    true
+}
+
+fn push_text_clip(scene: &mut fret_core::Scene, rect: Rect) {
+    scene.push(SceneOp::PushClipRRect {
+        rect,
+        corner_radii: fret_core::Corners::all(Px(0.0)),
+    });
+}
+
+fn pop_text_clip(scene: &mut fret_core::Scene) {
+    scene.push(SceneOp::PopClip);
 }
 
 impl ElementHostWidget {
@@ -717,6 +729,7 @@ impl ElementHostWidget {
                     self.text_cache.last_width = Some(max_width);
                 }
 
+                let mut clip_text_to_layout_bounds = false;
                 if needs_prepare {
                     if cx.tree.debug_enabled() {
                         cx.tree.debug_record_paint_text_prepare_reasons(
@@ -793,7 +806,7 @@ impl ElementHostWidget {
                         };
                     self.text_cache.ink_pad_top = pad_top;
                     self.text_cache.ink_pad_bottom = pad_bottom;
-                    maybe_repair_text_layout_after_paint_prepare(
+                    clip_text_to_layout_bounds = maybe_repair_text_layout_after_paint_prepare(
                         cx,
                         window,
                         &props.layout,
@@ -835,6 +848,9 @@ impl ElementHostWidget {
                         style.vertical_placement,
                     );
                 let origin = mapping.baseline_origin(baseline);
+                if clip_text_to_layout_bounds {
+                    push_text_clip(cx.scene, cx.bounds);
+                }
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),
                     origin,
@@ -843,6 +859,9 @@ impl ElementHostWidget {
                     outline: None,
                     shadow: None,
                 });
+                if clip_text_to_layout_bounds {
+                    pop_text_clip(cx.scene);
+                }
             }
             ElementInstance::StyledText(props) => {
                 cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
@@ -966,6 +985,7 @@ impl ElementHostWidget {
                     self.text_cache.last_width = Some(max_width);
                 }
 
+                let mut clip_text_to_layout_bounds = false;
                 if needs_prepare {
                     if cx.tree.debug_enabled() {
                         cx.tree.debug_record_paint_text_prepare_reasons(
@@ -1043,7 +1063,7 @@ impl ElementHostWidget {
                         };
                     self.text_cache.ink_pad_top = pad_top;
                     self.text_cache.ink_pad_bottom = pad_bottom;
-                    maybe_repair_text_layout_after_paint_prepare(
+                    clip_text_to_layout_bounds = maybe_repair_text_layout_after_paint_prepare(
                         cx,
                         window,
                         &props.layout,
@@ -1098,6 +1118,9 @@ impl ElementHostWidget {
                     vertical_offset,
                 );
                 let origin = mapping.baseline_origin(baseline);
+                if clip_text_to_layout_bounds {
+                    push_text_clip(cx.scene, cx.bounds);
+                }
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),
                     origin,
@@ -1106,6 +1129,9 @@ impl ElementHostWidget {
                     outline: None,
                     shadow: None,
                 });
+                if clip_text_to_layout_bounds {
+                    pop_text_clip(cx.scene);
+                }
             }
             ElementInstance::SelectableText(props) => {
                 cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
@@ -1229,6 +1255,7 @@ impl ElementHostWidget {
                     self.text_cache.last_width = Some(max_width);
                 }
 
+                let mut clip_text_to_layout_bounds = false;
                 if needs_prepare {
                     if cx.tree.debug_enabled() {
                         cx.tree.debug_record_paint_text_prepare_reasons(
@@ -1306,7 +1333,7 @@ impl ElementHostWidget {
                         };
                     self.text_cache.ink_pad_top = pad_top;
                     self.text_cache.ink_pad_bottom = pad_bottom;
-                    maybe_repair_text_layout_after_paint_prepare(
+                    clip_text_to_layout_bounds = maybe_repair_text_layout_after_paint_prepare(
                         cx,
                         window,
                         &props.layout,
@@ -1516,6 +1543,9 @@ impl ElementHostWidget {
                 }
 
                 let origin = mapping.baseline_origin(baseline);
+                if clip_text_to_layout_bounds {
+                    push_text_clip(cx.scene, cx.bounds);
+                }
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(0),
                     origin,
@@ -1524,6 +1554,9 @@ impl ElementHostWidget {
                     outline: None,
                     shadow: None,
                 });
+                if clip_text_to_layout_bounds {
+                    pop_text_clip(cx.scene);
+                }
 
                 if dragging
                     && let Some(pointer_pos) = last_pointer_pos

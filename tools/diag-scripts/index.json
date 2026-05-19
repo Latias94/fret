@@ -6160,6 +6160,32 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-combobox-full-page-startup-intro-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-full-page-startup-intro-non-overlap.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-combobox-geometry-placement"
+      ],
+      "tags": [
+        "combobox",
+        "gate",
+        "layout",
+        "shadcn",
+        "startup",
+        "text",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the full Combobox page rather than a focused section.",
+        "Captures the startup viewport before any manual resize recovery.",
+        "Asserts the long docs intro owns enough measured height before the Basic section title."
+      ]
+    },
+    {
       "id": "ui-gallery-combobox-groups-filter-select-paris",
       "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-groups-filter-select-paris.json",
       "required_capabilities": [

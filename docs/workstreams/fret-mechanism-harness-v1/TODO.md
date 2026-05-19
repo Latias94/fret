@@ -1252,3 +1252,11 @@ date: 2026-05-12
     hazards around selecting the outer fixture instead of the Select control, over-constraining the
     exact top-side gap, and querying underlay panel bounds after the modal overlay barrier was
     installed.
+- [x] Clip paint-time text reprepare repair frames and gate full Combobox startup overlap.
+  - Result: the paint-time text layout repair now clips `Text`, `StyledText`, and
+    `SelectableText` drawing to the stale layout bounds on the same frame that schedules the layout
+    repair, preventing a taller newly prepared blob from visibly overlapping following content
+    before the next layout pass. The focused mechanism regression now asserts both the layout
+    invalidation/redraw and the repair-frame clip. `ui-gallery-combobox-full-page-startup-intro-non-overlap.json`
+    complements the Popup-focused gate by starting on the full Combobox page and proving the long
+    intro leaves measured space before the Basic section at screenshot-like startup size.

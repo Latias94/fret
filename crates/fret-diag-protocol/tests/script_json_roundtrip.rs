@@ -498,6 +498,13 @@ fn script_v2_roundtrip_ui_gallery_combobox_popup_doc_intro_non_overlap() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_combobox_full_page_startup_intro_non_overlap() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-combobox-full-page-startup-intro-non-overlap.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_combobox_auto_highlight_disabled_none_on_open() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-combobox-auto-highlight-disabled-none-on-open.json"

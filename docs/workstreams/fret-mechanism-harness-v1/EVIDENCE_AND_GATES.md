@@ -5490,6 +5490,64 @@ Next slice recommendation:
   `git diff --check`
   - result: passed.
 
+## Text Reprepare Repair-Frame Clip And Full Combobox Startup Gate
+
+- invariant:
+  when paint-time text preparation discovers that a newly prepared auto-height text blob is taller
+  than the stale layout bounds, the framework must both schedule a layout repair and prevent that
+  same frame from visibly drawing outside the stale text bounds.
+- finding:
+  the earlier text repair fixed convergence by invalidating layout and requesting redraw, but the
+  user-observed full Combobox page screenshot showed why same-frame paint spill also matters: a
+  taller wrapped intro can overlap following content until a later layout or manual resize recovers.
+- mechanism change:
+  `Text`, `StyledText`, and `SelectableText` now draw under `PushClipRRect`/`PopClip` for the
+  repair frame when `maybe_repair_text_layout_after_paint_prepare` schedules layout repair. Normal
+  non-repair text paint remains unclipped by this helper.
+- runtime surface:
+  `ui-gallery-combobox-full-page-startup-intro-non-overlap.json` starts on the full Combobox page
+  at `671x460`, captures layout/screenshot/bundle evidence, and asserts `docsec-basic-title.top -
+  ui-gallery-doc-page-intro.bottom >= 16px`. It complements the existing
+  `ui-gallery-combobox-popup-doc-intro-non-overlap.json`, which starts on the focused Popup
+  section.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/host_widget/paint.rs`,
+  `crates/fret-ui/src/declarative/tests/text_cache.rs`,
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-full-page-startup-intro-non-overlap.json`,
+  `tools/diag-scripts/suites/ui-gallery-combobox-geometry-placement/suite.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- formatting:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\declarative\host_widget\paint.rs crates\fret-ui\src\declarative\tests\text_cache.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`
+  - result: passed.
+- JSON/registry:
+  `python -m json.tool tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-full-page-startup-intro-non-overlap.json > $null`,
+  `python -m json.tool tools\diag-scripts\ui-gallery-combobox-full-page-startup-intro-non-overlap.json > $null`,
+  and `python tools\check_diag_scripts_registry.py`
+  - result: passed.
+- mechanism regression:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui wrapped_text_paint_width_shrink_reinvalidates_layout_when_height_grows --no-fail-fast --no-capture`
+  - result: passed; latest Nextest run id `d8184adc-9875-470f-9828-025bc220465e`.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_full_page_startup_intro_non_overlap --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `4fa52001-9eb6-4102-9bba-033f10b3e2c0`.
+- build/check:
+  `cargo check --profile dev-fast -p fret-ui`
+  and `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed. `cargo check -p fret-ui` still reports the pre-existing
+    `current_effective_opacity` dead-code warning.
+- focused full-page runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-full-page-startup-intro-non-overlap.json --dir target\fret-diag-combobox-full-page-startup-intro-text-clip-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779194385483`; AI packet
+    `target/fret-diag-combobox-full-page-startup-intro-text-clip-v1/sessions/1779194373536-98264/1779194385483/ai.packet`.
+- focused Popup companion runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-popup-doc-intro-non-overlap.json --dir target\fret-diag-combobox-popup-doc-intro-text-clip-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779194199027`.
+- full Combobox geometry placement suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-combobox-geometry-placement --dir target\fret-diag-combobox-geometry-placement-text-clip-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; suite summary
+    `target/fret-diag-combobox-geometry-placement-text-clip-v1/sessions/1779194425260-69272/suite.summary.json`;
+    full-page startup run id `1779194524638`.
+
 ## Command Retained Active-Descendant Action-State Protocol Gate
 
 - invariant:

@@ -163,6 +163,12 @@ date: 2026-05-12
   window containment, listbox size bounds, relation wiring, screenshot, bundle, and layout sidecar
   evidence. The follow-up Combobox ownership gate now closes the explicit scroll-container
   clipping-boundary plus RTL sub-axis; Select remains a useful baseline for item-aligned policy.
+- Text repair-frame clipping update:
+  paint-time text reprepare coverage now proves both follow-up layout repair and same-frame clip
+  protection. The focused mechanism test asserts `PushClipRRect -> Text -> PopClip` when a wrapped
+  auto-height text blob grows during paint, while
+  `ui-gallery-combobox-full-page-startup-intro-non-overlap.json` covers the full Combobox page
+  startup path that can visually overlap before manual resize recovery.
 - Structural slot hygiene update:
   Recipe-internal child classification now uses `AnyElement::component_slot` for the discovered
   shadcn structural markers: AlertAction, CardAction, CardFooter, AvatarBadge, ItemMedia, and

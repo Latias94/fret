@@ -2826,3 +2826,42 @@ Status: complete for Select popper placement coverage inside a Resizable panel v
   `target/fret-diag-ui-gallery-resizable-suite-select-v1/sessions/1779193114796-63336/suite.summary.json`;
   3/3 scripts passed, `scripts_with_evidence=3`, and the new Select script run id is
   `1779193162410`.
+
+## M136: Text Reprepare Repair-Frame Clip And Full Combobox Startup Gate
+
+Status: complete for same-frame clipping during paint-time text layout repair and the full
+Combobox page startup non-overlap gate.
+
+- Extended the mechanism-layer text repair in `crates/fret-ui`: when paint-time text preparation
+  discovers that an auto-height `Text`, `StyledText`, or `SelectableText` blob is taller than the
+  current stale layout bounds, the node still invalidates layout and requests redraw, but the same
+  frame now draws the text under a rectangular clip equal to the stale layout bounds.
+- Extended the focused `wrapped_text_paint_width_shrink_reinvalidates_layout_when_height_grows`
+  regression so it asserts the repair frame contains `PushClipRRect -> Text -> PopClip`, preventing
+  the next regression from fixing only the follow-up layout pass while allowing one-frame visual
+  spill.
+- Added `ui-gallery-combobox-full-page-startup-intro-non-overlap.json`, a full-page companion to
+  the existing Popup-focused intro gate. It starts on the full Combobox page at `671x460`, captures
+  layout/screenshot/bundle evidence before any manual resize recovery, and asserts the long docs
+  intro leaves at least `16px` before the Basic section title.
+- Gates pass:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\declarative\host_widget\paint.rs crates\fret-ui\src\declarative\tests\text_cache.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui wrapped_text_paint_width_shrink_reinvalidates_layout_when_height_grows --no-fail-fast --no-capture`
+  with latest Nextest run id `d8184adc-9875-470f-9828-025bc220465e`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_full_page_startup_intro_non_overlap --no-fail-fast --no-capture`
+  with Nextest run id `4fa52001-9eb6-4102-9bba-033f10b3e2c0`;
+  `cargo check --profile dev-fast -p fret-ui`;
+  and `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-full-page-startup-intro-non-overlap.json --dir target\fret-diag-combobox-full-page-startup-intro-text-clip-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779194385483` and AI packet
+  `target/fret-diag-combobox-full-page-startup-intro-text-clip-v1/sessions/1779194373536-98264/1779194385483/ai.packet`.
+- Focused Popup companion still passes:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-popup-doc-intro-non-overlap.json --dir target\fret-diag-combobox-popup-doc-intro-text-clip-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779194199027`.
+- Full runtime suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-combobox-geometry-placement --dir target\fret-diag-combobox-geometry-placement-text-clip-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with suite summary
+  `target/fret-diag-combobox-geometry-placement-text-clip-v1/sessions/1779194425260-69272/suite.summary.json`;
+  the new full-page startup script run id is `1779194524638`.

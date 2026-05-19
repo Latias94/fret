@@ -1,0 +1,69 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-combobox-full-page-startup-intro-non-overlap",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "combobox",
+      "FRET_UI_GALLERY_MAIN_WINDOW_SIZE": "671x460"
+    },
+    "tags": ["ui_gallery", "shadcn", "combobox", "layout", "text", "startup", "gate"],
+    "target_hints": [
+      "Starts on the full Combobox page rather than a focused section.",
+      "Captures the startup viewport before any manual resize recovery.",
+      "Asserts the long docs intro owns enough measured height before the Basic section title."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-combobox" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-doc-page-intro" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "docsec-basic-title" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-combobox-full-page-startup-intro-non-overlap.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-combobox-full-page-startup-intro-non-overlap"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-combobox-full-page-startup-intro-non-overlap"
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_pair_delta",
+        "a": { "kind": "test_id", "id": "docsec-basic-title" },
+        "b": { "kind": "test_id", "id": "ui-gallery-doc-page-intro" },
+        "a_metric": "top",
+        "b_metric": "bottom",
+        "comparison": "ge",
+        "value_px": 16.0,
+        "eps_px": 1.0
+      }
+    }
+  ]
+}
