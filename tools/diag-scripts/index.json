@@ -6624,6 +6624,33 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-command-basic-dialog-overlay-focus",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-basic-dialog-overlay-focus.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-command"
+      ],
+      "tags": [
+        "active_descendant",
+        "command",
+        "dialog",
+        "focus",
+        "gate",
+        "overlay",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the Command Basic section and opens the real CommandDialog trigger.",
+        "Proves dialog overlay presence, input focus, listbox labelling, and cmdk active-descendant wiring.",
+        "Closes with Escape and verifies focus restoration to the trigger."
+      ]
+    },
+    {
       "id": "ui-gallery-command-docs-demo-icons-screenshots",
       "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-icons-screenshots.json",
       "required_capabilities": [

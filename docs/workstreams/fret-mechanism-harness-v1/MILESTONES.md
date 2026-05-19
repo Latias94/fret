@@ -2865,3 +2865,34 @@ Combobox page startup non-overlap gate.
   with suite summary
   `target/fret-diag-combobox-geometry-placement-text-clip-v1/sessions/1779194425260-69272/suite.summary.json`;
   the new full-page startup script run id is `1779194524638`.
+
+## M137: CommandDialog Basic Overlay Focus Gate
+
+Status: complete for Command Basic modal overlay/focus runtime coverage.
+
+- Added `ui-gallery-command-basic-dialog-overlay-focus.json` and a top-level redirect, then promoted
+  it into the `ui-gallery-command` suite with direct `fret-diag-protocol` roundtrip coverage.
+- The runtime gate opens the real Command Basic `CommandDialog`, proves dialog and close-button
+  semantics, input focus, listbox containment, listbox `labelled_by` wiring, input
+  `active_descendant` wiring, ArrowDown movement from Calendar to Search Emoji, Escape dismissal,
+  and focus restoration to the `Open Menu` button.
+- The first focused runtime draft failed only because the script asserted focus on
+  `ui-gallery-command-basic-trigger.chrome`, the visual chrome child. The failure bundle showed the
+  focused semantics node was the outer `role=button` with label `Open Menu`, so the final gate
+  asserts the semantic focus owner instead.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\command\ui-gallery-command-basic-dialog-overlay-focus.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-command-basic-dialog-overlay-focus.json > $null`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python tools\check_diag_scripts_registry.py`;
+  and `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_command_basic_dialog_overlay_focus --no-fail-fast --no-capture`
+  with Nextest run id `08a923e7-9ca3-4b3c-bb2f-fe62628193ec`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\command\ui-gallery-command-basic-dialog-overlay-focus.json --dir target\fret-diag-command-basic-dialog-overlay-focus-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779196803631` and AI packet
+  `target/fret-diag-command-basic-dialog-overlay-focus-v2/sessions/1779196795872-108048/1779196803631/ai.packet`.
+- Full runtime suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-command --dir target\fret-diag-ui-gallery-command-suite-dialog-overlay-focus-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with suite summary
+  `target/fret-diag-ui-gallery-command-suite-dialog-overlay-focus-v1/sessions/1779196833923-91304/suite.summary.json`;
+  the new CommandDialog script run id is `1779196993347`.

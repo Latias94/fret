@@ -540,6 +540,13 @@ fn script_v2_roundtrip_ui_gallery_command_docs_demo_long_query_text() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_command_basic_dialog_overlay_focus() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-command-basic-dialog-overlay-focus.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_command_scrollable_collection_metadata_mutation() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-command-scrollable-collection-metadata-mutation.json"

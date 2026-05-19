@@ -5608,3 +5608,45 @@ Next slice recommendation:
 - static diff check:
   `git diff --check`
   - result: passed.
+
+## CommandDialog Basic Overlay Focus Gate
+
+- invariant:
+  the Basic `CommandDialog` recipe must install a modal dialog overlay with coherent input/listbox
+  relations, keep keyboard active-descendant state on the input, and restore focus to the trigger's
+  semantic button when Escape closes the dialog.
+- finding:
+  no overlay focus defect was reproduced. The first focused runtime draft exposed a diagnostics
+  authoring issue: `focus_is` compares the focused semantics node directly, so asserting focus on
+  `ui-gallery-command-basic-trigger.chrome` targeted the visual chrome child. The failure bundle
+  showed the runtime had restored focus to the outer `role=button` node labelled `Open Menu`.
+- diagnostics surface:
+  `ui-gallery-command-basic-dialog-overlay-focus.json` starts on the Command Basic section, opens
+  the real trigger, asserts dialog and close-button semantics, input/listbox/item presence,
+  listbox `labelled_by` relation, input `active_descendant` relation, ArrowDown active-row
+  movement, listbox window containment, screenshot/layout/bundle evidence, Escape dismissal, and
+  final focus on the `Open Menu` button.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/command/ui-gallery-command-basic-dialog-overlay-focus.json`,
+  `tools/diag-scripts/ui-gallery-command-basic-dialog-overlay-focus.json`,
+  `tools/diag-scripts/suites/ui-gallery-command/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- JSON/registry/format:
+  `python -m json.tool tools\diag-scripts\ui-gallery\command\ui-gallery-command-basic-dialog-overlay-focus.json > $null`,
+  `python -m json.tool tools\diag-scripts\ui-gallery-command-basic-dialog-overlay-focus.json > $null`,
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`,
+  and `python tools\check_diag_scripts_registry.py`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_command_basic_dialog_overlay_focus --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `08a923e7-9ca3-4b3c-bb2f-fe62628193ec`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\command\ui-gallery-command-basic-dialog-overlay-focus.json --dir target\fret-diag-command-basic-dialog-overlay-focus-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779196803631`; AI packet
+    `target/fret-diag-command-basic-dialog-overlay-focus-v2/sessions/1779196795872-108048/1779196803631/ai.packet`.
+- full Command suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-command --dir target\fret-diag-ui-gallery-command-suite-dialog-overlay-focus-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; suite summary
+    `target/fret-diag-ui-gallery-command-suite-dialog-overlay-focus-v1/sessions/1779196833923-91304/suite.summary.json`;
+    new CommandDialog script run id `1779196993347`.

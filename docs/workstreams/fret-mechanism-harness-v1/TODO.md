@@ -1260,3 +1260,11 @@ date: 2026-05-12
     invalidation/redraw and the repair-frame clip. `ui-gallery-combobox-full-page-startup-intro-non-overlap.json`
     complements the Popup-focused gate by starting on the full Combobox page and proving the long
     intro leaves measured space before the Basic section at screenshot-like startup size.
+- [x] Promote CommandDialog Basic overlay/focus into the Command runtime suite.
+  - Result: `ui-gallery-command-basic-dialog-overlay-focus.json` starts directly on the Command
+    Basic section, opens the real `CommandDialog` trigger, asserts dialog and close-button
+    semantics, input/listbox presence, listbox labelling, input active-descendant wiring, ArrowDown
+    active-row movement, screenshot/layout/bundle capture, Escape dismissal, and focus restoration
+    to the `Open Menu` button. The first focused run exposed a diagnostics authoring issue rather
+    than an overlay defect: the script asserted focus on the Button `.chrome` child, while the
+    runtime correctly restored focus to the outer `role=button` semantics node.
