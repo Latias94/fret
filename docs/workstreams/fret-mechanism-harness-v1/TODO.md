@@ -1165,3 +1165,10 @@ date: 2026-05-12
     The focused run and suite run both pass without manually setting the environment variable,
     proving the promoted gate is self-contained for the non-retained view-cache
     `inputs_change` invalidation-detail path.
+- [x] Add protocol coverage to the UI Gallery View Cache model-mutation gate.
+  - Result: `ui-gallery-view-cache-model-mutation-through-cache.json` now has direct
+    `fret-diag-protocol` roundtrip coverage. Fresh focused and suite runtime runs still prove
+    cached-subtree counter mutation plus Popover open/close state through `/view_cache` app
+    snapshots while the script injects `FRET_UI_GALLERY_START_PAGE=view_cache`,
+    `FRET_UI_GALLERY_VIEW_CACHE=1`, and `FRET_UI_GALLERY_VIEW_CACHE_INNER=1`. No new view-cache
+    mechanism defect was reproduced.

@@ -5003,3 +5003,48 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
 - static diff check:
   `git diff --check`
   - result: passed.
+
+## UI Gallery View Cache Model-Mutation Gate
+
+- invariant:
+  the View Cache harness page must preserve model mutation and controlled overlay state through a
+  cached subtree. Counter mutation and Popover open/close state should be observable through the
+  dedicated `/view_cache` app snapshot payload, not inferred from text or screenshots.
+- finding:
+  no new view-cache mechanism defect was reproduced. The existing runtime gate still passes and now
+  has direct protocol roundtrip coverage, so schema drift in this promoted script is caught before
+  runtime.
+- diagnostics surface:
+  `ui-gallery-view-cache-model-mutation-through-cache.json` injects
+  `FRET_UI_GALLERY_START_PAGE=view_cache`, `FRET_UI_GALLERY_VIEW_CACHE=1`, and
+  `FRET_UI_GALLERY_VIEW_CACHE_INNER=1`, asserts `/view_cache/enabled=true` and
+  `/view_cache/inner_enabled=true`, resets and bumps the cached counter, then opens and closes the
+  controlled Popover while asserting `/view_cache/counter` and `/view_cache/popover_open`.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/view-cache/ui-gallery-view-cache-model-mutation-through-cache.json`,
+  `tools/diag-scripts/suites/ui-gallery-view-cache/suite.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- JSON validation:
+  `python -m json.tool tools\diag-scripts\ui-gallery\view-cache\ui-gallery-view-cache-model-mutation-through-cache.json > $null`
+  - result: passed.
+- registry:
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed; registry is up to date.
+- formatting:
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_view_cache_model_mutation_through_cache --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `e96cc371-57d7-46ca-859b-9120a0907d6d`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\view-cache\ui-gallery-view-cache-model-mutation-through-cache.json --dir target\fret-diag-view-cache-model-mutation-roundtrip-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  - result: passed; run id `1779162384646`; AI packet
+    `target/fret-diag-view-cache-model-mutation-roundtrip-v1/sessions/1779162372113-24280/1779162384646/ai.packet`.
+- suite runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-view-cache --dir target\fret-diag-view-cache-suite-roundtrip-v1 --session-auto --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  - result: passed; 1/1 scripts passed; suite summary
+    `target/fret-diag-view-cache-suite-roundtrip-v1/sessions/1779162428017-56424/suite.summary.json`;
+    script run id `1779162437682`.
+- static diff check:
+  `git diff --check`
+  - result: passed.

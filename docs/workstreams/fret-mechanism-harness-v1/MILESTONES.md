@@ -2454,3 +2454,33 @@ view-cache DataTable filter-shrink gate.
   with suite summary
   `target/fret-diag-data-table-view-cache-suite-env-default-v1/sessions/1779161746388-13892/suite.summary.json`;
   1/1 scripts passed and the script run id is `1779161756820`.
+
+## M126: UI Gallery View Cache Model-Mutation Protocol Gate
+
+Status: complete for protocol coverage and fresh runtime evidence on the View Cache harness gate.
+
+- Added direct `fret-diag-protocol` roundtrip coverage for
+  `ui-gallery-view-cache-model-mutation-through-cache.json`.
+- The script already self-configures `FRET_UI_GALLERY_START_PAGE=view_cache`,
+  `FRET_UI_GALLERY_VIEW_CACHE=1`, and `FRET_UI_GALLERY_VIEW_CACHE_INNER=1`, then asserts
+  `/view_cache/enabled=true` and `/view_cache/inner_enabled=true` before mutating the cached
+  subtree counter and Popover state.
+- No new mechanism defect was reproduced. The fresh runtime pass confirms the existing
+  cached-subtree counter mutation and controlled Popover open/close state still converge through
+  dedicated `/view_cache` app snapshot fields.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\view-cache\ui-gallery-view-cache-model-mutation-through-cache.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_view_cache_model_mutation_through_cache --no-fail-fast --no-capture`
+  with Nextest run id `e96cc371-57d7-46ca-859b-9120a0907d6d`; and
+  `git diff --check`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\view-cache\ui-gallery-view-cache-model-mutation-through-cache.json --dir target\fret-diag-view-cache-model-mutation-roundtrip-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with run id `1779162384646` and AI packet
+  `target/fret-diag-view-cache-model-mutation-roundtrip-v1/sessions/1779162372113-24280/1779162384646/ai.packet`.
+- Suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-view-cache --dir target\fret-diag-view-cache-suite-roundtrip-v1 --session-auto --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with suite summary
+  `target/fret-diag-view-cache-suite-roundtrip-v1/sessions/1779162428017-56424/suite.summary.json`;
+  1/1 scripts passed and the script run id is `1779162437682`.
