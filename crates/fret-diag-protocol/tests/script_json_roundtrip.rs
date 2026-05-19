@@ -794,6 +794,13 @@ fn script_v2_roundtrip_ui_gallery_resizable_multi_viewport_combobox_placement() 
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_resizable_view_cache_moving_combobox_root_boundary() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_dialog_nested_combobox_modal_boundary() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/dialog/ui-gallery-dialog-nested-combobox-modal-boundary.json"

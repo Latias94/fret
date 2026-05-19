@@ -1172,3 +1172,11 @@ date: 2026-05-12
     snapshots while the script injects `FRET_UI_GALLERY_START_PAGE=view_cache`,
     `FRET_UI_GALLERY_VIEW_CACHE=1`, and `FRET_UI_GALLERY_VIEW_CACHE_INNER=1`. No new view-cache
     mechanism defect was reproduced.
+- [x] Add protocol coverage to the Resizable moving cached Combobox root-boundary gate.
+  - Result:
+    `ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json` now has direct
+    `fret-diag-protocol` roundtrip coverage. Fresh focused and suite runtime runs still prove the
+    cached Combobox source can move from the left Resizable panel to the right panel, open after the
+    move, flip to the top with shadcn `sideOffset=6`, stay inside the right panel/window boundary,
+    and preserve Combobox input/listbox relation edges. No new cached movement/root-boundary
+    mechanism defect was reproduced.

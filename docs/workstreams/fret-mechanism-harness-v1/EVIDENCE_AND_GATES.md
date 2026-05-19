@@ -4671,6 +4671,7 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
 - static diff check:
   `git diff --check`
   - result: passed.
+
 - focused runtime diagnostics:
   `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\workspace-shell-demo-tab-close-button-dirty-shows-prompt-smoke.json --dir target\fret-diag-workspace-shell-demo-dirty-close-widget-v3 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\workspace_shell_demo.exe`
   - result: passed; run id `1779148945096`; AI packet
@@ -4829,6 +4830,7 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
 - static diff check:
   `git diff --check`
   - result: passed.
+
 - focused runtime diagnostics:
   `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json --dir target\fret-diag-workspace-shell-demo-cross-pane-context-close-others-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\workspace_shell_demo.exe`
   - result: passed; run id `1779152893863`; AI packet
@@ -5045,6 +5047,55 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - result: passed; 1/1 scripts passed; suite summary
     `target/fret-diag-view-cache-suite-roundtrip-v1/sessions/1779162428017-56424/suite.summary.json`;
     script run id `1779162437682`.
+- static diff check:
+  `git diff --check`
+  - result: passed.
+
+## Resizable Moving Cached Combobox Root-Boundary Protocol Gate
+
+- invariant:
+  a cached Combobox source that moves between Resizable panel viewport roots must keep hit-test
+  routing, anchored overlay placement, boundary containment, and relation edges coherent, and the
+  promoted runtime script must survive diagnostics schema roundtrips.
+- finding:
+  no new cached movement/root-boundary mechanism defect was reproduced. The existing runtime gate
+  still proves the moved source opens after ViewCache reuse, flips to the top with shadcn
+  `sideOffset=6`, remains within the right panel/window boundary, and preserves Combobox
+  input/listbox relation edges.
+- diagnostics surface:
+  `ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json` injects
+  `FRET_UI_GALLERY_START_PAGE=resizable`,
+  `FRET_UI_GALLERY_START_SECTION=ui-gallery-resizable-view-cache-moving-combobox-docsec`,
+  `FRET_UI_GALLERY_RESIZABLE_MOVING_CACHED_COMBOBOX=1`, and
+  `FRET_UI_GALLERY_VIEW_CACHE=1`; moves the source from left to right; opens the Combobox; waits
+  for the anchored-panel placement trace; then captures layout, screenshot, and bundle evidence.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json`,
+  `tools/diag-scripts/suites/ui-gallery-resizable/suite.json`,
+  `apps/fret-ui-gallery/src/ui/snippets/resizable/moving_cached_combobox.rs`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- JSON validation:
+  `python -m json.tool tools\diag-scripts\ui-gallery\resizable\ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json > $null`
+  - result: passed.
+- registry:
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed; registry is up to date.
+- formatting:
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_resizable_view_cache_moving_combobox_root_boundary --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `c0b75f4d-b758-48c7-9aac-db09a7f02595`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\resizable\ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json --dir target\fret-diag-resizable-view-cache-moving-combobox-roundtrip-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  - result: passed; run id `1779163064132`; AI packet
+    `target/fret-diag-resizable-view-cache-moving-combobox-roundtrip-v1/sessions/1779163052541-37388/1779163064132/ai.packet`.
+- suite runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-resizable --dir target\fret-diag-resizable-suite-view-cache-roundtrip-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  - result: passed; 2/2 scripts passed; suite summary
+    `target/fret-diag-resizable-suite-view-cache-roundtrip-v1/sessions/1779163144561-38700/suite.summary.json`;
+    moving cached Combobox run id `1779163184863`; `scripts_with_evidence=2`;
+    `overlay_chosen_side_counts.top=2`.
 - static diff check:
   `git diff --check`
   - result: passed.

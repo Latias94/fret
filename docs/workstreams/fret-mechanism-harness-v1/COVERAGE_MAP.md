@@ -99,7 +99,9 @@ date: 2026-05-12
   `ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json` closes the runtime cached
   source-movement companion: it moves a cached Combobox source between Resizable panels, opens the
   Combobox after the move, and locks the interaction-cache replay fix that translates replayed
-  hit-test records with the moved cache root.
+  hit-test records with the moved cache root. The promoted script now also has protocol roundtrip
+  coverage, and the current `ui-gallery-resizable` suite refresh proves both the multi-viewport and
+  cached-source movement placement gates still produce top-side overlay traces.
 - Read-only non-list action-state update:
   `read_only_is` now lets diagnostics assert the semantics read-only flag directly. The UI Gallery
   Switch gate `ui-gallery-switch-read-only-action-state.json` proves a read-only Switch remains

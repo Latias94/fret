@@ -2484,3 +2484,33 @@ Status: complete for protocol coverage and fresh runtime evidence on the View Ca
   with suite summary
   `target/fret-diag-view-cache-suite-roundtrip-v1/sessions/1779162428017-56424/suite.summary.json`;
   1/1 scripts passed and the script run id is `1779162437682`.
+
+## M127: Resizable Moving Cached Combobox Protocol Gate
+
+Status: complete for protocol coverage and fresh runtime evidence on cached movement/root-boundary
+placement.
+
+- Added direct `fret-diag-protocol` roundtrip coverage for
+  `ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json`.
+- The script already self-configures the Resizable page, the diagnostics-only moving cached
+  Combobox section, and `FRET_UI_GALLERY_VIEW_CACHE=1`. It moves the cached Combobox source from
+  the left Resizable panel to the right panel before opening the overlay.
+- No new mechanism defect was reproduced. The fresh runtime pass confirms the existing cached-root
+  interaction-cache replay fix still preserves hit-test routing, top-side overlay placement,
+  right-panel/window boundary containment, and Combobox input/listbox relation edges after movement.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\resizable\ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_resizable_view_cache_moving_combobox_root_boundary --no-fail-fast --no-capture`
+  with Nextest run id `c0b75f4d-b758-48c7-9aac-db09a7f02595`; and `git diff --check`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\resizable\ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json --dir target\fret-diag-resizable-view-cache-moving-combobox-roundtrip-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with run id `1779163064132` and AI packet
+  `target/fret-diag-resizable-view-cache-moving-combobox-roundtrip-v1/sessions/1779163052541-37388/1779163064132/ai.packet`.
+- Suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-resizable --dir target\fret-diag-resizable-suite-view-cache-roundtrip-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with suite summary
+  `target/fret-diag-resizable-suite-view-cache-roundtrip-v1/sessions/1779163144561-38700/suite.summary.json`;
+  2/2 scripts passed, `scripts_with_evidence=2`, `overlay_chosen_side_counts.top=2`, and the
+  moving cached Combobox script run id is `1779163184863`.
