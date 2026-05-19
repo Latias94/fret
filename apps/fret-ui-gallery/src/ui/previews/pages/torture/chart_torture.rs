@@ -27,9 +27,11 @@ pub(in crate::ui) fn preview_chart_torture(
     let y_axis = delinea::AxisId::new(2);
     let x_zoom = delinea::DataZoomId::new(1);
     let y_zoom = delinea::DataZoomId::new(2);
-    let series_id = delinea::ids::SeriesId::new(1);
+    let series_a = delinea::ids::SeriesId::new(1);
+    let series_b = delinea::ids::SeriesId::new(2);
     let x_field = delinea::FieldId::new(1);
-    let y_field = delinea::FieldId::new(2);
+    let y_a_field = delinea::FieldId::new(2);
+    let y_b_field = delinea::FieldId::new(3);
 
     let spec = ChartSpec {
         id: delinea::ids::ChartId::new(1),
@@ -42,8 +44,12 @@ pub(in crate::ui) fn preview_chart_torture(
                     column: 0,
                 },
                 FieldSpec {
-                    id: y_field,
+                    id: y_a_field,
                     column: 1,
+                },
+                FieldSpec {
+                    id: y_b_field,
+                    column: 2,
                 },
             ],
             ..Default::default()
@@ -94,24 +100,44 @@ pub(in crate::ui) fn preview_chart_torture(
             throttle_px: 0.75,
         }),
         visual_maps: vec![],
-        series: vec![SeriesSpec {
-            id: series_id,
-            name: Some("Series".to_string()),
-            kind: SeriesKind::Line,
-            dataset: dataset_id,
-            encode: SeriesEncode {
-                x: x_field,
-                y: y_field,
-                y2: None,
+        series: vec![
+            SeriesSpec {
+                id: series_a,
+                name: Some("A".to_string()),
+                kind: SeriesKind::Line,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_a_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+                lod: None,
             },
-            x_axis,
-            y_axis,
-            stack: None,
-            stack_strategy: Default::default(),
-            bar_layout: Default::default(),
-            area_baseline: None,
-            lod: None,
-        }],
+            SeriesSpec {
+                id: series_b,
+                name: Some("B".to_string()),
+                kind: SeriesKind::Line,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_b_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+                lod: None,
+            },
+        ],
     };
 
     let shared_engine = cx.local_model_keyed("chart_torture_engine", move || {
@@ -121,19 +147,23 @@ pub(in crate::ui) fn preview_chart_torture(
 
         let n = 200_000usize;
         let mut x: Vec<f64> = Vec::with_capacity(n);
-        let mut y: Vec<f64> = Vec::with_capacity(n);
+        let mut y_a: Vec<f64> = Vec::with_capacity(n);
+        let mut y_b: Vec<f64> = Vec::with_capacity(n);
         for i in 0..n {
             let t = i as f64 / (n - 1) as f64;
             let xi = base_ms + interval_ms * i as f64;
             let theta = t * std::f64::consts::TAU;
-            let yi = (theta * 8.0).sin() * 0.8;
+            let a = (theta * 8.0).sin() * 0.8;
+            let b = (theta * 6.0).cos() * 0.6 + 0.15;
             x.push(xi);
-            y.push(yi);
+            y_a.push(a);
+            y_b.push(b);
         }
 
         let mut table = DataTable::default();
         table.push_column(Column::F64(x));
-        table.push_column(Column::F64(y));
+        table.push_column(Column::F64(y_a));
+        table.push_column(Column::F64(y_b));
         engine.datasets_mut().insert(dataset_id, table);
 
         Rc::new(RefCell::new(engine))

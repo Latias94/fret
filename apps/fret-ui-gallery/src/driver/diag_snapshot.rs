@@ -256,6 +256,36 @@ fn chart_torture_snapshot_json(app: &App, window: AppWindowId) -> Option<serde_j
         chart_window_changed_from(x_axis_output_pair, full_x_pair);
     let x_output_model_domain_changed_from_full_domain =
         chart_window_changed_from(x_output_model_domain_pair, full_x_pair);
+    let tooltip_lines = &output.snapshot.tooltip_lines;
+    let tooltip_axis_header_count = tooltip_lines
+        .iter()
+        .filter(|line| line.kind == fret_chart::TooltipTextLineKind::AxisHeader)
+        .count() as u64;
+    let tooltip_series_labels = tooltip_lines
+        .iter()
+        .filter(|line| line.kind == fret_chart::TooltipTextLineKind::SeriesRow)
+        .filter_map(|line| {
+            line.columns
+                .as_ref()
+                .map(|(label, _)| label.clone())
+                .or_else(|| {
+                    line.text
+                        .split_once(':')
+                        .map(|(label, _)| label.to_string())
+                })
+        })
+        .collect::<Vec<_>>();
+    let tooltip_series_rows_count = tooltip_series_labels.len() as u64;
+    let tooltip_source_series_rows_count = tooltip_lines
+        .iter()
+        .filter(|line| {
+            line.kind == fret_chart::TooltipTextLineKind::SeriesRow && line.source_series.is_some()
+        })
+        .count() as u64;
+    let tooltip_missing_rows_count =
+        tooltip_lines.iter().filter(|line| line.is_missing).count() as u64;
+    let tooltip_has_series_a = tooltip_series_labels.iter().any(|label| label == "A");
+    let tooltip_has_series_b = tooltip_series_labels.iter().any(|label| label == "B");
 
     Some(serde_json::json!({
         "schema_version": 2,
@@ -273,6 +303,16 @@ fn chart_torture_snapshot_json(app: &App, window: AppWindowId) -> Option<serde_j
             "domain_windows_count": output.snapshot.domain_windows_by_key.len() as u64,
             "x_domain_window": chart_window_json(x_output_model_domain_pair),
             "tooltip_lines_count": output.snapshot.tooltip_lines.len() as u64,
+            "tooltip": {
+                "lines_count": tooltip_lines.len() as u64,
+                "axis_header_count": tooltip_axis_header_count,
+                "series_rows_count": tooltip_series_rows_count,
+                "source_series_rows_count": tooltip_source_series_rows_count,
+                "missing_rows_count": tooltip_missing_rows_count,
+                "series_labels": tooltip_series_labels,
+                "has_series_a": tooltip_has_series_a,
+                "has_series_b": tooltip_has_series_b,
+            },
         },
         "runtime_oracles": {
             "x_axis_output_matches_data_zoom": x_axis_output_matches_data_zoom,

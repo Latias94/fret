@@ -195,6 +195,14 @@ date: 2026-05-12
   overlapped following content until resize. The RTL Long Text startup gate now also asserts
   description-to-content and description-to-trigger spacing, with focused evidence at
   `target/fret-diag-combobox-rtl-long-text-startup-prepared-measure-v3/sessions/1779215091187-112692/1779215099640/ai.packet`.
+- Chart Torture multi-series tooltip update:
+  `ui-gallery-chart-torture-pan-zoom.json` now covers retained chart output freshness for a
+  two-series line chart. After real drag/wheel pan/zoom, the gate proves the output model publishes
+  the unique X domain window, keeps it aligned with dataZoom, and reports a tooltip with one axis
+  header plus two source-owned rows labelled `A` and `B` with no missing values. The first runtime
+  pass exposed a stale oracle rather than a chart defect: ADR 0301 does not auto-export the shared
+  Y axis once two Y fields make the `(dataset, field)` key ambiguous. Fixed evidence is anchored at
+  `target/fret-diag-chart-torture-multiseries-tooltip-v3/sessions/1779217007250-123724/1779217026347/ai.packet`.
 - AI transcript non-retained scroll update:
   `ui-gallery-ai-transcript-torture-scroll.json` now gates deterministic large-transcript mutation
   on the non-retained AI transcript path by asserting a hidden message-count semantics value moves

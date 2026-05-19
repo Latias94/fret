@@ -5891,3 +5891,48 @@ Next slice recommendation:
   `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json --dir target\fret-diag-combobox-rtl-long-text-startup-prepared-measure-v3 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
   - result: passed; run id `1779215099640`; the gate now asserts intro/title,
     title/description, description/content, and description/trigger spacing.
+
+## Chart Torture Multi-Series Tooltip Output
+
+- invariant:
+  retained chart output must keep tooltip rows fresh for every visible series after real pan/zoom
+  interaction, while the domain-window output must follow ADR 0301 link-key uniqueness rules.
+- finding:
+  no retained chart tooltip defect was reproduced. The first multi-series runtime run exposed a
+  stale diagnostics oracle instead: `domain_windows_count == 2` was invalid once the page had two Y
+  fields on one Y axis. ADR 0301 only auto-exports axes that resolve to one `(dataset, field)`, so
+  the ambiguous Y axis should not be exported without an explicit host map.
+- diagnostics surface:
+  `ui-gallery-chart-torture-pan-zoom.json` now drives the existing retained Chart Torture pan/zoom
+  path with two line series. It asserts the output model publishes one X domain window, that the X
+  output window matches dataZoom and changes from the full domain, and that the tooltip has one
+  axis header, two source-owned series rows, labels `A` and `B`, and zero missing rows.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/previews/pages/torture/chart_torture.rs`,
+  `apps/fret-ui-gallery/src/driver/diag_snapshot.rs`, and
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-chart-torture-pan-zoom.json`.
+- evidence anchors:
+  stale-oracle failure bundle
+  `target/fret-diag-chart-torture-multiseries-tooltip-v2/sessions/1779216523336-80372/1779216691687-script-step-0026-wait_until-timeout/bundle.schema2.json`;
+  fixed focused AI packet
+  `target/fret-diag-chart-torture-multiseries-tooltip-v3/sessions/1779217007250-123724/1779217026347/ai.packet`;
+  fixed focused pack
+  `target/fret-diag-chart-torture-multiseries-tooltip-v3/sessions/1779217007250-123724/share/1779217026347.zip`;
+  suite summary
+  `target/fret-diag-chart-torture-suite-multiseries-tooltip-v1/sessions/1779217110888-98424/suite.summary.json`.
+- format/JSON/registry:
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\driver\diag_snapshot.rs apps\fret-ui-gallery\src\ui\previews\pages\torture\chart_torture.rs`
+  - result: passed.
+  `python -m json.tool tools\diag-scripts\ui-gallery\perf\ui-gallery-chart-torture-pan-zoom.json > $null`
+  - result: passed.
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_chart_torture_pan_zoom --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `993eeccd-72d1-49f4-830f-a710b0b16250`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\perf\ui-gallery-chart-torture-pan-zoom.json --dir target\fret-diag-chart-torture-multiseries-tooltip-v3 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  - result: passed; run id `1779217026347`.
+- full Chart Torture suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-chart-torture --dir target\fret-diag-chart-torture-suite-multiseries-tooltip-v1 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  - result: passed; script run id `1779217122878`.

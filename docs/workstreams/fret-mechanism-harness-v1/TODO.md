@@ -1316,3 +1316,14 @@ date: 2026-05-12
     a repair/redraw for this class. The RTL Long Text startup gate now also asserts section
     content/trigger spacing after the description, matching the visible overlap area from the user
     screenshot.
+- [x] Harden Chart Torture multi-series tooltip and domain-window output coverage.
+  - Result:
+    the Chart Torture page now renders two line series on the same X/Y axes, and
+    `ui-gallery-chart-torture-pan-zoom.json` asserts the retained chart output model publishes a
+    three-line tooltip with one axis header, A/B series rows, source-series ownership on both rows,
+    and no missing values after real drag/wheel pan/zoom input. The first runtime run exposed an
+    obsolete diagnostics assertion, not a chart defect: `domain_windows_count == 2` assumed X and Y
+    link keys would both be exported, but ADR 0301 only auto-maps an axis when it uniquely resolves
+    to one `(dataset, field)`. With two Y fields on one Y axis, the Y key is ambiguous, so the
+    correct output count is one X domain window; the gate still proves the X output model window
+    matches dataZoom and changes from the full domain.

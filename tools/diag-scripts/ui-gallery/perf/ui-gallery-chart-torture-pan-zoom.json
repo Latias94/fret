@@ -154,7 +154,7 @@
       "predicate": {
         "kind": "app_snapshot_field_equals",
         "pointer": "/chart_torture/output_model/domain_windows_count",
-        "value": 2
+        "value": 1
       },
       "timeout_frames": 600
     },
@@ -199,7 +199,61 @@
       "predicate": {
         "kind": "app_snapshot_field_equals",
         "pointer": "/chart_torture/output_model/tooltip_lines_count",
+        "value": 3
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/output_model/tooltip/axis_header_count",
+        "value": 1
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/output_model/tooltip/series_rows_count",
         "value": 2
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/output_model/tooltip/source_series_rows_count",
+        "value": 2
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/output_model/tooltip/missing_rows_count",
+        "value": 0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/output_model/tooltip/has_series_a",
+        "value": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/output_model/tooltip/has_series_b",
+        "value": true
       },
       "timeout_frames": 600
     },
