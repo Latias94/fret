@@ -795,6 +795,10 @@ Exit criteria:
   unchanged while moving app-owned visible text to control-readout, compact paragraph, and list-row
   roles. The done/active row foreground stays app state policy, but row layout no longer relies on
   local `ui::text(...)` truncation.
+  2026-05-19 todo demo text result: `todo_demo` keeps its responsive/stateful todo proof behavior
+  unchanged while moving app-owned visible text to title, readout, compact paragraph, button-label,
+  and list-row roles. Completed row strikethrough now uses an attributed list-row label helper, so
+  the row decoration no longer requires local `ui::rich_text(...)` layout policy.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

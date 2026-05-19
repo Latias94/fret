@@ -3447,3 +3447,35 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
   passed.
 - `git diff --check` passed.
+
+2026-05-19 todo demo visible text-role slice:
+
+- Source gap before fix: `apps/fret-examples/src/todo_demo.rs` still used local `ui::text(...)`
+  builders for title, status, progress readouts, empty-state labels, filter labels, and active row
+  labels, plus local `ui::rich_text(...)` layout policy for completed rows with strikethrough. This
+  is a responsive app proof, not a text-rendering capability surface.
+- `ecosystem/fret-ui-kit/src/declarative/text.rs` now exposes
+  `text_list_row_label_attributed(...)`, an attributed-text variant of the shared list-row label
+  role. It keeps fill-width, shrinkable, single-line ellipsis semantics while allowing row labels
+  to carry per-span decoration such as strikethrough.
+- `todo_demo` now routes title/status/progress/empty/filter/row labels through local helpers backed
+  by shared `decl_text` roles: chrome title, control readout, compact paragraph, button label,
+  list-row label, and attributed list-row label. Done/active foreground and strikethrough remain
+  app state/decoration policy; fixed-row text layout is role-owned.
+- `apps/fret-examples/tests/todo_demo_surface.rs` and `tools/gate_imui_workstream_source.py` guard
+  the role mapping and require `todo_demo.rs` to stay free of local `ui::text(...)`,
+  `ui::rich_text(...)`, and `typography::` text layout policy.
+- `docs/workstreams/imui-imgui-gap-closure-v1/P3_TEXT_ROLE_MATRIX_2026-05-17.md` now records the
+  attributed list-row derived role and focused gate.
+- `cargo nextest run -p fret-ui-kit --lib
+  attributed_list_row_label_text_uses_fill_width_single_line_truncation --no-fail-fast` passed.
+- `cargo nextest run -p fret-examples --test todo_demo_surface
+  todo_demo_keeps_visible_text_on_roles --no-fail-fast` passed.
+- `cargo check -p fret-examples --lib` passed.
+- `cargo check -p fret-demo --bin todo_demo` passed.
+- `cargo fmt --check -p fret-ui-kit -p fret-examples` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.

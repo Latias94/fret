@@ -1,9 +1,12 @@
 use std::sync::Arc;
 
 use fret_core::{
-    FontId, FontWeight, Px, TextAlign, TextOverflow, TextStyle, TextStyleRefinement, TextWrap,
+    AttributedText, FontId, FontWeight, Px, TextAlign, TextOverflow, TextStyle,
+    TextStyleRefinement, TextWrap,
 };
-use fret_ui::element::{AnyElement, LayoutStyle, Length, TextInkOverflow, TextProps};
+use fret_ui::element::{
+    AnyElement, LayoutStyle, Length, StyledTextProps, TextInkOverflow, TextProps,
+};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::typography as ui_typography;
@@ -225,6 +228,35 @@ pub fn text_list_row_label<H: UiHost>(
         cx.text_props(TextProps {
             layout: fill_shrinkable_single_line_layout(),
             text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
+/// Attributed-text variant of [`text_list_row_label`].
+///
+/// Use this for dense selectable/menu/tree rows that need per-span decoration, such as a completed
+/// todo row with strikethrough. It keeps the same fill-width, shrinkable, single-line truncation
+/// contract as plain list-row labels.
+pub fn text_list_row_label_attributed<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    rich: AttributedText,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_sm_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.styled_text_props(StyledTextProps {
+            layout: fill_shrinkable_single_line_layout(),
+            rich,
             style: None,
             color: None,
             wrap: TextWrap::None,
@@ -1169,6 +1201,36 @@ mod tests {
 
         let ElementKind::Text(props) = &el.kind else {
             panic!("expected text_list_row_label(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
+    }
+
+    #[test]
+    fn attributed_list_row_label_text_uses_fill_width_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let text = Arc::<str>::from("Completed task with decoration");
+        let rich = AttributedText::new(
+            Arc::clone(&text),
+            Arc::<[fret_core::TextSpan]>::from([fret_core::TextSpan::new(text.len())]),
+        );
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_list_row_label_attributed(cx, rich)
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::StyledText(props) = &el.kind else {
+            panic!("expected text_list_row_label_attributed(...) to build a StyledText element");
         };
 
         assert!(props.style.is_none());

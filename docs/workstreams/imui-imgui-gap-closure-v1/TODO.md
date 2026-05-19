@@ -888,6 +888,10 @@ Readiness order for the next locally testable review slices:
    readouts through control-readout text, empty-state copy through compact paragraph text, and row
    labels through list-row text with app-owned done/active foreground state. The demo no longer has
    `ui::text(...)` residuals.
+   2026-05-19 todo demo text follow-up: `todo_demo` now routes title/status/progress/empty/filter
+   labels through shared text roles and uses the new attributed list-row label role for completed
+   rows that need strikethrough. The richer todo proof no longer has local `ui::text(...)` or
+   `ui::rich_text(...)` residuals.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
