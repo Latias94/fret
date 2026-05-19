@@ -57,7 +57,9 @@ recorded the remaining retained node graph capability ledger and added a source-
 keeps code-level retained bridge usage on the explicit migration ledger. `RBX-M2-085` moved the
 portal submit/cancel/step command protocol onto the default declarative `fret-ui` gate while the
 retained portal host and retained portal text/number command handlers continue to consume it from
-the explicit compatibility island.
+the explicit compatibility island. `RBX-M2-090` then moved portal text/number submit/cancel/step
+decision policy onto the default editor gate; retained portal text/number modules now act as
+session/model I/O adapters around that policy.
 
 ## Completed Implementation
 
@@ -388,8 +390,12 @@ compile. The retained canvas/editor stack still exists inside `fret-node` behind
 `compat-retained-canvas`. `RBX-M2-085` added `ui/portal_commands.rs` as a default-gated protocol
 module for portal text command builders/parsers, made `ui/portal.rs` re-export that protocol for
 retained compatibility consumers, and verified both default protocol tests and the full retained
-oracle. The next M2 slice should shrink the ledger by moving portal command handling out of retained
-`CommandCx` handlers or by replacing overlay/panel composition with declarative coverage before
+oracle. `RBX-M2-090` added `ui/editors/portal_command_policy.rs` as a default-gated policy module,
+moved portal text/number edit specs and submit result types into that module, and converted retained
+`portal_text.rs` / `portal_number.rs` handlers to consume policy plans instead of owning
+submit/cancel/step command decisions. The retained canvas/editor stack still exists inside
+`fret-node` behind `compat-retained-canvas`; the next M2 slice should either add a declarative
+portal editor session adapter or replace overlay/panel composition with declarative coverage before
 deleting retained code.
 
 ## Next Task
@@ -400,12 +406,11 @@ Pick the next task from:
 
 Recommended next implementation shape:
 
-- Continue M2 by shrinking the RBX-M2-080 ledger. The sharpest next slice is `RBX-M2-090`: move
-  portal submit/cancel/step handling from retained `portal_text.rs` / `portal_number.rs`
-  `CommandCx` handlers into a default-gated service/policy and add default declarative tests. The
-  next independent family is overlay/panel composition (blackboard, controls, minimap, toolbars,
-  rename). Each slice should first add default declarative tests, then remove or gate less retained
-  code.
+- Continue M2 by shrinking the RBX-M2-080 ledger. The sharpest follow-on inside the portal family is
+  a declarative portal editor session adapter that consumes `portal_command_policy` without retained
+  `CommandCx`. The next independent family is overlay/panel composition (blackboard, controls,
+  minimap, toolbars, rename). Each slice should first add default declarative tests, then remove or
+  gate less retained code.
 - After the ledger no longer contains behavior-only retained files, remove
   `compat-retained-canvas` / `unstable-retained-bridge` from `fret-node`.
 - Keep the known independent `fret-ui` layout primitive drift
@@ -414,7 +419,24 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-19 for `RBX-M2-085`:
+Last run on 2026-05-19 for `RBX-M2-090`:
+
+- `cargo nextest run -p fret-node portal_command_policy editor_chrome_compiles_without_retained_canvas_compat` -
+  passed, 3 tests.
+- `cargo check -p fret-node --no-default-features --features fret-ui` - passed.
+- `cargo check -p fret-node --features compat-retained-canvas` - passed.
+- `cargo nextest run -p fret-node --features compat-retained-canvas portal` - passed, 28 tests.
+- `cargo nextest run -p fret-node` - passed, 329 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas` - passed, 913 tests.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 427 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/editors/portal_command_policy.rs 2>&1); test -z "$out"` -
+  passed.
+
+Earlier run on 2026-05-19 for `RBX-M2-085`:
 
 - `cargo nextest run -p fret-node portal_text_command_protocol` - passed, 2 tests.
 - `cargo check -p fret-node --no-default-features --features fret-ui` - passed.

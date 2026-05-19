@@ -880,6 +880,41 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-090 Move portal editor command policy onto the default declarative UI gate.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/editors/mod.rs`
+    - `ecosystem/fret-node/src/ui/editors/portal_command_policy.rs`
+    - `ecosystem/fret-node/src/ui/editors/portal_text.rs`
+    - `ecosystem/fret-node/src/ui/editors/portal_number.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move portal text/number submit/cancel/step decision policy out of retained `CommandCx`
+      handlers and into a default-gated service module.
+    - Keep retained portal text/number handlers as compatibility adapters for session/model I/O
+      until declarative portal editor hosting can replace them.
+    - Add default declarative tests for text and number command policy behavior before deleting any
+      retained editor command code.
+  - Result:
+    - Added `ui/editors/portal_command_policy.rs` under the default `fret-ui` path.
+    - Moved `PortalTextEditSpec`, `PortalTextEditSubmit`, `PortalNumberEditSpec`, and
+      `PortalNumberEditSubmit` into the default policy module.
+    - Added default tests covering text cancel/submit/step planning and number cancel/submit/parse
+      error/step planning without retained `CommandCx`.
+    - `portal_text.rs` and `portal_number.rs` now consume default policy plans and remain retained
+      session/model I/O adapters behind `compat-retained-canvas`.
+  - Validation:
+    - `cargo nextest run -p fret-node portal_command_policy editor_chrome_compiles_without_retained_canvas_compat`
+    - `cargo check -p fret-node --no-default-features --features fret-ui`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas portal`
+    - `cargo nextest run -p fret-node`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+    - `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/editors/portal_command_policy.rs 2>&1); test -z "$out"`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

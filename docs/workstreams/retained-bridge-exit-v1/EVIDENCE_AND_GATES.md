@@ -252,7 +252,9 @@ Commands:
   - Scope proven: workstream catalog indexes remain valid after the task ledger update.
 - `git diff --check`
   - Result: passed.
-  - Scope proven: changed Rust and documentation files have no whitespace errors.
+- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/editors/portal_command_policy.rs 2>&1); test -z "$out"`
+  - Result: passed.
+  - Scope proven: tracked changes and the new untracked policy file have no whitespace errors.
 
 Follow-up:
 
@@ -3508,3 +3510,71 @@ Broader gates not run:
   - Reason: `RBX-M2-085` changes only `fret-node` portal command protocol ownership. The default
     package gate, the full retained compatibility oracle, both feature checks, layering, catalog,
     formatting, and whitespace gates cover the changed surface.
+
+## 2026-05-19 - RBX-M2-090 portal editor command policy default gate
+
+Claim verified:
+
+- Portal text/number submit/cancel/step decision policy now lives in a default-gated editor policy
+  module instead of being owned by retained `CommandCx` handlers.
+- Retained `portal_text.rs` and `portal_number.rs` remain behind `compat-retained-canvas`, but now
+  act as session/model I/O adapters that consume default policy plans.
+- Default declarative `fret-node` coverage includes text and number command policy tests, while the
+  retained portal/compatibility oracle remains green.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/editors/mod.rs`
+- `ecosystem/fret-node/src/ui/editors/portal_command_policy.rs`
+- `ecosystem/fret-node/src/ui/editors/portal_text.rs`
+- `ecosystem/fret-node/src/ui/editors/portal_number.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-node portal_command_policy editor_chrome_compiles_without_retained_canvas_compat`
+  - Result: passed, 3 tests.
+  - Scope proven: portal text/number command policy compiles and is tested on the default gate, and
+    the editor policy surface remains outside `compat-retained-canvas`.
+- `cargo check -p fret-node --no-default-features --features fret-ui`
+  - Result: passed.
+  - Scope proven: the extracted portal command policy compiles without retained bridge features.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed.
+  - Scope proven: retained portal text/number handlers still compile after being converted into
+    policy consumers.
+- `cargo nextest run -p fret-node --features compat-retained-canvas portal`
+  - Result: passed, 28 tests.
+  - Scope proven: retained portal lifecycle/keyboard/pointer/measured conformance and default
+    portal command policy tests remain green together.
+- `cargo nextest run -p fret-node`
+  - Result: passed, 329 tests.
+  - Scope proven: default `fret-node` coverage remains green and now includes portal command policy
+    tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas`
+  - Result: passed, 913 tests.
+  - Scope proven: the full retained canvas/editor/overlay oracle remains green after the portal
+    command policy extraction.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting is clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly after the new evidence update.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-090` changes only `fret-node` editor command policy extraction and retained
+    portal handler adapters. The default package gate, retained compatibility package gate,
+    targeted portal compat gate, both feature checks, layering, catalog, formatting, and whitespace
+    gates cover the changed surface.

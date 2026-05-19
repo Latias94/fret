@@ -4,6 +4,7 @@
 //! `fret-ui` controls inside node bodies while preserving undo/redo semantics.
 
 mod chrome;
+mod portal_command_policy;
 #[cfg(feature = "compat-retained-canvas")]
 mod portal_number;
 #[cfg(feature = "compat-retained-canvas")]

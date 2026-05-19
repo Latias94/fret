@@ -12,10 +12,12 @@ use fret_ui::elements::ElementContext;
 use fret_ui::{ThemeSnapshot, UiHost};
 
 use crate::core::{Graph, NodeId};
-use crate::ops::GraphTransaction;
 use crate::ui::editors::chrome::{
     PORTAL_BUTTON_STACK_GAP, PortalSmallButtonUi, PortalTextInputUi, portal_button_stack_height,
     portal_text_input_props, render_pressable_small_button,
+};
+use crate::ui::editors::portal_command_policy::{
+    PortalTextCommandPlan, PortalTextEditSpec, PortalTextEditSubmit, plan_portal_text_command,
 };
 use crate::ui::portal::{
     NodeGraphPortalCommandHandler, NodeGraphPortalNodeLayout, PortalCommandOutcome,
@@ -349,26 +351,6 @@ impl PortalTextEditor {
         });
     }
 
-    fn reset_input<H: UiHost, S: PortalTextEditSpec>(
-        &self,
-        app: &mut H,
-        window: AppWindowId,
-        graph: &Graph,
-        node: NodeId,
-        spec: &S,
-    ) {
-        let model = self.ensure_input_model(app, window, graph, node, spec);
-        let text = spec.initial_text(graph, node);
-        let synced = text.clone();
-        let _ = model.update(app, |v, _cx| {
-            *v = text;
-        });
-        self.with_session_mut(app, window, |session, _app| {
-            session.last_synced.insert(node, synced.clone());
-            session.last_seen.insert(node, synced);
-        });
-    }
-
     fn read_input<H: UiHost, S: PortalTextEditSpec>(
         &self,
         app: &mut H,
@@ -478,41 +460,6 @@ impl PortalTextEditor {
 }
 
 #[derive(Debug, Clone)]
-pub enum PortalTextEditSubmit {
-    NotHandled,
-    Handled {
-        normalized_text: Option<String>,
-    },
-    Error {
-        message: Arc<str>,
-    },
-    Commit {
-        tx: GraphTransaction,
-        normalized_text: Option<String>,
-    },
-}
-
-pub trait PortalTextEditSpec {
-    fn initial_text(&self, graph: &Graph, node: NodeId) -> String;
-    fn submit(&self, graph: &Graph, node: NodeId, text: &str) -> PortalTextEditSubmit;
-
-    fn step_text(&self, _graph: &Graph, _node: NodeId, _text: &str, _delta: i32) -> Option<String> {
-        None
-    }
-
-    fn step_text_with_mode(
-        &self,
-        graph: &Graph,
-        node: NodeId,
-        text: &str,
-        delta: i32,
-        _mode: PortalTextStepMode,
-    ) -> Option<String> {
-        self.step_text(graph, node, text, delta)
-    }
-}
-
-#[derive(Debug, Clone)]
 pub struct PortalTextEditHandler<S> {
     editor: PortalTextEditor,
     spec: S,
@@ -540,60 +487,57 @@ impl<H: UiHost, S: PortalTextEditSpec> NodeGraphPortalCommandHandler<H>
             return PortalCommandOutcome::NotHandled;
         };
 
-        match command {
-            PortalTextCommand::Cancel { node } => {
+        let current_text = match command {
+            PortalTextCommand::Submit { node } | PortalTextCommand::Step { node, .. } => Some(
                 self.editor
-                    .reset_input(cx.app, window, graph, node, &self.spec);
+                    .read_input(cx.app, window, graph, node, &self.spec),
+            ),
+            PortalTextCommand::Cancel { .. } => None,
+        };
+
+        match plan_portal_text_command(graph, &self.spec, command, current_text.as_deref()) {
+            PortalTextCommandPlan::NotHandled => PortalCommandOutcome::NotHandled,
+            PortalTextCommandPlan::Cancel { node, reset_text } => {
+                self.editor.write_normalized_input(
+                    cx.app,
+                    window,
+                    graph,
+                    node,
+                    &self.spec,
+                    Some(reset_text),
+                );
                 self.editor.set_error(cx.app, window, node, None);
                 PortalCommandOutcome::Handled
             }
-            PortalTextCommand::Submit { node } => {
-                let text = self
-                    .editor
-                    .read_input(cx.app, window, graph, node, &self.spec);
-                self.handle_submit(cx, window, graph, node, text)
+            PortalTextCommandPlan::Submit { node, submit, .. } => {
+                self.apply_submit(cx, window, graph, node, submit)
             }
-            PortalTextCommand::Step { node, delta, mode } => {
-                let text = self
-                    .editor
-                    .read_input(cx.app, window, graph, node, &self.spec);
-                let Some(next_text) = self
-                    .spec
-                    .step_text_with_mode(graph, node, &text, delta, mode)
-                else {
-                    return PortalCommandOutcome::NotHandled;
-                };
-
-                let model = self
-                    .editor
-                    .ensure_input_model(cx.app, window, graph, node, &self.spec);
-                let submit_text = next_text.clone();
-                let _ = model.update(cx.app, |v, _cx| {
-                    *v = next_text;
-                });
-                self.editor
-                    .with_session_mut(cx.app, window, |session, _app| {
-                        session.last_synced.insert(node, submit_text.clone());
-                        session.last_seen.insert(node, submit_text.clone());
-                    });
-
+            PortalTextCommandPlan::StepSubmit { node, text, submit } => {
+                self.editor.write_normalized_input(
+                    cx.app,
+                    window,
+                    graph,
+                    node,
+                    &self.spec,
+                    Some(text),
+                );
                 self.editor.set_error(cx.app, window, node, None);
-                self.handle_submit(cx, window, graph, node, submit_text)
+                self.apply_submit(cx, window, graph, node, submit)
             }
         }
     }
 }
 
 impl<S: PortalTextEditSpec> PortalTextEditHandler<S> {
-    fn handle_submit<H: UiHost>(
+    fn apply_submit<H: UiHost>(
         &mut self,
         cx: &mut fret_ui::retained_bridge::CommandCx<'_, H>,
         window: AppWindowId,
         graph: &Graph,
         node: NodeId,
-        text: String,
+        submit: PortalTextEditSubmit,
     ) -> PortalCommandOutcome {
-        match self.spec.submit(graph, node, &text) {
+        match submit {
             PortalTextEditSubmit::NotHandled => PortalCommandOutcome::NotHandled,
             PortalTextEditSubmit::Handled { normalized_text } => {
                 self.editor.set_error(cx.app, window, node, None);

@@ -12,10 +12,13 @@ use fret_ui::elements::ElementContext;
 use fret_ui::{ThemeSnapshot, UiHost};
 
 use crate::core::{Graph, NodeId};
-use crate::ops::GraphTransaction;
 use crate::ui::editors::chrome::{
     PORTAL_BUTTON_STACK_GAP, PortalSmallButtonUi, PortalTextInputUi, portal_button_stack_height,
     portal_text_input_props, render_pressable_small_button, render_small_button,
+};
+use crate::ui::editors::portal_command_policy::{
+    PortalNumberCommandPlan, PortalNumberCommandSubmit, PortalNumberEditSpec,
+    PortalNumberEditSubmit, plan_portal_number_command,
 };
 use crate::ui::portal::{
     NodeGraphPortalCommandHandler, NodeGraphPortalNodeLayout, PortalCommandOutcome,
@@ -63,105 +66,6 @@ impl Default for PortalNumberEditorUi {
             },
             error_text_style: TextStyle::default(),
         }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum PortalNumberEditSubmit {
-    NotHandled,
-    Handled {
-        normalized_text: Option<String>,
-    },
-    Error {
-        message: Arc<str>,
-    },
-    Commit {
-        tx: GraphTransaction,
-        normalized_text: Option<String>,
-    },
-}
-
-pub trait PortalNumberEditSpec: Clone + 'static {
-    /// Returns the current numeric value for the node, or `None` if the node is not editable by this spec.
-    fn initial_value(&self, graph: &Graph, node: NodeId) -> Option<f64>;
-
-    fn format_value(&self, value: f64) -> String {
-        format!("{value}")
-    }
-
-    fn parse_text(&self, text: &str) -> Result<f64, Arc<str>> {
-        text.trim()
-            .parse::<f64>()
-            .map_err(|_| Arc::from("Invalid number"))
-    }
-
-    fn clamp_range(&self, _graph: &Graph, _node: NodeId) -> Option<(f64, f64)> {
-        None
-    }
-
-    fn round_value(&self, _graph: &Graph, _node: NodeId, value: f64) -> f64 {
-        value
-    }
-
-    fn submit_value(
-        &self,
-        graph: &Graph,
-        node: NodeId,
-        value: f64,
-        text: &str,
-    ) -> PortalNumberEditSubmit;
-
-    fn supports_drag(&self, _graph: &Graph, _node: NodeId) -> bool {
-        false
-    }
-
-    fn drag_threshold_px(&self, _graph: &Graph, _node: NodeId) -> f32 {
-        1.0
-    }
-
-    fn drag_sensitivity_per_px(
-        &self,
-        _graph: &Graph,
-        _node: NodeId,
-        _mode: PortalTextStepMode,
-    ) -> Option<f64> {
-        None
-    }
-
-    fn drag_value_with_mode(
-        &self,
-        graph: &Graph,
-        node: NodeId,
-        start_value: f64,
-        dx_px: f32,
-        mode: PortalTextStepMode,
-    ) -> Option<f64> {
-        let sensitivity = self.drag_sensitivity_per_px(graph, node, mode)?;
-        let next = start_value + dx_px as f64 * sensitivity;
-        Some(self.normalize_value(graph, node, next))
-    }
-
-    fn step_size(&self, _graph: &Graph, _node: NodeId, _mode: PortalTextStepMode) -> Option<f64> {
-        None
-    }
-
-    fn step_value_with_mode(
-        &self,
-        graph: &Graph,
-        node: NodeId,
-        value: f64,
-        delta: i32,
-        mode: PortalTextStepMode,
-    ) -> Option<f64> {
-        let step = self.step_size(graph, node, mode)?;
-        Some(self.normalize_value(graph, node, value + step * delta as f64))
-    }
-
-    fn normalize_value(&self, graph: &Graph, node: NodeId, mut value: f64) -> f64 {
-        if let Some((min, max)) = self.clamp_range(graph, node) {
-            value = value.clamp(min.min(max), max.max(min));
-        }
-        self.round_value(graph, node, value)
     }
 }
 
@@ -636,13 +540,35 @@ impl<S: PortalNumberEditSpec> PortalNumberEditHandler<S> {
         }
     }
 
-    fn handle_submit<H: UiHost>(
+    fn current_input_text<H: UiHost>(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        graph: &Graph,
+        node: NodeId,
+    ) -> Option<String> {
+        let initial_value = self.spec.initial_value(graph, node)?;
+        let input_model = self.editor.ensure_input_model(
+            app,
+            window,
+            node,
+            self.spec.format_value(initial_value),
+        );
+        Some(
+            input_model
+                .read_ref(app, |v| v.clone())
+                .ok()
+                .unwrap_or_default(),
+        )
+    }
+
+    fn apply_submit<H: UiHost>(
         &mut self,
         cx: &mut fret_ui::retained_bridge::CommandCx<'_, H>,
         window: AppWindowId,
         graph: &Graph,
         node: NodeId,
-        text: String,
+        submit: PortalNumberCommandSubmit,
     ) -> PortalCommandOutcome {
         let Some(initial_value) = self.spec.initial_value(graph, node) else {
             return PortalCommandOutcome::NotHandled;
@@ -654,41 +580,39 @@ impl<S: PortalNumberEditSpec> PortalNumberEditHandler<S> {
             node,
             self.spec.format_value(initial_value),
         );
-        let value = match self.spec.parse_text(&text) {
-            Ok(v) => v,
-            Err(message) => {
-                self.editor
-                    .set_error(cx.app, window, node, &input_model, Some(message));
-                return PortalCommandOutcome::Handled;
-            }
-        };
-
-        match self.spec.submit_value(graph, node, value, &text) {
-            PortalNumberEditSubmit::NotHandled => PortalCommandOutcome::NotHandled,
-            PortalNumberEditSubmit::Handled { normalized_text } => {
-                self.editor
-                    .set_error(cx.app, window, node, &input_model, None);
-                if let Some(normalized) = normalized_text {
-                    let _ = input_model.update(cx.app, |v, _cx| *v = normalized);
-                }
-                PortalCommandOutcome::Handled
-            }
-            PortalNumberEditSubmit::Error { message } => {
+        match submit {
+            PortalNumberCommandSubmit::ParseError { message } => {
                 self.editor
                     .set_error(cx.app, window, node, &input_model, Some(message));
                 PortalCommandOutcome::Handled
             }
-            PortalNumberEditSubmit::Commit {
-                tx,
-                normalized_text,
-            } => {
-                self.editor
-                    .set_error(cx.app, window, node, &input_model, None);
-                if let Some(normalized) = normalized_text {
-                    let _ = input_model.update(cx.app, |v, _cx| *v = normalized);
+            PortalNumberCommandSubmit::Submit(submit) => match submit {
+                PortalNumberEditSubmit::NotHandled => PortalCommandOutcome::NotHandled,
+                PortalNumberEditSubmit::Handled { normalized_text } => {
+                    self.editor
+                        .set_error(cx.app, window, node, &input_model, None);
+                    if let Some(normalized) = normalized_text {
+                        let _ = input_model.update(cx.app, |v, _cx| *v = normalized);
+                    }
+                    PortalCommandOutcome::Handled
                 }
-                PortalCommandOutcome::Commit(tx)
-            }
+                PortalNumberEditSubmit::Error { message } => {
+                    self.editor
+                        .set_error(cx.app, window, node, &input_model, Some(message));
+                    PortalCommandOutcome::Handled
+                }
+                PortalNumberEditSubmit::Commit {
+                    tx,
+                    normalized_text,
+                } => {
+                    self.editor
+                        .set_error(cx.app, window, node, &input_model, None);
+                    if let Some(normalized) = normalized_text {
+                        let _ = input_model.update(cx.app, |v, _cx| *v = normalized);
+                    }
+                    PortalCommandOutcome::Commit(tx)
+                }
+            },
         }
     }
 }
@@ -706,71 +630,42 @@ impl<H: UiHost, S: PortalNumberEditSpec> NodeGraphPortalCommandHandler<H>
             return PortalCommandOutcome::NotHandled;
         };
 
-        match command {
-            PortalTextCommand::Cancel { node } => {
-                let Some(initial) = self.spec.initial_value(graph, node) else {
-                    return PortalCommandOutcome::NotHandled;
-                };
+        let current_text = match command {
+            PortalTextCommand::Submit { node } | PortalTextCommand::Step { node, .. } => {
+                self.current_input_text(cx.app, window, graph, node)
+            }
+            PortalTextCommand::Cancel { .. } => None,
+        };
 
-                let reset = self.spec.format_value(initial);
+        match plan_portal_number_command(graph, &self.spec, command, current_text.as_deref()) {
+            PortalNumberCommandPlan::NotHandled => PortalCommandOutcome::NotHandled,
+            PortalNumberCommandPlan::Handled => PortalCommandOutcome::Handled,
+            PortalNumberCommandPlan::Cancel { node, reset_text } => {
                 let input_model =
                     self.editor
-                        .ensure_input_model(cx.app, window, node, reset.clone());
+                        .ensure_input_model(cx.app, window, node, reset_text.clone());
                 let error_model = self.editor.ensure_error_model(cx.app, window, node);
 
-                let _ = input_model.update(cx.app, |v, _cx| *v = reset);
+                let _ = input_model.update(cx.app, |v, _cx| *v = reset_text);
                 let _ = error_model.update(cx.app, |v, _cx| *v = None);
 
                 PortalCommandOutcome::Handled
             }
-            PortalTextCommand::Submit { node } => {
-                let Some(initial_value) = self.spec.initial_value(graph, node) else {
-                    return PortalCommandOutcome::NotHandled;
-                };
-
-                let input_model = self.editor.ensure_input_model(
-                    cx.app,
-                    window,
-                    node,
-                    self.spec.format_value(initial_value),
-                );
-                let text = input_model
-                    .read_ref(cx.app, |v| v.clone())
-                    .ok()
-                    .unwrap_or_default();
-                self.handle_submit(cx, window, graph, node, text)
+            PortalNumberCommandPlan::Submit { node, submit, .. } => {
+                self.apply_submit(cx, window, graph, node, submit)
             }
-            PortalTextCommand::Step { node, delta, mode } => {
+            PortalNumberCommandPlan::StepSubmit { node, text, submit } => {
                 let Some(initial_value) = self.spec.initial_value(graph, node) else {
                     return PortalCommandOutcome::NotHandled;
                 };
-
                 let input_model = self.editor.ensure_input_model(
                     cx.app,
                     window,
                     node,
                     self.spec.format_value(initial_value),
                 );
-                let current_text = input_model
-                    .read_ref(cx.app, |v| v.clone())
-                    .ok()
-                    .unwrap_or_default();
-                let base = self
-                    .spec
-                    .parse_text(&current_text)
-                    .ok()
-                    .unwrap_or(initial_value);
-
-                let Some(next_value) = self
-                    .spec
-                    .step_value_with_mode(graph, node, base, delta, mode)
-                else {
-                    return PortalCommandOutcome::Handled;
-                };
-
-                let next_text = self.spec.format_value(next_value);
-                let _ = input_model.update(cx.app, |v, _cx| *v = next_text.clone());
-                self.handle_submit(cx, window, graph, node, next_text)
+                let _ = input_model.update(cx.app, |v, _cx| *v = text.clone());
+                self.apply_submit(cx, window, graph, node, submit)
             }
         }
     }
