@@ -63,6 +63,33 @@
       "timeout_frames": 60
     },
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/x_axis_output_window/min_ms_rounded",
+        "value": 1735689600000
+      },
+      "timeout_frames": 60
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/x_axis_output_window/max_ms_rounded",
+        "value": 1747689540000
+      },
+      "timeout_frames": 60
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/x_axis_output_window/span_ms_rounded",
+        "value": 11999940000
+      },
+      "timeout_frames": 60
+    },
+    {
       "type": "capture_bundle",
       "label": "ui-gallery-chart-torture-pan-zoom-before"
     },
@@ -117,8 +144,53 @@
       "type": "wait_until",
       "predicate": {
         "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/runtime_oracles/x_axis_output_matches_data_zoom",
+        "value": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
         "pointer": "/chart_torture/output_model/domain_windows_count",
         "value": 2
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/output_model/x_domain_window/present",
+        "value": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/runtime_oracles/x_output_model_domain_matches_data_zoom",
+        "value": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/runtime_oracles/x_axis_output_changed_from_full_domain",
+        "value": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_torture/runtime_oracles/x_output_model_domain_changed_from_full_domain",
+        "value": true
       },
       "timeout_frames": 600
     },

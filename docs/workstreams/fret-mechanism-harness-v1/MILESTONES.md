@@ -2636,3 +2636,36 @@ Status: complete for window-level dirty-close aggregation across workspace panes
   with suite summary
   `target/fret-diag-workspace-shell-demo-suite-window-close-dirty-aggregation-v2/sessions/1779171327648-11792/suite.summary.json`;
   the new window-close dirty aggregation script run id is `1779171369594`.
+
+## M131: Chart Torture Visible Domain-Window Oracle
+
+Status: complete for Chart Torture visible X domain-window correctness after pan/zoom.
+
+- Extended `app_snapshot.chart_torture` to schema version 2 with:
+  `x_full_domain_window`,
+  `output_model.x_domain_window`, and runtime oracle booleans for whether the engine X axis output
+  window and paint-published output-model X domain window match the active dataZoom window and
+  differ from the fixture's initial full X domain.
+- Hardened `ui-gallery-chart-torture-pan-zoom.json` so it first asserts the known full-domain X
+  baseline (`1735689600000..1747689540000`, span `11999940000`) before interaction, then waits for
+  all visible-window oracle booleans after drag/wheel.
+- No new chart mechanism defect was reproduced. The fresh suite shows the expected convergence:
+  after interaction, the output model and engine axis output both publish
+  `1739283224994..1757471732398`, matching dataZoom and differing from the initial full domain.
+- Gates pass:
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\driver\diag_snapshot.rs`;
+  `python -m json.tool tools\diag-scripts\ui-gallery\perf\ui-gallery-chart-torture-pan-zoom.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_chart_torture_pan_zoom --no-fail-fast --no-capture`
+  with Nextest run id `7bbb707d-390a-4659-b782-1d38ef175e24`;
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-chart,gallery-dev`;
+  and `git diff --check`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\perf\ui-gallery-chart-torture-pan-zoom.json --dir target\fret-diag-chart-torture-visible-window-oracle-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  with run id `1779173616393` and AI packet
+  `target/fret-diag-chart-torture-visible-window-oracle-v1/sessions/1779173543971-68812/1779173616393/ai.packet`.
+- Full runtime suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-chart-torture --dir target\fret-diag-chart-torture-suite-visible-window-oracle-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  with suite summary
+  `target/fret-diag-chart-torture-suite-visible-window-oracle-v1/sessions/1779173643592-70968/suite.summary.json`;
+  run id `1779173655069`.

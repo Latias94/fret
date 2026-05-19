@@ -15,13 +15,13 @@ use crate::spec::{
 };
 use crate::ui::{card_doc_scaffold_metrics_json, nav_visibility_summary};
 
+#[cfg(feature = "gallery-dev")]
+use crate::harness::UiGalleryChartTortureOutputStore;
 #[cfg(all(feature = "gallery-dev", not(target_arch = "wasm32")))]
 use crate::harness::{
     UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER, UiGalleryCodeEditorHandlesStore,
     UiGalleryMarkdownEditorHandlesStore,
 };
-#[cfg(feature = "gallery-dev")]
-use crate::harness::UiGalleryChartTortureOutputStore;
 
 use super::UiGalleryHarnessDiagnosticsStore;
 
@@ -145,6 +145,48 @@ fn rounded_f64_json(value: f64) -> serde_json::Value {
 }
 
 #[cfg(feature = "gallery-dev")]
+const CHART_TORTURE_X_BASE_MS: f64 = 1_735_689_600_000.0;
+#[cfg(feature = "gallery-dev")]
+const CHART_TORTURE_X_INTERVAL_MS: f64 = 60_000.0;
+#[cfg(feature = "gallery-dev")]
+const CHART_TORTURE_POINT_COUNT: u64 = 200_000;
+#[cfg(feature = "gallery-dev")]
+const CHART_TORTURE_WINDOW_EPSILON_MS: f64 = 1.0;
+
+#[cfg(feature = "gallery-dev")]
+fn chart_torture_full_x_pair() -> (f64, f64) {
+    (
+        CHART_TORTURE_X_BASE_MS,
+        CHART_TORTURE_X_BASE_MS
+            + CHART_TORTURE_X_INTERVAL_MS * (CHART_TORTURE_POINT_COUNT.saturating_sub(1) as f64),
+    )
+}
+
+#[cfg(feature = "gallery-dev")]
+fn chart_windows_approx_eq(left: Option<(f64, f64)>, right: Option<(f64, f64)>) -> bool {
+    match (left, right) {
+        (Some((left_min, left_max)), Some((right_min, right_max))) => {
+            (left_min - right_min).abs() <= CHART_TORTURE_WINDOW_EPSILON_MS
+                && (left_max - right_max).abs() <= CHART_TORTURE_WINDOW_EPSILON_MS
+                && ((left_max - left_min) - (right_max - right_min)).abs()
+                    <= CHART_TORTURE_WINDOW_EPSILON_MS
+        }
+        _ => false,
+    }
+}
+
+#[cfg(feature = "gallery-dev")]
+fn chart_window_changed_from(window: Option<(f64, f64)>, base: (f64, f64)) -> bool {
+    window
+        .map(|(min, max)| {
+            (min - base.0).abs() > CHART_TORTURE_WINDOW_EPSILON_MS
+                || (max - base.1).abs() > CHART_TORTURE_WINDOW_EPSILON_MS
+                || ((max - min) - (base.1 - base.0)).abs() > CHART_TORTURE_WINDOW_EPSILON_MS
+        })
+        .unwrap_or(false)
+}
+
+#[cfg(feature = "gallery-dev")]
 fn chart_window_json(pair: Option<(f64, f64)>) -> serde_json::Value {
     pair.map(|(min, max)| {
         let span = max - min;
@@ -170,6 +212,20 @@ fn chart_torture_snapshot_json(app: &App, window: AppWindowId) -> Option<serde_j
         .get(&window)?;
     let output = app.models().get_cloned(&handle.output)?;
     let x_axis = delinea::ids::AxisId::new(1);
+    let x_domain_key = fret_chart::LinkAxisKey {
+        kind: delinea::AxisKind::X,
+        dataset: delinea::ids::DatasetId::new(1),
+        field: delinea::FieldId::new(1),
+    };
+    let full_x_pair = chart_torture_full_x_pair();
+    let x_output_model_domain_pair = output
+        .snapshot
+        .domain_windows_by_key
+        .get(&x_domain_key)
+        .copied()
+        .flatten()
+        .filter(|window| window.is_valid())
+        .map(|window| (window.min, window.max));
     let (engine_state_revision, x_data_zoom_pair, x_axis_output_pair) = {
         let engine = handle.shared_engine.borrow();
         let x_data_zoom_pair = engine
@@ -186,23 +242,43 @@ fn chart_torture_snapshot_json(app: &App, window: AppWindowId) -> Option<serde_j
             .copied()
             .filter(|window| window.is_valid())
             .map(|window| (window.min, window.max));
-        (engine.state().revision.0, x_data_zoom_pair, x_axis_output_pair)
+        (
+            engine.state().revision.0,
+            x_data_zoom_pair,
+            x_axis_output_pair,
+        )
     };
+    let x_axis_output_matches_data_zoom =
+        chart_windows_approx_eq(x_axis_output_pair, x_data_zoom_pair);
+    let x_output_model_domain_matches_data_zoom =
+        chart_windows_approx_eq(x_output_model_domain_pair, x_data_zoom_pair);
+    let x_axis_output_changed_from_full_domain =
+        chart_window_changed_from(x_axis_output_pair, full_x_pair);
+    let x_output_model_domain_changed_from_full_domain =
+        chart_window_changed_from(x_output_model_domain_pair, full_x_pair);
 
     Some(serde_json::json!({
-        "schema_version": 1,
+        "schema_version": 2,
         "engine_present": true,
         "engine_state_revision": engine_state_revision,
         "x_data_zoom": {
             "active": x_data_zoom_pair.is_some(),
             "window": chart_window_json(x_data_zoom_pair),
         },
+        "x_full_domain_window": chart_window_json(Some(full_x_pair)),
         "x_axis_output_window": chart_window_json(x_axis_output_pair),
         "output_model": {
             "revision": output.revision,
             "link_events_revision": output.link_events_revision,
             "domain_windows_count": output.snapshot.domain_windows_by_key.len() as u64,
+            "x_domain_window": chart_window_json(x_output_model_domain_pair),
             "tooltip_lines_count": output.snapshot.tooltip_lines.len() as u64,
+        },
+        "runtime_oracles": {
+            "x_axis_output_matches_data_zoom": x_axis_output_matches_data_zoom,
+            "x_output_model_domain_matches_data_zoom": x_output_model_domain_matches_data_zoom,
+            "x_axis_output_changed_from_full_domain": x_axis_output_changed_from_full_domain,
+            "x_output_model_domain_changed_from_full_domain": x_output_model_domain_changed_from_full_domain,
         },
     }))
 }
@@ -336,8 +412,14 @@ fn code_editor_paint_perf_json(
     insert_u64!("us_row_scene_key", frame.us_row_scene_key);
     insert_u64!("us_row_scene_fast_probe", frame.us_row_scene_fast_probe);
     insert_u64!("us_row_scene_full_probe", frame.us_row_scene_full_probe);
-    insert_u64!("us_row_scene_fast_key_compare", frame.us_row_scene_fast_key_compare);
-    insert_u64!("us_row_scene_full_key_compare", frame.us_row_scene_full_key_compare);
+    insert_u64!(
+        "us_row_scene_fast_key_compare",
+        frame.us_row_scene_fast_key_compare
+    );
+    insert_u64!(
+        "us_row_scene_full_key_compare",
+        frame.us_row_scene_full_key_compare
+    );
     insert_u64!("us_row_scene_replay_touch", frame.us_row_scene_replay_touch);
     insert_u64!("us_row_scene_replay_ops", frame.us_row_scene_replay_ops);
     insert_u64!(
@@ -360,10 +442,7 @@ fn code_editor_paint_perf_json(
     insert_u64!("us_row_content_resolve", frame.us_row_content_resolve);
     insert_u64!("us_row_geom_resolve", frame.us_row_geom_resolve);
     insert_u64!("us_row_overlay", frame.us_row_overlay);
-    insert_u64!(
-        "us_frame_overlay_prepare",
-        frame.us_frame_overlay_prepare
-    );
+    insert_u64!("us_frame_overlay_prepare", frame.us_frame_overlay_prepare);
     insert_u64!("surface_rows_iterated", frame.surface_rows_iterated);
     insert_u64!("surface_rows_with_rect", frame.surface_rows_with_rect);
     insert_u64!(
@@ -413,8 +492,14 @@ fn code_editor_paint_perf_json(
     insert_u64!("ns_row_scene_key", frame.ns_row_scene_key);
     insert_u64!("ns_row_scene_fast_probe", frame.ns_row_scene_fast_probe);
     insert_u64!("ns_row_scene_full_probe", frame.ns_row_scene_full_probe);
-    insert_u64!("ns_row_scene_fast_key_compare", frame.ns_row_scene_fast_key_compare);
-    insert_u64!("ns_row_scene_full_key_compare", frame.ns_row_scene_full_key_compare);
+    insert_u64!(
+        "ns_row_scene_fast_key_compare",
+        frame.ns_row_scene_fast_key_compare
+    );
+    insert_u64!(
+        "ns_row_scene_full_key_compare",
+        frame.ns_row_scene_full_key_compare
+    );
     insert_u64!("ns_row_scene_replay_touch", frame.ns_row_scene_replay_touch);
     insert_u64!("ns_row_scene_replay_ops", frame.ns_row_scene_replay_ops);
     insert_u64!(
@@ -437,10 +522,7 @@ fn code_editor_paint_perf_json(
     insert_u64!("ns_row_content_resolve", frame.ns_row_content_resolve);
     insert_u64!("ns_row_geom_resolve", frame.ns_row_geom_resolve);
     insert_u64!("ns_row_overlay", frame.ns_row_overlay);
-    insert_u64!(
-        "ns_frame_overlay_prepare",
-        frame.ns_frame_overlay_prepare
-    );
+    insert_u64!("ns_frame_overlay_prepare", frame.ns_frame_overlay_prepare);
     insert_u64!(
         "ns_windowed_surface_paint_callback",
         frame.ns_windowed_surface_paint_callback

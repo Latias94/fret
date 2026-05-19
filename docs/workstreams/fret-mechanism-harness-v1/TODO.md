@@ -1085,6 +1085,13 @@ date: 2026-05-12
     `output_model.tooltip_lines_count=2` after scripted drag/wheel. This converts the previous
     supplemental output counters into a hard runtime gate for paint-published axis-window and
     tooltip payload freshness.
+- [x] Add a Chart Torture visible domain-window runtime oracle.
+  - Result: `app_snapshot.chart_torture` now exposes the fixture's full X domain, the
+    paint-published `output_model.x_domain_window`, and runtime booleans proving that both the
+    engine X axis output window and output-model X domain window match the active dataZoom window
+    after pan/zoom and differ from the initial full domain. The promoted pan/zoom script asserts
+    the full-domain baseline before interaction and all visible-window oracle booleans after
+    interaction.
 - [x] Promote UI Gallery workspace tabstrip overflow selection into the workspace shell runtime
   suite.
   - Result: `ui-gallery-workspace-tabstrip-overflow-select-command.json` now starts the Gallery in

@@ -4509,6 +4509,55 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag-chart-torture-suite-tooltip-output-v1/sessions/1779132036567-82724/check.chart_sampling_window_shifts_min.json`
     records `total_actions=3`, `distinct_key_count=2`, and two unique nonzero sampling keys.
 
+## Chart Torture Visible Domain-Window Runtime Oracle
+
+- invariant:
+  after scripted Chart Torture pan/zoom, the visible X domain used by both the engine axis output
+  and the paint-published `ChartCanvasOutput` domain-window payload must match the active dataZoom
+  window and must differ from the fixture's initial full X domain. Counting published windows is not
+  enough if the published window is stale or still equal to the initial full domain.
+- finding:
+  no new chart mechanism defect was reproduced. The promoted pan/zoom gate now observes the
+  expected convergence: before interaction the X axis output is the full fixture domain
+  `1735689600000..1747689540000`, and after interaction both the engine axis output and output-model
+  X domain publish `1739283224994..1757471732398`, matching the active dataZoom window.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/driver/diag_snapshot.rs`,
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-chart-torture-pan-zoom.json`,
+  `tools/diag-scripts/ui-gallery-chart-torture-pan-zoom.json`, and
+  `tools/diag-scripts/suites/ui-gallery-chart-torture/suite.json`.
+- static gates:
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\driver\diag_snapshot.rs`
+  - result: passed.
+  `python -m json.tool tools\diag-scripts\ui-gallery\perf\ui-gallery-chart-torture-pan-zoom.json > $null`
+  - result: passed.
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed; registry is up to date.
+  `git diff --check`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_chart_torture_pan_zoom --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `7bbb707d-390a-4659-b782-1d38ef175e24`.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-chart,gallery-dev`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\perf\ui-gallery-chart-torture-pan-zoom.json --dir target\fret-diag-chart-torture-visible-window-oracle-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  - result: passed; run id `1779173616393`; AI packet
+    `target/fret-diag-chart-torture-visible-window-oracle-v1/sessions/1779173543971-68812/1779173616393/ai.packet`.
+- runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-chart-torture --dir target\fret-diag-chart-torture-suite-visible-window-oracle-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  - result: passed; suite summary
+    `target/fret-diag-chart-torture-suite-visible-window-oracle-v1/sessions/1779173643592-70968/suite.summary.json`;
+    run id `1779173655069`.
+  - app snapshot proof:
+    final snapshots in
+    `target/fret-diag-chart-torture-suite-visible-window-oracle-v1/sessions/1779173643592-70968/1779173676553-ui-gallery-chart-torture-pan-zoom-after/bundle.schema2.json`
+    record `runtime_oracles.x_axis_output_matches_data_zoom=true`,
+    `runtime_oracles.x_output_model_domain_matches_data_zoom=true`,
+    `runtime_oracles.x_axis_output_changed_from_full_domain=true`, and
+    `runtime_oracles.x_output_model_domain_changed_from_full_domain=true`.
+
 ## Workspace Shell Tabstrip Overflow Selection Gate
 
 - invariant:
