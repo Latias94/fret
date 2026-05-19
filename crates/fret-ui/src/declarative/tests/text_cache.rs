@@ -524,6 +524,84 @@ impl fret_core::MaterialService for WidthSensitiveTextService {
     }
 }
 
+#[derive(Default)]
+struct UnderestimatedMeasureTextService {
+    measure_calls: usize,
+    prepare_calls: usize,
+}
+
+impl TextService for UnderestimatedMeasureTextService {
+    fn measure(
+        &mut self,
+        _input: &fret_core::TextInput,
+        constraints: TextConstraints,
+    ) -> TextMetrics {
+        self.measure_calls += 1;
+        let width = constraints.max_width.map(|w| w.0).unwrap_or(160.0);
+        TextMetrics {
+            size: Size::new(Px(width), Px(10.0)),
+            baseline: Px(8.0),
+        }
+    }
+
+    fn prepare(
+        &mut self,
+        _input: &fret_core::TextInput,
+        constraints: TextConstraints,
+    ) -> (fret_core::TextBlobId, TextMetrics) {
+        self.prepare_calls += 1;
+        let width = constraints.max_width.map(|w| w.0).unwrap_or(160.0);
+        (
+            fret_core::TextBlobId::default(),
+            TextMetrics {
+                size: Size::new(Px(width), Px(40.0)),
+                baseline: Px(8.0),
+            },
+        )
+    }
+
+    fn release(&mut self, _blob: fret_core::TextBlobId) {}
+}
+
+impl fret_core::PathService for UnderestimatedMeasureTextService {
+    fn prepare(
+        &mut self,
+        _commands: &[fret_core::PathCommand],
+        _style: fret_core::PathStyle,
+        _constraints: fret_core::PathConstraints,
+    ) -> (fret_core::PathId, fret_core::PathMetrics) {
+        (
+            fret_core::PathId::default(),
+            fret_core::PathMetrics::default(),
+        )
+    }
+
+    fn release(&mut self, _path: fret_core::PathId) {}
+}
+
+impl fret_core::SvgService for UnderestimatedMeasureTextService {
+    fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+        fret_core::SvgId::default()
+    }
+
+    fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        false
+    }
+}
+
+impl fret_core::MaterialService for UnderestimatedMeasureTextService {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        false
+    }
+}
+
 #[test]
 fn wrapped_text_paint_width_shrink_reinvalidates_layout_when_height_grows() {
     let mut app = TestHost::new();
@@ -598,6 +676,68 @@ fn wrapped_text_paint_width_shrink_reinvalidates_layout_when_height_grows() {
                 )
         ),
         "the repair frame should clip the taller paint-prepared text to the stale layout bounds"
+    );
+}
+
+#[test]
+fn wrapped_text_measure_uses_prepare_metrics_for_startup_layout() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_paint_cache_enabled(false);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(160.0), Px(80.0)),
+    );
+    let mut services = UnderestimatedMeasureTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-startup-prepared-measure",
+        |cx| {
+            let mut props = crate::element::TextProps::new(
+                "A long text run whose backend measure path underestimates wrapped height",
+            );
+            props.layout.size.width = Length::Fill;
+            props.wrap = fret_core::TextWrap::Word;
+            vec![cx.text_props(props)]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let text_node = ui.children(root)[0];
+    let text_bounds = ui.debug_node_bounds(text_node).expect("text bounds");
+
+    assert_eq!(
+        services.measure_calls, 0,
+        "wrapped text should not trust a separate measure path for startup layout"
+    );
+    assert_eq!(services.prepare_calls, 1);
+    assert_eq!(
+        text_bounds.size.height,
+        Px(40.0),
+        "startup layout should reserve the prepared text height"
+    );
+
+    ui.test_clear_node_invalidations(text_node);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    assert!(
+        !ui.node_layout_invalidated(text_node),
+        "first paint should reuse prepared metrics instead of scheduling a repair frame"
+    );
+    assert!(
+        app.flush_effects()
+            .into_iter()
+            .all(|effect| !matches!(effect, Effect::Redraw(w) if w == window)),
+        "first paint should not request an extra redraw for text height repair"
     );
 }
 

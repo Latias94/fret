@@ -1306,3 +1306,13 @@ date: 2026-05-12
     proves first-paint height growth invalidates layout, requests redraw, and clips the repair
     frame. The refreshed focused runtime gate and full Combobox geometry-placement suite pass
     without manual resize or keyboard input.
+- [x] Align wrapped text startup measurement with prepared paint metrics.
+  - Result:
+    the follow-up Combobox RTL Long Text screenshot showed that layout-bounds assertions can still
+    miss a pixel-visible overlap when the backend `measure` path underestimates wrapped text height
+    relative to the prepared text blob used for paint. Wrapped `Text`, `StyledText`, and
+    `SelectableText` now prepare during measurement and store those metrics in the shared text
+    cache, so startup layout reserves the same height paint will use and first paint no longer needs
+    a repair/redraw for this class. The RTL Long Text startup gate now also asserts section
+    content/trigger spacing after the description, matching the visible overlap area from the user
+    screenshot.

@@ -3050,3 +3050,37 @@ Status: complete for the cold-start text repair path behind the Combobox RTL Lon
   with suite summary
   `target/fret-diag-combobox-geometry-placement-startup-text-repair-v1/sessions/1779210565472-66488/suite.summary.json`;
   12/12 scripts passed, and the no-input RTL Long Text startup run id is `1779210808250`.
+
+## M142: Wrapped Text Prepared Measurement Convergence
+
+Status: complete for the startup measurement path behind the remaining Combobox RTL Long Text
+visual overlap.
+
+- A newer manual screenshot still showed `RTL Long Text` content visibly overlapping even after
+  M141. The promoted runtime gate passed because it asserted layout bounds, while the visible
+  failure could be caused by text ink painted taller than the measured layout box.
+- Fixed `Text`, `StyledText`, and `SelectableText` measurement in `crates/fret-ui` so wrapped text
+  paths prepare text and populate the shared text cache during measurement. This makes startup
+  layout reserve the same prepared metrics that paint will use instead of trusting a separate
+  backend `measure` result that can underestimate height before resize/font convergence.
+- Preserved the `TextWrap::None` fast measurement/fingerprint path and kept the M141 paint-time
+  repair as a fallback for stale paint bounds and width changes.
+- Strengthened
+  `ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json` to wait for
+  the live RTL Long Text content/trigger and assert description-to-content plus
+  description-to-trigger spacing, not only intro/title/description bounds.
+- Gates pass:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\declarative\host_widget\measure.rs crates\fret-ui\src\declarative\tests\text_cache.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui wrapped_text_measure_uses_prepare_metrics_for_startup_layout wrapped_text_first_paint_reinvalidates_layout_when_height_grows theme_color_change_does_not_change_text_input_fingerprints --no-fail-fast --no-capture`
+  with Nextest run id `c70a4417-6ee8-46f1-bc4f-a485bc98a122`;
+  `python -m json.tool tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json > $null`;
+  `python tools\check_diag_scripts_registry.py`; and
+  `cargo build --profile dev-fast -p fret-ui-gallery --features gallery-dev`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json --dir target\fret-diag-combobox-rtl-long-text-startup-prepared-measure-v3 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779215099640`, AI packet
+  `target/fret-diag-combobox-rtl-long-text-startup-prepared-measure-v3/sessions/1779215091187-112692/1779215099640/ai.packet`,
+  pack
+  `target/fret-diag-combobox-rtl-long-text-startup-prepared-measure-v3/sessions/1779215091187-112692/share/1779215099640.zip`,
+  and screenshot
+  `target/fret-diag-combobox-rtl-long-text-startup-prepared-measure-v3/sessions/1779215091187-112692/screenshots/1779215103570-ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap/window-4294967297-tick-3-frame-3.png`.

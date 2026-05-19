@@ -5853,3 +5853,41 @@ Next slice recommendation:
 - full Combobox geometry placement suite:
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-combobox-geometry-placement --dir target\fret-diag-combobox-geometry-placement-startup-text-repair-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
   - result: passed; 12/12 scripts; no-input RTL Long Text startup run id `1779210808250`.
+
+## Wrapped Text Prepared Measurement Convergence
+
+- invariant:
+  wrapped text startup measurement must reserve the same height as the prepared text blob used for
+  paint. Layout-bounds assertions are insufficient when actual painted ink can exceed stale
+  measured bounds.
+- finding:
+  the remaining Combobox RTL Long Text screenshot matched a measure/prepare divergence risk:
+  `TextService::measure` could underestimate wrapped height, while paint used a taller prepared
+  blob. Resize then corrected layout by forcing a fresh measurement/preparation path.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/host_widget/measure.rs`,
+  `crates/fret-ui/src/declarative/tests/text_cache.rs`, and
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json`.
+- evidence anchors:
+  fixed focused AI packet:
+  `target/fret-diag-combobox-rtl-long-text-startup-prepared-measure-v3/sessions/1779215091187-112692/1779215099640/ai.packet`;
+  fixed focused pack:
+  `target/fret-diag-combobox-rtl-long-text-startup-prepared-measure-v3/sessions/1779215091187-112692/share/1779215099640.zip`;
+  fixed focused screenshot:
+  `target/fret-diag-combobox-rtl-long-text-startup-prepared-measure-v3/sessions/1779215091187-112692/screenshots/1779215103570-ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap/window-4294967297-tick-3-frame-3.png`.
+- format:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\declarative\host_widget\measure.rs crates\fret-ui\src\declarative\tests\text_cache.rs`
+  - result: passed.
+- mechanism regression:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui wrapped_text_measure_uses_prepare_metrics_for_startup_layout wrapped_text_first_paint_reinvalidates_layout_when_height_grows theme_color_change_does_not_change_text_input_fingerprints --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `c70a4417-6ee8-46f1-bc4f-a485bc98a122`.
+- registry:
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed; registry is up to date.
+- build:
+  `cargo build --profile dev-fast -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json --dir target\fret-diag-combobox-rtl-long-text-startup-prepared-measure-v3 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779215099640`; the gate now asserts intro/title,
+    title/description, description/content, and description/trigger spacing.

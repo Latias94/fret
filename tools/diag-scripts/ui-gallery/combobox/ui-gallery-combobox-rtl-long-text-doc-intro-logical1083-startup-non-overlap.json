@@ -15,7 +15,7 @@
     "target_hints": [
       "Starts directly on the focused Combobox RTL Long Text doc section at the observed 1624x1128 physical startup window on a 1.5x scale display.",
       "Captures the early startup viewport before any manual resize recovery.",
-      "Asserts the long docs intro owns enough measured height before the RTL Long Text section title and description."
+      "Asserts the long docs intro owns enough measured height before the RTL Long Text section title, description, and live preview content."
     ]
   },
   "steps": [
@@ -57,6 +57,22 @@
       "predicate": {
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-combobox-rtl-long-text-docsec-description" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-rtl-long-text-docsec-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-rtl-long-text-trigger" }
       },
       "timeout_frames": 600
     },
@@ -104,6 +120,32 @@
         "b_metric": "bottom",
         "comparison": "ge",
         "value_px": 8.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_pair_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-combobox-rtl-long-text-docsec-content" },
+        "b": { "kind": "test_id", "id": "ui-gallery-combobox-rtl-long-text-docsec-description" },
+        "a_metric": "top",
+        "b_metric": "bottom",
+        "comparison": "ge",
+        "value_px": 8.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_pair_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-combobox-rtl-long-text-trigger" },
+        "b": { "kind": "test_id", "id": "ui-gallery-combobox-rtl-long-text-docsec-description" },
+        "a_metric": "top",
+        "b_metric": "bottom",
+        "comparison": "ge",
+        "value_px": 20.0,
         "eps_px": 1.0
       }
     }

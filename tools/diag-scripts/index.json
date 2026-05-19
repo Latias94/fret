@@ -6627,7 +6627,7 @@
       "target_hints": [
         "Starts directly on the focused Combobox RTL Long Text doc section at the observed 1624x1128 physical startup window on a 1.5x scale display.",
         "Captures the early startup viewport before any manual resize recovery.",
-        "Asserts the long docs intro owns enough measured height before the RTL Long Text section title and description."
+        "Asserts the long docs intro owns enough measured height before the RTL Long Text section title, description, and live preview content."
       ]
     },
     {
