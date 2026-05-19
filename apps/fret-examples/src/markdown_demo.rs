@@ -15,7 +15,7 @@ use fret_core::{ImageColorSpace, Point, Px, SvgFit};
 use fret_markdown as markdown;
 use fret_ui::element::{
     AnyElement, ImageProps, LayoutQueryRegionProps, LayoutStyle, Length, PressableProps,
-    SvgIconProps, TextProps,
+    SvgIconProps,
 };
 use fret_ui::{Invalidation, Theme, ThemeConfig};
 use fret_ui_assets::ui::use_rgba8_image_state_in;
@@ -54,6 +54,14 @@ fn markdown_demo_paragraph_text<H: fret_ui::UiHost>(
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
     decl_text::text_paragraph(cx, text)
+}
+
+fn markdown_demo_image_placeholder_text<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+    foreground: fret_core::Color,
+) -> AnyElement {
+    decl_text::text_paragraph_break_words(cx, text).inherit_foreground(foreground)
 }
 
 #[derive(Debug)]
@@ -708,6 +716,7 @@ fn render_image_placeholder<H: fret_ui::UiHost>(
     let label = link.text.clone();
 
     let text = Arc::<str>::from(format!("{} ({})", label, link.href));
+    let foreground = theme.color_token("muted-foreground");
     if let Some(on_link_activate) = on_link_activate {
         let mut props = PressableProps::default();
         props.a11y.role = Some(fret_core::SemanticsRole::Button);
@@ -720,29 +729,15 @@ fn render_image_placeholder<H: fret_ui::UiHost>(
                 on_link_activate(host, cx, reason, link.clone());
             }));
 
-            vec![cx.text_props(TextProps {
-                layout: Default::default(),
-                text: text.clone(),
-                style: None,
-                color: Some(theme.color_token("muted-foreground")),
-                align: fret_core::TextAlign::Start,
-                wrap: fret_core::TextWrap::Word,
-                overflow: fret_core::TextOverflow::Clip,
-                ink_overflow: Default::default(),
-            })]
+            vec![markdown_demo_image_placeholder_text(
+                cx,
+                text.clone(),
+                foreground,
+            )]
         });
     }
 
-    cx.text_props(TextProps {
-        layout: Default::default(),
-        text,
-        style: None,
-        color: Some(theme.color_token("muted-foreground")),
-        align: fret_core::TextAlign::Start,
-        wrap: fret_core::TextWrap::Word,
-        overflow: fret_core::TextOverflow::Clip,
-        ink_overflow: Default::default(),
-    })
+    markdown_demo_image_placeholder_text(cx, text, foreground)
 }
 
 fn apply_markdown_demo_theme_tokens(app: &mut KernelApp) {

@@ -439,8 +439,9 @@ Exit criteria:
   header, fixed control, and overlay proof `cx.text(...)` paths.
   2026-05-17 markdown proof chrome text result: `markdown_demo` now keeps fixed title, preview
   description, and toolbar state text on shared section-chrome, paragraph, and control-readout
-  roles. Markdown body/image rendering remains a text-capability proof surface instead of being
-  folded into the fixed-chrome role migration.
+  roles. 2026-05-19 markdown image placeholder result: image placeholder copy now uses the shared
+  paragraph-break-words role with app-owned muted foreground, removing the last `markdown_demo`
+  direct `TextProps` residual while keeping Markdown body rendering surface-owned.
   2026-05-17 residual bare text capability result: a focused `fret-examples` source test now keeps
   remaining bare `cx.text(...)` / `TextProps::new(...)` paths limited to explicit text/IME
   capability proofs. This prevents both accidental fixed-chrome regressions and mechanical

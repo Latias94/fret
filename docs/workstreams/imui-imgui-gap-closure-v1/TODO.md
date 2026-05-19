@@ -471,8 +471,10 @@ Readiness order for the next locally testable review slices:
    2026-05-17 markdown proof chrome text follow-up: `markdown_demo` now routes its fixed demo
    title through `text_section_chrome_label(...)`, its explanatory preview copy through
    `text_paragraph(...)`, and its toolbar/readout state through `text_control_readout(...)`.
-   Markdown body rendering, image placeholders, and text capability probes stay owned by the
-   Markdown surface instead of being mechanically rewritten.
+   2026-05-19 markdown image placeholder text follow-up: Markdown body rendering stays owned by
+   the Markdown surface, but image placeholder copy now uses `text_paragraph_break_words(...)`
+   with app-owned muted foreground instead of local `TextProps`, so long image URLs can break under
+   narrow resize without keeping `markdown_demo` in the direct-text residual allowlist.
    2026-05-17 residual bare text capability follow-up: the remaining first-party
    `apps/fret-examples/src` bare `cx.text(...)` / `TextProps::new(...)` paths are now source-gated
    to explicit text/IME/rendering capability proofs only: `components_gallery` text smoke/font

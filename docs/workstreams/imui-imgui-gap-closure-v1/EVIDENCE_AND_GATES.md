@@ -1799,6 +1799,32 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
 - `git diff --check` passed.
 
+2026-05-19 markdown image placeholder text-role slice:
+
+- Source gap before fix: `markdown_demo` still kept image placeholder text in local direct
+  `TextProps`, including the clickable placeholder path. These placeholders can contain long image
+  URLs, so they should not use a fixed single-line role, but they also should not bypass the shared
+  text-role contract.
+- `markdown_demo_image_placeholder_text(...)` now routes placeholder copy through
+  `decl_text::text_paragraph_break_words(...)` and preserves the demo-owned muted foreground via
+  `inherit_foreground(...)`. The optional `Pressable` activation/semantics wrapper remains local.
+- `apps/fret-examples/tests/markdown_demo_surface.rs`,
+  `apps/fret-examples/tests/text_role_residual_surface.rs`, and
+  `tools/gate_imui_workstream_source.py` guard the migration and remove `markdown_demo` from the
+  residual direct text allowlist.
+- First post-fix focused `cargo nextest` runs for `markdown_demo_surface` and
+  `text_role_residual_surface` timed out while background Cargo/Rustc compilation continued. Retried
+  after Cargo/Rustc exited.
+- `cargo fmt --check -p fret-examples` passed.
+- `cargo check -p fret-examples --lib` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo nextest run -p fret-examples --test markdown_demo_surface
+  markdown_demo_chrome_text_uses_shared_roles --no-fail-fast` passed.
+- `cargo nextest run -p fret-examples --test text_role_residual_surface
+  remaining_bare_text_in_fret_examples_is_explicit_capability_surface --no-fail-fast` passed.
+- `git diff --check` passed.
+
 2026-05-17 fret-examples residual bare text capability slice:
 
 - `cargo fmt -p fret-examples` passed.
