@@ -1286,3 +1286,13 @@ date: 2026-05-12
     this policy mismatch: all three scripts passed, but the suite failed a retained-only
     non-retained-shift tail check. After rebuilding `fretboard-dev`, the suite passed 3/3 with no
     retained-tail check file.
+- [x] Gate screenshot-corrected Combobox RTL Long Text startup intro overlap.
+  - Result:
+    `ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json` starts
+    directly on the focused `RTL Long Text` Combobox docs section at logical `1083x752`, matching
+    the latest `1624x1128` screenshot on a 1.5x scale display. It captures layout, screenshot, and
+    bundle evidence before resize recovery, then asserts the retained docs intro does not overlap
+    the `RTL Long Text` title and that title/description spacing remains stable. The slice also
+    keeps a `994x466` Popup companion to cover the earlier scale interpretation. Current runtime did
+    not reproduce the user-visible overlap; the corrected gate locks the actual screenshot target
+    that the earlier Popup and Basic startup gates did not cover.

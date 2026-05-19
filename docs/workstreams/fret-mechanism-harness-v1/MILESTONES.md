@@ -2971,3 +2971,47 @@ Status: complete for AI transcript torture scroll mutation coverage and suite ta
   `target/fret-diag-ai-transcript-retained-cargo-policy-v2/sessions/1779203319147-101240/suite.summary.json`;
   3/3 scripts passed, the torture script run id is `1779203465969`, and no retained-tail
   non-retained-shift check file was produced.
+
+## M140: Combobox RTL Long Text Startup Non-Overlap Gate
+
+Status: complete for the screenshot-corrected Combobox RTL Long Text cold-start overlap coverage.
+
+- The latest user screenshot showed the focused Combobox `RTL Long Text` section title visually
+  colliding with the long docs intro, not the earlier Popup title. The previous Popup/full-page
+  startup gates therefore covered the right class but the wrong section target.
+- Added
+  `ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json`, a focused
+  startup gate with `FRET_UI_GALLERY_START_SECTION=RTL Long Text` and
+  `FRET_UI_GALLERY_MAIN_WINDOW_SIZE=1083x752`, matching the observed `1624x1128` physical
+  screenshot at a 1.5x scale factor.
+- The gate captures layout, screenshot, and bundle evidence before manual resize recovery, then
+  asserts that `ui-gallery-doc-page-intro` and
+  `ui-gallery-combobox-rtl-long-text-docsec-title` do not overlap, the title starts at least
+  `16px` after the intro bottom, and the section description starts at least `8px` after the title.
+- Added the `994x466` Popup startup companion as a secondary scale-interpretation probe and
+  promoted both scripts into `ui-gallery-combobox-geometry-placement` with direct
+  `fret-diag-protocol` roundtrip coverage.
+- Current `dev-fast` runtime did not reproduce the overlap after the prior text repair-frame clip
+  work. The focused RTL Long Text run captured a clean frame 3 screenshot and passed with run id
+  `1779207094769`; the full Combobox geometry placement suite passed with the new RTL Long Text run
+  id `1779208395010`.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-combobox-geometry-placement\suite.json > $null`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python tools\check_diag_scripts_registry.py`; and
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_popup_doc_intro_logical994_startup_non_overlap script_v2_roundtrip_ui_gallery_combobox_rtl_long_text_doc_intro_logical1083_startup_non_overlap --no-fail-fast --no-capture`
+  with Nextest run id `6619d838-cd48-41d2-b279-ede4466fc291`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json --dir target\fret-diag-combobox-rtl-long-text-doc-intro-logical1083-gate-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779207094769`, AI packet
+  `target/fret-diag-combobox-rtl-long-text-doc-intro-logical1083-gate-v1/sessions/1779207086203-106128/1779207094769/ai.packet`,
+  and pack
+  `target/fret-diag-combobox-rtl-long-text-doc-intro-logical1083-gate-v1/sessions/1779207086203-106128/share/1779207094769.zip`.
+- Full Combobox geometry placement suite pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-combobox-geometry-placement --dir target\fret-diag-combobox-geometry-placement-rtl-long-text-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with suite summary
+  `target/fret-diag-combobox-geometry-placement-rtl-long-text-v1/sessions/1779208245269-120048/suite.summary.json`;
+  12/12 scripts passed, the new RTL Long Text startup run id is `1779208395010`, and the new Popup
+  logical994 run id is `1779208377600`.

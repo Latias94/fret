@@ -175,6 +175,13 @@ date: 2026-05-12
   short-height companion for the Popup docs intro path. It starts at logical `663x311`, captures
   early layout/screenshot/bundle evidence before resize recovery, and proves the intro leaves a
   `24px` measured gap before the Popup title under a `>= 16px` oracle.
+- Combobox RTL Long Text startup intro update:
+  `ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json` closes the
+  screenshot-corrected focused-section companion for the latest report. It starts at logical
+  `1083x752` with `FRET_UI_GALLERY_START_SECTION=RTL Long Text`, captures early
+  layout/screenshot/bundle evidence, and asserts the long docs intro does not overlap the
+  `RTL Long Text` title before resize recovery. The `994x466` Popup companion remains in the
+  geometry-placement suite to cover the earlier physical-size interpretation.
 - AI transcript non-retained scroll update:
   `ui-gallery-ai-transcript-torture-scroll.json` now gates deterministic large-transcript mutation
   on the non-retained AI transcript path by asserting a hidden message-count semantics value moves

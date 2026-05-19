@@ -5758,3 +5758,54 @@ Next slice recommendation:
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-ai-transcript-retained --dir target\fret-diag-ai-transcript-retained-cargo-policy-v2 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
   - result: passed after rebuilding `fretboard-dev`; 3/3 scripts; torture run id
     `1779203465969`; no `check.vlist_window_shifts_non_retained_max.json` tail file was produced.
+
+## Combobox RTL Long Text Startup Intro Non-Overlap Gate
+
+- invariant:
+  the Combobox docs intro must reserve enough measured vertical space before the focused
+  `RTL Long Text` section title on cold startup, before a manual resize can repair stale text
+  layout.
+- finding:
+  the latest user screenshot corrected the target from `Popup` to `RTL Long Text`: the title
+  overlapped the long docs intro while the page was focused on that section. Current `dev-fast`
+  diagnostics did not reproduce the overlap after the prior text repair-frame clipping work, but
+  the old gate set had no direct RTL Long Text intro/title startup assertion.
+- diagnostics surface:
+  `ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json` starts with
+  `FRET_UI_GALLERY_START_SECTION=RTL Long Text` and `FRET_UI_GALLERY_MAIN_WINDOW_SIZE=1083x752`,
+  captures layout/screenshot/bundle evidence, asserts intro/title non-overlap, asserts a `>= 16px`
+  intro-to-title gap, and asserts a `>= 8px` title-to-description gap. The companion
+  `ui-gallery-combobox-popup-doc-intro-logical994-startup-non-overlap.json` keeps the earlier
+  physical-size interpretation covered for Popup.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json`,
+  `tools/diag-scripts/ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json`,
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-doc-intro-logical994-startup-non-overlap.json`,
+  `tools/diag-scripts/ui-gallery-combobox-popup-doc-intro-logical994-startup-non-overlap.json`,
+  `tools/diag-scripts/suites/ui-gallery-combobox-geometry-placement/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused RTL Long Text AI packet
+  `target/fret-diag-combobox-rtl-long-text-doc-intro-logical1083-gate-v1/sessions/1779207086203-106128/1779207094769/ai.packet`;
+  focused RTL Long Text pack
+  `target/fret-diag-combobox-rtl-long-text-doc-intro-logical1083-gate-v1/sessions/1779207086203-106128/share/1779207094769.zip`;
+  full suite summary
+  `target/fret-diag-combobox-geometry-placement-rtl-long-text-v1/sessions/1779208245269-120048/suite.summary.json`.
+- JSON/registry/format:
+  `python -m json.tool tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json > $null`,
+  `python -m json.tool tools\diag-scripts\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json > $null`,
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-combobox-geometry-placement\suite.json > $null`,
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`,
+  and `python tools\check_diag_scripts_registry.py`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_popup_doc_intro_logical994_startup_non_overlap script_v2_roundtrip_ui_gallery_combobox_rtl_long_text_doc_intro_logical1083_startup_non_overlap --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `6619d838-cd48-41d2-b279-ede4466fc291`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json --dir target\fret-diag-combobox-rtl-long-text-doc-intro-logical1083-gate-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779207094769`.
+- full Combobox geometry placement suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-combobox-geometry-placement --dir target\fret-diag-combobox-geometry-placement-rtl-long-text-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; 12/12 scripts; RTL Long Text startup run id `1779208395010`; Popup logical994
+    run id `1779208377600`.

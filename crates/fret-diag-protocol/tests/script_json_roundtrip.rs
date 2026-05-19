@@ -505,6 +505,21 @@ fn script_v2_roundtrip_ui_gallery_combobox_popup_doc_intro_short_startup_non_ove
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_combobox_popup_doc_intro_logical994_startup_non_overlap() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-combobox-popup-doc-intro-logical994-startup-non-overlap.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_combobox_rtl_long_text_doc_intro_logical1083_startup_non_overlap()
+{
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_combobox_full_page_startup_intro_non_overlap() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-combobox-full-page-startup-intro-non-overlap.json"

@@ -6402,6 +6402,33 @@
       ]
     },
     {
+      "id": "ui-gallery-combobox-popup-doc-intro-logical994-startup-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-doc-intro-logical994-startup-non-overlap.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-combobox-geometry-placement"
+      ],
+      "tags": [
+        "combobox",
+        "gate",
+        "layout",
+        "popup",
+        "shadcn",
+        "startup",
+        "text",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the focused Combobox Popup doc section at the observed 994x466 logical startup window.",
+        "Complements the 671x460 and 663x311 startup probes by treating the user screenshot size as logical pixels instead of display-scaled physical pixels.",
+        "Captures the early startup frames before any manual resize recovery and asserts the long docs intro owns enough measured height before the Popup section title."
+      ]
+    },
+    {
       "id": "ui-gallery-combobox-popup-doc-intro-non-overlap",
       "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-doc-intro-non-overlap.json",
       "required_capabilities": [
@@ -6574,6 +6601,34 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-combobox-geometry-placement"
+      ],
+      "tags": [
+        "combobox",
+        "gate",
+        "layout",
+        "long_text",
+        "rtl",
+        "shadcn",
+        "startup",
+        "text",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the focused Combobox RTL Long Text doc section at the observed 1624x1128 physical startup window on a 1.5x scale display.",
+        "Captures the early startup viewport before any manual resize recovery.",
+        "Asserts the long docs intro owns enough measured height before the RTL Long Text section title and description."
+      ]
     },
     {
       "id": "ui-gallery-combobox-rtl-long-text-geometry",
