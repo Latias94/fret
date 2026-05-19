@@ -807,6 +807,18 @@ fn patch_alert_text_style_recursive(
     wrap: TextWrap,
     overflow: TextOverflow,
 ) {
+    patch_alert_text_style_recursive_scoped(el, px, line_height, weight, wrap, overflow, false);
+}
+
+fn patch_alert_text_style_recursive_scoped(
+    el: &mut AnyElement,
+    px: Px,
+    line_height: Px,
+    weight: FontWeight,
+    wrap: TextWrap,
+    overflow: TextOverflow,
+    role_scope_active: bool,
+) {
     fn patch_text_style(
         style: &mut Option<fret_core::TextStyle>,
         px: Px,
@@ -826,27 +838,42 @@ fn patch_alert_text_style_recursive(
         *style = Some(style_value);
     }
 
+    let role_scope_active = role_scope_active || el.inherited_text_style.is_some();
     match &mut el.kind {
         ElementKind::Text(props) => {
-            patch_text_style(&mut props.style, px, line_height, weight);
-            props.wrap = wrap;
-            props.overflow = overflow;
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height, weight);
+                props.wrap = wrap;
+                props.overflow = overflow;
+            }
         }
         ElementKind::StyledText(props) => {
-            patch_text_style(&mut props.style, px, line_height, weight);
-            props.wrap = wrap;
-            props.overflow = overflow;
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height, weight);
+                props.wrap = wrap;
+                props.overflow = overflow;
+            }
         }
         ElementKind::SelectableText(props) => {
-            patch_text_style(&mut props.style, px, line_height, weight);
-            props.wrap = wrap;
-            props.overflow = overflow;
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height, weight);
+                props.wrap = wrap;
+                props.overflow = overflow;
+            }
         }
         _ => {}
     }
 
     for child in &mut el.children {
-        patch_alert_text_style_recursive(child, px, line_height, weight, wrap, overflow);
+        patch_alert_text_style_recursive_scoped(
+            child,
+            px,
+            line_height,
+            weight,
+            wrap,
+            overflow,
+            role_scope_active,
+        );
     }
 }
 
@@ -1026,7 +1053,7 @@ mod tests {
     use fret_ui::element::{
         CrossAlign, ElementKind, GridProps, InsetEdge, LayoutStyle, Length, SpacingLength,
     };
-    use fret_ui_kit::declarative::icon as decl_icon;
+    use fret_ui_kit::declarative::{icon as decl_icon, text as decl_text};
 
     fn contains_foreground_scope(el: &AnyElement) -> bool {
         matches!(el.kind, ElementKind::ForegroundScope(_))
@@ -1290,6 +1317,34 @@ mod tests {
         assert_eq!(style.letter_spacing_em, Some(-0.025));
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
+    }
+
+    #[test]
+    fn alert_title_children_preserve_shared_text_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(260.0), Px(100.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            AlertTitle::new_children([decl_text::text_chrome_title(cx, "Alert role title")])
+                .into_element(cx)
+        });
+
+        let text = find_text_element(&element, "Alert role title")
+            .expect("expected AlertTitle role child text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(text.inherited_text_style.is_some());
     }
 
     #[test]

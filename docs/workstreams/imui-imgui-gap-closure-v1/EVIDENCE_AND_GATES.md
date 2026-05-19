@@ -3939,6 +3939,40 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.
 
+2026-05-19 shadcn AlertTitle role-preservation slice:
+
+- Source gap before fix: `AlertTitle` recursively wrote title typography into every descendant
+  text leaf. That kept bare alert titles ergonomic, but it also overwrote shared role children such
+  as `text_chrome_title(...)`, even though those already carry title-family single-line ellipsis
+  semantics.
+- `patch_alert_text_style_recursive(...)` now delegates to a role-scope-aware helper. It still
+  patches bare `Text`, `StyledText`, and `SelectableText` children so custom AlertTitle content gets
+  the shadcn alert-title fallback, but it skips any subtree that already carries inherited text-role
+  metadata.
+- `alert_title_children_patch_rich_text_with_title_typography` and
+  `alert_title_children_preserve_interactive_spans_under_title_scope` keep the strong slot
+  fallback; `alert_title_children_preserve_shared_text_role_contracts` proves shared title-role
+  children keep `style: None`, ellipsis overflow, and role metadata.
+- `tools/gate_imui_workstream_source.py` now guards the AlertTitle helper/test shape.
+- Red run before fix:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  alert_title_children_preserve_shared_text_role_contracts
+  alert_title_children_patch_rich_text_with_title_typography
+  alert_title_children_preserve_interactive_spans_under_title_scope --no-fail-fast` failed because
+  the role-preservation test observed a leaf `style`.
+- Post-fix focused run passed:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  alert_title_children_preserve_shared_text_role_contracts
+  alert_title_children_patch_rich_text_with_title_typography
+  alert_title_children_preserve_interactive_spans_under_title_scope --no-fail-fast`.
+- `cargo fmt --check -p fret-ui-shadcn` passed.
+- `cargo check -p fret-ui-shadcn --lib` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.
+
 2026-05-19 shadcn CardTitle role-preservation slice:
 
 - Source gap before fix: `CardTitle::new_children(...)` intentionally patched child text leaves to
