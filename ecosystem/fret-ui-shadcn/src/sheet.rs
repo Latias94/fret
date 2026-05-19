@@ -3,12 +3,12 @@ use std::marker::PhantomData;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, Px, TextOverflow, TextWrap};
+use fret_core::{Color, Corners, Edges, FontWeight, Px, TextOverflow, TextWrap};
 use fret_runtime::Model;
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
-    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, MarginEdge, MarginEdges, Overflow,
-    PositionStyle, SemanticsDecoration, SemanticsProps, SizeStyle,
+    AnyElement, ContainerProps, ElementKind, InsetStyle, LayoutStyle, Length, MarginEdge,
+    MarginEdges, Overflow, PositionStyle, SemanticsDecoration, SemanticsProps, SizeStyle,
 };
 use fret_ui::overlay_placement::Side;
 use fret_ui::{
@@ -1922,14 +1922,28 @@ where
 }
 
 /// shadcn/ui `SheetTitle` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SheetTitle {
-    text: Arc<str>,
+    content: SheetTitleContent,
+}
+
+#[derive(Debug)]
+enum SheetTitleContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
 }
 
 impl SheetTitle {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            content: SheetTitleContent::Text(text.into()),
+        }
+    }
+
+    pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: SheetTitleContent::Children(children.into_iter().collect()),
+        }
     }
 
     #[track_caller]
@@ -1948,14 +1962,115 @@ impl SheetTitle {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-        ui::text(self.text)
-            .text_size_px(px)
-            .line_height_px(line_height)
-            .font_semibold()
-            .text_color(ColorRef::Color(fg))
-            .wrap(TextWrap::Word)
-            .overflow(TextOverflow::Clip)
-            .into_element(cx)
+        match self.content {
+            SheetTitleContent::Text(text) => ui::text(text)
+                .text_size_px(px)
+                .line_height_px(line_height)
+                .font_semibold()
+                .text_color(ColorRef::Color(fg))
+                .wrap(TextWrap::Word)
+                .overflow(TextOverflow::Clip)
+                .into_element(cx),
+            SheetTitleContent::Children(mut children) => {
+                for child in &mut children {
+                    patch_sheet_title_text_style_recursive(child, px, line_height, fg);
+                }
+
+                match children.len() {
+                    0 => ui::text("")
+                        .text_size_px(px)
+                        .line_height_px(line_height)
+                        .font_semibold()
+                        .text_color(ColorRef::Color(fg))
+                        .wrap(TextWrap::Word)
+                        .overflow(TextOverflow::Clip)
+                        .into_element(cx),
+                    1 => children.pop().expect("children.len() == 1"),
+                    _ => ui::v_flex(move |_cx| children)
+                        .gap(Space::N0)
+                        .items_start()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .into_element(cx),
+                }
+            }
+        }
+    }
+}
+
+fn patch_sheet_title_text_style_recursive(
+    el: &mut AnyElement,
+    px: Px,
+    line_height: Px,
+    color: Color,
+) {
+    patch_sheet_title_text_style_recursive_scoped(el, px, line_height, color, false);
+}
+
+fn patch_sheet_title_text_style_recursive_scoped(
+    el: &mut AnyElement,
+    px: Px,
+    line_height: Px,
+    color: Color,
+    role_scope_active: bool,
+) {
+    fn patch_text_style(style: &mut Option<fret_core::TextStyle>, px: Px, line_height: Px) {
+        let mut style_value = style.take().unwrap_or_default();
+        style_value.size = px;
+        style_value.weight = FontWeight::SEMIBOLD;
+        style_value.line_height = Some(line_height);
+        style_value.line_height_em = None;
+        *style = Some(style_value);
+    }
+
+    fn ensure_fill_width(layout: &mut fret_ui::element::LayoutStyle) {
+        if matches!(layout.size.width, Length::Auto) {
+            layout.size.width = Length::Fill;
+        }
+        if layout.size.min_width.is_none() {
+            layout.size.min_width = Some(Length::Px(Px(0.0)));
+        }
+    }
+
+    let role_scope_active = role_scope_active || el.inherited_text_style.is_some();
+    match &mut el.kind {
+        ElementKind::Text(props) => {
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height);
+                ensure_fill_width(&mut props.layout);
+                props.color = Some(color);
+                props.wrap = TextWrap::Word;
+                props.overflow = TextOverflow::Clip;
+            }
+        }
+        ElementKind::StyledText(props) => {
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height);
+                ensure_fill_width(&mut props.layout);
+                props.color = Some(color);
+                props.wrap = TextWrap::Word;
+                props.overflow = TextOverflow::Clip;
+            }
+        }
+        ElementKind::SelectableText(props) => {
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height);
+                ensure_fill_width(&mut props.layout);
+                props.color = Some(color);
+                props.wrap = TextWrap::Word;
+                props.overflow = TextOverflow::Clip;
+            }
+        }
+        _ => {}
+    }
+
+    for child in &mut el.children {
+        patch_sheet_title_text_style_recursive_scoped(
+            child,
+            px,
+            line_height,
+            color,
+            role_scope_active,
+        );
     }
 }
 
@@ -2003,6 +2118,7 @@ mod tests {
     use fret_ui::element::{ContainerProps, ElementKind, PressableProps};
     use fret_ui_kit::UiExt as _;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
+    use fret_ui_kit::declarative::text as decl_text;
     use fret_ui_kit::ui::UiElementSinkExt as _;
 
     fn contains_plain_text(el: &AnyElement, needle: &str) -> bool {
@@ -2013,6 +2129,24 @@ mod tests {
                 .iter()
                 .any(|child| contains_plain_text(child, needle)),
         }
+    }
+
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &el.kind
+            && props.text.as_ref() == needle
+        {
+            return Some(el);
+        }
+        el.children
+            .iter()
+            .find_map(|child| find_text_element(child, needle))
+    }
+
+    fn find_first_styled_text(el: &AnyElement) -> Option<&fret_ui::element::StyledTextProps> {
+        if let ElementKind::StyledText(props) = &el.kind {
+            return Some(props);
+        }
+        el.children.iter().find_map(find_first_styled_text)
     }
 
     fn scene_contains_full_window_solid_quad(
@@ -2135,6 +2269,80 @@ mod tests {
             element.inherited_foreground,
             Some(fret_ui_kit::typography::muted_foreground_color(&theme))
         );
+    }
+
+    #[test]
+    fn sheet_title_children_patch_rich_text_with_title_typography() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(140.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let rich = fret_core::AttributedText::new(
+                Arc::<str>::from("Edit profile sheet title"),
+                Arc::<[fret_core::TextSpan]>::from([fret_core::TextSpan::new(
+                    "Edit profile sheet title".len(),
+                )]),
+            );
+
+            SheetTitle::new_children([cx.styled_text(rich)]).into_element(cx)
+        });
+
+        let props = find_first_styled_text(&element)
+            .expect("expected SheetTitle children to keep the rich text node");
+        let style = props
+            .style
+            .as_ref()
+            .expect("expected SheetTitle children to receive explicit title text style");
+        let theme = Theme::global(&app).snapshot();
+        let expected_px = theme
+            .metric_by_key("component.sheet.title_px")
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or_else(|| theme.metric_token("font.size"));
+        let expected_line_height = theme
+            .metric_by_key("component.sheet.title_line_height")
+            .or_else(|| theme.metric_by_key("font.line_height"))
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
+        let expected_fg = theme
+            .color_by_key("foreground")
+            .unwrap_or_else(|| theme.color_token("foreground"));
+
+        assert_eq!(style.size, expected_px);
+        assert_eq!(style.weight, fret_core::FontWeight::SEMIBOLD);
+        assert_eq!(style.line_height, Some(expected_line_height));
+        assert_eq!(props.color, Some(expected_fg));
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+    }
+
+    #[test]
+    fn sheet_title_children_preserve_shared_text_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(140.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            SheetTitle::new_children([decl_text::text_chrome_title(cx, "Sheet role title")])
+                .into_element(cx)
+        });
+
+        let text = find_text_element(&element, "Sheet role title")
+            .expect("expected SheetTitle role child text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(text.inherited_text_style.is_some());
     }
 
     #[test]

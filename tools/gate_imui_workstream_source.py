@@ -3574,6 +3574,19 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/sheet.rs"),
+            required=[
+                "pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self",
+                "fn patch_sheet_title_text_style_recursive_scoped(",
+                "let role_scope_active = role_scope_active || el.inherited_text_style.is_some();",
+                "if !role_scope_active {\n                patch_text_style(&mut props.style, px, line_height);",
+                "sheet_title_children_patch_rich_text_with_title_typography",
+                "sheet_title_children_preserve_shared_text_role_contracts",
+                "sheet_description_scopes_inherited_text_style",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-ai/src/elements/prompt_input.rs"),
             required=[
                 "return crate::elements::empty_placeholder(cx);",

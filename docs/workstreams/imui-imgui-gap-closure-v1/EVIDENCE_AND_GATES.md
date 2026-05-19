@@ -3939,6 +3939,36 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.
 
+2026-05-19 shadcn SheetTitle children-role slice:
+
+- Source gap before fix: `SheetTitle` only accepted a string payload, so sheet titles could not
+  carry caller-supplied shared title/chrome role children. That left sheet composition behind the
+  dialog/title-slot contract now used by `DialogTitle`, `AlertDialogTitle`, `CardTitle`, and
+  `AlertTitle`.
+- `SheetTitle` now exposes `new_children(...)`. The string path preserves existing shadcn
+  sheet-title defaults; the children path patches bare `Text`, `StyledText`, and `SelectableText`
+  children with sheet-title typography/foreground, but skips subtrees that already carry inherited
+  text-role metadata.
+- `sheet_title_children_patch_rich_text_with_title_typography` proves the strong fallback remains;
+  `sheet_title_children_preserve_shared_text_role_contracts` proves a `text_chrome_title(...)`
+  child keeps `style: None`, `color: None`, ellipsis overflow, and role metadata; and
+  `sheet_description_scopes_inherited_text_style` stays in the focused run to prove the existing
+  description scope is unchanged.
+- `tools/gate_imui_workstream_source.py` now guards the SheetTitle children API, scoped helper, and
+  tests.
+- Focused run passed:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  sheet_title_children_patch_rich_text_with_title_typography
+  sheet_title_children_preserve_shared_text_role_contracts
+  sheet_description_scopes_inherited_text_style --no-fail-fast`.
+- `cargo fmt --check -p fret-ui-shadcn` passed.
+- `cargo check -p fret-ui-shadcn --lib` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.
+
 2026-05-19 shadcn DialogTitle children-role slice:
 
 - Source gap before fix: `DialogTitle` only accepted a string payload, so callers could not provide
