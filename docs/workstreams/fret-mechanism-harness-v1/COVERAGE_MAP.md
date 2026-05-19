@@ -170,6 +170,11 @@ date: 2026-05-12
   auto-height text blob grows during paint, while
   `ui-gallery-combobox-full-page-startup-intro-non-overlap.json` covers the full Combobox page
   startup path that can visually overlap before manual resize recovery.
+- Combobox short-startup intro update:
+  `ui-gallery-combobox-popup-doc-intro-short-startup-non-overlap.json` closes the screenshot-shaped
+  short-height companion for the Popup docs intro path. It starts at logical `663x311`, captures
+  early layout/screenshot/bundle evidence before resize recovery, and proves the intro leaves a
+  `24px` measured gap before the Popup title under a `>= 16px` oracle.
 - Structural slot hygiene update:
   Recipe-internal child classification now uses `AnyElement::component_slot` for the discovered
   shadcn structural markers: AlertAction, CardAction, CardFooter, AvatarBadge, ItemMedia, and

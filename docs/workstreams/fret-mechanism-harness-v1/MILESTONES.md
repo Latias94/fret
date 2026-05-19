@@ -2896,3 +2896,42 @@ Status: complete for Command Basic modal overlay/focus runtime coverage.
   with suite summary
   `target/fret-diag-ui-gallery-command-suite-dialog-overlay-focus-v1/sessions/1779196833923-91304/suite.summary.json`;
   the new CommandDialog script run id is `1779196993347`.
+
+## M138: Combobox Short Startup Intro Non-Overlap Gate
+
+Status: complete for screenshot-derived short-height startup coverage on the Combobox Popup docs
+intro path.
+
+- Added `ui-gallery-combobox-popup-doc-intro-short-startup-non-overlap.json` plus a top-level
+  redirect, then promoted it into the `ui-gallery-combobox-geometry-placement` suite with direct
+  `fret-diag-protocol` roundtrip coverage.
+- The gate starts directly on the Combobox Popup section at logical `663x311`, matching the
+  observed `994x466` screenshot on a 1.5x scale display. It captures layout, screenshot, and bundle
+  evidence at early startup before any manual resize recovery.
+- No current runtime overlap defect was reproduced after the text repair-frame clipping work. The
+  focused run captured the relevant layout at frame 3: `ui-gallery-doc-page-intro.bottom =
+  379.3333`, `docsec-popup-title.top = 403.3333`, so the measured gap is `24px` and satisfies the
+  `>= 16px` gate.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-popup-doc-intro-short-startup-non-overlap.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-combobox-popup-doc-intro-short-startup-non-overlap.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-combobox-geometry-placement\suite.json > $null`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python tools\check_diag_scripts_registry.py`;
+  and
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_popup_doc_intro_short_startup_non_overlap --no-fail-fast --no-capture`
+  with Nextest run id `e92bb8b8-cf66-47b5-8281-1fa91f73c6b3`.
+- Build pass:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-popup-doc-intro-short-startup-non-overlap.json --dir target\fret-diag-combobox-popup-doc-intro-short-startup-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779198569025`, AI packet
+  `target/fret-diag-combobox-popup-doc-intro-short-startup-v1/sessions/1779198558655-90216/1779198569025/ai.packet`,
+  and pack
+  `target/fret-diag-combobox-popup-doc-intro-short-startup-v1/sessions/1779198558655-90216/share/1779198569025.zip`.
+- Full Combobox geometry placement suite pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-combobox-geometry-placement --dir target\fret-diag-combobox-geometry-placement-short-startup-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with suite summary
+  `target/fret-diag-combobox-geometry-placement-short-startup-v1/sessions/1779198616098-23160/suite.summary.json`;
+  10/10 scripts passed, `scripts_with_evidence=9`, and the new short-startup script run id is
+  `1779198792251`.

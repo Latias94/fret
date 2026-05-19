@@ -1268,3 +1268,11 @@ date: 2026-05-12
     to the `Open Menu` button. The first focused run exposed a diagnostics authoring issue rather
     than an overlay defect: the script asserted focus on the Button `.chrome` child, while the
     runtime correctly restored focus to the outer `role=button` semantics node.
+- [x] Gate screenshot-derived short-startup Combobox Popup intro non-overlap.
+  - Result:
+    `ui-gallery-combobox-popup-doc-intro-short-startup-non-overlap.json` starts directly on the
+    Combobox Popup section at logical `663x311`, derived from the observed `994x466` screenshot on
+    a 1.5x display scale, and captures layout/screenshot/bundle evidence before any manual resize
+    recovery. Current runtime did not reproduce the overlap; the new gate proves
+    `docsec-popup-title.top - ui-gallery-doc-page-intro.bottom = 24px`, keeps the assertion floor at
+    `>= 16px`, and complements the earlier `671x460` Popup/full-page startup gates.

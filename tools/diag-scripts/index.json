@@ -6408,6 +6408,32 @@
       ]
     },
     {
+      "id": "ui-gallery-combobox-popup-doc-intro-short-startup-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-doc-intro-short-startup-non-overlap.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-combobox-geometry-placement"
+      ],
+      "tags": [
+        "combobox",
+        "gate",
+        "layout",
+        "popup",
+        "shadcn",
+        "startup",
+        "text",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the focused Combobox Popup doc section at a short startup window derived from the observed 994x466 screenshot on a 1.5x scale display.",
+        "Captures the early startup frames before any manual resize recovery and asserts the long docs intro owns enough measured height before the Popup section title."
+      ]
+    },
+    {
       "id": "ui-gallery-combobox-popup-trigger",
       "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger.json",
       "required_capabilities": [
