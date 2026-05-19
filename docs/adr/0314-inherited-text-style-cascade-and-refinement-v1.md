@@ -74,6 +74,7 @@ Expected fields (v1 baseline) are the subset needed for common UI typography inh
 - slant,
 - line height / line height em,
 - letter spacing,
+- OpenType feature settings for subtree-wide UI defaults such as tabular numeric readouts,
 - vertical placement,
 - leading distribution,
 - optional base color,

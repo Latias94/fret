@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    AttributedText, FontId, FontWeight, Px, TextAlign, TextOverflow, TextStyle,
-    TextStyleRefinement, TextWrap,
+    AttributedText, FontId, FontWeight, Px, TextAlign, TextFontFeatureSetting, TextOverflow,
+    TextStyle, TextStyleRefinement, TextWrap,
 };
 use fret_ui::element::{
     AnyElement, LayoutStyle, Length, StyledTextProps, TextInkOverflow, TextProps,
@@ -58,6 +58,23 @@ pub(crate) fn text_chrome_title_refinement(theme: &Theme) -> TextStyleRefinement
 
 pub(crate) fn text_table_cell_emphasis_refinement(theme: &Theme) -> TextStyleRefinement {
     let mut refinement = text_sm_refinement(theme);
+    refinement.weight = Some(FontWeight::MEDIUM);
+    refinement
+}
+
+pub(crate) fn text_control_readout_tabular_refinement(theme: &Theme) -> TextStyleRefinement {
+    let mut refinement = text_sm_refinement(theme);
+    refinement.features.push(TextFontFeatureSetting {
+        tag: "tnum".into(),
+        value: 1,
+    });
+    refinement
+}
+
+pub(crate) fn text_control_readout_tabular_emphasis_refinement(
+    theme: &Theme,
+) -> TextStyleRefinement {
+    let mut refinement = text_control_readout_tabular_refinement(theme);
     refinement.weight = Some(FontWeight::MEDIUM);
     refinement
 }
@@ -369,6 +386,66 @@ pub fn text_status_message<H: UiHost>(
         }),
         refinement,
         foreground,
+    )
+}
+
+/// Declarative text helper for tabular control readouts.
+///
+/// Use this for data-table and dashboard counters that must keep stable digit widths while still
+/// staying single-line, shrinkable, muted, and ellipsized under resize.
+pub fn text_control_readout_tabular<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let (refinement, foreground) = {
+        let theme = Theme::global(&*cx.app);
+        (
+            text_control_readout_tabular_refinement(theme),
+            ui_typography::muted_foreground_color(theme),
+        )
+    };
+
+    ui_typography::scope_text_style_with_color(
+        cx.text_props(TextProps {
+            layout: shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+        foreground,
+    )
+}
+
+/// Declarative text helper for medium-weight tabular control readouts.
+///
+/// Use this for pagination and compact dashboard summaries where the count is primary within the
+/// control row. It preserves the same single-line resize contract as numeric readouts.
+pub fn text_control_readout_tabular_emphasis<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_control_readout_tabular_emphasis_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
     )
 }
 
@@ -1502,6 +1579,82 @@ mod tests {
         assert_eq!(
             el.inherited_foreground,
             Some(ui_typography::muted_foreground_color(theme))
+        );
+    }
+
+    #[test]
+    fn control_readout_tabular_text_uses_muted_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_control_readout_tabular(cx, "128 of 4096")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_control_readout_tabular(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(
+            el.inherited_text_style,
+            Some(text_control_readout_tabular_refinement(&theme))
+        );
+        assert!(el.inherited_text_style.as_ref().is_some_and(|style| {
+            style
+                .features
+                .iter()
+                .any(|feature| feature.tag.as_str() == "tnum" && feature.value == 1)
+        }));
+        assert_eq!(
+            el.inherited_foreground,
+            Some(ui_typography::muted_foreground_color(theme))
+        );
+    }
+
+    #[test]
+    fn control_readout_tabular_emphasis_text_uses_medium_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_control_readout_tabular_emphasis(cx, "Page 12 of 128")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_control_readout_tabular_emphasis(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(
+            el.inherited_text_style,
+            Some(text_control_readout_tabular_emphasis_refinement(&theme))
+        );
+        assert!(el.inherited_text_style.as_ref().is_some_and(|style| {
+            style
+                .features
+                .iter()
+                .any(|feature| feature.tag.as_str() == "tnum" && feature.value == 1)
+        }));
+        assert_eq!(
+            el.inherited_text_style
+                .as_ref()
+                .and_then(|style| style.weight),
+            Some(FontWeight::MEDIUM)
         );
     }
 

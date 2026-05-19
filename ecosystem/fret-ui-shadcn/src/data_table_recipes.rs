@@ -314,6 +314,20 @@ fn data_table_toolbar_readout<H: UiHost>(
     decl_text::text_control_readout(cx, text)
 }
 
+fn data_table_pagination_readout<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_control_readout_tabular(cx, text)
+}
+
+fn data_table_pagination_summary<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_control_readout_tabular_emphasis(cx, text)
+}
+
 /// shadcn/ui `DataTable` toolbar (recipe).
 ///
 /// This is a v1 convenience surface that wires common controls to `TableState`:
@@ -1785,18 +1799,8 @@ impl DataTablePagination {
             .into_element(cx);
 
         ui::h_row(move |cx| {
-            let theme = Theme::global(&*cx.app);
             let dir = use_direction(cx, None);
-            let muted_fg = theme.color_by_key("muted-foreground");
-            let mut text = ui::text(selected_label.clone())
-                .text_sm()
-                .tabular_nums()
-                .nowrap();
-            if let Some(color) = muted_fg {
-                text = text.text_color(ColorRef::Color(color));
-            }
-
-            let selected_text = text.into_element(cx);
+            let selected_text = data_table_pagination_readout(cx, selected_label.clone());
             let spacer = cx.spacer(fret_ui::element::SpacerProps::default());
 
             let page_size_group = ui::h_flex(move |cx| {
@@ -1825,20 +1829,12 @@ impl DataTablePagination {
                 .on_activate(prev_on_activate.clone())
                 .children([icon::icon(cx, rtl::chevron_inline_start(dir))])
                 .into_element(cx);
-            let page_summary = ui::h_flex(move |cx| {
-                vec![
-                    ui::text(page_label.clone())
-                        .text_sm()
-                        .font_medium()
-                        .tabular_nums()
-                        .nowrap()
-                        .into_element(cx),
-                ]
-            })
-            .layout(LayoutRefinement::default().w_px(Px(100.0)))
-            .items_center()
-            .justify_center()
-            .into_element(cx);
+            let page_summary =
+                ui::h_flex(move |cx| vec![data_table_pagination_summary(cx, page_label.clone())])
+                    .layout(LayoutRefinement::default().w_px(Px(100.0)))
+                    .items_center()
+                    .justify_center()
+                    .into_element(cx);
             let next_btn = Button::new("Go to next page")
                 .variant(ButtonVariant::Outline)
                 .size(ButtonSize::IconSm)
@@ -1955,6 +1951,19 @@ mod tests {
         );
     }
 
+    fn assert_has_tabular_feature(element: &AnyElement, label: &str) {
+        assert!(
+            element
+                .inherited_text_style
+                .as_ref()
+                .is_some_and(|style| style
+                    .features
+                    .iter()
+                    .any(|feature| feature.tag.as_str() == "tnum" && feature.value == 1)),
+            "{label} must inherit tabular numeric OpenType features"
+        );
+    }
+
     #[test]
     fn data_table_toolbar_fixed_text_uses_shared_roles() {
         let window = fret_core::AppWindowId::default();
@@ -1972,6 +1981,26 @@ mod tests {
             assert!(
                 readout.inherited_foreground.is_some(),
                 "toolbar readouts must inherit muted foreground"
+            );
+
+            let pagination_readout = data_table_pagination_readout(cx, "128 of 4096 selected");
+            assert_single_line_role(&pagination_readout, "pagination readout");
+            assert_has_tabular_feature(&pagination_readout, "pagination readout");
+            assert!(
+                pagination_readout.inherited_foreground.is_some(),
+                "pagination readouts must inherit muted foreground"
+            );
+
+            let pagination_summary = data_table_pagination_summary(cx, "Page 12 of 128");
+            assert_single_line_role(&pagination_summary, "pagination summary");
+            assert_has_tabular_feature(&pagination_summary, "pagination summary");
+            assert_eq!(
+                pagination_summary
+                    .inherited_text_style
+                    .as_ref()
+                    .and_then(|style| style.weight),
+                Some(fret_core::FontWeight::MEDIUM),
+                "pagination summaries must keep the upstream-like medium emphasis"
             );
         });
     }

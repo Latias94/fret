@@ -4088,10 +4088,6 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   `style`/`color` empty, carry inherited text-role typography, stay shrinkable with
   `min-width: 0`, and use single-line ellipsis. The readout path also proves muted foreground is
   inherited.
-- Pagination footer text remains local in this slice because the current inherited text-role
-  refinement surface cannot yet carry OpenType numeric features such as `tabular-nums`; moving that
-  to a generic readout role would hide a visual/behavioral regression instead of fixing the role
-  system.
 - Focused gates passed: `cargo fmt --check -p fret-ui-shadcn`; `cargo nextest run -p
   fret-ui-shadcn --lib data_table_toolbar_fixed_text_uses_shared_roles --no-fail-fast`; `cargo
   check -p fret-ui-shadcn --lib`; `python -m py_compile tools\gate_imui_workstream_source.py`;
@@ -4100,6 +4096,44 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - Verification note: focused shadcn nextest timed out twice while Cargo/Rustc still held build
   locks. No cargo/rustc process was killed; after each compile chain exited naturally, the same
   focused nextest command passed.
+
+2026-05-20 inherited text feature + DataTable tabular readout slice:
+
+- Source gap before fix: the remaining DataTable pagination footer used local
+  `ui::text(...).tabular_nums()` builders because the shared inherited text-role refinement could
+  not express OpenType numeric features. That left a resize-sensitive fixed footer row outside the
+  shared control-readout contract.
+- `TextStyleRefinement` now carries subtree-default OpenType feature settings. `TextStyle::refine`,
+  `TextStyleRefinement::merge`, `text_style_refinement_fingerprint(...)`, and
+  `fret-ui-kit` typography bridge helpers preserve those feature settings so passive text
+  measurement/cache and role helpers see the same numeric shaping policy.
+- `text_control_readout_tabular(...)` and `text_control_readout_tabular_emphasis(...)` are narrow
+  control-readout variants, not new stable text-role categories. They keep single-line ellipsis,
+  `min-width: 0`, inherited role typography, and tabular numeric features; the emphasis variant
+  adds the medium page-summary weight.
+- `DataTablePagination` now consumes recipe-local `data_table_pagination_readout(...)` and
+  `data_table_pagination_summary(...)` helpers backed by those shared variants, closing the last
+  local pagination footer text policy without widening `fret-imui`.
+- Focused gates passed: `cargo check -p fret-core`; `cargo check -p fret-ui`; `cargo check -p
+  fret-ui-kit`; `cargo check -p fret-ui-shadcn`; `cargo nextest run -p fret-core --lib
+  text_style_refinement_merges_font_features_in_parent_child_order
+  text_style_refine_applies_inherited_font_features_after_leaf_defaults --no-fail-fast`; `cargo
+  nextest run -p fret-ui --lib inherited_text_style_features_affect_passive_text_measurement
+  inherited_text_style_fingerprint_tracks_feature_overrides --no-fail-fast`; `cargo nextest run -p
+  fret-ui-kit --lib control_readout_tabular_text_uses_muted_single_line_truncation
+  control_readout_tabular_emphasis_text_uses_medium_single_line_truncation --no-fail-fast`; `cargo
+  nextest run -p fret-ui-shadcn --lib data_table_toolbar_fixed_text_uses_shared_roles
+  --no-fail-fast`; `python -m py_compile tools\gate_imui_workstream_source.py`; `python -m
+  json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`; `python
+  tools\gate_imui_workstream_source.py`; `rustfmt --edition 2024 --check
+  crates/fret-core/src/text/mod.rs crates/fret-ui/src/text/props.rs
+  crates/fret-ui/src/declarative/tests/text_style_inheritance.rs
+  ecosystem/fret-ui-kit/src/typography.rs ecosystem/fret-ui-kit/src/declarative/text.rs
+  ecosystem/fret-ui-shadcn/src/data_table_recipes.rs`; and `git diff --check`.
+- Verification note: broader package-level `cargo fmt --check -p ...` and the first
+  `fret-ui-shadcn` focused nextest attempt timed out while Cargo/Rustc still held build locks. No
+  cargo/rustc process was killed; after each compile chain exited naturally, focused checks were
+  rerun and passed.
 
 2026-05-19 shadcn EmptyTitle children-role slice:
 

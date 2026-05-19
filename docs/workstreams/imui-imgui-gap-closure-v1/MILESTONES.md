@@ -925,8 +925,9 @@ Exit criteria:
   2026-05-20 shadcn DataTable toolbar text result: DataTable toolbar faceted trigger labels,
   faceted option labels, option counts, clear/reset action labels, and selected-count readouts now
   consume shared button-label, list-row-label, and control-readout text roles. Pagination footer
-  page/selected summaries still keep local tabular-number styling until the shared inherited
-  text-role surface can carry OpenType numeric feature policy.
+  page/selected summaries now also consume tabular control-readout variants after
+  `TextStyleRefinement` gained inherited OpenType feature support, closing the local
+  `ui::text(...).tabular_nums()` footer escape without adding a sixth stable text role.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.
