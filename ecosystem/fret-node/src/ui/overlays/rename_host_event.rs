@@ -1,12 +1,19 @@
 use fret_core::KeyCode;
+#[cfg(feature = "compat-retained-canvas")]
 use fret_runtime::Model;
+#[cfg(feature = "compat-retained-canvas")]
 use fret_ui::UiHost;
 
+#[cfg(feature = "compat-retained-canvas")]
 use crate::ops::GraphTransaction;
+#[cfg(feature = "compat-retained-canvas")]
 use crate::ui::compat_transport::NodeGraphEditQueue;
+#[cfg(feature = "compat-retained-canvas")]
 use crate::ui::controller::NodeGraphController;
 
+#[cfg(feature = "compat-retained-canvas")]
 use super::group_rename::NodeGraphOverlayState;
+#[cfg(feature = "compat-retained-canvas")]
 use super::rename_policy::{
     RenameOverlaySession, build_rename_commit_transaction, clear_rename_sessions,
 };
@@ -26,6 +33,7 @@ pub(super) fn decide_rename_host_key(key: KeyCode) -> RenameHostKeyDecision {
     }
 }
 
+#[cfg(feature = "compat-retained-canvas")]
 pub(super) fn apply_rename_host_key_decision<H: UiHost>(
     host: &mut H,
     decision: RenameHostKeyDecision,
@@ -52,6 +60,7 @@ pub(super) fn apply_rename_host_key_decision<H: UiHost>(
     }
 }
 
+#[cfg(feature = "compat-retained-canvas")]
 fn rename_commit_transaction<H: UiHost>(
     host: &H,
     graph: &Model<crate::Graph>,
@@ -68,6 +77,7 @@ fn rename_commit_transaction<H: UiHost>(
         .flatten()
 }
 
+#[cfg(feature = "compat-retained-canvas")]
 fn submit_rename_transaction<H: UiHost>(
     host: &mut H,
     graph: &Model<crate::Graph>,
@@ -78,6 +88,7 @@ fn submit_rename_transaction<H: UiHost>(
     crate::ui::retained_submit::submit_graph_transaction(host, controller, edits, graph, tx);
 }
 
+#[cfg(feature = "compat-retained-canvas")]
 pub(super) fn close_rename_host_sessions<H: UiHost>(
     host: &mut H,
     overlays: &Model<NodeGraphOverlayState>,

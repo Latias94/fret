@@ -59,6 +59,7 @@ mod surface_policy_tests {
     const UI_CONTROLLER_VIEWPORT_RS: &str = include_str!("ui/controller_viewport.rs");
     const UI_DECLARATIVE_MOD_RS: &str = include_str!("ui/declarative/mod.rs");
     const UI_MOD_RS: &str = include_str!("ui/mod.rs");
+    const UI_OVERLAYS_MOD_RS: &str = include_str!("ui/overlays/mod.rs");
     const UI_OVERLAY_CONTROLS_RS: &str = include_str!("ui/overlays/controls.rs");
     const UI_OVERLAY_GROUP_RENAME_RS: &str = include_str!("ui/overlays/group_rename.rs");
     const UI_OVERLAY_BLACKBOARD_RS: &str = include_str!("ui/overlays/blackboard.rs");
@@ -323,6 +324,57 @@ mod surface_policy_tests {
         assert!(!MINIMAP_RS.contains("pub(crate) fn with_view_queue("));
         assert!(MINIMAP_RS.contains("retained compatibility plumbing"));
         assert!(MINIMAP_RS.contains("declarative node graph surface"));
+    }
+
+    #[test]
+    fn overlay_policy_modules_compile_without_retained_canvas_compat() {
+        assert!(UI_MOD_RS.contains("mod overlays;"));
+        assert!(!UI_MOD_RS.contains("#[cfg(feature = \"compat-retained-canvas\")]\nmod overlays;"));
+        assert!(UI_MOD_RS.contains("mod screen_space_placement;"));
+        assert!(
+            !UI_MOD_RS.contains(
+                "#[cfg(feature = \"compat-retained-canvas\")]\nmod screen_space_placement;"
+            )
+        );
+
+        for module in [
+            "mod blackboard_layout;",
+            "mod blackboard_policy;",
+            "mod controls_layout;",
+            "mod controls_policy;",
+            "mod minimap_drag_policy;",
+            "mod minimap_navigation_policy;",
+            "mod minimap_policy;",
+            "mod minimap_projection;",
+            "mod panel_item_state;",
+            "mod panel_navigation_policy;",
+            "mod panel_pointer_policy;",
+            "mod rename_host_event;",
+            "mod rename_host_layout;",
+            "mod rename_policy;",
+            "mod toolbar_policy;",
+        ] {
+            assert!(
+                UI_OVERLAYS_MOD_RS.contains(module),
+                "overlay policy module should compile outside compat-retained-canvas: {module}"
+            );
+        }
+
+        for retained_widget_module in [
+            "mod blackboard;",
+            "mod blackboard_paint;",
+            "mod controls;",
+            "mod minimap;",
+            "mod panel_button_paint;",
+            "mod toolbars;",
+        ] {
+            let marker =
+                format!("#[cfg(feature = \"compat-retained-canvas\")]\n{retained_widget_module}");
+            assert!(
+                UI_OVERLAYS_MOD_RS.contains(&marker),
+                "retained overlay widget module must stay behind compat-retained-canvas: {retained_widget_module}"
+            );
+        }
     }
 
     #[test]

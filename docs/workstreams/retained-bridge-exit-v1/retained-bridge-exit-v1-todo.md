@@ -767,6 +767,43 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-060 Move node graph overlay/panel policy tests onto the default declarative UI gate.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/mod.rs`
+    - `ecosystem/fret-node/src/ui/screen_space_placement.rs`
+    - `ecosystem/fret-node/src/ui/overlays/mod.rs`
+    - `ecosystem/fret-node/src/ui/overlays/group_rename.rs`
+    - `ecosystem/fret-node/src/ui/overlays/rename_host_event.rs`
+    - `ecosystem/fret-node/src/ui/overlays/panel_pointer_policy.rs`
+    - `ecosystem/fret-node/src/ui/overlays/blackboard_policy.rs`
+    - `ecosystem/fret-node/src/lib.rs`
+  - Goal:
+    - Compile overlay/panel/screen-space pure policy and layout modules under the default
+      declarative `fret-ui` feature, without enabling `compat-retained-canvas` or
+      `fret-ui/unstable-retained-bridge`.
+    - Keep retained overlay widget/paint modules gated behind `compat-retained-canvas` until their
+      host/paint behavior is replaced by declarative composition.
+    - Expand the default `fret-node` test gate so overlay/panel layout, keyboard, pointer,
+      minimap, toolbar, blackboard, rename, and screen-space placement policy is protected outside
+      the retained compatibility island.
+  - Result:
+    - `overlays` and `screen_space_placement` now compile in the default `fret-ui` path.
+    - Retained overlay widget modules (`blackboard`, `controls`, `minimap`, `toolbars`) and retained
+      paint helpers remain behind `compat-retained-canvas`.
+    - Default `cargo nextest run -p fret-node` coverage increased from 269 to 319 tests, adding 50
+      overlay/panel/screen-space policy tests to the declarative gate.
+    - Surface-policy coverage now rejects moving overlay policy modules back behind
+      `compat-retained-canvas`.
+  - Validation:
+    - `cargo check -p fret-node --no-default-features --features fret-ui`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node overlay_policy_modules_compile_without_retained_canvas_compat`
+    - `cargo nextest run -p fret-node`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

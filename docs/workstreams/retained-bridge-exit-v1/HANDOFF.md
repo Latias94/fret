@@ -49,6 +49,9 @@ the lower-level `compat-retained-canvas` feature compiling for the remaining ret
 implementation island. `RBX-M2-050` then moved retained node graph widget/editor/overlay/panel/
 portal modules and root exports behind a crate-private/test-only compatibility island, keeping the
 retained behavior matrix available while removing the public retained widget authoring surface.
+`RBX-M2-060` moved pure overlay/panel/screen-space policy and layout modules onto the default
+declarative `fret-ui` gate while keeping retained overlay widgets/paint behind
+`compat-retained-canvas`.
 
 ## Completed Implementation
 
@@ -363,10 +366,14 @@ and removed its public re-exports, then tightened the
 `retained_compatibility_surface_stays_declarative_only` policy test so the symbols cannot return.
 `RBX-M2-050` made the retained widget/editor/overlay/panel/portal modules crate-private and removed
 their public root re-exports, with test-only crate-private access retained for the conformance
-matrix. The headless graph surface, default declarative UI surface, and explicit retained canvas
-compatibility island still compile. The retained canvas/editor stack still exists inside
-`fret-node` behind `compat-retained-canvas`; the next M2 slice should migrate chrome/overlays/panels
-toward declarative composition and shrink the remaining retained leaf.
+matrix. `RBX-M2-060` made `overlays` and `screen_space_placement` compile in the default
+declarative `fret-ui` path, expanding default `fret-node` nextest coverage from 269 to 319 tests
+with overlay/panel/minimap/toolbar/blackboard/rename/screen-space policy coverage. Retained overlay
+widgets and retained paint helpers remain gated behind `compat-retained-canvas`. The headless graph
+surface, default declarative UI surface, and explicit retained canvas compatibility island still
+compile. The retained canvas/editor stack still exists inside `fret-node` behind
+`compat-retained-canvas`; the next M2 slice should replace retained overlay/panel host composition
+with declarative elements and shrink the remaining retained leaf.
 
 ## Next Task
 

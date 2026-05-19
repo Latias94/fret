@@ -1,22 +1,33 @@
 //! Node graph overlay host state (UI-only).
 
-use fret_core::{Point, Rect, Size};
+use fret_core::Point;
+#[cfg(feature = "compat-retained-canvas")]
+use fret_core::{Rect, Size};
+#[cfg(feature = "compat-retained-canvas")]
 use fret_runtime::Model;
+#[cfg(feature = "compat-retained-canvas")]
 use fret_ui::{UiHost, retained_bridge::*};
 
 use crate::core::{GroupId, SymbolId};
+#[cfg(feature = "compat-retained-canvas")]
 use crate::ui::compat_transport::NodeGraphEditQueue;
+#[cfg(feature = "compat-retained-canvas")]
 use crate::ui::controller::NodeGraphController;
+#[cfg(feature = "compat-retained-canvas")]
 use crate::ui::style::NodeGraphStyle;
 
+#[cfg(feature = "compat-retained-canvas")]
 use super::layout_hidden_child_and_release_focus;
+#[cfg(feature = "compat-retained-canvas")]
 use super::rename_host_event::{
     apply_rename_host_key_decision, close_rename_host_sessions, decide_rename_host_key,
 };
+#[cfg(feature = "compat-retained-canvas")]
 use super::rename_host_layout::{RenameHostLayoutPlan, plan_rename_host_layout};
-use super::rename_policy::{
-    RenameOverlaySession, RenameOverlaySessionKey, active_rename_session, rename_session_seed_text,
-};
+#[cfg(feature = "compat-retained-canvas")]
+use super::rename_policy::rename_session_seed_text;
+#[cfg(feature = "compat-retained-canvas")]
+use super::rename_policy::{RenameOverlaySession, RenameOverlaySessionKey, active_rename_session};
 
 /// UI-only overlay state for a node graph editor instance.
 #[derive(Debug, Default, Clone)]
@@ -41,6 +52,7 @@ pub struct SymbolRenameOverlay {
 ///
 /// Expected children:
 /// - child 0: a `BoundTextInput` bound to `group_rename_text`.
+#[cfg(feature = "compat-retained-canvas")]
 pub struct NodeGraphOverlayHost {
     graph: Model<crate::Graph>,
     edits: Option<Model<NodeGraphEditQueue>>,
@@ -55,6 +67,7 @@ pub struct NodeGraphOverlayHost {
     active: bool,
 }
 
+#[cfg(feature = "compat-retained-canvas")]
 impl NodeGraphOverlayHost {
     pub fn new(
         graph: Model<crate::Graph>,
@@ -100,6 +113,7 @@ impl NodeGraphOverlayHost {
     }
 }
 
+#[cfg(feature = "compat-retained-canvas")]
 impl<H: UiHost> Widget<H> for NodeGraphOverlayHost {
     fn hit_test(&self, _bounds: Rect, position: Point) -> bool {
         self.active && self.rename_bounds.is_some_and(|r| r.contains(position))

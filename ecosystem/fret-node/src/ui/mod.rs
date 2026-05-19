@@ -34,7 +34,6 @@ mod diag_anchors;
 mod editor;
 #[cfg(feature = "compat-retained-canvas")]
 mod editors;
-#[cfg(feature = "compat-retained-canvas")]
 mod overlays;
 #[cfg(feature = "compat-retained-canvas")]
 mod panel;
@@ -44,7 +43,6 @@ mod portal;
 mod retained_event_tail;
 #[cfg(feature = "compat-retained-canvas")]
 mod retained_submit;
-#[cfg(feature = "compat-retained-canvas")]
 mod screen_space_placement;
 
 pub use binding::NodeGraphSurfaceBinding;

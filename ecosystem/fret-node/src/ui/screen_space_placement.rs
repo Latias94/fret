@@ -1,4 +1,4 @@
-//! Shared window-space placement helpers for compat-retained panels and overlays.
+//! Shared window-space placement helpers for node graph overlay and panel policy.
 
 use fret_core::{Point, Px, Rect, Size};
 
