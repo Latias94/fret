@@ -330,6 +330,10 @@ Readiness order for the next locally testable review slices:
    `editor_input_value_text(...)` for drag-value and axis-drag-value scrub readouts. The helper
    keeps numeric value text fill-width, `min-width: 0`, shrinkable, single-line, and ellipsis
    clipped without moving editor-specific density/chrome policy into `fret-imui`.
+   2026-05-19 editor input-group text ownership follow-up: `primitives/input_group.rs` no longer
+   owns direct `TextProps` construction for text segments, value text, or axis markers. Those
+   policies now live in `primitives/readout.rs` as editor text role helpers, and the source gate
+   removed `input_group.rs` from the direct editor `TextProps` allowlist.
    2026-05-17 editor status badge text follow-up: `FieldStatusBadge` now routes its compact label
    through `editor_status_badge_text_props(...)`, keeping badge text in the editor readout
    primitive layer instead of hand-rolling `TextProps` inside the control.

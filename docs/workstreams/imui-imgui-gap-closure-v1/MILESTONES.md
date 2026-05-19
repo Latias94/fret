@@ -342,6 +342,10 @@ Exit criteria:
   `fret-ui-editor` because it depends on editor density/chrome policy, but it now has the same
   resize-safe fill, `min-width: 0`, shrink, single-line, and ellipsis behavior expected by IMUI
   editor panels.
+  2026-05-19 editor input-group text ownership result: `input_group.rs` no longer carries local
+  direct `TextProps` policy for joined-control text segments, numeric value text, or axis markers.
+  Those fixed-line editor text roles now live in `readout.rs`, and the source gate rejects direct
+  `TextProps` construction from the input-group composition layer.
   2026-05-17 editor status badge text result: `FieldStatusBadge` no longer hand-rolls badge label
   `TextProps`; it uses `editor_status_badge_text_props(...)` from the editor readout primitive
   layer, preserving compact centered ellipsis text while keeping role policy reusable.

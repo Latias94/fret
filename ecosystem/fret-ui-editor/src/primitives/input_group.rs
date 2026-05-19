@@ -5,22 +5,23 @@
 
 use std::sync::{Arc, Mutex};
 
-use fret_core::text::{TextOverflow, TextWrap};
-use fret_core::{Color, Corners, Edges, MouseButton, Px, TextAlign, TextStyle};
+use fret_core::{Color, Corners, Edges, MouseButton, Px};
 use fret_ui::action::{ActionCx, OnActivate, OnPointerCancel, OnPointerDown, OnPointerUp};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexItemStyle, FlexProps, HoverRegionProps,
     LayoutStyle, Length, MainAlign, PointerRegionProps, PressableA11y, PressableProps, SizeStyle,
-    SpacingLength, TextProps,
+    SpacingLength,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::ColorRef;
-use fret_ui_kit::typography;
 
 use super::EditorDensity;
 use super::chrome::ResolvedEditorFrameChrome;
 use super::colors::editor_foreground;
 use super::icons::{editor_icon, editor_icon_with};
+use super::readout::{
+    editor_axis_marker_text_props, editor_input_segment_text_props, editor_input_value_text_props,
+};
 use super::visuals::{EditorFrameSemanticState, EditorFrameState, EditorWidgetVisuals};
 use super::visuals::{editor_icon_button_bg, editor_icon_button_border};
 
@@ -404,27 +405,12 @@ pub(crate) fn editor_text_segment<H: UiHost>(
     color: Color,
     padding: Edges,
 ) -> AnyElement {
-    let text_el = cx.text_props(TextProps {
-        layout: LayoutStyle {
-            size: SizeStyle {
-                width: Length::Auto,
-                height: Length::Fill,
-                ..Default::default()
-            },
-            ..Default::default()
-        },
+    let text_el = cx.text_props(editor_input_segment_text_props(
         text,
-        style: Some(typography::as_control_text(TextStyle {
-            size: text_px,
-            line_height: Some(density.row_height),
-            ..Default::default()
-        })),
-        color: Some(color),
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Clip,
-        align: TextAlign::Start,
-        ink_overflow: Default::default(),
-    });
+        color,
+        text_px,
+        density.row_height,
+    ));
 
     editor_input_group_segment(
         cx,
@@ -449,35 +435,13 @@ pub(crate) fn editor_input_value_text<H: UiHost>(
     color: Color,
     height: Length,
 ) -> AnyElement {
-    cx.text_props(TextProps {
-        layout: LayoutStyle {
-            size: SizeStyle {
-                width: Length::Fill,
-                height,
-                min_width: Some(Length::Px(Px(0.0))),
-                ..Default::default()
-            },
-            flex: FlexItemStyle {
-                order: 0,
-                grow: 1.0,
-                shrink: 1.0,
-                basis: Length::Px(Px(0.0)),
-                align_self: None,
-            },
-            ..Default::default()
-        },
+    cx.text_props(editor_input_value_text_props(
         text,
-        style: Some(typography::as_control_text(TextStyle {
-            size: text_px,
-            line_height: Some(density.row_height),
-            ..Default::default()
-        })),
-        color: Some(color),
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Ellipsis,
-        align: TextAlign::Start,
-        ink_overflow: Default::default(),
-    })
+        color,
+        text_px,
+        density.row_height,
+        height,
+    ))
 }
 
 pub(crate) fn derived_test_id(base: Option<&Arc<str>>, suffix: &str) -> Option<Arc<str>> {
@@ -728,28 +692,11 @@ pub(crate) fn editor_axis_segment<H: UiHost>(
             ..Default::default()
         },
         move |cx| {
-            vec![cx.text_props(TextProps {
-                layout: LayoutStyle {
-                    size: SizeStyle {
-                        width: Length::Fill,
-                        height: Length::Fill,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                text: label.clone(),
-                style: Some(typography::as_control_text(TextStyle {
-                    size: Px(11.0),
-                    weight: fret_core::FontWeight::SEMIBOLD,
-                    line_height: Some(density.row_height),
-                    ..Default::default()
-                })),
-                color: Some(fg),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-                align: TextAlign::Center,
-                ink_overflow: Default::default(),
-            })]
+            vec![cx.text_props(editor_axis_marker_text_props(
+                label.clone(),
+                fg,
+                density.row_height,
+            ))]
         },
     )
 }

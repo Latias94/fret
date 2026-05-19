@@ -524,6 +524,17 @@ Run evidence:
   while preserving editor-specific density and chrome policy outside `fret-imui`. Gates: `cargo
   nextest run -p fret-ui-editor editor_input_value_text_is_single_line_and_shrinkable --no-fail-fast`
   and `cargo nextest run -p fret-ui-editor drag_value axis_drag_value --no-fail-fast`.
+- 2026-05-19: moved the remaining input-group text props constructors out of
+  `primitives/input_group.rs` and into `primitives/readout.rs` as
+  `editor_input_segment_text_props(...)`, `editor_input_value_text_props(...)`, and
+  `editor_axis_marker_text_props(...)`. `input_group` now consumes editor text roles instead of
+  owning local `TextProps` policy, and the direct editor `TextProps` allowlist no longer includes
+  `input_group.rs`. Gates: `cargo nextest run -p fret-ui-editor
+  editor_input_segment_text_keeps_fixed_segment_line_box
+  editor_input_value_text_props_are_single_line_and_shrinkable
+  editor_axis_marker_text_keeps_fixed_centered_line_box
+  editor_input_value_text_is_single_line_and_shrinkable --no-fail-fast` and
+  `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: moved `FieldStatusBadge` label text policy into
   `editor_status_badge_text_props(...)` in the editor readout primitive layer. The control keeps its
   compact centered badge label, single-line ellipsis, and palette behavior without owning local
