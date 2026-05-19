@@ -3337,3 +3337,28 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_workstream_source.py` passed.
 - `cargo fmt --check -p fret-examples` passed.
 - `cargo check -p fret-examples --lib` passed.
+
+2026-05-19 launcher utility window materials fixed text-role slice:
+
+- Source gap before fix: `apps/fret-examples/src/launcher_utility_window_materials_demo.rs` used
+  local `ui::text(...)` builders for the material-window title, effective material/style diagnostic
+  line, and status readout. These are fixed chrome/readout slots under resize, not paragraph text.
+- `launcher_utility_materials_title_text(...)` now routes the title through
+  `decl_text::text_section_chrome_label(...)`, `launcher_utility_materials_code_label_text(...)`
+  routes the effective-style diagnostic through `decl_text::text_code_label(...)`, and
+  `launcher_utility_materials_readout_text(...)` routes status through
+  `decl_text::text_control_readout(...)`.
+- `apps/fret-examples/tests/launcher_utility_window_materials_demo_surface.rs` and
+  `tools/gate_imui_workstream_source.py` guard those role mappings and forbid the old local fixed
+  text policy from returning.
+- First post-fix `cargo nextest run -p fret-examples --test
+  launcher_utility_window_materials_demo_surface
+  launcher_utility_window_materials_demo_keeps_fixed_text_on_roles --no-fail-fast` timed out while
+  background Cargo/Rustc compilation continued.
+- Retried after Cargo/Rustc exited:
+  `cargo nextest run -p fret-examples --test launcher_utility_window_materials_demo_surface
+  launcher_utility_window_materials_demo_keeps_fixed_text_on_roles --no-fail-fast` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo fmt --check -p fret-examples` passed.
+- `cargo check -p fret-examples --lib` passed.

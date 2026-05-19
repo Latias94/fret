@@ -777,6 +777,11 @@ Exit criteria:
   section-chrome text, the effective style diagnostic to code-label text, status to
   control-readout text, and the resize handle arrow to chrome-glyph text. This removes local
   fixed-window chrome/readout/glyph text styling without adding new `fret-imui` API.
+  2026-05-19 launcher utility window materials text result:
+  `launcher_utility_window_materials_demo` keeps its material request/diagnostics proof behavior
+  unchanged while moving the fixed title to section-chrome text, the effective material/style
+  diagnostic to code-label text, and status to control-readout text. This completes the paired
+  utility-window chrome text cleanup without moving window-material policy into `fret-imui`.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

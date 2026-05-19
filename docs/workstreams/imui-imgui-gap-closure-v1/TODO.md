@@ -869,6 +869,11 @@ Readiness order for the next locally testable review slices:
    through code-label text, status through control-readout text, and the resize handle arrow
    through chrome-glyph text. The BeginDrag/BeginResize/SetVisible proof path stays unchanged; only
    local fixed chrome/readout/glyph text policy was removed.
+   2026-05-19 launcher utility window materials text follow-up:
+   `launcher_utility_window_materials_demo` now routes its fixed material-window title through
+   section-chrome text, the effective material/style diagnostic through code-label text, and the
+   status line through control-readout text. The background material request/diagnostics proof path
+   stays unchanged; only local fixed chrome/readout text policy was removed.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
