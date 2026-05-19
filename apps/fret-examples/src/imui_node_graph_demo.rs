@@ -3,18 +3,28 @@
 //! authoring path for node-graph apps.
 //! Prefer the declarative node-graph surfaces for normal downstream guidance.
 use fret::{FretApp, advanced::prelude::*, component::prelude::*};
+use fret_imui::prelude::UiWriter as _;
 use fret_node::core::{
     CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
     PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
 use fret_node::io::{NodeGraphEditorConfig, NodeGraphViewState};
 use fret_runtime::Model;
+use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::declarative::text as decl_text;
 use serde_json::Value;
 
 struct ImUiNodeGraphView {
     graph: Model<Graph>,
     view: Model<NodeGraphViewState>,
     editor_config: Model<NodeGraphEditorConfig>,
+}
+
+fn compat_section_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<std::sync::Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    decl_text::text_section_chrome_label(cx, text)
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -49,9 +59,10 @@ impl View for ImUiNodeGraphView {
 
             let root = fret_ui_kit::ui::v_flex_build(move |cx, out| {
                 fret_imui::imui_build(cx, out, |ui| {
-                    let title = fret_ui_kit::ui::text("imui node-graph compatibility proof")
-                        .font_semibold();
-                    ui.add_ui(title);
+                    let title = ui.with_cx_mut(|cx| {
+                        compat_section_text(cx, "imui node-graph compatibility proof")
+                    });
+                    ui.add(title);
                     ui.separator();
 
                     let mut surface_props =

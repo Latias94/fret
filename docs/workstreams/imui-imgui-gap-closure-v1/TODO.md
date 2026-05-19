@@ -850,6 +850,11 @@ Readiness order for the next locally testable review slices:
    local helpers backed by shared list-row, control-readout, and button-label text roles. Focused
    source tests plus the IMUI workstream source gate keep those resize-sensitive panel demos from
    returning to bare `cx.text(...)`.
+   2026-05-19 imui node-graph compatibility title follow-up: `imui_node_graph_demo` keeps its
+   retained-bridge compatibility-only posture, but the fixed proof title now routes through a local
+   helper backed by `text_section_chrome_label(...)` instead of local
+   `fret_ui_kit::ui::text(...).font_semibold()` styling. This does not promote the retained
+   bridge as the default node-graph authoring path and does not widen `fret-imui`.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

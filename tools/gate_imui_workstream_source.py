@@ -1018,6 +1018,25 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-examples/src/imui_node_graph_demo.rs"),
+            required=[
+                "Retained-bridge IMUI demo for `fret-node`.",
+                "compatibility-oriented and should not be treated as the default downstream",
+                "Prefer the declarative node-graph surfaces for normal downstream guidance.",
+                "use fret_imui::prelude::UiWriter as _;",
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "fn compat_section_text<",
+                "decl_text::text_section_chrome_label(cx, text)",
+                'compat_section_text(cx, "imui node-graph compatibility proof")',
+                "NodeGraphSurfaceCompatRetainedProps::new(",
+                "node_graph_surface_compat_retained(",
+            ],
+            forbidden=[
+                'fret_ui_kit::ui::text("imui node-graph compatibility proof")',
+                ".font_semibold()",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-ui-gallery/src/ui/snippets/ai/message_branch_demo.rs"),
             required=[
                 "use fret_ui_kit::declarative::text as decl_text;",

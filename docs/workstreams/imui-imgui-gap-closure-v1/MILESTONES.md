@@ -759,6 +759,11 @@ Exit criteria:
   `container_queries_docking_demo` now use local helpers over shared list-row, control-readout, and
   button-label text roles for fixed panel text. This closes the simple docking demo resize escape
   hatch while leaving docking topology/policy ownership unchanged.
+  2026-05-19 imui node-graph compatibility title result: `imui_node_graph_demo` keeps the
+  retained-bridge node-graph proof explicitly compatibility-only, but its fixed title is now a
+  section-chrome text role through `compat_section_text(...)`. The slice removes local
+  `fret_ui_kit::ui::text(...).font_semibold()` title styling without adding node-graph policy to
+  `fret-imui`.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

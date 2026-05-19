@@ -3234,3 +3234,37 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `rg -n "ui::text\(|cx\.text\(" apps\fret-ui-gallery\src\ui\snippets\ai -g "*.rs"` returned no
   matches after this slice; remaining AI snippet text rendering is component-owned surfaces such as
   `Shimmer::new(...)` or other explicit AI text-capability APIs.
+
+2026-05-19 imui node-graph compatibility title text-role slice:
+
+- Source gap before fix: `apps/fret-examples/src/imui_node_graph_demo.rs` is explicitly a retained
+  bridge compatibility proof for `fret-node`, but its fixed title still used local
+  `fret_ui_kit::ui::text("imui node-graph compatibility proof").font_semibold()` styling. That
+  made the compatibility demo teach an ad-hoc text policy under resize instead of the shared text
+  role vocabulary.
+- `apps/fret-examples/src/imui_node_graph_demo.rs` now routes the title through
+  `compat_section_text(...)`, backed by `decl_text::text_section_chrome_label(...)`. The demo still
+  imports the IMUI writer trait through `fret_imui::prelude::UiWriter` and keeps the retained
+  bridge posture explicit; no direct `fret_authoring` dependency or new `fret-imui` API was added.
+- `apps/fret-examples/tests/imui_node_graph_demo_surface.rs`,
+  `tools/gate_imui_facade_teaching_source.py`, and `tools/gate_imui_workstream_source.py` now guard
+  the compatibility-only wording, shared section role, and absence of the old local title styling.
+- `tools/gate_imui_facade_teaching_source.py` no longer uses the stale exact-count check for
+  `) -> fret_ui::element::AnyElement {` in `imui_editor_proof_demo.rs`. The gate now checks the
+  actual proof-local shared text role helpers and role calls, so adding legitimate role helpers does
+  not force the proof back to a worse shape.
+- `cargo fmt --check -p fret-examples` passed.
+- `python -m py_compile tools\gate_imui_facade_teaching_source.py tools\gate_imui_workstream_source.py`
+  passed.
+- `python tools\gate_imui_facade_teaching_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo check -p fret-demo --features node-graph-demos-legacy --bin imui_node_graph_demo` passed
+  with pre-existing `private_interfaces` warnings from node-graph legacy/domain driver visibility.
+- First post-fix `cargo nextest run -p fret-examples --features node-graph-demos-legacy --test
+  imui_node_graph_demo_surface imui_node_graph_demo_keeps_compat_title_on_shared_role
+  --no-fail-fast` timed out while background Cargo/Rustc compilation continued.
+- Retried after Cargo/Rustc exited:
+  `cargo nextest run -p fret-examples --features node-graph-demos-legacy --test
+  imui_node_graph_demo_surface imui_node_graph_demo_keeps_compat_title_on_shared_role
+  --no-fail-fast` passed, with the same pre-existing node-graph legacy/domain
+  `private_interfaces` warnings.
