@@ -494,6 +494,10 @@ Exit criteria:
   medium chrome-title weight, and the `fret-ui-ai` `EnvironmentVariablesTitle` default/text paths
   route through that shared role instead of local raw-text title policy. Custom title children stay
   on the component-owned inherited title refinement because the upstream surface is children-first.
+  2026-05-19 AI EnvironmentVariables code-label result: environment variable names and
+  non-selectable values now reuse `text_code_label(...)` for fixed identifier slots, while revealed
+  values stay on `SelectableTextProps` for the explicit selection capability surface. Empty
+  custom-child/diagnostics markers no longer use empty `Text` nodes.
   2026-05-18 AI visible text-role result 2: Artifact, CodeBlock, and Sandbox snippets now reuse the
   same shared text roles for visible fixed chrome/prose, and CodeBlock's active-language marker no
   longer mounts an invisible empty `Text` element.

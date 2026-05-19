@@ -761,6 +761,16 @@ Run evidence:
   environment_variables_title_children_scope_inherited_typography
   terminal_title_label_uses_chrome_title_text_role --no-fail-fast`, and
   `python tools/gate_imui_workstream_source.py`.
+- 2026-05-19: routed `fret-ui-ai` `EnvironmentVariableName` and non-selectable
+  `EnvironmentVariableValue` text through `text_code_label(...)` with component-owned foreground
+  inheritance instead of local monospace `TextProps`. Revealed values intentionally stay on
+  `SelectableTextProps` because that path owns text selection, not ordinary fixed chrome text. The
+  environment-variable empty/custom-child marker paths now use the crate-local non-text spacer
+  placeholder instead of empty `Text` nodes. Gates: `cargo nextest run -p fret-ui-ai
+  environment_variable_name_and_masked_value_use_code_label_text_role
+  environment_variable_value_is_selectable_only_when_shown
+  environment_variable_copy_button_supports_custom_children --no-fail-fast`, `cargo check -p
+  fret-ui-ai`, and `python tools/gate_imui_workstream_source.py`.
 - 2026-05-18: extended the same visible text-role migration to AI Artifact, CodeBlock, and Sandbox
   snippets. Fixed demo titles and panel labels now use section-chrome text, explanatory copy uses
   paragraph text, Artifact's closed state uses a compact control readout, and CodeBlock's

@@ -535,6 +535,11 @@ Readiness order for the next locally testable review slices:
    `EnvironmentVariablesTitle` default/text paths now route through the shared medium
    `text_chrome_title(...)` role instead of local raw-text title policy. Custom title children keep
    the component-owned inherited title refinement because upstream accepts children.
+   2026-05-19 AI EnvironmentVariables code-label follow-up: environment variable names and
+   non-selectable masked/custom values now use the shared `text_code_label(...)` fixed identifier
+   role with inherited foreground. Revealed values intentionally remain selectable text because
+   selection is the capability surface. Empty custom-child/diagnostic paths now use the crate-local
+   non-text placeholder instead of empty `Text` nodes.
    2026-05-18 AI visible text-role follow-up 2: Artifact, CodeBlock, and Sandbox copyable snippets
    now use the same role split for fixed demo titles, explanatory prose, and compact status text.
    CodeBlock's active-language diagnostics marker also moved from an invisible empty text node to a

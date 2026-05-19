@@ -11,7 +11,7 @@ use fret_icons::ids;
 use fret_runtime::{Effect, Model};
 use fret_ui::element::{
     AnyElement, ContainerProps, InteractivityGateProps, LayoutStyle, Length, PressableProps,
-    SelectableTextProps, SemanticsDecoration, SizeStyle, TextProps,
+    SelectableTextProps, SemanticsDecoration,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::chrome::centered_fixed_chrome_pressable_with_id_props;
@@ -94,7 +94,7 @@ fn inline_children<H: UiHost>(
 ) -> AnyElement {
     let mut iter = children.into_iter();
     match (iter.next(), iter.next()) {
-        (None, _) => cx.text(""),
+        (None, _) => crate::elements::empty_placeholder(cx),
         (Some(first), None) => first,
         (Some(first), Some(second)) => {
             let mut row_children = Vec::with_capacity(2 + iter.len());
@@ -704,27 +704,11 @@ impl EnvironmentVariableName {
                 let text = use_environment_variable_data(cx)
                     .map(|d| d.name)
                     .unwrap_or_else(|| Arc::<str>::from(""));
-                cx.text_props(TextProps {
-                    layout: LayoutStyle::default(),
-                    text,
-                    style: Some(style),
-                    color: Some(fg),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                    align: fret_core::TextAlign::Start,
-                    ink_overflow: Default::default(),
-                })
+                decl_text::text_code_label(cx, text).inherit_foreground(fg)
             }
-            EnvironmentVariableNameContent::Text(text) => cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text,
-                style: Some(style),
-                color: Some(fg),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-                align: fret_core::TextAlign::Start,
-                ink_overflow: Default::default(),
-            }),
+            EnvironmentVariableNameContent::Text(text) => {
+                decl_text::text_code_label(cx, text).inherit_foreground(fg)
+            }
             EnvironmentVariableNameContent::Children(children) => cx
                 .foreground_scope(fg, move |cx| vec![inline_children(cx, children)])
                 .inherit_foreground(fg)
@@ -814,27 +798,11 @@ impl EnvironmentVariableValue {
                     });
                 }
 
-                cx.text_props(TextProps {
-                    layout: LayoutStyle::default(),
-                    text: display_value,
-                    style: Some(style),
-                    color: Some(fg),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                    align: fret_core::TextAlign::Start,
-                    ink_overflow: Default::default(),
-                })
+                decl_text::text_code_label(cx, display_value).inherit_foreground(fg)
             }
-            EnvironmentVariableValueContent::Text(text) => cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text,
-                style: Some(style),
-                color: Some(fg),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-                align: fret_core::TextAlign::Start,
-                ink_overflow: Default::default(),
-            }),
+            EnvironmentVariableValueContent::Text(text) => {
+                decl_text::text_code_label(cx, text).inherit_foreground(fg)
+            }
             EnvironmentVariableValueContent::Children(children) => cx
                 .foreground_scope(fg, move |cx| vec![inline_children(cx, children)])
                 .inherit_foreground(fg)
@@ -1103,24 +1071,7 @@ impl EnvironmentVariableCopyButton {
 
                 let marker = copied_marker_test_id.clone().and_then(|marker_id| {
                     copied.then(|| {
-                        cx.text_props(TextProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Px(Px(0.0)),
-                                    height: Length::Px(Px(0.0)),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            text: Arc::<str>::from(""),
-                            style: None,
-                            color: None,
-                            wrap: TextWrap::None,
-                            overflow: TextOverflow::Clip,
-                            align: fret_core::TextAlign::Start,
-                            ink_overflow: Default::default(),
-                        })
-                        .attach_semantics(
+                        crate::elements::empty_placeholder(cx).attach_semantics(
                             SemanticsDecoration::default()
                                 .role(SemanticsRole::Generic)
                                 .test_id(marker_id),
@@ -1329,6 +1280,16 @@ mod tests {
         }
     }
 
+    fn find_selectable_text_element<'a>(el: &'a AnyElement, text: &str) -> Option<&'a AnyElement> {
+        match &el.kind {
+            ElementKind::SelectableText(props) if props.rich.text.as_ref() == text => Some(el),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_selectable_text_element(child, text)),
+        }
+    }
+
     #[test]
     fn environment_variables_root_provides_controller_to_toggle() {
         let window = AppWindowId::default();
@@ -1475,6 +1436,21 @@ mod tests {
             )),
             "expected shown value to be selectable"
         );
+        let selectable =
+            find_selectable_text_element(&shown, "sk-123").expect("expected shown value text");
+        let ElementKind::SelectableText(props) = &selectable.kind else {
+            panic!("expected shown value to render as selectable text");
+        };
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(
+            selectable
+                .inherited_text_style
+                .as_ref()
+                .and_then(|style| style.font.clone()),
+            None,
+            "selectable text keeps its direct style for the capability surface"
+        );
 
         let hidden_model = app.models_mut().insert(false);
         let hidden = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
@@ -1501,6 +1477,50 @@ mod tests {
             )),
             "expected hidden value to be non-selectable"
         );
+    }
+
+    #[test]
+    fn environment_variable_name_and_masked_value_use_code_label_text_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let hidden_model = app.models_mut().insert(false);
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                EnvironmentVariables::new()
+                    .show_values_model(hidden_model)
+                    .into_element_with_children(cx, |cx, _controller| {
+                        let row = EnvironmentVariable::new("VERY_LONG_API_KEY", "secret-value")
+                            .into_element(cx);
+                        let content = EnvironmentVariablesContent::new([row]).into_element(cx);
+                        vec![content]
+                    })
+            });
+
+        let theme = Theme::global(&app).clone();
+        for (text, expected_foreground) in [
+            ("VERY_LONG_API_KEY", theme.color_token("foreground")),
+            ("••••••••••••", theme.color_token("muted-foreground")),
+        ] {
+            let element = find_text_element(&element, text).expect("expected env text");
+            let ElementKind::Text(props) = &element.kind else {
+                panic!("expected env name/value leaf to be text");
+            };
+            assert_eq!(props.layout.flex.shrink, 1.0);
+            assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+            assert_eq!(props.wrap, TextWrap::None);
+            assert_eq!(props.overflow, TextOverflow::Ellipsis);
+            assert!(props.style.is_none());
+            assert!(props.color.is_none());
+            assert_eq!(
+                element
+                    .inherited_text_style
+                    .as_ref()
+                    .and_then(|style| style.font.clone()),
+                Some(FontId::monospace())
+            );
+            assert_eq!(element.inherited_foreground, Some(expected_foreground));
+        }
     }
 
     #[test]
