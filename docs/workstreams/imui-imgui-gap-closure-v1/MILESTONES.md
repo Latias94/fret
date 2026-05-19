@@ -810,6 +810,11 @@ Exit criteria:
   readout text, stream help uses paragraph text, and the empty text spacer is gone.
   2026-05-19 extras marquee perf text result: `extras_marquee_perf_demo` keeps its marquee
   animation/perf probe unchanged while moving the fixed title to the section-chrome text role.
+  2026-05-19 residual bare text gate tightening result: `text_role_residual_surface` now counts
+  `ui::text(...)` and `ui::rich_text(...)` residuals too, so ordinary proof apps cannot bypass the
+  text-role contract by using the builder-style text facade. The remaining builder-style residuals
+  are explicit capability/display payloads: the large numeric counter display and the GPUI/Fret
+  hello-world comparison title.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

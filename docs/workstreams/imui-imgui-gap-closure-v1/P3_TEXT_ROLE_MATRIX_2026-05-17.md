@@ -81,10 +81,13 @@ component should construct `TextProps` locally.
 5. Do not add a public `TextRole` enum until at least two consumers need a data-driven role value.
    The current API remains helper-based to avoid freezing unnecessary public surface.
 6. Remaining bare text in first-party proof apps is allowed only when the surface is itself testing
-   text/input rendering behavior. Current allowed residuals are `components_gallery` text
-   smoke/font override probes and `ime_smoke_demo` IME behavior instructions/status. Do not migrate
-   those mechanically into chrome roles; add a new role only when a non-proof surface repeats the
-   need.
+   text/input/rendering behavior or intentionally carries a visual display payload that does not
+   fit the compact role vocabulary yet. Current allowed residuals are `components_gallery` text
+   smoke/font override probes, `ime_smoke_demo` IME behavior instructions/status, text/CJK/emoji
+   conformance probes, rendering-effect overlay probes, `hello_counter_demo`'s large numeric
+   display, and `hello_world_compare_demo`'s GPUI/Fret comparison title payload. Do not migrate
+   those mechanically into compact chrome roles; add a new role only when a non-proof surface
+   repeats the need.
 
 ## Gates
 

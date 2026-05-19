@@ -3,6 +3,8 @@ use std::path::{Path, PathBuf};
 
 #[derive(Debug, Default, PartialEq, Eq)]
 struct DirectTextCounts {
+    ui_text: usize,
+    ui_rich_text: usize,
     cx_text: usize,
     text_props_new: usize,
     text_props_literal: usize,
@@ -37,6 +39,8 @@ fn direct_text_counts() -> BTreeMap<String, DirectTextCounts> {
             .replace('\\', "/");
 
         let count = counts.entry(rel).or_default();
+        count.ui_text += source.matches("ui::text(").count();
+        count.ui_rich_text += source.matches("ui::rich_text(").count();
         count.cx_text += source.matches("cx.text(").count();
         count.text_props_new += source.matches("TextProps::new(").count();
         count.text_props_literal += source.matches("cx.text_props(TextProps {").count()
@@ -46,7 +50,11 @@ fn direct_text_counts() -> BTreeMap<String, DirectTextCounts> {
     }
 
     counts.retain(|_, count| {
-        count.cx_text > 0 || count.text_props_new > 0 || count.text_props_literal > 0
+        count.ui_text > 0
+            || count.ui_rich_text > 0
+            || count.cx_text > 0
+            || count.text_props_new > 0
+            || count.text_props_literal > 0
     });
     counts
 }
@@ -57,6 +65,8 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
         (
             "src/components_gallery.rs".to_string(),
             DirectTextCounts {
+                ui_text: 0,
+                ui_rich_text: 0,
                 cx_text: 4,
                 text_props_new: 3,
                 text_props_literal: 0,
@@ -65,6 +75,8 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
         (
             "src/cjk_conformance_demo.rs".to_string(),
             DirectTextCounts {
+                ui_text: 0,
+                ui_rich_text: 0,
                 cx_text: 0,
                 text_props_new: 0,
                 text_props_literal: 7,
@@ -73,6 +85,8 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
         (
             "src/custom_effect_v1_demo.rs".to_string(),
             DirectTextCounts {
+                ui_text: 0,
+                ui_rich_text: 0,
                 cx_text: 0,
                 text_props_new: 0,
                 text_props_literal: 1,
@@ -81,6 +95,8 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
         (
             "src/custom_effect_v2_demo.rs".to_string(),
             DirectTextCounts {
+                ui_text: 0,
+                ui_rich_text: 0,
                 cx_text: 0,
                 text_props_new: 0,
                 text_props_literal: 1,
@@ -89,6 +105,8 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
         (
             "src/custom_effect_v2_glass_chrome_web_demo.rs".to_string(),
             DirectTextCounts {
+                ui_text: 0,
+                ui_rich_text: 0,
                 cx_text: 0,
                 text_props_new: 0,
                 text_props_literal: 3,
@@ -97,6 +115,8 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
         (
             "src/custom_effect_v2_identity_web_demo.rs".to_string(),
             DirectTextCounts {
+                ui_text: 0,
+                ui_rich_text: 0,
                 cx_text: 0,
                 text_props_new: 0,
                 text_props_literal: 3,
@@ -105,6 +125,8 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
         (
             "src/custom_effect_v2_lut_web_demo.rs".to_string(),
             DirectTextCounts {
+                ui_text: 0,
+                ui_rich_text: 0,
                 cx_text: 0,
                 text_props_new: 0,
                 text_props_literal: 3,
@@ -113,6 +135,8 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
         (
             "src/custom_effect_v2_web_demo.rs".to_string(),
             DirectTextCounts {
+                ui_text: 0,
+                ui_rich_text: 0,
                 cx_text: 0,
                 text_props_new: 0,
                 text_props_literal: 3,
@@ -121,6 +145,8 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
         (
             "src/custom_effect_v3_demo.rs".to_string(),
             DirectTextCounts {
+                ui_text: 0,
+                ui_rich_text: 0,
                 cx_text: 0,
                 text_props_new: 0,
                 text_props_literal: 1,
@@ -129,14 +155,38 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
         (
             "src/emoji_conformance_demo.rs".to_string(),
             DirectTextCounts {
+                ui_text: 0,
+                ui_rich_text: 0,
                 cx_text: 0,
                 text_props_new: 0,
                 text_props_literal: 5,
             },
         ),
         (
+            "src/hello_counter_demo.rs".to_string(),
+            DirectTextCounts {
+                ui_text: 1,
+                ui_rich_text: 0,
+                cx_text: 0,
+                text_props_new: 0,
+                text_props_literal: 0,
+            },
+        ),
+        (
+            "src/hello_world_compare_demo.rs".to_string(),
+            DirectTextCounts {
+                ui_text: 1,
+                ui_rich_text: 0,
+                cx_text: 0,
+                text_props_new: 0,
+                text_props_literal: 0,
+            },
+        ),
+        (
             "src/ime_smoke_demo.rs".to_string(),
             DirectTextCounts {
+                ui_text: 0,
+                ui_rich_text: 0,
                 cx_text: 8,
                 text_props_new: 0,
                 text_props_literal: 0,
@@ -145,6 +195,8 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
         (
             "src/liquid_glass_demo.rs".to_string(),
             DirectTextCounts {
+                ui_text: 0,
+                ui_rich_text: 0,
                 cx_text: 0,
                 text_props_new: 0,
                 text_props_literal: 2,
@@ -153,6 +205,8 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
         (
             "src/markdown_demo.rs".to_string(),
             DirectTextCounts {
+                ui_text: 0,
+                ui_rich_text: 0,
                 cx_text: 0,
                 text_props_new: 0,
                 text_props_literal: 2,
@@ -161,6 +215,8 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
         (
             "src/postprocess_theme_demo.rs".to_string(),
             DirectTextCounts {
+                ui_text: 0,
+                ui_rich_text: 0,
                 cx_text: 0,
                 text_props_new: 0,
                 text_props_literal: 2,
@@ -169,6 +225,8 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
         (
             "src/text_heavy_memory_demo.rs".to_string(),
             DirectTextCounts {
+                ui_text: 0,
+                ui_rich_text: 0,
                 cx_text: 0,
                 text_props_new: 0,
                 text_props_literal: 1,
@@ -212,6 +270,38 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
         assert!(
             ime.contains(needle),
             "ime_smoke_demo residual bare text should remain scoped to IME behavior probes; missing `{needle}`",
+        );
+    }
+
+    let hello_counter = include_str!("../src/hello_counter_demo.rs");
+    for needle in [
+        "ui::text(count.to_string())",
+        ".text_size_px(Px(72.0))",
+        ".font_bold()",
+        ".text_align(fret_core::TextAlign::Center)",
+        ".nowrap()",
+        ".test_id(TEST_ID_COUNT)",
+    ] {
+        assert!(
+            hello_counter.contains(needle),
+            "hello_counter_demo residual ui::text should remain the explicit large numeric display; missing `{needle}`",
+        );
+    }
+
+    let hello_world_compare = include_str!("../src/hello_world_compare_demo.rs");
+    for needle in [
+        "FRET_HELLO_WORLD_COMPARE_NO_TEXT",
+        "FRET_HELLO_WORLD_COMPARE_ACTIVE_MODE",
+        "ui::text(\"Hello, World!\")",
+        ".text_size_px(Px(24.0))",
+        ".font_semibold()",
+        ".text_align(TextAlign::Center)",
+        ".nowrap()",
+        ".test_id(TEST_ID_TITLE)",
+    ] {
+        assert!(
+            hello_world_compare.contains(needle),
+            "hello_world_compare_demo residual ui::text should remain the explicit GPUI/Fret comparison payload; missing `{needle}`",
         );
     }
 }

@@ -905,6 +905,13 @@ Readiness order for the next locally testable review slices:
    2026-05-19 extras marquee perf text follow-up: `extras_marquee_perf_demo` now routes its fixed
    perf-probe title through a section-chrome text role instead of local
    `ui::text(...).font_semibold()` styling. The marquee animation/perf path stays unchanged.
+   2026-05-19 residual bare text gate tightening follow-up: `text_role_residual_surface` now counts
+   `ui::text(...)` and `ui::rich_text(...)` in addition to `cx.text(...)`, `TextProps::new(...)`,
+   and direct `TextProps { ... }` construction. The only remaining `ui::text(...)` entries in
+   `fret-examples` are explicitly documented display/performance payloads:
+   `hello_counter_demo`'s large numeric display and `hello_world_compare_demo`'s GPUI/Fret
+   comparison title. Ordinary app/proof visible text must continue moving to shared roles instead
+   of relying on those exceptions.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

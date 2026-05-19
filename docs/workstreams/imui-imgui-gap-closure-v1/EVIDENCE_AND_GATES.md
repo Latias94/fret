@@ -3569,3 +3569,27 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
   passed.
 - `git diff --check` passed.
+
+2026-05-19 residual builder-text capability gate tightening:
+
+- Source gap before fix: `apps/fret-examples/tests/text_role_residual_surface.rs` counted
+  `cx.text(...)`, `TextProps::new(...)`, and direct `TextProps { ... }` residuals, but missed
+  builder-style `ui::text(...)` / `ui::rich_text(...)` calls. That left the proof-app text-role
+  contract weaker than the current resize-semantics policy.
+- `text_role_residual_surface` now counts `ui::text(...)` and `ui::rich_text(...)` too. The
+  remaining `ui::text(...)` entries in `fret-examples` are explicitly documented as
+  capability/display payloads: `hello_counter_demo`'s large numeric display and
+  `hello_world_compare_demo`'s GPUI/Fret comparison title.
+- `docs/workstreams/imui-imgui-gap-closure-v1/P3_TEXT_ROLE_MATRIX_2026-05-17.md` now records the
+  current allowed residual classes, including text/IME/conformance/rendering probes and the two
+  display/performance payload exceptions.
+- `tools/gate_imui_workstream_source.py` now requires the stricter residual test shape so the
+  gate cannot drift back to missing builder-style text construction.
+- `cargo fmt --check -p fret-examples` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo nextest run -p fret-examples --test text_role_residual_surface
+  remaining_bare_text_in_fret_examples_is_explicit_capability_surface --no-fail-fast` passed.
+- `git diff --check` passed.
