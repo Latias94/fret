@@ -3734,6 +3734,21 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/button_group.rs"),
+            required=[
+                "ButtonGroupTextContent::Children(children) => children",
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "button_group_text_children_preserve_shared_button_label_role_contracts",
+                "ButtonGroupText::new_children([decl_text::text_button_label(cx, \"Format\")])",
+                "assert_eq!(props.wrap, fret_core::TextWrap::None);",
+                "assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);",
+                "assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));",
+                "assert_eq!(props.layout.flex.shrink, 1.0);",
+                "assert!(label.inherited_text_style.is_some());",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-shadcn/src/item.rs"),
             required=[
                 "fn patch_item_title_text_style_recursive_scoped(",

@@ -4472,6 +4472,26 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   alert_dialog_description_children_preserve_shared_text_role_contracts
   item_description_children_preserve_shared_text_role_contracts --no-fail-fast` passed.
 
+2026-05-20 shadcn ButtonGroupText children role-preservation gate:
+
+- Source gap before gate: `ButtonGroupText::new_children(...)` already passed custom children
+  through, but the test suite only proved inline child count/layout. It did not prove a
+  caller-supplied shared button-label role kept its own single-line shrink/ellipsis contract under
+  button-group chrome composition.
+- `button_group_text_children_preserve_shared_button_label_role_contracts` now proves a
+  `text_button_label(...)` child keeps `style: None`, `color: None`, no wrapping, ellipsis
+  overflow, zero minimum width, flex shrink, and inherited role metadata when mounted through
+  `ButtonGroupText::new_children(...)`.
+- This is a gate-only contract slice for an existing shadcn recipe slot. Component-owned
+  `ButtonGroupText::new(...)` label styling remains local chrome policy, and this does not add a
+  new text role or widen `fret-imui`.
+- First focused `cargo nextest run -p fret-ui-shadcn --lib
+  button_group_text_children_preserve_shared_button_label_role_contracts --no-fail-fast` timed out
+  while Cargo/Rustc was still compiling. No process was killed; after Cargo/Rustc exited naturally,
+  the same focused command passed.
+- Focused `cargo nextest run -p fret-ui-shadcn --lib
+  button_group_text_children_preserve_shared_button_label_role_contracts --no-fail-fast` passed.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground

@@ -1060,6 +1060,10 @@ Readiness order for the next locally testable review slices:
    2026-05-20 tabular readout resize-gate follow-up: the tabular control-readout variants are now
    explicitly covered by the shared narrow-layout single-line role gate and by the text role
    matrix, so the derived readout helpers cannot exist without resize evidence.
+   2026-05-20 shadcn ButtonGroupText children-role follow-up: `ButtonGroupText::new_children(...)`
+   now has a focused gate proving caller-supplied `text_button_label(...)` children keep their
+   role-owned no-wrap, ellipsis, zero-min-width, and shrink contract under button-group chrome
+   composition. The default `ButtonGroupText::new(...)` label path remains component-owned policy.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

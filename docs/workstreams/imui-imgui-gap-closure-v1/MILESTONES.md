@@ -949,6 +949,9 @@ Exit criteria:
   2026-05-20 tabular readout resize-gate result: those tabular control-readout variants are now
   part of the shared narrow-layout single-line role gate and the text-role matrix derived-role
   catalog, so footer/page readouts remain explicitly protected against resize wrapping.
+  2026-05-20 shadcn ButtonGroupText children role-preservation result: the existing composable
+  ButtonGroupText children lane now has a focused gate proving caller-supplied button-label roles
+  keep their single-line shrink/ellipsis contract under button-group chrome composition.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.
