@@ -905,6 +905,9 @@ Exit criteria:
   2026-05-19 shadcn FieldTitle children-role result: FieldTitle now has a composable
   `new_children(...)` path. Bare/rich title children still receive field-title defaults and w-fit
   layout behavior, while shared title/chrome roles keep their own layout and ellipsis contracts.
+  2026-05-19 shadcn EmptyTitle children-role result: EmptyTitle now has a composable
+  `new_children(...)` path. Bare/rich empty-state title children still receive empty-title
+  defaults, while shared title/chrome roles keep their own ellipsis contracts.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

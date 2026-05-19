@@ -1,8 +1,10 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use fret_core::{Edges, Px, TextAlign, TextOverflow};
-use fret_ui::element::{AnyElement, CrossAlign, FlexProps, LayoutQueryRegionProps, MainAlign};
+use fret_core::{Edges, FontWeight, Px, TextAlign, TextOverflow, TextWrap};
+use fret_ui::element::{
+    AnyElement, CrossAlign, ElementKind, FlexProps, LayoutQueryRegionProps, MainAlign,
+};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography::scope_description_text;
@@ -286,14 +288,28 @@ impl EmptyMedia {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct EmptyTitle {
-    text: Arc<str>,
+    content: EmptyTitleContent,
+}
+
+#[derive(Debug)]
+enum EmptyTitleContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
 }
 
 impl EmptyTitle {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            content: EmptyTitleContent::Text(text.into()),
+        }
+    }
+
+    pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: EmptyTitleContent::Children(children.into_iter().collect()),
+        }
     }
 
     #[track_caller]
@@ -307,16 +323,107 @@ impl EmptyTitle {
             .metric_by_key("component.empty.title_line_height")
             .unwrap_or(Px(28.0));
 
-        ui::text(self.text)
-            .text_size_px(px)
-            .line_height_px(line_height)
-            .font_medium()
-            .text_align(TextAlign::Center)
-            .text_balance()
-            .w_full()
-            .min_w_0()
-            .text_color(ColorRef::Color(fg))
-            .into_element(cx)
+        match self.content {
+            EmptyTitleContent::Text(text) => ui::text(text)
+                .text_size_px(px)
+                .line_height_px(line_height)
+                .font_medium()
+                .text_align(TextAlign::Center)
+                .text_balance()
+                .w_full()
+                .min_w_0()
+                .text_color(ColorRef::Color(fg))
+                .into_element(cx),
+            EmptyTitleContent::Children(mut children) => {
+                for child in &mut children {
+                    patch_empty_title_text_style_recursive(child, px, line_height, fg);
+                }
+
+                match children.len() {
+                    0 => ui::text("")
+                        .text_size_px(px)
+                        .line_height_px(line_height)
+                        .font_medium()
+                        .text_align(TextAlign::Center)
+                        .text_balance()
+                        .w_full()
+                        .min_w_0()
+                        .text_color(ColorRef::Color(fg))
+                        .into_element(cx),
+                    1 => children.pop().expect("children.len() == 1"),
+                    _ => ui::v_flex(move |_cx| children)
+                        .gap(Space::N0)
+                        .items_center()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .into_element(cx),
+                }
+            }
+        }
+    }
+}
+
+fn patch_empty_title_text_style_recursive(
+    el: &mut AnyElement,
+    px: Px,
+    line_height: Px,
+    color: fret_core::Color,
+) {
+    patch_empty_title_text_style_recursive_scoped(el, px, line_height, color, false);
+}
+
+fn patch_empty_title_text_style_recursive_scoped(
+    el: &mut AnyElement,
+    px: Px,
+    line_height: Px,
+    color: fret_core::Color,
+    role_scope_active: bool,
+) {
+    fn patch_text_style(style: &mut Option<fret_core::TextStyle>, px: Px, line_height: Px) {
+        let mut style_value = style.take().unwrap_or_default();
+        style_value.size = px;
+        style_value.weight = FontWeight::MEDIUM;
+        style_value.line_height = Some(line_height);
+        style_value.line_height_em = None;
+        *style = Some(style_value);
+    }
+
+    let role_scope_active = role_scope_active || el.inherited_text_style.is_some();
+    match &mut el.kind {
+        ElementKind::Text(props) => {
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height);
+                props.color = Some(color);
+                props.align = TextAlign::Center;
+                props.wrap = TextWrap::Balance;
+            }
+        }
+        ElementKind::StyledText(props) => {
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height);
+                props.color = Some(color);
+                props.align = TextAlign::Center;
+                props.wrap = TextWrap::Balance;
+            }
+        }
+        ElementKind::SelectableText(props) => {
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height);
+                props.color = Some(color);
+                props.align = TextAlign::Center;
+                props.wrap = TextWrap::Balance;
+            }
+        }
+        _ => {}
+    }
+
+    for child in &mut el.children {
+        patch_empty_title_text_style_recursive_scoped(
+            child,
+            px,
+            line_height,
+            color,
+            role_scope_active,
+        );
     }
 }
 
@@ -740,19 +847,110 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Rect, Size};
     use fret_ui::element::ElementKind;
+    use fret_ui_kit::declarative::text as decl_text;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        )
+    }
+
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &el.kind
+            && props.text.as_ref() == needle
+        {
+            return Some(el);
+        }
+        el.children
+            .iter()
+            .find_map(|child| find_text_element(child, needle))
+    }
+
+    fn find_first_styled_text(el: &AnyElement) -> Option<&fret_ui::element::StyledTextProps> {
+        if let ElementKind::StyledText(props) = &el.kind {
+            return Some(props);
+        }
+        el.children.iter().find_map(find_first_styled_text)
+    }
+
+    #[test]
+    fn empty_title_children_patch_rich_text_with_title_typography() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                let rich = fret_core::AttributedText::new(
+                    Arc::<str>::from("No matching panes"),
+                    Arc::<[fret_core::TextSpan]>::from([fret_core::TextSpan::new(
+                        "No matching panes".len(),
+                    )]),
+                );
+
+                EmptyTitle::new_children([cx.styled_text(rich)]).into_element(cx)
+            });
+
+        let props = find_first_styled_text(&element)
+            .expect("expected EmptyTitle children to keep the rich text node");
+        let style = props
+            .style
+            .as_ref()
+            .expect("expected EmptyTitle children to receive explicit title text style");
+        let theme = fret_ui::Theme::global(&app).snapshot();
+
+        assert_eq!(
+            style.size,
+            theme
+                .metric_by_key("component.empty.title_px")
+                .unwrap_or(Px(18.0))
+        );
+        assert_eq!(style.weight, fret_core::FontWeight::MEDIUM);
+        assert_eq!(
+            style.line_height,
+            Some(
+                theme
+                    .metric_by_key("component.empty.title_line_height")
+                    .unwrap_or(Px(28.0))
+            )
+        );
+        assert_eq!(props.color, Some(theme.color_token("foreground")));
+        assert_eq!(props.align, TextAlign::Center);
+    }
+
+    #[test]
+    fn empty_title_children_preserve_shared_text_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                EmptyTitle::new_children([decl_text::text_chrome_title(cx, "No matching panes")])
+                    .into_element(cx)
+            });
+
+        let text = find_text_element(&element, "No matching panes")
+            .expect("expected EmptyTitle role child text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, fret_core::TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(text.inherited_text_style.is_some());
+    }
 
     #[test]
     fn empty_description_scopes_inherited_text_style() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        let bounds = Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(320.0), Px(120.0)),
-        );
 
-        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            EmptyDescription::new("Description").into_element(cx)
-        });
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                EmptyDescription::new("Description").into_element(cx)
+            });
 
         let ElementKind::Text(props) = &element.kind else {
             panic!("expected EmptyDescription to be a text element");

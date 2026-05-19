@@ -3939,6 +3939,39 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.
 
+2026-05-19 shadcn EmptyTitle children-role slice:
+
+- Source gap before fix: `EmptyTitle` only accepted a string payload, so empty-state title slots
+  could not carry caller-supplied shared title/chrome role children. That kept empty states outside
+  the same explicit-role contract used by overlay, card, item, and field title slots.
+- `EmptyTitle` now exposes `new_children(...)`. The string path preserves the existing shadcn
+  empty-title defaults, including centered balanced text; the children path patches bare `Text`,
+  `StyledText`, and `SelectableText` children with empty-title typography/foreground/centered
+  balance fallback, but skips subtrees that already carry inherited text-role metadata.
+- `empty_title_children_patch_rich_text_with_title_typography` proves the strong fallback remains;
+  `empty_title_children_preserve_shared_text_role_contracts` proves a `text_chrome_title(...)`
+  child keeps `style: None`, `color: None`, ellipsis overflow, and role metadata; and
+  `empty_description_scopes_inherited_text_style` proves description scopes are unchanged.
+- `tools/gate_imui_workstream_source.py` now guards the EmptyTitle children API, scoped helper, and
+  tests.
+- Red run before fix:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  empty_title_children_patch_rich_text_with_title_typography
+  empty_title_children_preserve_shared_text_role_contracts --no-fail-fast` failed because
+  `EmptyTitle::new_children(...)` did not exist.
+- Post-fix focused run passed:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  empty_title_children_patch_rich_text_with_title_typography
+  empty_title_children_preserve_shared_text_role_contracts
+  empty_description_scopes_inherited_text_style --no-fail-fast`.
+- `cargo fmt --check -p fret-ui-shadcn` passed.
+- `cargo check -p fret-ui-shadcn --lib` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.
+
 2026-05-19 shadcn FieldTitle children-role slice:
 
 - Source gap before fix: `FieldTitle` only accepted a string payload, so field/property-panel title
