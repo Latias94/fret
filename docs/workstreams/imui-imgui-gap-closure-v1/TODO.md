@@ -932,6 +932,11 @@ Readiness order for the next locally testable review slices:
    direct-text residual allowlist. Starter/LUT badges use section-chrome text, status/hints use
    control-readout text, and the glass/chrome slider label/value row uses control-label/readout
    roles.
+   2026-05-19 effect reference chrome text follow-up: `custom_effect_v3_demo`,
+   `postprocess_theme_demo`, and `liquid_glass_demo` no longer keep fixed overlay/header/card
+   titles in the direct-text residual allowlist. Effect/runtime proof ownership stays local, while
+   fixed chrome/readout text now routes through `text_section_chrome_label(...)` and
+   `text_control_readout(...)`.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

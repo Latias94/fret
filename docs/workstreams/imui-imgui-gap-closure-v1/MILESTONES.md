@@ -833,6 +833,11 @@ Exit criteria:
   template behavior unchanged while moving fixed overlay/control text out of local `TextProps`.
   Starter/LUT badges use section-chrome text, hints/status use readout text, and glass/chrome
   slider names/values use control-label/readout roles.
+  2026-05-19 effect reference chrome text result: `custom_effect_v3_demo`,
+  `postprocess_theme_demo`, and `liquid_glass_demo` keep their renderer/effect proof behavior
+  unchanged while moving fixed overlay/header/card titles out of local `TextProps`. The remaining
+  effect chrome uses shared section-chrome/control-readout roles with app-owned foreground and
+  container geometry.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

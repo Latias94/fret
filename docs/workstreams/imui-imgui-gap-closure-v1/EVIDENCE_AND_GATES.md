@@ -2725,6 +2725,35 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   passed.
 - `git diff --check` passed.
 
+2026-05-19 effect reference chrome text-role slice:
+
+- Source gap before fix: `custom_effect_v3_demo.rs`, `postprocess_theme_demo.rs`, and
+  `liquid_glass_demo.rs` still used local `TextProps` for fixed effect overlay/header/card titles.
+  These are ordinary chrome/readout slots around renderer/effect proofs, not text-rendering
+  capability probes.
+- `custom_effect_v3_demo` now uses `overlay_label_text(...)` backed by
+  `decl_text::text_section_chrome_label(...)`. `postprocess_theme_demo` uses
+  `postprocess_title_text(...)` for the fixed header title and `postprocess_readout_text(...)` for
+  the explanatory header readout. `liquid_glass_demo` uses section-chrome helpers for both overlay
+  pill labels and card titles.
+- App-owned foreground inheritance and absolute/header/card container geometry remain local; the
+  shrink/single-line text semantics now come from shared roles.
+- `apps/fret-examples/tests/custom_effect_overlay_text_surface.rs`,
+  `apps/fret-examples/tests/text_role_residual_surface.rs`, and
+  `tools/gate_imui_workstream_source.py` guard the migration and remove these three demos from the
+  residual direct text allowlist.
+- First post-fix focused `cargo nextest` runs for `custom_effect_overlay_text_surface` and
+  `text_role_residual_surface` timed out while background Cargo/Rustc compilation continued. Retried
+  after Cargo/Rustc exited.
+- `cargo fmt --check -p fret-examples` passed.
+- `cargo check -p fret-examples --lib` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo nextest run -p fret-examples --test custom_effect_overlay_text_surface
+  custom_effect_v3_and_effect_reference_chrome_use_shared_roles --no-fail-fast` passed.
+- `cargo nextest run -p fret-examples --test text_role_residual_surface
+  remaining_bare_text_in_fret_examples_is_explicit_capability_surface --no-fail-fast` passed.
+
 2026-05-19 custom effect web template overlay/control text-role slice:
 
 - Source gap before fix: `custom_effect_v2_identity_web_demo.rs`,

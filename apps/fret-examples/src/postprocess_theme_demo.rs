@@ -12,21 +12,39 @@
 
 use std::sync::Arc;
 
+use fret::app::AppRenderContext;
 use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_core::scene::{
     DitherMode, EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep,
 };
 use fret_core::{Color, Corners, Edges, EffectId, Px};
 use fret_ui::element::{
-    ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle, SpacerProps,
-    TextProps,
+    AnyElement, ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle,
+    SpacerProps,
 };
 use fret_ui_kit::custom_effects::CustomEffectProgramV1;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{IntoUiElement, IntoUiElementInExt as _, Space};
 
 mod act {
     fret::actions!([Reset = "postprocess_theme_demo.reset.v1"]);
+}
+
+fn postprocess_title_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    decl_text::text_section_chrome_label(cx.elements(), text)
+        .inherit_foreground(srgb(255, 255, 255, 0.92))
+}
+
+fn postprocess_readout_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    decl_text::text_control_readout(cx.elements(), text)
+        .inherit_foreground(srgb(255, 255, 255, 0.68))
 }
 
 fn install_demo_theme(app: &mut KernelApp) {
@@ -688,29 +706,11 @@ fn stage_body(
             header_layout.inset.left = Some(Px(20.0)).into();
             header_layout.inset.top = Some(Px(18.0)).into();
 
-            let title = cx.text_props(TextProps {
-                layout: Default::default(),
-                text: Arc::<str>::from("Theme-like Postprocess (CustomV1)"),
-                style: None,
-                color: Some(srgb(255, 255, 255, 0.92)),
-                align: fret_core::TextAlign::Start,
-                wrap: fret_core::TextWrap::None,
-                overflow: fret_core::TextOverflow::Clip,
-                ink_overflow: Default::default(),
-            });
-
-            let subtitle = cx.text_props(TextProps {
-                layout: Default::default(),
-                text: Arc::<str>::from(
-                    "Scanlines + vignette + chromatic + grain (bounded, deterministic).",
-                ),
-                style: None,
-                color: Some(srgb(255, 255, 255, 0.68)),
-                align: fret_core::TextAlign::Start,
-                wrap: fret_core::TextWrap::None,
-                overflow: fret_core::TextOverflow::Clip,
-                ink_overflow: Default::default(),
-            });
+            let title = postprocess_title_text(cx, "Theme-like Postprocess (CustomV1)");
+            let subtitle = postprocess_readout_text(
+                cx,
+                "Scanlines + vignette + chromatic + grain (bounded, deterministic).",
+            );
 
             let header = cx.container(
                 ContainerProps {

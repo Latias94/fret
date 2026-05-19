@@ -133,6 +133,101 @@ fn assert_custom_effect_v2_glass_chrome_text_roles(source: &str) {
     }
 }
 
+fn assert_custom_effect_v3_overlay_text_roles(source: &str) {
+    let source = compact(source);
+
+    for needle in [
+        "usefret::app::AppRenderContext;",
+        "usefret_ui_kit::declarative::textasdecl_text;",
+        "fnoverlay_label_text<'a,Cx>(",
+        "Cx:AppRenderContext<'a>,",
+        "decl_text::text_section_chrome_label(cx.elements(),text).inherit_foreground(Color{r:1.0,g:1.0,b:1.0,a:0.92,})",
+        "letlabel_text=overlay_label_text(cx,title);",
+        "move|_cx|vec![label_text]",
+    ] {
+        assert!(
+            source.contains(needle),
+            "custom_effect_v3_demo should keep fixed overlay labels on shared chrome text roles; missing `{needle}`",
+        );
+    }
+
+    for needle in [
+        "cx.text_props(TextProps{",
+        "TextProps{",
+        "wrap:fret_core::TextWrap::None",
+        "overflow:fret_core::TextOverflow::Clip",
+    ] {
+        assert!(
+            !source.contains(needle),
+            "custom_effect_v3_demo should not render overlay labels with local TextProps policy; unexpected `{needle}`",
+        );
+    }
+}
+
+fn assert_postprocess_theme_overlay_text_roles(source: &str) {
+    let source = compact(source);
+
+    for needle in [
+        "usefret::app::AppRenderContext;",
+        "usefret_ui_kit::declarative::textasdecl_text;",
+        "fnpostprocess_title_text<'a,Cx>(",
+        "fnpostprocess_readout_text<'a,Cx>(",
+        "decl_text::text_section_chrome_label(cx.elements(),text).inherit_foreground(srgb(255,255,255,0.92))",
+        "decl_text::text_control_readout(cx.elements(),text).inherit_foreground(srgb(255,255,255,0.68))",
+        "lettitle=postprocess_title_text(cx,\"Theme-likePostprocess(CustomV1)\");",
+        "letsubtitle=postprocess_readout_text(cx,\"Scanlines+vignette+chromatic+grain(bounded,deterministic).\",);",
+    ] {
+        assert!(
+            source.contains(needle),
+            "postprocess_theme_demo should keep fixed title/readout text on shared roles; missing `{needle}`",
+        );
+    }
+
+    for needle in [
+        "cx.text_props(TextProps{",
+        "TextProps{",
+        "wrap:fret_core::TextWrap::None",
+        "overflow:fret_core::TextOverflow::Clip",
+    ] {
+        assert!(
+            !source.contains(needle),
+            "postprocess_theme_demo should not render overlay text with local TextProps policy; unexpected `{needle}`",
+        );
+    }
+}
+
+fn assert_liquid_glass_overlay_text_roles(source: &str) {
+    let source = compact(source);
+
+    for needle in [
+        "usefret::app::AppRenderContext;",
+        "usefret_ui_kit::declarative::textasdecl_text;",
+        "fnliquid_glass_overlay_text<H:UiHost>(",
+        "fnliquid_glass_card_title_text<'a,Cx>(",
+        "decl_text::text_section_chrome_label(cx,text).inherit_foreground(srgb(255,255,255,0.92))",
+        "decl_text::text_section_chrome_label(cx.elements(),text).inherit_foreground(srgb(255,255,255,0.92))",
+        "lettitle=liquid_glass_overlay_text(cx,label.clone());",
+        "lettitle=liquid_glass_card_title_text(cx,title);",
+    ] {
+        assert!(
+            source.contains(needle),
+            "liquid_glass_demo should keep fixed overlay/card text on shared chrome roles; missing `{needle}`",
+        );
+    }
+
+    for needle in [
+        "cx.text_props(TextProps{",
+        "TextProps{",
+        "wrap:fret_core::TextWrap::None",
+        "overflow:fret_core::TextOverflow::Clip",
+    ] {
+        assert!(
+            !source.contains(needle),
+            "liquid_glass_demo should not render overlay/card text with local TextProps policy; unexpected `{needle}`",
+        );
+    }
+}
+
 #[test]
 fn custom_effect_v1_v2_overlay_labels_use_shared_chrome_role() {
     assert_custom_effect_overlay_text_roles(
@@ -143,6 +238,13 @@ fn custom_effect_v1_v2_overlay_labels_use_shared_chrome_role() {
         include_str!("../src/custom_effect_v2_demo.rs"),
         "custom_effect_v2_demo",
     );
+}
+
+#[test]
+fn custom_effect_v3_and_effect_reference_chrome_use_shared_roles() {
+    assert_custom_effect_v3_overlay_text_roles(include_str!("../src/custom_effect_v3_demo.rs"));
+    assert_postprocess_theme_overlay_text_roles(include_str!("../src/postprocess_theme_demo.rs"));
+    assert_liquid_glass_overlay_text_roles(include_str!("../src/liquid_glass_demo.rs"));
 }
 
 #[test]

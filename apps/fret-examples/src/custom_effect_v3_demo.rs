@@ -12,6 +12,7 @@
 
 use std::sync::Arc;
 
+use fret::app::AppRenderContext;
 use fret::{FretApp, advanced::prelude::*, component::prelude::*};
 use fret_core::scene::{
     CustomEffectImageInputV1, CustomEffectPyramidRequestV1, CustomEffectSourcesV3, EffectChain,
@@ -25,9 +26,10 @@ use fret_render::{
 use fret_ui::Invalidation;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, EffectLayerProps, LayoutStyle, Length, MainAlign,
-    Overflow, PositionStyle, RowProps, SpacingLength, TextProps,
+    Overflow, PositionStyle, RowProps, SpacingLength,
 };
 use fret_ui_kit::custom_effects::CustomEffectProgramV3;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::facade as shadcn;
 
@@ -35,6 +37,18 @@ use crate::custom_effect_v3_wgsl::CUSTOM_EFFECT_V3_LENS_WGSL;
 
 mod act {
     fret::actions!([Reset = "custom_effect_v3_demo.reset.v1"]);
+}
+
+fn overlay_label_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    decl_text::text_section_chrome_label(cx.elements(), text).inherit_foreground(Color {
+        r: 1.0,
+        g: 1.0,
+        b: 1.0,
+        a: 0.92,
+    })
 }
 
 const CUSTOM_EFFECT_V3_USER0_PROBE_WGSL: &str = r#"
@@ -963,21 +977,14 @@ fn lens_shell(
                 |_cx| Vec::<AnyElement>::new(),
             );
 
-            let label = cx.text_props(TextProps {
-                layout: label_layout,
-                text: Arc::from(title),
-                style: None,
-                color: Some(Color {
-                    r: 1.0,
-                    g: 1.0,
-                    b: 1.0,
-                    a: 0.92,
-                }),
-                align: fret_core::TextAlign::Start,
-                wrap: fret_core::TextWrap::None,
-                overflow: fret_core::TextOverflow::Clip,
-                ink_overflow: Default::default(),
-            });
+            let label_text = overlay_label_text(cx, title);
+            let label = cx.container(
+                ContainerProps {
+                    layout: label_layout,
+                    ..Default::default()
+                },
+                move |_cx| vec![label_text],
+            );
 
             let mut out = Vec::new();
             if let Some(layer) = effect_layer {
