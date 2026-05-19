@@ -3268,3 +3268,22 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   imui_node_graph_demo_surface imui_node_graph_demo_keeps_compat_title_on_shared_role
   --no-fail-fast` passed, with the same pre-existing node-graph legacy/domain
   `private_interfaces` warnings.
+
+2026-05-19 embedded viewport chrome/readout text-role slice:
+
+- Source gap before fix: `apps/fret-examples/src/embedded_viewport_demo.rs` used local
+  `ui::text(...)` children for fixed ToggleGroup viewport-size labels and local
+  `ui::text(format!(...)).text_sm()` builders for compact target/click/input status lines. Under
+  narrow resize those are button/readout chrome, not paragraph text.
+- `embedded_viewport_button_label_text(...)` now routes the size labels through
+  `decl_text::text_button_label(...)`, and `embedded_viewport_readout_text(...)` routes target,
+  click, and last-input status through `decl_text::text_control_readout(...)`.
+- `apps/fret-examples/tests/embedded_viewport_demo_surface.rs` and
+  `tools/gate_imui_workstream_source.py` guard the shared roles and forbid the old local
+  `ui::text(...)` builders for those fixed chrome/readout slots.
+- `cargo fmt --check -p fret-examples` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo nextest run -p fret-examples --test embedded_viewport_demo_surface
+  embedded_viewport_demo_keeps_fixed_chrome_text_on_roles --no-fail-fast` passed.
+- `cargo check -p fret-demo --bin embedded_viewport_demo` passed.

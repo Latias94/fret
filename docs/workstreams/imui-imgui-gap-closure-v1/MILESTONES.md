@@ -764,6 +764,10 @@ Exit criteria:
   section-chrome text role through `compat_section_text(...)`. The slice removes local
   `fret_ui_kit::ui::text(...).font_semibold()` title styling without adding node-graph policy to
   `fret-imui`.
+  2026-05-19 embedded viewport chrome text result: `embedded_viewport_demo` now keeps viewport size
+  ToggleGroup labels on shared button-label text and status lines on shared control-readout text.
+  This removes local fixed-chrome `ui::text(...).text_sm()` policy from the embedded viewport proof
+  without changing the embedded RenderTarget/input-forwarding interop path.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

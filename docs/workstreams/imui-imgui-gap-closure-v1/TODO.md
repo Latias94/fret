@@ -855,6 +855,11 @@ Readiness order for the next locally testable review slices:
    helper backed by `text_section_chrome_label(...)` instead of local
    `fret_ui_kit::ui::text(...).font_semibold()` styling. This does not promote the retained
    bridge as the default node-graph authoring path and does not widen `fret-imui`.
+   2026-05-19 embedded viewport chrome text follow-up: `embedded_viewport_demo` now routes fixed
+   ToggleGroup size labels through a button-label role and viewport status lines through a
+   control-readout role instead of local `ui::text(...).text_sm()` builders. This closes another
+   resize-sensitive app-owned chrome surface while leaving embedded viewport/input forwarding
+   behavior unchanged.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

@@ -5,12 +5,28 @@ use fret::{FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_core::ViewportFit;
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{FrameId, TickId};
+use fret_ui::UiHost;
 use fret_ui_kit::IntoUiElementInExt as _;
+use fret_ui_kit::declarative::text as decl_text;
 
 const DEFAULT_VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
 const SIZE_PRESET_640: &str = "640x360";
 const SIZE_PRESET_960: &str = "960x540";
 const SIZE_PRESET_1280: &str = "1280x720";
+
+fn embedded_viewport_button_label_text<H: UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    decl_text::text_button_label(cx, text)
+}
+
+fn embedded_viewport_readout_text<H: UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    decl_text::text_control_readout(cx, text)
+}
 
 fn diag_enabled() -> bool {
     std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty() && v != "0")
@@ -83,17 +99,26 @@ impl View for EmbeddedViewportDemoView {
             .items([
                 shadcn::ToggleGroupItem::new(
                     SIZE_PRESET_640,
-                    [ui::text("640×360").into_element_in(cx)],
+                    [embedded_viewport_button_label_text(
+                        cx.elements(),
+                        "640×360",
+                    )],
                 )
                 .a11y_label("Viewport size 640 by 360"),
                 shadcn::ToggleGroupItem::new(
                     SIZE_PRESET_960,
-                    [ui::text("960×540").into_element_in(cx)],
+                    [embedded_viewport_button_label_text(
+                        cx.elements(),
+                        "960×540",
+                    )],
                 )
                 .a11y_label("Viewport size 960 by 540"),
                 shadcn::ToggleGroupItem::new(
                     SIZE_PRESET_1280,
-                    [ui::text("1280×720").into_element_in(cx)],
+                    [embedded_viewport_button_label_text(
+                        cx.elements(),
+                        "1280×720",
+                    )],
                 )
                 .a11y_label("Viewport size 1280 by 720"),
             ])
@@ -103,15 +128,9 @@ impl View for EmbeddedViewportDemoView {
         let info = ui::v_flex(|cx| {
             ui::children![
                 cx;
-                ui::text(format!("Target: {preset_label}"))
-                    .text_sm()
-                    .into_element(cx),
-                ui::text(format!("Clicks: {clicks}"))
-                    .text_sm()
-                    .into_element(cx),
-                ui::text(format!("Last input: {last_input}"))
-                    .text_sm()
-                    .into_element(cx),
+                embedded_viewport_readout_text(cx, format!("Target: {preset_label}")),
+                embedded_viewport_readout_text(cx, format!("Clicks: {clicks}")),
+                embedded_viewport_readout_text(cx, format!("Last input: {last_input}")),
             ]
         })
         .gap(Space::N1)
