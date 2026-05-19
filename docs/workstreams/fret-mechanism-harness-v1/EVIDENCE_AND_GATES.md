@@ -4680,3 +4680,57 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - result: passed; 11/11 scripts passed; suite summary
     `target/fret-diag-workspace-shell-demo-suite-dirty-close-widget-v1/sessions/1779148963907-13484/suite.summary.json`;
     new dirty-close button script run id `1779148967346`.
+
+## Workspace Shell Demo Close Others Dirty Aggregation Gate
+
+- invariant:
+  aggregate tab-close commands must build a dirty-close request over the actual target set, not
+  just the active tab. `Close Other Tabs` should target non-pinned, non-active tabs in order,
+  include only dirty target tabs in the dirty list, block before mutation on Cancel, and close the
+  target set only after Discard.
+- finding:
+  no runtime mechanism defect was reproduced. The focused runtime gate passed once the script used
+  the existing stable tabstrip keyboard-selection path. The first runtime drafts exposed two script
+  authoring issues: direct tab click did not select `doc-a-0` in this shell state, and `arrowright`
+  was not a valid `press_key` token; the script now uses `arrow_right`.
+- diagnostics surface:
+  the workspace shell dirty-close dialog now publishes a stable semantics label with
+  `reason`, `active`, `close_count`, and `dirty` fields. This lets diagnostics assert aggregate
+  prompt content with `label_contains` instead of relying on child text-node aggregation.
+- implementation anchors:
+  `apps/fret-examples/src/workspace_shell_demo.rs`,
+  `ecosystem/fret-workspace/src/tabs.rs`,
+  `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-others-dirty-aggregation-smoke.json`,
+  `tools/diag-scripts/workspace-shell-demo-tab-close-others-dirty-aggregation-smoke.json`,
+  `tools/diag-scripts/suites/workspace-shell-demo/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- JSON validation:
+  `python -m json.tool tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-tab-close-others-dirty-aggregation-smoke.json > $null`
+  - result: passed.
+  `python -m json.tool tools\diag-scripts\workspace-shell-demo-tab-close-others-dirty-aggregation-smoke.json > $null`
+  - result: passed.
+- registry:
+  `python tools/check_diag_scripts_registry.py`
+  - result: passed; registry is up to date.
+- focused workspace mechanism gate:
+  `cargo test --profile dev-fast -p fret-workspace --lib dirty_close_policy_can_block_close_others_with_multiple_targets -- --nocapture`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_workspace_shell_demo_tab_close_others_dirty_aggregation_smoke --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `c5d88a4e-1708-43e1-aac0-39bd3f49db41`.
+- formatting:
+  `rustfmt --edition 2024 --check apps\fret-examples\src\workspace_shell_demo.rs ecosystem\fret-workspace\src\tabs.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`
+  - result: passed.
+- build:
+  `cargo build --profile dev-fast -p fret-demo --bin workspace_shell_demo`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\workspace-shell-demo-tab-close-others-dirty-aggregation-smoke.json --dir target\fret-diag-workspace-shell-demo-close-others-dirty-aggregation-v3 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  - result: passed; run id `1779150581545`; AI packet
+    `target/fret-diag-workspace-shell-demo-close-others-dirty-aggregation-v3/sessions/1779150577000-104072/1779150581545/ai.packet`.
+- full runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite workspace-shell-demo --dir target\fret-diag-workspace-shell-demo-suite-close-others-dirty-aggregation-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  - result: passed; 12/12 scripts passed; suite summary
+    `target/fret-diag-workspace-shell-demo-suite-close-others-dirty-aggregation-v1/sessions/1779150610325-113064/suite.summary.json`;
+    aggregate dirty-close script run id `1779150627934`.

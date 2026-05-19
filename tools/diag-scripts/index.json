@@ -12004,6 +12004,33 @@
       ]
     },
     {
+      "id": "workspace-shell-demo-tab-close-others-dirty-aggregation-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-others-dirty-aggregation-smoke.json",
+      "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "aggregation",
+        "close",
+        "dirty",
+        "gate",
+        "prompt",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Marks doc-a-0 and doc-a-1 dirty, activates doc-a-2, and invokes Close Other Tabs from the real tab context menu.",
+        "Asserts the dirty-close prompt reports a CloseOthers aggregate with two targets and two dirty tabs.",
+        "Cancels once to prove the aggregate close is blocked, then discards to close only the aggregate targets."
+      ]
+    },
+    {
       "id": "workspace-shell-demo-tab-cross-pane-move-to-end",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cross-pane-move-to-end.json",
       "required_capabilities": [

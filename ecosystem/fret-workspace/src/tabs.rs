@@ -1178,6 +1178,59 @@ mod tests {
     }
 
     #[test]
+    fn dirty_close_policy_can_block_close_others_with_multiple_targets() {
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["p0", "a", "b", "c"]) {
+            state.open_and_activate(id);
+        }
+        state.set_pinned_count(1);
+        assert!(state.activate(Arc::<str>::from("c")));
+        state.set_dirty(Arc::<str>::from("p0"), true);
+        state.set_dirty(Arc::<str>::from("a"), true);
+        state.set_dirty(Arc::<str>::from("b"), true);
+        state.set_dirty(Arc::<str>::from("c"), true);
+
+        let mut policy = BlockDirtyClosePolicy;
+        let outcome = state.apply_command_with_close_policy(
+            &CommandId::from(CMD_WORKSPACE_TAB_CLOSE_OTHERS),
+            Some(&mut policy),
+        );
+
+        assert!(!outcome.applied);
+        let request = outcome
+            .blocked_dirty_close
+            .expect("expected dirty close request");
+        assert_eq!(request.reason, WorkspaceCloseReason::CloseOthers);
+        assert_eq!(request.active_tab_id.as_deref(), Some("c"));
+        assert_eq!(
+            request
+                .target_tabs_in_order
+                .iter()
+                .map(|id| id.as_ref())
+                .collect::<Vec<_>>(),
+            vec!["a", "b"]
+        );
+        assert_eq!(
+            request
+                .dirty_tabs_in_order
+                .iter()
+                .map(|id| id.as_ref())
+                .collect::<Vec<_>>(),
+            vec!["a", "b"]
+        );
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["p0", "a", "b", "c"]
+        );
+        assert_eq!(state.pinned_count(), 1);
+        assert_eq!(state.active().unwrap().as_ref(), "c");
+        assert!(state.is_dirty("p0"));
+        assert!(state.is_dirty("a"));
+        assert!(state.is_dirty("b"));
+        assert!(state.is_dirty("c"));
+    }
+
+    #[test]
     fn close_last_clears_active() {
         let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
         state.open_and_activate(Arc::<str>::from("only"));

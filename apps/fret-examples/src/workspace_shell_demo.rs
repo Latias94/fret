@@ -671,6 +671,9 @@ impl WorkspaceShellDemoDriver {
                                     0,
                                 )
                             });
+                        let prompt_label = Arc::<str>::from(format!(
+                            "Dirty close confirmation reason={reason} active={active_tab} close_count={close_count} dirty=[{dirty_list}]"
+                        ));
 
                         let dim_bg = Some(theme.color_token("muted"));
                         let dialog_bg = Some(theme.color_token("card"));
@@ -723,6 +726,7 @@ impl WorkspaceShellDemoDriver {
                                             SemanticsProps {
                                                 layout: fill_layout(),
                                                 role: SemanticsRole::Dialog,
+                                                label: Some(prompt_label.clone()),
                                                 test_id: Some(Arc::from(
                                                     "workspace-shell-dirty-close-prompt",
                                                 )),

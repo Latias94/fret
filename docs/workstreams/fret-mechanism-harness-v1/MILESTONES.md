@@ -2229,3 +2229,41 @@ Status: complete for dirty-close policy under widget-dispatched tab close comman
   with suite summary
   `target/fret-diag-workspace-shell-demo-suite-dirty-close-widget-v1/sessions/1779148963907-13484/suite.summary.json`
   and 11/11 scripts passed.
+
+## M120: Workspace Shell Demo Close Others Dirty Aggregation Gate
+
+Status: complete for aggregate dirty-close policy under context-menu Close Other Tabs commands.
+
+- Added `workspace-shell-demo-tab-close-others-dirty-aggregation-smoke.json` and promoted it into
+  the `workspace-shell-demo` suite.
+- The script marks `doc-a-0` and `doc-a-1` dirty, activates `doc-a-2`, invokes `Close Other Tabs`
+  from the real tab context menu, and asserts the pointer command dispatch trace records
+  `workspace.tab.close.others`.
+- The dirty-close prompt now exposes a stable diagnostics label containing the reason, active tab,
+  close-count, and dirty target list. The runtime gate asserts `reason=CloseOthers`,
+  `active=doc-a-2`, `close_count=2`, and `dirty=[doc-a-0, doc-a-1]`.
+- The first runtime drafts exposed diagnostics authoring defects, not runtime defects: direct tab
+  clicking did not make `doc-a-0` selected in this shell state, and `arrowright` was not a valid
+  key token. The final script uses the existing content-focus plus tabstrip keyboard-selection
+  pattern and the valid `arrow_right` key token.
+- The companion `fret-workspace` unit test proves `CloseOthers` dirty-close requests aggregate
+  multiple non-pinned, non-active targets while leaving pinned and active dirty tabs out of the
+  close target set.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-tab-close-others-dirty-aggregation-smoke.json > $null`;
+  `python -m json.tool tools\diag-scripts\workspace-shell-demo-tab-close-others-dirty-aggregation-smoke.json > $null`;
+  `python tools/check_diag_scripts_registry.py`;
+  `cargo test --profile dev-fast -p fret-workspace --lib dirty_close_policy_can_block_close_others_with_multiple_targets -- --nocapture`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_workspace_shell_demo_tab_close_others_dirty_aggregation_smoke --no-fail-fast --no-capture`
+  with Nextest run id `c5d88a4e-1708-43e1-aac0-39bd3f49db41`;
+  `cargo build --profile dev-fast -p fret-demo --bin workspace_shell_demo`; and
+  `rustfmt --edition 2024 --check apps\fret-examples\src\workspace_shell_demo.rs ecosystem\fret-workspace\src\tabs.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\workspace-shell-demo-tab-close-others-dirty-aggregation-smoke.json --dir target\fret-diag-workspace-shell-demo-close-others-dirty-aggregation-v3 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  with run id `1779150581545` and AI packet
+  `target/fret-diag-workspace-shell-demo-close-others-dirty-aggregation-v3/sessions/1779150577000-104072/1779150581545/ai.packet`.
+- Full runtime suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite workspace-shell-demo --dir target\fret-diag-workspace-shell-demo-suite-close-others-dirty-aggregation-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  with suite summary
+  `target/fret-diag-workspace-shell-demo-suite-close-others-dirty-aggregation-v1/sessions/1779150610325-113064/suite.summary.json`;
+  12/12 scripts passed and the new aggregate script run id is `1779150627934`.

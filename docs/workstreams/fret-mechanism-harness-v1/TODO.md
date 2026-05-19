@@ -1116,3 +1116,12 @@ date: 2026-05-12
     failure exposed an app-shell redraw gap: a blocked dirty-close request installed the prompt
     model but did not request a redraw when no UI driver fallback ran. The demo now redraws when
     `blocked_dirty_close` is present, and `fret-workspace` has focused close-by-id policy coverage.
+- [x] Promote workspace shell demo aggregate dirty-close policy through Close Other Tabs.
+  - Result: `workspace-shell-demo-tab-close-others-dirty-aggregation-smoke.json` now marks
+    `doc-a-0` and `doc-a-1` dirty, activates `doc-a-2`, invokes `Close Other Tabs` from the real
+    tab context menu, and asserts the dirty-close prompt label reports `CloseOthers`,
+    `close_count=2`, and `dirty=[doc-a-0, doc-a-1]`. Cancel preserves all tabs and dirty markers;
+    Discard closes the aggregate targets while keeping the active tab. The first runtime draft only
+    exposed script authoring issues: direct tab click did not select `doc-a-0`, and `arrowright`
+    was not a valid key token. The final script uses the existing tabstrip keyboard-selection path
+    and `arrow_right`.

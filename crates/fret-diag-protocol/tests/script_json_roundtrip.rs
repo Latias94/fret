@@ -140,6 +140,13 @@ fn script_v2_roundtrip_workspace_shell_demo_tab_close_button_dirty_shows_prompt_
 }
 
 #[test]
+fn script_v2_roundtrip_workspace_shell_demo_tab_close_others_dirty_aggregation_smoke() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/workspace-shell-demo-tab-close-others-dirty-aggregation-smoke.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_set_window_preferences_defaults() {
     assert_script_v2_roundtrip(
         r#"{
