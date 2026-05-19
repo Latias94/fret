@@ -3479,3 +3479,37 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
   passed.
 - `git diff --check` passed.
+
+2026-05-19 async playground visible text-role slice:
+
+- Source gap before fix: `apps/fret-examples/src/async_playground_demo.rs` used local
+  `ui::text(...)` builders for fixed app chrome, catalog item labels, inspector status/policy
+  readouts, policy switch labels, query parameter guidance, query identifiers, and result body
+  text. Several of those slots also carried local muted color, weight, or truncation policy.
+- `async_chrome_title_text(...)`, `async_section_text(...)`, `async_list_row_text(...)`,
+  `async_readout_text(...)`, `async_code_label_text(...)`, and
+  `async_compact_paragraph_text(...)` now route the proof through shared declarative text roles.
+  Fixed chrome/control rows stay single-line and shrinkable; result/guidance body copy uses the
+  compact paragraph role where wrapping is intentional.
+- The query panel helper chain no longer takes `ThemeSnapshot` just to style text. Theme ownership
+  remains where it still controls panel/card/background chrome; text resize semantics are owned by
+  the role helpers.
+- `apps/fret-examples/tests/async_playground_demo_surface.rs` and
+  `tools/gate_imui_workstream_source.py` guard the role mapping and forbid the old local
+  `ui::text(...)`, weight/truncate, muted text-color, and redundant theme-parameter patterns from
+  returning.
+- First post-fix `cargo nextest run -p fret-examples --test async_playground_demo_surface
+  async_playground_demo_keeps_visible_text_on_roles --no-fail-fast` timed out while background
+  Cargo/Rustc compilation continued.
+- Retried after Cargo/Rustc exited:
+  `cargo nextest run -p fret-examples --test async_playground_demo_surface
+  async_playground_demo_keeps_visible_text_on_roles --no-fail-fast` passed.
+- `cargo fmt --check -p fret-examples` passed.
+- `cargo check -p fret-examples --lib` passed.
+- `cargo check -p fret-demo` passed with an existing unrelated warning in
+  `apps/fret-demo/src/bin/wgpu_hello_world_control.rs` about an unused `Result`.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.

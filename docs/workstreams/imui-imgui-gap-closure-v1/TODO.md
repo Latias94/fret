@@ -892,6 +892,11 @@ Readiness order for the next locally testable review slices:
    labels through shared text roles and uses the new attributed list-row label role for completed
    rows that need strikethrough. The richer todo proof no longer has local `ui::text(...)` or
    `ui::rich_text(...)` residuals.
+   2026-05-19 async playground text follow-up: `async_playground_demo` now routes fixed app chrome,
+   catalog rows, policy/status readouts, query identifiers, and result body copy through shared
+   chrome-title, section-chrome, list-row, control-readout, code-label, and compact-paragraph text
+   roles. The obsolete `ThemeSnapshot` plumbing that only supported local muted text color policy
+   was removed from the query panel helpers.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

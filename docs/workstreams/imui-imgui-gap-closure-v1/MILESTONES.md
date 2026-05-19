@@ -799,6 +799,11 @@ Exit criteria:
   unchanged while moving app-owned visible text to title, readout, compact paragraph, button-label,
   and list-row roles. Completed row strikethrough now uses an attributed list-row label helper, so
   the row decoration no longer requires local `ui::rich_text(...)` layout policy.
+  2026-05-19 async playground text result: `async_playground_demo` keeps its async query/cache proof
+  behavior unchanged while moving app-owned visible text to chrome-title, section-chrome, list-row,
+  control-readout, code-label, and compact-paragraph roles. The query helper call chain no longer
+  carries `ThemeSnapshot` just to color fixed readouts, so resize behavior is role-owned rather
+  than locally styled.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.
