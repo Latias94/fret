@@ -204,21 +204,32 @@
       "type": "move_pointer"
     },
     {
-      "delta_x": 0.0,
-      "delta_y": 120.0,
+      "button": "left",
       "target": {
-        "id": "ui-gallery-data-table-torture-root",
+        "id": "ui-gallery-data-table-row-0",
         "kind": "test_id"
       },
-      "type": "wheel"
+      "type": "click"
     },
     {
       "n": 2,
       "type": "wait_frames"
     },
     {
+      "predicate": {
+        "kind": "selected_is",
+        "selected": true,
+        "target": {
+          "id": "ui-gallery-data-table-row-0",
+          "kind": "test_id"
+        }
+      },
+      "type": "assert"
+    },
+    {
       "delta_x": 0.0,
-      "delta_y": 120.0,
+      "delta_y": -720.0,
+      "pointer_kind": "touch",
       "target": {
         "id": "ui-gallery-data-table-torture-root",
         "kind": "test_id"
@@ -226,12 +237,30 @@
       "type": "wheel"
     },
     {
-      "n": 2,
-      "type": "wait_frames"
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-data-table-row-25",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "id": "ui-gallery-data-table-row-0",
+          "kind": "test_id"
+        }
+      },
+      "type": "assert"
     },
     {
       "delta_x": 0.0,
-      "delta_y": 120.0,
+      "delta_y": 720.0,
+      "pointer_kind": "touch",
       "target": {
         "id": "ui-gallery-data-table-torture-root",
         "kind": "test_id"
@@ -239,99 +268,15 @@
       "type": "wheel"
     },
     {
-      "n": 2,
-      "type": "wait_frames"
-    },
-    {
-      "delta_x": 0.0,
-      "delta_y": 120.0,
-      "target": {
-        "id": "ui-gallery-data-table-torture-root",
-        "kind": "test_id"
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-data-table-row-0",
+          "kind": "test_id"
+        }
       },
-      "type": "wheel"
-    },
-    {
-      "n": 2,
-      "type": "wait_frames"
-    },
-    {
-      "delta_x": 0.0,
-      "delta_y": 120.0,
-      "target": {
-        "id": "ui-gallery-data-table-torture-root",
-        "kind": "test_id"
-      },
-      "type": "wheel"
-    },
-    {
-      "n": 5,
-      "type": "wait_frames"
-    },
-    {
-      "delta_x": 0.0,
-      "delta_y": -120.0,
-      "target": {
-        "id": "ui-gallery-data-table-torture-root",
-        "kind": "test_id"
-      },
-      "type": "wheel"
-    },
-    {
-      "n": 2,
-      "type": "wait_frames"
-    },
-    {
-      "delta_x": 0.0,
-      "delta_y": -120.0,
-      "target": {
-        "id": "ui-gallery-data-table-torture-root",
-        "kind": "test_id"
-      },
-      "type": "wheel"
-    },
-    {
-      "n": 2,
-      "type": "wait_frames"
-    },
-    {
-      "delta_x": 0.0,
-      "delta_y": -120.0,
-      "target": {
-        "id": "ui-gallery-data-table-torture-root",
-        "kind": "test_id"
-      },
-      "type": "wheel"
-    },
-    {
-      "n": 2,
-      "type": "wait_frames"
-    },
-    {
-      "delta_x": 0.0,
-      "delta_y": -120.0,
-      "target": {
-        "id": "ui-gallery-data-table-torture-root",
-        "kind": "test_id"
-      },
-      "type": "wheel"
-    },
-    {
-      "n": 2,
-      "type": "wait_frames"
-    },
-    {
-      "delta_x": 0.0,
-      "delta_y": -120.0,
-      "target": {
-        "id": "ui-gallery-data-table-torture-root",
-        "kind": "test_id"
-      },
-      "type": "wheel"
-    },
-    {
-      "n": 5,
-      "type": "wait_frames"
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
       "label": "ui-gallery-data-table-window-boundary-scroll-retained",

@@ -7227,6 +7227,7 @@
       "id": "ui-gallery-data-table-retained-column-actions-menu",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-column-actions-menu.json",
       "required_capabilities": [
+        "diag.command_dispatch_trace",
         "diag.script_v2"
       ],
       "required_launch_features": [

@@ -4892,3 +4892,65 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - result: passed; 14/14 scripts passed; suite summary
     `target/fret-diag-workspace-shell-demo-suite-cross-pane-context-source-v1/sessions/1779156335684-11164/suite.summary.json`;
     strengthened context-menu Close Others ownership script run id `1779156370933`.
+
+## Retained DataTable Column Actions And Stale Script Gates
+
+- invariant:
+  retained DataTable column menu actions must dispatch from the real pointer source and keep the
+  visible table, retained summaries, and Columns menu state coherent after a column is pinned,
+  sorted, and hidden.
+- finding:
+  no retained DataTable UI/model stale-state defect was reproduced. The strengthened column-actions
+  runtime gate passed once the script asserted command dispatch and post-hide retained summaries.
+  The broader suite exposed diagnostics authoring drift instead: old toolbar scripts used
+  unscoped ids after the torture toolbar adopted `ui-gallery-data-table-torture-toolbar-*`, and
+  the old window-boundary script could stall on `wait_frames` after wheel input when the app was
+  otherwise idle.
+- diagnostics surface:
+  `ui-gallery-data-table-retained-column-actions-menu.json` now asserts pointer-sourced command
+  dispatch for `pin_left`, `sort_asc`, and `hide` on `mem_mb`; verifies `mem_mb` is hidden from
+  the table; verifies sorting and pinning summaries persist; and verifies the Columns menu reports
+  `mem_mb` unchecked. The window-boundary gate now asserts row-window movement directly instead of
+  waiting for fixed frames.
+- diagnostics follow-up note:
+  the attempted DataTable window-boundary retained-reconcile counter oracle was not stable on this
+  path, even though row 25 appeared and row 0 detached. Keep this gate on observable row-window
+  behavior unless a later bundle shows a reliable DataTable retained reconcile diagnostic stream.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-column-actions-menu.json`,
+  `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-faceted-filter.json`,
+  `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-reset-filters.json`,
+  `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-faceted-filter-dashed-border-screenshot.json`,
+  `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-window-boundary-scroll-retained.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- JSON validation:
+  `python -m json.tool tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-window-boundary-scroll-retained.json > $null`
+  - result: passed.
+- formatting:
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_data_table_retained_column_actions_menu script_v2_roundtrip_ui_gallery_data_table_retained_faceted_filter script_v2_roundtrip_ui_gallery_data_table_retained_reset_filters script_v2_roundtrip_ui_gallery_data_table_retained_window_boundary_scroll --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `96dcbf8b-13fa-48da-bae6-c930fad77b04`.
+- focused column-actions runtime diagnostics:
+  `$env:FRET_UI_GALLERY_DATA_TABLE_RETAINED='1'; target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-retained-column-actions-menu.json --dir target\fret-diag-data-table-retained-column-actions-menu-state-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  - result: passed; run id `1779157628043`; AI packet
+    `target/fret-diag-data-table-retained-column-actions-menu-state-v2/sessions/1779157546485-30336/1779157628043/ai.packet`.
+- focused reset/faceted selector diagnostics:
+  `$env:FRET_UI_GALLERY_DATA_TABLE_RETAINED='1'; target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-retained-reset-filters.json --dir target\fret-diag-data-table-retained-reset-filters-scoped-ids-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  - result: passed; run id `1779158123014`; AI packet
+    `target/fret-diag-data-table-retained-reset-filters-scoped-ids-v1/sessions/1779158112692-50208/1779158123014/ai.packet`.
+  `$env:FRET_UI_GALLERY_DATA_TABLE_RETAINED='1'; target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-retained-faceted-filter.json --dir target\fret-diag-data-table-retained-faceted-filter-scoped-ids-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  - result: passed; run id `1779158182462`; AI packet
+    `target/fret-diag-data-table-retained-faceted-filter-scoped-ids-v1/sessions/1779158171894-54300/1779158182462/ai.packet`.
+- focused window-boundary runtime diagnostics:
+  `$env:FRET_UI_GALLERY_DATA_TABLE_RETAINED='1'; target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-window-boundary-scroll-retained.json --dir target\fret-diag-data-table-window-boundary-scroll-retained-deterministic-v5 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  - result: passed; run id `1779160262364`; AI packet
+    `target/fret-diag-data-table-window-boundary-scroll-retained-deterministic-v5/sessions/1779160251641-54688/1779160262364/ai.packet`.
+- full retained DataTable suite:
+  `$env:FRET_UI_GALLERY_DATA_TABLE_RETAINED='1'; target\dev-fast\fretboard-dev.exe diag suite ui-gallery-data-table-retained --dir target\fret-diag-data-table-retained-suite-column-actions-state-v3 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  - result: passed; 12/12 scripts passed; suite summary
+    `target/fret-diag-data-table-retained-suite-column-actions-state-v3/sessions/1779160314350-36592/suite.summary.json`;
+    strengthened column-actions script run id `1779160434776`; window-boundary script run id
+    `1779160736205`.

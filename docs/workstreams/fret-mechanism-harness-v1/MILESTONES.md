@@ -2375,3 +2375,48 @@ Status: complete for pointer-source attribution on pane activation triggered by 
   `target/fret-diag-workspace-shell-demo-suite-cross-pane-context-source-v1/sessions/1779156335684-11164/suite.summary.json`;
   14/14 scripts passed and the strengthened context-menu Close Others ownership script run id is
   `1779156370933`.
+
+## M124: Retained DataTable Column Actions And Stale Script Gates
+
+Status: complete for retained DataTable column-action state, scoped toolbar selectors, and the
+observable window-boundary runtime gate.
+
+- Strengthened `ui-gallery-data-table-retained-column-actions-menu.json` so the real retained
+  DataTable menu path asserts pointer-sourced command dispatch for
+  `fret_ui_shadcn.data_table.column_action/pin_left/mem_mb`,
+  `fret_ui_shadcn.data_table.column_action/sort_asc/mem_mb`, and
+  `fret_ui_shadcn.data_table.column_action/hide/mem_mb`.
+- The gate now proves the retained UI/model state does not split after hiding `mem_mb`: the column
+  is absent from the visible table, `Sorting: mem_mb asc` and
+  `Pinning: left=[mem_mb] right=[]` remain present, and the Columns menu reports `mem_mb`
+  unchecked.
+- Fixed retained DataTable toolbar script drift by replacing old unscoped toolbar ids with the
+  current `ui-gallery-data-table-torture-toolbar-*` ids in the faceted-filter, reset-filters, and
+  dashed-border screenshot scripts.
+- Reworked `ui-gallery-data-table-window-boundary-scroll-retained.json` from repeated
+  `wheel + wait_frames` steps to deterministic observable row-window assertions: select row 0,
+  touch-wheel to row 25, prove row 0 is detached, then wheel back and prove row 0 returns.
+- Added protocol roundtrip coverage for the DataTable retained window-boundary script so schema
+  mistakes in that promoted gate are caught before runtime.
+- No retained DataTable mechanism or recipe stale-state defect was reproduced. The red runs exposed
+  diagnostics authoring drift instead: scoped toolbar ids had changed, the old window-boundary
+  script could stall on a static frame with `timeout.no_frames`, and the DataTable path did not
+  produce a stable retained-reconcile counter matching the attempted oracle.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-window-boundary-scroll-retained.json > $null`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_data_table_retained_column_actions_menu script_v2_roundtrip_ui_gallery_data_table_retained_faceted_filter script_v2_roundtrip_ui_gallery_data_table_retained_reset_filters script_v2_roundtrip_ui_gallery_data_table_retained_window_boundary_scroll --no-fail-fast --no-capture`
+  with Nextest run id `96dcbf8b-13fa-48da-bae6-c930fad77b04`.
+- Focused runtime diagnostics pass:
+  `$env:FRET_UI_GALLERY_DATA_TABLE_RETAINED='1'; target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-retained-column-actions-menu.json --dir target\fret-diag-data-table-retained-column-actions-menu-state-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with run id `1779157628043` and AI packet
+  `target/fret-diag-data-table-retained-column-actions-menu-state-v2/sessions/1779157546485-30336/1779157628043/ai.packet`.
+- Focused window-boundary diagnostics pass:
+  `$env:FRET_UI_GALLERY_DATA_TABLE_RETAINED='1'; target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-window-boundary-scroll-retained.json --dir target\fret-diag-data-table-window-boundary-scroll-retained-deterministic-v5 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with run id `1779160262364` and AI packet
+  `target/fret-diag-data-table-window-boundary-scroll-retained-deterministic-v5/sessions/1779160251641-54688/1779160262364/ai.packet`.
+- Full retained DataTable suite diagnostics pass:
+  `$env:FRET_UI_GALLERY_DATA_TABLE_RETAINED='1'; target\dev-fast\fretboard-dev.exe diag suite ui-gallery-data-table-retained --dir target\fret-diag-data-table-retained-suite-column-actions-state-v3 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with suite summary
+  `target/fret-diag-data-table-retained-suite-column-actions-state-v3/sessions/1779160314350-36592/suite.summary.json`;
+  12/12 scripts passed and the strengthened column-actions run id is `1779160434776`.

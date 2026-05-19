@@ -187,7 +187,7 @@
     },
     {
       "target": {
-        "id": "data-table-toolbar-faceted-status-trigger",
+        "id": "ui-gallery-data-table-torture-toolbar-faceted-status-trigger",
         "kind": "test_id"
       },
       "type": "click"
@@ -200,7 +200,7 @@
       "predicate": {
         "kind": "exists",
         "target": {
-          "id": "data-table-toolbar-faceted-status-input",
+          "id": "ui-gallery-data-table-torture-toolbar-faceted-status-input",
           "kind": "test_id"
         }
       },
@@ -209,7 +209,7 @@
     },
     {
       "target": {
-        "id": "data-table-toolbar-faceted-status-item-running",
+        "id": "ui-gallery-data-table-torture-toolbar-faceted-status-item-running",
         "kind": "test_id"
       },
       "type": "click"
@@ -220,7 +220,7 @@
     },
     {
       "target": {
-        "id": "data-table-toolbar-faceted-status-item-idle",
+        "id": "ui-gallery-data-table-torture-toolbar-faceted-status-item-idle",
         "kind": "test_id"
       },
       "type": "click"

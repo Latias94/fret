@@ -1150,3 +1150,11 @@ date: 2026-05-12
     context-menu ownership gate now strictly asserts `workspace.pane.activate.pane-b` is
     pointer-sourced from `workspace-shell-pane-pane-b-tab-doc-b-1`, while preserving the aggregate
     Close Other Tabs ownership proof.
+- [x] Harden retained DataTable column-action state and stale-script gates.
+  - Result: `ui-gallery-data-table-retained-column-actions-menu.json` now asserts pointer-sourced
+    command dispatch for `pin_left`, `sort_asc`, and `hide` on `mem_mb`, then proves the hidden
+    column disappears while the retained model still reports `Sorting: mem_mb asc`,
+    `Pinning: left=[mem_mb] right=[]`, and the Columns menu reports `mem_mb` unchecked. No retained
+    DataTable UI/model stale-state defect was reproduced. The suite pass also required fixing old
+    toolbar scoped-selector drift in faceted/reset scripts and replacing the old window-boundary
+    `wheel + wait_frames` script with observable row-window assertions.
