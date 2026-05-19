@@ -40,7 +40,9 @@ component should construct `TextProps` locally.
 
 - `text_compact_paragraph(...)`: dense wrapping paragraph for editor/IMUI panels. It may grow
   height and must not be used inside fixed-height control chrome unless that parent measures
-  multi-line height.
+  multi-line height. `text_compact_paragraph_inherited(...)` keeps the same wrapping/fill-width
+  layout contract for component-owned description slots that already install their own inherited
+  typography.
 - `text_compact_paragraph_line_clamp(...)`: dense wrapping paragraph for list/card descriptions
   with a fixed maximum line count. It is still paragraph-family text, but the helper owns the
   `max-height + ellipsis` clamp contract so snippets/components do not hand-roll local
@@ -56,8 +58,9 @@ component should construct `TextProps` locally.
   title-bar layout; all three keep fixed chrome rows single-line, with ellipsis or clip according
   to the slot.
 - `text_code_label(...)`: code-text derivative for fixed-height identifier slots such as package
-  names, env keys, and dependency rows. It is intentionally not a substitute for wrapping inline
-  prose code.
+  names, env keys, and dependency rows. `text_code_label_emphasis(...)` keeps the same single-line
+  resize contract for primary identifier slots that need medium emphasis, such as package names or
+  target versions. These are intentionally not substitutes for wrapping inline prose code.
 - Editor readout primitives in `fret-ui-editor/src/primitives/readout.rs`: editor-specific status
   badges, inline errors, validation messages, section labels, preview captions, tooltip readouts,
   inspector panel titles, property-row labels, and property chrome. Direct editor `TextProps`

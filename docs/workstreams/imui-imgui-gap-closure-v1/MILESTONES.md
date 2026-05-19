@@ -498,6 +498,12 @@ Exit criteria:
   non-selectable values now reuse `text_code_label(...)` for fixed identifier slots, while revealed
   values stay on `SelectableTextProps` for the explicit selection capability surface. Empty
   custom-child/diagnostics markers no longer use empty `Text` nodes.
+  2026-05-19 AI PackageInfo code/paragraph result: shared text roles now cover the PackageInfo
+  defaults without local `TextProps`. Package names and target versions use
+  `text_code_label_emphasis(...)`; current versions, dependency names, and dependency versions use
+  `text_code_label(...)`; the Dependencies heading uses `text_section_chrome_label(...)`; and
+  descriptions use `text_compact_paragraph_inherited(...)` so component-owned description tokens
+  still win while the leaf owns the shared wrapping/fill-width resize contract.
   2026-05-18 AI visible text-role result 2: Artifact, CodeBlock, and Sandbox snippets now reuse the
   same shared text roles for visible fixed chrome/prose, and CodeBlock's active-language marker no
   longer mounts an invisible empty `Text` element.

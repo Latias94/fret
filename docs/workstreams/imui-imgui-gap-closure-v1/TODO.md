@@ -540,6 +540,12 @@ Readiness order for the next locally testable review slices:
    role with inherited foreground. Revealed values intentionally remain selectable text because
    selection is the capability surface. Empty custom-child/diagnostic paths now use the crate-local
    non-text placeholder instead of empty `Text` nodes.
+   2026-05-19 AI PackageInfo code/paragraph follow-up: the real `PackageInfo` component family now
+   uses `text_code_label_emphasis(...)` for primary package/target-version identifiers,
+   `text_code_label(...)` for current-version/dependency identifiers,
+   `text_section_chrome_label(...)` for the Dependencies heading, and
+   `text_compact_paragraph_inherited(...)` for description copy that should keep component-owned
+   description typography while sharing the wrapping/fill-width resize contract.
    2026-05-18 AI visible text-role follow-up 2: Artifact, CodeBlock, and Sandbox copyable snippets
    now use the same role split for fixed demo titles, explanatory prose, and compact status text.
    CodeBlock's active-language diagnostics marker also moved from an invisible empty text node to a

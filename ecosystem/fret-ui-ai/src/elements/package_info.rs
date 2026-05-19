@@ -4,17 +4,13 @@
 
 use std::sync::Arc;
 
-use fret_core::{
-    Color, ColorScheme, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle,
-    TextWrap,
-};
+use fret_core::{Color, ColorScheme, Edges, Px, SemanticsRole};
 use fret_icons::IconId;
-use fret_ui::element::{
-    AnyElement, LayoutStyle, Length, SemanticsDecoration, SizeStyle, TextProps,
-};
+use fret_ui::element::{AnyElement, SemanticsDecoration};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::typography;
 use fret_ui_kit::ui;
 use fret_ui_kit::{
@@ -104,18 +100,6 @@ fn inline_children<H: UiHost>(
                 .into_element(cx)
         }
     }
-}
-
-fn monospace_style(theme: &Theme, size: Px, weight: FontWeight) -> TextStyle {
-    typography::as_control_text(TextStyle {
-        font: FontId::monospace(),
-        size,
-        weight,
-        slant: Default::default(),
-        line_height: Some(theme.metric_token("metric.font.mono_line_height")),
-        letter_spacing_em: None,
-        ..Default::default()
-    })
 }
 
 fn with_alpha(mut c: Color, alpha: f32) -> Color {
@@ -683,20 +667,7 @@ impl PackageInfoName {
         let icon = decl_icon::icon_with(cx, self.icon, Some(Px(16.0)), Some(ColorRef::Color(fg)));
         let content = match self.children {
             Some(children) => inline_children(cx, children),
-            None => cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text: label,
-                style: Some(monospace_style(
-                    &theme,
-                    theme.metric_token("component.text.sm_px"),
-                    FontWeight::MEDIUM,
-                )),
-                color: None,
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-                align: fret_core::TextAlign::Start,
-                ink_overflow: Default::default(),
-            }),
+            None => decl_text::text_code_label_emphasis(cx, label),
         };
 
         let row = ui::h_row(move |_cx| vec![icon, content])
@@ -849,20 +820,10 @@ impl PackageInfoVersion {
 
             let mut parts: Vec<AnyElement> = Vec::new();
             if let Some(current) = current.as_ref() {
-                parts.push(cx.text_props(TextProps {
-                    layout: LayoutStyle::default(),
-                    text: current.clone(),
-                    style: Some(monospace_style(
-                        &theme,
-                        theme.metric_token("component.text.sm_px"),
-                        FontWeight::NORMAL,
-                    )),
-                    color: Some(muted_fg(&theme)),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                    align: fret_core::TextAlign::Start,
-                    ink_overflow: Default::default(),
-                }));
+                parts.push(
+                    decl_text::text_code_label(cx, current.clone())
+                        .inherit_foreground(muted_fg(&theme)),
+                );
             }
             if has_current && has_new {
                 parts.push(decl_icon::icon_with(
@@ -873,20 +834,10 @@ impl PackageInfoVersion {
                 ));
             }
             if let Some(new) = new.as_ref() {
-                parts.push(cx.text_props(TextProps {
-                    layout: LayoutStyle::default(),
-                    text: new.clone(),
-                    style: Some(monospace_style(
-                        &theme,
-                        theme.metric_token("component.text.sm_px"),
-                        FontWeight::MEDIUM,
-                    )),
-                    color: Some(theme.color_token("foreground")),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                    align: fret_core::TextAlign::Start,
-                    ink_overflow: Default::default(),
-                }));
+                parts.push(
+                    decl_text::text_code_label_emphasis(cx, new.clone())
+                        .inherit_foreground(theme.color_token("foreground")),
+                );
             }
 
             ui::h_row(move |_cx| parts)
@@ -959,16 +910,7 @@ impl PackageInfoDescription {
         let theme = Theme::global(&*cx.app).clone();
         let content = match self.children {
             Some(children) => inline_children(cx, children),
-            None => cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text: self.text,
-                style: None,
-                color: None,
-                wrap: TextWrap::Grapheme,
-                overflow: TextOverflow::Clip,
-                align: fret_core::TextAlign::Start,
-                ink_overflow: Default::default(),
-            }),
+            None => decl_text::text_compact_paragraph_inherited(cx, self.text),
         };
 
         let chrome = ChromeRefinement::default().merge(self.chrome);
@@ -1152,24 +1094,8 @@ impl PackageInfoDependencies {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let label = cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
-            text: Arc::<str>::from("DEPENDENCIES"),
-            style: Some(typography::as_control_text(TextStyle {
-                font: FontId::default(),
-                size: theme.metric_token("component.text.xs_px"),
-                weight: FontWeight::MEDIUM,
-                slant: Default::default(),
-                line_height: Some(theme.metric_token("component.text.xs_line_height")),
-                letter_spacing_em: Some(0.08),
-                ..Default::default()
-            })),
-            color: Some(muted_fg(&theme)),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            ink_overflow: Default::default(),
-        });
+        let label = decl_text::text_section_chrome_label(cx, "DEPENDENCIES")
+            .inherit_foreground(muted_fg(&theme));
 
         let list = ui::v_flex(move |cx| {
             self.children
@@ -1243,44 +1169,12 @@ impl PackageInfoDependency {
         let row_content = if let Some(children) = self.children {
             inline_children(cx, children)
         } else {
-            let name = cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text: self.name,
-                style: Some(monospace_style(
-                    &theme,
-                    theme.metric_token("component.text.sm_px"),
-                    FontWeight::NORMAL,
-                )),
-                color: Some(muted_fg(&theme)),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-                align: fret_core::TextAlign::Start,
-                ink_overflow: Default::default(),
-            });
+            let name =
+                decl_text::text_code_label(cx, self.name).inherit_foreground(muted_fg(&theme));
 
             let mut items = vec![name];
             if let Some(version) = self.version {
-                items.push(cx.text_props(TextProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Auto,
-                            height: Length::Auto,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    text: version,
-                    style: Some(monospace_style(
-                        &theme,
-                        theme.metric_token("component.text.xs_px"),
-                        FontWeight::NORMAL,
-                    )),
-                    color: None,
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                    align: fret_core::TextAlign::Start,
-                    ink_overflow: Default::default(),
-                }));
+                items.push(decl_text::text_code_label(cx, version));
             }
 
             ui::h_row(move |_cx| items)
@@ -1306,7 +1200,7 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_core::{AppWindowId, FontId, Point, Px, Rect, Size, TextOverflow, TextWrap};
     use fret_ui::element::{AnyElement, ElementKind};
     use fret_ui::{Theme, ThemeConfig};
 
@@ -1330,6 +1224,34 @@ mod tests {
             .find_map(|child| find_text_by_content(child, content))
     }
 
+    fn assert_code_label(element: &AnyElement, content: &str, emphasis: bool) {
+        let text = find_text_by_content(element, content).expect("expected code label text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected code label text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(
+            props.layout.size.min_width,
+            Some(fret_ui::element::Length::Px(Px(0.0)))
+        );
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(
+            text.inherited_text_style
+                .as_ref()
+                .and_then(|style| style.font.clone()),
+            Some(FontId::monospace())
+        );
+        assert_eq!(
+            text.inherited_text_style
+                .as_ref()
+                .and_then(|style| style.weight),
+            emphasis.then_some(fret_core::FontWeight::MEDIUM)
+        );
+    }
+
     #[test]
     fn package_info_root_provides_controller_to_default_parts() {
         let window = AppWindowId::default();
@@ -1348,6 +1270,42 @@ mod tests {
         assert!(find_text_by_content(&element, "1.0.0").is_some());
         assert!(find_text_by_content(&element, "2.0.0").is_some());
         assert!(find_text_by_content(&element, "Major").is_some());
+    }
+
+    #[test]
+    fn package_info_default_identifier_text_uses_code_label_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                PackageInfo::new("very-long-runtime-package")
+                    .current_version("1.0.0-alpha-long")
+                    .new_version("2.0.0-beta-long")
+                    .change_type(PackageInfoChangeKind::Major)
+                    .children(vec![
+                        PackageInfoChild::Header(PackageInfoHeader::new().children(vec![
+                            PackageInfoHeaderChild::Name(PackageInfoName::new()),
+                            PackageInfoHeaderChild::ChangeType(PackageInfoChangeType::new()),
+                        ])),
+                        PackageInfoChild::Version(PackageInfoVersion::new()),
+                        PackageInfoChild::Content(PackageInfoContent::new(vec![
+                            PackageInfoContentChild::Dependencies(PackageInfoDependencies::new(
+                                vec![
+                                    PackageInfoDependency::new("runtime-adapter")
+                                        .version("^2.0.0-feature-long"),
+                                ],
+                            )),
+                        ])),
+                    ])
+                    .into_element(cx)
+            });
+
+        assert_code_label(&element, "very-long-runtime-package", true);
+        assert_code_label(&element, "1.0.0-alpha-long", false);
+        assert_code_label(&element, "2.0.0-beta-long", true);
+        assert_code_label(&element, "runtime-adapter", false);
+        assert_code_label(&element, "^2.0.0-feature-long", false);
     }
 
     #[test]
@@ -1383,7 +1341,15 @@ mod tests {
         };
         assert!(props.style.is_none());
         assert!(props.color.is_none());
-        assert_eq!(props.wrap, TextWrap::Grapheme);
+        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(
+            props.layout.size.min_width,
+            Some(fret_ui::element::Length::Px(Px(0.0)))
+        );
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(child.inherited_text_style, None);
 
         let theme = Theme::global(&app).snapshot();
         assert_eq!(

@@ -568,6 +568,26 @@ pub fn text_compact_paragraph<H: UiHost>(
     )
 }
 
+/// Compact paragraph/body copy that inherits typography from an owning component.
+///
+/// Use this when the surrounding component already installs a description/body text refinement but
+/// the leaf still needs the shared wrapping and fill-width resize contract.
+pub fn text_compact_paragraph_inherited<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    cx.text_props(TextProps {
+        layout: fill_growing_zero_min_layout(),
+        text: text.into(),
+        style: None,
+        color: None,
+        wrap: TextWrap::Word,
+        overflow: TextOverflow::Clip,
+        align: TextAlign::Start,
+        ink_overflow: TextInkOverflow::None,
+    })
+}
+
 /// Compact paragraph/body copy clamped to a fixed number of dense text lines.
 ///
 /// This role is for list/card descriptions where prose should wrap, but the surrounding item has a
@@ -653,6 +673,12 @@ fn text_code_refinement(theme: &Theme) -> TextStyleRefinement {
     ))
 }
 
+fn text_code_label_emphasis_refinement(theme: &Theme) -> TextStyleRefinement {
+    let mut refinement = text_code_refinement(theme);
+    refinement.weight = Some(FontWeight::MEDIUM);
+    refinement
+}
+
 /// Declarative helper intended for code-like inline text.
 ///
 /// Defaults:
@@ -681,6 +707,34 @@ pub fn text_code_label<H: UiHost>(
     let refinement = {
         let theme = Theme::global(&*cx.app);
         text_code_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
+/// Emphasized variant of [`text_code_label`].
+///
+/// Use this for primary identifier slots, such as package names or target versions, that need
+/// medium emphasis while keeping code-label single-line truncation under resize.
+pub fn text_code_label_emphasis<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_code_label_emphasis_refinement(theme)
     };
 
     ui_typography::scope_text_style(
@@ -1032,6 +1086,29 @@ mod tests {
             Some(FontId::monospace())
         );
 
+        let code_label_emphasis =
+            elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+                text_code_label_emphasis(cx, "pkg/runtime-with-a-long-name")
+            });
+        let ElementKind::Text(props) = &code_label_emphasis.kind else {
+            panic!("expected text_code_label_emphasis(...) to build a Text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        let mut expected_code_emphasis = {
+            let theme = Theme::global(&app);
+            text_code_refinement(theme)
+        };
+        expected_code_emphasis.weight = Some(FontWeight::MEDIUM);
+        assert_eq!(
+            code_label_emphasis.inherited_text_style,
+            Some(expected_code_emphasis)
+        );
+
         let paragraph = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             text_paragraph(cx, "Paragraph body copy")
         });
@@ -1109,6 +1186,35 @@ mod tests {
         assert_eq!(props.wrap, TextWrap::Word);
         assert_eq!(props.overflow, TextOverflow::Clip);
         assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
+    }
+
+    #[test]
+    fn inherited_compact_paragraph_keeps_wrapping_layout_without_leaf_refinement() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_compact_paragraph_inherited(
+                cx,
+                "Component-owned description copy wraps inside the available row",
+            )
+        });
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_compact_paragraph_inherited(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(el.inherited_text_style, None);
     }
 
     #[test]

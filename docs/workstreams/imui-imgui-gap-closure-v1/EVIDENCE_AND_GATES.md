@@ -771,6 +771,20 @@ Run evidence:
   environment_variable_value_is_selectable_only_when_shown
   environment_variable_copy_button_supports_custom_children --no-fail-fast`, `cargo check -p
   fret-ui-ai`, and `python tools/gate_imui_workstream_source.py`.
+- 2026-05-19: added the shared `text_code_label_emphasis(...)` and
+  `text_compact_paragraph_inherited(...)` text-role derivatives, then routed real `fret-ui-ai`
+  `PackageInfo` defaults through them. Package names and target versions now use emphasized
+  code-label text, current versions and dependency rows use regular code-label text, the
+  Dependencies heading uses section-chrome text, and `PackageInfoDescription` keeps the shared
+  wrapping/fill-width paragraph layout without overriding the component-owned description
+  typography scope. Gates: `cargo nextest run -p fret-ui-kit --features imui --lib
+  prose_variants_and_code_wrap_install_semantic_inherited_overrides
+  compact_paragraph_text_uses_wrapping_fill_width_layout
+  inherited_compact_paragraph_keeps_wrapping_layout_without_leaf_refinement --no-fail-fast`,
+  `cargo nextest run -p fret-ui-ai package_info_default_identifier_text_uses_code_label_role
+  package_info_description_scopes_inherited_description_typography
+  package_info_root_children_support_docs_shaped_compound_parts --no-fail-fast`,
+  `cargo check -p fret-ui-ai`, and `python tools/gate_imui_workstream_source.py`.
 - 2026-05-18: extended the same visible text-role migration to AI Artifact, CodeBlock, and Sandbox
   snippets. Fixed demo titles and panel labels now use section-chrome text, explanatory copy uses
   paragraph text, Artifact's closed state uses a compact control readout, and CodeBlock's
