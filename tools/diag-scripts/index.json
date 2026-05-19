@@ -4912,6 +4912,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
+        "ui-gallery-carousel-state",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -4932,6 +4933,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
+        "ui-gallery-carousel-state",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -5055,6 +5057,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
+        "ui-gallery-carousel-state",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -5077,6 +5080,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
+        "ui-gallery-carousel-state",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -5120,6 +5124,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
+        "ui-gallery-carousel-state",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [

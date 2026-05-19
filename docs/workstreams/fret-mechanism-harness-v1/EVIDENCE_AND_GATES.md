@@ -3571,6 +3571,57 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag-carousel-embla-engine-strict-v1/sessions/1778982359710-115076/suite.summary.json`
     reports `status=passed`, 5/5 rows, `scripts_with_evidence=5`,
     `focus_mismatch_total=0`, and zero lint errors/warnings for every row.
+- Carousel state suite and focus autoplay stop:
+  - invariant:
+    Carousel state evidence should be split into compact, independently runnable suites. Focus
+    entry into a slide is an autoplay stopOnInteraction event even when no timer token happens to
+    be active in that render frame.
+  - findings:
+    the first `ui-gallery-carousel-state` run found a real shadcn Carousel defect. The focus
+    stopOnInteraction script moved focus into a nested slide button and watchFocus scrolled to the
+    slide, but the status remained `playing=true • stopped_by_interaction=false`. The focus stop
+    path incorrectly required `runtime_snapshot.autoplay_token.is_some()`, treating a scheduling
+    detail as the interaction oracle.
+  - implementation anchors:
+    `ecosystem/fret-ui-shadcn/src/carousel.rs`,
+    `tools/diag-scripts/suites/ui-gallery-carousel-state/suite.json`,
+    `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-select-gate.json`,
+    `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-reinit-gate.json`,
+    `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-stop-on-last-snap-gate.json`,
+    `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-stop-on-interaction-focus-gate.json`,
+    `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-rtl-controls-gate.json`, and
+    `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+  - JSON/registry:
+    `python -m json.tool tools\diag-scripts\suites\ui-gallery-carousel-state\suite.json > $null`
+    and `python tools\check_diag_scripts_registry.py`
+    - result: passed.
+  - formatting:
+    `rustfmt --edition 2024 --check ecosystem\fret-ui-shadcn\src\carousel.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`
+    - result: passed.
+  - focused recipe regression:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --test carousel_autoplay_api_handle carousel_autoplay_stop_on_interaction_stops_after_slide_receives_focus --no-fail-fast --no-capture`
+    - result: passed; Nextest run id `7fc50006-1357-4756-86f2-9452c5605aab`.
+  - protocol roundtrip:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_carousel_state_gates --no-fail-fast --no-capture`
+    - result: passed; Nextest run id `96bee069-29be-4c38-8423-f89b44f5d3fa`.
+  - build gate:
+    `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+    - result: passed.
+  - focused runtime diagnostics:
+    `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\carousel\ui-gallery-carousel-plugin-autoplay-stop-on-interaction-focus-gate.json --dir target\fret-diag-carousel-stop-on-focus-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+    - result: passed; run id `1779176381271`; AI packet
+      `target/fret-diag-carousel-stop-on-focus-v2/sessions/1779176372434-68188/1779176381271/ai.packet`.
+  - full state suite:
+    `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-carousel-state --dir target\fret-diag-carousel-state-suite-v2 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+    - result: passed; suite summary
+      `target/fret-diag-carousel-state-suite-v2/sessions/1779176492375-78748/suite.summary.json`;
+      5/5 rows; `scripts_with_evidence=5`; `focus_mismatch_total=0`; row run ids
+      `1779176501302`, `1779176563142`, `1779176638167`, `1779176831378`, and
+      `1779176928324`.
+  - first failed evidence:
+    `target/fret-diag-carousel-state-suite-v1/sessions/1779174619173-69116/1779175342309-script-step-0022-wait_until-timeout/bundle.schema2.json`
+    captured the focused nested slide button and the stale `playing=true •
+    stopped_by_interaction=false` status before the fix.
 - Date Picker strict diagnostics precondition hardening:
   - invariant:
     responsive and long-page Date Picker diagnostics should fail with actionable harness reasons,

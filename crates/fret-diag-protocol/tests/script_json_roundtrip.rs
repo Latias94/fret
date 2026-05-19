@@ -325,6 +325,25 @@ fn script_v2_roundtrip_chart_torture_pan_zoom() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_carousel_state_gates() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-select-gate.json"
+    ));
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-reinit-gate.json"
+    ));
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-stop-on-last-snap-gate.json"
+    ));
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-stop-on-interaction-focus-gate.json"
+    ));
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-rtl-controls-gate.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_node_graph_cull_torture_pan_zoom() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-node-graph-cull-torture-pan-zoom.json"

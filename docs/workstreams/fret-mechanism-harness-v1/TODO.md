@@ -793,6 +793,15 @@ date: 2026-05-12
     sub-suite passed 5/5 with `focus_mismatch_total=0` and zero lint errors/warnings. No new
     Carousel mechanism or recipe defect was reproduced; the embla-engine suite now rejects future
     diagnostics lint drift for inertia, touch, resize reInit, and loop continuity/downgrade paths.
+- [x] Split Carousel state interactions into a compact runtime suite and fix focus-triggered
+  autoplay stop.
+  - Result: `ui-gallery-carousel-state` now gates Events select/reInit, autoplay
+    stopOnLastSnap, autoplay stopOnInteraction via focus, and RTL controls as a 5/5 zero-warning
+    suite. The first strict run exposed a real shadcn Carousel defect: focus entered a nested slide
+    button and watchFocus scrolled to that slide, but autoplay stayed `playing=true` with
+    `stopped_by_interaction=false` because the focus stop path required an active timer token.
+    Carousel now treats focus entry into a slide as the interaction, cancelling a token only when
+    one is present, and the focused stopOnInteraction gate plus the compact state suite pass.
 - [x] Harden the Date Picker suite after strict lint exposed scroll/script precondition gaps.
   - Result: the mobile Drawer script now uses a mobile-branch width that the Gallery content
     viewport can actually contain, the range-roving script is independently runnable with its own

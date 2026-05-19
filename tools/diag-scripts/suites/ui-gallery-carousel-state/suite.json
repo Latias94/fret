@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "lint_policy": {
+    "max_warning_issues": 0
+  },
+  "scripts": [
+    "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-select-gate.json",
+    "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-reinit-gate.json",
+    "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-stop-on-last-snap-gate.json",
+    "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-stop-on-interaction-focus-gate.json",
+    "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-rtl-controls-gate.json"
+  ]
+}

@@ -2669,3 +2669,40 @@ Status: complete for Chart Torture visible X domain-window correctness after pan
   with suite summary
   `target/fret-diag-chart-torture-suite-visible-window-oracle-v1/sessions/1779173643592-70968/suite.summary.json`;
   run id `1779173655069`.
+
+## M132: Carousel State Suite And Focus Autoplay Stop
+
+Status: complete for compact Carousel state diagnostics and focus-triggered autoplay
+stopOnInteraction correctness.
+
+- Added `ui-gallery-carousel-state` as a compact zero-warning diagnostics suite for Carousel state
+  interactions: Events select, Events reInit, autoplay stopOnLastSnap, autoplay stopOnInteraction
+  via focus, and RTL controls.
+- The first full suite run found a real shadcn Carousel runtime defect. Pressing Tab moved focus
+  into a nested slide button and watchFocus scrolled to that slide, but the autoplay API still
+  reported `playing=true` and `stopped_by_interaction=false`.
+- Fixed the owning recipe layer in `ecosystem/fret-ui-shadcn/src/carousel.rs`: focus entry into a
+  slide now marks autoplay as stopped by interaction whenever stopOnInteraction is enabled. The
+  code still cancels an active timer token when one exists, but no longer treats token presence as
+  the condition for recognizing the focus interaction.
+- Added direct `fret-diag-protocol` roundtrip coverage for the five scripts that make up the new
+  Carousel state suite.
+- Gates pass:
+  `rustfmt --edition 2024 --check ecosystem\fret-ui-shadcn\src\carousel.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-carousel-state\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --test carousel_autoplay_api_handle carousel_autoplay_stop_on_interaction_stops_after_slide_receives_focus --no-fail-fast --no-capture`
+  with Nextest run id `7fc50006-1357-4756-86f2-9452c5605aab`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_carousel_state_gates --no-fail-fast --no-capture`
+  with Nextest run id `96bee069-29be-4c38-8423-f89b44f5d3fa`;
+  and `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\carousel\ui-gallery-carousel-plugin-autoplay-stop-on-interaction-focus-gate.json --dir target\fret-diag-carousel-stop-on-focus-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779176381271` and AI packet
+  `target/fret-diag-carousel-stop-on-focus-v2/sessions/1779176372434-68188/1779176381271/ai.packet`.
+- Full runtime suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-carousel-state --dir target\fret-diag-carousel-state-suite-v2 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with suite summary
+  `target/fret-diag-carousel-state-suite-v2/sessions/1779176492375-78748/suite.summary.json`;
+  5/5 rows passed, `scripts_with_evidence=5`, `focus_mismatch_total=0`, and the focus
+  stopOnInteraction script run id is `1779176831378`.
