@@ -878,6 +878,9 @@ Exit criteria:
   default text-style wrapper now skips shared text-role scopes. This keeps data-table ergonomics
   for bare cell renderers while preserving role-owned typography and ellipsis for callers that
   already supply `text_table_cell(...)`.
+  2026-05-19 shadcn NavigationMenuLink role-preservation result: custom link content now keeps
+  shared button-label text roles intact. Link foreground is stamped as inherited foreground, while
+  link typography remains a bare-text fallback instead of a recursive leaf override.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

@@ -3906,6 +3906,41 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.
 
+2026-05-19 shadcn NavigationMenuLink role-preservation slice:
+
+- Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground
+  directly into descendant text leaves. That kept bare link text ergonomic, but it overwrote shared
+  role children such as `text_button_label(...)`, replacing the role-owned typography path that
+  controls single-line ellipsis under narrow navigation content.
+- `apply_link_inherited_style(...)` now treats `inherited_text_style` as a protected role scope and
+  only writes link default typography into bare text. Link foreground is stamped as inherited
+  foreground on the child root, so visual state remains link-owned without mutating text-role leaf
+  props. The existing default-icon behavior remains intact: default icons opt out of inheriting the
+  link foreground.
+- `navigation_menu_link_applies_default_style_to_bare_text` proves the fallback still applies to
+  bare text; `navigation_menu_link_preserves_shared_text_role_contracts` proves shared button-label
+  text keeps `style: None`, ellipsis overflow, and role metadata; and the existing
+  `navigation_menu_link_default_icons_do_not_inherit_current_color` test stays in the focused gate.
+- `tools/gate_imui_workstream_source.py` now guards the NavigationMenuLink helper/test shape and
+  forbids the old leaf foreground write from returning.
+- Red run before fix:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  navigation_menu_link_applies_default_style_to_bare_text
+  navigation_menu_link_preserves_shared_text_role_contracts --no-fail-fast` failed because the
+  role-preservation test observed a leaf `style`.
+- Post-fix focused run passed:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  navigation_menu_link_applies_default_style_to_bare_text
+  navigation_menu_link_preserves_shared_text_role_contracts
+  navigation_menu_link_default_icons_do_not_inherit_current_color --no-fail-fast`.
+- `cargo fmt --check -p fret-ui-shadcn` passed.
+- `cargo check -p fret-ui-shadcn --lib` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.
+
 2026-05-19 shadcn DataTable role-preservation slice:
 
 - Source gap before fix: `DataTable` wrapped body-cell renderers with

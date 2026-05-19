@@ -3499,6 +3499,20 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/navigation_menu.rs"),
+            required=[
+                "let role_scope_active = role_scope_active || element.inherited_text_style.is_some();",
+                "if props.style.is_none() && !role_scope_active",
+                "apply_link_inherited_style(\n                        child,\n                        &text_style,\n                        icon_fg,\n                        default_icon_color,\n                        false,\n                    )\n                    .inherit_foreground(fg)",
+                "navigation_menu_link_applies_default_style_to_bare_text",
+                "navigation_menu_link_preserves_shared_text_role_contracts",
+                "navigation_menu_link_default_icons_do_not_inherit_current_color",
+            ],
+            forbidden=[
+                "if props.color.is_none() {\n                        props.color = Some(fg);",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-ai/src/elements/prompt_input.rs"),
             required=[
                 "return crate::elements::empty_placeholder(cx);",

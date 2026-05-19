@@ -980,6 +980,10 @@ Readiness order for the next locally testable review slices:
    styling now uses the same role-scope guard as Table. Bare cell text still receives the default
    table typography, but caller-supplied shared text roles are not rewritten by the virtualized
    data-table wrapper.
+   2026-05-19 shadcn NavigationMenuLink role-preservation follow-up: link children now receive
+   foreground through inherited foreground and only bare text receives the link default typography.
+   Shared button-label roles keep their single-line ellipsis contract when used as custom link
+   content.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
