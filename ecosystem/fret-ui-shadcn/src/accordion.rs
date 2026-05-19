@@ -71,46 +71,51 @@ fn tailwind_transition_ease_in_out(t: f32) -> f32 {
 }
 
 fn apply_trigger_label_defaults(
-    el: AnyElement,
+    mut el: AnyElement,
     text_style: &TextStyle,
     align: TextAlign,
 ) -> AnyElement {
-    match el.kind {
-        ElementKind::Text(mut props) => {
-            if props.style.is_none() {
+    let has_role_typography = el.inherited_text_style.is_some();
+    match &mut el.kind {
+        ElementKind::Text(props) => {
+            if props.style.is_none() && !has_role_typography {
                 props.style = Some(text_style.clone());
             }
             props.layout.size.width = Length::Fill;
             props.layout.size.min_width = Some(Length::Px(Px(0.0)));
-            props.wrap = TextWrap::Word;
-            props.overflow = TextOverflow::Clip;
+            if !has_role_typography {
+                props.wrap = TextWrap::Word;
+                props.overflow = TextOverflow::Clip;
+            }
             props.align = align;
-            AnyElement::new(el.id, ElementKind::Text(props), el.children)
         }
-        ElementKind::StyledText(mut props) => {
-            if props.style.is_none() {
+        ElementKind::StyledText(props) => {
+            if props.style.is_none() && !has_role_typography {
                 props.style = Some(text_style.clone());
             }
             props.layout.size.width = Length::Fill;
             props.layout.size.min_width = Some(Length::Px(Px(0.0)));
-            props.wrap = TextWrap::Word;
-            props.overflow = TextOverflow::Clip;
+            if !has_role_typography {
+                props.wrap = TextWrap::Word;
+                props.overflow = TextOverflow::Clip;
+            }
             props.align = align;
-            AnyElement::new(el.id, ElementKind::StyledText(props), el.children)
         }
-        ElementKind::SelectableText(mut props) => {
-            if props.style.is_none() {
+        ElementKind::SelectableText(props) => {
+            if props.style.is_none() && !has_role_typography {
                 props.style = Some(text_style.clone());
             }
             props.layout.size.width = Length::Fill;
             props.layout.size.min_width = Some(Length::Px(Px(0.0)));
-            props.wrap = TextWrap::Word;
-            props.overflow = TextOverflow::Clip;
+            if !has_role_typography {
+                props.wrap = TextWrap::Word;
+                props.overflow = TextOverflow::Clip;
+            }
             props.align = align;
-            AnyElement::new(el.id, ElementKind::SelectableText(props), el.children)
         }
-        _ => el,
+        _ => {}
     }
+    el
 }
 
 fn underline_rich_text(rich: AttributedText) -> AttributedText {
@@ -131,7 +136,7 @@ fn underline_rich_text(rich: AttributedText) -> AttributedText {
     AttributedText::new(rich.text, Arc::from(spans.into_boxed_slice()))
 }
 
-fn apply_trigger_label_hover_underline(el: AnyElement) -> AnyElement {
+fn apply_trigger_label_hover_underline(mut el: AnyElement) -> AnyElement {
     match el.kind {
         ElementKind::Text(props) => {
             let text = props.text.clone();
@@ -153,15 +158,18 @@ fn apply_trigger_label_hover_underline(el: AnyElement) -> AnyElement {
             styled.overflow = props.overflow;
             styled.align = props.align;
             styled.ink_overflow = props.ink_overflow;
-            AnyElement::new(el.id, ElementKind::StyledText(styled), el.children)
+            el.kind = ElementKind::StyledText(styled);
+            el
         }
         ElementKind::StyledText(mut props) => {
             props.rich = underline_rich_text(props.rich);
-            AnyElement::new(el.id, ElementKind::StyledText(props), el.children)
+            el.kind = ElementKind::StyledText(props);
+            el
         }
         ElementKind::SelectableText(mut props) => {
             props.rich = underline_rich_text(props.rich);
-            AnyElement::new(el.id, ElementKind::SelectableText(props), el.children)
+            el.kind = ElementKind::SelectableText(props);
+            el
         }
         _ => el,
     }
@@ -2220,7 +2228,10 @@ mod tests {
     use std::sync::Mutex;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, NodeId, PathCommand, Point, Rect, Size, SvgId, SvgService};
+    use fret_core::{
+        AppWindowId, NodeId, PathCommand, Point, Rect, Size, SvgId, SvgService, TextOverflow,
+        TextWrap,
+    };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Px, TextAlign, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{FrameId, TickId};
@@ -2228,10 +2239,12 @@ mod tests {
     use fret_ui::UiTree;
     use fret_ui::element::{CrossAlign, ElementKind, SpacingLength, TextProps};
     use fret_ui_kit::LayoutRefinement;
+    use fret_ui_kit::declarative::text as decl_text;
 
     use super::{
         Accordion, AccordionContent, AccordionItem, AccordionTrigger, apply_trigger_label_defaults,
-        composable as composable_accordion, trigger_text_style,
+        apply_trigger_label_hover_underline, composable as composable_accordion,
+        trigger_text_style,
     };
 
     fn bounds() -> Rect {
@@ -2263,6 +2276,74 @@ mod tests {
                 props.color.is_none(),
                 "expected AccordionTrigger label to inherit foreground color from scope (e.g. Card foreground)"
             );
+        });
+    }
+
+    #[test]
+    fn accordion_trigger_label_defaults_preserve_shared_text_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let theme = Theme::global(&*cx.app).snapshot();
+            let text_style = trigger_text_style(&theme);
+            let el = decl_text::text_list_row_label(cx, "Search the web for information");
+            let inherited = el.inherited_text_style.clone();
+
+            let out = apply_trigger_label_defaults(el, &text_style, TextAlign::Start);
+            let ElementKind::Text(props) = &out.kind else {
+                panic!("expected Text element");
+            };
+
+            assert!(props.style.is_none());
+            assert_eq!(props.wrap, TextWrap::None);
+            assert_eq!(props.overflow, TextOverflow::Ellipsis);
+            assert_eq!(out.inherited_text_style, inherited);
+        });
+    }
+
+    #[test]
+    fn accordion_trigger_hover_underline_preserves_shared_text_role_metadata() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let el = decl_text::text_list_row_label(cx, "Search the web for information");
+            let inherited = el.inherited_text_style.clone();
+
+            let out = apply_trigger_label_hover_underline(el);
+            let ElementKind::StyledText(props) = &out.kind else {
+                panic!("expected styled text after hover underline");
+            };
+
+            assert!(props.style.is_none());
+            assert_eq!(props.wrap, TextWrap::None);
+            assert_eq!(props.overflow, TextOverflow::Ellipsis);
+            assert_eq!(out.inherited_text_style, inherited);
+        });
+    }
+
+    #[test]
+    fn accordion_trigger_label_defaults_keep_bare_text_wrapping_policy() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let theme = Theme::global(&*cx.app).snapshot();
+            let text_style = trigger_text_style(&theme);
+            let el = cx.text("Plain accordion trigger");
+
+            let out = apply_trigger_label_defaults(el, &text_style, TextAlign::Start);
+            let ElementKind::Text(props) = &out.kind else {
+                panic!("expected Text element");
+            };
+
+            assert_eq!(props.style, Some(text_style));
+            assert_eq!(props.wrap, TextWrap::Word);
+            assert_eq!(props.overflow, TextOverflow::Clip);
         });
     }
 

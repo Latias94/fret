@@ -84,9 +84,13 @@ component should construct `TextProps` locally.
    or update the source gate with a documented owner and proof. Builder-style `ui::raw_text(...)`
    and `ui::text_block(...)` count as direct text policy too, unless the surface is an explicit
    text/rendering capability probe.
-5. Do not add a public `TextRole` enum until at least two consumers need a data-driven role value.
+5. Component recipes may apply default typography/layout to bare text children, but they must not
+   overwrite a caller-supplied role child that already carries inherited text-role metadata. A
+   recipe wrapper can add container layout or hover decoration, but role-owned style, wrap, and
+   overflow remain the role's contract unless the recipe documents a stronger slot policy.
+6. Do not add a public `TextRole` enum until at least two consumers need a data-driven role value.
    The current API remains helper-based to avoid freezing unnecessary public surface.
-6. Remaining bare text in first-party proof apps is allowed only when the surface is itself testing
+7. Remaining bare text in first-party proof apps is allowed only when the surface is itself testing
    text/input/rendering behavior or intentionally carries a visual display payload that does not
    fit the compact role vocabulary yet. Current allowed residuals are `components_gallery` text
    smoke/font override probes, `ime_smoke_demo` IME behavior instructions/status, text/CJK/emoji

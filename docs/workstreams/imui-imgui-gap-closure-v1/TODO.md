@@ -546,6 +546,12 @@ Readiness order for the next locally testable review slices:
    `text_section_chrome_label(...)` for the Dependencies heading, and
    `text_compact_paragraph_inherited(...)` for description copy that should keep component-owned
    description typography while sharing the wrapping/fill-width resize contract.
+   2026-05-19 AI Agent text-role/accordion-boundary follow-up: the real `Agent` component family
+   now routes header names through `text_chrome_title(...)`, section labels through
+   `text_section_chrome_label(...)`, instruction body copy through `text_compact_paragraph(...)`,
+   and tool trigger descriptions through `text_list_row_label(...)`. `AccordionTrigger` now keeps
+   shared text-role typography/wrap/overflow metadata when a caller supplies a role child, while
+   preserving its legacy wrapping defaults for bare trigger text.
    2026-05-18 AI visible text-role follow-up 2: Artifact, CodeBlock, and Sandbox copyable snippets
    now use the same role split for fixed demo titles, explanatory prose, and compact status text.
    CodeBlock's active-language diagnostics marker also moved from an invisible empty text node to a

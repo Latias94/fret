@@ -504,6 +504,12 @@ Exit criteria:
   `text_code_label(...)`; the Dependencies heading uses `text_section_chrome_label(...)`; and
   descriptions use `text_compact_paragraph_inherited(...)` so component-owned description tokens
   still win while the leaf owns the shared wrapping/fill-width resize contract.
+  2026-05-19 AI Agent text-role/accordion-boundary result: shared text roles now cover real Agent
+  chrome/content defaults without local `TextProps`. Agent header names use chrome-title text,
+  section labels use section-chrome text, instructions use compact paragraph text, and tool trigger
+  descriptions use list-row text. The shadcn Accordion trigger defaulting path now preserves
+  caller-supplied text role style/wrap/overflow metadata instead of forcing every text child back
+  to wrapping trigger text.
   2026-05-18 AI visible text-role result 2: Artifact, CodeBlock, and Sandbox snippets now reuse the
   same shared text roles for visible fixed chrome/prose, and CodeBlock's active-language marker no
   longer mounts an invisible empty `Text` element.

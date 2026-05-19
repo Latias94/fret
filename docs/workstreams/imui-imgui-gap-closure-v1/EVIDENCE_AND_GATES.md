@@ -3839,3 +3839,39 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
   passed.
 - `git diff --check` passed.
+
+2026-05-19 AI Agent text-role and Accordion role-preservation slice:
+
+- Source gap before fix: the real `fret-ui-ai` `Agent` component still carried local `TextProps`
+  for header names, section labels, instruction body copy, and output labels; tool trigger
+  descriptions used bare `cx.text(...)`. The shadcn `AccordionTrigger` recipe then unconditionally
+  rewrote text children to wrapping trigger text, so a caller-supplied shared role could still lose
+  its single-line resize contract.
+- `AgentHeader` now routes the name through `decl_text::text_chrome_title(...)`;
+  `AgentInstructions`, `AgentTools`, and `AgentOutput` route fixed labels through
+  `text_section_chrome_label(...)`; instruction body copy uses `text_compact_paragraph(...)`; and
+  `AgentTool` trigger descriptions use `text_list_row_label(...)`.
+- `AccordionTrigger` now applies its wrapping trigger defaults only to bare text children. Children
+  that already carry inherited text-role metadata keep their role-owned style, wrap, overflow, and
+  inherited metadata; hover underline conversion also preserves that metadata.
+- `tools/gate_imui_workstream_source.py` now guards the Agent role mapping and the Accordion
+  role-preservation markers.
+- `cargo fmt --check -p fret-ui-ai -p fret-ui-shadcn` passed.
+- `cargo nextest run -p fret-ui-ai agent_header_label_uses_chrome_title_text_role
+  agent_default_text_uses_shared_resize_roles
+  agent_tools_multiple_uncontrolled_renders_label_and_item_text --no-fail-fast` passed.
+- Unbounded `cargo nextest run -p fret-ui-shadcn ...` listed all package test binaries and hit an
+  unrelated `extras_relative_time_auto_update` elevation manifest (`os error 740`). Retried with
+  the intended lib-only scope.
+- `cargo nextest run -p fret-ui-shadcn --lib
+  accordion_trigger_label_defaults_do_not_force_foreground_color
+  accordion_trigger_label_defaults_preserve_shared_text_role_contracts
+  accordion_trigger_hover_underline_preserves_shared_text_role_metadata
+  accordion_trigger_label_defaults_keep_bare_text_wrapping_policy --no-fail-fast` passed.
+- `cargo check -p fret-ui-ai --lib` passed.
+- `cargo check -p fret-ui-shadcn --lib` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.

@@ -3437,6 +3437,39 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-ai/src/elements/agent.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "let name_text = decl_text::text_chrome_title(cx, name)",
+                ".inherit_foreground(theme.color_required(\"foreground\"));",
+                "decl_text::text_section_chrome_label(cx, \"Instructions\")",
+                "decl_text::text_compact_paragraph(cx, self.text).inherit_foreground(muted)",
+                "decl_text::text_section_chrome_label(cx, \"Tools\").inherit_foreground(muted)",
+                "decl_text::text_list_row_label(cx, desc)",
+                "decl_text::text_section_chrome_label(cx, \"Output Schema\").inherit_foreground(muted)",
+                "agent_header_label_uses_chrome_title_text_role",
+                "agent_default_text_uses_shared_resize_roles",
+            ],
+            forbidden=[
+                "cx.text_props(TextProps",
+                "let desc_el = cx.text(desc);",
+                "wrap: TextWrap::Word,\n            overflow: TextOverflow::Clip,",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/accordion.rs"),
+            required=[
+                "let has_role_typography = el.inherited_text_style.is_some();",
+                "if props.style.is_none() && !has_role_typography",
+                "if !has_role_typography {\n                props.wrap = TextWrap::Word;",
+                "el.kind = ElementKind::StyledText(styled);",
+                "accordion_trigger_label_defaults_preserve_shared_text_role_contracts",
+                "accordion_trigger_hover_underline_preserves_shared_text_role_metadata",
+                "accordion_trigger_label_defaults_keep_bare_text_wrapping_policy",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-ai/src/elements/prompt_input.rs"),
             required=[
                 "return crate::elements::empty_placeholder(cx);",
