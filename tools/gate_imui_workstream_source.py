@@ -3769,6 +3769,44 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/toggle.rs"),
+            required=[
+                "fn apply_toggle_inherited_style(",
+                "role_scope_active: bool",
+                "let role_scope_active = role_scope_active || element.inherited_text_style.is_some();",
+                "if !role_scope_active {\n                props.color.get_or_insert(fg);",
+                "apply_toggle_inherited_style(child, fg, default_icon_color, role_scope_active)",
+                "toggle_children_apply_foreground_to_bare_text",
+                "toggle_children_preserve_shared_button_label_role_contracts",
+                "Toggle::uncontrolled(false)\n                    .a11y_label(\"Toggle bookmark\")\n                    .children([decl_text::text_button_label(cx, \"Bookmark\")])",
+                "assert_eq!(props.wrap, fret_core::TextWrap::None);",
+                "assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);",
+            ],
+            forbidden=[
+                "props.color.get_or_insert(fg);\n        }",
+                "apply_toggle_inherited_style(child, fg, default_icon_color)\n",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/toggle_group.rs"),
+            required=[
+                "fn apply_item_inherited_style(",
+                "role_scope_active: bool",
+                "let role_scope_active = role_scope_active || element.inherited_text_style.is_some();",
+                "if !role_scope_active {\n                props.color.get_or_insert(fg);",
+                "apply_item_inherited_style(child, fg, default_icon_color, role_scope_active)",
+                "toggle_group_item_children_apply_foreground_to_bare_text",
+                "toggle_group_item_children_preserve_shared_button_label_role_contracts",
+                "ToggleGroupItem::new(\n                        \"normal\",\n                        [decl_text::text_button_label(cx, \"Bold\")],\n                    )",
+                "assert_eq!(props.wrap, fret_core::TextWrap::None);",
+                "assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);",
+            ],
+            forbidden=[
+                "props.color.get_or_insert(fg);\n        }",
+                "apply_item_inherited_style(child, fg, default_icon_color)\n",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-shadcn/src/item.rs"),
             required=[
                 "fn patch_item_title_text_style_recursive_scoped(",

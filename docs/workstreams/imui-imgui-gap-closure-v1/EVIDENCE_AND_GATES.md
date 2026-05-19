@@ -4518,6 +4518,32 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   tabs_trigger_applies_default_style_to_bare_label_text
   tabs_trigger_children_preserve_shared_button_label_role_contracts --no-fail-fast`.
 
+2026-05-20 shadcn Toggle/ToggleGroup role-preservation slice:
+
+- Source gap before fix: `Toggle` and `ToggleGroupItem` recursively wrote their resolved
+  foreground into descendant passive text leaves. That kept bare custom text ergonomic, but it
+  overwrote shared text role children such as `text_button_label(...)`, replacing the role-owned
+  leaf color/inherited typography path that controls single-line shrink/ellipsis under narrow
+  editor chrome.
+- `apply_toggle_inherited_style(...)` and `apply_item_inherited_style(...)` now treat
+  `inherited_text_style` as a protected role scope and propagate that scope through descendants.
+  Bare text children still receive toggle/toggle-group foreground; shared role children keep
+  `style: None`, `color: None`, no-wrap, ellipsis overflow, zero minimum width, shrink, and
+  inherited role metadata. Foreground still flows through the content root's inherited foreground.
+- `toggle_children_apply_foreground_to_bare_text` and
+  `toggle_group_item_children_apply_foreground_to_bare_text` prove the bare-text fallback remains.
+  `toggle_children_preserve_shared_button_label_role_contracts` and
+  `toggle_group_item_children_preserve_shared_button_label_role_contracts` prove shared
+  button-label roles survive explicit toggle/toggle-group children.
+- Two early focused runs timed out while Cargo/Rustc was still compiling. No process was killed;
+  after Cargo/Rustc exited naturally, the split focused runs passed:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  toggle_children_apply_foreground_to_bare_text
+  toggle_children_preserve_shared_button_label_role_contracts --no-fail-fast` and
+  `cargo nextest run -p fret-ui-shadcn --lib
+  toggle_group_item_children_apply_foreground_to_bare_text
+  toggle_group_item_children_preserve_shared_button_label_role_contracts --no-fail-fast`.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground
