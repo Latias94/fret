@@ -178,6 +178,10 @@ Exit criteria:
   2026-05-17 proof teaching follow-up result: `imui_editor_proof_demo` property-grid labels now
   use `row_cx.label_text(...)`, and the source gate rejects representative proof labels if they
   return to bare `|cx| cx.text(...)` label slots.
+  2026-05-19 editor proof main text result: `imui_editor_proof_demo` main proof chrome and
+  explanatory copy now use proof-local IMUI helpers backed by shared section-chrome,
+  control-readout, and compact paragraph roles instead of local `fret_ui_kit::ui::text(...)`
+  styling.
   2026-05-19 editor notes center/collection text result: `editor_notes_demo` collection summary
   and center preview text now use local helpers backed by shared readout, section, and paragraph
   roles instead of local `ui::text(...).wrap(...)` styling.

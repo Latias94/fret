@@ -607,6 +607,25 @@ Run evidence:
   use `label_text(...)` and forbids those labels from returning to `|cx| cx.text(...)` in property
   label slots. Gates: `python tools/gate_imui_workstream_source.py` and
   `cargo check -p fret-demo --bin imui_editor_proof_demo`.
+- 2026-05-19: extended the `imui_editor_proof_demo` text-role proof from property rows/readouts to
+  the main IMUI proof chrome. The demo now uses `proof_imui_section_text(...)`,
+  `proof_imui_readout_text(...)`, and `proof_imui_compact_paragraph_text(...)` backed by shared
+  `text_section_chrome_label(...)`, `text_control_readout(...)`, and
+  `text_compact_paragraph(...)` instead of `fret_ui_kit::ui::text(...).text_xs()` /
+  `.font_semibold()` local styling. The focused source test and workstream source gate reject the
+  old headline, hint, parity intro/state hint, and editor label paths. Gates:
+  `cargo nextest run -p fret-examples --test imui_editor_proof_text_roles_surface
+  imui_editor_proof_main_fixed_text_uses_shared_roles --no-fail-fast`,
+  `cargo check -p fret-demo --bin imui_editor_proof_demo`, and
+  `python tools/gate_imui_workstream_source.py`.
+  Verification note: the first focused nextest attempt timed out while it contended with a parallel
+  `cargo check` for Cargo package-cache locks; after the background Cargo/Rustc processes exited,
+  the same focused nextest command passed. `cargo fmt --check -p fret-examples` and
+  `python -m py_compile tools\gate_imui_workstream_source.py` also passed before the final gate
+  run. `cargo nextest run -p fret-examples --test text_role_residual_surface
+  remaining_bare_text_in_fret_examples_is_explicit_capability_surface --no-fail-fast`,
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`, and
+  `git diff --check` passed.
 - 2026-05-17: migrated the `workspace_shell_demo` editor rail to teach the shared text roles too.
   Rail command buttons now use `text_button_label(...)`, property labels use `row_cx.label_text(...)`,
   and compact property values route through `text_control_readout(...)` via a local proof helper.

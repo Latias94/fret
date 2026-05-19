@@ -367,6 +367,10 @@ Readiness order for the next locally testable review slices:
    2026-05-17 proof teaching follow-up: `imui_editor_proof_demo` property-grid labels now use
    `row_cx.label_text(...)`, and the IMUI workstream source gate forbids representative proof
    labels from drifting back to bare `|cx| cx.text(...)` label slots.
+   2026-05-19 editor proof main text follow-up: `imui_editor_proof_demo` main headline, mode hint,
+   authoring parity explanatory copy, shared-state hint, and editor section label now route through
+   proof-local IMUI helpers backed by shared section-chrome, readout, and compact paragraph roles
+   instead of local `fret_ui_kit::ui::text(...).text_xs()` / `.font_semibold()` styling.
    2026-05-17 workspace shell proof text follow-up: `workspace_shell_demo` editor-rail buttons,
    property labels, and compact property values now teach the shared button-label, property-label,
    and control-readout text roles instead of bare `cx.text(...)`.
