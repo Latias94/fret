@@ -2679,6 +2679,38 @@ mod tests {
     }
 
     #[test]
+    fn alert_dialog_description_children_preserve_shared_text_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(180.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            AlertDialogDescription::new_children([decl_text::text_compact_paragraph(
+                cx,
+                "Description body copy",
+            )])
+            .into_element(cx)
+        });
+
+        let text = find_text_element(&element, "Description body copy")
+            .expect("expected AlertDialogDescription role child text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert!(text.inherited_text_style.is_some());
+    }
+
+    #[test]
     fn alert_dialog_description_children_preserve_interactive_spans_under_description_scope() {
         let window = AppWindowId::default();
         let mut app = App::new();

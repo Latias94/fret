@@ -1002,6 +1002,10 @@ Readiness order for the next locally testable review slices:
    SheetDescription and PopoverDescription now expose composable children lanes, and focused gates
    prove shared paragraph/body roles keep their role-owned wrap/layout and inherited metadata under
    overlay description composition.
+   2026-05-20 shadcn existing description children role-preservation follow-up:
+   AlertDescription, DialogDescription, AlertDialogDescription, and ItemDescription now have focused
+   gates proving their existing children lanes preserve shared paragraph/body roles instead of only
+   testing inherited typography or rich/selectable text.
    2026-05-19 shadcn AlertTitle role-preservation follow-up: AlertTitle now follows the same split
    for alert titles. Bare and ordinary rich title children still receive the alert title fallback,
    while explicit shared title/chrome roles keep their role-owned single-line ellipsis contract

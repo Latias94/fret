@@ -1484,6 +1484,40 @@ mod tests {
     }
 
     #[test]
+    fn item_description_children_preserve_shared_text_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = bounds();
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ItemDescription::new_children([decl_text::text_compact_paragraph_line_clamp(
+                cx,
+                "Description body copy",
+                2,
+            )])
+            .into_element(cx)
+        });
+
+        let text = find_text_element(&element, "Description body copy")
+            .expect("expected ItemDescription role child text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert!(text.inherited_text_style.is_some());
+        assert_eq!(
+            element.component_slot.as_deref(),
+            Some(ITEM_DESCRIPTION_SLOT)
+        );
+    }
+
+    #[test]
     fn item_title_children_patch_rich_text_with_title_typography() {
         let window = AppWindowId::default();
         let mut app = App::new();

@@ -902,6 +902,9 @@ Exit criteria:
   and PopoverDescription now have composable children lanes, with focused gates proving shared
   paragraph/body roles keep role-owned wrap/layout and inherited metadata under overlay description
   composition.
+  2026-05-20 shadcn existing description children role-preservation result: AlertDescription,
+  DialogDescription, AlertDialogDescription, and ItemDescription now have focused gates proving
+  their existing children lanes preserve shared paragraph/body roles under description composition.
   2026-05-19 shadcn AlertTitle role-preservation result: AlertTitle keeps the shadcn title fallback
   for bare/rich alert-title children, while shared title/chrome roles remain protected role scopes
   and keep their single-line ellipsis contract under alert composition.

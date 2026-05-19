@@ -4452,6 +4452,26 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   popover_description_children_preserve_shared_text_role_contracts --no-fail-fast` passed after the
   new children lanes landed.
 
+2026-05-20 shadcn existing description children role-preservation gate:
+
+- Source gap before gate: `AlertDescription`, `DialogDescription`, `AlertDialogDescription`, and
+  `ItemDescription` already exposed `new_children(...)`, but their tests only covered inherited
+  typography, rich/selectable text, or container layout. They did not prove shared paragraph-role
+  children kept their own wrap/layout/overflow metadata under description composition.
+- `alert_description_children_preserve_shared_text_role_contracts`,
+  `dialog_description_children_preserve_shared_text_role_contracts`,
+  `alert_dialog_description_children_preserve_shared_text_role_contracts`, and
+  `item_description_children_preserve_shared_text_role_contracts` now prove shared paragraph/body
+  roles keep `style: None`, `color: None`, role-owned wrapping/overflow, fill-width/min-width
+  layout, and inherited role metadata when passed through the existing description children lanes.
+- This is a gate-only contract slice for existing shadcn recipe surfaces. It does not add a new text
+  role, widen `fret-imui`, or change description rendering policy.
+- Focused `cargo nextest run -p fret-ui-shadcn --lib
+  alert_description_children_preserve_shared_text_role_contracts
+  dialog_description_children_preserve_shared_text_role_contracts
+  alert_dialog_description_children_preserve_shared_text_role_contracts
+  item_description_children_preserve_shared_text_role_contracts --no-fail-fast` passed.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground
