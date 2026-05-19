@@ -320,6 +320,12 @@ declarative docking entry points (`dock_space_element`, `dock_space_element_from
 their covered capabilities were mapped to compiling public declarative or mechanism-level tests in
 `EVIDENCE_AND_GATES.md`.
 
+Follow-up parity backfill after deletion added public declarative tests for cross-window element
+bounds scoping, cross-window overlay-anchor lookup, registry-provided viewport panel child event
+reachability, and missing non-viewport panel fallback UI. The viewport child reachability test uses
+a declarative `PointerRegion` that actively requests focus on pointer down, matching the old
+retained `FocusOnDown` test behavior.
+
 ## Next Task
 
 Pick the next task from:
@@ -343,8 +349,10 @@ Last run on 2026-05-19 for `RBX-M1-080` completion:
 - `cargo check -p fret-docking --features imui` - passed.
 - `cargo clippy -p fret-docking --all-targets --features imui --no-deps -- -D warnings` -
   passed.
+- `cargo clippy -p fret-docking --all-targets --no-deps -- -D warnings` - passed during the
+  follow-up parity backfill.
 - `cargo nextest run -p fret-ui managed_surface` - passed, 6 tests.
-- `cargo nextest run -p fret-docking` - passed, 85 tests.
+- `cargo nextest run -p fret-docking` - passed, 89 tests during the follow-up parity backfill.
 - `python3 tools/check_layering.py` - passed.
 - `python3 tools/check_workstream_catalog.py` - passed; validated 427 dedicated directories and 47
   standalone markdown files.

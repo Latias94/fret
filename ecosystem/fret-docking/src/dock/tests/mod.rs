@@ -21,6 +21,10 @@ use fret_core::{
 use fret_runtime::PlatformCapabilities;
 use fret_runtime::{DRAG_KIND_DOCK_PANEL, DRAG_KIND_DOCK_TABS};
 use fret_ui::UiTree;
+use fret_ui::element::{
+    AnchoredProps, ContainerProps, InsetEdge, LayoutStyle, PositionStyle, SemanticsProps, SizeStyle,
+};
+use fret_ui::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions, Side};
 use std::sync::Arc;
 
 use fret_ui::declarative;

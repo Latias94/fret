@@ -14,6 +14,58 @@ impl DockPanelElementRegistry<TestHost> for EmptyRegistry {
     }
 }
 
+fn fill_semantics_props() -> SemanticsProps {
+    let mut props = SemanticsProps::default();
+    props.layout.size.width = fret_ui::element::Length::Fill;
+    props.layout.size.height = fret_ui::element::Length::Fill;
+    props
+}
+
+fn absolute_anchor_props(left: Px, top: Px) -> SemanticsProps {
+    SemanticsProps {
+        layout: LayoutStyle {
+            position: PositionStyle::Absolute,
+            inset: fret_ui::element::InsetStyle {
+                left: InsetEdge::Px(left),
+                top: InsetEdge::Px(top),
+                ..Default::default()
+            },
+            size: SizeStyle {
+                width: fret_ui::element::Length::Px(Px(100.0)),
+                height: fret_ui::element::Length::Px(Px(30.0)),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+fn setup_single_panel_window(
+    app: &mut TestHost,
+    window: AppWindowId,
+    panel: &PanelKey,
+    target: Option<fret_core::RenderTargetId>,
+) {
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        dock.ensure_panel(panel, || crate::DockPanel {
+            title: panel.kind.0.clone(),
+            color: fret_core::Color::TRANSPARENT,
+            viewport: target.map(|target| ViewportPanel {
+                target,
+                target_px_size: (320, 240),
+                fit: fret_core::ViewportFit::Stretch,
+                context_menu_enabled: true,
+            }),
+        });
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel.clone()],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+    });
+}
+
 #[test]
 fn declarative_managed_surface_consumes_dock_space_layout_snapshot_for_panel_roots() {
     let window = AppWindowId::default();
@@ -620,6 +672,520 @@ fn public_declarative_dock_space_entry_point_records_panel_root_bounds_for_eleme
     assert_eq!(
         ui.debug_node_bounds(right_node),
         Some(expected_1[&panel_right])
+    );
+}
+
+#[test]
+fn public_declarative_dock_space_entry_point_keeps_bounds_window_scoped_across_windows() {
+    let window_a = AppWindowId::default();
+    let window_b = AppWindowId::from(KeyData::from_ffi(42));
+    let panel_a = PanelKey::new("demo.public.declarative.multi-window.a");
+    let panel_b = PanelKey::new("demo.public.declarative.multi-window.b");
+    let bounds_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(600.0), Px(240.0)),
+    );
+    let bounds_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(480.0), Px(200.0)),
+    );
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+    setup_single_panel_window(&mut app, window_a, &panel_a, None);
+    setup_single_panel_window(&mut app, window_b, &panel_b, None);
+
+    let mut services = FakeTextService;
+    let mut ui_a: UiTree<TestHost> = UiTree::new();
+    ui_a.set_window(window_a);
+    let mut ui_b: UiTree<TestHost> = UiTree::new();
+    ui_b.set_window(window_b);
+
+    let element_a = Arc::new(Mutex::new(None));
+    let element_b = Arc::new(Mutex::new(None));
+
+    let render_window_a =
+        |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut FakeTextService| {
+            let panel = panel_a.clone();
+            let element = element_a.clone();
+            declarative::render_root(
+                ui,
+                app,
+                services,
+                window_a,
+                bounds_a,
+                "public-declarative-dock-host-multi-window-a",
+                move |cx| {
+                    let child = cx.semantics_with_id(fill_semantics_props(), {
+                        let element = element.clone();
+                        move |cx, id| {
+                            *element.lock().expect("window a element mutex") = Some(id);
+                            vec![cx.text("a")]
+                        }
+                    });
+                    vec![dock_space_element(
+                        cx,
+                        window_a,
+                        DockSpaceElementOptions::default(),
+                        [dock_panel_element(panel.clone(), child)],
+                    )]
+                },
+            )
+        };
+    let render_window_b =
+        |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut FakeTextService| {
+            let panel = panel_b.clone();
+            let element = element_b.clone();
+            declarative::render_root(
+                ui,
+                app,
+                services,
+                window_b,
+                bounds_b,
+                "public-declarative-dock-host-multi-window-b",
+                move |cx| {
+                    let child = cx.semantics_with_id(fill_semantics_props(), {
+                        let element = element.clone();
+                        move |cx, id| {
+                            *element.lock().expect("window b element mutex") = Some(id);
+                            vec![cx.text("b")]
+                        }
+                    });
+                    vec![dock_space_element(
+                        cx,
+                        window_b,
+                        DockSpaceElementOptions::default(),
+                        [dock_panel_element(panel.clone(), child)],
+                    )]
+                },
+            )
+        };
+
+    let root_a = render_window_a(&mut ui_a, &mut app, &mut services);
+    ui_a.set_root(root_a);
+    let root_b = render_window_b(&mut ui_b, &mut app, &mut services);
+    ui_b.set_root(root_b);
+
+    ui_a.layout_all(&mut app, &mut services, bounds_a, 1.0);
+    ui_b.layout_all(&mut app, &mut services, bounds_b, 1.0);
+
+    let element_a = element_a
+        .lock()
+        .expect("window a element mutex")
+        .expect("expected window a element id");
+    let element_b = element_b
+        .lock()
+        .expect("window b element mutex")
+        .expect("expected window b element id");
+    let expected_a_0 = fret_ui::elements::current_bounds_for_element(&mut app, window_a, element_a)
+        .expect("expected window a current bounds");
+    let expected_b_0 = fret_ui::elements::current_bounds_for_element(&mut app, window_b, element_b)
+        .expect("expected window b current bounds");
+    assert_ne!(
+        expected_a_0, expected_b_0,
+        "test setup should make window-local panel rects distinguishable"
+    );
+
+    app.advance_frame();
+    let root_a = render_window_a(&mut ui_a, &mut app, &mut services);
+    ui_a.set_root(root_a);
+    let root_b = render_window_b(&mut ui_b, &mut app, &mut services);
+    ui_b.set_root(root_b);
+    ui_a.layout_all(&mut app, &mut services, bounds_a, 1.0);
+    ui_b.layout_all(&mut app, &mut services, bounds_b, 1.0);
+
+    assert_eq!(
+        fret_ui::elements::bounds_for_element(&mut app, window_a, element_a),
+        Some(expected_a_0),
+        "window A committed element bounds must stay scoped to window A"
+    );
+    assert_eq!(
+        fret_ui::elements::bounds_for_element(&mut app, window_b, element_b),
+        Some(expected_b_0),
+        "window B committed element bounds must stay scoped to window B"
+    );
+    assert_eq!(
+        fret_ui::elements::bounds_for_element(&mut app, window_b, element_a),
+        None,
+        "window B must not resolve window A element bounds"
+    );
+    assert_eq!(
+        fret_ui::elements::bounds_for_element(&mut app, window_a, element_b),
+        None,
+        "window A must not resolve window B element bounds"
+    );
+}
+
+#[test]
+fn public_declarative_dock_space_entry_point_uses_window_local_anchor_for_overlay_placement() {
+    let window_a = AppWindowId::default();
+    let window_b = AppWindowId::from(KeyData::from_ffi(43));
+    let panel_a = PanelKey::new("demo.public.declarative.overlay-anchor.a");
+    let panel_b = PanelKey::new("demo.public.declarative.overlay-anchor.b");
+    let bounds_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(600.0), Px(240.0)),
+    );
+    let bounds_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(480.0), Px(200.0)),
+    );
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+    setup_single_panel_window(&mut app, window_a, &panel_a, None);
+    setup_single_panel_window(&mut app, window_b, &panel_b, None);
+
+    let mut services = FakeTextService;
+    let mut ui_a: UiTree<TestHost> = UiTree::new();
+    ui_a.set_window(window_a);
+    let mut ui_b: UiTree<TestHost> = UiTree::new();
+    ui_b.set_window(window_b);
+
+    let anchor_a = Arc::new(Mutex::new(None));
+    let anchor_b = Arc::new(Mutex::new(None));
+
+    let render_anchor_a =
+        |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut FakeTextService| {
+            let panel = panel_a.clone();
+            let anchor = anchor_a.clone();
+            declarative::render_root(
+                ui,
+                app,
+                services,
+                window_a,
+                bounds_a,
+                "public-declarative-dock-host-overlay-anchor-a",
+                move |cx| {
+                    let child = cx.semantics_with_id(absolute_anchor_props(Px(240.0), Px(20.0)), {
+                        let anchor = anchor.clone();
+                        move |cx, id| {
+                            *anchor.lock().expect("window a anchor mutex") = Some(id);
+                            vec![cx.text("a")]
+                        }
+                    });
+                    vec![dock_space_element(
+                        cx,
+                        window_a,
+                        DockSpaceElementOptions::default(),
+                        [dock_panel_element(panel.clone(), child)],
+                    )]
+                },
+            )
+        };
+    let render_anchor_b =
+        |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut FakeTextService| {
+            let panel = panel_b.clone();
+            let anchor = anchor_b.clone();
+            declarative::render_root(
+                ui,
+                app,
+                services,
+                window_b,
+                bounds_b,
+                "public-declarative-dock-host-overlay-anchor-b",
+                move |cx| {
+                    let child = cx.semantics_with_id(absolute_anchor_props(Px(40.0), Px(20.0)), {
+                        let anchor = anchor.clone();
+                        move |cx, id| {
+                            *anchor.lock().expect("window b anchor mutex") = Some(id);
+                            vec![cx.text("b")]
+                        }
+                    });
+                    vec![dock_space_element(
+                        cx,
+                        window_b,
+                        DockSpaceElementOptions::default(),
+                        [dock_panel_element(panel.clone(), child)],
+                    )]
+                },
+            )
+        };
+
+    let root_a = render_anchor_a(&mut ui_a, &mut app, &mut services);
+    ui_a.set_root(root_a);
+    let root_b = render_anchor_b(&mut ui_b, &mut app, &mut services);
+    ui_b.set_root(root_b);
+    ui_a.layout_all(&mut app, &mut services, bounds_a, 1.0);
+    ui_b.layout_all(&mut app, &mut services, bounds_b, 1.0);
+
+    let anchor_a = anchor_a
+        .lock()
+        .expect("window a anchor mutex")
+        .expect("expected window a anchor id");
+    let anchor_b = anchor_b
+        .lock()
+        .expect("window b anchor mutex")
+        .expect("expected window b anchor id");
+    let expected_a_anchor =
+        fret_ui::elements::current_bounds_for_element(&mut app, window_a, anchor_a)
+            .expect("expected window a anchor bounds");
+    let expected_b_anchor =
+        fret_ui::elements::current_bounds_for_element(&mut app, window_b, anchor_b)
+            .expect("expected window b anchor bounds");
+    assert_ne!(
+        expected_a_anchor, expected_b_anchor,
+        "test setup should make same-kind anchors distinguishable across windows"
+    );
+
+    app.advance_frame();
+    let root_a = render_anchor_a(&mut ui_a, &mut app, &mut services);
+    ui_a.set_root(root_a);
+    let root_b = render_anchor_b(&mut ui_b, &mut app, &mut services);
+    ui_b.set_root(root_b);
+    ui_a.layout_all(&mut app, &mut services, bounds_a, 1.0);
+    ui_b.layout_all(&mut app, &mut services, bounds_b, 1.0);
+
+    let desired = Size::new(Px(80.0), Px(24.0));
+    let layout_out = app.models_mut().insert(AnchoredPanelLayout {
+        rect: Rect::default(),
+        side: Side::Bottom,
+        align: Align::End,
+        arrow: None,
+    });
+    let overlay_root = declarative::render_root(
+        &mut ui_b,
+        &mut app,
+        &mut services,
+        window_b,
+        bounds_b,
+        "public-declarative-dock-host-overlay-anchor-layer-b",
+        |cx| {
+            assert_eq!(
+                cx.last_bounds_for_element(anchor_b),
+                Some(expected_b_anchor),
+                "overlay policy should read window B's committed anchor bounds"
+            );
+            assert_eq!(
+                cx.last_bounds_for_element(anchor_a),
+                None,
+                "overlay policy in window B must not read window A's anchor bounds"
+            );
+            vec![cx.anchored_props(
+                AnchoredProps {
+                    anchor: Rect::default(),
+                    anchor_element: Some(anchor_b.0),
+                    side: Side::Bottom,
+                    align: Align::End,
+                    side_offset: Px(6.0),
+                    options: AnchoredPanelOptions::default(),
+                    layout_out: Some(layout_out.clone()),
+                    ..Default::default()
+                },
+                |cx| {
+                    vec![cx.container(
+                        ContainerProps {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: fret_ui::element::Length::Px(desired.width),
+                                    height: fret_ui::element::Length::Px(desired.height),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        |_cx| Vec::new(),
+                    )]
+                },
+            )]
+        },
+    );
+    let _overlay_layer = ui_b.push_overlay_root(overlay_root, false);
+    ui_b.layout_all(&mut app, &mut services, bounds_b, 1.0);
+
+    let expected = fret_ui::overlay_placement::anchored_panel_layout_sized(
+        bounds_b,
+        expected_b_anchor,
+        desired,
+        Px(6.0),
+        Side::Bottom,
+        Align::End,
+        AnchoredPanelOptions::default(),
+    );
+    assert_eq!(
+        app.models().get_copied(&layout_out),
+        Some(expected),
+        "declarative overlay placement should use the window-local anchor bounds"
+    );
+}
+
+#[test]
+fn public_declarative_registry_binds_viewport_panel_element_when_registry_returns_one() {
+    struct ViewportOverlayRegistry;
+
+    impl DockPanelElementRegistry<TestHost> for ViewportOverlayRegistry {
+        fn render_panel(
+            &self,
+            cx: &mut fret_ui::ElementContext<'_, TestHost>,
+            _window: AppWindowId,
+            _panel: &PanelKey,
+        ) -> Option<fret_ui::element::AnyElement> {
+            let props = fret_ui::element::PointerRegionProps {
+                layout: fill_semantics_props().layout,
+                enabled: true,
+                capture_phase_pointer_moves: false,
+            };
+            Some(cx.pointer_region(props, |cx| {
+                cx.pointer_region_on_pointer_down(Arc::new(
+                    |host: &mut dyn fret_ui::action::UiPointerActionHost, cx, _down| {
+                        host.request_focus(cx.target);
+                        true
+                    },
+                ));
+                vec![cx.text("viewport overlay")]
+            }))
+        }
+    }
+
+    let window = AppWindowId::default();
+    let panel = PanelKey::new("demo.public.declarative.viewport.with-element");
+    let target = fret_core::RenderTargetId::from(KeyData::from_ffi(41));
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+    setup_single_panel_window(&mut app, window, &panel, Some(target));
+    app.with_global_mut(
+        DockPanelElementRegistryService::<TestHost>::default,
+        |svc, _app| {
+            svc.set(Arc::new(ViewportOverlayRegistry));
+        },
+    );
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(180.0)),
+    );
+    let mut services = FakeTextService;
+    let root = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "public-declarative-dock-host-viewport-with-element",
+        move |cx| {
+            vec![dock_space_element_from_registry(
+                cx,
+                window,
+                DockSpaceElementOptions::default(),
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let node = app
+        .global::<DockPanelContentService>()
+        .and_then(|content| content.get(window, &panel))
+        .expect("expected viewport panel element returned by registry to be bound");
+    let rect = ui
+        .debug_node_bounds(node)
+        .expect("expected viewport panel element bounds");
+    assert!(rect.size.width.0 > 0.0 && rect.size.height.0 > 0.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(rect.origin.x.0 + 1.0), Px(rect.origin.y.0 + 1.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        ui.focus(),
+        Some(node),
+        "registry-provided viewport panel element should remain focusable and event-reachable"
+    );
+}
+
+#[test]
+fn public_declarative_registry_falls_back_to_placeholder_for_missing_non_viewport_panel_ui() {
+    struct AlwaysMissingRegistry;
+
+    impl DockPanelElementRegistry<TestHost> for AlwaysMissingRegistry {
+        fn render_panel(
+            &self,
+            _cx: &mut fret_ui::ElementContext<'_, TestHost>,
+            _window: AppWindowId,
+            _panel: &PanelKey,
+        ) -> Option<fret_ui::element::AnyElement> {
+            None
+        }
+    }
+
+    let window = AppWindowId::default();
+    let panel = PanelKey::new("demo.public.declarative.missing.non-viewport");
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+    setup_single_panel_window(&mut app, window, &panel, None);
+    app.with_global_mut(
+        DockPanelElementRegistryService::<TestHost>::default,
+        |svc, _app| {
+            svc.set(Arc::new(AlwaysMissingRegistry));
+        },
+    );
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(200.0)),
+    );
+    let mut services = FakeTextService;
+    let root = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "public-declarative-dock-host-missing-non-viewport",
+        move |cx| {
+            vec![dock_space_element_from_registry(
+                cx,
+                window,
+                DockSpaceElementOptions::default(),
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let node = app
+        .global::<DockPanelContentService>()
+        .and_then(|content| content.get(window, &panel))
+        .expect("expected placeholder element for missing non-viewport panel UI");
+    let rect = ui
+        .debug_node_bounds(node)
+        .expect("expected placeholder element bounds");
+    assert!(
+        rect.size.width.0 > 0.0 && rect.size.height.0 > 0.0,
+        "placeholder should be laid out as the active dock panel content"
+    );
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert!(
+        scene.ops().iter().any(|op| matches!(
+            op,
+            SceneOp::Text { order, .. } if *order == fret_core::DrawOrder(0)
+        )),
+        "missing non-viewport panel placeholder should paint explanatory text, got: {:?}",
+        scene.ops()
     );
 }
 

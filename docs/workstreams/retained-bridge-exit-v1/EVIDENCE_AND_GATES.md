@@ -2716,3 +2716,66 @@ Broader gates not run:
   - Reason: this is a focused retained-bridge exit slice with a very large workspace; task-local
     `fret-docking`, `fret-ui managed_surface`, layering, clippy, catalog, and residual-reference
     gates cover the changed contracts.
+
+## 2026-05-19 - RBX-M1-080 follow-up public declarative parity backfill
+
+Claim verified:
+
+- Deleted retained docking tests now have additional public declarative entry-point coverage for
+  cross-window element bounds scoping, cross-window overlay-anchor lookup, viewport-panel registry
+  child event reachability, and missing non-viewport panel fallback UI.
+- The viewport-panel registry test preserves the old retained `FocusOnDown` behavior by using a
+  declarative `PointerRegion` root that actively requests focus on pointer down. This confirms the
+  child root is event-reachable without conflating `SemanticsProps::focusable` with pointer-driven
+  focus policy.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `ecosystem/fret-docking/src/dock/tests/mod.rs`
+
+Commands:
+
+- `cargo nextest run -p fret-docking public_declarative_registry_binds_viewport_panel_element_when_registry_returns_one`
+  - Result: passed, 1 test.
+  - Scope proven: registry-provided viewport panel elements remain bound, laid out, event-reachable,
+    and able to request focus through the public declarative dock-space host.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_keeps_bounds_window_scoped_across_windows`
+  - Result: passed, 1 test.
+  - Scope proven: committed element bounds for panel roots remain window-scoped across multiple
+    declarative dock-space hosts.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_uses_window_local_anchor_for_overlay_placement`
+  - Result: passed, 1 test.
+  - Scope proven: overlay placement reads the window-local committed anchor bounds and does not
+    leak anchors from another window.
+- `cargo nextest run -p fret-docking public_declarative_registry_falls_back_to_placeholder_for_missing_non_viewport_panel_ui`
+  - Result: passed, 1 test.
+  - Scope proven: a missing registry element for a non-viewport panel still binds and paints the
+    fallback placeholder UI through the public declarative registry path.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting is clean after the test backfill.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 89 tests.
+  - Scope proven: public declarative docking, split, viewport, tab, drop, floating, runtime, and
+    public-surface policy tests all pass with the retained bridge removed and the parity backfill in
+    place.
+- `cargo clippy -p fret-docking --all-targets --no-deps -- -D warnings`
+  - Result: passed.
+  - Scope proven: `fret-docking` all-targets remain warning-clean after adding the public
+    declarative parity tests.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained-bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: this follow-up only backfills `fret-docking` tests. The package test gate, clippy,
+    layering, catalog, format, and whitespace checks cover the changed files.
