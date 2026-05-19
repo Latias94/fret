@@ -136,6 +136,16 @@ fn resolve_bundle_artifact_path_prefers_run_id_schema2_from_script_result() {
 }
 
 #[test]
+fn ai_transcript_torture_scroll_is_not_a_retained_vlist_reconcile_gate() {
+    let script = Path::new("tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json");
+
+    assert!(
+        !crate::diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(script),
+        "AI transcript surfaces intentionally use non-retained virtualization to keep the surface non-static"
+    );
+}
+
+#[test]
 fn resolve_bundle_artifact_path_records_integrity_failure_reason_code_on_chunk_hash_mismatch() {
     let root = std::env::temp_dir().join(format!(
         "fret-diag-resolve-bundle-chunks-integrity-{}",

@@ -1276,3 +1276,13 @@ date: 2026-05-12
     recovery. Current runtime did not reproduce the overlap; the new gate proves
     `docsec-popup-title.top - ui-gallery-doc-page-intro.bottom = 24px`, keeps the assertion floor at
     `>= 16px`, and complements the earlier `671x460` Popup/full-page startup gates.
+- [x] Harden AI transcript non-retained scroll mutation gate and suite policy.
+  - Result: `ui-gallery-ai-transcript-torture-scroll.json` now self-configures a deterministic
+    `240`-message, variable-height transcript, asserts the startup message-count semantics, appends
+    `100` messages, and proves the count advances to `340` while capturing layout, screenshot, and
+    bundle evidence. The slice also removes the transcript torture script from the retained vlist
+    reconcile tail policy because `fret-ui-ai` intentionally keeps transcript virtualization
+    non-retained to avoid a `UiHost + 'static` surface requirement. The first suite rerun exposed
+    this policy mismatch: all three scripts passed, but the suite failed a retained-only
+    non-retained-shift tail check. After rebuilding `fretboard-dev`, the suite passed 3/3 with no
+    retained-tail check file.

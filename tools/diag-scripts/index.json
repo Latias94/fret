@@ -3458,13 +3458,32 @@
     {
       "id": "ui-gallery-ai-transcript-torture-scroll",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-ai-transcript-torture-scroll.json",
-      "required_capabilities": [],
-      "required_launch_features": [],
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-ai",
+        "gallery-chart",
+        "gallery-dev",
+        "gallery-web-ime-harness"
+      ],
       "suite_memberships": [
         "ui-gallery-ai-transcript-retained"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "ai-elements",
+        "retained",
+        "scroll",
+        "transcript",
+        "ui-gallery",
+        "virtual-list"
+      ],
+      "target_hints": [
+        "Navigates to the AI Transcript Torture page.",
+        "Uses a smaller deterministic transcript length for a retained virtual-list scroll and append mutation gate.",
+        "Asserts the retained transcript model count before and after appending while capturing layout and bundle evidence."
+      ]
     },
     {
       "id": "ui-gallery-ai-transcription-demo-screenshot-zinc-dark",

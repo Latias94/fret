@@ -2935,3 +2935,39 @@ intro path.
   `target/fret-diag-combobox-geometry-placement-short-startup-v1/sessions/1779198616098-23160/suite.summary.json`;
   10/10 scripts passed, `scripts_with_evidence=9`, and the new short-startup script run id is
   `1779198792251`.
+
+## M139: AI Transcript Non-Retained Scroll Count Gate
+
+Status: complete for AI transcript torture scroll mutation coverage and suite tail policy.
+
+- Strengthened `ui-gallery-ai-transcript-torture-scroll.json` so it injects a deterministic
+  `240`-message variable-height transcript, asserts the startup message-count semantics, appends
+  `100` messages, and proves the count advances to `340` with layout, screenshot, and bundle
+  evidence.
+- Added a hidden semantics counter to the AI transcript torture snippet so diagnostics can assert
+  the real model size without depending on rendered text snippets or scroll-window selection.
+- Added direct `fret-diag-protocol` roundtrip coverage for all three
+  `ui-gallery-ai-transcript-retained` suite scripts.
+- Removed `ui-gallery-ai-transcript-torture-scroll.json` from the retained vlist reconcile tail
+  policy. `fret-ui-ai` intentionally uses non-retained virtual lists for transcript surfaces so the
+  component surface does not require `UiHost + 'static`; the old suite tail check treated that
+  intentional non-retained path as a retained-window failure.
+- Gates pass:
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\snippets\ai\transcript_torture.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs crates\fret-diag\src\diag_policy.rs crates\fret-diag\src\tests.rs`;
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag ai_transcript_torture_scroll_is_not_a_retained_vlist_reconcile_gate --no-fail-fast --no-capture`
+  with Nextest run id `caf72dfa-d836-47df-8dd3-0aa22a1618e5`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_ai_conversation_demo_screenshot_zinc_dark script_v2_roundtrip_ui_gallery_ai_conversation_demo_scroll_button script_v2_roundtrip_ui_gallery_ai_transcript_torture_scroll --no-fail-fast --no-capture`
+  with Nextest run id `674f2827-c68d-4532-917f-583e0e81cc1b`;
+  and
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\perf\ui-gallery-ai-transcript-torture-scroll.json --dir target\fret-diag-ai-transcript-torture-count-gate-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with run id `1779201476652` and AI packet
+  `target/fret-diag-ai-transcript-torture-count-gate-v1/sessions/1779201370619-115172/1779201476652/ai.packet`.
+- Full AI transcript suite diagnostics pass after rebuilding `fretboard-dev`:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-ai-transcript-retained --dir target\fret-diag-ai-transcript-retained-cargo-policy-v2 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with suite summary
+  `target/fret-diag-ai-transcript-retained-cargo-policy-v2/sessions/1779203319147-101240/suite.summary.json`;
+  3/3 scripts passed, the torture script run id is `1779203465969`, and no retained-tail
+  non-retained-shift check file was produced.

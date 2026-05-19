@@ -617,6 +617,27 @@ fn script_v2_roundtrip_ui_gallery_ai_file_tree_demo_screenshot_zinc_dark() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_ai_conversation_demo_screenshot_zinc_dark() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-ai-conversation-demo-screenshot-zinc-dark.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_ai_conversation_demo_scroll_button() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-ai-conversation-demo-scroll-button.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_ai_transcript_torture_scroll() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_sonner_live_region_mutation() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-sonner-live-region-mutation.json"

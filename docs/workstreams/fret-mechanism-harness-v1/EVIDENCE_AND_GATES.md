@@ -5702,3 +5702,59 @@ Next slice recommendation:
   - result: passed; 10/10 scripts; suite summary
     `target/fret-diag-combobox-geometry-placement-short-startup-v1/sessions/1779198616098-23160/suite.summary.json`;
     new short-startup run id `1779198792251`.
+
+## AI Transcript Non-Retained Scroll Count Gate
+
+- invariant:
+  the AI transcript torture page must mutate a large variable-height transcript through the real
+  UI Gallery runtime while keeping diagnostics assertions stable. Because `fret-ui-ai` transcript
+  surfaces intentionally use non-retained virtual lists, the suite must not apply retained-window
+  reconcile tail checks to this script.
+- finding:
+  no AI transcript scroll mutation defect was reproduced. The first suite rerun after strengthening
+  the script showed all three scripts passing while the suite still failed
+  `tooling.suite.success_tail.failed`; the tail artifact showed a retained-only
+  non-retained-shift check was being applied to the transcript torture script. Removing the script
+  from `ui_gallery_script_requires_retained_vlist_reconcile_gate` matches the `fret-ui-ai`
+  non-static surface policy and eliminates the false suite failure.
+- diagnostics surface:
+  `ui-gallery-ai-transcript-torture-scroll.json` injects
+  `FRET_UI_GALLERY_AI_TRANSCRIPT_LEN=240` and
+  `FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT=1`, asserts the hidden
+  `ui-gallery-ai-transcript-messages-len` semantics value is `240`, clicks the append control,
+  asserts the value becomes `340`, and captures layout, screenshot, and bundle evidence.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/ai/transcript_torture.rs`,
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-ai-transcript-torture-scroll.json`,
+  `crates/fret-diag/src/diag_policy.rs`,
+  `crates/fret-diag/src/tests.rs`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`, and
+  `ecosystem/fret-ui-ai/src/surface_policy_tests.rs`.
+- evidence anchors:
+  focused AI packet
+  `target/fret-diag-ai-transcript-torture-count-gate-v1/sessions/1779201370619-115172/1779201476652/ai.packet`;
+  focused pack
+  `target/fret-diag-ai-transcript-torture-count-gate-v1/sessions/1779201370619-115172/share/1779201476652.zip`;
+  suite summary
+  `target/fret-diag-ai-transcript-retained-cargo-policy-v2/sessions/1779203319147-101240/suite.summary.json`.
+- format/registry:
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\snippets\ai\transcript_torture.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs crates\fret-diag\src\diag_policy.rs crates\fret-diag\src\tests.rs`
+  - result: passed.
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed; registry is up to date.
+- diag policy regression:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag ai_transcript_torture_scroll_is_not_a_retained_vlist_reconcile_gate --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `caf72dfa-d836-47df-8dd3-0aa22a1618e5`.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_ai_conversation_demo_screenshot_zinc_dark script_v2_roundtrip_ui_gallery_ai_conversation_demo_scroll_button script_v2_roundtrip_ui_gallery_ai_transcript_torture_scroll --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `674f2827-c68d-4532-917f-583e0e81cc1b`.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\perf\ui-gallery-ai-transcript-torture-scroll.json --dir target\fret-diag-ai-transcript-torture-count-gate-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  - result: passed; run id `1779201476652`.
+- full AI transcript suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-ai-transcript-retained --dir target\fret-diag-ai-transcript-retained-cargo-policy-v2 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  - result: passed after rebuilding `fretboard-dev`; 3/3 scripts; torture run id
+    `1779203465969`; no `check.vlist_window_shifts_non_retained_max.json` tail file was produced.

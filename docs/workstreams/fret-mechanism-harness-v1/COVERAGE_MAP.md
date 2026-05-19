@@ -175,6 +175,12 @@ date: 2026-05-12
   short-height companion for the Popup docs intro path. It starts at logical `663x311`, captures
   early layout/screenshot/bundle evidence before resize recovery, and proves the intro leaves a
   `24px` measured gap before the Popup title under a `>= 16px` oracle.
+- AI transcript non-retained scroll update:
+  `ui-gallery-ai-transcript-torture-scroll.json` now gates deterministic large-transcript mutation
+  on the non-retained AI transcript path by asserting a hidden message-count semantics value moves
+  from `240` to `340` after append, with layout/screenshot/bundle evidence. The suite policy no
+  longer applies retained vlist reconcile tail checks to this script, matching the `fret-ui-ai`
+  non-static transcript surface contract.
 - Structural slot hygiene update:
   Recipe-internal child classification now uses `AnyElement::component_slot` for the discovered
   shadcn structural markers: AlertAction, CardAction, CardFooter, AvatarBadge, ItemMedia, and
