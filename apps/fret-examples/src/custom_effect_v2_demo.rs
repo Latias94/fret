@@ -22,10 +22,12 @@ use fret_render::{
     ImageColorSpace, ImageDescriptor, Renderer, WgpuContext, write_rgba8_texture_region,
 };
 use fret_ui::element::{
-    ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle, SpacerProps,
-    TextProps,
+    AnyElement, ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle,
+    SpacerProps,
 };
+use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::custom_effects::CustomEffectProgramV2;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{IntoUiElement, Space, ui};
 
 mod act {
@@ -282,6 +284,13 @@ fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
     );
     c.a = a.clamp(0.0, 1.0);
     c
+}
+
+fn custom_effect_label_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_section_chrome_label(cx, text).inherit_foreground(srgb(255, 255, 255, 0.92))
 }
 
 fn watch_first_f32(cx: &mut AppComponentCx<'_>, model: &LocalState<Vec<f32>>, default: f32) -> f32 {
@@ -575,16 +584,7 @@ where
             label_layout.inset.left = Some(Px(12.0)).into();
             label_layout.inset.top = Some(Px(12.0)).into();
 
-            let title = cx.text_props(TextProps {
-                layout: Default::default(),
-                text: label.clone(),
-                style: None,
-                color: Some(srgb(255, 255, 255, 0.92)),
-                align: fret_core::TextAlign::Start,
-                wrap: fret_core::TextWrap::None,
-                overflow: fret_core::TextOverflow::Clip,
-                ink_overflow: Default::default(),
-            });
+            let title = custom_effect_label_text(cx, label.clone());
 
             let pill = cx.container(
                 ContainerProps {

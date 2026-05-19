@@ -820,6 +820,10 @@ Exit criteria:
   control-readout text, fetched data uses code-label text, and error foreground remains app-owned
   state styling. `imui_editor_proof_demo` also removed its old direct editor-style readout
   `TextProps` construction in favor of the shared control-readout role.
+  2026-05-19 custom effect overlay text result: `custom_effect_v1_demo` and
+  `custom_effect_v2_demo` keep their explicit custom-effect/runtime ownership, but their fixed
+  overlay pill labels now use shared section-chrome text with inherited white foreground instead
+  of local `TextProps`.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

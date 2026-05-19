@@ -3627,3 +3627,32 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `cargo check -p fret-demo` passed with an existing unrelated warning in
   `apps/fret-demo/src/bin/wgpu_hello_world_control.rs` about an unused `Result`.
 - `git diff --check` passed.
+
+2026-05-19 custom effect overlay chrome text-role slice:
+
+- Source gap before fix: `custom_effect_v1_demo.rs` and `custom_effect_v2_demo.rs` were still in the
+  direct-text residual allowlist for a single fixed overlay pill label. Those labels are ordinary
+  fixed chrome over an effect preview, not text-rendering capability probes.
+- Both demos now use `custom_effect_label_text(...)`, backed by
+  `decl_text::text_section_chrome_label(...)`, and preserve the white overlay foreground with
+  `inherit_foreground(...)`. Custom effect ABI/runtime ownership is unchanged.
+- `apps/fret-examples/tests/custom_effect_overlay_text_surface.rs`,
+  `apps/fret-examples/tests/text_role_residual_surface.rs`, and
+  `tools/gate_imui_workstream_source.py` guard the migration and remove the two demos from the
+  residual direct text allowlist.
+- First post-fix `cargo nextest run -p fret-examples --test custom_effect_overlay_text_surface
+  custom_effect_v1_v2_overlay_labels_use_shared_chrome_role --no-fail-fast` timed out while
+  background Cargo/Rustc compilation continued. Retried after Cargo/Rustc exited.
+- `cargo fmt --check -p fret-examples` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo nextest run -p fret-examples --test custom_effect_overlay_text_surface
+  custom_effect_v1_v2_overlay_labels_use_shared_chrome_role --no-fail-fast` passed.
+- `cargo nextest run -p fret-examples --test text_role_residual_surface
+  remaining_bare_text_in_fret_examples_is_explicit_capability_surface --no-fail-fast` passed.
+- `cargo check -p fret-examples --lib` passed.
+- `cargo check -p fret-demo` passed with an existing unrelated warning in
+  `apps/fret-demo/src/bin/wgpu_hello_world_control.rs` about an unused `Result`.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.

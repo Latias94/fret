@@ -12036,6 +12036,36 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-examples/src/custom_effect_v1_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "fn custom_effect_label_text<H: UiHost>(",
+                "decl_text::text_section_chrome_label(cx, text).inherit_foreground(srgb(255, 255, 255, 0.92))",
+                "let title = custom_effect_label_text(cx, label.clone());",
+            ],
+            forbidden=[
+                "TextProps",
+                "cx.text_props(",
+                "wrap: fret_core::TextWrap::None",
+                "overflow: fret_core::TextOverflow::Clip",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/src/custom_effect_v2_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "fn custom_effect_label_text<H: UiHost>(",
+                "decl_text::text_section_chrome_label(cx, text).inherit_foreground(srgb(255, 255, 255, 0.92))",
+                "let title = custom_effect_label_text(cx, label.clone());",
+            ],
+            forbidden=[
+                "TextProps",
+                "cx.text_props(",
+                "wrap: fret_core::TextWrap::None",
+                "overflow: fret_core::TextOverflow::Clip",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-examples/src/imui_editor_proof_demo.rs"),
             required=[
                 "fn proof_compact_readout<H: UiHost>(",
@@ -12633,6 +12663,22 @@ def main() -> None:
                 "\"ui::text(count.to_string())\"",
                 "\"ui::text(\\\"Hello, World!\\\")\"",
                 "\"FRET_HELLO_WORLD_COMPARE_ACTIVE_MODE\"",
+            ],
+            forbidden=[
+                "\"src/custom_effect_v1_demo.rs\".to_string()",
+                "\"src/custom_effect_v2_demo.rs\".to_string()",
+            ],
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/tests/custom_effect_overlay_text_surface.rs"),
+            required=[
+                "fn custom_effect_v1_v2_overlay_labels_use_shared_chrome_role()",
+                "fn assert_custom_effect_overlay_text_roles(source: &str, label: &str)",
+                "fncustom_effect_label_text<H:UiHost>(",
+                "decl_text::text_section_chrome_label(cx,text).inherit_foreground(srgb(255,255,255,0.92))",
+                "lettitle=custom_effect_label_text(cx,label.clone());",
+                "include_str!(\"../src/custom_effect_v1_demo.rs\")",
+                "include_str!(\"../src/custom_effect_v2_demo.rs\")",
             ],
             forbidden=[],
         ),

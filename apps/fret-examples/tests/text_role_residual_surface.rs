@@ -98,32 +98,6 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
             },
         ),
         (
-            "src/custom_effect_v1_demo.rs".to_string(),
-            DirectTextCounts {
-                ui_text: 0,
-                ui_rich_text: 0,
-                ui_raw_text: 0,
-                ui_text_block: 0,
-                cx_text: 0,
-                cx_text_props: 1,
-                text_props_new: 0,
-                text_props_literal: 1,
-            },
-        ),
-        (
-            "src/custom_effect_v2_demo.rs".to_string(),
-            DirectTextCounts {
-                ui_text: 0,
-                ui_rich_text: 0,
-                ui_raw_text: 0,
-                ui_text_block: 0,
-                cx_text: 0,
-                cx_text_props: 1,
-                text_props_new: 0,
-                text_props_literal: 1,
-            },
-        ),
-        (
             "src/custom_effect_v2_glass_chrome_web_demo.rs".to_string(),
             DirectTextCounts {
                 ui_text: 0,
