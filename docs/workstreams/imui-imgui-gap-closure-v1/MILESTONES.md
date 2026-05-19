@@ -890,6 +890,9 @@ Exit criteria:
   2026-05-19 shadcn AlertTitle role-preservation result: AlertTitle keeps the shadcn title fallback
   for bare/rich alert-title children, while shared title/chrome roles remain protected role scopes
   and keep their single-line ellipsis contract under alert composition.
+  2026-05-19 shadcn AlertDialogTitle role-preservation result: AlertDialogTitle keeps the shadcn
+  dialog-title fallback for bare/rich title children, while shared title/chrome roles remain
+  protected role scopes under alert-dialog composition.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

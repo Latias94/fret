@@ -3939,6 +3939,41 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.
 
+2026-05-19 shadcn AlertDialogTitle role-preservation slice:
+
+- Source gap before fix: `AlertDialogTitle` recursively wrote dialog-title typography, foreground,
+  wrapping, and clipping into descendant text leaves. That kept bare dialog titles ergonomic, but it
+  also overwrote shared role children such as `text_chrome_title(...)`, even though those already
+  carry role-owned title-family resize semantics.
+- `patch_alert_dialog_text_style_recursive(...)` now delegates to a role-scope-aware helper. It
+  still patches bare `Text`, `StyledText`, and `SelectableText` children so custom
+  AlertDialogTitle content gets the shadcn dialog-title fallback, but it skips any subtree that
+  already carries inherited text-role metadata.
+- `alert_dialog_title_children_patch_rich_text_with_title_typography` keeps the strong title-slot
+  fallback; `alert_dialog_description_children_scope_rich_text_with_description_typography` stays
+  in the focused run to prove the existing description scope is unchanged; and
+  `alert_dialog_title_children_preserve_shared_text_role_contracts` proves shared title-role
+  children keep `style: None`, `color: None`, ellipsis overflow, and role metadata.
+- `tools/gate_imui_workstream_source.py` now guards the AlertDialogTitle helper/test shape.
+- Red run before fix:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  alert_dialog_title_children_preserve_shared_text_role_contracts
+  alert_dialog_title_children_patch_rich_text_with_title_typography
+  alert_dialog_description_children_scope_rich_text_with_description_typography --no-fail-fast`
+  failed because the role-preservation test observed a leaf `style`.
+- Post-fix focused run passed:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  alert_dialog_title_children_preserve_shared_text_role_contracts
+  alert_dialog_title_children_patch_rich_text_with_title_typography
+  alert_dialog_description_children_scope_rich_text_with_description_typography --no-fail-fast`.
+- `cargo fmt --check -p fret-ui-shadcn` passed.
+- `cargo check -p fret-ui-shadcn --lib` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.
+
 2026-05-19 shadcn AlertTitle role-preservation slice:
 
 - Source gap before fix: `AlertTitle` recursively wrote title typography into every descendant

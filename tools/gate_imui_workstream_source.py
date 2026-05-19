@@ -3549,6 +3549,18 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/alert_dialog.rs"),
+            required=[
+                "fn patch_alert_dialog_text_style_recursive_scoped(",
+                "let role_scope_active = role_scope_active || el.inherited_text_style.is_some();",
+                "if !role_scope_active {\n                patch_text_style(&mut props.style, px, line_height, weight, letter_spacing_em);",
+                "alert_dialog_title_children_preserve_shared_text_role_contracts",
+                "alert_dialog_title_children_patch_rich_text_with_title_typography",
+                "alert_dialog_description_children_scope_rich_text_with_description_typography",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-ai/src/elements/prompt_input.rs"),
             required=[
                 "return crate::elements::empty_placeholder(cx);",

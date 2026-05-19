@@ -1769,6 +1769,26 @@ fn patch_alert_dialog_text_style_recursive(
     color: Color,
     letter_spacing_em: f32,
 ) {
+    patch_alert_dialog_text_style_recursive_scoped(
+        el,
+        px,
+        line_height,
+        weight,
+        color,
+        letter_spacing_em,
+        false,
+    );
+}
+
+fn patch_alert_dialog_text_style_recursive_scoped(
+    el: &mut AnyElement,
+    px: Px,
+    line_height: Px,
+    weight: FontWeight,
+    color: Color,
+    letter_spacing_em: f32,
+    role_scope_active: bool,
+) {
     fn patch_text_style(
         style: &mut Option<fret_core::TextStyle>,
         px: Px,
@@ -1785,36 +1805,44 @@ fn patch_alert_dialog_text_style_recursive(
         *style = Some(style_value);
     }
 
+    let role_scope_active = role_scope_active || el.inherited_text_style.is_some();
     match &mut el.kind {
         ElementKind::Text(props) => {
-            patch_text_style(&mut props.style, px, line_height, weight, letter_spacing_em);
-            props.color = Some(color);
-            props.wrap = TextWrap::Word;
-            props.overflow = TextOverflow::Clip;
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height, weight, letter_spacing_em);
+                props.color = Some(color);
+                props.wrap = TextWrap::Word;
+                props.overflow = TextOverflow::Clip;
+            }
         }
         ElementKind::StyledText(props) => {
-            patch_text_style(&mut props.style, px, line_height, weight, letter_spacing_em);
-            props.color = Some(color);
-            props.wrap = TextWrap::Word;
-            props.overflow = TextOverflow::Clip;
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height, weight, letter_spacing_em);
+                props.color = Some(color);
+                props.wrap = TextWrap::Word;
+                props.overflow = TextOverflow::Clip;
+            }
         }
         ElementKind::SelectableText(props) => {
-            patch_text_style(&mut props.style, px, line_height, weight, letter_spacing_em);
-            props.color = Some(color);
-            props.wrap = TextWrap::Word;
-            props.overflow = TextOverflow::Clip;
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height, weight, letter_spacing_em);
+                props.color = Some(color);
+                props.wrap = TextWrap::Word;
+                props.overflow = TextOverflow::Clip;
+            }
         }
         _ => {}
     }
 
     for child in &mut el.children {
-        patch_alert_dialog_text_style_recursive(
+        patch_alert_dialog_text_style_recursive_scoped(
             child,
             px,
             line_height,
             weight,
             color,
             letter_spacing_em,
+            role_scope_active,
         );
     }
 }
@@ -2422,6 +2450,7 @@ mod tests {
     use fret_ui::element::PressableProps;
     use fret_ui::elements::bounds_for_element;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
+    use fret_ui_kit::declarative::text as decl_text;
 
     fn find_first_styled_text(el: &AnyElement) -> Option<&fret_ui::element::StyledTextProps> {
         if let ElementKind::StyledText(props) = &el.kind {
@@ -2447,6 +2476,17 @@ mod tests {
                 .iter()
                 .any(|child| contains_plain_text(child, needle)),
         }
+    }
+
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &el.kind
+            && props.text.as_ref() == needle
+        {
+            return Some(el);
+        }
+        el.children
+            .iter()
+            .find_map(|child| find_text_element(child, needle))
     }
 
     #[test]
@@ -2565,6 +2605,36 @@ mod tests {
         assert_eq!(props.color, Some(expected_fg));
         assert_eq!(props.wrap, TextWrap::Word);
         assert_eq!(props.overflow, TextOverflow::Clip);
+    }
+
+    #[test]
+    fn alert_dialog_title_children_preserve_shared_text_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(160.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            AlertDialogTitle::new_children([decl_text::text_chrome_title(
+                cx,
+                "Delete project role title",
+            )])
+            .into_element(cx)
+        });
+
+        let text = find_text_element(&element, "Delete project role title")
+            .expect("expected AlertDialogTitle role child text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(text.inherited_text_style.is_some());
     }
 
     #[test]

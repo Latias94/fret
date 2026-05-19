@@ -995,6 +995,9 @@ Readiness order for the next locally testable review slices:
    for alert titles. Bare and ordinary rich title children still receive the alert title fallback,
    while explicit shared title/chrome roles keep their role-owned single-line ellipsis contract
    under alert composition.
+   2026-05-19 shadcn AlertDialogTitle role-preservation follow-up: AlertDialogTitle now protects
+   shared title/chrome roles under alert-dialog composition while preserving the shadcn dialog-title
+   fallback for bare/rich children.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
