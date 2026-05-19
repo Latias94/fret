@@ -1033,6 +1033,12 @@ Readiness order for the next locally testable review slices:
    the muted `text-sm` non-interactive empty/loading/status message role, and shadcn
    `CommandEmpty` / `CommandLoading` consume it instead of duplicating local text sizing/color
    builders.
+   2026-05-20 shadcn DataTable toolbar text follow-up: DataTable toolbar faceted-trigger labels,
+   faceted option labels, count chips, clear/reset actions, and selected-count readouts now route
+   through shared button-label, list-row-label, and control-readout text roles instead of local
+   `ui::text(...)` / `ui::raw_text(...)` builders. Pagination footer text remains local for now
+   because its upstream-like `tabular-nums` / medium page summary treatment is not yet expressible
+   through the current inherited text-role refinement surface.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

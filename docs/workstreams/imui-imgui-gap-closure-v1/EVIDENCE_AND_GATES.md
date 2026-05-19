@@ -4072,6 +4072,35 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   compilation. No cargo/rustc process was killed; after the compile chain exited naturally, the
   same command passed.
 
+2026-05-20 shadcn DataTable toolbar text role slice:
+
+- Source gap before fix: `DataTableToolbar` still owned local `ui::text(...)` /
+  `ui::raw_text(...)` policy for fixed toolbar text: faceted-trigger labels, faceted option
+  labels, count chips, clear/reset action labels, and selected-count readouts. Those are fixed-row
+  control texts, so resize should truncate them through shared roles instead of allowing local
+  builder policy to drift.
+- `data_table_toolbar_button_label(...)`, `data_table_toolbar_option_label(...)`, and
+  `data_table_toolbar_readout(...)` now keep that recipe-local semantic split while delegating to
+  `text_button_label(...)`, `text_list_row_label(...)`, and `text_control_readout(...)`. The
+  helper names are intentionally local to the recipe; `fret-imui` stays policy-light and no new
+  public text-role enum was added.
+- `data_table_toolbar_fixed_text_uses_shared_roles` proves these helper outputs keep leaf
+  `style`/`color` empty, carry inherited text-role typography, stay shrinkable with
+  `min-width: 0`, and use single-line ellipsis. The readout path also proves muted foreground is
+  inherited.
+- Pagination footer text remains local in this slice because the current inherited text-role
+  refinement surface cannot yet carry OpenType numeric features such as `tabular-nums`; moving that
+  to a generic readout role would hide a visual/behavioral regression instead of fixing the role
+  system.
+- Focused gates passed: `cargo fmt --check -p fret-ui-shadcn`; `cargo nextest run -p
+  fret-ui-shadcn --lib data_table_toolbar_fixed_text_uses_shared_roles --no-fail-fast`; `cargo
+  check -p fret-ui-shadcn --lib`; `python -m py_compile tools\gate_imui_workstream_source.py`;
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`;
+  `python tools\gate_imui_workstream_source.py`; and `git diff --check`.
+- Verification note: focused shadcn nextest timed out twice while Cargo/Rustc still held build
+  locks. No cargo/rustc process was killed; after each compile chain exited naturally, the same
+  focused nextest command passed.
+
 2026-05-19 shadcn EmptyTitle children-role slice:
 
 - Source gap before fix: `EmptyTitle` only accepted a string payload, so empty-state title slots

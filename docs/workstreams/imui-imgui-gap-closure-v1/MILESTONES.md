@@ -922,6 +922,11 @@ Exit criteria:
   2026-05-20 shared status-message text result: `text_status_message(...)` now covers muted
   `text-sm` non-interactive empty/loading/status messages, and shadcn `CommandEmpty` /
   `CommandLoading` use it for their fixed command-surface status text.
+  2026-05-20 shadcn DataTable toolbar text result: DataTable toolbar faceted trigger labels,
+  faceted option labels, option counts, clear/reset action labels, and selected-count readouts now
+  consume shared button-label, list-row-label, and control-readout text roles. Pagination footer
+  page/selected summaries still keep local tabular-number styling until the shared inherited
+  text-role surface can carry OpenType numeric feature policy.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

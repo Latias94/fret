@@ -13,6 +13,7 @@ use fret_ui_headless::table::{ColumnDef, ColumnId, ColumnPinPosition, TableState
 use fret_ui_kit::declarative::icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::table::{IntoTableStateModel, TableViewOutput};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
 use serde_json::Value;
 
@@ -290,6 +291,27 @@ fn data_table_toolbar_test_id(prefix: Option<&Arc<str>>, suffix: &str, fallback:
         Some(prefix) => Arc::<str>::from(format!("{prefix}-{suffix}")),
         None => Arc::<str>::from(fallback),
     }
+}
+
+fn data_table_toolbar_button_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_button_label(cx, text)
+}
+
+fn data_table_toolbar_option_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_list_row_label(cx, text)
+}
+
+fn data_table_toolbar_readout<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_control_readout(cx, text)
 }
 
 /// shadcn/ui `DataTable` toolbar (recipe).
@@ -919,7 +941,6 @@ impl<TData> DataTableToolbar<TData> {
                 sync_column_pinning(&mut *cx.app, &self.state, &desired_pinning);
 
                 let selected_count = state_value.row_selection.len();
-                let theme = Theme::global(&*cx.app).snapshot();
 
                 let column_label = Arc::clone(&self.column_label);
                 let columns = Arc::clone(&self.columns);
@@ -1096,10 +1117,10 @@ impl<TData> DataTableToolbar<TData> {
                                             cx,
                                             fret_icons::IconId::new_static("lucide.circle-plus"),
                                         ));
-                                        children.push(
-                                            ui::text( trigger_button_label.clone())
-                                                .into_element(cx),
-                                        );
+                                        children.push(data_table_toolbar_button_label(
+                                            cx,
+                                            trigger_button_label.clone(),
+                                        ));
                                         if trigger_selected_count > 0 {
                                             children.push(
                                                 crate::separator::Separator::new()
@@ -1243,9 +1264,8 @@ impl<TData> DataTableToolbar<TData> {
                                         cx.opacity(0.6, move |_cx| vec![icon])
                                     });
 
-                                    let label = ui::raw_text(it.label.clone())
-                                        .nowrap()
-                                        .into_element(cx);
+                                    let label =
+                                        data_table_toolbar_option_label(cx, it.label.clone());
 
                                     let check = icon::icon(
                                         cx,
@@ -1284,12 +1304,10 @@ impl<TData> DataTableToolbar<TData> {
                                         .get(it.value.as_ref())
                                         .copied()
                                         .map(|n| {
-                                            let fg_muted = theme.color_token("muted-foreground");
-                                            let count = ui::text( Arc::<str>::from(n.to_string()))
-                                                .text_xs()
-                                                .text_color(ColorRef::Color(fg_muted))
-                                                .nowrap()
-                                                .into_element(cx);
+                                            let count = data_table_toolbar_readout(
+                                                cx,
+                                                Arc::<str>::from(n.to_string()),
+                                            );
 
                                             ui::h_row(move |_cx| vec![count])
                                                 .layout(
@@ -1365,8 +1383,7 @@ impl<TData> DataTableToolbar<TData> {
 
                                 entries.push(CommandSeparator::new().into());
                                 let clear_row = ui::h_row(move |_cx| {
-                                    vec![ui::text(Arc::<str>::from("Clear filters"))
-                                        .into_element(_cx)]
+                                    vec![data_table_toolbar_button_label(_cx, "Clear filters")]
                                 })
                                 .layout(LayoutRefinement::default().w_full())
                                 .items_center()
@@ -1504,7 +1521,7 @@ impl<TData> DataTableToolbar<TData> {
                         .test_id(reset_test_id)
                         .children(vec![
                             icon::icon(cx, fret_icons::IconId::new_static("lucide.x")),
-                            ui::text("Reset").into_element(cx),
+                            data_table_toolbar_button_label(cx, "Reset"),
                         ])
                         .on_activate(on_activate)
                         .into_element(cx)
@@ -1512,12 +1529,10 @@ impl<TData> DataTableToolbar<TData> {
 
                 let selected_text: Option<AnyElement> =
                     (self.show_selected_text && selected_count > 0).then(|| {
-                        let mut text =
-                            ui::raw_text(Arc::from(format!("Selected: {selected_count}"))).nowrap();
-                        if let Some(color) = theme.color_by_key("muted-foreground") {
-                            text = text.text_color(ColorRef::Color(color));
-                        }
-                        text.into_element(cx)
+                        data_table_toolbar_readout(
+                            cx,
+                            Arc::from(format!("Selected: {selected_count}")),
+                        )
                     });
 
                 let trailing = self.trailing;
@@ -1875,6 +1890,9 @@ impl DataTablePagination {
 mod tests {
     use super::*;
     use crate::data_table_controls::apply_column_visibility_change;
+    use fret_app::App;
+    use fret_core::{Point, Rect, TextOverflow, TextWrap};
+    use fret_ui::element::ElementKind;
 
     #[derive(Debug, Clone, PartialEq, Eq)]
     enum PageSizeAction {
@@ -1901,6 +1919,61 @@ mod tests {
             Ok(_) => PageSizeAction::None,
             Err(_) => PageSizeAction::SyncToState,
         }
+    }
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(640.0), Px(240.0)),
+        )
+    }
+
+    fn assert_single_line_role(element: &AnyElement, label: &str) {
+        let ElementKind::Text(props) = &element.kind else {
+            panic!("expected {label} helper to build a Text element");
+        };
+
+        assert!(
+            props.style.is_none(),
+            "{label} must leave typography on inherited role metadata"
+        );
+        assert!(
+            props.color.is_none(),
+            "{label} must leave foreground on inherited role metadata"
+        );
+        assert_eq!(
+            props.layout.size.min_width,
+            Some(Length::Px(Px(0.0))),
+            "{label} must be shrinkable in toolbar rows"
+        );
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(
+            element.inherited_text_style.is_some(),
+            "{label} must carry shared text-role typography"
+        );
+    }
+
+    #[test]
+    fn data_table_toolbar_fixed_text_uses_shared_roles() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let button = data_table_toolbar_button_label(cx, "Clear filters");
+            assert_single_line_role(&button, "toolbar button label");
+
+            let option = data_table_toolbar_option_label(cx, "Really long faceted filter option");
+            assert_single_line_role(&option, "faceted option label");
+
+            let readout = data_table_toolbar_readout(cx, "Selected: 128");
+            assert_single_line_role(&readout, "toolbar readout");
+            assert!(
+                readout.inherited_foreground.is_some(),
+                "toolbar readouts must inherit muted foreground"
+            );
+        });
     }
 
     #[test]

@@ -3595,6 +3595,33 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/data_table_recipes.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "fn data_table_toolbar_button_label<H: UiHost>(",
+                "decl_text::text_button_label(cx, text)",
+                "fn data_table_toolbar_option_label<H: UiHost>(",
+                "decl_text::text_list_row_label(cx, text)",
+                "fn data_table_toolbar_readout<H: UiHost>(",
+                "decl_text::text_control_readout(cx, text)",
+                "children.push(data_table_toolbar_button_label(",
+                "let label =\n                                        data_table_toolbar_option_label(cx, it.label.clone());",
+                "let count = data_table_toolbar_readout(",
+                "vec![data_table_toolbar_button_label(_cx, \"Clear filters\")]",
+                "data_table_toolbar_button_label(cx, \"Reset\")",
+                "data_table_toolbar_readout(\n                            cx,\n                            Arc::from(format!(\"Selected: {selected_count}\")),\n                        )",
+                "data_table_toolbar_fixed_text_uses_shared_roles",
+            ],
+            forbidden=[
+                "ui::text( trigger_button_label.clone())",
+                "let label = ui::raw_text(it.label.clone())\n                                        .nowrap()",
+                "let count = ui::text( Arc::<str>::from(n.to_string()))",
+                "vec![ui::text(Arc::<str>::from(\"Clear filters\"))",
+                "ui::text(\"Reset\").into_element(cx)",
+                "ui::raw_text(Arc::from(format!(\"Selected: {selected_count}\"))).nowrap()",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-shadcn/src/navigation_menu.rs"),
             required=[
                 "let role_scope_active = role_scope_active || element.inherited_text_style.is_some();",
