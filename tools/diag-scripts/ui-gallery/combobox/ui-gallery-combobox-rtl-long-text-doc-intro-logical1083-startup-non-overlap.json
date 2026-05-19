@@ -28,7 +28,6 @@
       },
       "timeout_frames": 600
     },
-    { "type": "press_key", "key": "escape" },
     {
       "type": "wait_until",
       "predicate": {

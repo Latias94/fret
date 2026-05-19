@@ -602,6 +602,83 @@ fn wrapped_text_paint_width_shrink_reinvalidates_layout_when_height_grows() {
 }
 
 #[test]
+fn wrapped_text_first_paint_reinvalidates_layout_when_height_grows() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_paint_cache_enabled(false);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut services = WidthSensitiveTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-first-paint-layout-repair",
+        |cx| {
+            let mut props = crate::element::TextProps::new(
+                "A long text run whose first prepared height exceeds stale startup bounds",
+            );
+            props.layout.size.width = Length::Fill;
+            props.wrap = fret_core::TextWrap::Word;
+            vec![cx.text_props(props)]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let text_node = ui.children(root)[0];
+    ui.test_clear_node_invalidations(text_node);
+
+    let mut scene = Scene::default();
+    ui.paint(
+        &mut app,
+        &mut services,
+        text_node,
+        Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(80.0), Px(10.0)),
+        ),
+        &mut scene,
+        1.0,
+    );
+
+    assert!(
+        ui.node_layout_invalidated(text_node),
+        "first paint prepare that increases auto-height must schedule a layout repair"
+    );
+    assert!(
+        app.flush_effects()
+            .into_iter()
+            .any(|effect| matches!(effect, Effect::Redraw(w) if w == window)),
+        "first paint layout repair should request another frame"
+    );
+
+    let ops = scene.ops();
+    assert!(
+        matches!(
+            ops,
+            [
+                fret_core::SceneOp::PushClipRRect { rect, .. },
+                fret_core::SceneOp::Text { .. },
+                fret_core::SceneOp::PopClip,
+            ] if *rect
+                == Rect::new(
+                    fret_core::Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(80.0), Px(10.0)),
+                )
+        ),
+        "the startup repair frame should clip taller prepared text to stale layout bounds"
+    );
+}
+
+#[test]
 fn theme_color_change_does_not_change_text_input_fingerprints() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

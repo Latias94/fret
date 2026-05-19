@@ -92,15 +92,10 @@ fn maybe_repair_text_layout_after_paint_prepare<H: UiHost>(
     cx: &mut PaintCx<'_, H>,
     window: AppWindowId,
     layout: &crate::element::LayoutStyle,
-    width_changed: bool,
-    font_stack_changed: bool,
     metrics: fret_core::TextMetrics,
     ink_pad_top: fret_core::Px,
     ink_pad_bottom: fret_core::Px,
 ) -> bool {
-    if !(width_changed || font_stack_changed) {
-        return false;
-    }
     if !matches!(layout.size.height, crate::element::Length::Auto) {
         return false;
     }
@@ -810,8 +805,6 @@ impl ElementHostWidget {
                         cx,
                         window,
                         &props.layout,
-                        width_changed,
-                        font_stack_changed,
                         metrics,
                         pad_top,
                         pad_bottom,
@@ -1067,8 +1060,6 @@ impl ElementHostWidget {
                         cx,
                         window,
                         &props.layout,
-                        width_changed,
-                        font_stack_changed,
                         metrics,
                         pad_top,
                         pad_bottom,
@@ -1337,8 +1328,6 @@ impl ElementHostWidget {
                         cx,
                         window,
                         &props.layout,
-                        width_changed,
-                        font_stack_changed,
                         metrics,
                         pad_top,
                         pad_bottom,

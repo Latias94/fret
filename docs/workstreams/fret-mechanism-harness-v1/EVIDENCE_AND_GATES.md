@@ -5809,3 +5809,47 @@ Next slice recommendation:
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-combobox-geometry-placement --dir target\fret-diag-combobox-geometry-placement-rtl-long-text-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
   - result: passed; 12/12 scripts; RTL Long Text startup run id `1779208395010`; Popup logical994
     run id `1779208377600`.
+
+## First-Paint Text Auto-Height Repair
+
+- invariant:
+  text nodes with auto height must not visibly overlap following content when their first
+  paint-time prepared metrics are taller than stale startup layout bounds. The repair must schedule
+  another layout frame and clip the taller text on the stale frame.
+- finding:
+  the M140 RTL Long Text startup script pressed `Escape` before capturing evidence. That keyboard
+  input advanced a frame and could hide the exact cold-start path reported by the user. Removing
+  the input produced a stricter startup gate; before the mechanism fix, one focused run stalled at
+  screenshot capture with `script_stalled_no_frames`, showing the startup path could fail to drive
+  itself without input.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/host_widget/paint.rs`,
+  `crates/fret-ui/src/declarative/tests/text_cache.rs`, and
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json`.
+- evidence anchors:
+  pre-fix no-input failed run:
+  `target/fret-diag-combobox-rtl-long-text-no-input-repro-v1/sessions/1779209752041-10556/script.result.json`;
+  fixed focused AI packet:
+  `target/fret-diag-combobox-rtl-long-text-no-input-fixed-v1/sessions/1779210358866-112204/1779210456769/ai.packet`;
+  fixed focused screenshot:
+  `target/fret-diag-combobox-rtl-long-text-no-input-fixed-v1/sessions/1779210358866-112204/screenshots/1779210460025-ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap/window-4294967297-tick-2-frame-2.png`;
+  full suite summary:
+  `target/fret-diag-combobox-geometry-placement-startup-text-repair-v1/sessions/1779210565472-66488/suite.summary.json`.
+- format:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\declarative\host_widget\paint.rs crates\fret-ui\src\declarative\tests\text_cache.rs`
+  - result: passed.
+- mechanism regression:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui wrapped_text_first_paint_reinvalidates_layout_when_height_grows wrapped_text_paint_width_shrink_reinvalidates_layout_when_height_grows --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `ee45c3ee-bd9e-4983-bf51-3a676fe8efdc`.
+- protocol/registry:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_rtl_long_text_doc_intro_logical1083_startup_non_overlap --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `af2bdc87-44c4-4be2-8e92-d5a6a062da39`.
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json --dir target\fret-diag-combobox-rtl-long-text-no-input-fixed-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed; run id `1779210456769`; the captured screenshot shows clean intro/title
+    spacing without keyboard or resize recovery.
+- full Combobox geometry placement suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-combobox-geometry-placement --dir target\fret-diag-combobox-geometry-placement-startup-text-repair-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed; 12/12 scripts; no-input RTL Long Text startup run id `1779210808250`.

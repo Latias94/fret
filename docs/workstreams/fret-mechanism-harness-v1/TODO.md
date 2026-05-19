@@ -1296,3 +1296,13 @@ date: 2026-05-12
     keeps a `994x466` Popup companion to cover the earlier scale interpretation. Current runtime did
     not reproduce the user-visible overlap; the corrected gate locks the actual screenshot target
     that the earlier Popup and Basic startup gates did not cover.
+- [x] Repair first-paint text auto-height growth and remove input-masked startup gate recovery.
+  - Result:
+    the RTL Long Text startup gate no longer sends `Escape` before capturing layout/screenshot
+    evidence, so it no longer advances an input frame that can hide cold-start text layout defects.
+    `Text`, `StyledText`, and `SelectableText` now schedule an auto-height layout repair whenever
+    paint-time prepare produces taller metrics than the current layout bounds, including the first
+    paint prepare path and not only width/font-stack reprepare. The focused mechanism regression
+    proves first-paint height growth invalidates layout, requests redraw, and clips the repair
+    frame. The refreshed focused runtime gate and full Combobox geometry-placement suite pass
+    without manual resize or keyboard input.
