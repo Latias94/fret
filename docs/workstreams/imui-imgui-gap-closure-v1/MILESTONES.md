@@ -320,9 +320,9 @@ Exit criteria:
   separator/section chrome labels in `fret-ui-kit::declarative::text`. IMUI `separator_text`
   labels use that shared role, so section chrome stays single-line, shrinkable, and ellipsis-based
   under resize instead of inheriting default word wrapping.
-  2026-05-17 chrome title text result: `text_chrome_title(...)` now owns fill-width floating
-  window title-bar text. Resizable floating titles keep fill/grow/min-width-zero behavior, while
-  non-resizable titles reuse the section/chrome label role instead of local `TextProps`.
+  2026-05-17 chrome title text result: `text_chrome_title(...)` now owns medium, fill-width
+  floating window title-bar text. Resizable floating titles keep fill/grow/min-width-zero behavior,
+  while non-resizable titles reuse the section/chrome label role instead of local `TextProps`.
   2026-05-17 chrome glyph text result: `text_chrome_glyph(...)` now owns compact fixed-slot
   chrome glyph text in `fret-ui-kit::declarative::text`. Disclosure/tree indicators use that
   shared role, so glyph-only chrome stays single-line and clipped without local `TextProps`.
@@ -490,6 +490,10 @@ Exit criteria:
   2026-05-19 AI Terminal title text-role result: the `fret-ui-ai` `TerminalTitle` default label now
   uses `text_chrome_title(...)`, giving the real component the same fill-width, `min-width: 0`,
   grow/shrink, single-line ellipsis contract as other chrome titles.
+  2026-05-19 AI EnvironmentVariables title text-role result: `text_chrome_title(...)` now also owns
+  medium chrome-title weight, and the `fret-ui-ai` `EnvironmentVariablesTitle` default/text paths
+  route through that shared role instead of local raw-text title policy. Custom title children stay
+  on the component-owned inherited title refinement because the upstream surface is children-first.
   2026-05-18 AI visible text-role result 2: Artifact, CodeBlock, and Sandbox snippets now reuse the
   same shared text roles for visible fixed chrome/prose, and CodeBlock's active-language marker no
   longer mounts an invisible empty `Text` element.

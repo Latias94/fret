@@ -299,9 +299,9 @@ Readiness order for the next locally testable review slices:
    2026-05-17 section chrome label text follow-up: `text_section_chrome_label(...)` now owns
    compact separator/section chrome labels in `fret-ui-kit::declarative::text`, and IMUI
    `separator_text` labels route through it instead of local default-wrapping `TextProps`.
-   2026-05-17 chrome title text follow-up: `text_chrome_title(...)` now owns fill-width floating
-   window title-bar text, and floating window titles route through shared chrome text roles instead
-   of local `TextProps`.
+   2026-05-17 chrome title text follow-up: `text_chrome_title(...)` now owns medium, fill-width
+   floating window title-bar text, and floating window titles route through shared chrome text roles
+   instead of local `TextProps`.
    2026-05-17 chrome glyph text follow-up: `text_chrome_glyph(...)` now owns compact fixed-slot
    chrome glyphs in `fret-ui-kit::declarative::text`, and disclosure/tree indicators route through
    it instead of keeping a local `TextProps` constructor.
@@ -531,6 +531,10 @@ Readiness order for the next locally testable review slices:
    itself now routes its default label through `text_chrome_title(...)` instead of local
    `ui::raw_text(...).wrap(None).overflow(Clip)` policy, so actual terminal chrome titles inherit
    fill-width shrink/ellipsis behavior under resize.
+   2026-05-19 AI EnvironmentVariables title text-role follow-up:
+   `EnvironmentVariablesTitle` default/text paths now route through the shared medium
+   `text_chrome_title(...)` role instead of local raw-text title policy. Custom title children keep
+   the component-owned inherited title refinement because upstream accepts children.
    2026-05-18 AI visible text-role follow-up 2: Artifact, CodeBlock, and Sandbox copyable snippets
    now use the same role split for fixed demo titles, explanatory prose, and compact status text.
    CodeBlock's active-language diagnostics marker also moved from an invisible empty text node to a

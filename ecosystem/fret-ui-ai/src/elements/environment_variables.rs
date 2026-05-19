@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use fret_core::{
     AttributedText, ClipboardAccessError, Color, Corners, Edges, FontId, FontWeight, Px,
-    SemanticsRole, TextOverflow, TextSpan, TextStyle, TextWrap,
+    SemanticsRole, TextOverflow, TextSpan, TextStyle, TextStyleRefinement, TextWrap,
 };
 use fret_icons::ids;
 use fret_runtime::{Effect, Model};
@@ -18,6 +18,7 @@ use fret_ui_kit::declarative::chrome::centered_fixed_chrome_pressable_with_id_pr
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::typography;
 use fret_ui_kit::ui;
 use fret_ui_kit::{
@@ -108,6 +109,15 @@ fn inline_children<H: UiHost>(
                 .into_element(cx)
         }
     }
+}
+
+fn environment_variables_title_refinement(theme: &Theme) -> TextStyleRefinement {
+    let mut refinement = typography::composable_preset_text_refinement(
+        theme,
+        typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
+    );
+    refinement.weight = Some(FontWeight::MEDIUM);
+    refinement
 }
 
 /// Root surface aligned with AI Elements `EnvironmentVariables`.
@@ -366,42 +376,15 @@ impl EnvironmentVariablesTitle {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme.color_token("foreground");
-
-        let px = theme.metric_token("font.size");
-        let style = typography::as_control_text(TextStyle {
-            font: FontId::default(),
-            size: px,
-            weight: FontWeight::MEDIUM,
-            slant: Default::default(),
-            line_height: Some(theme.metric_token("font.line_height")),
-            letter_spacing_em: None,
-            ..Default::default()
-        });
-        let refinement = typography::composable_refinement_from_style(&style);
+        let refinement = environment_variables_title_refinement(&theme);
 
         let mut el = match self.content {
-            EnvironmentVariablesTitleContent::Default => cx
-                .foreground_scope(fg, move |cx| {
-                    vec![
-                        fret_ui_kit::ui::raw_text("Environment Variables")
-                            .wrap(TextWrap::None)
-                            .overflow(TextOverflow::Clip)
-                            .into_element(cx),
-                    ]
-                })
-                .inherit_foreground(fg)
-                .inherit_text_style(refinement),
-            EnvironmentVariablesTitleContent::Text(text) => cx
-                .foreground_scope(fg, move |cx| {
-                    vec![
-                        fret_ui_kit::ui::raw_text(text)
-                            .wrap(TextWrap::None)
-                            .overflow(TextOverflow::Clip)
-                            .into_element(cx),
-                    ]
-                })
-                .inherit_foreground(fg)
-                .inherit_text_style(refinement),
+            EnvironmentVariablesTitleContent::Default => {
+                decl_text::text_chrome_title(cx, "Environment Variables").inherit_foreground(fg)
+            }
+            EnvironmentVariablesTitleContent::Text(text) => {
+                decl_text::text_chrome_title(cx, text).inherit_foreground(fg)
+            }
             EnvironmentVariablesTitleContent::Children(children) => cx
                 .foreground_scope(fg, move |cx| vec![inline_children(cx, children)])
                 .inherit_foreground(fg)
@@ -1404,22 +1387,66 @@ mod tests {
         );
 
         let theme = Theme::global(&app).clone();
-        let style = typography::as_control_text(TextStyle {
-            font: FontId::default(),
-            size: theme.metric_token("font.size"),
-            weight: FontWeight::MEDIUM,
-            slant: Default::default(),
-            line_height: Some(theme.metric_token("font.line_height")),
-            letter_spacing_em: None,
-            ..Default::default()
-        });
-        let expected_refinement = typography::composable_refinement_from_style(&style);
+        let expected_refinement = environment_variables_title_refinement(&theme);
         let expected_foreground = theme.color_token("foreground");
         assert!(has_scoped_text_style(
             &element,
             &expected_refinement,
             expected_foreground
         ));
+    }
+
+    #[test]
+    fn environment_variables_title_text_uses_chrome_title_text_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                EnvironmentVariablesTitle::new()
+                    .text("Runtime Secrets")
+                    .test_id("env-title")
+                    .into_element(cx)
+            });
+
+        let text = find_text_element(&element, "Runtime Secrets").expect("expected title text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected env title leaf to be text");
+        };
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(
+            element.semantics_decoration.as_ref().and_then(|d| d.role),
+            Some(SemanticsRole::Heading)
+        );
+        assert_eq!(
+            element.semantics_decoration.as_ref().and_then(|d| d.level),
+            Some(3)
+        );
+        assert_eq!(
+            element
+                .semantics_decoration
+                .as_ref()
+                .and_then(|d| d.test_id.as_deref()),
+            Some("env-title")
+        );
+
+        let theme = Theme::global(&app).clone();
+        assert_eq!(
+            element.inherited_text_style,
+            Some(environment_variables_title_refinement(&theme))
+        );
+        assert_eq!(
+            element.inherited_foreground,
+            Some(theme.color_token("foreground"))
+        );
     }
 
     #[test]

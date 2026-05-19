@@ -50,6 +50,12 @@ pub(crate) fn text_button_label_refinement(theme: &Theme) -> TextStyleRefinement
     refinement
 }
 
+pub(crate) fn text_chrome_title_refinement(theme: &Theme) -> TextStyleRefinement {
+    let mut refinement = text_sm_refinement(theme);
+    refinement.weight = Some(FontWeight::MEDIUM);
+    refinement
+}
+
 pub(crate) fn text_table_cell_emphasis_refinement(theme: &Theme) -> TextStyleRefinement {
     let mut refinement = text_sm_refinement(theme);
     refinement.weight = Some(FontWeight::MEDIUM);
@@ -416,15 +422,15 @@ pub fn text_chrome_glyph<H: UiHost>(
 
 /// Declarative text helper for fill-width chrome titles.
 ///
-/// Use this for window/panel title bars that occupy remaining chrome row space. It keeps the same
-/// section/chrome label style while opting into fill, grow, and `min-width: 0` layout.
+/// Use this for window/panel title bars that occupy remaining chrome row space. It keeps compact
+/// medium-weight chrome text while opting into fill, grow, and `min-width: 0` layout.
 pub fn text_chrome_title<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
     let refinement = {
         let theme = Theme::global(&*cx.app);
-        text_sm_refinement(theme)
+        text_chrome_title_refinement(theme)
     };
 
     ui_typography::scope_text_style(
@@ -1323,7 +1329,7 @@ mod tests {
     }
 
     #[test]
-    fn chrome_title_text_uses_fill_width_single_line_truncation() {
+    fn chrome_title_text_uses_medium_fill_width_single_line_truncation() {
         let window = AppWindowId::default();
         let mut app = test_app();
         let bounds = test_bounds();
@@ -1346,7 +1352,10 @@ mod tests {
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
-        assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
+        assert_eq!(
+            el.inherited_text_style,
+            Some(text_chrome_title_refinement(&theme))
+        );
     }
 
     #[test]

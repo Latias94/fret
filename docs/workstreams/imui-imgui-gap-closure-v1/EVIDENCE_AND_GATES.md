@@ -471,11 +471,12 @@ Run evidence:
   local `TextProps` policy or default word wrapping; they stay single-line, shrinkable, and
   ellipsis-truncated under resize. Gate: `cargo nextest run -p fret-ui-kit --features imui --lib
   section_chrome_label_text_uses_single_line_truncation --no-fail-fast`.
-- 2026-05-17: introduced `text_chrome_title(...)` as the shared fill-width chrome title role and
-  routed floating window title-bar text through shared chrome text helpers. Resizable floating
-  titles keep fill, grow, shrink, `min-width: 0`, and ellipsis behavior; non-resizable titles reuse
-  `text_section_chrome_label(...)` instead of local `TextProps`. Gate: `cargo nextest run -p
-  fret-ui-kit --features imui --lib chrome_title_text_uses_fill_width_single_line_truncation
+- 2026-05-17: introduced `text_chrome_title(...)` as the shared medium, fill-width chrome title
+  role and routed floating window title-bar text through shared chrome text helpers. Resizable
+  floating titles keep fill, grow, shrink, `min-width: 0`, and ellipsis behavior; non-resizable
+  titles reuse `text_section_chrome_label(...)` instead of local `TextProps`. Gate: `cargo nextest
+  run -p fret-ui-kit --features imui --lib
+  chrome_title_text_uses_medium_fill_width_single_line_truncation
   section_chrome_label_text_uses_single_line_truncation --no-fail-fast`.
 - 2026-05-17: introduced `text_chrome_glyph(...)` as the shared compact fixed-slot chrome glyph
   role and routed disclosure/tree indicators through it. Indicator glyphs now stay single-line and
@@ -747,6 +748,18 @@ Run evidence:
   role. The component now keeps terminal chrome titles fill-width, `min-width: 0`, grow/shrink
   enabled, single-line, and ellipsized under narrow resize. Gate: `cargo nextest run -p
   fret-ui-ai terminal_title_label_uses_chrome_title_text_role --no-fail-fast` and
+  `python tools/gate_imui_workstream_source.py`.
+- 2026-05-19: tightened `text_chrome_title(...)` to own the medium-weight chrome-title contract as
+  well as fill/grow/shrink/min-width-zero/ellipsis layout, then routed the real `fret-ui-ai`
+  `EnvironmentVariablesTitle` default/text paths through that shared role instead of local
+  `ui::raw_text(...).wrap(None).overflow(Clip)` typography policy. Custom title children still use
+  the component-owned inherited title refinement because the upstream surface is children-first.
+  Gates: `cargo nextest run -p fret-ui-kit --lib
+  chrome_title_text_uses_medium_fill_width_single_line_truncation
+  section_chrome_label_text_uses_single_line_truncation --no-fail-fast`, `cargo nextest run -p
+  fret-ui-ai environment_variables_title_text_uses_chrome_title_text_role
+  environment_variables_title_children_scope_inherited_typography
+  terminal_title_label_uses_chrome_title_text_role --no-fail-fast`, and
   `python tools/gate_imui_workstream_source.py`.
 - 2026-05-18: extended the same visible text-role migration to AI Artifact, CodeBlock, and Sandbox
   snippets. Fixed demo titles and panel labels now use section-chrome text, explanatory copy uses

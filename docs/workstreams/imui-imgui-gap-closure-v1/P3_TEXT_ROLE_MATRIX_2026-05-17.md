@@ -52,8 +52,9 @@ component should construct `TextProps` locally.
 - `text_control_label(...)`: fill-width checkbox/radio/switch/combo/slider label text. It keeps
   fixed control chrome single-line under resize.
 - `text_section_chrome_label(...)`, `text_chrome_title(...)`, and `text_chrome_glyph(...)`: section,
-  title-bar, and glyph chrome roles. They keep fixed chrome rows single-line, with ellipsis or clip
-  according to the slot.
+  title-bar, and glyph chrome roles. `text_chrome_title(...)` owns medium emphasis plus fill/grow
+  title-bar layout; all three keep fixed chrome rows single-line, with ellipsis or clip according
+  to the slot.
 - `text_code_label(...)`: code-text derivative for fixed-height identifier slots such as package
   names, env keys, and dependency rows. It is intentionally not a substitute for wrapping inline
   prose code.
