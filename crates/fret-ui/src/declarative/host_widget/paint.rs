@@ -817,6 +817,14 @@ impl ElementHostWidget {
                 let Some(metrics) = self.text_cache.metrics else {
                     return;
                 };
+                clip_text_to_layout_bounds |= maybe_repair_text_layout_after_paint_prepare(
+                    cx,
+                    window,
+                    &props.layout,
+                    metrics,
+                    self.text_cache.ink_pad_top,
+                    self.text_cache.ink_pad_bottom,
+                );
 
                 let (pad_top, pad_bottom) =
                     crate::text::coords::clamp_text_ink_overflow_padding_to_bounds(
@@ -1072,6 +1080,14 @@ impl ElementHostWidget {
                 let Some(metrics) = self.text_cache.metrics else {
                     return;
                 };
+                clip_text_to_layout_bounds |= maybe_repair_text_layout_after_paint_prepare(
+                    cx,
+                    window,
+                    &props.layout,
+                    metrics,
+                    self.text_cache.ink_pad_top,
+                    self.text_cache.ink_pad_bottom,
+                );
 
                 let (pad_top, pad_bottom) =
                     crate::text::coords::clamp_text_ink_overflow_padding_to_bounds(
@@ -1340,6 +1356,14 @@ impl ElementHostWidget {
                 let Some(metrics) = self.text_cache.metrics else {
                     return;
                 };
+                clip_text_to_layout_bounds |= maybe_repair_text_layout_after_paint_prepare(
+                    cx,
+                    window,
+                    &props.layout,
+                    metrics,
+                    self.text_cache.ink_pad_top,
+                    self.text_cache.ink_pad_bottom,
+                );
 
                 // Ensure any persisted selection state remains valid for this frame's text buffer.
                 crate::elements::with_element_state(

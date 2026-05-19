@@ -3120,3 +3120,28 @@ Status: complete for multi-series retained chart tooltip and X domain-window out
   with suite summary
   `target/fret-diag-chart-torture-suite-multiseries-tooltip-v1/sessions/1779217110888-98424/suite.summary.json`
   and script run id `1779217122878`.
+
+## M144: Cached Prepared Text Stale-Bounds Repair
+
+Status: complete for the persistent Combobox RTL Long Text startup overlap follow-up.
+
+- A fresh manual screenshot still showed `RTL Long Text` visually colliding with the docs intro
+  even though M142's runtime gate passed. The gate's screenshot captures at frame 3, so it can miss
+  a first-visible-frame paint overflow that later repair frames correct.
+- Added a focused mechanism regression for the remaining gap: layout prepares and caches a wrapped
+  text blob with a `40px` height, then paint receives a stale `10px` auto-height bounds. Before
+  the fix, the cached prepared blob path did not invalidate layout or clip; the new test failed on
+  that exact condition.
+- Fixed `Text`, `StyledText`, and `SelectableText` paint in `crates/fret-ui` so the auto-height
+  repair helper also runs after cached/prepared metrics are loaded, not only inside the
+  `needs_prepare` branch. If cached metrics exceed current auto-height bounds, paint now schedules
+  layout repair, requests redraw, and clips the stale frame.
+- Gates pass:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\declarative\host_widget\paint.rs crates\fret-ui\src\declarative\tests\text_cache.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui text_cache --no-fail-fast --no-capture`
+  with Nextest run id `c4dc5647-ab06-4015-be4a-829f175a3359`; and
+  `cargo build --profile dev-fast -p fret-ui-gallery`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json --dir target\fret-diag-ui-gallery-combobox-rtl-intro-overlap-fixed-1624-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779219333574` and AI packet
+  `target/fret-diag-ui-gallery-combobox-rtl-intro-overlap-fixed-1624-v1/sessions/1779219328227-121516/1779219333574/ai.packet`.

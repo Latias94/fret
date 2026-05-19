@@ -5936,3 +5936,37 @@ Next slice recommendation:
 - full Chart Torture suite:
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-chart-torture --dir target\fret-diag-chart-torture-suite-multiseries-tooltip-v1 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
   - result: passed; script run id `1779217122878`.
+
+## Cached Prepared Text Stale-Bounds Repair
+
+- invariant:
+  wrapped auto-height text must not paint cached prepared glyphs outside stale startup bounds while
+  waiting for a follow-up layout frame.
+- finding:
+  a later manual Combobox RTL Long Text screenshot still showed visible overlap. Existing runtime
+  gates were frame-3 layout/screenshot gates, so they could pass after repair and still miss the
+  first-visible-frame cached prepared paint path. The missing mechanism was that
+  `maybe_repair_text_layout_after_paint_prepare` only ran inside `needs_prepare`; layout-prepared
+  cached blobs could skip the stale-bounds repair check.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/host_widget/paint.rs` and
+  `crates/fret-ui/src/declarative/tests/text_cache.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-ui-gallery-combobox-rtl-intro-overlap-fixed-1624-v1/sessions/1779219328227-121516/1779219333574/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-ui-gallery-combobox-rtl-intro-overlap-fixed-1624-v1/sessions/1779219328227-121516/share/1779219333574.zip`.
+- format:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\declarative\host_widget\paint.rs crates\fret-ui\src\declarative\tests\text_cache.rs`
+  - result: passed.
+- mechanism regression:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui wrapped_text_cached_prepared_metrics_reinvalidate_when_bounds_height_shrinks --no-fail-fast --no-capture`
+  - pre-fix result: failed; the cached prepared metrics path did not schedule layout repair.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui text_cache --no-fail-fast --no-capture`
+  - fixed result: passed; Nextest run id `c4dc5647-ab06-4015-be4a-829f175a3359`.
+- build:
+  `cargo build --profile dev-fast -p fret-ui-gallery`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json --dir target\fret-diag-ui-gallery-combobox-rtl-intro-overlap-fixed-1624-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779219333574`.

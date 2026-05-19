@@ -195,6 +195,15 @@ date: 2026-05-12
   overlapped following content until resize. The RTL Long Text startup gate now also asserts
   description-to-content and description-to-trigger spacing, with focused evidence at
   `target/fret-diag-combobox-rtl-long-text-startup-prepared-measure-v3/sessions/1779215091187-112692/1779215099640/ai.packet`.
+- Cached prepared text stale-bounds update:
+  The text repair guard now also covers wrapped text blobs prepared during layout and reused during
+  paint. `Text`, `StyledText`, and `SelectableText` all re-check cached metrics against current
+  auto-height bounds, request layout repair, and clip the stale frame when cached prepared text is
+  taller than those bounds. The focused regression
+  `wrapped_text_cached_prepared_metrics_reinvalidate_when_bounds_height_shrinks` is the primary
+  guard for first-visible-frame cached text overflow; the Combobox RTL Long Text runtime gate
+  remains the user-visible companion with evidence at
+  `target/fret-diag-ui-gallery-combobox-rtl-intro-overlap-fixed-1624-v1/sessions/1779219328227-121516/1779219333574/ai.packet`.
 - Chart Torture multi-series tooltip update:
   `ui-gallery-chart-torture-pan-zoom.json` now covers retained chart output freshness for a
   two-series line chart. After real drag/wheel pan/zoom, the gate proves the output model publishes

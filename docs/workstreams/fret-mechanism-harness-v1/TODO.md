@@ -218,6 +218,12 @@ date: 2026-05-12
     action is externally disabled and re-enabled through `WindowCommandEnabledService`. The first
     runtime pass found a diagnostics harness gap: the Gallery driver handled the command after the
     UI tree reported it unhandled, but did not record a `handled_by_driver=true` dispatch trace.
+- [x] Fix the cached prepared wrapped-text stale-bounds path exposed by the persistent Combobox
+  RTL Long Text startup overlap.
+  - Result: `Text`, `StyledText`, and `SelectableText` now run the auto-height repair/clip check
+    even when paint reuses a prepared text blob from layout. The focused regression first failed
+    before the fix, then passed with the full `text_cache` test filter, and the screenshot-shaped
+    Combobox RTL Long Text runtime gate passed after rebuilding the Gallery.
     The driver now records handled command decisions for owned gallery command paths, and the
     strict runtime gate passes with command dispatch, `disabled`, `invoke`, and checked-state
     mutation assertions.
