@@ -66,7 +66,11 @@ six-button roster, labels, a11y labels/test IDs, enabled/disabled command bindin
 activation command dispatch hooks without constructing the retained controls widget. The retained
 controls widget remains behind `compat-retained-canvas` as the oracle for pointer, keyboard, hover,
 focus, and retained paint behavior until those interaction families have default declarative
-coverage.
+coverage. `RBX-M2-105` then added a default-gated declarative blackboard overlay composition that
+builds the blackboard panel, header, sorted symbol rows, labels, a11y labels/test IDs, and a
+mechanism-only action hook without constructing the retained blackboard widget. The retained
+blackboard widget remains behind `compat-retained-canvas` as the oracle for transaction submission,
+rename sessions, keyboard/focus navigation, pointer hover/press state, and retained paint behavior.
 
 ## Completed Implementation
 
@@ -405,9 +409,12 @@ submit/cancel/step command decisions. `RBX-M2-095` then added
 text/number session command application without retained `CommandCx`, and reduced retained
 `PortalTextEditHandler` / `PortalNumberEditHandler` command paths to model/session I/O adapters
 around that default logic. The retained portal editor modules still carry portal rendering/model
-lifecycles until declarative portal hosting replaces them. The retained canvas/editor stack still
-exists inside `fret-node` behind `compat-retained-canvas`; the next M2 slice should replace
-overlay/panel composition with declarative coverage or move portal subtree hosting/model lifecycles
+lifecycles until declarative portal hosting replaces them. `RBX-M2-100` added default-gated
+declarative controls overlay composition and action command dispatch coverage. `RBX-M2-105` added
+default-gated declarative blackboard overlay composition and action-hook activation coverage. The
+retained canvas/editor stack still exists inside `fret-node` behind `compat-retained-canvas`; the
+next M2 slice should continue overlay/panel composition for minimap/toolbars/rename, backfill
+blackboard/controls interaction/focus/paint parity, or move portal subtree hosting/model lifecycles
 onto a declarative host before deleting retained code.
 
 ## Next Task
@@ -418,10 +425,11 @@ Pick the next task from:
 
 Recommended next implementation shape:
 
-- Continue M2 by shrinking the RBX-M2-080 ledger. The sharpest independent family is now
-  overlay/panel composition (blackboard, controls, minimap, toolbars, rename). The remaining portal
-  family work is declarative portal subtree hosting/model lifecycle replacement. Each slice should
-  first add default declarative tests, then remove or gate less retained code.
+- Continue M2 by shrinking the RBX-M2-080 ledger. The sharpest independent family is still
+  overlay/panel composition and interaction migration: minimap, toolbars, rename, then
+  blackboard/controls interaction, focus, and paint parity. The remaining portal family work is
+  declarative portal subtree hosting/model lifecycle replacement. Each slice should first add
+  default declarative tests, then remove or gate less retained code.
 - After the ledger no longer contains behavior-only retained files, remove
   `compat-retained-canvas` / `unstable-retained-bridge` from `fret-node`.
 - Keep the known independent `fret-ui` layout primitive drift
@@ -430,21 +438,20 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-19 for `RBX-M2-095`:
+Last run on 2026-05-19 for `RBX-M2-105`:
 
-- `cargo nextest run -p fret-node without_retained_command_cx editor_chrome_compiles_without_retained_canvas_compat` -
-  passed, 3 tests.
+- `cargo nextest run -p fret-node blackboard_declarative overlay_policy_modules_compile_without_retained_canvas_compat controls_overlay_requires_explicit_editor_config_model` -
+  passed, 5 tests.
 - `cargo check -p fret-node --no-default-features --features fret-ui` - passed.
 - `cargo check -p fret-node --features compat-retained-canvas` - passed.
-- `cargo nextest run -p fret-node --features compat-retained-canvas portal` - passed, 30 tests.
-- `cargo nextest run -p fret-node` - passed, 331 tests.
-- `cargo nextest run -p fret-node --features compat-retained-canvas` - passed, 915 tests.
+- `cargo nextest run -p fret-node` - passed, 337 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas` - passed, 921 tests.
 - `cargo fmt --check` - passed.
 - `python3 tools/check_layering.py` - passed.
 - `python3 tools/check_workstream_catalog.py` - passed; validated 427 dedicated directories and 47
   standalone markdown files.
 - `git diff --check` - passed.
-- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/editors/portal_command_session.rs 2>&1); test -z "$out"` -
+- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/blackboard_declarative.rs 2>&1); test -z "$out"` -
   passed.
 
 Earlier run on 2026-05-19 for `RBX-M2-090`:

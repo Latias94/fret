@@ -3725,3 +3725,72 @@ Broader gates not run:
   - Reason: `RBX-M2-100` changes only `fret-node` controls overlay declarative composition and
     source-policy tests. The default package gate, retained compatibility package gate, both
     feature checks, layering, catalog, formatting, and whitespace gates cover the changed surface.
+
+## 2026-05-19 - RBX-M2-105 blackboard overlay declarative composition default gate
+
+Claim verified:
+
+- Blackboard overlay composition now has a default-gated declarative element tree that does not
+  construct the retained `NodeGraphBlackboardOverlay` widget.
+- The declarative blackboard tree preserves the retained overlay's composition and activation
+  handoff capability: panel sizing, sorted symbol rows, stable visible labels, root semantics,
+  action a11y labels/test IDs, and a mechanism-only pointer activation hook that yields
+  `BlackboardAction`.
+- The retained blackboard widget remains behind `compat-retained-canvas` as the oracle for
+  transaction submission, rename sessions, keyboard/focus navigation, pointer hover/press state,
+  and retained paint conformance until those interaction families have default declarative coverage.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/overlays/mod.rs`
+- `ecosystem/fret-node/src/ui/overlays/blackboard_declarative.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-node blackboard_declarative overlay_policy_modules_compile_without_retained_canvas_compat controls_overlay_requires_explicit_editor_config_model`
+  - Result: passed, 5 tests.
+  - Scope proven: declarative blackboard composition, action-hook activation, default overlay module
+    gating, and retained-dependency source policy are covered by targeted tests.
+- `cargo nextest run -p fret-node`
+  - Result: passed, 337 tests.
+  - Scope proven: default `fret-node` coverage remains green and now includes declarative
+    blackboard composition/action-hook tests.
+- `cargo check -p fret-node --no-default-features --features fret-ui`
+  - Result: passed.
+  - Scope proven: declarative blackboard composition compiles without enabling
+    `compat-retained-canvas`.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed.
+  - Scope proven: the retained blackboard widget and remaining retained island still compile beside
+    the new declarative blackboard composition.
+- `cargo nextest run -p fret-node --features compat-retained-canvas`
+  - Result: passed, 921 tests.
+  - Scope proven: the full retained canvas/editor/overlay oracle remains green after adding the
+    default declarative blackboard composition.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting is clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly after the new evidence update.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked Rust and documentation changes have no whitespace errors.
+- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/blackboard_declarative.rs 2>&1); test -z "$out"`
+  - Result: passed.
+  - Scope proven: the new untracked declarative blackboard composition file has no whitespace errors
+    before staging.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-105` changes only `fret-node` blackboard overlay declarative composition and
+    source-policy tests. The default package gate, retained compatibility package gate, both
+    feature checks, layering, catalog, formatting, and whitespace gates cover the changed surface.

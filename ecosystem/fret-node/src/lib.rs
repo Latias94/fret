@@ -66,6 +66,8 @@ mod surface_policy_tests {
     const UI_OVERLAY_CONTROLS_RS: &str = include_str!("ui/overlays/controls.rs");
     const UI_OVERLAY_CONTROLS_DECLARATIVE_RS: &str =
         include_str!("ui/overlays/controls_declarative.rs");
+    const UI_OVERLAY_BLACKBOARD_DECLARATIVE_RS: &str =
+        include_str!("ui/overlays/blackboard_declarative.rs");
     const UI_OVERLAY_GROUP_RENAME_RS: &str = include_str!("ui/overlays/group_rename.rs");
     const UI_OVERLAY_BLACKBOARD_RS: &str = include_str!("ui/overlays/blackboard.rs");
     const UI_VIEWPORT_OPTIONS_RS: &str = include_str!("ui/viewport_options.rs");
@@ -428,6 +430,7 @@ mod surface_policy_tests {
         );
 
         for module in [
+            "mod blackboard_declarative;",
             "mod blackboard_layout;",
             "mod blackboard_policy;",
             "mod controls_declarative;",
@@ -497,6 +500,12 @@ mod surface_policy_tests {
                 && !UI_OVERLAY_CONTROLS_DECLARATIVE_RS.contains("RetainedSubtreeProps")
                 && !UI_OVERLAY_CONTROLS_DECLARATIVE_RS.contains("Widget<"),
             "declarative controls composition must not take a retained dependency"
+        );
+        assert!(
+            !UI_OVERLAY_BLACKBOARD_DECLARATIVE_RS.contains("retained_bridge")
+                && !UI_OVERLAY_BLACKBOARD_DECLARATIVE_RS.contains("RetainedSubtreeProps")
+                && !UI_OVERLAY_BLACKBOARD_DECLARATIVE_RS.contains("Widget<"),
+            "declarative blackboard composition must not take a retained dependency"
         );
     }
 

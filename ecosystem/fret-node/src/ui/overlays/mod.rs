@@ -5,6 +5,7 @@
 //! `fret-ui` widgets (focus, IME, clipboard, semantics).
 #[cfg(feature = "compat-retained-canvas")]
 mod blackboard;
+mod blackboard_declarative;
 mod blackboard_layout;
 #[cfg(feature = "compat-retained-canvas")]
 mod blackboard_paint;
