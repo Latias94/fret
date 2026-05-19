@@ -335,6 +335,14 @@ gate are green. The broader `fret-ui` layout primitive harness still has an inde
 `chrome-container-stretch-keeps-outer-box` flex/chrome drift that is not anchored- or
 docking-specific.
 
+`RBX-M2-010` started the node-graph migration by narrowing `fret-node`'s retained bridge entry:
+the redundant `compat-retained-bridge` feature alias was deleted, and
+`compat-retained-canvas` is now the only `fret-node` feature that enables
+`fret-ui/unstable-retained-bridge`. The headless graph surface, default declarative UI surface, and
+explicit retained canvas compatibility island all compile. The retained canvas/editor stack still
+exists behind `compat-retained-canvas`; the next M2 slice should migrate chrome/overlays/panels
+toward declarative composition and shrink the remaining retained leaf.
+
 ## Next Task
 
 Pick the next task from:
@@ -343,10 +351,12 @@ Pick the next task from:
 
 Recommended next implementation shape:
 
-- Add or upgrade `fretboard-dev diag` scripts for docking drag + tear-off correctness if we want a
-  runnable regression artifact before leaving M1.
-- Otherwise move to M2: split node graph into declarative chrome/overlays plus canvas-style heavy
-  rendering leaves, then remove `unstable-retained-bridge` from `fret-node`.
+- Continue M2: split node graph chrome/overlays/panels toward declarative composition, shrink the
+  remaining retained canvas leaf, then remove `compat-retained-canvas` / `unstable-retained-bridge`
+  from `fret-node`.
+- Keep the known independent `fret-ui` layout primitive drift
+  (`chrome-container-stretch-keeps-outer-box`) separate from retained-bridge exit unless a future
+  slice touches that layout path directly.
 
 ## Gates
 
@@ -370,6 +380,12 @@ Last run on 2026-05-19 for `RBX-M1-080` completion:
 - `git diff --check` - passed.
 - `cargo nextest run -p fret-ui declarative::tests::layout::mechanism_harness::mechanism_harness_layout_primitives_match_oracles` -
   failed on independent `chrome-container-stretch-keeps-outer-box` flex/chrome layout drift.
+- `python3 tools/audit_crate.py --crate fret-node` - passed.
+- `cargo check -p fret-node --no-default-features --features headless` - passed.
+- `cargo check -p fret-node --no-default-features --features fret-ui` - passed.
+- `cargo check -p fret-node --features compat-retained-canvas` - passed.
+- `cargo nextest run -p fret-node retained_compatibility_surface_stays_declarative_only` -
+  passed, 1 test.
 - `rg -n "DockSpace::|create_node_retained|retained_bridge|UiTreeRetainedExt|RetainedSubtree|DockPanelRegistry|with_panel_content|unstable-retained-bridge" ecosystem/fret-docking/src ecosystem/fret-docking/tests ecosystem/fret-docking/Cargo.toml -g '*.rs' -g 'Cargo.toml'` -
   only public-surface policy negative assertion strings matched.
 

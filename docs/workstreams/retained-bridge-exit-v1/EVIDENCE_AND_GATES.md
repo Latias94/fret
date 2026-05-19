@@ -2836,3 +2836,65 @@ Known independent red gate:
   - Scope assessed: this is a flex/chrome stretch fixture that does not use `Anchored` placement or
     the mixed absolute/static fallback path changed in this follow-up. It should be tracked as a
     separate layout primitive drift task rather than as docking retained-bridge regression evidence.
+
+## 2026-05-19 - RBX-M2-010 fret-node retained feature entry narrowed
+
+Claim verified:
+
+- `fret-node` no longer exposes a generic `compat-retained-bridge` feature alias.
+- The only `fret-node` feature that enables `fret-ui/unstable-retained-bridge` is the concrete
+  `compat-retained-canvas` compatibility island.
+- Default declarative `fret-node` UI and headless graph surfaces still compile without the retained
+  bridge, while the explicit retained-canvas compatibility island still compiles.
+
+Evidence:
+
+- `ecosystem/fret-node/Cargo.toml`
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/declarative/mod.rs`
+- `ecosystem/fret-node/src/ui/declarative/compat_retained.rs`
+- `tools/check_layering.py`
+
+Commands:
+
+- `python3 tools/audit_crate.py --crate fret-node`
+  - Result: passed.
+  - Scope proven: current `fret-node` audit snapshot identifies `fret-ui` as optional UI
+    integration and `compat-retained-canvas` as the retained-bridge-backed delete-planned escape
+    hatch.
+- `cargo check -p fret-node --no-default-features --features headless`
+  - Result: passed.
+  - Scope proven: headless graph/schema/rules surfaces remain independent of `fret-ui` and retained
+    bridge.
+- `cargo check -p fret-node --no-default-features --features fret-ui`
+  - Result: passed.
+  - Scope proven: default declarative UI integration compiles without `compat-retained-canvas` or
+    `fret-ui/unstable-retained-bridge`.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed.
+  - Scope proven: the explicit retained canvas compatibility island still compiles after deleting
+    the generic retained bridge alias.
+- `cargo nextest run -p fret-node retained_compatibility_surface_stays_declarative_only`
+  - Result: passed, 1 test.
+  - Scope proven: `fret-node` surface policy rejects a public `compat-retained-bridge` alias and
+    keeps retained compatibility attached to `compat-retained-canvas`.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: `fret-node` remains the only M2 allowlisted node-graph retained-bridge user, and
+    no forbidden dependency direction was introduced.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+
+Follow-up:
+
+- The retained node graph canvas/editor implementation is still present behind
+  `compat-retained-canvas`. Next M2 work should migrate chrome/overlays/panels to declarative
+  composition and shrink the retained leaf toward canvas-only rendering and interaction, then remove
+  `compat-retained-canvas` from first-party apps.

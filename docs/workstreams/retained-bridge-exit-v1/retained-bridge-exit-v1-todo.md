@@ -16,8 +16,12 @@ Related plan:
   - Source of truth: `tools/check_layering.py` (`unstable_retained_bridge_allowlist`).
   - Current allowlist (workspace crate names):
     - `fret-node`
-      - Why: node graph canvas + portal editors are still authored as retained widgets; it also exercises overlays/commands in the retained path.
-      - Evidence: `ecosystem/fret-node/Cargo.toml` enables `fret-ui/unstable-retained-bridge`; retained widget surface in `ecosystem/fret-node/src/ui/canvas/widget.rs`.
+      - Why: node graph canvas + portal editors are still authored as retained widgets inside the
+        explicit `compat-retained-canvas` compatibility island; it also exercises
+        overlays/commands in the retained path.
+      - Evidence: `ecosystem/fret-node/Cargo.toml` enables `fret-ui/unstable-retained-bridge` only
+        through `compat-retained-canvas`; retained widget surface in
+        `ecosystem/fret-node/src/ui/canvas/widget.rs`.
       - Exit target: M2.
     - `fret-chart`
       - Why: retained canvas widget used for interactive charts; still depends on retained layout/paint/event wiring.
@@ -601,6 +605,26 @@ Related plan:
 
 ### M2 — Node graph migration
 
+- [x] RBX-M2-010 Narrow `fret-node` retained bridge entry to the canvas compatibility island.
+  - Scope:
+    - `ecosystem/fret-node/Cargo.toml`
+    - `ecosystem/fret-node/src/lib.rs`
+  - Goal:
+    - Remove the redundant `compat-retained-bridge` feature alias so consumers cannot opt into
+      `fret-ui/unstable-retained-bridge` without naming the concrete retained canvas compatibility
+      surface.
+  - Result:
+    - `compat-retained-canvas` remains the only `fret-node` feature that enables
+      `fret-ui/unstable-retained-bridge`.
+    - The crate surface-policy test now rejects reintroducing `compat-retained-bridge` and locks the
+      direct `compat-retained-canvas = ["fret-ui", "fret-ui/unstable-retained-bridge"]` edge.
+  - Validation:
+    - `cargo fmt --check`
+    - `cargo nextest run -p fret-node retained_compatibility_surface_stays_declarative_only`
+    - `cargo check -p fret-node --no-default-features --features headless`
+    - `cargo check -p fret-node --no-default-features --features fret-ui`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `python3 tools/check_layering.py`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

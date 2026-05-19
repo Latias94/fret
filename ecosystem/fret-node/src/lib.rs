@@ -114,6 +114,10 @@ mod surface_policy_tests {
             COMPAT_RETAINED_RS
                 .contains("keeps retained authoring out of the downstream API surface")
         );
+        assert!(!CARGO_TOML.contains("compat-retained-bridge"));
+        assert!(CARGO_TOML.contains(
+            "compat-retained-canvas = [\"fret-ui\", \"fret-ui/unstable-retained-bridge\"]"
+        ));
         assert!(COMPAT_RETAINED_RS.contains("pub editor_config: Model<NodeGraphEditorConfig>,"));
         assert!(COMPAT_RETAINED_RS.contains(
             "pub fn new(\n        graph: Model<Graph>,\n        view_state: Model<NodeGraphViewState>,\n        editor_config: Model<NodeGraphEditorConfig>,\n    ) -> Self {"
