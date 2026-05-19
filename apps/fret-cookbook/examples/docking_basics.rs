@@ -2,17 +2,16 @@ use std::sync::Arc;
 
 use fret::{advanced::prelude::*, component::prelude::*, integration::InstallIntoApp, shadcn};
 use fret_app::{CommandMeta, CommandScope};
-use fret_core::{Axis, Color, DockNode, DockNodeId, DockOp, PanelKey, PanelKind, Px};
+use fret_core::{Axis, Color, DockNode, DockNodeId, DockOp, PanelKey, Px};
 use fret_docking::runtime::request_dock_invalidation;
 use fret_docking::{
-    DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
-    DockPanelRegistryService, DockingPolicy, DockingPolicyService,
-    create_dock_space_node_with_test_id, handle_dock_op, render_and_bind_dock_panels,
+    DockManager, DockPanel, DockPanelElementRegistry, DockPanelElementRegistryService,
+    DockSpaceElementOptions, DockingPolicy, DockingPolicyService, handle_dock_op,
 };
 use fret_runtime::CommandId;
-use fret_ui::element::{LayoutStyle, Length, SemanticsDecoration, SemanticsProps};
-use fret_ui::retained_bridge::{LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt as _, Widget};
-use fret_ui::{ElementContext, UiHost, UiTree};
+use fret_ui::ElementContext;
+use fret_ui::UiTree;
+use fret_ui::element::{AnyElement, SemanticsDecoration, SemanticsProps};
 use fret_ui_kit::prelude::{CachedSubtreeExt, CachedSubtreeProps};
 
 const ROOT_NAME: &str = "cookbook-docking-basics";
@@ -32,7 +31,7 @@ const CMD_ACTIVATE_HIERARCHY: &str = "cookbook.docking.activate_hierarchy";
 const CMD_ACTIVATE_INSPECTOR: &str = "cookbook.docking.activate_inspector";
 const CMD_ACTIVATE_EDITOR: &str = "cookbook.docking.activate_editor";
 const CMD_ACTIVATE_CONSOLE: &str = "cookbook.docking.activate_console";
-const PANEL_DESCRIPTION: &str = "Dock content is app-owned, while reusable panel contributions aggregate through fret_docking::DockPanelFactory over the fret-docking ecosystem layer.";
+const PANEL_DESCRIPTION: &str = "Dock content is app-owned, while reusable panel contributions aggregate through fret_docking::DockPanelElementRegistry over the fret-docking ecosystem layer.";
 
 fn install_commands(app: &mut KernelApp) {
     let scope = CommandScope::Widget;
@@ -176,39 +175,36 @@ impl DockingPolicy for DockingBasicsPolicy {
     }
 }
 
-struct DockingBasicsCardPanelFactory {
-    kind: PanelKind,
-    title: &'static str,
-}
+struct DockingBasicsPanelRegistry;
 
-impl DockingBasicsCardPanelFactory {
-    fn new(kind: &'static str, title: &'static str) -> Self {
-        Self {
-            kind: PanelKind::new(kind),
-            title,
+impl DockingBasicsPanelRegistry {
+    fn title_for(panel: &PanelKey) -> Option<&'static str> {
+        match panel.kind.0.as_str() {
+            "core.hierarchy" => Some("Hierarchy"),
+            "core.inspector" => Some("Inspector"),
+            "core.editor" => Some("Editor"),
+            "core.console" => Some("Console"),
+            _ => None,
         }
     }
 }
 
-impl DockPanelFactory<KernelApp> for DockingBasicsCardPanelFactory {
-    fn panel_kind(&self) -> PanelKind {
-        self.kind.clone()
-    }
-
-    fn build_panel(
+impl DockPanelElementRegistry<KernelApp> for DockingBasicsPanelRegistry {
+    fn render_panel(
         &self,
+        cx: &mut ElementContext<'_, KernelApp>,
+        _window: AppWindowId,
         panel: &PanelKey,
-        cx: &mut DockPanelFactoryCx<'_, KernelApp>,
-    ) -> Option<fret_core::NodeId> {
-        let root_name = format!("cookbook.docking.panel.{}", panel.kind.0);
-        Some(cx.render_cached_panel_root(&root_name, |cx| {
-            let body = shadcn::card(|cx| {
+    ) -> Option<AnyElement> {
+        let title = Self::title_for(panel)?;
+        Some(
+            shadcn::card(|cx| {
                 ui::children![
                     cx;
                     shadcn::card_header(|cx| {
                         ui::children![
                             cx;
-                            shadcn::card_title(self.title),
+                            shadcn::card_title(title),
                             shadcn::card_description(PANEL_DESCRIPTION),
                         ]
                     }),
@@ -223,51 +219,8 @@ impl DockPanelFactory<KernelApp> for DockingBasicsCardPanelFactory {
             .ui()
             .w_full()
             .h_full()
-            .into_element(cx);
-
-            vec![body]
-        }))
-    }
-}
-
-struct DockingBasicsDockHostRoot {
-    window: AppWindowId,
-    dock_space: fret_core::NodeId,
-}
-
-impl DockingBasicsDockHostRoot {
-    fn new(window: AppWindowId, dock_space: fret_core::NodeId) -> Self {
-        Self { window, dock_space }
-    }
-}
-
-impl<H: UiHost + 'static> Widget<H> for DockingBasicsDockHostRoot {
-    fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
-        cx.set_role(SemanticsRole::Group);
-    }
-
-    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> fret_core::Size {
-        if cx.pass_kind != fret_ui::layout_pass::LayoutPassKind::Probe {
-            render_and_bind_dock_panels(
-                cx.tree,
-                cx.app,
-                cx.services,
-                self.window,
-                cx.bounds,
-                self.dock_space,
-            );
-        }
-
-        let _ = cx.layout_in(self.dock_space, cx.bounds);
-        cx.available
-    }
-
-    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
-        if let Some(bounds) = cx.child_bounds(self.dock_space) {
-            cx.paint(self.dock_space, bounds);
-        } else {
-            cx.paint(self.dock_space, cx.bounds);
-        }
+            .into_element(cx),
+        )
     }
 }
 
@@ -278,26 +231,10 @@ struct DockingBasicsWindowState {
 }
 
 fn install_docking_services(app: &mut KernelApp) {
-    let mut registry = DockPanelRegistryBuilder::new();
-    registry
-        .register(DockingBasicsCardPanelFactory::new(
-            "core.hierarchy",
-            "Hierarchy",
-        ))
-        .register(DockingBasicsCardPanelFactory::new(
-            "core.inspector",
-            "Inspector",
-        ))
-        .register(DockingBasicsCardPanelFactory::new("core.editor", "Editor"))
-        .register(DockingBasicsCardPanelFactory::new(
-            "core.console",
-            "Console",
-        ));
-
     app.with_global_mut(
-        DockPanelRegistryService::<KernelApp>::default,
+        DockPanelElementRegistryService::<KernelApp>::default,
         |svc, _app| {
-            svc.set(registry.build_arc());
+            svc.set(Arc::new(DockingBasicsPanelRegistry));
         },
     );
 
@@ -399,20 +336,14 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut DockingBasicsWindowStat
         CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
         |cx| {
             let window = st.window;
-
-            let mut layout = LayoutStyle::default();
-            layout.size.width = Length::Fill;
-            layout.size.height = Length::Fill;
-
-            let props =
-                fret_ui::retained_bridge::RetainedSubtreeProps::new::<KernelApp>(move |ui| {
-                    let dock_space =
-                        create_dock_space_node_with_test_id(ui, window, TEST_ID_DOCK_SPACE);
-                    ui.create_node_retained(DockingBasicsDockHostRoot::new(window, dock_space))
-                })
-                .with_layout(layout);
-
-            vec![cx.retained_subtree(props)]
+            vec![fret_docking::dock_space_element_from_registry(
+                cx,
+                window,
+                DockSpaceElementOptions {
+                    test_id: Some(TEST_ID_DOCK_SPACE),
+                    ..Default::default()
+                },
+            )]
         },
     );
 
@@ -424,7 +355,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut DockingBasicsWindowStat
                     cx;
                     shadcn::card_title("Docking basics"),
                     shadcn::card_description(
-                        "Minimal retained dock host + app-owned panel registry + runner dock_op wiring.",
+                        "Minimal declarative dock host + app-owned panel registry + runner dock_op wiring.",
                     ),
                 ]
             }),

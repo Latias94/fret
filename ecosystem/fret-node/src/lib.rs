@@ -66,10 +66,12 @@ mod surface_policy_tests {
     const UI_VIEW_QUEUE_RS: &str = include_str!("ui/canvas/widget/view_queue.rs");
     const MINIMAP_RS: &str = include_str!("ui/overlays/minimap.rs");
     const PORTAL_RS: &str = include_str!("ui/portal.rs");
-    const NODE_GRAPH_DOMAIN_DEMO_RS: &str =
-        include_str!("../../../apps/fret-examples/src/node_graph_domain_demo.rs");
-    const NODE_GRAPH_LEGACY_DEMO_RS: &str =
-        include_str!("../../../apps/fret-examples/src/node_graph_legacy_demo.rs");
+    const FRET_EXAMPLES_CARGO_TOML: &str = include_str!("../../../apps/fret-examples/Cargo.toml");
+    const FRET_EXAMPLES_LIB_RS: &str = include_str!("../../../apps/fret-examples/src/lib.rs");
+    const FRET_DEMO_CARGO_TOML: &str = include_str!("../../../apps/fret-demo/Cargo.toml");
+    const FRETBOARD_NATIVE_RS: &str = include_str!("../../../apps/fretboard/src/dev/native.rs");
+    const NODE_GRAPH_DEMO_RS: &str =
+        include_str!("../../../apps/fret-examples/src/node_graph_demo.rs");
     const UI_GALLERY_CARGO_TOML: &str = include_str!("../../../apps/fret-ui-gallery/Cargo.toml");
     const UI_GALLERY_NODE_GRAPH_CULL_TORTURE_RS: &str = include_str!(
         "../../../apps/fret-ui-gallery/src/ui/previews/pages/torture/node_graph_cull_torture.rs"
@@ -302,7 +304,6 @@ mod surface_policy_tests {
             "pub fn new(\n        canvas_node: fret_core::NodeId,\n        view_state: Model<NodeGraphViewState>,\n        editor_config: Model<NodeGraphEditorConfig>,\n        style: NodeGraphStyle,\n    ) -> Self {"
         ));
         assert!(!UI_OVERLAY_CONTROLS_RS.contains("pub fn with_editor_config_model("));
-        assert!(NODE_GRAPH_LEGACY_DEMO_RS.contains("NodeGraphControlsOverlay::new("));
     }
 
     #[test]
@@ -357,17 +358,37 @@ mod surface_policy_tests {
     }
 
     #[test]
-    fn first_party_demos_stay_controller_first_for_edit_commits() {
-        for source in [NODE_GRAPH_DOMAIN_DEMO_RS, NODE_GRAPH_LEGACY_DEMO_RS] {
-            assert!(!source.contains("NodeGraphEditQueue"));
-            assert!(!source.contains("bind_controller_edit_queue_transport"));
-            assert!(!source.contains("use fret_node::ui::advanced::{"));
+    fn first_party_node_graph_demos_stay_declarative_only() {
+        for source in [
+            FRET_EXAMPLES_CARGO_TOML,
+            FRET_EXAMPLES_LIB_RS,
+            FRET_DEMO_CARGO_TOML,
+            FRETBOARD_NATIVE_RS,
+            NODE_GRAPH_DEMO_RS,
+        ] {
+            assert!(!source.contains("node-graph-demos-legacy"));
+            assert!(!source.contains("fret-node/compat-retained-canvas"));
+            assert!(!source.contains("node_graph_legacy_demo"));
+            assert!(!source.contains("node_graph_domain_demo"));
+            assert!(!source.contains("imui_node_graph_demo"));
+            assert!(!source.contains("node_graph_tuning_overlay"));
+            assert!(!source.contains("RetainedSubtreeProps"));
+            assert!(!source.contains("retained_bridge"));
+            assert!(!source.contains("NodeGraphCanvas::new"));
+            assert!(!source.contains("NodeGraphEditor::new"));
+            assert!(!source.contains("create_node_retained"));
+            assert!(!source.contains("retained_subtree"));
         }
-        assert!(NODE_GRAPH_DOMAIN_DEMO_RS.contains("let controller = NodeGraphController::new("));
-        assert!(NODE_GRAPH_DOMAIN_DEMO_RS.contains(".with_controller(controller.clone())"));
-        assert!(NODE_GRAPH_LEGACY_DEMO_RS.contains("submit_transaction_and_sync_graph_model("));
-        assert!(NODE_GRAPH_LEGACY_DEMO_RS.contains("replace_document_and_sync_models("));
-        assert!(NODE_GRAPH_LEGACY_DEMO_RS.contains(".with_controller(controller.clone())"));
+        assert!(FRET_EXAMPLES_CARGO_TOML.contains("node-graph-demos = []"));
+        assert!(
+            FRET_DEMO_CARGO_TOML
+                .contains("node-graph-demos = [\"fret-examples/node-graph-demos\"]")
+        );
+        assert!(FRET_EXAMPLES_LIB_RS.contains("pub mod node_graph_demo;"));
+        assert!(NODE_GRAPH_DEMO_RS.contains("NodeGraphSurfaceBinding::new("));
+        assert!(NODE_GRAPH_DEMO_RS.contains("node_graph_surface_in(cx, props)"));
+        assert!(!NODE_GRAPH_DEMO_RS.contains("NodeGraphController"));
+        assert!(!NODE_GRAPH_DEMO_RS.contains("binding.controller()"));
     }
 
     #[test]

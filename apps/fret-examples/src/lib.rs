@@ -197,8 +197,6 @@ pub use fret_examples_imui::imui_floating_windows_demo;
 pub use fret_examples_imui::imui_hello_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub use fret_examples_imui::imui_interaction_showcase_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "node-graph-demos-legacy"))]
-pub mod imui_node_graph_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub use fret_examples_imui::imui_response_signals_demo;
 #[cfg(not(target_arch = "wasm32"))]
@@ -215,12 +213,6 @@ pub mod liquid_glass_demo;
 pub mod markdown_demo;
 #[cfg(all(not(target_arch = "wasm32"), feature = "node-graph-demos"))]
 pub mod node_graph_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "node-graph-demos-legacy"))]
-pub mod node_graph_domain_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "node-graph-demos-legacy"))]
-pub mod node_graph_legacy_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "node-graph-demos-legacy"))]
-pub(crate) mod node_graph_tuning_overlay;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod plot3d_demo;
 pub mod plot_demo;

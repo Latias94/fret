@@ -2979,3 +2979,136 @@ Follow-up:
 - First-party `apps/fret-examples` still contains legacy retained node graph demos behind
   `node-graph-demos-legacy`. The next M2 slice should either migrate or explicitly quarantine
   those examples before removing `compat-retained-canvas` from `fret-node` itself.
+
+## 2026-05-19 - RBX-M1-085 first-party docking examples declarative entry-point closure
+
+Claim verified:
+
+- First-party docking demos and the cookbook docking example no longer use deleted public retained
+  docking entry points.
+- They now install declarative `DockPanelElementRegistry` services and mount dock spaces through
+  `dock_space_element_from_registry(...)` or `dock_space_declarative_with(...)`.
+- A `fret-docking` policy test now prevents first-party docking examples from reintroducing the
+  retained public entry points.
+
+Evidence:
+
+- `apps/fret-examples/src/docking_demo.rs`
+- `apps/fret-examples/src/container_queries_docking_demo.rs`
+- `apps/fret-examples/src/docking_arbitration_demo.rs`
+- `apps/fret-examples/src/imui_editor_proof_demo.rs`
+- `apps/fret-cookbook/examples/docking_basics.rs`
+- `apps/fret-cookbook/src/lib.rs`
+- `ecosystem/fret-docking/tests/public_surface_policy.rs`
+- `docs/crate-usage-guide.md`
+- `docs/docking-arbitration-checklist.md`
+- `docs/docking-imgui-parity-matrix.md`
+- `docs/adr/IMPLEMENTATION_ALIGNMENT.md`
+
+Commands:
+
+- `cargo check -p fret-demo --bin docking_demo`
+  - Result: passed.
+  - Scope proven: main docking demo compiles with declarative dock-space host and registry.
+- `cargo check -p fret-demo --bin container_queries_docking_demo`
+  - Result: passed.
+  - Scope proven: container-query docking demo compiles with declarative dock-space host and
+    retained-free docking public surface.
+- `cargo check -p fret-demo --bin docking_arbitration_demo`
+  - Result: passed.
+  - Scope proven: arbitration/diagnostics demo compiles after moving dock host and panel registry
+    off the deleted retained entry points while preserving external diagnostic anchors.
+- `cargo check -p fret-demo --bin imui_editor_proof_demo`
+  - Result: passed.
+  - Scope proven: imui editor proof embeds docking through `dock_space_declarative_with(...)`.
+- `cargo check -p fret-cookbook --features cookbook-docking --example docking_basics`
+  - Result: passed.
+  - Scope proven: public cookbook docking example teaches the declarative registry/host path.
+- `cargo nextest run -p fret-docking public_docking_surface_prefers_declarative_entry_points retained_docking_entry_points_are_not_public first_party_docking_examples_use_declarative_entry_points`
+  - Result: passed, 3 tests.
+  - Scope proven: public declarative symbols remain exported, retained public entry points remain
+    absent, and first-party examples stay on the declarative entry-point path.
+- `rg -n "DockPanelFactory|DockPanelRegistryBuilder|DockPanelRegistryService|create_dock_space_node|mount_dock_space|render_and_bind_dock_panels|dock_space_with|DockSpaceImUiOptions" apps crates ecosystem docs tools --glob '!target/**' --glob '!docs/workstreams/**' --glob '!docs/audits/**'`
+  - Result: matches only `ecosystem/fret-docking/tests/public_surface_policy.rs` forbidden-string
+    assertions.
+  - Scope proven: live source/docs no longer teach or call the deleted retained docking public
+    entry points.
+- `cargo test -p fret-cookbook --lib advanced_examples_use_the_explicit_advanced_surface`
+  - Result: passed, 1 test.
+  - Scope proven: cookbook source-policy assertions now expect the declarative docking surface.
+
+Broader gates not run:
+
+- `cargo nextest run -p fret-cookbook`
+  - Reason: the package-wide no-run phase currently fails in an unrelated example
+    (`apps/fret-cookbook/examples/hello_counter.rs` imports `fret::icons::icon` without enabling
+    the `icons` feature). The targeted cookbook docking compile gate and source-policy unit test
+    cover this change.
+
+## 2026-05-19 - RBX-M2-030 first-party legacy node graph demo entry-point removal
+
+Claim verified:
+
+- First-party legacy retained node graph demo entry points were removed.
+- The supported first-party node graph demo path is now `node_graph_demo` behind
+  `node-graph-demos`.
+- `fret-node` policy tests prevent first-party app/demo sources from reintroducing
+  `node-graph-demos-legacy`, legacy module/bin names, or `fret-node/compat-retained-canvas`.
+
+Evidence:
+
+- `apps/fret-demo/Cargo.toml`
+- `apps/fret-examples/Cargo.toml`
+- `apps/fret-examples/src/lib.rs`
+- `apps/fretboard/src/dev/native.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `tools/examples_source_tree_policy/gate.py`
+- `tools/gate_imui_facade_teaching_source.py`
+- `docs/examples/README.md`
+- `docs/node-graph-roadmap.md`
+- `docs/node-graph-xyflow-parity.md`
+
+Commands:
+
+- `cargo check -p fret-demo --features node-graph-demos --bin node_graph_demo`
+  - Result: passed.
+  - Scope proven: the supported node graph demo binary still compiles.
+- `cargo check -p fret-examples --features node-graph-demos`
+  - Result: passed.
+  - Scope proven: first-party example library still compiles with the declarative node graph demo
+    feature.
+- `cargo nextest run -p fret-node first_party_node_graph_demos_stay_declarative_only retained_compatibility_surface_stays_declarative_only first_party_gallery_node_graph_pages_stay_off_retained_canvas`
+  - Result: passed, 3 tests.
+  - Scope proven: node graph surface policy rejects legacy first-party demo entry points and keeps
+    retained compatibility explicit.
+- `PYTHONPATH=tools python3 tools/examples_source_tree_policy/gate.py`
+  - Result: passed.
+  - Scope proven: examples source tree policy no longer expects the deleted IMUI node graph legacy
+    source.
+- `python3 tools/gate_imui_facade_teaching_source.py`
+  - Result: passed.
+  - Scope proven: IMUI teaching source remains inside the current facade policy after removing the
+    old node graph exception.
+- `rg -n "node-graph-demos-legacy|fret-node/compat-retained-canvas|node_graph_legacy_demo|node_graph_domain_demo|imui_node_graph_demo|node_graph_tuning_overlay" apps crates ecosystem tools docs --glob '!docs/workstreams/**' --glob '!docs/audits/**' --glob '!target/**'`
+  - Result: matches only `ecosystem/fret-node/src/lib.rs` negative policy assertions.
+  - Scope proven: first-party app/demo/tool/doc sources no longer expose the legacy retained node
+    graph demo entry points.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting is clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: this slice removes first-party retained node graph demo entry points and migrates
+    first-party docking examples exposed by the deletion; the targeted app checks, policy tests,
+    source-policy gates, layering gate, and no-retained-search gates cover the changed surfaces.

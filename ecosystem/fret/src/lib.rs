@@ -3390,7 +3390,7 @@ mod authoring_surface_policy_tests {
         assert!(CRATE_USAGE_GUIDE.contains("`fret::integration::InstallIntoApp`"));
         assert!(CRATE_USAGE_GUIDE.contains("one installer/bundle surface"));
         assert!(CRATE_USAGE_GUIDE.contains("`RouteCodec`"));
-        assert!(CRATE_USAGE_GUIDE.contains("`DockPanelFactory`"));
+        assert!(CRATE_USAGE_GUIDE.contains("`DockPanelElementRegistry`"));
         assert!(CRATE_USAGE_GUIDE.contains("`fret-app::Plugin`"));
         assert!(
             CRATE_USAGE_GUIDE

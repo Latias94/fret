@@ -5,11 +5,14 @@ Updated: 2026-05-19
 ## Current State
 
 `RBX-M1-010`, `RBX-M1-020`, `RBX-M1-021`, `RBX-M1-030`, `RBX-M1-040`, `RBX-M1-050`,
-`RBX-M1-060`, `RBX-M1-070`, `RBX-M1-075`, and `RBX-M1-080` are complete. `RBX-M1-080` removed
+`RBX-M1-060`, `RBX-M1-070`, `RBX-M1-075`, `RBX-M1-080`, and `RBX-M1-085` are complete. `RBX-M1-080` removed
 `fret-docking`'s `fret-ui/unstable-retained-bridge` dependency, deleted the retained docking
 adapter and retained public entry points, removed `fret-docking` from the retained-bridge
 allowlist, and mapped the deleted retained test files to public declarative or mechanism-level
-coverage. The docking retained bridge audit is recorded in:
+coverage. `RBX-M1-085` then migrated first-party docking demos and the cookbook docking example to
+the public declarative dock-space entry points and added policy coverage that prevents those
+examples from teaching the deleted retained public APIs. The docking retained bridge audit is
+recorded in:
 
 - `docs/workstreams/retained-bridge-exit-v1/RBX_M1_010_DOCKING_RETAINED_BRIDGE_AUDIT_2026-05-18.md`
 - `docs/workstreams/retained-bridge-exit-v1/RBX_M1_030_DOCKING_DECLARATIVE_PRIMITIVE_GAP_AUDIT_2026-05-18.md`
@@ -37,7 +40,9 @@ M2 is in progress. `RBX-M2-010` narrowed `fret-node` retained bridge access to t
 `compat-retained-canvas` island. `RBX-M2-020` removed UI Gallery's dependency on that island by
 migrating the node graph cull torture page and AI workflow node graph demo to
 `NodeGraphSurfaceBinding` plus declarative `node_graph_surface(...)`; workflow viewport controls now
-use `LayoutQueryRegion` for stage bounds instead of a retained `BoundsRecorder`.
+use `LayoutQueryRegion` for stage bounds instead of a retained `BoundsRecorder`. `RBX-M2-030`
+removed the first-party legacy retained node graph demo feature/bins/modules, leaving
+`node_graph_demo` behind `node-graph-demos` as the supported first-party node graph demo path.
 
 ## Completed Implementation
 
@@ -54,8 +59,8 @@ There are no remaining Rust source users of:
 - `retained_bridge::ResizablePanelGroupLayout`
 - `resizable::compute_layout`
 
-`RBX-M1-030` found that panel content is already declarative-capable through
-`DockPanelRegistry`/`render_cached_panel_root(...)`. The missing piece is the host lifecycle around
+`RBX-M1-030` found that panel content is declarative-capable through panel-root registries. The
+missing piece was the host lifecycle around
 `DockSpace`: externalized controller state, child-root placement, prepaint liveness, raw event
 arbitration, command/focus routing, and custom chrome/child paint ordering.
 
@@ -344,10 +349,13 @@ docking-specific.
 `RBX-M2-010` started the node-graph migration by narrowing `fret-node`'s retained bridge entry:
 the redundant `compat-retained-bridge` feature alias was deleted, and
 `compat-retained-canvas` is now the only `fret-node` feature that enables
-`fret-ui/unstable-retained-bridge`. The headless graph surface, default declarative UI surface, and
-explicit retained canvas compatibility island all compile. The retained canvas/editor stack still
-exists behind `compat-retained-canvas`; the next M2 slice should migrate chrome/overlays/panels
-toward declarative composition and shrink the remaining retained leaf.
+`fret-ui/unstable-retained-bridge`. `RBX-M2-020` moved UI Gallery's node graph pages to
+`NodeGraphSurfaceBinding` plus declarative `node_graph_surface(...)`. `RBX-M2-030` removed the
+first-party legacy retained node graph demo feature/bins/modules and locked that with
+`fret-node` policy tests. The headless graph surface, default declarative UI surface, and explicit
+retained canvas compatibility island still compile. The retained canvas/editor stack still exists
+inside `fret-node` behind `compat-retained-canvas`; the next M2 slice should migrate
+chrome/overlays/panels toward declarative composition and shrink the remaining retained leaf.
 
 ## Next Task
 

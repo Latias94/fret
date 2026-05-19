@@ -102,7 +102,6 @@ Now / Next / Later (high level):
 To run:
 
 - `cargo run -p fret-demo --features node-graph-demos --bin node_graph_demo`
-- `cargo run -p fret-demo --features node-graph-demos --bin node_graph_domain_demo`
 - preferred runner: `cargo run -p fretboard-dev -- dev native --bin node_graph_demo`
 
 ## Missing Pieces (Gap Analysis)

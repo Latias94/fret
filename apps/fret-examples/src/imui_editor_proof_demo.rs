@@ -11,12 +11,11 @@ use fret::{Defaults, FretApp, advanced::prelude::*, component::prelude::*, shadc
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
 use fret_core::text::TextOverflow;
 use fret_core::{
-    Color, Corners, Edges, KeyCode, Modifiers, PanelKind, Point, PointerId, Px, Rect, Size,
-    TextAlign,
+    Color, Corners, Edges, KeyCode, Modifiers, Point, PointerId, Px, Rect, Size, TextAlign,
 };
 use fret_docking::{
-    DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
-    DockPanelRegistryService, ViewportPanel, runtime as dock_runtime,
+    DockManager, DockPanel, DockPanelElementRegistry, DockPanelElementRegistryService,
+    DockSpaceElementOptions, ViewportPanel, runtime as dock_runtime,
 };
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{
@@ -25,7 +24,7 @@ use fret_runtime::{
 };
 use fret_ui::GlobalElementId;
 use fret_ui::action::{UiActionHostExt as _, UiFocusActionHost};
-use fret_ui::element::{LayoutStyle, Length, SizeStyle};
+use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle};
 use fret_ui::scroll::ScrollHandle;
 use fret_ui_editor::composites::{
     GradientEditor, GradientEditorOptions, GradientStopBinding, InspectorPanel,
@@ -227,7 +226,7 @@ fn proof_optional_outcome_readout<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     outcome: String,
     test_id: Arc<str>,
-) -> Option<fret_ui::element::AnyElement> {
+) -> Option<AnyElement> {
     let outcome = outcome.trim().to_string();
     if outcome.is_empty() {
         return None;
@@ -273,7 +272,7 @@ fn proof_compact_readout_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     readout: impl Into<Arc<str>>,
     test_id: impl Into<Arc<str>>,
-) -> fret_ui::element::AnyElement {
+) -> AnyElement {
     let readout = readout.into();
     let mut el = decl_text::text_control_readout(cx, readout.clone()).test_id(test_id.into());
     el = el.a11y_label(readout);
@@ -284,7 +283,7 @@ fn proof_empty_state_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: &'static str,
     test_id: &'static str,
-) -> fret_ui::element::AnyElement {
+) -> AnyElement {
     proof_compact_readout_element(cx, Arc::<str>::from(text), Arc::<str>::from(test_id))
 }
 
@@ -292,7 +291,7 @@ fn proof_section_chrome_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: &'static str,
     test_id: &'static str,
-) -> fret_ui::element::AnyElement {
+) -> AnyElement {
     decl_text::text_section_chrome_label(cx, text).test_id(test_id)
 }
 
@@ -761,9 +760,6 @@ where
     } else {
         None
     };
-    let tab_drag_anchor_test_id = (diag_enabled() && logical_window_id.as_deref() == Some("main"))
-        .then_some("imui-editor-proof.main.tab-drag-anchor");
-
     let editor_value_model = editor_demo_value_model(cx);
     let editor_drag_value_outcome_model = editor_demo_drag_value_outcome_model(cx);
     let editor_roughness_model = editor_demo_roughness_model(cx);
@@ -2385,14 +2381,13 @@ where
                 if !editor_review_layout {
                     ui.separator();
 
-                    fret_docking::imui::dock_space_with(
+                    ui.with_cx_mut(|cx| ensure_dock_graph(cx.app, cx.window));
+                    fret_docking::imui::dock_space_declarative_with(
                         ui,
-                        fret_docking::imui::DockSpaceImUiOptions {
+                        DockSpaceElementOptions {
                             test_id: dock_test_id,
-                            tab_drag_anchor_test_id,
                             ..Default::default()
                         },
-                        move |app, window| ensure_dock_graph(app, window),
                     );
                 }
             });
@@ -3977,68 +3972,57 @@ fn authoring_parity_outliner_status_model<H: UiHost>(
 }
 
 fn install_dock_panel_registry(app: &mut KernelApp) {
-    let mut registry = DockPanelRegistryBuilder::new();
-    registry.register(ImUiEditorProofControlsPanelFactory);
     app.with_global_mut(
-        DockPanelRegistryService::<KernelApp>::default,
+        DockPanelElementRegistryService::<KernelApp>::default,
         |svc, _app| {
-            svc.set(registry.build_arc());
+            svc.set(Arc::new(ImUiEditorProofControlsPanelRegistry));
         },
     );
 }
 
-struct ImUiEditorProofControlsPanelFactory;
+struct ImUiEditorProofControlsPanelRegistry;
 
-impl DockPanelFactory<KernelApp> for ImUiEditorProofControlsPanelFactory {
-    fn panel_kind(&self) -> PanelKind {
-        PanelKind::new("demo.controls")
-    }
-
-    fn build_panel(
+impl DockPanelElementRegistry<KernelApp> for ImUiEditorProofControlsPanelRegistry {
+    fn render_panel(
         &self,
+        cx: &mut ElementContext<'_, KernelApp>,
+        _window: AppWindowId,
         panel: &fret_core::PanelKey,
-        cx: &mut DockPanelFactoryCx<'_, KernelApp>,
-    ) -> Option<fret_core::NodeId> {
-        let root_name = match panel.instance.as_deref() {
-            Some(instance) => format!("imui_editor_proof.panel.{}:{}", panel.kind.0, instance),
-            None => format!("imui_editor_proof.panel.{}", panel.kind.0),
-        };
+    ) -> Option<AnyElement> {
+        if panel.kind.0.as_str() != "demo.controls" {
+            return None;
+        }
         let panel_key = panel.clone();
-        Some(cx.render_cached_panel_root(
-            &root_name,
-            move |cx| {
-                let target = embedded::models(&*cx.app, cx.window)
-                    .map(|m| cx.data().selector_model_paint(&m.target, |target| target))
-                    .unwrap_or_default();
+        let target = embedded::models(&*cx.app, cx.window)
+            .map(|m| cx.data().selector_model_paint(&m.target, |target| target))
+            .unwrap_or_default();
 
-                vec![
-                    fret_ui_kit::ui::container_build( move |cx, out| {
-                        out.extend(
-                            imui(cx, move |ui| {
-                                // Dock panels can move across roots and windows, so the immediate
-                                // content keeps an explicit stable identity instead of relying on
-                                // callsite position alone.
-                                ui.id(&panel_key, |ui| {
-                                    ui.text("Controls panel (declarative root inside docking)");
-                                    ui.text(format!("embedded viewport target: {target:?}"));
-                                    ui.text_wrapped(
-                                        "Wasm/mobile note: multi-window should degrade to in-window floatings.",
-                                    );
-                                });
-                            })
-                            .into_vec(),
-                        );
+        Some(
+            fret_ui_kit::ui::container_build(move |cx, out| {
+                out.extend(
+                    imui(cx, move |ui| {
+                        // Dock panels can move across roots and windows, so the immediate
+                        // content keeps an explicit stable identity instead of relying on
+                        // callsite position alone.
+                        ui.id(&panel_key, |ui| {
+                            ui.text("Controls panel (declarative root inside docking)");
+                            ui.text(format!("embedded viewport target: {target:?}"));
+                            ui.text_wrapped(
+                                "Wasm/mobile note: multi-window should degrade to in-window floatings.",
+                            );
+                        });
                     })
-                    .size_full()
-                    .p_3()
-                    .bg(fret_ui_kit::ColorRef::Token {
-                        key: "background",
-                        fallback: fret_ui_kit::ColorFallback::ThemeSurfaceBackground,
-                    })
-                    .into_element(cx),
-                ]
-            },
-        ))
+                    .into_vec(),
+                );
+            })
+            .size_full()
+            .p_3()
+            .bg(fret_ui_kit::ColorRef::Token {
+                key: "background",
+                fallback: fret_ui_kit::ColorFallback::ThemeSurfaceBackground,
+            })
+            .into_element(cx),
+        )
     }
 }
 

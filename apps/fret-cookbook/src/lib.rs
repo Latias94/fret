@@ -1095,8 +1095,9 @@ mod authoring_surface_policy_tests {
         assert!(DOCKING_EXAMPLE.contains("use fret_docking::{"));
         assert!(DOCKING_EXAMPLE.contains("advanced::prelude::*"));
         assert!(DOCKING_EXAMPLE.contains("integration::InstallIntoApp"));
-        assert!(DOCKING_EXAMPLE.contains("DockPanelFactory<KernelApp>"));
-        assert!(DOCKING_EXAMPLE.contains("DockPanelRegistryBuilder::new()"));
+        assert!(DOCKING_EXAMPLE.contains("DockPanelElementRegistry<KernelApp>"));
+        assert!(DOCKING_EXAMPLE.contains("DockPanelElementRegistryService::<KernelApp>"));
+        assert!(DOCKING_EXAMPLE.contains("dock_space_element_from_registry("));
         assert!(DOCKING_EXAMPLE.contains("handle_dock_op(app, op)"));
         assert!(DOCKING_EXAMPLE.contains("impl InstallIntoApp for DockingBasicsBundle"));
         assert!(
@@ -1104,7 +1105,7 @@ mod authoring_surface_policy_tests {
                 .contains(".setup((DockingBasicsBundle, fret_icons_lucide::app::install))")
         );
         assert!(!DOCKING_EXAMPLE.contains(".setup(shadcn::install_app)"));
-        assert!(DOCKING_EXAMPLE.contains("RetainedSubtreeProps::new::<KernelApp>"));
+        assert!(!DOCKING_EXAMPLE.contains("RetainedSubtreeProps::new::<KernelApp>"));
 
         assert!(
             EMBEDDED_VIEWPORT_EXAMPLE

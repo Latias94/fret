@@ -601,6 +601,32 @@ Related plan:
       and retained docking entry points are no longer public.
     - Evidence:
       `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-19---rbx-m1-080-retained-capability-parity-audit-and-docking-bridge-removal`.
+- [x] RBX-M1-085 Move first-party docking demos and cookbook off retained docking entry points.
+  - Scope:
+    - `apps/fret-examples/src/docking_demo.rs`
+    - `apps/fret-examples/src/container_queries_docking_demo.rs`
+    - `apps/fret-examples/src/docking_arbitration_demo.rs`
+    - `apps/fret-examples/src/imui_editor_proof_demo.rs`
+    - `apps/fret-cookbook/examples/docking_basics.rs`
+    - `ecosystem/fret-docking/tests/public_surface_policy.rs`
+  - Goal:
+    - Keep public examples and cookbook on `DockPanelElementRegistry` +
+      `dock_space_element_from_registry(...)` / `dock_space_declarative_with(...)` after the
+      retained public docking entry points were removed.
+    - Preserve demo diagnostics harness nodes where scripted tests still need stable external
+      anchors, without reintroducing `fret-docking` retained APIs.
+  - Result:
+    - First-party docking examples compile against the declarative dock-space host.
+    - Cookbook docking now teaches the declarative registry/host path.
+    - Added policy coverage preventing first-party docking examples from reintroducing the deleted
+      retained public entry points.
+  - Validation:
+    - `cargo check -p fret-demo --bin docking_demo`
+    - `cargo check -p fret-demo --bin container_queries_docking_demo`
+    - `cargo check -p fret-demo --bin docking_arbitration_demo`
+    - `cargo check -p fret-demo --bin imui_editor_proof_demo`
+    - `cargo check -p fret-cookbook --features cookbook-docking --example docking_basics`
+    - `cargo nextest run -p fret-docking public_docking_surface_prefers_declarative_entry_points retained_docking_entry_points_are_not_public first_party_docking_examples_use_declarative_entry_points`
 - [ ] Add/upgrade `fretboard-dev diag` scripts to lock in docking drag + tear-off correctness.
 
 ### M2 — Node graph migration
@@ -656,6 +682,29 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-030 Remove first-party legacy retained node graph demo entry points.
+  - Scope:
+    - `apps/fret-demo/Cargo.toml`
+    - `apps/fret-demo/src/bin/*node_graph*_demo.rs` legacy retained bins
+    - `apps/fret-examples/Cargo.toml`
+    - `apps/fret-examples/src/*node_graph*_demo.rs` legacy retained modules
+    - `apps/fret-examples/src/lib.rs`
+    - `apps/fretboard/src/dev/native.rs`
+    - `ecosystem/fret-node/src/lib.rs`
+    - node graph docs/source-policy tools that referenced the legacy examples
+  - Goal:
+    - Remove first-party `node-graph-demos-legacy` entry points instead of keeping retained canvas
+      examples alive after the declarative `node_graph_demo` path exists.
+  - Result:
+    - First-party node graph demo feature surface is declarative-only.
+    - `fretboard dev native --bin node_graph_demo` still maps to `node-graph-demos`.
+    - `fret-node` policy tests now reject legacy demo feature names, modules, bins, and retained
+      canvas feature usage in first-party app/demo sources.
+  - Validation:
+    - `cargo check -p fret-demo --features node-graph-demos --bin node_graph_demo`
+    - `cargo check -p fret-examples --features node-graph-demos`
+    - `cargo nextest run -p fret-node first_party_node_graph_demos_stay_declarative_only retained_compatibility_surface_stays_declarative_only first_party_gallery_node_graph_pages_stay_off_retained_canvas`
+    - `rg -n "node-graph-demos-legacy|fret-node/compat-retained-canvas|node_graph_legacy_demo|node_graph_domain_demo|imui_node_graph_demo|node_graph_tuning_overlay" apps crates ecosystem tools docs --glob '!docs/workstreams/**' --glob '!docs/audits/**' --glob '!target/**'`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

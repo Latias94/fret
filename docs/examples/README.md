@@ -128,9 +128,8 @@ Immediate-mode sidecar (when you intentionally want the IMUI lane):
 
 - First-party authoring policy: use the root `fret::imui` lane (`use fret::imui::prelude::*;` or
   `use fret::imui::{kit::..., prelude::*};` for kit-focused teaching surfaces, or
-  `use fret::imui::{kit::..., editor, prelude::*};` for editor-grade teaching surfaces. The
-  only deliberate exception is `imui_node_graph_demo`, which remains a compatibility-only
-  retained-bridge proof.
+  `use fret::imui::{kit::..., editor, prelude::*};` for editor-grade teaching surfaces.
+  No first-party IMUI example uses the retained node-graph canvas.
 
 - Golden pair:
   - `imui_action_basics` — generic/default immediate authoring on the app lane
@@ -164,8 +163,6 @@ Immediate-mode sidecar (when you intentionally want the IMUI lane):
   - `imui_shadcn_adapter_demo`
 - Advanced/reference:
   - `imui_floating_windows_demo`
-- Compatibility-only:
-  - `imui_node_graph_demo`
 
 Mounting rule for the immediate-mode lane:
 
@@ -274,9 +271,6 @@ Explicit advanced/reference roster:
   default immediate teaching path.
 - `imui_floating_windows_demo` is an IMUI overlap/floating proof surface. It validates IMUI
   interaction contracts and diagnostics affordances rather than the retained-mode onboarding lane.
-- `imui_node_graph_demo` is an IMUI compatibility-only proof. It exists to keep the retained-bridge
-  node-graph path auditable and should not be treated as the default downstream immediate path.
-
 Start from the “Examples redesign” workstream for the intended product surface:
 
 - [docs/workstreams/example-suite-fearless-refactor-v1/design.md](../workstreams/example-suite-fearless-refactor-v1/design.md)
