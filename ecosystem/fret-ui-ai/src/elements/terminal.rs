@@ -19,6 +19,7 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::chrome::centered_fixed_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::typography;
 use fret_ui_kit::ui;
 use fret_ui_kit::{
@@ -422,13 +423,9 @@ impl TerminalTitle {
 
         let icon = decl_icon::icon_with(cx, self.icon, Some(Px(16.0)), Some(ColorRef::Color(fg)));
         let content = match self.content {
-            TerminalTitleContent::Label(label) => vec![
-                icon,
-                fret_ui_kit::ui::raw_text(label)
-                    .wrap(TextWrap::None)
-                    .overflow(TextOverflow::Clip)
-                    .into_element(cx),
-            ],
+            TerminalTitleContent::Label(label) => {
+                vec![icon, decl_text::text_chrome_title(cx, label)]
+            }
             TerminalTitleContent::Children(children) => {
                 let mut row = Vec::with_capacity(children.len() + 1);
                 row.push(icon);
@@ -1101,6 +1098,34 @@ mod tests {
         let ElementKind::Text(props) = &text.kind else {
             panic!("expected terminal title leaf to be text");
         };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+    }
+
+    #[test]
+    fn terminal_title_label_uses_chrome_title_text_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                TerminalTitle::new()
+                    .label("Long Terminal Output Title")
+                    .into_element(cx)
+            });
+
+        let text = find_text_by_content(&element, "Long Terminal Output Title")
+            .expect("expected terminal title label text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected terminal title label leaf to be text");
+        };
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
         assert!(props.style.is_none());
         assert!(props.color.is_none());
     }

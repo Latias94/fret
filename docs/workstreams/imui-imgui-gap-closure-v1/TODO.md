@@ -527,6 +527,10 @@ Readiness order for the next locally testable review slices:
    fixed titles through `text_section_chrome_label(...)`, explanatory prose through
    `text_paragraph(...)`, and compact Message action status through `text_control_readout(...)`.
    The Terminal empty-output marker also uses the same non-text spacer-marker pattern.
+   2026-05-19 AI Terminal title text-role follow-up: the `fret-ui-ai` `TerminalTitle` component
+   itself now routes its default label through `text_chrome_title(...)` instead of local
+   `ui::raw_text(...).wrap(None).overflow(Clip)` policy, so actual terminal chrome titles inherit
+   fill-width shrink/ellipsis behavior under resize.
    2026-05-18 AI visible text-role follow-up 2: Artifact, CodeBlock, and Sandbox copyable snippets
    now use the same role split for fixed demo titles, explanatory prose, and compact status text.
    CodeBlock's active-language diagnostics marker also moved from an invisible empty text node to a

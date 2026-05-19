@@ -3376,9 +3376,13 @@ def main() -> None:
             Path("ecosystem/fret-ui-ai/src/elements/terminal.rs"),
             required=[
                 "return crate::elements::empty_placeholder(cx);",
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_chrome_title(cx, label)",
+                "terminal_title_label_uses_chrome_title_text_role",
             ],
             forbidden=[
                 "return cx.text(\"\");",
+                "fret_ui_kit::ui::raw_text(label)",
             ],
         ),
         SourceCheck(

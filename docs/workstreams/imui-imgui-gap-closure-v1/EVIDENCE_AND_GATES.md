@@ -742,6 +742,12 @@ Run evidence:
   non-text spacer-marker pattern for its empty-output diagnostics marker. Gates: `cargo nextest run
   -p fret-ui-gallery --test ai_visible_text_role_surface --no-fail-fast` and
   `python tools/gate_imui_workstream_source.py`.
+- 2026-05-19: moved the actual `fret-ui-ai` `TerminalTitle` default label from local
+  `ui::raw_text(...).wrap(None).overflow(Clip)` policy to the shared `text_chrome_title(...)`
+  role. The component now keeps terminal chrome titles fill-width, `min-width: 0`, grow/shrink
+  enabled, single-line, and ellipsized under narrow resize. Gate: `cargo nextest run -p
+  fret-ui-ai terminal_title_label_uses_chrome_title_text_role --no-fail-fast` and
+  `python tools/gate_imui_workstream_source.py`.
 - 2026-05-18: extended the same visible text-role migration to AI Artifact, CodeBlock, and Sandbox
   snippets. Fixed demo titles and panel labels now use section-chrome text, explanatory copy uses
   paragraph text, Artifact's closed state uses a compact control readout, and CodeBlock's
