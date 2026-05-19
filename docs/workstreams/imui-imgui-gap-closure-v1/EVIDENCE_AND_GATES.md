@@ -3939,6 +3939,38 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.
 
+2026-05-19 shadcn FieldTitle children-role slice:
+
+- Source gap before fix: `FieldTitle` only accepted a string payload, so field/property-panel title
+  slots could not carry caller-supplied shared title/chrome role children. That kept field titles
+  outside the same explicit-role contract now used by dialog, sheet, popover, alert, card, and item
+  titles.
+- `FieldTitle` now exposes `new_children(...)`. The string path preserves existing field-title
+  defaults and `w-fit` behavior; the children path patches bare `Text`, `StyledText`, and
+  `SelectableText` children with field-title typography/foreground/alignment, but skips subtrees
+  that already carry inherited text-role metadata.
+- `field_title_children_patch_rich_text_with_title_typography` proves the strong fallback remains;
+  `field_title_children_preserve_shared_text_role_contracts` proves a `text_chrome_title(...)`
+  child keeps `style: None`, `color: None`, ellipsis overflow, role metadata, and its own
+  fill-width layout; `field_title_and_plain_label_approximate_upstream_w_fit_defaults` keeps the
+  existing bare-title `w-fit` contract in the focused run; and
+  `field_description_scopes_inherited_text_style` proves description scopes are unchanged.
+- `tools/gate_imui_workstream_source.py` now guards the FieldTitle children API, scoped helper, and
+  tests.
+- Focused run passed:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  field_title_children_patch_rich_text_with_title_typography
+  field_title_children_preserve_shared_text_role_contracts
+  field_title_and_plain_label_approximate_upstream_w_fit_defaults
+  field_description_scopes_inherited_text_style --no-fail-fast`.
+- `cargo fmt --check -p fret-ui-shadcn` passed.
+- `cargo check -p fret-ui-shadcn --lib` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.
+
 2026-05-19 shadcn PopoverTitle children-role slice:
 
 - Source gap before fix: `PopoverTitle` only accepted a string payload, so popover/panel titles

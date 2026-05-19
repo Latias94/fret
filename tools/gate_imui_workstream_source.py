@@ -3600,6 +3600,20 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/field.rs"),
+            required=[
+                "pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self",
+                "fn patch_field_title_text_style_recursive_scoped(",
+                "let role_scope_active = role_scope_active || el.inherited_text_style.is_some();",
+                "if !role_scope_active {\n                patch_text_style(&mut props.style, px, line_height);",
+                "field_title_children_patch_rich_text_with_title_typography",
+                "field_title_children_preserve_shared_text_role_contracts",
+                "field_title_and_plain_label_approximate_upstream_w_fit_defaults",
+                "field_description_scopes_inherited_text_style",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-ai/src/elements/prompt_input.rs"),
             required=[
                 "return crate::elements::empty_placeholder(cx);",
