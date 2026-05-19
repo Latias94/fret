@@ -3870,6 +3870,36 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   accordion_trigger_label_defaults_keep_bare_text_wrapping_policy --no-fail-fast` passed.
 - `cargo check -p fret-ui-ai --lib` passed.
 - `cargo check -p fret-ui-shadcn --lib` passed.
+
+2026-05-19 shadcn Table role-preservation slice:
+
+- Source gap before fix: `TableCell` / `TableHead` could still rewrite shared text-role children
+  by setting leaf `TextStyle`, `TextWrap::None`, and `TextOverflow::Clip` as recipe defaults. That
+  meant a caller could correctly use `text_table_cell(...)` and still lose its single-line
+  ellipsis resize contract under shadcn table composition.
+- `apply_table_cell_text_defaults(...)`, `apply_table_inherited_text_style(...)`,
+  `apply_table_footer_inherited_style(...)`, and `apply_table_head_inherited_style(...)` now treat
+  inherited text-role metadata as a protected role scope. Recipe defaults continue to apply to bare
+  text, but shared role children keep their role-owned style, wrap, overflow, and inherited
+  metadata.
+- `table_cell_preserves_shared_text_role_contracts` and
+  `table_head_children_preserve_shared_text_role_contracts` cover the role-child path; the existing
+  bare-text tests remain in the same focused run to prove table defaults still apply where intended.
+- `tools/gate_imui_workstream_source.py` now guards the Table role-preservation helper shape and
+  tests so the recipe cannot drift back to unconditional leaf typography rewrites.
+- Red run before fix:
+  `cargo nextest run -p fret-ui-shadcn --lib table_cell_preserves_shared_text_role_contracts
+  table_head_children_preserve_shared_text_role_contracts
+  table_applies_text_sm_defaults_to_unstyled_text_cells
+  table_head_children_apply_header_typography_to_plain_text --no-fail-fast` failed because both
+  role-preservation tests observed a leaf `style`.
+- Post-fix focused run passed:
+  `cargo nextest run -p fret-ui-shadcn --lib table_cell_preserves_shared_text_role_contracts
+  table_head_children_preserve_shared_text_role_contracts
+  table_applies_text_sm_defaults_to_unstyled_text_cells
+  table_head_children_apply_header_typography_to_plain_text --no-fail-fast`.
+- `cargo fmt --check -p fret-ui-shadcn` passed.
+- `cargo check -p fret-ui-shadcn --lib` passed.
 - `python -m py_compile tools\gate_imui_workstream_source.py` passed.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
   passed.

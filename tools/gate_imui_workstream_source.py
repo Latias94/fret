@@ -3470,6 +3470,24 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/table.rs"),
+            required=[
+                "let has_role_typography = child.inherited_text_style.is_some();",
+                "fn apply_table_inherited_text_style_scoped(",
+                "fn apply_table_footer_inherited_style_scoped(",
+                "fn apply_table_head_inherited_style_scoped(",
+                "let role_scope_active = role_scope_active || child.inherited_text_style.is_some();",
+                "if props.style.is_none() && !role_scope_active",
+                "if !has_role_typography {\n                props.wrap = TextWrap::None;",
+                "if !role_scope_active {\n                props.wrap = TextWrap::None;",
+                "table_cell_preserves_shared_text_role_contracts",
+                "table_head_children_preserve_shared_text_role_contracts",
+                "table_applies_text_sm_defaults_to_unstyled_text_cells",
+                "table_head_children_apply_header_typography_to_plain_text",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-ai/src/elements/prompt_input.rs"),
             required=[
                 "return crate::elements::empty_placeholder(cx);",

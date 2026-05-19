@@ -72,26 +72,33 @@ fn apply_table_cell_text_defaults(
     mut child: AnyElement,
     text_align: Option<TextAlign>,
 ) -> AnyElement {
+    let has_role_typography = child.inherited_text_style.is_some();
     match &mut child.kind {
         ElementKind::Text(props) => {
-            props.wrap = TextWrap::None;
-            props.overflow = TextOverflow::Clip;
+            if !has_role_typography {
+                props.wrap = TextWrap::None;
+                props.overflow = TextOverflow::Clip;
+            }
             if let Some(align) = text_align {
                 props.align = align;
                 props.layout.size.width = fret_ui::element::Length::Fill;
             }
         }
         ElementKind::StyledText(props) => {
-            props.wrap = TextWrap::None;
-            props.overflow = TextOverflow::Clip;
+            if !has_role_typography {
+                props.wrap = TextWrap::None;
+                props.overflow = TextOverflow::Clip;
+            }
             if let Some(align) = text_align {
                 props.align = align;
                 props.layout.size.width = fret_ui::element::Length::Fill;
             }
         }
         ElementKind::SelectableText(props) => {
-            props.wrap = TextWrap::None;
-            props.overflow = TextOverflow::Clip;
+            if !has_role_typography {
+                props.wrap = TextWrap::None;
+                props.overflow = TextOverflow::Clip;
+            }
             if let Some(align) = text_align {
                 props.align = align;
                 props.layout.size.width = fret_ui::element::Length::Fill;
@@ -102,20 +109,29 @@ fn apply_table_cell_text_defaults(
     child
 }
 
-fn apply_table_inherited_text_style(mut child: AnyElement, style: &TextStyle) -> AnyElement {
+fn apply_table_inherited_text_style(child: AnyElement, style: &TextStyle) -> AnyElement {
+    apply_table_inherited_text_style_scoped(child, style, false)
+}
+
+fn apply_table_inherited_text_style_scoped(
+    mut child: AnyElement,
+    style: &TextStyle,
+    role_scope_active: bool,
+) -> AnyElement {
+    let role_scope_active = role_scope_active || child.inherited_text_style.is_some();
     match &mut child.kind {
         ElementKind::Text(props) => {
-            if props.style.is_none() {
+            if props.style.is_none() && !role_scope_active {
                 props.style = Some(style.clone());
             }
         }
         ElementKind::StyledText(props) => {
-            if props.style.is_none() {
+            if props.style.is_none() && !role_scope_active {
                 props.style = Some(style.clone());
             }
         }
         ElementKind::SelectableText(props) => {
-            if props.style.is_none() {
+            if props.style.is_none() && !role_scope_active {
                 props.style = Some(style.clone());
             }
         }
@@ -125,35 +141,47 @@ fn apply_table_inherited_text_style(mut child: AnyElement, style: &TextStyle) ->
     child.children = child
         .children
         .into_iter()
-        .map(|child| apply_table_inherited_text_style(child, style))
+        .map(|child| apply_table_inherited_text_style_scoped(child, style, role_scope_active))
         .collect();
     child
 }
 
-fn apply_table_footer_inherited_style(mut child: AnyElement, style: &TextStyle) -> AnyElement {
+fn apply_table_footer_inherited_style(child: AnyElement, style: &TextStyle) -> AnyElement {
+    apply_table_footer_inherited_style_scoped(child, style, false)
+}
+
+fn apply_table_footer_inherited_style_scoped(
+    mut child: AnyElement,
+    style: &TextStyle,
+    role_scope_active: bool,
+) -> AnyElement {
+    let role_scope_active = role_scope_active || child.inherited_text_style.is_some();
     match &mut child.kind {
         ElementKind::Text(props) => {
-            if props.style.is_none() {
+            if props.style.is_none() && !role_scope_active {
                 props.style = Some(style.clone());
-            } else if let Some(existing) = props.style.as_mut()
+            } else if !role_scope_active
+                && let Some(existing) = props.style.as_mut()
                 && existing.weight == FontWeight::NORMAL
             {
                 existing.weight = style.weight;
             }
         }
         ElementKind::StyledText(props) => {
-            if props.style.is_none() {
+            if props.style.is_none() && !role_scope_active {
                 props.style = Some(style.clone());
-            } else if let Some(existing) = props.style.as_mut()
+            } else if !role_scope_active
+                && let Some(existing) = props.style.as_mut()
                 && existing.weight == FontWeight::NORMAL
             {
                 existing.weight = style.weight;
             }
         }
         ElementKind::SelectableText(props) => {
-            if props.style.is_none() {
+            if props.style.is_none() && !role_scope_active {
                 props.style = Some(style.clone());
-            } else if let Some(existing) = props.style.as_mut()
+            } else if !role_scope_active
+                && let Some(existing) = props.style.as_mut()
                 && existing.weight == FontWeight::NORMAL
             {
                 existing.weight = style.weight;
@@ -165,45 +193,63 @@ fn apply_table_footer_inherited_style(mut child: AnyElement, style: &TextStyle) 
     child.children = child
         .children
         .into_iter()
-        .map(|child| apply_table_footer_inherited_style(child, style))
+        .map(|child| apply_table_footer_inherited_style_scoped(child, style, role_scope_active))
         .collect();
     child
 }
 
-fn apply_table_head_inherited_style(mut child: AnyElement, style: &TextStyle) -> AnyElement {
+fn apply_table_head_inherited_style(child: AnyElement, style: &TextStyle) -> AnyElement {
+    apply_table_head_inherited_style_scoped(child, style, false)
+}
+
+fn apply_table_head_inherited_style_scoped(
+    mut child: AnyElement,
+    style: &TextStyle,
+    role_scope_active: bool,
+) -> AnyElement {
+    let role_scope_active = role_scope_active || child.inherited_text_style.is_some();
     match &mut child.kind {
         ElementKind::Text(props) => {
-            if props.style.is_none() {
+            if props.style.is_none() && !role_scope_active {
                 props.style = Some(style.clone());
-            } else if let Some(existing) = props.style.as_mut()
+            } else if !role_scope_active
+                && let Some(existing) = props.style.as_mut()
                 && existing.weight == FontWeight::NORMAL
             {
                 existing.weight = style.weight;
             }
-            props.wrap = TextWrap::None;
-            props.overflow = TextOverflow::Clip;
+            if !role_scope_active {
+                props.wrap = TextWrap::None;
+                props.overflow = TextOverflow::Clip;
+            }
         }
         ElementKind::StyledText(props) => {
-            if props.style.is_none() {
+            if props.style.is_none() && !role_scope_active {
                 props.style = Some(style.clone());
-            } else if let Some(existing) = props.style.as_mut()
+            } else if !role_scope_active
+                && let Some(existing) = props.style.as_mut()
                 && existing.weight == FontWeight::NORMAL
             {
                 existing.weight = style.weight;
             }
-            props.wrap = TextWrap::None;
-            props.overflow = TextOverflow::Clip;
+            if !role_scope_active {
+                props.wrap = TextWrap::None;
+                props.overflow = TextOverflow::Clip;
+            }
         }
         ElementKind::SelectableText(props) => {
-            if props.style.is_none() {
+            if props.style.is_none() && !role_scope_active {
                 props.style = Some(style.clone());
-            } else if let Some(existing) = props.style.as_mut()
+            } else if !role_scope_active
+                && let Some(existing) = props.style.as_mut()
                 && existing.weight == FontWeight::NORMAL
             {
                 existing.weight = style.weight;
             }
-            props.wrap = TextWrap::None;
-            props.overflow = TextOverflow::Clip;
+            if !role_scope_active {
+                props.wrap = TextWrap::None;
+                props.overflow = TextOverflow::Clip;
+            }
         }
         _ => {}
     }
@@ -211,7 +257,7 @@ fn apply_table_head_inherited_style(mut child: AnyElement, style: &TextStyle) ->
     child.children = child
         .children
         .into_iter()
-        .map(|child| apply_table_head_inherited_style(child, style))
+        .map(|child| apply_table_head_inherited_style_scoped(child, style, role_scope_active))
         .collect();
     child
 }
@@ -1722,6 +1768,7 @@ mod tests {
         ContainerProps, ElementKind, Length, MarginEdge, Overflow, SpacingLength, TextProps,
     };
     use fret_ui_kit::UiExt as _;
+    use fret_ui_kit::declarative::text as decl_text;
     use fret_ui_kit::ui::UiElementSinkExt as _;
 
     use fret_ui::UiTree;
@@ -2118,6 +2165,37 @@ mod tests {
     }
 
     #[test]
+    fn table_cell_preserves_shared_text_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        let label = "runtime-package-with-a-long-identifier";
+        let table = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            Table::new([TableBody::new([TableRow::new(
+                1,
+                [TableCell::new(decl_text::text_table_cell(cx, label)).into_element(cx)],
+            )
+            .into_element(cx)])
+            .into_element(cx)])
+            .into_element(cx)
+        });
+
+        let text = find_text_element(&table, label).expect("expected table cell text node");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected table cell text leaf");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(text.inherited_text_style.is_some());
+    }
+
+    #[test]
     fn table_head_children_apply_header_typography_to_plain_text() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -2147,6 +2225,31 @@ mod tests {
             assert_eq!(text.overflow, TextOverflow::Clip);
             assert!(contains_inherited_foreground(&head));
         });
+    }
+
+    #[test]
+    fn table_head_children_preserve_shared_text_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        let head = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            TableHead::new_children([decl_text::text_table_cell(cx, "Status")]).into_element(cx)
+        });
+
+        let text = find_text_element(&head, "Status").expect("expected table head text node");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected table head text leaf");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(text.inherited_text_style.is_some());
+        assert!(contains_inherited_foreground(&head));
     }
 
     #[test]

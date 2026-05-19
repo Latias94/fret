@@ -972,6 +972,10 @@ Readiness order for the next locally testable review slices:
    titles in the direct-text residual allowlist. Effect/runtime proof ownership stays local, while
    fixed chrome/readout text now routes through `text_section_chrome_label(...)` and
    `text_control_readout(...)`.
+   2026-05-19 shadcn Table role-preservation follow-up: `TableCell` and `TableHead` now treat
+   recipe typography as a bare-text fallback. Caller-supplied shared text roles such as
+   `text_table_cell(...)` keep their role-owned style/wrap/overflow contract, while plain
+   `cx.text(...)` still receives table default typography and fixed-row clipping behavior.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

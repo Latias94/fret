@@ -870,6 +870,10 @@ Exit criteria:
   unchanged while moving fixed overlay/header/card titles out of local `TextProps`. The remaining
   effect chrome uses shared section-chrome/control-readout roles with app-owned foreground and
   container geometry.
+  2026-05-19 shadcn Table role-preservation result: `TableCell` and `TableHead` now preserve
+  caller-supplied shared text roles instead of rewriting their leaf typography or overflow. Bare
+  text children still receive table defaults, so recipe ergonomics remain intact while role-owned
+  resize semantics survive nested shadcn composition.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.
