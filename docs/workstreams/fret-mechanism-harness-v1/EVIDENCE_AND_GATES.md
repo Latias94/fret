@@ -4772,6 +4772,65 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `git diff --check`
   - result: passed.
 
+## Combobox Checkmark Effective Opacity Gate
+
+- invariant:
+  selected and unselected Combobox checkmarks are both present in semantics/layout for stable
+  geometry, but only the selected checkmark should paint at effective opacity `1.0`; the unselected
+  checkmark should remain at effective opacity `0.0`.
+- finding:
+  no Combobox recipe defect was reproduced. The first focused runtime run exposed a diagnostics
+  harness gap instead: predicate-bearing `assert` steps did not borrow `ElementRuntime` unless the
+  step contained a `global_element_id` selector, so the new opacity predicate evaluated false
+  before reading the target.
+- implementation anchors:
+  `crates/fret-ui/src/elements/runtime.rs`,
+  `crates/fret-ui/src/declarative/mount.rs`,
+  `crates/fret-diag-protocol/src/lib.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs`,
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-long-text-geometry.json`,
+  and
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-geometry.json`.
+- formatting:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\elements\runtime.rs crates\fret-ui\src\declarative\mount.rs crates\fret-diag-protocol\src\lib.rs ecosystem\fret-bootstrap\src\ui_diagnostics\predicates.rs ecosystem\fret-bootstrap\src\ui_diagnostics\script_steps_wait.rs ecosystem\fret-bootstrap\src\ui_diagnostics\script_engine.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`
+  - result: passed.
+- JSON validation:
+  `python -m json.tool tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-long-text-geometry.json > $null`
+  and
+  `python -m json.tool tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-geometry.json > $null`
+  - result: passed.
+- registry:
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed; registry is up to date.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_element_effective_opacity_approx_eq_serializes_and_deserializes script_v2_roundtrip_ui_gallery_combobox_long_text_geometry script_v2_roundtrip_ui_gallery_combobox_rtl_long_text_geometry --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `021decf3-5aae-41ac-95f6-ec738542acca`.
+- diagnostics runtime gate test:
+  `cargo test --profile dev-fast -p fret-bootstrap runtime_gate_keeps_effective_opacity_predicates --features ui-app-driver,diagnostics -- --nocapture`
+  - result: passed.
+- compile/build:
+  `cargo check --profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics`
+  and
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused LTR runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-long-text-geometry.json --dir target\fret-diag-combobox-long-text-opacity-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779180476346`; AI packet
+    `target/fret-diag-combobox-long-text-opacity-v2/sessions/1779180467898-80632/1779180476346/ai.packet`.
+- focused RTL runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-geometry.json --dir target\fret-diag-combobox-rtl-long-text-opacity-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779180503756`; AI packet
+    `target/fret-diag-combobox-rtl-long-text-opacity-v1/sessions/1779180495343-65848/1779180503756/ai.packet`.
+- full Combobox geometry suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-combobox-geometry-placement --dir target\fret-diag-combobox-geometry-placement-opacity-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; 7/7 rows; suite summary
+    `target/fret-diag-combobox-geometry-placement-opacity-v1/sessions/1779180495343-74828/suite.summary.json`;
+    `scripts_with_evidence=7`; `overlay_chosen_side_counts.bottom=6`; `overlay_chosen_side_counts.top=5`.
+  - first failed bundle for diagnostics root-cause comparison:
+    `target/fret-diag-combobox-long-text-opacity-v1/sessions/1779179412289-69288/1779179421684/bundle.schema2.json`.
+
 ## AI FileTree Protocol Coverage And Auto-Height VirtualList Refresh
 
 - invariant:

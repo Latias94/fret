@@ -2503,6 +2503,17 @@ pub enum UiPredicateV1 {
     VisibleInWindow {
         target: UiSelectorV1,
     },
+    /// True when the target element's effective paint opacity approximately equals `opacity`.
+    ///
+    /// This reads the ElementRuntime paint-opacity stack after inherited `Opacity` wrappers are
+    /// applied, so scripts can gate paint-only selected/hidden affordances that remain present in
+    /// semantics and layout.
+    ElementEffectiveOpacityApproxEq {
+        target: UiSelectorV1,
+        opacity: f32,
+        #[serde(default)]
+        eps: f32,
+    },
     BoundsWithinWindow {
         target: UiSelectorV1,
         #[serde(default)]
@@ -4578,6 +4589,35 @@ mod tests {
 
         let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
         assert!(matches!(roundtrip, UiPredicateV1::SelectedIs { .. }));
+    }
+
+    #[test]
+    fn predicate_element_effective_opacity_approx_eq_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::ElementEffectiveOpacityApproxEq {
+            target: UiSelectorV1::TestId {
+                id: "command-item-alpha.checkmark".to_string(),
+                root_z_index: None,
+            },
+            opacity: 1.0,
+            eps: 0.125,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "element_effective_opacity_approx_eq",
+                "target": { "kind": "test_id", "id": "command-item-alpha.checkmark" },
+                "opacity": 1.0,
+                "eps": 0.125,
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::ElementEffectiveOpacityApproxEq { .. }
+        ));
     }
 
     #[test]

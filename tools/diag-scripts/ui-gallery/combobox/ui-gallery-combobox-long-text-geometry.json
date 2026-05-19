@@ -160,6 +160,24 @@
     {
       "type": "assert",
       "predicate": {
+        "kind": "element_effective_opacity_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-long-text-item-enterprise-observability-platform.checkmark" },
+        "opacity": 1.0,
+        "eps": 0.01
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "element_effective_opacity_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-long-text-item-short.checkmark" },
+        "opacity": 0.0,
+        "eps": 0.01
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
         "kind": "bounds_max_size",
         "target": { "kind": "test_id", "id": "ui-gallery-combobox-long-text-item-enterprise-observability-platform.label" },
         "max_w_px": 192.0,

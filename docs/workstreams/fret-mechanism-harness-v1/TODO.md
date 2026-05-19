@@ -268,6 +268,15 @@ date: 2026-05-12
 - [x] Add internal `CommandItem` label/checkmark anchors and Combobox popup-trigger text/checkmark
   size, vertical-centering, and inset predicates for both collision-flip and bottom-room runtime
   gates.
+- [x] Add Combobox selected/unselected checkmark effective-opacity runtime coverage.
+  - Result: `element_effective_opacity_approx_eq` now reads the declarative opacity stack from
+    `ElementRuntime`, and the LTR/RTL long-text Combobox geometry scripts assert selected long
+    checkmark opacity `1.0` plus unselected short checkmark opacity `0.0`. The first focused
+    runtime run exposed a diagnostics harness gap: predicate-bearing `assert`/`wait_until` steps did
+    not borrow `ElementRuntime` unless the selector was a `global_element_id`, so the new predicate
+    evaluated false before reading the target. The script engine now recognizes predicates that need
+    element runtime data, and the focused LTR/RTL runs plus the full
+    `ui-gallery-combobox-geometry-placement` suite pass.
 - [x] Retarget Combobox popup-trigger placement gates from the internal listbox to the content shell
   and add cross-metric side-gap oracles for both top-flip and bottom-room placement.
 - [x] Add Combobox long-text truncation/ellipsis coverage for constrained trigger and popup option

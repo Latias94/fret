@@ -31,7 +31,21 @@ fn script_step_needs_element_runtime(step: &UiActionStepV2) -> bool {
         step,
         UiActionStepV2::ClickSelectableTextSpanStable { .. }
             | UiActionStepV2::WaitOverlayPlacementTrace { .. }
-    ) || serialized_step_contains_global_element_selector(step)
+    ) || match step {
+        UiActionStepV2::WaitUntil { predicate, .. }
+        | UiActionStepV2::Assert { predicate, .. }
+        | UiActionStepV2::DragPointerUntil { predicate, .. } => {
+            predicate_needs_element_runtime(predicate)
+        }
+        _ => false,
+    } || serialized_step_contains_global_element_selector(step)
+}
+
+fn predicate_needs_element_runtime(predicate: &UiPredicateV1) -> bool {
+    matches!(
+        predicate,
+        UiPredicateV1::ElementEffectiveOpacityApproxEq { .. }
+    )
 }
 
 fn serialized_step_contains_global_element_selector(step: &UiActionStepV2) -> bool {
@@ -3066,6 +3080,20 @@ mod tests {
             stable_frames: 2,
             max_move_px: 1.0,
             timeout_frames: 180,
+        };
+
+        assert!(script_step_needs_element_runtime(&step));
+    }
+
+    #[test]
+    fn runtime_gate_keeps_effective_opacity_predicates() {
+        let step = UiActionStepV2::Assert {
+            window: None,
+            predicate: UiPredicateV1::ElementEffectiveOpacityApproxEq {
+                target: test_id_selector("cmd-item-alpha.checkmark"),
+                opacity: 1.0,
+                eps: 0.01,
+            },
         };
 
         assert!(script_step_needs_element_runtime(&step));
