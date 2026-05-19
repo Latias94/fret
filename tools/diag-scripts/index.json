@@ -12456,6 +12456,33 @@
         "Presses Escape to restore focus to pane content.",
         "Asserts content focus is restored."
       ]
+    },
+    {
+      "id": "workspace-shell-demo-window-close-dirty-aggregation-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-window-close-dirty-aggregation-smoke.json",
+      "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "aggregation",
+        "close",
+        "dirty",
+        "gate",
+        "prompt",
+        "smoke",
+        "window",
+        "workspace"
+      ],
+      "target_hints": [
+        "Marks the active tab in pane-a and the active tab in pane-b dirty.",
+        "Invokes the real window.close command from the debug UI.",
+        "Asserts the dirty-close prompt aggregates dirty tabs across panes and Cancel preserves the window."
+      ]
     }
   ]
 }

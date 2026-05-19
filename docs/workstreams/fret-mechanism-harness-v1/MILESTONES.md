@@ -2592,3 +2592,47 @@ stabilization, and fresh AI FileTree suite evidence.
   `target/fret-diag-ai-file-tree-suite-v3/sessions/1779168118270-70184/suite.summary.json`;
   4/4 scripts passed, `scripts_with_evidence=4`, and the screenshot script run id is
   `1779168265307`.
+
+## M130: Workspace Shell Demo Window-Close Dirty Aggregation Gate
+
+Status: complete for window-level dirty-close aggregation across workspace panes.
+
+- Added `WorkspaceCloseReason::CloseWindow`,
+  `WorkspaceWindowLayout::dirty_close_request_for_window_close`, and
+  `WorkspaceWindowLayout::can_close_window_with_policy` so the workspace policy layer can build a
+  single dirty-close request over all pane tabs before a window is closed.
+- Routed the workspace shell demo's real `window.close` command and `Event::WindowCloseRequested`
+  through that policy path. When policy blocks, the app-owned dirty-close prompt now reports the
+  `CloseWindow` reason and preserves the window until the user chooses Discard or Save.
+- Added debug controls that mark pane-a and pane-b active tabs dirty, then dispatch the real
+  `window.close` command. The shared command-button helper now records pending pointer source so
+  driver-handled commands keep accurate diagnostics attribution.
+- Added
+  `workspace-shell-demo-window-close-dirty-aggregation-smoke.json` and promoted it into the
+  `workspace-shell-demo` suite. The script marks `doc-a-2` and `doc-b-1` dirty, clicks
+  `workspace-shell-debug-close-window`, asserts pointer-sourced `window.close`, verifies the prompt
+  label contains `reason=CloseWindow active=doc-a-2 close_count=5` and
+  `dirty=[doc-a-2, doc-b-1]`, cancels, and proves both panes plus dirty markers remain.
+- The first focused drafts exposed diagnostics authoring gaps rather than the final ownership
+  invariant: the `window.close` driver branch did not record a command-dispatch trace, the shared
+  debug command button did not record pending pointer source, and the redirect file needed
+  `kind=script_redirect`/`to` to run under the suite launcher.
+- Gates pass:
+  `rustfmt --edition 2024 --check ecosystem\fret-workspace\src\close_policy.rs ecosystem\fret-workspace\src\layout.rs apps\fret-examples\src\workspace_shell_demo.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python -m json.tool tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-window-close-dirty-aggregation-smoke.json > $null`;
+  `python -m json.tool tools\diag-scripts\workspace-shell-demo-window-close-dirty-aggregation-smoke.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-workspace window_close_dirty_policy_aggregates_tabs_across_panes --no-fail-fast --no-capture`
+  with Nextest run id `8cf5ad37-5f56-4572-bab9-b3d96f5a29ae`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_workspace_shell_demo_window_close_dirty_aggregation_smoke --no-fail-fast --no-capture`
+  with Nextest run id `a076a73a-6fe1-44c5-9757-1fd257a67a0c`; and
+  `cargo build --profile dev-fast -p fret-demo --bin workspace_shell_demo`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-window-close-dirty-aggregation-smoke.json --dir target\fret-diag-workspace-shell-demo-window-close-dirty-aggregation-v4 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  with run id `1779171091877` and AI packet
+  `target/fret-diag-workspace-shell-demo-window-close-dirty-aggregation-v4/sessions/1779171088566-57484/1779171091877/ai.packet`.
+- Full runtime suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite workspace-shell-demo --dir target\fret-diag-workspace-shell-demo-suite-window-close-dirty-aggregation-v2 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  with suite summary
+  `target/fret-diag-workspace-shell-demo-suite-window-close-dirty-aggregation-v2/sessions/1779171327648-11792/suite.summary.json`;
+  the new window-close dirty aggregation script run id is `1779171369594`.

@@ -1150,6 +1150,16 @@ date: 2026-05-12
     context-menu ownership gate now strictly asserts `workspace.pane.activate.pane-b` is
     pointer-sourced from `workspace-shell-pane-pane-b-tab-doc-b-1`, while preserving the aggregate
     Close Other Tabs ownership proof.
+- [x] Promote workspace shell demo window-close dirty aggregation into the runtime suite.
+  - Result: `window.close` and `Event::WindowCloseRequested` now route through workspace
+    dirty-close policy instead of closing the window directly. `WorkspaceWindowLayout` aggregates a
+    `CloseWindow` request across panes, the demo prompts when dirty tabs exist, and
+    `workspace-shell-demo-window-close-dirty-aggregation-smoke.json` marks dirty tabs in both
+    panes, invokes the real `window.close` button, proves
+    `reason=CloseWindow active=doc-a-2 close_count=5 dirty=[doc-a-2, doc-b-1]`, and verifies
+    Cancel preserves the window and dirty state. The first runtime drafts exposed diagnostics
+    authoring gaps around driver-handled `window.close` traces, debug-button pointer source, and
+    redirect shape; all are fixed in the promoted gate.
 - [x] Harden retained DataTable column-action state and stale-script gates.
   - Result: `ui-gallery-data-table-retained-column-actions-menu.json` now asserts pointer-sourced
     command dispatch for `pin_left`, `sort_asc`, and `hide` on `mem_mb`, then proves the hidden

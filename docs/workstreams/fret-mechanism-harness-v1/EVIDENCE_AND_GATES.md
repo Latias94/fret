@@ -4951,6 +4951,71 @@ Next slice recommendation:
     `target/fret-diag-workspace-shell-demo-suite-cross-pane-context-source-v1/sessions/1779156335684-11164/suite.summary.json`;
     strengthened context-menu Close Others ownership script run id `1779156370933`.
 
+## Workspace Shell Demo Window-Close Dirty Aggregation Gate
+
+- invariant:
+  window-level close requests must aggregate dirty tabs across all panes and block through the
+  workspace dirty-close policy before the app closes the window. The real `window.close` command
+  and OS close request path must not bypass tab close policy.
+- finding:
+  a real app-shell defect was confirmed. The workspace shell demo's `window.close` command and
+  `Event::WindowCloseRequested` path pushed `WindowRequest::Close` directly, so dirty tabs in any
+  pane could be lost without the dirty-close prompt. The fix lives in the owning workspace/app
+  policy layer: `fret-workspace` now builds a `CloseWindow` dirty-close request across panes, and
+  the demo routes both command and event paths through that policy.
+- diagnostics surface:
+  `workspace-shell-demo-window-close-dirty-aggregation-smoke.json` marks `doc-a-2` dirty in
+  pane-a and `doc-b-1` dirty in pane-b, clicks `workspace-shell-debug-close-window`, waits for a
+  pointer-sourced `window.close` command dispatch, asserts the prompt label contains
+  `reason=CloseWindow active=doc-a-2 close_count=5` and `dirty=[doc-a-2, doc-b-1]`, cancels, and
+  proves both pane roots and dirty markers remain.
+- diagnostics authoring note:
+  the first focused drafts exposed harness gaps while making the gate strict. The `window.close`
+  driver branch did not record a command-dispatch trace, the shared debug command button dispatched
+  without pending pointer source metadata, and the suite redirect file used the wrong v1 shape.
+  These are fixed by the demo command-dispatch helpers and the `kind=script_redirect` redirect.
+- implementation anchors:
+  `ecosystem/fret-workspace/src/close_policy.rs`,
+  `ecosystem/fret-workspace/src/layout.rs`,
+  `apps/fret-examples/src/workspace_shell_demo.rs`,
+  `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-window-close-dirty-aggregation-smoke.json`,
+  `tools/diag-scripts/workspace-shell-demo-window-close-dirty-aggregation-smoke.json`,
+  `tools/diag-scripts/suites/workspace-shell-demo/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- JSON validation:
+  `python -m json.tool tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-window-close-dirty-aggregation-smoke.json > $null`
+  - result: passed.
+  `python -m json.tool tools\diag-scripts\workspace-shell-demo-window-close-dirty-aggregation-smoke.json > $null`
+  - result: passed.
+- registry:
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed; registry is up to date.
+- formatting:
+  `rustfmt --edition 2024 --check ecosystem\fret-workspace\src\close_policy.rs ecosystem\fret-workspace\src\layout.rs apps\fret-examples\src\workspace_shell_demo.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`
+  - result: passed.
+- focused workspace policy:
+  `cargo nextest run --cargo-profile dev-fast -p fret-workspace window_close_dirty_policy_aggregates_tabs_across_panes --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `8cf5ad37-5f56-4572-bab9-b3d96f5a29ae`.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_workspace_shell_demo_window_close_dirty_aggregation_smoke --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `a076a73a-6fe1-44c5-9757-1fd257a67a0c`.
+- build:
+  `cargo build --profile dev-fast -p fret-demo --bin workspace_shell_demo`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-window-close-dirty-aggregation-smoke.json --dir target\fret-diag-workspace-shell-demo-window-close-dirty-aggregation-v4 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  - result: passed; run id `1779171091877`; AI packet
+    `target/fret-diag-workspace-shell-demo-window-close-dirty-aggregation-v4/sessions/1779171088566-57484/1779171091877/ai.packet`.
+- full runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite workspace-shell-demo --dir target\fret-diag-workspace-shell-demo-suite-window-close-dirty-aggregation-v2 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  - result: passed; suite summary
+    `target/fret-diag-workspace-shell-demo-suite-window-close-dirty-aggregation-v2/sessions/1779171327648-11792/suite.summary.json`;
+    window-close dirty aggregation script run id `1779171369594`.
+- static diff check:
+  `git diff --check`
+  - result: passed.
+
 ## Retained DataTable Column Actions And Stale Script Gates
 
 - invariant:
