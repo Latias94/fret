@@ -3230,3 +3230,25 @@ Status: complete for the decorated-window/client-area companion coverage.
   and new client-height script run id `1779232938320`.
 - A plain `cargo build -p fret-ui-gallery` attempt to refresh `target\debug\fret-ui-gallery.exe`
   timed out and was not used as evidence. Current runtime evidence is from `target\dev-fast`.
+
+## M148: Chart Explicit Y Linked-Domain Propagation Mechanism Gate
+
+Status: complete for the retained two-chart explicit Y propagation mechanism path.
+
+- Added
+  `explicit_y_domain_window_propagates_to_second_linked_chart_output_model` in
+  `ecosystem/fret-chart/src/retained/canvas.rs`.
+- The regression constructs a source retained chart and a target retained chart from the same
+  ambiguous multi-axis spec, applies an explicit `AxisId -> LinkAxisKey` map for the otherwise
+  ambiguous Y axis, and gives the target chart a different local initial Y window.
+- The test proves the full mechanism chain: source `ChartCanvasOutput` publishes the explicit Y
+  window, `LinkedChartGroup::tick` writes it into shared linked-domain state, target retained paint
+  consumes that model through `sync_linked_domain_windows`, and target `ChartCanvasOutput` publishes
+  the propagated window rather than its local initial window.
+- Gates pass:
+  `rustfmt --edition 2024 --check ecosystem\fret-chart\src\retained\canvas.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-chart explicit_link_axis_map_publishes_ambiguous_y_domain_window_to_output_model explicit_y_domain_window_propagates_to_second_linked_chart_output_model --no-fail-fast --no-capture`
+  with Nextest run id `620beddb-8a62-4de0-81fd-d5f2fadb28f1`.
+- Runtime note: `chart_multi_axis_demo` currently logs linked-domain state but does not expose an
+  app snapshot provider for direct `fretboard-dev diag` assertions. A follow-up runtime companion
+  should add that bounded diagnostics surface before promoting a demo-level gate.

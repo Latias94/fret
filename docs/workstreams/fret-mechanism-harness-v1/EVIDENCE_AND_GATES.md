@@ -6095,3 +6095,32 @@ Next slice recommendation:
   `cargo build -p fret-ui-gallery` was attempted to refresh `target\debug\fret-ui-gallery.exe`, but
   timed out after five minutes and was stopped. Do not treat `target\debug` or older
   `target\release` gallery binaries as evidence for this slice unless rebuilt separately.
+
+## Chart Explicit Y Linked-Domain Propagation Mechanism Gate
+
+- invariant:
+  an explicit Y link-axis map must propagate through the linked-domain shared model into a second
+  retained chart, not only publish from the source chart's output model.
+- finding:
+  no `fret-chart` mechanism defect was reproduced. The missing coverage was the second half of the
+  propagation chain after F228: source output publication had a gate, but the target chart's real
+  paint-time `sync_linked_domain_windows` path and target output publication were not covered.
+- implementation anchors:
+  `ecosystem/fret-chart/src/retained/canvas.rs`.
+- test shape:
+  `explicit_y_domain_window_propagates_to_second_linked_chart_output_model` creates source and
+  target retained charts from the ambiguous multi-axis spec, applies an explicit Y map for
+  `AxisId::new(3) -> LinkAxisKey { kind: Y, dataset: 1, field: 2 }`, publishes source output,
+  ticks `LinkedChartGroup`, pumps real target retained layout/paint frames, and asserts target
+  output publishes the propagated `[-0.25, 0.75]` window instead of its initial `[-5.0, 5.0]`
+  local Y window.
+- format:
+  `rustfmt --edition 2024 --check ecosystem\fret-chart\src\retained\canvas.rs`
+  - result: passed.
+- mechanism regressions:
+  `cargo nextest run --cargo-profile dev-fast -p fret-chart explicit_link_axis_map_publishes_ambiguous_y_domain_window_to_output_model explicit_y_domain_window_propagates_to_second_linked_chart_output_model --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `620beddb-8a62-4de0-81fd-d5f2fadb28f1`.
+- residual runtime gap:
+  `apps/fret-examples/src/chart_multi_axis_demo.rs` already has two linked charts and deterministic
+  diagnostics auto-zoom, but currently exposes linked-domain state through logs rather than an app
+  snapshot provider. Add a bounded snapshot surface before promoting a runtime assertion gate.

@@ -235,6 +235,13 @@ date: 2026-05-12
   `ui-gallery-chart-linking-explicit-y-map` so it does not inherit the pan/zoom-only Chart Torture
   tail policy. Suite evidence is anchored at
   `target/fret-diag-chart-linking-explicit-y-map-suite-v1/sessions/1779226956912-131628/suite.summary.json`.
+- Chart explicit Y linked-domain propagation update:
+  `explicit_y_domain_window_propagates_to_second_linked_chart_output_model` now covers the
+  two-chart retained mechanism path: source output publishes an explicit Y domain window,
+  `LinkedChartGroup` writes it to shared linked-domain state, target retained paint consumes that
+  model through `sync_linked_domain_windows`, and target output republishes the propagated window.
+  Focused chart evidence uses Nextest run id `620beddb-8a62-4de0-81fd-d5f2fadb28f1`. The remaining
+  runtime companion gap is a bounded app snapshot provider for `chart_multi_axis_demo`.
 - AI transcript non-retained scroll update:
   `ui-gallery-ai-transcript-torture-scroll.json` now gates deterministic large-transcript mutation
   on the non-retained AI transcript path by asserting a hidden message-count semantics value moves

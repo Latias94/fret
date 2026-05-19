@@ -1357,3 +1357,11 @@ date: 2026-05-12
     promoted suite covers that outer-window/client-area ambiguity. The focused gate passed with
     run id `1779232803236`, and the full `ui-gallery-combobox-geometry-placement` suite passed
     13/13 with the new row run id `1779232938320`.
+- [x] Gate explicit Y linked-domain propagation into a second retained chart.
+  - Result:
+    added a retained `fret-chart` mechanism regression proving the full two-chart propagation path:
+    the source chart publishes an explicit `AxisId -> LinkAxisKey` Y domain window, `LinkedChartGroup`
+    copies it into shared linked-domain state, the target chart consumes that model through its real
+    paint-time `sync_linked_domain_windows` path, and the target `ChartCanvasOutput` publishes the
+    same explicit Y window instead of its initial local window. Focused chart checks passed with
+    Nextest run id `620beddb-8a62-4de0-81fd-d5f2fadb28f1`.
