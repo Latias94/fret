@@ -1064,6 +1064,10 @@ Readiness order for the next locally testable review slices:
    now has a focused gate proving caller-supplied `text_button_label(...)` children keep their
    role-owned no-wrap, ellipsis, zero-min-width, and shrink contract under button-group chrome
    composition. The default `ButtonGroupText::new(...)` label path remains component-owned policy.
+   2026-05-20 shadcn TabsTrigger children-role follow-up: trigger typography/foreground patching
+   now treats `inherited_text_style` as a protected role scope. Bare trigger text keeps the shadcn
+   fallback, while caller-supplied `text_button_label(...)` trigger children keep their role-owned
+   single-line shrink/ellipsis contract under tabs chrome composition.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

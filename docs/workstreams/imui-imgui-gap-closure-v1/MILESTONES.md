@@ -952,6 +952,9 @@ Exit criteria:
   2026-05-20 shadcn ButtonGroupText children role-preservation result: the existing composable
   ButtonGroupText children lane now has a focused gate proving caller-supplied button-label roles
   keep their single-line shrink/ellipsis contract under button-group chrome composition.
+  2026-05-20 shadcn TabsTrigger role-preservation result: TabsTrigger now preserves
+  caller-supplied button-label roles in trigger children by treating inherited text styles as
+  protected role scopes, while bare trigger labels still receive the shadcn tabs fallback.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

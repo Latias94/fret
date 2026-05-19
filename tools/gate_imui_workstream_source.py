@@ -3749,6 +3749,26 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/tabs.rs"),
+            required=[
+                "fn apply_trigger_inherited_style(",
+                "role_scope_active: bool",
+                "let role_scope_active = role_scope_active || element.inherited_text_style.is_some();",
+                "if props.style.is_none() && !role_scope_active",
+                "if props.color.is_none() && !role_scope_active",
+                "apply_trigger_inherited_style(\n                child,\n                fg,\n                text_style,\n                default_icon_color,\n                role_scope_active,\n            )",
+                "tabs_trigger_applies_default_style_to_bare_label_text",
+                "tabs_trigger_children_preserve_shared_button_label_role_contracts",
+                "TabsItem::new(\"alpha\", \"Alpha\", Vec::<AnyElement>::new())\n                        .trigger_children([decl_text::text_button_label(cx, \"Open Workbench\")])",
+                "assert_eq!(props.wrap, fret_core::TextWrap::None);",
+                "assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);",
+            ],
+            forbidden=[
+                "if props.style.is_none() {\n                props.style = Some(text_style.clone());",
+                "if props.color.is_none() {\n                props.color = Some(fg);",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-shadcn/src/item.rs"),
             required=[
                 "fn patch_item_title_text_style_recursive_scoped(",

@@ -4492,6 +4492,32 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - Focused `cargo nextest run -p fret-ui-shadcn --lib
   button_group_text_children_preserve_shared_button_label_role_contracts --no-fail-fast` passed.
 
+2026-05-20 shadcn TabsTrigger role-preservation slice:
+
+- Source gap before fix: `TabsTrigger` recursively wrote trigger typography and foreground into
+  descendant passive text leaves whenever `style` / `color` were empty. Shared text role helpers
+  intentionally keep leaf `style` and `color` empty and carry typography through
+  `inherited_text_style`, so trigger children built with `text_button_label(...)` lost their
+  role-owned single-line shrink/ellipsis contract.
+- `apply_trigger_inherited_style(...)` now treats `inherited_text_style` as a protected role scope
+  and carries that scope through descendants. Bare trigger text still receives the shadcn trigger
+  typography/foreground fallback; shared role children keep leaf `style: None`, `color: None`,
+  no-wrap, ellipsis overflow, zero minimum width, shrink, and inherited role metadata. Trigger
+  foreground still flows through the content root's inherited foreground instead of being stamped
+  onto role-owned text leaves.
+- `tabs_trigger_applies_default_style_to_bare_label_text` proves the bare-text fallback remains;
+  `tabs_trigger_children_preserve_shared_button_label_role_contracts` proves a shared button-label
+  role survives `TabsItem::trigger_children(...)`.
+- First focused `cargo nextest run -p fret-ui-shadcn --lib
+  tabs_trigger_applies_default_style_to_bare_label_text
+  tabs_trigger_children_preserve_shared_button_label_role_contracts --no-fail-fast` timed out while
+  Cargo/Rustc was still compiling. No process was killed; after Cargo/Rustc exited naturally, the
+  same focused command passed.
+- Post-fix focused run passed:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  tabs_trigger_applies_default_style_to_bare_label_text
+  tabs_trigger_children_preserve_shared_button_label_role_contracts --no-fail-fast`.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground
