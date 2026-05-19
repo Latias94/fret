@@ -898,6 +898,10 @@ Exit criteria:
   2026-05-20 shadcn CardDescription children role-preservation result: the composable
   CardDescription children lane now has a focused gate proving shared description/body roles keep
   their role-owned wrap/overflow and inherited metadata under card composition.
+  2026-05-20 shadcn Sheet/Popover description children role-preservation result: SheetDescription
+  and PopoverDescription now have composable children lanes, with focused gates proving shared
+  paragraph/body roles keep role-owned wrap/layout and inherited metadata under overlay description
+  composition.
   2026-05-19 shadcn AlertTitle role-preservation result: AlertTitle keeps the shadcn title fallback
   for bare/rich alert-title children, while shared title/chrome roles remain protected role scopes
   and keep their single-line ellipsis contract under alert composition.

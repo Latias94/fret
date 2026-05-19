@@ -58,6 +58,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix Dialog:
 - Pass: `SheetContent::build(...)` is the typed content-side companion on that same recipe lane,
   so first-party snippets no longer need to pre-land `SheetHeader` / `SheetFooter` trees into a
   raw `SheetContent::new([...])` array.
+- Pass: `SheetDescription::new_children(...)` covers composed/rich description bodies while
+  preserving caller-supplied shared text-role children under the sheet description scope.
 
 ### Placement & sizing
 
@@ -97,6 +99,7 @@ Upstream shadcn/ui exports a thin wrapper around Radix Dialog:
 - Contract test: `sheet_disable_pointer_dismissal_alias_maps_overlay_closable`
 - Contract test: `sheet_open_change_events_emit_change_and_complete_after_settle`
 - Contract test: `sheet_open_change_events_complete_without_animation`
+- Contract test: `sheet_description_children_preserve_shared_text_role_contracts`
 - Contract test: `sheet_children_builder_opens_and_closes_with_default_close_button`
 - Contract test: `sheet_children_content_with_supports_from_scope_close`
 - Shadcn Web chrome gates: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`

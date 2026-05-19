@@ -2063,6 +2063,8 @@ def main() -> None:
                 "`PaginationPrevious` / `PaginationNext` visible text",
                 "2026-05-20 shadcn CardDescription children role-preservation follow-up",
                 "CardDescription now has a focused gate proving shared description/body text roles",
+                "2026-05-20 shadcn Sheet/Popover description children role-preservation follow-up",
+                "SheetDescription and PopoverDescription now expose composable children lanes",
             ],
             forbidden=[
                 "Remaining advanced-table candidates are freeze panes, persistence, and old columns API shape",
@@ -2102,6 +2104,8 @@ def main() -> None:
                 "`fret-ui-shadcn` Previous/Next visible labels",
                 "2026-05-20 shadcn CardDescription children role-preservation result",
                 "shared description/body roles keep",
+                "2026-05-20 shadcn Sheet/Popover description children role-preservation result",
+                "and PopoverDescription now have composable children lanes",
             ],
             forbidden=[
                 "remain advanced-table candidates",
@@ -2149,6 +2153,18 @@ def main() -> None:
             forbidden=[
                 "copy Dear ImGui's mutable style stack",
                 "add a public `TextRole` enum now",
+            ],
+        ),
+        SourceCheck(
+            Path("docs/workstreams/text-style-cascade-fearless-refactor-v1/TODO.md"),
+            required=[
+                "| `SheetDescription`, `PopoverDescription` | `new`, `new_children` | Keep children lanes |",
+                "sheet_description_children_preserve_shared_text_role_contracts",
+                "popover_description_children_preserve_shared_text_role_contracts",
+                "| `AlertDialogDescription`, `EmptyDescription` | `new` | Keep text-only for now |",
+            ],
+            forbidden=[
+                "`SheetDescription`, `PopoverDescription`, `AlertDialogDescription`, `EmptyDescription` | `new` | Keep text-only for now",
             ],
         ),
         SourceCheck(
@@ -2431,6 +2447,9 @@ def main() -> None:
                 "`python tools\\gate_imui_workstream_source.py`",
                 "2026-05-20 shadcn CardDescription children role-preservation gate",
                 "card_description_children_preserve_shared_text_role_contracts --no-fail-fast` timed out",
+                "2026-05-20 shadcn Sheet/Popover description children role-preservation gate",
+                "sheet_description_children_preserve_shared_text_role_contracts",
+                "popover_description_children_preserve_shared_text_role_contracts",
                 "cargo check -p fret-examples",
             ],
             forbidden=[
@@ -3777,6 +3796,7 @@ def main() -> None:
                 "sheet_title_children_patch_rich_text_with_title_typography",
                 "sheet_title_children_preserve_shared_text_role_contracts",
                 "sheet_description_scopes_inherited_text_style",
+                "sheet_description_children_preserve_shared_text_role_contracts",
             ],
             forbidden=[],
         ),
@@ -3790,6 +3810,7 @@ def main() -> None:
                 "popover_title_children_patch_rich_text_with_title_typography",
                 "popover_title_children_preserve_shared_text_role_contracts",
                 "popover_description_scopes_inherited_text_style",
+                "popover_description_children_preserve_shared_text_role_contracts",
             ],
             forbidden=[],
         ),

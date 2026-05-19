@@ -1899,28 +1899,53 @@ fn patch_popover_title_text_style_recursive_scoped(
 }
 
 /// shadcn/ui `PopoverDescription` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PopoverDescription {
-    text: Arc<str>,
+    content: PopoverDescriptionContent,
+}
+
+#[derive(Debug)]
+enum PopoverDescriptionContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
 }
 
 impl PopoverDescription {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            content: PopoverDescriptionContent::Text(text.into()),
+        }
+    }
+
+    pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: PopoverDescriptionContent::Children(children.into_iter().collect()),
+        }
     }
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        scope_description_text(
-            ui::raw_text(self.text)
-                .wrap(TextWrap::Word)
-                .overflow(TextOverflow::Clip)
-                .into_element(cx),
-            &theme,
-            "component.popover.description",
-        )
+        match self.content {
+            PopoverDescriptionContent::Text(text) => scope_description_text(
+                ui::raw_text(text)
+                    .wrap(TextWrap::Word)
+                    .overflow(TextOverflow::Clip)
+                    .into_element(cx),
+                &theme,
+                "component.popover.description",
+            ),
+            PopoverDescriptionContent::Children(children) => scope_description_text(
+                ui::v_flex(move |_cx| children)
+                    .gap(Space::N1)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx),
+                &theme,
+                "component.popover.description",
+            ),
+        }
     }
 }
 
@@ -2027,6 +2052,38 @@ mod tests {
             element.inherited_foreground,
             Some(fret_ui_kit::typography::muted_foreground_color(&theme))
         );
+    }
+
+    #[test]
+    fn popover_description_children_preserve_shared_text_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(160.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            PopoverDescription::new_children([decl_text::text_compact_paragraph(
+                cx,
+                "Description body copy",
+            )])
+            .into_element(cx)
+        });
+
+        let text = find_text_element(&element, "Description body copy")
+            .expect("expected PopoverDescription role child text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert!(text.inherited_text_style.is_some());
     }
 
     #[test]

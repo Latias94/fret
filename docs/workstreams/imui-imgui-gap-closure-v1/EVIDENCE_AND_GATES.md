@@ -4436,6 +4436,22 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   Cargo/Rustc was still compiling. No process was killed; after Cargo/Rustc exited naturally, the
   same focused command passed.
 
+2026-05-20 shadcn Sheet/Popover description children role-preservation gate:
+
+- Source gap before gate: `SheetDescription` and `PopoverDescription` were text-only leaves, so
+  callers could not hand a composed shared paragraph role tree into the description slot without
+  wrapping around the component boundary.
+- `sheet_description_children_preserve_shared_text_role_contracts` and
+  `popover_description_children_preserve_shared_text_role_contracts` now prove a
+  `text_compact_paragraph(...)` child keeps `style: None`, wrap, fill-width layout, and inherited
+  role metadata when mounted through the description slots.
+- This widens the shadcn recipe/API surface only where the component already had a description slot;
+  it does not add a new `fret-imui` text role or move policy into `fret-imui`.
+- Focused `cargo nextest run -p fret-ui-shadcn --lib
+  sheet_description_children_preserve_shared_text_role_contracts
+  popover_description_children_preserve_shared_text_role_contracts --no-fail-fast` passed after the
+  new children lanes landed.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground
