@@ -306,3 +306,2413 @@ Follow-up:
 
 - `RBX-M1-060` should decide whether the existing declarative primitives can host the extracted
   controller + snapshot path, or whether a narrow mechanism-only managed-surface primitive is needed.
+
+## 2026-05-19 - RBX-M1-060 declarative managed-surface host proof
+
+Claim verified:
+
+- Existing declarative primitives were not sufficient for docking because they did not expose a
+  mechanism-only way for an ecosystem host to lay out child roots from runtime geometry, keep a
+  host surface alive for prepaint, and choose child-root paint order/rects.
+- `fret-ui` now provides a narrow `ManagedSurface` declarative primitive. It is mechanism-only:
+  handlers are stored in element-local state, props remain plain data, and docking policy stays in
+  `fret-docking`.
+- A declarative managed surface can consume `DockSpaceLayoutSnapshot` for docking panel-root
+  placement and paint ordering without `RetainedSubtreeProps`.
+- `DockSpaceLayoutSnapshot::paint_panel_bounds` is graph-order stable; it no longer depends on
+  `HashMap` iteration order.
+
+Evidence:
+
+- `crates/fret-ui/src/managed_surface.rs`
+- `crates/fret-ui/src/element.rs`
+- `crates/fret-ui/src/elements/cx.rs`
+- `crates/fret-ui/src/declarative/host_widget.rs`
+- `crates/fret-ui/src/declarative/host_widget/layout.rs`
+- `crates/fret-ui/src/declarative/host_widget/measure.rs`
+- `crates/fret-ui/src/declarative/host_widget/paint.rs`
+- `crates/fret-ui/src/declarative/mount.rs`
+- `crates/fret-ui/src/declarative/tests/managed_surface.rs`
+- `ecosystem/fret-docking/src/dock/space.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-ui`
+  - Result: passed.
+  - Scope proven: the managed-surface primitive type-checks in the `fret-ui` mechanism layer.
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: the docking snapshot placement helper and proof compile without widening public
+    retained APIs.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the managed-surface and docking proof edits.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 3 tests.
+  - Scope proven: managed surfaces can place declarative child roots, paint child roots in
+    host-selected order/rects, and run prepaint hooks when enabled.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 112 tests.
+  - Scope proven: docking behavior remains green, including the new declarative managed-surface
+    snapshot proof and the retained adapter's shared placement path.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and the retained-bridge allowlist remain valid after adding the
+    mechanism primitive and docking proof.
+
+Blocked broader gate:
+
+- `cargo nextest run -p fret-ui -p fret-docking`
+  - Result: failed before completion on
+    `fret-ui declarative::tests::anchored_layout_invalidation_harness::mechanism_harness_anchored_layout_invalidation_matches_oracles`.
+  - Repeat: `cargo nextest run -p fret-ui mechanism_harness_anchored_layout_invalidation_matches_oracles`
+    also fails with the same `first-panel` layout-bounds mismatch.
+  - Assessment: this is an independent anchored-layout mechanism harness failure outside the
+    `ManagedSurface` and docking snapshot proof surface. The `fret-ui managed_surface` targeted
+    gate and the full `fret-docking` gate are green.
+
+Follow-up:
+
+- `RBX-M1-070` should replace public retained docking entry points with declarative entry points
+  backed by the managed-surface mechanism.
+- A separate follow-up should diagnose the anchored-layout harness red test before treating
+  `cargo nextest run -p fret-ui -p fret-docking` as a green aggregate gate again.
+
+## 2026-05-19 - RBX-M1-070 public declarative docking entry points
+
+Claim verified:
+
+- `fret-docking` now exposes a public declarative dock-space entry path backed by
+  `ManagedSurface`.
+- New declarative panel content returns `AnyElement` roots through
+  `DockPanelElementRegistry` / `DockPanelElementRegistryService`; the public replacement path no
+  longer asks callers to create retained `UiTree` nodes.
+- The retained `create_dock_space_node*` and `mount_dock_space*` helpers are explicitly documented
+  as legacy compatibility entry points.
+- `imui` has a declarative wrapper (`dock_space_declarative*`) for callers that configure the dock
+  graph before mounting declarative panel content.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/mod.rs`
+- `ecosystem/fret-docking/src/lib.rs`
+- `ecosystem/fret-docking/src/imui.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `ecosystem/fret-docking/tests/public_surface_policy.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: the declarative docking entry points compile in the default `fret-docking`
+    feature set.
+- `cargo check -p fret-docking --features imui`
+  - Result: passed.
+  - Scope proven: the new `imui` declarative wrapper compiles together with the existing legacy
+    retained imui bridge.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_hosts_registry_panel_roots`
+  - Result: passed, 1 test.
+  - Scope proven: public `dock_space_element_from_registry(...)` can render declarative panel roots,
+    bind them through `DockPanelContentService`, and place/paint them from
+    `DockSpaceLayoutSnapshot`.
+- `cargo nextest run -p fret-docking public_docking_surface_prefers_declarative_entry_points retained_docking_entry_points_are_documented_as_legacy`
+  - Result: passed, 2 tests.
+  - Scope proven: public declarative symbols are exported and the declarative entry module does not
+    reference `RetainedSubtreeProps`, `UiTreeRetainedExt`, or `create_node_retained`.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 115 tests.
+  - Scope proven: existing docking behavior remains green after adding the declarative public entry
+    surface and legacy retained-entry documentation.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 3 tests.
+  - Scope proven: the underlying `ManagedSurface` mechanism used by the public docking entry points
+    remains green after the public surface wiring.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the M1-060/M1-070 code and tests.
+- `cargo check -p fret-demo --bin todo_demo`
+  - Result: passed.
+  - Scope proven: the default native demo binary still compiles after the public docking surface
+    additions and re-exports.
+- `cargo check -p fret-cookbook --example docking_basics --features cookbook-docking`
+  - Result: passed.
+  - Scope proven: a public docking example that still uses the legacy retained adapter compiles
+    while the new declarative entry points coexist.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after adding `RBX-M1-075`.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Known gap:
+
+- App/demo call sites still use the legacy retained `DockSpace` adapter where they require full
+  docking interactions. This is intentional for this slice: retained `DockSpace` still owns event,
+  command, focus, internal-drag route, diagnostics, chrome painting, and viewport capture hooks.
+  That remaining adapter migration is tracked as `RBX-M1-075` before `RBX-M1-080` can remove
+  `fret-docking`'s `fret-ui/unstable-retained-bridge` dependency.
+
+## 2026-05-19 - RBX-M1-075 first slice: managed-surface command/focus hooks
+
+Claim verified:
+
+- `ManagedSurface` now has mechanism-only hooks for event dispatch, command dispatch, and command
+  availability. The hooks expose runtime context capabilities needed by interaction-heavy hosts
+  without exposing the retained `Widget` API to ecosystem crates.
+- `fret-docking` uses the new declarative command hook for
+  `dock.focus_requested_panel`, so the public declarative dock-space entry point can focus a
+  requested panel root without depending on retained `DockSpace::command`.
+- `RBX-M1-075` is not complete yet. This slice only moved command/focus routing; raw docking
+  pointer/internal-drag event arbitration, diagnostics/prepaint liveness, chrome painting, drop
+  hints, viewport layout sync, and viewport capture still live on the retained `DockSpace` adapter.
+
+Evidence:
+
+- `crates/fret-ui/src/managed_surface.rs`
+- `crates/fret-ui/src/elements/cx.rs`
+- `crates/fret-ui/src/declarative/host_widget.rs`
+- `crates/fret-ui/src/declarative/host_widget/event/mod.rs`
+- `crates/fret-ui/src/declarative/tests/managed_surface.rs`
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/services.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-ui managed_surface_dispatches_event_command_and_availability_hooks`
+  - Result: passed, 1 test.
+  - Scope proven: the new mechanism hooks can receive a pointer event, request focus, report
+    command availability, and handle a command through declarative managed-surface authoring.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 4 tests.
+  - Scope proven: existing managed-surface layout/prepaint/paint proofs remain green with the new
+    event/command hooks.
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: the declarative docking host command/focus hook compiles in the default
+    `fret-docking` feature set.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_handles_focus_requested_panel_command`
+  - Result: passed, 1 test.
+  - Scope proven: `DockManager::request_activate_panel(..., focus: true)` can emit
+    `dock.focus_requested_panel`; the public declarative dock-space host consumes it and focuses the
+    requested panel root.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 2 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots
+    and now also handles the focus-request command path.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 116 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    while the public declarative host starts taking over command/focus routing.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the managed-surface and docking command/focus
+    edits.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained-bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after recording `RBX-M1-075` first-slice
+    progress.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Follow-up:
+
+- Continue `RBX-M1-075` with a small event/prepaint slice. The next safest target is internal-drag
+  route keep-alive plus one minimal event arbitration path before moving full docking drag/drop
+  behavior.
+
+## 2026-05-19 - RBX-M1-075 second slice: declarative internal-drag route keep-alive
+
+Claim verified:
+
+- The public declarative dock-space host now refreshes `DRAG_KIND_DOCK_PANEL` and
+  `DRAG_KIND_DOCK_TABS` internal-drag routes during layout, prepaint, and paint.
+- The public declarative dock-space host registers itself as `DockManager::dock_space_node(...)`
+  for its window, preserving the retained adapter's dock-space node anchor contract.
+- `ManagedSurface` layout/prepaint/paint contexts expose the current host `NodeId`, allowing
+  mechanism users to install route anchors without retained `Widget` access.
+- `RBX-M1-075` still remains open. This slice moved internal-drag route keep-alive; diagnostics,
+  raw docking event arbitration, chrome/drop-hint painting, viewport layout sync, drag ghost, and
+  viewport capture are still retained-adapter responsibilities.
+
+Evidence:
+
+- `crates/fret-ui/src/managed_surface.rs`
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_installs_internal_drag_route_anchor`
+  - Result: passed, 1 test.
+  - Scope proven: the public declarative dock-space host installs the dock-panel route during
+    layout, refreshes the dock-tabs route during paint/prepaint, and registers the window
+    dock-space node without a retained dock-space node.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 3 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles the focus-request command path, and installs internal-drag route anchors.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 117 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    while the public declarative host takes over command/focus routing and internal-drag route
+    keep-alive.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the route keep-alive edits.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained-bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after recording `RBX-M1-075`
+    second-slice progress.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Follow-up:
+
+- Continue `RBX-M1-075` by moving diagnostics publication or one minimal raw event arbitration path
+  onto declarative hooks.
+
+## 2026-05-19 - RBX-M1-075 third slice: declarative diagnostics and prepaint liveness
+
+Claim verified:
+
+- Common docking diagnostics publication is no longer embedded only in retained `DockSpace`
+  layout/prepaint/paint bodies. Retained and declarative hosts now share the graph/drag diagnostics
+  path in `dock/diagnostics.rs`.
+- The public declarative dock-space host publishes `WindowInteractionDiagnosticsStore` snapshots
+  from its prepaint hook, including active dock-drag diagnostics, dock graph stats, and dock graph
+  signature.
+- The public declarative dock-space host requests animation frames while an active dock drag affects
+  its window, preserving the retained adapter's prepaint liveness intent on the declarative path.
+- `RBX-M1-075` still remains open. Raw docking pointer/internal-drag event arbitration,
+  chrome/drop-hint painting, viewport layouts, drag ghost, and viewport capture still live on the
+  retained `DockSpace` adapter.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/diagnostics.rs`
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/space.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: the diagnostics extraction and declarative prepaint hook compile in the default
+    `fret-docking` feature set.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_publishes_diagnostics_and_liveness`
+  - Result: passed, 1 test.
+  - Scope proven: the public declarative dock-space host publishes active dock-drag diagnostics,
+    dock graph stats, dock graph signature, and requests animation frames from prepaint while a dock
+    drag is active.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 4 tests.
+  - Scope proven: managed-surface layout/prepaint/paint/event/command hooks remain green after the
+    docking diagnostics/liveness hook usage.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 4 tests.
+  - Scope proven: the public declarative dock-space host places/paints registry panel roots, handles
+    focus-request commands, installs internal-drag route anchors, and publishes diagnostics/liveness
+    state.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 118 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    while the public declarative host takes over diagnostics publication and prepaint liveness.
+- `cargo check -p fret-docking --features imui`
+  - Result: passed.
+  - Scope proven: the imui wrapper and retained/imui compatibility surface still compile after the
+    shared diagnostics extraction and declarative host hook changes.
+- `cargo check -p fret-demo --bin docking_demo --bin container_queries_docking_demo --bin imui_editor_proof_demo`
+  - Result: passed.
+  - Scope proven: the docking-heavy demo entry-point consumers still compile while app/demo call
+    sites remain on retained dock-space helpers until the remaining interaction hooks migrate.
+- `cargo check -p fret-cookbook --example docking_basics --features cookbook-docking`
+  - Result: passed.
+  - Scope proven: the cookbook docking example still compiles against the updated public docking
+    surface.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the diagnostics extraction.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained-bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after recording `RBX-M1-075`
+    third-slice progress.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Follow-up:
+
+- Continue `RBX-M1-075` with a small paint/event slice. The next safest targets are declarative
+  chrome/drop-hint/drag-ghost painting from shared snapshot inputs, or one minimal raw pointer event
+  arbitration path. Do not switch app/demo call sites until those interaction paths are covered.
+
+## 2026-05-19 - RBX-M1-075 fourth slice: managed-surface paint context capabilities
+
+Claim verified:
+
+- `ManagedSurfacePaintCx` now exposes mechanism-only access to `scale_factor()`, `services()`, and
+  `child_bounds(...)` so interaction-heavy ecosystem hosts can prepare text/SVG paint inputs and
+  respect actual child-root layout without using the retained `Widget` API.
+- The public declarative dock-space host now paints panel roots using `child_bounds(node)` with the
+  snapshot rect as a fallback, matching retained `DockSpace::paint` panel-root fallback semantics
+  more closely.
+- `RBX-M1-075` still remains open. This slice only added the paint context capabilities needed for
+  later declarative chrome/drag-ghost/drop-hint painting.
+
+Evidence:
+
+- `crates/fret-ui/src/managed_surface.rs`
+- `crates/fret-ui/src/elements/cx.rs`
+- `crates/fret-ui/src/declarative/tests/managed_surface.rs`
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 5 tests.
+  - Scope proven: managed-surface layout/prepaint/paint/event/command hooks remain green, including
+    the new paint context proof for services, scale factor, and child bounds.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 4 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, and publishes
+    diagnostics/liveness state while using actual child bounds for panel-root paint.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 118 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after the declarative panel-root paint fallback was aligned with the retained adapter.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the managed-surface paint context capability
+    edits.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained-bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Follow-up:
+
+- Continue `RBX-M1-075` by moving one more retained paint or viewport responsibility onto the
+  public declarative dock-space host before attempting raw event arbitration.
+
+## 2026-05-19 - RBX-M1-075 fifth slice: declarative viewport layout sync
+
+Claim verified:
+
+- The public declarative dock-space host now syncs `DockSpaceLayoutSnapshot::viewport_layouts` into
+  `DockManager::sync_viewport_layouts_for_window(...)` from layout and prepaint.
+- App/editor viewport consumers can read the same viewport mapping, draw rect, and stale-layout
+  cleanup state from the declarative host path without waiting for retained `DockSpace::paint`.
+- `RBX-M1-075` still remains open. Raw docking pointer/internal-drag event arbitration, chrome/drop
+  hint painting, drag ghost painting, and viewport input capture still live on the retained
+  `DockSpace` adapter.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_syncs_viewport_layouts`
+  - Result: passed, 1 test.
+  - Scope proven: the public declarative dock-space host publishes viewport layout state for active
+    viewport panels and clears stale viewport layouts for the same window.
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: the declarative viewport-layout sync compiles in the default `fret-docking`
+    feature set.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 5 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, and syncs viewport layouts.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 5 tests.
+  - Scope proven: the underlying managed-surface mechanism remains green after the docking
+    viewport-layout sync usage.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 119 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    while the public declarative host takes over viewport-layout publication.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the declarative viewport-layout sync edits.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained-bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Follow-up:
+
+- The next implementation slice should target shared chrome/drop-hint/drag-ghost paint input
+  extraction or a very small raw event arbitration path. Avoid moving full `DockSpace::event` in
+  one step.
+
+## 2026-05-19 - RBX-M1-075 sixth slice: declarative split-handle paint
+
+Claim verified:
+
+- Split-handle paint preparation is no longer embedded only in retained `DockSpace::paint`.
+  `paint_split_handles(...)` now delegates through reusable `split_handle_paint_inputs(...)` and
+  `paint_split_handle_inputs(...)` helpers.
+- The public declarative dock-space host stores split-handle paint inputs in its per-frame output
+  and paints split handles from the managed-surface paint hook without borrowing retained
+  `DockSpace`.
+- `RBX-M1-075` still remains open. Tab/floating chrome, drop hints/overlays, drag ghost painting,
+  raw docking pointer/internal-drag event arbitration, and viewport input capture still live on the
+  retained `DockSpace` adapter.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/paint.rs`
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: shared split-handle paint inputs and the declarative paint hook compile in the
+    default `fret-docking` feature set.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 5 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, syncs viewport layouts, and now paints split handles.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 5 tests.
+  - Scope proven: the managed-surface mechanism remains green while the docking host consumes its
+    paint hook for split-handle chrome.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 119 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after extracting split-handle paint inputs.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the split-handle paint extraction.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained-bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Follow-up:
+
+- The next implementation slice should target either shared tab/floating chrome paint inputs or one
+  tightly scoped raw pointer event arbitration path. Avoid moving full `DockSpace::event` in one
+  step.
+
+## 2026-05-19 - RBX-M1-075 seventh slice: declarative viewport-surface paint
+
+Claim verified:
+
+- Viewport-surface paint preparation is no longer embedded only in retained `paint_dock(...)`.
+  `paint_dock(...)` now delegates through reusable viewport-surface paint input helpers.
+- The public declarative dock-space host stores viewport-surface paint inputs in its per-frame
+  output and paints `SceneOp::ViewportSurface` plus viewport overlay hooks from the managed-surface
+  paint hook.
+- Pure viewport panels can now render their viewport surface through the public declarative
+  dock-space host without creating a retained `DockSpace` adapter.
+- `RBX-M1-075` still remains open. Tab/floating chrome, drop hints/overlays, drag ghost painting,
+  raw docking pointer/internal-drag event arbitration, and viewport input capture still live on the
+  retained `DockSpace` adapter.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/paint.rs`
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: shared viewport-surface paint inputs and the declarative paint hook compile in
+    the default `fret-docking` feature set.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 6 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, syncs viewport layouts, paints split handles, and now paints
+    viewport surfaces for pure viewport panels.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 120 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after extracting viewport-surface paint inputs.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 5 tests.
+  - Scope proven: the managed-surface mechanism remains green while the docking host consumes its
+    paint hook for viewport surfaces.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the viewport-surface paint extraction.
+
+Follow-up:
+
+- Run the final repo boundary/doc gates after this documentation update:
+  `python3 tools/check_layering.py`, `python3 tools/check_workstream_catalog.py`, and
+  `git diff --check`.
+- The next implementation slice should target either shared tab/floating chrome paint inputs,
+  drop-hint/drag-ghost paint input extraction, or one tightly scoped raw pointer event arbitration
+  path. Avoid moving full `DockSpace::event` in one step.
+
+## 2026-05-19 - RBX-M1-075 eighth slice: declarative floating chrome paint
+
+Claim verified:
+
+- Floating container chrome paint preparation is no longer embedded only in retained
+  `DockSpace::paint`. The retained adapter now delegates the floating outer/title-bar/close-button
+  chrome drawing through reusable `FloatingChromePaintInput` helpers.
+- The public declarative dock-space host stores floating chrome paint inputs in its per-frame output
+  and paints in-window floating outer/title-bar chrome from the managed-surface paint hook without
+  borrowing retained `DockSpace`.
+- `RBX-M1-075` still remains open. Tab chrome, floating hover/close interaction state, drop
+  hints/overlays, drag ghost painting, raw docking pointer/internal-drag event arbitration, and
+  viewport input capture still live on the retained `DockSpace` adapter.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/consts.rs`
+- `ecosystem/fret-docking/src/dock/paint.rs`
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/space.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: shared floating chrome paint inputs and the declarative paint hook compile in
+    the default `fret-docking` feature set.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_paints_floating_chrome`
+  - Result: passed, 1 test.
+  - Scope proven: the public declarative dock-space host paints floating outer/title-bar chrome
+    from the declarative host path.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 7 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, syncs viewport layouts, paints split handles, paints viewport
+    surfaces, and now paints floating container chrome.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 121 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after extracting floating chrome paint inputs.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 5 tests.
+  - Scope proven: the managed-surface mechanism remains green while the docking host consumes its
+    paint hook for floating chrome.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the floating chrome paint extraction.
+
+Follow-up:
+
+- Run the final repo boundary/doc gates after this documentation update:
+  `python3 tools/check_layering.py`, `python3 tools/check_workstream_catalog.py`, and
+  `git diff --check`.
+- The next implementation slice should target drop-hint/drag-ghost paint input extraction, tab
+  chrome paint inputs, floating hover/close event state, or one tightly scoped raw pointer event
+  arbitration path. Avoid moving full `DockSpace::event` in one step.
+
+## 2026-05-19 - RBX-M1-075 ninth slice: declarative drag payload ghost paint
+
+Claim verified:
+
+- Active dock drag ghost snapshot selection is no longer embedded only in retained
+  `DockSpace::paint`; it is now exposed as a reusable docking diagnostics helper.
+- The public declarative dock-space host stores drag ghost snapshots in its per-frame output,
+  prepares the dragged panel title via `ManagedSurfacePaintCx::services()`, and paints the payload
+  ghost from the managed-surface paint hook without borrowing retained `DockSpace`.
+- `RBX-M1-075` still remains open. Tab chrome, floating hover/close interaction state, drop
+  hints/overlays, raw docking pointer/internal-drag event arbitration, and viewport input capture
+  still live on the retained `DockSpace` adapter.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/diagnostics.rs`
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/types.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: shared drag ghost snapshot selection and the declarative paint hook compile in
+    the default `fret-docking` feature set.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_paints_drag_payload_ghost`
+  - Result: passed, 1 test.
+  - Scope proven: the public declarative dock-space host paints the drag payload ghost from the
+    declarative host path.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 8 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, syncs viewport layouts, paints split handles, paints viewport
+    surfaces, paints floating container chrome, and now paints drag payload ghosts.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 122 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after wiring declarative drag payload ghost paint.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 5 tests.
+  - Scope proven: the managed-surface mechanism remains green while the docking host consumes its
+    paint hook services for drag ghost title preparation.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the drag payload ghost paint slice.
+
+Follow-up:
+
+- Run the final repo boundary/doc gates after this documentation update:
+  `python3 tools/check_layering.py`, `python3 tools/check_workstream_catalog.py`, and
+  `git diff --check`.
+- The next implementation slice should target drop-hint/drop-overlay paint input extraction, shared
+  tab chrome paint inputs, floating hover/close event state, or one tightly scoped raw pointer event
+  arbitration path. Avoid moving full `DockSpace::event` in one step.
+
+## 2026-05-19 - RBX-M1-075 tenth slice: declarative basic drop overlay paint
+
+Claim verified:
+
+- Basic float/empty/center drop-overlay painting is now available through
+  `paint_basic_drop_overlay(...)`, a reusable helper that does not require retained `DockSpace`
+  state or full graph edge-preview decisions.
+- The public declarative dock-space host stores `DockManager::hover` and
+  `DockSpaceLayoutSnapshot::layout_all` in its per-frame output and paints center drop overlays from
+  the managed-surface paint hook without borrowing retained `DockSpace`.
+- `RBX-M1-075` still remains open. Tab chrome, floating hover/close interaction state, drop hint
+  pads, complex edge/tab preview overlays, raw docking pointer/internal-drag event arbitration, and
+  viewport input capture still live on the retained `DockSpace` adapter.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/paint.rs`
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: the basic drop-overlay helper and declarative paint hook compile in the default
+    `fret-docking` feature set.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_paints_center_drop_overlay`
+  - Result: passed, 1 test.
+  - Scope proven: the public declarative dock-space host paints center content/tab-bar drop
+    overlays from the declarative host path.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 9 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, syncs viewport layouts, paints split handles, paints viewport
+    surfaces, paints floating container chrome, paints drag payload ghosts, and now paints basic
+    center drop overlays.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 123 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after wiring declarative basic drop-overlay paint.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 5 tests.
+  - Scope proven: the managed-surface mechanism remains green while the docking host consumes its
+    paint hook for basic drop overlays.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the basic drop-overlay paint slice.
+
+Follow-up:
+
+- Run the final repo boundary/doc gates after this documentation update:
+  `python3 tools/check_layering.py`, `python3 tools/check_workstream_catalog.py`, and
+  `git diff --check`.
+- The next implementation slice should target complex edge/tab preview overlays, shared tab chrome
+  paint inputs, floating hover/close event state, or one tightly scoped raw pointer event
+  arbitration path. Avoid moving full `DockSpace::event` in one step.
+
+## 2026-05-19 - RBX-M1-075 eleventh slice: declarative drop hint pads
+
+Claim verified:
+
+- The public declarative dock-space host now derives `DockDropHints` from the resolved
+  `DockManager::hover` target and carries that hint snapshot in its per-frame output.
+- The managed-surface paint hook reuses `paint_drop_hints(...)` to paint the drop-hint plate and
+  pads without borrowing retained `DockSpace`.
+- `RBX-M1-075` still remains open. Tab chrome, floating hover/close interaction state, complex
+  edge/tab preview overlays, raw docking pointer/internal-drag event arbitration, and viewport
+  input capture still live on the retained `DockSpace` adapter.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: the declarative drop-hint frame snapshot and paint hook compile in the default
+    `fret-docking` feature set.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_paints_drop_hint_pads`
+  - Result: passed, 1 test.
+  - Scope proven: the public declarative dock-space host paints the drop-hint plate and pads from
+    the declarative host path.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 10 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, syncs viewport layouts, paints split handles, paints viewport
+    surfaces, paints floating container chrome, paints drag payload ghosts, paints basic center
+    drop overlays, and now paints drop-hint pads.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 124 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after wiring declarative drop-hint pads.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 5 tests.
+  - Scope proven: the managed-surface mechanism remains green while the docking host consumes its
+    paint hook for drop-hint pads.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the drop-hint pad paint slice.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: this slice keeps the managed-surface mechanism in `fret-ui` and docking policy in
+    `fret-docking`.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: no whitespace errors were introduced.
+
+Follow-up:
+
+- Re-run `git diff --check` after this evidence update if this slice is committed separately.
+- The next implementation slice should target tab title/close/overflow chrome details, tab-title
+  preview text, floating hover/close event state, or one tightly scoped raw pointer event
+  arbitration path. Avoid moving full `DockSpace::event` in one step.
+
+## 2026-05-19 - RBX-M1-075 thirteenth slice: declarative complex drop overlays
+
+Claim verified:
+
+- Non-text complex drop-overlay geometry is now available through reusable
+  `ComplexDropOverlayPaintInput` / `paint_complex_drop_overlay_inputs(...)` helpers.
+- Retained `paint_drop_overlay(...)` delegates tab insert markers and edge split-slot preview
+  overlays through the shared helper, while still owning tab-title preview text.
+- The public declarative dock-space host stores complex drop-overlay inputs in its per-frame output
+  and paints edge split-slot previews plus tab insert markers from the managed-surface paint hook.
+- `RBX-M1-075` still remains open. Tab title/close/overflow chrome details, tab-title preview text,
+  floating hover/close interaction state, raw docking pointer/internal-drag event arbitration, and
+  viewport input capture still live on the retained `DockSpace` adapter.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/paint.rs`
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: shared complex drop-overlay inputs and the declarative paint hook compile in the
+    default `fret-docking` feature set.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_paints_edge_drop_preview_slot public_declarative_dock_space_entry_point_paints_tab_insert_marker`
+  - Result: passed, 2 tests.
+  - Scope proven: the public declarative dock-space host paints edge split-slot previews and tab
+    insert markers from the declarative host path.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 13 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, syncs viewport layouts, paints split handles, paints viewport
+    surfaces, paints floating container chrome, paints drag payload ghosts, paints basic center
+    drop overlays, paints drop-hint pads, paints structural tab chrome, and now paints complex
+    edge/marker overlays.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 127 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after retained `paint_drop_overlay(...)` delegates non-text complex overlay geometry through the
+    shared helper.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 5 tests.
+  - Scope proven: the managed-surface mechanism remains green while the docking host consumes its
+    paint hook for complex drop overlays.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the complex drop-overlay slice.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: this slice keeps overlay policy in `fret-docking` and does not widen `fret-ui`
+    mechanism contracts.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed before this evidence update.
+  - Scope proven: no whitespace errors were introduced in the implementation slice.
+
+Follow-up:
+
+- Re-run `git diff --check` after this evidence update if this slice is committed separately.
+- The next implementation slice should target tab title/close/overflow chrome details, tab-title
+  preview text, floating hover/close event state, or one tightly scoped raw pointer event
+  arbitration path. Avoid moving full `DockSpace::event` in one step.
+
+## 2026-05-19 - RBX-M1-075 twelfth slice: declarative structural tab chrome
+
+Claim verified:
+
+- Structural tab chrome painting is now available through reusable `TabChromePaintInput` /
+  `paint_tab_chrome_inputs(...)` helpers.
+- Retained `paint_dock(...)` delegates panel background, tab bar, active/hover tab plate, and active
+  underline painting through the shared helper, while still owning tab title, close button,
+  overflow, and viewport fill details.
+- The public declarative dock-space host stores tab chrome inputs in its per-frame output and
+  paints tab bar chrome before panel roots from the managed-surface paint hook.
+- `RBX-M1-075` still remains open. Tab title/close/overflow chrome details, floating hover/close
+  interaction state, complex edge/tab preview overlays, raw docking pointer/internal-drag event
+  arbitration, and viewport input capture still live on the retained `DockSpace` adapter.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/paint.rs`
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: shared structural tab chrome inputs and declarative paint hook compile in the
+    default `fret-docking` feature set.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_paints_tab_chrome`
+  - Result: passed, 1 test.
+  - Scope proven: the public declarative dock-space host paints tab bar chrome and the active tab
+    underline from the declarative host path.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 11 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, syncs viewport layouts, paints split handles, paints viewport
+    surfaces, paints floating container chrome, paints drag payload ghosts, paints basic center
+    drop overlays, paints drop-hint pads, and now paints structural tab chrome.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 125 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after retained `paint_dock(...)` delegates structural tab chrome painting through the shared
+    helper.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 5 tests.
+  - Scope proven: the managed-surface mechanism remains green while the docking host consumes its
+    paint hook for structural tab chrome.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the tab chrome paint slice.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: this slice keeps tab chrome policy in `fret-docking` and does not widen
+    `fret-ui` mechanism contracts.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed before this evidence update.
+  - Scope proven: no whitespace errors were introduced in the implementation slice.
+
+Follow-up:
+
+- Re-run `git diff --check` after this evidence update if this slice is committed separately.
+- The next implementation slice should target tab title/close/overflow chrome details, complex
+  edge/tab preview overlays, floating hover/close event state, or one tightly scoped raw pointer
+  event arbitration path. Avoid moving full `DockSpace::event` in one step.
+
+## 2026-05-19 - RBX-M1-075 fourteenth slice: declarative tab-insert preview title
+
+Claim verified:
+
+- Tab-insert preview title painting is now available through reusable
+  `paint_tab_insert_preview_title(...)`.
+- Retained `paint_drop_overlay(...)` delegates the tab-insert preview title through the shared
+  helper, and the public declarative dock-space host paints the same preview title from its
+  managed-surface paint hook.
+- `ManagedSurfacePaintCx` exposes `release_text_blob_on_next_paint(...)` so paint-time transient
+  text blobs remain valid for the scene that references them and are released on the next
+  managed-surface repaint or cleanup.
+- `RBX-M1-075` still remains open. Tab title/close/overflow chrome details, floating hover/close
+  interaction state, raw docking pointer/internal-drag event arbitration, and viewport input
+  capture still live on the retained `DockSpace` adapter.
+
+Evidence:
+
+- `crates/fret-ui/src/managed_surface.rs`
+- `crates/fret-ui/src/declarative/host_widget.rs`
+- `crates/fret-ui/src/declarative/host_widget/paint.rs`
+- `crates/fret-ui/src/declarative/tests/managed_surface.rs`
+- `ecosystem/fret-docking/src/dock/paint.rs`
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-ui`
+  - Result: passed.
+  - Scope proven: managed-surface paint-time text release plumbing compiles in the default
+    `fret-ui` feature set.
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: shared preview-title painting and the declarative paint hook compile in the
+    default `fret-docking` feature set.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 6 tests.
+  - Scope proven: the managed-surface mechanism still places/paints child roots, dispatches
+    event/command hooks, exposes paint services/bounds, and now defers paint-time text release
+    until the next repaint.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_paints_tab_insert_preview_title`
+  - Result: passed, 1 test.
+  - Scope proven: the public declarative dock-space host paints the tab-insert preview title plate
+    and text from the declarative host path.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 128 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after retained and declarative hosts share tab-insert preview title painting.
+- `cargo fmt`
+  - Result: passed.
+  - Scope proven: Rust sources were formatted after the implementation slice.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting remains clean after the evidence update.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: this slice keeps the transient text mechanism in `fret-ui` and docking preview
+    policy in `fret-docking`.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: no whitespace errors were introduced.
+
+Follow-up:
+
+- Continue `RBX-M1-075` with tab title/close/overflow chrome details, floating hover/close event
+  state, viewport input capture, or one tightly scoped raw pointer event arbitration path. Avoid
+  moving full `DockSpace::event` in one step.
+
+## 2026-05-19 - RBX-M1-075 fifteenth slice: declarative tab detail paint
+
+Claim verified:
+
+- Tab title, active-tab close affordance, overflow button, and overflow menu painting are now
+  available through reusable `TabDetailPaintInput` / `paint_tab_detail_inputs(...)` helpers.
+- Retained `paint_dock(...)` delegates tab detail painting through the shared helper while still
+  owning retained tab resource caches and interaction state.
+- The public declarative dock-space host prepares transient tab title/close/overflow text resources
+  and paints tab details from its managed-surface paint hook without borrowing retained
+  `DockSpace`.
+- `RBX-M1-075` still remains open. Tab close/overflow interaction state, floating hover/close
+  interaction state, raw docking pointer/internal-drag event arbitration, and viewport input
+  capture still live on the retained `DockSpace` adapter.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/paint.rs`
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: shared tab detail paint inputs/helpers and declarative paint hook integration
+    compile in the default `fret-docking` feature set.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_paints_tab_details`
+  - Result: passed, 1 test.
+  - Scope proven: the public declarative dock-space host paints tab title text, active-tab close
+    text, and overflow button text from the declarative host path.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 15 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, syncs viewport layouts, paints split handles, paints viewport
+    surfaces, paints floating container chrome, paints drag payload ghosts, paints basic center
+    drop overlays, paints drop-hint pads, paints structural tab chrome, paints complex overlays,
+    paints tab-insert preview titles, and now paints tab details.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 129 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after retained `paint_dock(...)` delegates tab detail painting through the shared helper.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 6 tests.
+  - Scope proven: the managed-surface mechanism and deferred paint-time text release contract
+    remain green while the docking host uses transient tab detail text blobs.
+- `cargo fmt`
+  - Result: passed.
+  - Scope proven: Rust sources were formatted after the implementation slice.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting remains clean after the evidence update.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: this slice keeps tab paint policy in `fret-docking` and does not widen
+    `fret-ui` mechanism contracts.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: no whitespace errors were introduced.
+
+Follow-up:
+
+- Continue `RBX-M1-075` with tab close/overflow interaction state, floating hover/close event
+  state, viewport input capture, or one tightly scoped raw pointer event arbitration path. Avoid
+  moving full `DockSpace::event` in one step.
+
+## 2026-05-19 - RBX-M1-075 sixteenth slice: declarative active-tab close interaction
+
+Claim verified:
+
+- The public declarative dock-space host now handles active-tab close affordance
+  `PointerDown` / `PointerUp` without delegating to retained `DockSpace::event`.
+- `ManagedSurfaceEventCx` remains mechanism-only: event hooks do not read prepaint output. The
+  docking host rebuilds a temporary `DockSpaceLayoutSnapshot` from current bounds and `DockManager`
+  state for tab-close hit-testing.
+- Declarative docking interaction state tracks the pressed tab-close target, captures/releases the
+  pointer through the managed-surface event context, and emits
+  `Effect::Dock(DockOp::ClosePanel { ... })` when release lands on the same close affordance or
+  remains within close-click slop.
+- `RBX-M1-075` still remains open. Tab overflow and remaining tab interaction state, floating
+  hover/close interaction state, raw docking pointer/internal-drag event arbitration, and viewport
+  input capture still live on the retained `DockSpace` adapter.
+
+Evidence:
+
+- `crates/fret-ui/src/managed_surface.rs`
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: declarative tab-close interaction state and managed-surface event context changes
+    compile in the default `fret-docking` feature set.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_closes_tab_from_close_affordance`
+  - Result: passed, 1 test.
+  - Scope proven: clicking the active-tab close affordance through the public declarative dock-space
+    entry point emits the expected `DockOp::ClosePanel`.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 16 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, syncs viewport layouts, paints split handles, paints viewport
+    surfaces, paints floating container chrome, paints drag payload ghosts, paints basic center
+    drop overlays, paints drop-hint pads, paints structural tab chrome, paints complex overlays,
+    paints tab-insert preview titles, paints tab details, and now handles active-tab close clicks.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 6 tests.
+  - Scope proven: the managed-surface mechanism remains green after keeping event context free of
+    prepaint-output reads.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 130 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after adding the declarative active-tab close path.
+
+Follow-up:
+
+- Continue `RBX-M1-075` with tab overflow/remaining tab interaction state, floating hover/close
+  event state, viewport input capture, or one tightly scoped raw pointer/internal-drag arbitration
+  path. Avoid moving full `DockSpace::event` in one step.
+
+## 2026-05-19 - RBX-M1-075 seventeenth slice: declarative tab overflow-menu close interaction
+
+Claim verified:
+
+- The public declarative dock-space host now handles the tab overflow button and overflow-menu row
+  close click path without delegating to retained `DockSpace::event`.
+- Declarative overflow-menu state lives in `fret-docking` and reuses existing
+  `TabOverflowMenuState` plus shared `TabDetailPaintInput` / `paint_tab_detail_inputs(...)`;
+  `fret-ui` remains a mechanism layer and receives no docking policy/state.
+- Clicking the declarative overflow button opens and paints the menu. Clicking a row close
+  affordance emits `Effect::Dock(DockOp::ClosePanel { ... })` without also emitting
+  `SetActiveTab`; clicking row content emits `Effect::Dock(DockOp::SetActiveTab { ... })` without
+  closing a tab.
+- `RBX-M1-075` still remains open. Remaining tab hover/scroll/drag interaction state, floating
+  hover/close interaction state, raw docking pointer/internal-drag event arbitration, and viewport
+  input capture still live on the retained `DockSpace` adapter.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: declarative overflow-menu state/event integration compiles in the default
+    `fret-docking` feature set.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_handles_overflow_menu_close`
+  - Result: passed, 1 test.
+  - Scope proven: the public declarative dock-space host opens/paints the overflow menu and emits
+    `DockOp::ClosePanel` for row close without also activating the tab.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_activates_overflow_menu_row`
+  - Result: passed, 1 test.
+  - Scope proven: the public declarative dock-space host emits `DockOp::SetActiveTab` for row
+    activation without also closing the tab.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 18 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, syncs viewport layouts, paints split handles, paints viewport
+    surfaces, paints floating container chrome, paints drag payload ghosts, paints basic center
+    drop overlays, paints drop-hint pads, paints structural tab chrome, paints complex overlays,
+    paints tab-insert preview titles, paints tab details, handles active-tab close clicks, and now
+    handles overflow-menu close and activation clicks.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 6 tests.
+  - Scope proven: the managed-surface mechanism remains green while overflow-menu policy/state
+    stays in `fret-docking`.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 132 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after adding the declarative overflow-menu close and activation paths.
+
+Follow-up:
+
+- Continue `RBX-M1-075` with remaining tab hover/scroll/drag interaction state, floating
+  hover/close event state, viewport input capture, or one tightly scoped raw pointer/internal-drag
+  arbitration path. Avoid moving full `DockSpace::event` in one step.
+
+## 2026-05-19 - RBX-M1-075 eighteenth slice: declarative floating close interaction
+
+Claim verified:
+
+- The public declarative dock-space host now handles in-window floating close
+  `PointerDown` / `PointerUp` without delegating to retained `DockSpace::event`.
+- Declarative pressed-floating-close state lives in `fret-docking`; `fret-ui` remains a
+  mechanism-only managed surface layer and receives no docking policy/state.
+- The declarative host reuses `DockSpaceLayoutSnapshot` floating chrome geometry for close
+  hit-testing and pressed close painting, emits `Effect::Dock(DockOp::RaiseFloating { ... })` on
+  close press, and emits `Effect::Dock(DockOp::MergeFloatingInto { ... })` when release lands on
+  the same close affordance.
+- `RBX-M1-075` still remains open. Remaining tab hover/scroll/drag interaction state, floating
+  hover/title-bar drag interaction state, raw docking pointer/internal-drag event arbitration, and
+  viewport input capture still live on the retained `DockSpace` adapter.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_closes_floating_chrome`
+  - Result: failed before implementation, then passed after implementation.
+  - Scope proven: the new public declarative dock-space event path emits `RaiseFloating` on close
+    press and `MergeFloatingInto` on close release.
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: declarative pressed-floating-close state/event integration compiles in the
+    default `fret-docking` feature set.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 19 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, syncs viewport layouts, paints split handles, paints viewport
+    surfaces, paints floating container chrome, paints drag payload ghosts, paints basic center
+    drop overlays, paints drop-hint pads, paints structural tab chrome, paints complex overlays,
+    paints tab-insert preview titles, paints tab details, handles active-tab close clicks, handles
+    overflow-menu close/activation clicks, and now handles floating close clicks.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 6 tests.
+  - Scope proven: the managed-surface mechanism remains green while floating close policy/state
+    stays in `fret-docking`.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 133 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after adding the declarative floating close path.
+- `cargo fmt`
+  - Result: passed.
+  - Scope proven: Rust sources were formatted after the implementation slice.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting remains clean after the evidence update.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: this slice keeps floating close policy in `fret-docking` and does not widen
+    `fret-ui` mechanism contracts.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Follow-up:
+
+- Continue `RBX-M1-075` with remaining tab hover/scroll/drag interaction state, floating
+  hover/title-bar drag event state, viewport input capture, or one tightly scoped raw
+  pointer/internal-drag arbitration path. Avoid moving full `DockSpace::event` in one step.
+
+## 2026-05-19 - RBX-M1-075 nineteenth slice: declarative floating title-bar move interaction
+
+Claim verified:
+
+- The public declarative dock-space host now handles the narrow in-window floating title-bar
+  `PointerDown` / `PointerMove` / `PointerUp` move-rect path without delegating to retained
+  `DockSpace::event`.
+- Declarative floating-drag state lives in `fret-docking`; `fret-ui` remains a mechanism-only
+  managed surface layer and receives no docking policy/state.
+- The declarative host reuses `DockSpaceLayoutSnapshot` floating chrome geometry for title-bar
+  hit-testing, emits `Effect::Dock(DockOp::RaiseFloating { ... })` on title-bar press, captures
+  the pointer, emits `Effect::Dock(DockOp::SetFloatingRect { ... })` while the title bar is
+  dragged, and releases the pointer on `PointerUp` / cancel.
+- This slice intentionally does not move dock-preview/merge-on-release arbitration for floating
+  title-bar drags. `RBX-M1-075` still remains open. Remaining tab hover/scroll/drag interaction
+  state, floating hover and title-bar dock-preview arbitration, raw docking pointer/internal-drag
+  event arbitration, and viewport input capture still live on the retained `DockSpace` adapter.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_drags_floating_title_bar`
+  - Result: failed before implementation, then passed after implementation.
+  - Scope proven: the new public declarative dock-space event path emits `RaiseFloating` on
+    title-bar press and `SetFloatingRect` while the title bar is dragged.
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: declarative floating-drag state/event integration compiles in the default
+    `fret-docking` feature set.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 20 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, syncs viewport layouts, paints split handles, paints viewport
+    surfaces, paints floating container chrome, paints drag payload ghosts, paints basic center
+    drop overlays, paints drop-hint pads, paints structural tab chrome, paints complex overlays,
+    paints tab-insert preview titles, paints tab details, handles active-tab close clicks, handles
+    overflow-menu close/activation clicks, handles floating close clicks, and now handles floating
+    title-bar move clicks.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 6 tests.
+  - Scope proven: the managed-surface mechanism remains green while floating title-bar drag
+    policy/state stays in `fret-docking`.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 134 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after adding the declarative floating title-bar move path.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting remains clean after the implementation and evidence update.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: this slice keeps floating title-bar move policy in `fret-docking` and does not
+    widen `fret-ui` mechanism contracts.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Follow-up:
+
+- Continue `RBX-M1-075` with remaining tab hover/scroll/drag interaction state, floating
+  hover/title-bar dock-preview arbitration, viewport input capture, or one tightly scoped raw
+  pointer/internal-drag arbitration path. Avoid moving full `DockSpace::event` in one step.
+
+## 2026-05-19 - RBX-M1-075 twentieth slice: declarative overflow-menu wheel scrolling
+
+Claim verified:
+
+- The public declarative dock-space host now handles overflow-menu wheel scrolling without
+  delegating to retained `DockSpace::event`.
+- The declarative host reuses the retained adapter's overflow-menu geometry and scroll formula:
+  `next_scroll = (menu.scroll - (delta.x + delta.y)).clamp(0, max_scroll)`.
+- Overflow-menu state stays in `fret-docking` via `DeclarativeDockInteractionService`;
+  `fret-ui` remains a mechanism-only managed-surface layer and receives no docking policy/state.
+- `RBX-M1-075` still remains open. Remaining tab hover/tab-strip wheel/drag interaction state,
+  floating hover and title-bar dock-preview arbitration, raw docking pointer/internal-drag event
+  arbitration, and viewport input capture still live on the retained `DockSpace` adapter.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_scrolls_overflow_menu_with_wheel`
+  - Result: failed before implementation, then passed after implementation.
+  - Scope proven: wheel scrolling through the public declarative dock-space host updates overflow
+    menu scroll state and allows activating the row exposed by that scroll offset.
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: declarative overflow-menu wheel integration compiles in the default
+    `fret-docking` feature set.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 21 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, syncs viewport layouts, paints split handles, paints viewport
+    surfaces, paints floating container chrome, paints drag payload ghosts, paints basic center
+    drop overlays, paints drop-hint pads, paints structural tab chrome, paints complex overlays,
+    paints tab-insert preview titles, paints tab details, handles active-tab close clicks, handles
+    overflow-menu close/activation clicks, handles floating close clicks, handles floating
+    title-bar move clicks, and now handles overflow-menu wheel scrolling.
+
+Follow-up:
+
+- Continue `RBX-M1-075` with remaining tab hover/tab-strip scroll/drag interaction state, floating
+  hover/title-bar dock-preview arbitration, viewport input capture, or one tightly scoped raw
+  pointer/internal-drag arbitration path. Avoid moving full `DockSpace::event` in one step.
+
+## 2026-05-19 - RBX-M1-075 twenty-first slice: declarative tab-strip wheel scrolling
+
+Claim verified:
+
+- The public declarative dock-space host now handles tab-strip wheel scrolling without delegating
+  to retained `DockSpace::event`.
+- Declarative tab-scroll state lives in `fret-docking`, keyed by window and tabs node; `fret-ui`
+  remains a mechanism-only managed-surface layer and receives no docking policy/state.
+- The declarative host feeds tab-scroll state into tab chrome/detail paint inputs, tab close
+  hit-testing, overflow-menu opening, and tab-insert preview painting.
+- The declarative host reuses the retained adapter's tab-strip scroll formula:
+  `next_scroll = (scroll - (delta.x + delta.y)).clamp(0, max_scroll)`.
+- `RBX-M1-075` still remains open. Remaining tab hover/drag interaction state, floating hover and
+  title-bar dock-preview arbitration, raw docking pointer/internal-drag event arbitration, and
+  viewport input capture still live on the retained `DockSpace` adapter.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_scrolls_tab_strip_with_wheel`
+  - Result: failed before implementation by closing panel 0 with unscrolled hit-testing, then
+    passed after implementation.
+  - Scope proven: wheel scrolling through the public declarative dock-space host updates tab-strip
+    scroll state and makes the expected tab close hit-testable.
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: declarative tab-scroll state/event integration compiles in the default
+    `fret-docking` feature set.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 22 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, syncs viewport layouts, paints split handles, paints viewport
+    surfaces, paints floating container chrome, paints drag payload ghosts, paints basic center
+    drop overlays, paints drop-hint pads, paints structural tab chrome, paints complex overlays,
+    paints tab-insert preview titles, paints tab details, handles active-tab close clicks, handles
+    overflow-menu close/activation clicks, handles overflow-menu wheel scrolling, handles floating
+    close clicks, handles floating title-bar move clicks, and now handles tab-strip wheel
+    scrolling.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 6 tests.
+  - Scope proven: the managed-surface mechanism remains green while tab-scroll policy/state stays
+    in `fret-docking`.
+
+Follow-up:
+
+- Continue `RBX-M1-075` with remaining tab hover/drag interaction state, floating
+  hover/title-bar dock-preview arbitration, viewport input capture, or one tightly scoped raw
+  pointer/internal-drag arbitration path. Avoid moving full `DockSpace::event` in one step.
+
+## 2026-05-19 - RBX-M1-075 twenty-second slice: declarative tab and overflow hover state
+
+Claim verified:
+
+- The public declarative dock-space host now handles tab hover, tab overflow button hover, and
+  overflow menu row hover without delegating to retained `DockSpace::event`.
+- Declarative tab hover state lives in `fret-docking` via `DeclarativeDockInteractionService`;
+  `fret-ui` remains a mechanism-only managed-surface layer and receives no docking policy/state.
+- The declarative paint hook now refreshes transient tab interaction paint state from the latest
+  docking service state at paint time. This prevents hover/menu visuals from being stuck on the
+  older layout/prepaint frame output while keeping stable geometry in `DockSpaceElementFrame`.
+- `RBX-M1-075` still remains open. Remaining tab drag interaction state, floating hover and
+  title-bar dock-preview arbitration, raw docking pointer/internal-drag event arbitration, and
+  viewport input capture still live on the retained `DockSpace` adapter.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_hovers_tab_overflow_button`
+  - Result: failed before implementation because the overflow button hover background was not
+    painted from the public declarative host, then passed after implementation.
+  - Scope proven: moving over an overflowing tab bar's overflow button paints the expected hover
+    background through the public declarative dock-space host.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_hovers`
+  - Result: passed, 3 tests.
+  - Scope proven: the public declarative dock-space host paints ordinary tab hover, overflow
+    button hover, and overflow menu row hover state.
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: declarative tab/overflow hover state integration compiles in the default
+    `fret-docking` feature set.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 25 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, syncs viewport layouts, paints split handles, paints viewport
+    surfaces, paints floating container chrome, paints drag payload ghosts, paints basic center
+    drop overlays, paints drop-hint pads, paints structural tab chrome, paints complex overlays,
+    paints tab-insert preview titles, paints tab details, handles active-tab close clicks, handles
+    overflow-menu close/activation clicks, handles overflow-menu wheel scrolling, handles
+    tab-strip wheel scrolling, handles floating close clicks, handles floating title-bar move
+    clicks, and now handles tab/overflow hover state.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 6 tests.
+  - Scope proven: the managed-surface mechanism remains green while tab hover policy/state stays
+    in `fret-docking`.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 139 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after adding the declarative tab/overflow hover path.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting remains clean after the implementation and evidence update.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: this slice keeps tab hover policy in `fret-docking` and does not widen
+    `fret-ui` mechanism contracts.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Follow-up:
+
+- Continue `RBX-M1-075` with remaining tab drag interaction state, floating hover/title-bar
+  dock-preview arbitration, viewport input capture, or one tightly scoped raw
+  pointer/internal-drag arbitration path. Avoid moving full `DockSpace::event` in one step.
+
+## 2026-05-19 - RBX-M1-075 twenty-third slice: declarative tab drag activation
+
+Claim verified:
+
+- The public declarative dock-space host now handles the narrow panel-tab drag activation path
+  without delegating to retained `DockSpace::event`.
+- Declarative pending dock-drag state lives in `fret-docking` via
+  `DeclarativeDockInteractionService`; `fret-ui` remains a mechanism-only managed-surface layer
+  and receives no docking policy/state.
+- The declarative host starts a `DRAG_KIND_DOCK_PANEL` runtime drag only after the configured
+  `DockingInteractionSettings::tab_drag_threshold` is satisfied, releases pointer capture once the
+  runtime drag starts, carries the tab-local grab offset into `DockPanelDragPayload`, and respects
+  `DockingPolicy::allow_panel_drag`.
+- `RBX-M1-075` still remains open. Tabs-group drag activation, floating hover and title-bar
+  dock-preview arbitration, raw docking pointer/internal-drag event arbitration, and viewport input
+  capture still live on the retained `DockSpace` adapter.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/space.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_starts_tab_drag_after_threshold`
+  - Result: failed before implementation because no declarative runtime dock drag was created,
+    then passed after implementation.
+  - Scope proven: dragging a panel tab through the public declarative dock-space host starts a
+    `DRAG_KIND_DOCK_PANEL` session with the expected panel payload, position, grab offset, and
+    default dock-preview policy.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_ --retries 0`
+  - Result: passed, 28 tests.
+  - Scope proven: the public declarative dock-space host still passes the full filtered behavior
+    suite, including tab drag activation, tab drag threshold gating, and
+    `DockingPolicy::allow_panel_drag` gating.
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: declarative pending dock-drag state/event integration compiles in the default
+    `fret-docking` feature set.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 28 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, syncs viewport layouts, paints split handles, paints viewport
+    surfaces, paints floating container chrome, paints drag payload ghosts, paints basic center
+    drop overlays, paints drop-hint pads, paints structural tab chrome, paints complex overlays,
+    paints tab-insert preview titles, paints tab details, handles active-tab close clicks, handles
+    overflow-menu close/activation clicks, handles overflow-menu wheel scrolling, handles
+    tab-strip wheel scrolling, handles tab/overflow hover state, handles floating close clicks,
+    handles floating title-bar move clicks, and now handles panel-tab drag activation.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 6 tests.
+  - Scope proven: the managed-surface mechanism remains green while tab drag policy/state stays in
+    `fret-docking`.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 142 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after adding the declarative panel-tab drag activation path.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting remains clean after the implementation and evidence update.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: this slice keeps tab drag policy in `fret-docking` and does not widen `fret-ui`
+    mechanism contracts.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Follow-up:
+
+- Continue `RBX-M1-075` with tabs-group drag activation, floating hover/title-bar dock-preview
+  arbitration, viewport input capture, or one tightly scoped raw pointer/internal-drag arbitration
+  path. Avoid moving full `DockSpace::event` in one step.
+
+## 2026-05-19 - RBX-M1-075 twenty-fourth slice: declarative tabs-group drag activation
+
+Claim verified:
+
+- The public declarative dock-space host now handles tabs-group drag activation from empty tab-bar
+  space without delegating to retained `DockSpace::event`.
+- Declarative pending tabs-drag state lives in `fret-docking` via
+  `DeclarativeDockInteractionService`; `fret-ui` remains a mechanism-only managed-surface layer
+  and receives no docking policy/state.
+- The declarative host starts a `DRAG_KIND_DOCK_TABS` runtime drag only after the configured
+  `DockingInteractionSettings::tab_drag_threshold` is satisfied, releases pointer capture once the
+  runtime drag starts, carries the tab-bar-local grab offset into `DockTabsDragPayload`, and
+  respects `DockingPolicy::allow_tabs_group_drag`.
+- `RBX-M1-075` still remains open. Floating hover/title-bar dock-preview and merge-on-release
+  arbitration, raw docking pointer/internal-drag event arbitration, and viewport input capture
+  still live on the retained `DockSpace` adapter.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `ecosystem/fret-docking/src/dock/tests/mod.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_starts_tabs_group_drag_after_threshold public_declarative_dock_space_entry_point_respects_tabs_group_drag_policy`
+  - Result: failed before implementation because no declarative runtime tabs drag was created,
+    then passed after implementation, 2 tests.
+  - Scope proven: dragging empty tab-bar space through the public declarative dock-space host
+    starts a `DRAG_KIND_DOCK_TABS` session after threshold and respects
+    `DockingPolicy::allow_tabs_group_drag`.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 30 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, syncs viewport layouts, paints split handles, paints viewport
+    surfaces, paints floating container chrome, paints drag payload ghosts, paints basic center
+    drop overlays, paints drop-hint pads, paints structural tab chrome, paints complex overlays,
+    paints tab-insert preview titles, paints tab details, handles active-tab close clicks, handles
+    overflow-menu close/activation clicks, handles overflow-menu wheel scrolling, handles
+    tab-strip wheel scrolling, handles tab/overflow hover state, handles floating close clicks,
+    handles floating title-bar move clicks, handles panel-tab drag activation, and now handles
+    tabs-group drag activation.
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: declarative pending tabs-drag state/event integration compiles in the default
+    `fret-docking` feature set.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 6 tests.
+  - Scope proven: the managed-surface mechanism remains green while tabs-group drag policy/state
+    stays in `fret-docking`.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 144 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after adding the declarative tabs-group drag activation path.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting remains clean after the implementation and evidence update.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: this slice keeps tabs-group drag policy in `fret-docking` and does not widen
+    `fret-ui` mechanism contracts.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Follow-up:
+
+- Continue `RBX-M1-075` with floating hover/title-bar dock-preview and merge-on-release
+  arbitration, viewport input capture, or one tightly scoped raw pointer/internal-drag arbitration
+  path. Avoid moving full `DockSpace::event` in one step.
+
+## 2026-05-19 - RBX-M1-075 twenty-fifth slice: declarative floating title-bar center merge
+
+Claim verified:
+
+- The public declarative dock-space host now handles the floating title-bar drag dock-preview and
+  center merge-on-release path without delegating to retained `DockSpace::event`.
+- Declarative floating-drag activation state lives in `fret-docking` via
+  `DeclarativeDockInteractionService`; `fret-ui` remains a mechanism-only managed-surface layer
+  and receives no docking policy/state.
+- The declarative host latches dock-preview inversion policy when the configured
+  `DockingInteractionSettings::tab_drag_threshold` is satisfied, resolves `DockManager::hover`
+  over the root dock layout while the activated floating title-bar drag moves, respects
+  `DockingPolicy::allow_dock_drop_target`, and emits `DockOp::MergeFloatingInto` on center drop
+  release.
+- `RBX-M1-075` still remains open. Raw docking pointer/internal-drag event arbitration, viewport
+  input capture, and remaining floating hover visual state still live on the retained `DockSpace`
+  adapter.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_merges_floating_title_bar_drag_on_center_drop`
+  - Result: failed before implementation because declarative floating title-bar drag left
+    `DockManager::hover` as `None`, then passed after implementation, 1 test.
+  - Scope proven: dragging a floating title bar through the public declarative dock-space host
+    resolves a center dock hover and emits `DockOp::MergeFloatingInto` on release without creating
+    retained `DockSpace`.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_merges_floating_title_bar_drag_on_center_drop public_declarative_dock_space_entry_point_drags_floating_title_bar`
+  - Result: passed, 2 tests.
+  - Scope proven: the declarative floating title-bar drag still emits `SetFloatingRect` while the
+    new center merge path is active.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 31 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, syncs viewport layouts, paints split handles, paints viewport
+    surfaces, paints floating container chrome, paints drag payload ghosts, paints basic center
+    drop overlays, paints drop-hint pads, paints structural tab chrome, paints complex overlays,
+    paints tab-insert preview titles, paints tab details, handles active-tab close clicks, handles
+    overflow-menu close/activation clicks, handles overflow-menu wheel scrolling, handles
+    tab-strip wheel scrolling, handles tab/overflow hover state, handles floating close clicks,
+    handles floating title-bar move clicks, handles panel-tab drag activation, handles tabs-group
+    drag activation, and now handles floating title-bar center merge.
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: declarative floating-drag activation/hover/merge integration compiles in the
+    default `fret-docking` feature set.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 145 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after adding the declarative floating title-bar center merge path.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting remains clean after the implementation and evidence update.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: this slice keeps floating title-bar drag policy in `fret-docking` and does not
+    widen `fret-ui` mechanism contracts.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Follow-up:
+
+- Continue `RBX-M1-075` with viewport input capture, remaining floating hover visual state, or one
+  tightly scoped raw pointer/internal-drag arbitration path. Avoid moving full `DockSpace::event`
+  in one step.
+
+## 2026-05-19 - RBX-M1-075 twenty-sixth slice: declarative viewport input capture
+
+Claim verified:
+
+- The public declarative dock-space host now handles left-button viewport pointer capture without
+  delegating to retained `DockSpace::event`.
+- Declarative viewport capture state lives in `fret-docking` via
+  `DeclarativeDockInteractionService`; `fret-ui` remains a mechanism-only managed-surface layer
+  and receives no docking policy/state.
+- The declarative host forwards `ViewportInputKind::PointerDown`, clamped captured `PointerMove`,
+  `PointerUp`, and `PointerCancel` effects through the shared viewport helper path, and
+  requests/releases pointer capture on the managed-surface host node.
+- `RBX-M1-075` still remains open. Raw docking pointer/internal-drag event arbitration and
+  remaining floating hover visual state still live on the retained `DockSpace` adapter.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_captures_viewport_pointer_input public_declarative_dock_space_entry_point_cancels_viewport_pointer_capture`
+  - Result: failed before implementation because the declarative host emitted no viewport input
+    effect and did not request pointer capture, then passed after implementation, 2 tests.
+  - Scope proven: the public declarative dock-space host starts viewport capture on left pointer
+    down, forwards clamped captured moves outside the draw rect to the original viewport, releases
+    capture on pointer up, and emits pointer cancel input while releasing capture.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 33 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, syncs viewport layouts, paints split handles, paints viewport
+    surfaces, paints floating container chrome, paints drag payload ghosts, paints basic center
+    drop overlays, paints drop-hint pads, paints structural tab chrome, paints complex overlays,
+    paints tab-insert preview titles, paints tab details, handles active-tab close clicks, handles
+    overflow-menu close/activation clicks, handles overflow-menu wheel scrolling, handles
+    tab-strip wheel scrolling, handles tab/overflow hover state, handles floating close clicks,
+    handles floating title-bar move clicks, handles panel-tab drag activation, handles tabs-group
+    drag activation, handles floating title-bar center merge, and now handles viewport pointer
+    capture.
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: declarative viewport capture state/event integration compiles in the default
+    `fret-docking` feature set.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 147 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after adding the declarative viewport capture path.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting remains clean after the implementation and evidence update.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: this slice keeps viewport capture policy/state in `fret-docking` and does not
+    widen `fret-ui` mechanism contracts.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Follow-up:
+
+- Continue `RBX-M1-075` with remaining floating hover visual state or one tightly scoped raw
+  pointer/internal-drag arbitration path. Avoid moving full `DockSpace::event` in one step.
+
+## 2026-05-19 - RBX-M1-075 twenty-seventh slice: declarative floating chrome hover
+
+Claim verified:
+
+- The public declarative dock-space host now handles floating close/title-bar hover visual state
+  without delegating to retained `DockSpace::event`.
+- Declarative floating hover state lives in `fret-docking` via
+  `DeclarativeDockInteractionService`; `fret-ui` remains a mechanism-only managed-surface layer
+  and receives no docking policy/state.
+- The declarative host updates floating hover state from `PointerMove` hit-tests, applies that
+  state at paint time so visuals use the latest event state rather than stale layout/prepaint frame
+  output, and preserves retained cursor hints for floating close/title-bar hover.
+- `RBX-M1-075` still remains open. Raw docking pointer/internal-drag event arbitration still lives
+  on the retained `DockSpace` adapter.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_hovers_floating_chrome`
+  - Result: failed before implementation because the declarative host painted floating chrome with
+    hover fields fixed to `false`, then passed after implementation, 1 test.
+  - Scope proven: moving the pointer over a floating title bar paints the retained-style
+    translucent title-bar hover background, and moving over the floating close affordance paints
+    the retained-style close hover affordance.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 34 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, syncs viewport layouts, paints split handles, paints viewport
+    surfaces, paints floating container chrome, paints drag payload ghosts, paints basic center
+    drop overlays, paints drop-hint pads, paints structural tab chrome, paints complex overlays,
+    paints tab-insert preview titles, paints tab details, handles active-tab close clicks, handles
+    overflow-menu close/activation clicks, handles overflow-menu wheel scrolling, handles
+    tab-strip wheel scrolling, handles tab/overflow hover state, handles floating close clicks,
+    handles floating title-bar move clicks, handles panel-tab drag activation, handles tabs-group
+    drag activation, handles floating title-bar center merge, handles viewport pointer capture,
+    and now handles floating close/title-bar hover visuals.
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: declarative floating hover state/event/paint integration compiles in the default
+    `fret-docking` feature set.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 148 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after adding the declarative floating hover path.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting remains clean after the implementation and evidence update.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: this slice keeps floating hover policy/state in `fret-docking` and does not
+    widen `fret-ui` mechanism contracts.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Follow-up:
+
+- Continue `RBX-M1-075` with one tightly scoped raw pointer/internal-drag arbitration path. Avoid
+  moving full `DockSpace::event` in one step.
+
+## 2026-05-19 - RBX-M1-075 twenty-eighth slice: declarative internal-drag drop hover cleanup
+
+Claim verified:
+
+- The public declarative dock-space host now handles the stale-hover cleanup part of raw
+  `InternalDrag` arbitration without delegating to retained `DockSpace::event`.
+- Declarative docking state remains in `fret-docking`: the managed-surface event hook clears
+  `DockManager::hover` for `InternalDragKind::{Drop, Leave, Cancel}` and requests redraw only when
+  a hover was actually cleared.
+- `fret-ui` remains a mechanism-only managed-surface layer; no docking policy/state was added to
+  `fret-ui`.
+- `RBX-M1-075` still remains open. Full `InternalDragKind::{Enter, Over, Drop}` target resolution,
+  drop-intent application, diagnostics, and tear-off arbitration still need a separate declarative
+  migration slice before `RBX-M1-080`.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_clears_hover_on_internal_drag_drop_without_drag_session`
+  - Result: passed, 1 test.
+  - Scope proven: an `InternalDragKind::Drop` delivered through the public declarative dock-space
+    entry point clears stale `DockManager::hover` even when no runtime drag session is active.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 35 tests.
+  - Scope proven: the public declarative dock-space host still places/paints registry panel roots,
+    handles focus-request commands, installs internal-drag route anchors, publishes
+    diagnostics/liveness state, syncs viewport layouts, paints split handles, paints viewport
+    surfaces, paints floating container chrome, paints drag payload ghosts, paints basic center
+    drop overlays, paints drop-hint pads, paints structural tab chrome, paints complex overlays,
+    paints tab-insert preview titles, paints tab details, handles active-tab close clicks, handles
+    overflow-menu close/activation clicks, handles overflow-menu wheel scrolling, handles
+    tab-strip wheel scrolling, handles tab/overflow hover state, handles floating close clicks,
+    handles floating title-bar move/merge paths, handles panel-tab drag activation, handles
+    tabs-group drag activation, handles viewport pointer capture, handles floating close/title-bar
+    hover visuals, and now clears stale hover on internal drag drop.
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: declarative internal-drag cleanup compiles in the default `fret-docking` feature
+    set.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 149 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after adding the declarative internal-drag cleanup path.
+- `cargo fmt --check`
+  - Result: initially reported rustfmt changes for this slice; passed after running `cargo fmt`.
+  - Scope proven: Rust formatting is clean after the implementation and evidence update.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: this slice keeps raw docking arbitration policy/state in `fret-docking` and does
+    not widen `fret-ui` mechanism contracts.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Follow-up:
+
+- Continue `RBX-M1-075` with full declarative `InternalDragKind::{Enter, Over, Drop}` hover/drop
+  target resolution and drop-intent application. Keep this as one or more narrow slices; do not
+  move the entire retained `DockSpace::event` body at once.
+
+## 2026-05-19 - RBX-M1-075 twenty-ninth slice: shared drop target resolution and declarative internal-drag over
+
+Claim verified:
+
+- Dock drop-target resolution is no longer a retained-only local function inside
+  `DockSpace::event`; the shared, docking-private resolution logic now lives in
+  `dock/drop_resolve.rs`.
+- The retained `DockSpace` adapter still uses the same resolution behavior through the shared
+  helper, preserving existing drag/drop semantics while reducing retained-bridge coupling.
+- The public declarative dock-space host now handles `InternalDragKind::{Enter, Over}` enough to
+  resolve and publish `DockManager::hover` from the same shared drop-target resolver.
+- `ManagedSurfaceEventCx` exposes the existing mechanism-only window-local pointer position helper
+  so declarative hosts can use pre-transform event positions without depending on retained
+  `EventCx`.
+- `RBX-M1-075` still remains open. Drop-intent application, drop-time cancellation/end-drag,
+  tear-off debounce mutation, and tab-bar drag auto-scroll still need separate declarative slices
+  before `RBX-M1-080`.
+
+Evidence:
+
+- `crates/fret-ui/src/managed_surface.rs`
+- `ecosystem/fret-docking/src/dock/drop_resolve.rs`
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/space.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_resolves_internal_drag_over_outer_hint_rect`
+  - Result: passed, 1 test.
+  - Scope proven: an `InternalDragKind::Over` delivered through the public declarative dock-space
+    entry point resolves the root split's outer-left hint rect and updates `DockManager::hover`
+    without creating retained `DockSpace`.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point`
+  - Result: passed, 36 tests.
+  - Scope proven: all public declarative dock-space entry-point behavior remains green with the new
+    internal-drag `Over` hover resolution path.
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: shared drop resolution and declarative internal-drag hover integration compile in
+    the default `fret-docking` feature set.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 150 tests.
+  - Scope proven: existing retained docking drag/drop/viewport/floating behavior remains green
+    after moving drop-target resolution into the shared docking-private helper.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 6 tests.
+  - Scope proven: the managed-surface mechanism remains green after exposing the
+    window-local pointer position helper through `ManagedSurfaceEventCx`.
+- `cargo fmt --check`
+  - Result: initially reported rustfmt changes for this slice; passed after running `cargo fmt`.
+  - Scope proven: Rust formatting is clean after the implementation and evidence update.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: this slice keeps docking policy/state in `fret-docking` and only adds a
+    mechanism-only `ManagedSurfaceEventCx` context helper in `fret-ui`.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Follow-up:
+
+- Continue `RBX-M1-075` with declarative `InternalDragKind::Drop` drop-intent application using
+  the shared resolver. Keep tear-off debounce mutation and tab-bar drag auto-scroll as explicit
+  follow-on checks rather than silently treating them as covered by hover resolution.
+
+## 2026-05-19 - RBX-M1-075 thirtieth slice: declarative internal-drag drop intent and end-drag
+
+Claim verified:
+
+- Dock drop-intent resolution/application is no longer retained-only local logic inside
+  `DockSpace::event`; the shared, docking-private intent helpers now live in `dock/drop_resolve.rs`.
+- The retained `DockSpace` adapter uses the shared drop-intent helpers, preserving the existing
+  retained drop behavior while shrinking retained-only policy code.
+- The public declarative dock-space host now handles `InternalDragKind::Drop` for active dock-panel
+  and dock-tabs drags by resolving the target through the shared resolver, applying the shared
+  `DockDropIntent` into `Effect::Dock(...)`, clearing hover, invalidating layout when an op is
+  emitted, and ending the active dock drag session.
+- A public declarative dock-space test proves an inner-left hint-rect drop emits
+  `DockOp::MovePanel`, applies cleanly to split the tabs node, and cancels the active drag session
+  without creating retained `DockSpace`.
+- `RBX-M1-075` still remains open. Tear-off debounce mutation and tab-bar drag auto-scroll still
+  need separate declarative slices before `RBX-M1-080`.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/drop_resolve.rs`
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/space.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_drops_panel_on_inner_left_hint_rect`
+  - Result: failed before implementation because the public declarative host emitted no `DockOp`;
+    failed again after adding the end-drag assertion because the active drag session remained; passed
+    after wiring shared drop-intent application and `cancel_drag(...)`.
+  - Scope proven: this test drove the declarative `Drop` behavior end-to-end rather than only
+    checking a private helper.
+- `cargo nextest run -p fret-docking dock_drop_left_emits_move_panel_and_splits_tabs_node`
+  - Result: passed.
+  - Scope proven: the retained adapter's existing inner-left drop behavior remains green after
+    extracting shared drop-intent helpers.
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: shared drop-intent helpers and declarative `Drop` integration compile in the
+    default `fret-docking` feature set.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 151 tests.
+  - Scope proven: retained and declarative docking drag/drop/floating/viewport behavior remains
+    green after moving `Drop` intent application onto the public declarative dock-space host.
+- `cargo fmt --check`
+  - Result: passed after running `cargo fmt`.
+  - Scope proven: Rust formatting is clean after this slice.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: docking drop policy/state stays in `fret-docking`; no new retained bridge or
+    reverse dependency leakage was introduced.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Follow-up:
+
+- Continue `RBX-M1-075` with tear-off debounce mutation and tab-bar drag auto-scroll on the public
+  declarative dock-space host. Keep them explicit; do not claim `RBX-M1-080` until those retained
+  event responsibilities have been either ported or intentionally deleted with evidence.
+
+## 2026-05-19 - RBX-M1-075 thirty-first slice: declarative tab-bar drag auto-scroll
+
+Claim verified:
+
+- Tab-bar drag auto-scroll for active dock drags is no longer retained-only behavior in
+  `DockSpace::event`; the public declarative dock-space host now applies the same event-side
+  auto-scroll when `InternalDragKind::{Enter, Over}` resolves a center tab-bar drop target.
+- Declarative docking now caches tab widths measured during managed-surface paint in
+  `DeclarativeDockInteractionService`, then reuses those widths for event-side hit testing,
+  drop-target resolution, and auto-scroll. This preserves retained behavior after paint while
+  keeping the first-frame approximate-width fallback for hosts that have not painted yet.
+- The retained `DockSpace` adapter's tab-bar drag auto-scroll behavior remains green.
+- `RBX-M1-075` still remains open. Tear-off debounce mutation remains the last explicit retained
+  event responsibility to port or intentionally delete before `RBX-M1-080`.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: declarative measured tab-width cache and auto-scroll integration compile in the
+    default `fret-docking` feature set.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_auto_scrolls_tab_bar_during_dock_drag`
+  - Result: failed before measured-width cache because scroll accumulated but the approximate
+    short-title tab geometry kept the insert index at `7`; passed after paint-measured tab widths
+    were cached and reused by event-side geometry.
+  - Scope proven: repeated public declarative `InternalDragKind::Over` events near the tab-bar right
+    edge advance the drop insert index without creating retained `DockSpace`.
+- `cargo nextest run -p fret-docking dock_drag_auto_scrolls_tab_bar_near_edges`
+  - Result: passed.
+  - Scope proven: retained tab-bar drag auto-scroll behavior remains unchanged.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 152 tests.
+  - Scope proven: retained and declarative docking drag/drop/floating/viewport behavior remains
+    green after moving declarative tab-bar drag auto-scroll.
+- `cargo fmt`
+  - Result: passed.
+  - Scope proven: Rust sources were formatted after the slice.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting remains clean after the docs/evidence update.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: the measured tab-width cache stays in `fret-docking`; no `fret-ui` mechanism
+    layer or retained-bridge dependency leakage was introduced.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Follow-up:
+
+- Continue `RBX-M1-075` with tear-off debounce mutation on the public declarative dock-space host.
+  After that, start `RBX-M1-080` by removing `fret-docking`'s `fret-ui/unstable-retained-bridge`
+  dependency and retained docking public entry points that are no longer needed.
+
+## 2026-05-19 - RBX-M1-075 thirty-second slice: declarative tear-off debounce mutation
+
+Claim verified:
+
+- Stable out-of-bounds tear-off debounce mutation is no longer retained-only behavior in
+  `DockSpace::event`; the public declarative dock-space host now updates drag payload
+  `tear_off_oob_start_frame`, suppresses duplicate tear-off requests, and emits
+  `DockOp::RequestTearOffPanel` / `DockOp::RequestTearOffTabs` after the second stable OOB frame.
+- Declarative docking now reads `PlatformCapabilities.ui.window_tear_off`, gates requests through
+  `DockingPolicy::allow_tear_off(...)`, preserves the conservative default for multi-window
+  sessions, and exposes `DockSpaceElementOptions::allow_multi_window_tear_off` for the per-host
+  opt-in that the retained adapter previously provided through `DockSpace`.
+- The retained adapter's tear-off comparison tests remain green, and the full `fret-docking` gate
+  passes with 153 tests.
+- `RBX-M1-075` is complete. The remaining M1 work is `RBX-M1-080`: remove `fret-docking`'s
+  dependency on `fret-ui/unstable-retained-bridge` and delete/quarantine retained docking entry
+  points.
+
+Evidence:
+
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: declarative tear-off debounce state, platform-capability gating, and option
+    plumbing compile in the default `fret-docking` feature set.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_requests_tear_off_after_stable_oob_frame`
+  - Result: passed after implementation.
+  - Scope proven: the public declarative host emits a tear-off request only after a stable second
+    OOB frame, without creating retained `DockSpace`.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 153 tests.
+  - Scope proven: retained and declarative docking drag/drop/floating/viewport behavior remains
+    green after moving tear-off debounce mutation onto the public declarative dock-space host.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and the existing retained-bridge allowlist remain valid before
+    `RBX-M1-080` removes `fret-docking` from that allowlist.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Follow-up:
+
+- Start `RBX-M1-080` by migrating app/example call sites to declarative docking entry points, then
+  remove retained docking public helpers and `fret-docking`'s
+  `fret-ui/unstable-retained-bridge` dependency.
+
+## 2026-05-19 - RBX-M1-080 retained capability parity audit and docking bridge removal
+
+Claim under verification:
+
+- `fret-docking` no longer depends on `fret-ui/unstable-retained-bridge`.
+- The retained docking adapter and public retained docking entry points were deleted rather than
+  quarantined because the public declarative dock-space host now covers docking layout, paint,
+  event, command/focus, diagnostics, viewport, drag/drop, floating, tab, split, and tear-off
+  behavior.
+- Deleted retained tests were not kept as dead documentation; their covered capabilities are mapped
+  to compiling public declarative or mechanism-level tests.
+
+Retained test capability mapping:
+
+- `bounds.rs`
+  - Replaced by
+    `public_declarative_dock_space_entry_point_records_panel_root_bounds_for_element_queries`,
+    proving public declarative dock hosts place panel roots into the element bounds query path.
+  - The underlying mechanism remains covered by `fret-ui` bounds/managed-surface tests.
+- `tab_bar.rs`
+  - Replaced by public declarative tab-drop tests:
+    `public_declarative_dock_space_entry_point_tab_drop_uses_over_tab_halves_for_insert_index`,
+    `public_declarative_dock_space_entry_point_tab_drop_reorders_tabs_when_move_op_is_applied`, and
+    `public_declarative_dock_space_entry_point_tab_drop_reserved_overflow_header_inserts_at_end`.
+  - Lower-level geometry remains covered by `tab_bar_geometry`, `tab_bar_kernel`, and
+    `tab_bar_drop_target` tests.
+- `viewport.rs`
+  - Replaced by public declarative viewport tests for layout sync, viewport surface painting,
+    left-button capture/move/up/cancel, other-pointer suppression, right-click forwarding, and
+    right-drag context-menu suppression.
+- `drag.rs`
+  - Replaced by public declarative tests for tab drag activation, threshold gating, panel drag
+    policy, tabs-group drag activation/policy, diagnostics/liveness, internal-drag route anchors,
+    stale hover cleanup, over/drop resolution, auto-scroll, tear-off debounce, and floating
+    title-bar merge.
+  - Pointer occlusion and foreign-capture arbitration remain mechanism concerns in `fret-ui`; the
+    docking host tests cover docking-owned policy and payload effects.
+- `drop_hints.rs`
+  - Replaced by public declarative drop-hint, center overlay, edge preview, tab insert marker,
+    tab insert preview title, and inner/outer drop intent tests, plus lower-level drop resolver
+    coverage.
+- `floating.rs`
+  - Replaced by public declarative floating chrome paint, floating hover, floating close,
+    floating title-bar drag, floating title-bar center merge, in-window float/drop, and tear-off
+    request tests.
+- `split.rs`
+  - Retained split tests were migrated instead of deleted: `dock::tests::split::*` now covers
+    split-handle hover, drag, min-size policy, viewport min-size defaults, and n-ary adjacent
+    resize through the public declarative dock host.
+
+Evidence:
+
+- `ecosystem/fret-docking/Cargo.toml`
+- `ecosystem/fret-docking/src/dock/declarative.rs`
+- `ecosystem/fret-docking/src/dock/drop_resolve.rs`
+- `ecosystem/fret-docking/src/dock/host_frame.rs`
+- `ecosystem/fret-docking/src/dock/paint.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `ecosystem/fret-docking/src/dock/tests/split.rs`
+- `ecosystem/fret-docking/tests/public_surface_policy.rs`
+- `tools/check_layering.py`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_tab_drop public_declarative_dock_space_entry_point_viewport_capture_ignores_other_pointer_move_and_up`
+  - Result: passed earlier in this task, 4 tests.
+  - Scope proven: tab drop parity and other-pointer viewport capture parity run through the public
+    declarative dock-space host.
+- `cargo nextest run -p fret-docking public_declarative_dock_space_entry_point_records_panel_root_bounds_for_element_queries`
+  - Result: passed earlier in this task, 1 test.
+  - Scope proven: retained `bounds.rs` panel-root query behavior is covered on the public
+    declarative entry point.
+- `cargo check -p fret-docking`
+  - Result: passed during cleanup.
+  - Scope proven: after deleting retained adapter wrappers and dead retained-era fields,
+    `fret-docking` compiles without retained bridge code.
+- `cargo fmt --check -p fret-docking`
+  - Result: passed.
+  - Scope proven: touched `fret-docking` Rust sources are formatted.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after rustfmt.
+- `cargo check -p fret-docking`
+  - Result: passed.
+  - Scope proven: the default `fret-docking` feature set compiles after deleting retained docking
+    code.
+- `cargo check -p fret-docking --features imui`
+  - Result: passed.
+  - Scope proven: the imui compatibility wrapper now mounts declarative docking without retained
+    bridge dependencies.
+- `cargo clippy -p fret-docking --all-targets --features imui --no-deps -- -D warnings`
+  - Result: passed after fixing clippy findings in the declarative host.
+  - Scope proven: touched `fret-docking` targets are warning-clean under clippy.
+- `cargo nextest run -p fret-ui managed_surface`
+  - Result: passed, 6 tests.
+  - Scope proven: the `ManagedSurface` mechanism used by declarative docking still handles
+    child-root layout, prepaint, paint ordering, paint-time text release, services/scale access,
+    and event/command hooks.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 85 tests.
+  - Scope proven: public declarative docking, split, viewport, tab, drop, floating, runtime, and
+    public-surface policy tests all pass after deleting retained docking tests/code.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: `fret-docking` is no longer on the retained-bridge allowlist and no forbidden
+    dependency direction was introduced.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+- `rg -n "DockSpace::|create_node_retained|retained_bridge|UiTreeRetainedExt|RetainedSubtree|DockPanelRegistry|with_panel_content|unstable-retained-bridge" ecosystem/fret-docking/src ecosystem/fret-docking/tests ecosystem/fret-docking/Cargo.toml -g '*.rs' -g 'Cargo.toml'`
+  - Result: only `ecosystem/fret-docking/tests/public_surface_policy.rs` negative assertion
+    strings matched.
+  - Scope proven: `fret-docking` source/Cargo files no longer contain retained bridge API or
+    retained docking entry point dependencies.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: this is a focused retained-bridge exit slice with a very large workspace; task-local
+    `fret-docking`, `fret-ui managed_surface`, layering, clippy, catalog, and residual-reference
+    gates cover the changed contracts.

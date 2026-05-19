@@ -175,6 +175,7 @@ pub(super) fn hidden_bounds(size: Size) -> Rect {
     }
 }
 
+#[cfg(test)]
 pub(super) fn active_panel_content_bounds(
     graph: &DockGraph,
     layout: &std::collections::HashMap<DockNodeId, Rect>,

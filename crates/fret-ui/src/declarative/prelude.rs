@@ -6,8 +6,9 @@ pub(super) use crate::action::{ActivateReason, DismissReason, KeyDownCx};
 pub(super) use crate::element::{
     AnyElement, CompositeGroupProps, ContainerProps, CrossAlign, EffectLayerProps, ElementKind,
     ExternalDragRegionProps, FlexProps, FocusScopeProps, HoverRegionProps, InternalDragRegionProps,
-    LayoutStyle, Length, MainAlign, MaskLayerProps, Overflow, PointerRegionProps, PressableProps,
-    SpacerProps, SpinnerProps, StackProps, TextProps, VisualTransformProps,
+    LayoutStyle, Length, MainAlign, ManagedSurfaceProps, MaskLayerProps, Overflow,
+    PointerRegionProps, PressableProps, SpacerProps, SpinnerProps, StackProps, TextProps,
+    VisualTransformProps,
 };
 pub(super) use crate::elements::{ElementContext, GlobalElementId, NodeEntry};
 pub(super) use crate::text_input::BoundTextInput;

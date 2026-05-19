@@ -13,14 +13,13 @@ pub mod runtime;
 #[cfg(feature = "imui")]
 pub mod imui;
 
+#[cfg(feature = "imui")]
+pub use dock::imui_dock_space_element;
 pub use dock::{
-    ActivatePanelOptions, DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx,
-    DockPanelFactoryRegistry, DockPanelRegistry, DockPanelRegistryBuilder,
-    DockPanelRegistryService, DockSpace, DockSpaceMount, DockViewportLayout,
+    ActivatePanelOptions, DockManager, DockPanel, DockPanelElement, DockPanelElementRegistry,
+    DockPanelElementRegistryService, DockSpaceElementOptions, DockViewportLayout,
     DockViewportOverlayHooks, DockViewportOverlayHooksService, DockingPolicy, DockingPolicyService,
-    DuplicateDockPanelKindError, ViewportPanel, create_dock_space_node,
-    create_dock_space_node_with_test_id, mount_dock_space, mount_dock_space_with_test_id,
-    render_and_bind_dock_panels, render_cached_panel_root,
+    ViewportPanel, dock_panel_element, dock_space_element, dock_space_element_from_registry,
 };
 pub use facade::DockingRuntime;
 pub use runtime::{handle_dock_before_close_window, handle_dock_op, handle_dock_window_created};

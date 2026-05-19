@@ -23,7 +23,7 @@ pub(super) fn spacing_px_for_basis(length: crate::element::SpacingLength, basis:
 }
 
 impl ElementHostWidget {
-    pub(super) fn layout_impl<H: UiHost>(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+    pub(super) fn layout_impl<H: UiHost + 'static>(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let _element_id = self.element;
         let Some(window) = cx.window else {
             return Size::new(Px(0.0), Px(0.0));
@@ -197,6 +197,7 @@ impl ElementHostWidget {
             | ElementInstance::Scrollbar(_)
             | ElementInstance::Image(_)
             | ElementInstance::Canvas(_)
+            | ElementInstance::ManagedSurface(_)
             | ElementInstance::ViewportSurface(_)
             | ElementInstance::SvgIcon(_)
             | ElementInstance::SvgImage(_)
@@ -1568,6 +1569,20 @@ impl ElementHostWidget {
                 clamp_to_constraints(cx.available, props.layout, cx.available)
             }
             ElementInstance::Canvas(props) => {
+                clamp_to_constraints(cx.available, props.layout, cx.available)
+            }
+            ElementInstance::ManagedSurface(props) => {
+                let on_layout = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::managed_surface::ManagedSurfaceHooks::<H>::default,
+                    |hooks| hooks.on_layout.clone(),
+                );
+                if let Some(on_layout) = on_layout {
+                    let mut managed_cx = crate::managed_surface::ManagedSurfaceLayoutCx::new(cx);
+                    (on_layout)(&mut managed_cx);
+                }
                 clamp_to_constraints(cx.available, props.layout, cx.available)
             }
             #[cfg(feature = "unstable-retained-bridge")]

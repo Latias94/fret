@@ -94,7 +94,11 @@ impl ElementHostWidget {
         }
     }
 
-    pub(super) fn event_impl<H: UiHost>(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+    pub(super) fn event_impl<H: UiHost + 'static>(
+        &mut self,
+        cx: &mut EventCx<'_, H>,
+        event: &Event,
+    ) {
         let Some(window) = cx.window else {
             return;
         };
@@ -162,6 +166,19 @@ impl ElementHostWidget {
             }
             ElementInstance::RovingFlex(props) => {
                 roving_flex::handle_roving_flex(self, cx, window, props, event);
+            }
+            ElementInstance::ManagedSurface(_) => {
+                let on_event = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::managed_surface::ManagedSurfaceHooks::<H>::default,
+                    |hooks| hooks.on_event.clone(),
+                );
+                if let Some(on_event) = on_event {
+                    let mut managed_cx = crate::managed_surface::ManagedSurfaceEventCx::new(cx);
+                    (on_event)(&mut managed_cx, event);
+                }
             }
             _ => {}
         }

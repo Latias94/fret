@@ -1864,6 +1864,7 @@ fn ime_cursor_area_reflects_scroll_offset_in_paint_space() {
             observe_model: &mut observe_model,
             observe_global: &mut observe_global,
             scene: &mut scene,
+            deferred_text_blob_releases: Vec::new(),
         };
 
         area.paint(&mut cx);

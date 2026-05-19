@@ -89,7 +89,7 @@ fn text_prepare_depends_on_width(
 }
 
 impl ElementHostWidget {
-    pub(super) fn paint_impl<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
+    pub(super) fn paint_impl<H: UiHost + 'static>(&mut self, cx: &mut PaintCx<'_, H>) {
         let _element_id = self.element;
         let Some(window) = cx.window else {
             return;
@@ -1801,6 +1801,26 @@ impl ElementHostWidget {
                     }
                 }
                 self.canvas_cache.end_paint(cx.services);
+            }
+            ElementInstance::ManagedSurface(_) => {
+                for blob in self.deferred_paint_text_blobs.drain(..) {
+                    cx.services.text().release(blob);
+                }
+                let on_paint = crate::elements::with_element_state(
+                    cx.app,
+                    window,
+                    self.element,
+                    crate::managed_surface::ManagedSurfaceHooks::<H>::default,
+                    |hooks| hooks.on_paint.clone(),
+                );
+                if let Some(on_paint) = on_paint {
+                    {
+                        let mut managed_cx = crate::managed_surface::ManagedSurfacePaintCx::new(cx);
+                        (on_paint)(&mut managed_cx);
+                    }
+                    self.deferred_paint_text_blobs
+                        .append(&mut cx.deferred_text_blob_releases);
+                }
             }
             ElementInstance::ViewportSurface(props) => {
                 let opacity = props.opacity.clamp(0.0, 1.0);

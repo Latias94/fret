@@ -9,18 +9,6 @@ pub(crate) struct DockInvalidationService {
 }
 
 impl DockInvalidationService {
-    pub(crate) fn model_for_window<H: UiHost>(app: &mut H, window: AppWindowId) -> Model<u64> {
-        app.with_global_mut(DockInvalidationService::default, |svc, app| {
-            if let Some(model) = svc.by_window.get(&window) {
-                return model.clone();
-            }
-
-            let model = app.models_mut().insert(0u64);
-            svc.by_window.insert(window, model.clone());
-            model
-        })
-    }
-
     pub(crate) fn bump_windows<H: UiHost>(
         app: &mut H,
         windows: impl IntoIterator<Item = AppWindowId>,

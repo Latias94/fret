@@ -2,8 +2,6 @@
 //
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
-#[cfg(test)]
-use super::layout::dock_hint_pick_zone;
 use super::layout::split_tab_bar;
 use super::prelude_core::*;
 use super::split_geometry;
@@ -79,50 +77,6 @@ pub(super) fn hit_test_tab(
             Px(pad),
         );
         return Some((node, idx, panel, close));
-    }
-    None
-}
-
-#[cfg(test)]
-pub(super) fn hit_test_drop_target(
-    graph: &DockGraph,
-    layout: &std::collections::HashMap<DockNodeId, Rect>,
-    tab_scroll: &HashMap<DockNodeId, Px>,
-    position: Point,
-) -> Option<HoverTarget> {
-    for (&node, &rect) in layout.iter() {
-        let Some(DockNode::Tabs { tabs, .. }) = graph.node(node) else {
-            continue;
-        };
-        if !rect.contains(position) {
-            continue;
-        }
-
-        let (tab_bar, _content) = split_tab_bar(rect);
-        if tab_bar.contains(position) {
-            let scroll = tab_scroll_for_node(tab_scroll, node);
-            let geom = TabBarGeometry::fixed(tab_bar, tabs.len());
-            let insert_index = geom.compute_insert_index(position, scroll);
-            return Some(HoverTarget {
-                tabs: node,
-                root: node,
-                leaf_tabs: node,
-                zone: DropZone::Center,
-                insert_index: Some(insert_index),
-                outer: false,
-                explicit: false,
-            });
-        }
-
-        return Some(HoverTarget {
-            tabs: node,
-            root: node,
-            leaf_tabs: node,
-            zone: dock_hint_pick_zone(rect, Px(13.0), false, position).unwrap_or(DropZone::Center),
-            insert_index: None,
-            outer: false,
-            explicit: true,
-        });
     }
     None
 }

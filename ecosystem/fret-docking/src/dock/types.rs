@@ -8,7 +8,6 @@ use fret_runtime::{FrameId, TickId};
 pub(crate) struct DockPanelDragPayload {
     pub(crate) panel: PanelKey,
     pub(crate) grab_offset: Point,
-    pub(crate) start_tick: TickId,
     pub(crate) tear_off_requested: bool,
     pub(crate) tear_off_requested_at_tick: Option<TickId>,
     pub(crate) tear_off_oob_start_frame: Option<FrameId>,
@@ -21,11 +20,17 @@ pub(crate) struct DockTabsDragPayload {
     pub(crate) tabs: Vec<PanelKey>,
     pub(crate) active: usize,
     pub(crate) grab_offset: Point,
-    pub(crate) start_tick: TickId,
     pub(crate) tear_off_requested: bool,
     pub(crate) tear_off_requested_at_tick: Option<TickId>,
     pub(crate) tear_off_oob_start_frame: Option<FrameId>,
     pub(crate) dock_previews_enabled: bool,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct DockDragGhostSnapshot {
+    pub(super) panel: PanelKey,
+    pub(super) position: Point,
+    pub(super) grab_offset: Point,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -132,5 +137,4 @@ pub(super) struct HoverTarget {
 pub(super) struct PreparedTabTitle {
     pub(super) blob: TextBlobId,
     pub(super) metrics: TextMetrics,
-    pub(super) title_hash: u64,
 }

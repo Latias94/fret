@@ -1116,6 +1116,7 @@ pub struct PaintCx<'a, H: UiHost> {
     pub observe_model: &'a mut dyn FnMut(ModelId, Invalidation),
     pub observe_global: &'a mut dyn FnMut(TypeId, Invalidation),
     pub scene: &'a mut Scene,
+    pub(crate) deferred_text_blob_releases: Vec<fret_core::TextBlobId>,
 }
 
 impl<'a, H: UiHost> PaintCx<'a, H> {
@@ -1152,6 +1153,7 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
             observe_model,
             observe_global,
             scene,
+            deferred_text_blob_releases: Vec::new(),
         }
     }
 
@@ -1383,6 +1385,10 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
 
     pub fn child_bounds(&self, child: NodeId) -> Option<Rect> {
         self.tree.node_bounds(child)
+    }
+
+    pub(crate) fn release_text_blob_on_next_paint(&mut self, blob: fret_core::TextBlobId) {
+        self.deferred_text_blob_releases.push(blob);
     }
 }
 

@@ -1,20 +1,19 @@
 use fret_core::dock::DropZone;
 use fret_core::geometry::{Px, Rect, Size};
 use fret_core::{
-    AppWindowId, Color, DockNodeId, NodeId, PanelKey, RenderTargetId, Scene, ViewportFit,
-    ViewportMapping,
+    AppWindowId, Color, DockNodeId, PanelKey, RenderTargetId, Scene, ViewportFit, ViewportMapping,
 };
-use fret_ui::UiHost;
 
 mod consts;
+mod declarative;
 mod diagnostics;
+mod drop_resolve;
 mod hit_test;
+mod host_frame;
 mod layout;
 mod paint;
-mod panel_registry;
 mod prelude_core;
 mod prelude_runtime;
-mod prelude_ui;
 mod services;
 mod split_geometry;
 mod tab_bar_drop_target;
@@ -25,19 +24,19 @@ mod types;
 mod viewport;
 
 mod manager;
-mod space;
 
+#[cfg(feature = "imui")]
+pub use declarative::imui_dock_space_element;
+pub use declarative::{
+    DockPanelElement, DockPanelElementRegistry, DockPanelElementRegistryService,
+    DockSpaceElementOptions, dock_panel_element, dock_space_element,
+    dock_space_element_from_registry,
+};
 pub use diagnostics::{dock_graph_signature_for_window, dock_graph_stats_for_window};
 pub use manager::{ActivatePanelOptions, DockManager};
-pub use panel_registry::{
-    DockPanelFactory, DockPanelFactoryCx, DockPanelFactoryRegistry, DockPanelRegistry,
-    DockPanelRegistryBuilder, DockPanelRegistryService, DuplicateDockPanelKindError,
-    render_and_bind_dock_panels, render_cached_panel_root,
-};
 pub use services::{
     DockPanelContentService, DockViewportOverlayHooksService, DockingPolicyService,
 };
-pub use space::DockSpace;
 pub(crate) use types::{DockPanelDragPayload, DockTabsDragPayload};
 
 pub struct DockPanel {
@@ -102,7 +101,7 @@ pub trait DockingPolicy: Send + Sync + 'static {
     /// keeps scripted playback deterministic and prevents "chains" of empty one-panel windows.
     ///
     /// Editors/apps may opt into chained tear-offs by overriding this hook (and/or enabling it
-    /// per dock space via `DockSpace::with_allow_multi_window_tear_off(true)`).
+    /// per dock space via `DockSpaceElementOptions::allow_multi_window_tear_off`).
     fn allow_multi_window_tear_off(
         &self,
         _source_window: AppWindowId,
@@ -197,63 +196,6 @@ pub trait DockViewportOverlayHooks: Send + Sync + 'static {
         _draw_rect: Rect,
         _scene: &mut Scene,
     ) {
-    }
-}
-
-pub fn create_dock_space_node<H: UiHost>(
-    ui: &mut fret_ui::UiTree<H>,
-    window: fret_core::AppWindowId,
-) -> NodeId {
-    // Integration contract:
-    // - Create one DockSpace node per window and keep it alive (do not conditionally omit it).
-    // - Call `render_and_bind_dock_panels(...)` every frame before `layout_all`/`paint_all`.
-    // This matches ADR 0013's "dock host keep-alive / early submission" guidance.
-    use fret_ui::retained_bridge::UiTreeRetainedExt as _;
-    ui.create_node_retained(DockSpace::new(window))
-}
-
-pub fn create_dock_space_node_with_test_id<H: UiHost>(
-    ui: &mut fret_ui::UiTree<H>,
-    window: fret_core::AppWindowId,
-    test_id: &'static str,
-) -> NodeId {
-    use fret_ui::retained_bridge::UiTreeRetainedExt as _;
-    ui.create_node_retained(DockSpace::new(window).with_semantics_test_id(test_id))
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct DockSpaceMount {
-    pub root: NodeId,
-    pub dock_space: NodeId,
-}
-
-/// Create a dock space node and mount it as the UI root.
-///
-/// This helper exists to prevent integration bugs where a dock space node is created but never
-/// mounted into the tree (which would break hit testing and internal drag routing).
-pub fn mount_dock_space<H: UiHost>(
-    ui: &mut fret_ui::UiTree<H>,
-    window: fret_core::AppWindowId,
-) -> DockSpaceMount {
-    let dock_space = create_dock_space_node(ui, window);
-    ui.set_root(dock_space);
-    DockSpaceMount {
-        root: dock_space,
-        dock_space,
-    }
-}
-
-/// `mount_dock_space(...)` variant that also sets a semantics test id.
-pub fn mount_dock_space_with_test_id<H: UiHost>(
-    ui: &mut fret_ui::UiTree<H>,
-    window: fret_core::AppWindowId,
-    test_id: &'static str,
-) -> DockSpaceMount {
-    let dock_space = create_dock_space_node_with_test_id(ui, window, test_id);
-    ui.set_root(dock_space);
-    DockSpaceMount {
-        root: dock_space,
-        dock_space,
     }
 }
 

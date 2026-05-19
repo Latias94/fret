@@ -34,6 +34,7 @@ pub mod host;
 pub mod input_modality;
 pub mod internal_drag;
 mod layout;
+pub mod managed_surface;
 pub use layout::constraints as layout_constraints;
 pub use layout::engine as layout_engine;
 #[doc(hidden)]

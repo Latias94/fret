@@ -498,6 +498,7 @@ impl<H: UiHost> UiTree<H> {
                         observe_model: &mut observe_model,
                         observe_global: &mut observe_global,
                         scene,
+                        deferred_text_blob_releases: Vec::new(),
                         tree,
                     };
                     let transform = widget.render_transform(bounds);

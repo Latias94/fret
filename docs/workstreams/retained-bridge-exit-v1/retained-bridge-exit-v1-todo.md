@@ -12,13 +12,9 @@ Related plan:
 
 - [x] CI: reject `crates/* -> ecosystem/*` reverse dependencies (`tools/check_layering.py`).
 - [x] CI: restrict `fret-ui/unstable-retained-bridge` to an explicit allowlist (`tools/check_layering.py`).
-- [x] Document the current allowlist and rationale per crate (docking/node/chart/plot).
+- [x] Document the current allowlist and rationale per crate.
   - Source of truth: `tools/check_layering.py` (`unstable_retained_bridge_allowlist`).
   - Current allowlist (workspace crate names):
-    - `fret-docking`
-      - Why: hosts retained subtrees for docking UI and reuses retained helpers (e.g. resizable panel group sizing / capture / hit-test policy) while the declarative surface is still closing.
-      - Evidence: `ecosystem/fret-docking/Cargo.toml` enables `fret-ui/unstable-retained-bridge`; retained hosting in `ecosystem/fret-docking/src/imui.rs`.
-      - Exit target: M1 (primary target).
     - `fret-node`
       - Why: node graph canvas + portal editors are still authored as retained widgets; it also exercises overlays/commands in the retained path.
       - Evidence: `ecosystem/fret-node/Cargo.toml` enables `fret-ui/unstable-retained-bridge`; retained widget surface in `ecosystem/fret-node/src/ui/canvas/widget.rs`.
@@ -35,6 +31,10 @@ Related plan:
       - Why: retained 3D plot surface uses retained viewport-surface helpers and widget lifecycle plumbing.
       - Evidence: `ecosystem/fret-plot3d/Cargo.toml` enables `fret-ui/unstable-retained-bridge`; retained widget in `ecosystem/fret-plot3d/src/retained.rs`.
       - Exit target: M3.
+  - Removed from allowlist:
+    - `fret-docking`
+      - Result: removed in `RBX-M1-080`; docking now uses public declarative dock-space entry
+        points and no longer depends on `fret-ui/unstable-retained-bridge`.
 
 ### M1 — Docking declarative closure (primary target)
 
@@ -181,7 +181,7 @@ Related plan:
     - `DockSpace::paint` reuses a same-frame valid snapshot and falls back to rebuilding one when
       paint runs without a matching layout snapshot.
     - Preserved retained adapter behavior with the full `fret-docking` nextest gate.
-- [ ] RBX-M1-060 Decide and prove the declarative docking host mechanism.
+- [x] RBX-M1-060 Decide and prove the declarative docking host mechanism.
   - Scope:
     - `crates/fret-ui/src/element.rs` / declarative host internals only if existing primitives are
       insufficient.
@@ -196,9 +196,408 @@ Related plan:
     - a small docking layout/diagnostics proof for declarative panel-root placement
   - Evidence:
     - `docs/workstreams/retained-bridge-exit-v1/RBX_M1_030_DOCKING_DECLARATIVE_PRIMITIVE_GAP_AUDIT_2026-05-18.md#rbx-m1-060-decide-the-declarative-host-mechanism`
-- [ ] Replace retained subtree hosting in docking with declarative composition where feasible.
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-19---rbx-m1-060-declarative-managed-surface-host-proof`
+  - Result:
+    - Existing declarative primitives were not sufficient because docking needs host-selected
+      child-root layout, prepaint liveness, and controlled child paint order without exposing the
+      retained `Widget` API.
+    - Added a narrow mechanism-only `ManagedSurface` primitive in `fret-ui`; it owns no docking
+      policy and only exposes layout/prepaint/paint hooks to place and paint child roots.
+    - Added `fret-ui` proof tests for child-root placement, child-root paint order/rects, and
+      prepaint output flow.
+    - Extracted `panel_root_placements_for_snapshot(...)` so retained `DockSpace::layout` and a
+      future declarative dock host can share the same panel placement decision.
+    - Made `DockSpaceLayoutSnapshot::paint_panel_bounds` graph-order stable instead of relying on
+      `HashMap` iteration order.
+    - Added a docking proof that a declarative managed surface consumes `DockSpaceLayoutSnapshot`
+      for panel-root layout and paint without `RetainedSubtreeProps`.
+- [x] RBX-M1-070 Replace public retained docking entry points.
+  - Scope:
+    - `ecosystem/fret-docking/src/dock/mod.rs`
+    - `ecosystem/fret-docking/src/imui.rs`
+    - call sites in apps/examples that create dock spaces through retained helpers.
+  - Goal:
+    - Add or switch to public declarative docking entry points backed by the managed-surface
+      mechanism while preserving docking policy in `fret-docking`.
+    - Keep retained `DockSpace` only as a private/temporary compatibility adapter until the
+      declarative entry points cover the public integration surface.
+  - Validation:
+    - `cargo nextest run -p fret-docking`
+    - targeted app/example checks for docking entry point consumers
+    - `python3 tools/check_layering.py`
+  - Evidence:
+    - `ecosystem/fret-docking/src/dock/declarative.rs`
+    - `ecosystem/fret-docking/src/dock/mod.rs`
+    - `ecosystem/fret-docking/src/imui.rs`
+    - `ecosystem/fret-docking/tests/public_surface_policy.rs`
+    - `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-19---rbx-m1-070-public-declarative-docking-entry-points`
+  - Result:
+    - Added public declarative docking entry points backed by `ManagedSurface`:
+      `dock_space_element(...)`, `dock_space_element_from_registry(...)`, and
+      `dock_panel_element(...)`.
+    - Added `DockPanelElementRegistry` / `DockPanelElementRegistryService` so declarative panel
+      content returns `AnyElement` roots instead of retained `UiTree` node ids.
+    - Added an imui declarative wrapper (`dock_space_declarative*`) that mounts the new public
+      declarative host path.
+    - Documented the retained `create_dock_space_node*` / `mount_dock_space*` helpers as legacy and
+      locked that policy with a public surface test.
+    - Kept retained `DockSpace` as the temporary full-interaction adapter because drag/event/command
+      policy is still implemented through retained `Widget` hooks. Migrating app/demo call sites to
+      the declarative host before that migration would silently drop editor-grade docking
+      interactions.
+- [x] RBX-M1-075 Move docking interaction host hooks off the retained `Widget` adapter.
+  - Scope:
+    - `crates/fret-ui/src/managed_surface.rs`
+    - `crates/fret-ui/src/declarative/host_widget.rs`
+    - `crates/fret-ui/src/declarative/host_widget/event/mod.rs`
+    - `crates/fret-ui/src/elements/cx.rs`
+    - `ecosystem/fret-docking/src/dock/space.rs`
+    - `ecosystem/fret-docking/src/dock/declarative.rs`
+    - app/example docking entry-point call sites.
+  - Goal:
+    - Extract event, command, focus, internal-drag route, diagnostics, chrome painting, and viewport
+      capture hooks so the declarative host can replace the retained `DockSpace` adapter for real
+      app/demo entry points.
+    - After this task, app/example call sites should no longer need `create_dock_space_node*`.
+  - Validation:
+    - `cargo nextest run -p fret-docking`
+    - `cargo nextest run -p fret-ui managed_surface`
+    - targeted app/example checks for `docking_demo`, `container_queries_docking_demo`,
+      `docking_basics`, and `imui_editor_proof_demo`
+    - `python3 tools/check_layering.py`
+  - Progress:
+    - 2026-05-19 first slice completed:
+      - Extended `ManagedSurface` with mechanism-only event, command, and command availability
+        hooks. These hooks expose lifecycle context capabilities needed by docking without
+        exposing the retained `Widget` API.
+      - Added a `fret-ui` proof that a declarative managed surface can receive pointer events,
+        request focus, handle commands, and answer command availability.
+      - Moved `dock.focus_requested_panel` handling onto the public declarative dock-space host so
+        `dock_space_element_from_registry(...)` can focus the requested panel root without the
+        retained `DockSpace::command` adapter.
+      - Locked the new docking path with a public declarative dock-space focus-request test.
+    - 2026-05-19 second slice completed:
+      - Exposed current host `node()` through `ManagedSurface` layout/prepaint/paint contexts.
+      - Made the public declarative dock-space host refresh dock panel/tabs internal-drag routes
+        during layout, prepaint, and paint, matching the retained adapter keep-alive contract.
+      - Made the public declarative dock-space host register as `DockManager::dock_space_node(...)`
+        for its window, matching the retained adapter window-anchor contract.
+      - Locked the declarative route-anchor path with a public declarative dock-space test.
+    - 2026-05-19 third slice completed:
+      - Moved common docking diagnostics publication into `dock/diagnostics.rs` so retained and
+        declarative hosts share one graph/drag diagnostics path instead of carrying duplicate
+        `DockSpace`-local helpers.
+      - Made the public declarative dock-space host publish `WindowInteractionDiagnosticsStore`
+        snapshots from its prepaint hook, including active dock-drag diagnostics, dock graph stats,
+        and dock graph signature.
+      - Made the public declarative dock-space host request animation frames while an active dock
+        drag affects its window, preserving the retained adapter's prepaint liveness intent for the
+        declarative path.
+      - Locked the declarative diagnostics/liveness path with a public declarative dock-space test.
+    - 2026-05-19 fourth slice completed:
+      - Extended `ManagedSurfacePaintCx` with mechanism-only access to `scale_factor()`,
+        `services()`, and `child_bounds(...)`, keeping those capabilities in `fret-ui` without
+        exposing the retained `Widget` API.
+      - Updated the public declarative dock-space host to paint panel roots using actual child
+        bounds with the snapshot rect as a fallback, matching retained `DockSpace::paint`
+        child-root fallback semantics more closely.
+      - Locked the new managed-surface paint capabilities with a focused `fret-ui` test.
+    - 2026-05-19 fifth slice completed:
+      - Added declarative viewport layout sync from the public dock-space host's shared
+        `DockSpaceLayoutSnapshot` path into `DockManager::sync_viewport_layouts_for_window(...)`.
+      - Runs the sync from layout and prepaint so app/editor viewport consumers can read stable
+        viewport mapping/draw rect state without retained `DockSpace::paint`.
+      - Locked stale-layout cleanup and viewport mapping publication with a public declarative
+        dock-space test.
+    - 2026-05-19 sixth slice completed:
+      - Extracted split-handle paint inputs from retained `paint_split_handles(...)` into reusable
+        `split_handle_paint_inputs(...)` / `paint_split_handle_inputs(...)` helpers.
+      - Made the public declarative dock-space host carry split-handle paint inputs in its
+        per-frame output and paint split handles without borrowing retained `DockSpace`.
+      - Locked the declarative split-handle paint path through the public declarative dock-space
+        panel-root test.
+    - 2026-05-19 seventh slice completed:
+      - Extracted viewport-surface paint inputs from retained `paint_dock(...)` into reusable
+        viewport paint-input helpers.
+      - Made the public declarative dock-space host carry viewport-surface paint inputs in its
+        per-frame output and paint `SceneOp::ViewportSurface` plus viewport overlay hooks from its
+        managed-surface paint hook.
+      - Locked the pure viewport-panel declarative path with a public declarative dock-space test.
+    - 2026-05-19 eighth slice completed:
+      - Extracted floating container chrome paint inputs from retained `DockSpace::paint` into
+        reusable `FloatingChromePaintInput` / `paint_floating_chrome_input(s)` helpers.
+      - Made the public declarative dock-space host carry floating chrome paint inputs in its
+        per-frame output and paint in-window floating outer/title-bar chrome from its
+        managed-surface paint hook without borrowing retained `DockSpace`.
+      - Locked the public declarative floating chrome path with a public declarative dock-space
+        test.
+    - 2026-05-19 ninth slice completed:
+      - Extracted active dock drag ghost snapshot selection into a reusable diagnostics helper
+        shared by retained and declarative hosts.
+      - Made the public declarative dock-space host carry drag ghost snapshots in its per-frame
+        output, prepare the dragged panel title through `ManagedSurfacePaintCx::services()`, and
+        paint the payload ghost from its managed-surface paint hook.
+      - Locked the public declarative drag payload ghost path with a public declarative dock-space
+        test.
+    - 2026-05-19 tenth slice completed:
+      - Extracted basic float/empty/center drop-overlay painting into a reusable
+        `paint_basic_drop_overlay(...)` helper that does not require retained `DockSpace` state.
+      - Made the public declarative dock-space host carry `DockManager::hover` plus
+        `DockSpaceLayoutSnapshot::layout_all` in its per-frame output and paint center drop
+        overlays from its managed-surface paint hook.
+      - Locked the public declarative center drop-overlay path with a public declarative
+        dock-space test.
+    - 2026-05-19 eleventh slice completed:
+      - Made the public declarative dock-space host derive `DockDropHints` from the resolved
+        `DockManager::hover` target and carry the hints in its per-frame output.
+      - Reused the shared `paint_drop_hints(...)` helper from the managed-surface paint hook so
+        declarative docking paints the ImGui-style drop-hint plate and pads without borrowing
+        retained `DockSpace`.
+      - Locked the public declarative drop-hint pad path with a public declarative dock-space test.
+    - 2026-05-19 twelfth slice completed:
+      - Extracted the structural tab chrome quads (panel background, tab bar, active/hover tab
+        plate, active underline) into reusable `TabChromePaintInput` /
+        `paint_tab_chrome_inputs(...)` helpers.
+      - Retained `paint_dock(...)` now delegates those structural tab chrome quads through the
+        shared helper, while still owning tab title, close button, overflow, and viewport fill
+        details.
+      - Made the public declarative dock-space host carry tab chrome inputs in its per-frame output
+        and paint tab bar chrome from its managed-surface paint hook before painting panel roots.
+      - Locked the public declarative tab chrome path with a public declarative dock-space test.
+    - 2026-05-19 thirteenth slice completed:
+      - Extracted non-text complex drop-overlay geometry into reusable
+        `ComplexDropOverlayPaintInput` / `paint_complex_drop_overlay_inputs(...)` helpers.
+      - Retained `paint_drop_overlay(...)` now delegates tab insert markers and edge split-slot
+        preview overlays through the shared helper while still owning tab-title preview text.
+      - Made the public declarative dock-space host carry complex drop-overlay inputs in its
+        per-frame output and paint edge split-slot previews plus tab insert markers from its
+        managed-surface paint hook.
+      - Locked the public declarative edge preview and tab insert marker paths with public
+        declarative dock-space tests.
+    - 2026-05-19 fourteenth slice completed:
+      - Extracted tab-insert preview title painting into reusable
+        `paint_tab_insert_preview_title(...)` so retained and declarative dock-space hosts share
+        the same preview title behavior.
+      - Extended `ManagedSurfacePaintCx` with `release_text_blob_on_next_paint(...)` so
+        paint-time transient text blobs remain valid for the scene that references them and are
+        released on the next managed-surface repaint or cleanup.
+      - Made the public declarative dock-space host paint tab-insert preview titles from its
+        managed-surface paint hook without borrowing retained `DockSpace`.
+      - Locked the public declarative tab-insert preview title path with a public declarative
+        dock-space test.
+    - 2026-05-19 fifteenth slice completed:
+      - Extracted tab title, active-tab close affordance, overflow button, and overflow menu
+        painting into reusable `TabDetailPaintInput` / `paint_tab_detail_inputs(...)` helpers.
+      - Retained `paint_dock(...)` now delegates tab detail painting through the shared helper
+        while still owning the retained tab resource cache and interaction state.
+      - Made the public declarative dock-space host prepare transient tab title/close/overflow text
+        resources and paint tab details from its managed-surface paint hook.
+      - Locked the public declarative tab detail path with a public declarative dock-space test.
+    - 2026-05-19 sixteenth slice completed:
+      - Moved the active-tab close affordance `PointerDown` / `PointerUp` path onto the public
+        declarative dock-space host.
+      - Kept `ManagedSurfaceEventCx` mechanism-only by avoiding prepaint-output reads from event
+        hooks; the declarative docking host rebuilds a temporary `DockSpaceLayoutSnapshot` from the
+        current bounds and `DockManager` for close hit-testing.
+      - Added declarative docking interaction state for pressed tab-close tracking and pointer
+        capture, then emits `DockOp::ClosePanel` through `Effect::Dock` on click/slop release.
+      - Locked the public declarative active-tab close path with a public declarative dock-space
+        event test.
+    - 2026-05-19 seventeenth slice completed:
+      - Moved the tab overflow button/menu close click path onto the public declarative dock-space
+        host.
+      - Added declarative overflow-menu state in `fret-docking`, reused existing
+        `TabOverflowMenuState` and `paint_tab_detail_inputs(...)`, and kept the state out of
+        `fret-ui`.
+      - The declarative host now opens the overflow menu, paints it through the existing tab detail
+        helper, emits `DockOp::ClosePanel` for overflow-menu row close without also activating the
+        tab, and emits `DockOp::SetActiveTab` for overflow-menu row activation without closing a
+        tab.
+      - Locked the public declarative overflow-menu close and activation paths with public
+        declarative dock-space event/paint tests.
+    - 2026-05-19 eighteenth slice completed:
+      - Moved the in-window floating close `PointerDown` / `PointerUp` path onto the public
+        declarative dock-space host.
+      - Added declarative pressed-floating-close state in `fret-docking`, keeping floating close
+        policy out of `fret-ui`.
+      - The declarative host now raises a floating container on close press, captures/releases the
+        pointer, and emits `DockOp::MergeFloatingInto { ... }` on release over the same close
+        affordance.
+      - Reused the existing `DockSpaceLayoutSnapshot` floating chrome geometry for close
+        hit-testing and pressed close painting.
+      - Locked the public declarative floating close path with a declarative dock-space event test.
+    - 2026-05-19 nineteenth slice completed:
+      - Moved the in-window floating title-bar drag `PointerDown` / `PointerMove` / `PointerUp`
+        state onto the public declarative dock-space host for the narrow move-rect path.
+      - Added declarative floating-drag state in `fret-docking`, keeping drag policy out of
+        `fret-ui`.
+      - The declarative host now raises a floating container on title-bar press, captures/releases
+        the pointer, and emits `DockOp::SetFloatingRect { ... }` while the title bar is dragged.
+      - Reused the existing `DockSpaceLayoutSnapshot` floating chrome geometry for title-bar
+        hit-testing and the same clamp-to-window-bounds behavior as the retained adapter.
+      - Locked the public declarative floating title-bar drag path with a declarative dock-space
+        event test.
+    - 2026-05-19 twentieth slice completed:
+      - Moved overflow-menu wheel scrolling onto the public declarative dock-space host.
+      - Reused the retained adapter's menu geometry and scroll formula:
+        `next_scroll = (menu.scroll - (delta.x + delta.y)).clamp(0, max_scroll)`.
+      - Kept overflow-menu state in `fret-docking`; `fret-ui` remains a mechanism-only
+        `ManagedSurface` host with no docking policy/state.
+      - Locked the public declarative overflow-menu wheel path with a test that scrolls the menu
+        and then activates a row exposed by the new scroll offset.
+    - 2026-05-19 twenty-first slice completed:
+      - Moved tab-strip wheel scrolling onto the public declarative dock-space host.
+      - Added declarative tab-scroll state in `fret-docking`, keyed by window and tabs node, and
+        wired it into tab chrome/detail paint inputs, tab close hit-testing, overflow-menu opening,
+        and tab-insert preview painting.
+      - Reused the retained adapter's tab-strip scroll formula:
+        `next_scroll = (scroll - (delta.x + delta.y)).clamp(0, max_scroll)`.
+      - Locked the public declarative tab-strip wheel path with a test that scrolls the tab strip
+        and then closes the tab made hit-testable by the new scroll offset.
+    - 2026-05-19 twenty-second slice completed:
+      - Moved tab hover, tab overflow button hover, and overflow menu row hover state onto the
+        public declarative dock-space host.
+      - Added declarative tab-hover state in `fret-docking` and kept hover policy out of
+        `fret-ui`.
+      - Refreshed transient tab interaction paint state from the latest docking service state at
+        paint time so hover/menu visuals do not lag behind an older layout/prepaint frame output.
+      - Locked the public declarative hover paths with tests for ordinary tab hover, overflow
+        button hover, and overflow menu row hover.
+    - 2026-05-19 twenty-third slice completed:
+      - Moved the narrow panel-tab drag activation path onto the public declarative dock-space
+        host.
+      - Added declarative pending dock-drag state in `fret-docking`, reusing the retained runtime
+        drag startup helper for `DRAG_KIND_DOCK_PANEL`.
+      - Preserved retained semantics for tab-local grab offset, configured tab drag threshold,
+        dock-preview inversion policy, pointer capture release on runtime drag start, and
+        `DockingPolicy::allow_panel_drag`.
+      - Locked the public declarative tab drag path with tests for activation, threshold gating,
+        and panel drag policy gating.
+    - 2026-05-19 twenty-fourth slice completed:
+      - Moved tabs-group drag activation from empty tab-bar space onto the public declarative
+        dock-space host.
+      - Added declarative pending tabs-drag state in `fret-docking`, reusing the retained runtime
+        drag startup helper for `DRAG_KIND_DOCK_TABS`.
+      - Preserved retained semantics for tab-bar-local grab offset, configured tab drag threshold,
+        dock-preview inversion policy, pointer capture release on runtime drag start, and
+        `DockingPolicy::allow_tabs_group_drag`.
+      - Locked the public declarative tabs-group drag path with tests for activation and tabs-group
+        drag policy gating.
+    - 2026-05-19 twenty-fifth slice completed:
+      - Moved the floating title-bar drag dock-preview and center merge-on-release path onto the
+        public declarative dock-space host.
+      - Added declarative floating-drag activation state in `fret-docking`, latching
+        dock-preview inversion policy at threshold activation while keeping policy/state out of
+        `fret-ui`.
+      - The declarative host now resolves `DockManager::hover` while an activated floating
+        title-bar drag moves over the root dock layout, and emits `DockOp::MergeFloatingInto` on
+        center drop release.
+      - Locked the public declarative floating title-bar merge path with a test that proves hover
+        resolution and release-time merge without creating retained `DockSpace`.
+    - 2026-05-19 twenty-sixth slice completed:
+      - Moved left-button viewport pointer capture onto the public declarative dock-space host.
+      - Added declarative viewport capture state in `fret-docking`, keeping viewport interaction
+        policy/state out of `fret-ui`.
+      - The declarative host now forwards `ViewportInputKind::PointerDown`, clamped captured
+        `PointerMove`, `PointerUp`, and `PointerCancel` effects through the shared viewport helper
+        path, and requests/releases pointer capture on the managed-surface host node.
+      - Locked the public declarative viewport capture path with tests for captured moves outside
+        the draw rect and pointer cancel release without creating retained `DockSpace`.
+    - 2026-05-19 twenty-seventh slice completed:
+      - Moved floating close/title-bar hover visual state onto the public declarative dock-space
+        host.
+      - Added declarative floating hover state in `fret-docking`, keeping hover policy/state out of
+        `fret-ui`.
+      - The declarative host now updates floating hover state from `PointerMove` hit-tests, applies
+        that state at paint time so visuals use the latest event state, and preserves retained
+        cursor hints for floating close/title-bar hover.
+      - Locked the public declarative floating hover path with a test for title-bar hover
+        background and close hover affordance painting without creating retained `DockSpace`.
+    - 2026-05-19 twenty-eighth slice completed:
+      - Moved the stale-hover cleanup part of raw `InternalDrag` arbitration onto the public
+        declarative dock-space host.
+      - The declarative host now clears `DockManager::hover` on
+        `InternalDragKind::{Drop, Leave, Cancel}` and requests redraw only when stale hover state
+        was present.
+      - Preserved the retained robustness behavior where `Drop` can arrive after the runtime drag
+        session has already been cleared by the runner or driver.
+      - Locked the public declarative cleanup path with an event test that dispatches
+        `InternalDragKind::Drop` without creating retained `DockSpace`.
+    - 2026-05-19 twenty-ninth slice completed:
+      - Moved drop-target resolution out of the retained `DockSpace::event` local function set and
+        into docking-private `dock/drop_resolve.rs`.
+      - Retained `DockSpace` now uses the shared resolver, preserving existing retained drag/drop
+        behavior while reducing retained adapter coupling.
+      - The public declarative dock-space host now resolves `InternalDragKind::{Enter, Over}` hover
+        targets through the same shared resolver and updates `DockManager::hover`.
+      - Added a mechanism-only `ManagedSurfaceEventCx::pointer_position_window(...)` helper so the
+        declarative docking host can use window-local pointer positions without retained `EventCx`.
+      - Locked the public declarative `Over` path with a test that resolves the root split
+        outer-left hint rect without creating retained `DockSpace`.
+    - 2026-05-19 thirtieth slice completed:
+      - Moved drop-intent resolution/application out of the retained `DockSpace::event` local
+        function set and into docking-private `dock/drop_resolve.rs`.
+      - Retained `DockSpace` now uses the shared drop-intent helpers, preserving existing retained
+        drop behavior while reducing retained adapter coupling.
+      - The public declarative dock-space host now handles `InternalDragKind::Drop` for active
+        dock-panel and dock-tabs drags: it resolves the drop target through the shared resolver,
+        applies the shared `DockDropIntent` into `Effect::Dock(...)`, clears hover, invalidates
+        layout when an op is emitted, and ends the active dock drag session.
+      - Locked the public declarative `Drop` path with a test that emits `DockOp::MovePanel`,
+        applies it to split a tabs node, and verifies the drag session is cancelled without
+        creating retained `DockSpace`.
+    - 2026-05-19 thirty-first slice completed:
+      - Moved tab-bar drag auto-scroll for active dock drags onto the public declarative dock-space
+        host.
+      - Added a declarative interaction-service cache for tab widths measured during managed-surface
+        paint, so event-side hit testing, drop target resolution, and auto-scroll use the same
+        measured tab geometry as retained `DockSpace` after paint.
+      - Preserved a fallback approximate-width path for the first frame before paint measurement is
+        available.
+      - Locked the public declarative auto-scroll path with a test that drives repeated
+        `InternalDragKind::Over` events at the right tab-bar edge without creating retained
+        `DockSpace`.
+    - 2026-05-19 thirty-second slice completed:
+      - Moved stable out-of-bounds tear-off debounce mutation onto the public declarative
+        dock-space host.
+      - Added declarative handling for `PlatformCapabilities.ui.window_tear_off`,
+        `DockSpaceElementOptions::allow_multi_window_tear_off`, policy-gated tear-off checks,
+        `tear_off_oob_start_frame`, and duplicate request suppression.
+      - Locked the public declarative tear-off path with a test that requires the second stable
+        OOB frame to emit `DockOp::RequestTearOffPanel` without creating retained `DockSpace`.
+    - Result for `RBX-M1-075`:
+      - The active-tab close, overflow-menu close/activation, overflow-menu wheel scroll,
+        tab-strip wheel scroll, tab hover, panel-tab drag activation, tabs-group drag activation,
+        viewport input capture, floating close/title-bar hover, stale internal-drag hover cleanup,
+        internal-drag over hover resolution, internal-drag drop intent/end-drag, tab-bar drag
+        auto-scroll, tear-off debounce mutation, and tab paint paths now exist on the declarative
+        host.
+      - App/demo call sites can now switch away from `create_dock_space_node*` during
+        `RBX-M1-080`.
+- [x] RBX-M1-080 Remove `fret-ui/unstable-retained-bridge` from `fret-docking`.
+  - Scope:
+    - `ecosystem/fret-docking/Cargo.toml`
+    - remaining `fret_ui::retained_bridge` imports in `ecosystem/fret-docking/src/`
+    - `tools/check_layering.py` retained-bridge allowlist.
+  - Goal:
+    - Delete or quarantine the retained docking adapter and remove `fret-docking` from the
+      retained-bridge allowlist.
+  - Validation:
+    - `cargo check -p fret-docking`
+    - `cargo nextest run -p fret-docking`
+    - `python3 tools/check_layering.py`
+  - Result:
+    - Deleted the retained `DockSpace` adapter, retained panel registry, retained prelude, and
+      retained-only docking tests after mapping their covered behaviors to public declarative or
+      mechanism-level tests.
+    - Removed `fret-ui/unstable-retained-bridge` from `ecosystem/fret-docking/Cargo.toml`.
+    - Removed `fret-docking` from `tools/check_layering.py`'s retained-bridge allowlist.
+    - Added public-surface policy coverage proving declarative docking entry points are exported
+      and retained docking entry points are no longer public.
+    - Evidence:
+      `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-19---rbx-m1-080-retained-capability-parity-audit-and-docking-bridge-removal`.
 - [ ] Add/upgrade `fretboard-dev diag` scripts to lock in docking drag + tear-off correctness.
-- [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-docking` dependencies.
 
 ### M2 — Node graph migration
 
