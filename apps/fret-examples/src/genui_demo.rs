@@ -24,6 +24,8 @@ use fret_genui_core::spec_fixer::{SpecFixups, auto_fix_spec};
 use fret_genui_core::validate::ValidationMode;
 use fret_genui_shadcn::catalog::shadcn_catalog_v1;
 use fret_genui_shadcn::resolver::ShadcnResolver;
+use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::declarative::text as decl_text;
 use serde_json::Value;
 mod act {
     fret::actions!([
@@ -45,6 +47,27 @@ fn install_demo_theme(app: &mut KernelApp) {
         shadcn::themes::ShadcnBaseColor::Slate,
         shadcn::themes::ShadcnColorScheme::Light,
     );
+}
+
+fn genui_code_line_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_code_block(cx, text)
+}
+
+fn genui_readout_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_control_readout(cx, text)
+}
+
+fn genui_paragraph_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_compact_paragraph(cx, text)
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -943,7 +966,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
     let queue_len = queue_snapshot.len();
     let queue_lines: Vec<AnyElement> = queue_snapshot
         .into_iter()
-        .map(|line| ui::text(line).text_sm().into_element(cx))
+        .map(|line| genui_code_line_text(cx, line))
         .collect();
 
     let state_snapshot: Vec<Arc<str>> = st
@@ -960,7 +983,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
         .unwrap_or_else(|| vec![Arc::<str>::from("null")]);
     let state_lines: Vec<AnyElement> = state_snapshot
         .into_iter()
-        .map(|line| ui::text(line).text_sm().into_element(cx))
+        .map(|line| genui_code_line_text(cx, line))
         .collect();
 
     let (validation_issue_count, validation_snapshot): (usize, Vec<Arc<str>>) = st
@@ -980,7 +1003,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
         .unwrap_or_else(|_| (0, vec![Arc::<str>::from("<validation unavailable>")]));
     let validation_lines: Vec<AnyElement> = validation_snapshot
         .into_iter()
-        .map(|line| ui::text(line).text_sm().into_element(cx))
+        .map(|line| genui_code_line_text(cx, line))
         .collect();
 
     let toolbar = ui::h_flex(move |cx| {
@@ -1000,11 +1023,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
         let mut items: Vec<AnyElement> = Vec::new();
         items.push(mode_badge);
 
-        items.push(
-            ui::text(Arc::<str>::from("auto-apply"))
-                .text_sm()
-                .into_element(cx),
-        );
+        items.push(genui_readout_text(cx, "auto-apply"));
         items.push(
             shadcn::Switch::new(auto_apply_model.clone())
                 .a11y_label("Auto-apply standard actions")
@@ -1012,18 +1031,14 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
                 .into_element(cx),
         );
 
-        items.push(
-            ui::text(Arc::<str>::from("auto-fix on apply"))
-                .text_sm()
-                .into_element(cx),
-        );
+        items.push(genui_readout_text(cx, "auto-fix on apply"));
         items.push(
             shadcn::Switch::new(auto_fix_model.clone())
                 .a11y_label("Auto-fix spec on apply")
                 .into_element(cx),
         );
 
-        items.push(ui::text(count_label.clone()).text_sm().into_element(cx));
+        items.push(genui_readout_text(cx, count_label.clone()));
 
         items.push(
             shadcn::Button::new("Clear queue")
@@ -1128,7 +1143,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
                 spec_issue_lines
                     .iter()
                     .cloned()
-                    .map(|s| ui::text(s).text_sm().into_element(cx)),
+                    .map(|s| genui_readout_text(cx, s)),
             );
         }
         if let Some(root) = spec_root {
@@ -1153,11 +1168,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
     });
     let spec_lines: Vec<AnyElement> = spec_pretty
         .lines()
-        .map(|line| {
-            ui::text(Arc::<str>::from(line.to_string()))
-                .text_sm()
-                .into_element(cx)
-        })
+        .map(|line| genui_code_line_text(cx, Arc::<str>::from(line.to_string())))
         .collect();
 
     let schema_value = st.catalog.spec_json_schema();
@@ -1165,21 +1176,13 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
         serde_json::to_string_pretty(&schema_value).unwrap_or_else(|_| schema_value.to_string());
     let schema_lines: Vec<AnyElement> = schema_pretty
         .lines()
-        .map(|line| {
-            ui::text(Arc::<str>::from(line.to_string()))
-                .text_sm()
-                .into_element(cx)
-        })
+        .map(|line| genui_code_line_text(cx, Arc::<str>::from(line.to_string())))
         .collect();
 
     let prompt = st.catalog.system_prompt();
     let prompt_lines: Vec<AnyElement> = prompt
         .lines()
-        .map(|line| {
-            ui::text(Arc::<str>::from(line.to_string()))
-                .text_sm()
-                .into_element(cx)
-        })
+        .map(|line| genui_code_line_text(cx, Arc::<str>::from(line.to_string())))
         .collect();
 
     let editor_model = st.editor_text.clone();
@@ -1232,16 +1235,12 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
         .into_element(cx);
 
         let issues_body = if spec_issue_count == 0 {
-            vec![
-                ui::text(Arc::<str>::from("No spec issues."))
-                    .text_sm()
-                    .into_element(cx),
-            ]
+            vec![genui_readout_text(cx, "No spec issues.")]
         } else {
             spec_issue_lines
                 .iter()
                 .cloned()
-                .map(|s| ui::text(s).text_sm().into_element(cx))
+                .map(|s| genui_readout_text(cx, s))
                 .collect()
         };
         let issues_scroll = shadcn::ScrollArea::new([ui::v_flex(|_cx| issues_body)
@@ -1312,7 +1311,6 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
             .items_center()
             .into_element(cx),
         );
-        editor_children.push(ui::text("").text_sm().into_element(cx));
         if let Some(summary) = auto_fix_summary.clone() {
             editor_children.push(
                 shadcn::Alert::new([
@@ -1369,12 +1367,13 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
         stream_children.push(
             ui::h_flex(move |cx| {
                 vec![
-                    ui::text(Arc::<str>::from(format!(
-                        "patch-only: {}",
-                        if stream_patch_only { "on" } else { "off" }
-                    )))
-                    .text_sm()
-                    .into_element(cx),
+                    genui_readout_text(
+                        cx,
+                        Arc::<str>::from(format!(
+                            "patch-only: {}",
+                            if stream_patch_only { "on" } else { "off" }
+                        )),
+                    ),
                     shadcn::Switch::new(stream_patch_only_model.clone())
                         .a11y_label("Patch-only stream mode")
                         .into_element(cx),
@@ -1384,14 +1383,12 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
             .items_center()
             .into_element(cx),
         );
-        stream_children.push(
-            ui::text(Arc::<str>::from(
-                    "Paste json-render-style mixed streams here (text + JSONL RFC6902 patches). Supports ```spec fences.",
-                ),
-            )
-            .text_sm()
-            .into_element(cx),
-        );
+        stream_children.push(genui_paragraph_text(
+            cx,
+            Arc::<str>::from(
+                "Paste json-render-style mixed streams here (text + JSONL RFC6902 patches). Supports ```spec fences.",
+            ),
+        ));
         stream_children.push(
             shadcn::Textarea::new(&stream_model)
                 .a11y_label("Mixed stream input")
@@ -1399,7 +1396,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut GenUiState) -> ViewElem
                 .into_element(cx),
         );
         if let Some(summary) = stream_summary {
-            stream_children.push(ui::text(summary).text_sm().into_element(cx));
+            stream_children.push(genui_readout_text(cx, summary));
         }
         if let Some(summary) = auto_fix_summary {
             stream_children.push(

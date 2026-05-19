@@ -804,6 +804,10 @@ Exit criteria:
   control-readout, code-label, and compact-paragraph roles. The query helper call chain no longer
   carries `ThemeSnapshot` just to color fixed readouts, so resize behavior is role-owned rather
   than locally styled.
+  2026-05-19 GenUI demo text result: `genui_demo` keeps its catalog/editor/runtime validation
+  behavior unchanged while moving tool text to code-block, control-readout, and compact-paragraph
+  roles. JSON/spec/schema/prompt panes now use code text, fixed toolbar/issue/status values use
+  readout text, stream help uses paragraph text, and the empty text spacer is gone.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

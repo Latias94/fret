@@ -2700,6 +2700,37 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   passed.
 - `git diff --check` passed.
 
+2026-05-19 GenUI demo visible text-role slice:
+
+- Source gap before fix: `apps/fret-examples/src/genui_demo.rs` used local
+  `ui::text(...).text_sm()` builders for action queue lines, JSON state/spec/schema panes, prompt
+  text, spec issue lines, toolbar switch labels, count/readout values, stream status text, and
+  stream guidance. It also used `ui::text("")` as an empty spacer in the editor panel.
+- `genui_code_line_text(...)` now routes queue/state/validation/spec/schema/prompt pane lines
+  through `decl_text::text_code_block(...)`, keeping code/log content on the code-text role
+  instead of ordinary prose.
+- `genui_readout_text(...)` now routes fixed toolbar labels, count/status/issue lines, patch-only
+  status, and stream summaries through `decl_text::text_control_readout(...)`.
+- `genui_paragraph_text(...)` routes stream guidance through `decl_text::text_compact_paragraph(...)`;
+  the old empty text spacer was removed rather than converted to another invisible text node.
+- `apps/fret-examples/tests/genui_demo_surface.rs` and `tools/gate_imui_workstream_source.py` guard
+  the role mapping and forbid local `ui::text(...)`, `.text_sm()`, and the empty text spacer from
+  returning.
+- First post-fix `cargo nextest run -p fret-examples --test genui_demo_surface
+  genui_demo_keeps_tool_text_on_roles --no-fail-fast` timed out while background Cargo/Rustc
+  compilation continued.
+- Retried after Cargo/Rustc exited:
+  `cargo nextest run -p fret-examples --test genui_demo_surface
+  genui_demo_keeps_tool_text_on_roles --no-fail-fast` passed.
+- `cargo fmt --check -p fret-examples` passed.
+- `cargo check -p fret-examples --lib` passed.
+- `cargo check -p fret-demo` passed with the existing unrelated warning in
+  `apps/fret-demo/src/bin/wgpu_hello_world_control.rs` about an unused `Result`.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+
 2026-05-19 gallery NavigationMenu link-label text-role slice:
 
 - Red repro:

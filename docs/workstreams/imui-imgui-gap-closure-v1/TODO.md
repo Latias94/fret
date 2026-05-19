@@ -897,6 +897,11 @@ Readiness order for the next locally testable review slices:
    chrome-title, section-chrome, list-row, control-readout, code-label, and compact-paragraph text
    roles. The obsolete `ThemeSnapshot` plumbing that only supported local muted text color policy
    was removed from the query panel helpers.
+   2026-05-19 GenUI demo text follow-up: `genui_demo` now routes JSON/log/prompt panes through
+   code-block text roles, toolbar/status/issue readouts through control-readout roles, and stream
+   guidance through compact paragraph text. The old empty `ui::text("")` spacer and local
+   `ui::text(...).text_sm()` policy were removed without moving GenUI runtime/rendering ownership
+   into `fret-imui`.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
