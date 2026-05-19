@@ -824,6 +824,10 @@ Exit criteria:
   `custom_effect_v2_demo` keep their explicit custom-effect/runtime ownership, but their fixed
   overlay pill labels now use shared section-chrome text with inherited white foreground instead
   of local `TextProps`.
+  2026-05-19 custom effect web overlay text result: `custom_effect_v2_web_demo` keeps its WebGPU
+  effect ownership unchanged while moving the unsupported-state readout, badge label, and keyboard
+  hint to shared text roles. The absolute keyboard hint now positions a container around
+  control-readout text instead of constructing local `TextProps`.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

@@ -2725,6 +2725,40 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   passed.
 - `git diff --check` passed.
 
+2026-05-19 custom effect web overlay/readout text-role slice:
+
+- Source gap before fix: `custom_effect_v2_web_demo.rs` still used three local `TextProps`
+  constructions for fixed overlay/readout text: the unsupported-state message, the WebGPU badge
+  label, and the bottom keyboard hint. These are ordinary UI chrome/readouts, not text-rendering
+  capability probes.
+- The demo now uses `overlay_label_text(...)` backed by `text_section_chrome_label(...)` for the
+  badge and `overlay_readout_text(...)` backed by `text_control_readout(...)` for the unsupported
+  state and keyboard hint. App-owned foreground colors are preserved with `inherit_foreground(...)`.
+- The bottom hint keeps its absolute positioning by wrapping the shared readout role in a positioned
+  container, avoiding a regression back to local text layout policy.
+- `apps/fret-examples/tests/custom_effect_overlay_text_surface.rs`,
+  `apps/fret-examples/tests/text_role_residual_surface.rs`, and
+  `tools/gate_imui_workstream_source.py` guard the migration and remove `custom_effect_v2_web_demo`
+  from the residual direct text allowlist.
+- `cargo fmt --check -p fret-examples` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo nextest run -p fret-examples --test custom_effect_overlay_text_surface
+  custom_effect_v2_web_overlay_readouts_use_shared_roles --no-fail-fast` passed.
+- `cargo nextest run -p fret-examples --test custom_effect_overlay_text_surface
+  custom_effect_v1_v2_overlay_labels_use_shared_chrome_role --no-fail-fast` passed.
+- `cargo nextest run -p fret-examples --test text_role_residual_surface
+  remaining_bare_text_in_fret_examples_is_explicit_capability_surface --no-fail-fast` passed.
+- `cargo check -p fret-examples --lib` passed.
+- `cargo check -p fret-examples --lib --target wasm32-unknown-unknown` passed.
+- `cargo check -p fret-demo-web --target wasm32-unknown-unknown` passed with existing unrelated
+  `fret-platform-native` clipboard dead-code warnings.
+- `cargo check -p fret-demo` passed with an existing unrelated warning in
+  `apps/fret-demo/src/bin/wgpu_hello_world_control.rs` about an unused `Result`.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.
+
 2026-05-19 GenUI demo visible text-role slice:
 
 - Source gap before fix: `apps/fret-examples/src/genui_demo.rs` used local

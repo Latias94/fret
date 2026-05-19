@@ -922,6 +922,10 @@ Readiness order for the next locally testable review slices:
    `custom_effect_v2_demo` no longer keep fixed overlay labels in the direct-text residual allowlist.
    Their pill labels now use `text_section_chrome_label(...)` with app-owned white foreground
    inheritance, leaving custom-effect runtime/ABI ownership unchanged.
+   2026-05-19 custom effect web overlay text follow-up: `custom_effect_v2_web_demo` no longer keeps
+   its unsupported-state readout, WebGPU badge label, or keyboard hint in the direct-text residual
+   allowlist. The badge now uses section-chrome text, the status/hint use control-readout text, and
+   absolute positioning stays in layout containers instead of local `TextProps`.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
