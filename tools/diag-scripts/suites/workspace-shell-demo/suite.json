@@ -3,6 +3,7 @@
   "kind": "diag_script_suite_manifest",
   "scripts": [
     "tools/diag-scripts/workspace-shell-demo-tab-close-button-dirty-shows-prompt-smoke.json",
+    "tools/diag-scripts/workspace-shell-demo-tab-close-cross-pane-button-ownership-smoke.json",
     "tools/diag-scripts/workspace-shell-demo-tab-close-others-dirty-aggregation-smoke.json",
     "tools/diag-scripts/workspace-shell-demo-tab-cross-pane-move-to-end.json",
     "tools/diag-scripts/workspace-shell-demo-tab-drag-and-scroll.json",

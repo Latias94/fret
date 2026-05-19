@@ -1125,3 +1125,10 @@ date: 2026-05-12
     exposed script authoring issues: direct tab click did not select `doc-a-0`, and `arrowright`
     was not a valid key token. The final script uses the existing tabstrip keyboard-selection path
     and `arrow_right`.
+- [x] Promote workspace shell demo cross-pane close-button ownership into the runtime suite.
+  - Result: `workspace-shell-demo-tab-close-cross-pane-button-ownership-smoke.json` now starts with
+    `pane-a` active, clicks the real close button for selected `doc-b-1` in `pane-b`, asserts the
+    pointer path dispatches `workspace.pane.activate.pane-b` and then `workspace.tab.close.doc-b-1`,
+    and proves only `doc-b-1` is removed while `doc-a-2` remains. No runtime defect was reproduced;
+    the gate locks the close-button ownership invariant that non-active pane tab closes must route
+    through pane activation before model mutation.

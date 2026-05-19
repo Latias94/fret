@@ -2267,3 +2267,37 @@ Status: complete for aggregate dirty-close policy under context-menu Close Other
   with suite summary
   `target/fret-diag-workspace-shell-demo-suite-close-others-dirty-aggregation-v1/sessions/1779150610325-113064/suite.summary.json`;
   12/12 scripts passed and the new aggregate script run id is `1779150627934`.
+
+## M121: Workspace Shell Demo Cross-Pane Close Button Ownership Gate
+
+Status: complete for real close-button ownership when the clicked tab belongs to a non-active pane.
+
+- Added `workspace-shell-demo-tab-close-cross-pane-button-ownership-smoke.json` and promoted it into
+  the `workspace-shell-demo` suite.
+- The script starts from the default split layout where `pane-a` is the active pane and `pane-b` is
+  visible with selected `doc-b-1`.
+- It clicks the real `workspace-shell-pane-pane-b-tab-doc-b-1.close` button, asserts the pointer
+  path dispatches `workspace.pane.activate.pane-b`, then asserts `workspace.tab.close.doc-b-1`
+  dispatches from the same close button.
+- The final state proves command ownership by checking `doc-b-1` is removed, `doc-b-0` remains and
+  becomes selected with set size `1`, and pane-a's active `doc-a-2` remains present.
+- No runtime mechanism defect was reproduced. The existing tab close interaction already carries a
+  pane-activate command in the close press state and dispatches it before the close command, so the
+  app-owned `WorkspaceWindowLayout` routes the close to the correct pane.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-tab-close-cross-pane-button-ownership-smoke.json > $null`;
+  `python -m json.tool tools\diag-scripts\workspace-shell-demo-tab-close-cross-pane-button-ownership-smoke.json > $null`;
+  `python tools/check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_workspace_shell_demo_tab_close_cross_pane_button_ownership_smoke --no-fail-fast --no-capture`
+  with Nextest run id `dfb8718a-4d49-4fbe-aacd-05b732b5f971`;
+  `cargo build --profile dev-fast -p fret-demo --bin workspace_shell_demo`; and
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-tab-close-cross-pane-button-ownership-smoke.json --dir target\fret-diag-workspace-shell-demo-cross-pane-close-ownership-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  with run id `1779151906508` and AI packet
+  `target/fret-diag-workspace-shell-demo-cross-pane-close-ownership-v1/sessions/1779151900949-103552/1779151906508/ai.packet`.
+- Full runtime suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite workspace-shell-demo --dir target\fret-diag-workspace-shell-demo-suite-cross-pane-close-ownership-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  with suite summary
+  `target/fret-diag-workspace-shell-demo-suite-cross-pane-close-ownership-v1/sessions/1779152081871-77896/suite.summary.json`;
+  13/13 scripts passed and the new cross-pane close ownership script run id is `1779152100416`.

@@ -11955,6 +11955,33 @@
       ]
     },
     {
+      "id": "workspace-shell-demo-tab-close-cross-pane-button-ownership-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-cross-pane-button-ownership-smoke.json",
+      "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "close",
+        "cross_pane",
+        "gate",
+        "ownership",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Starts with pane-a active while pane-b is visible.",
+        "Clicks the real close button for doc-b-1 in pane-b.",
+        "Asserts the pointer path dispatches pane-b activation before closing doc-b-1.",
+        "Proves the close removes only doc-b-1 and does not remove pane-a's active doc-a-2."
+      ]
+    },
+    {
       "id": "workspace-shell-demo-tab-close-dirty-shows-prompt-and-discard-closes-smoke",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-shows-prompt-and-discard-closes-smoke.json",
       "required_capabilities": [

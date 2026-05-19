@@ -4734,3 +4734,50 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - result: passed; 12/12 scripts passed; suite summary
     `target/fret-diag-workspace-shell-demo-suite-close-others-dirty-aggregation-v1/sessions/1779150610325-113064/suite.summary.json`;
     aggregate dirty-close script run id `1779150627934`.
+
+## Workspace Shell Demo Cross-Pane Close Button Ownership Gate
+
+- invariant:
+  close-button commands from a tab in a non-active pane must first establish pane ownership before
+  applying the tab-close model command. Otherwise the app-owned `WorkspaceWindowLayout` can route
+  the close to the previously active pane instead of the pane that owns the clicked tab.
+- finding:
+  no runtime mechanism defect was reproduced. The existing `WorkspaceTabStripClosePress` path
+  carries the pane-activate command and dispatches `workspace.pane.activate.pane-b` before
+  `workspace.tab.close.doc-b-1`, so the app model mutates pane-b, not the previously active pane-a.
+- diagnostics surface:
+  the script asserts both command dispatch trace entries from the real close-button source
+  `workspace-shell-pane-pane-b-tab-doc-b-1.close`, then checks `doc-b-1` disappears, `doc-b-0`
+  remains selected with set size `1`, and pane-a's `doc-a-2` remains present.
+- implementation anchors:
+  `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-cross-pane-button-ownership-smoke.json`,
+  `tools/diag-scripts/workspace-shell-demo-tab-close-cross-pane-button-ownership-smoke.json`,
+  `tools/diag-scripts/suites/workspace-shell-demo/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- JSON validation:
+  `python -m json.tool tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-tab-close-cross-pane-button-ownership-smoke.json > $null`
+  - result: passed.
+  `python -m json.tool tools\diag-scripts\workspace-shell-demo-tab-close-cross-pane-button-ownership-smoke.json > $null`
+  - result: passed.
+- registry:
+  `python tools/check_diag_scripts_registry.py`
+  - result: passed; registry is up to date.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_workspace_shell_demo_tab_close_cross_pane_button_ownership_smoke --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `dfb8718a-4d49-4fbe-aacd-05b732b5f971`.
+- formatting:
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`
+  - result: passed.
+- build:
+  `cargo build --profile dev-fast -p fret-demo --bin workspace_shell_demo`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-tab-close-cross-pane-button-ownership-smoke.json --dir target\fret-diag-workspace-shell-demo-cross-pane-close-ownership-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  - result: passed; run id `1779151906508`; AI packet
+    `target/fret-diag-workspace-shell-demo-cross-pane-close-ownership-v1/sessions/1779151900949-103552/1779151906508/ai.packet`.
+- full runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite workspace-shell-demo --dir target\fret-diag-workspace-shell-demo-suite-cross-pane-close-ownership-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  - result: passed; 13/13 scripts passed; suite summary
+    `target/fret-diag-workspace-shell-demo-suite-cross-pane-close-ownership-v1/sessions/1779152081871-77896/suite.summary.json`;
+    cross-pane close ownership script run id `1779152100416`.
