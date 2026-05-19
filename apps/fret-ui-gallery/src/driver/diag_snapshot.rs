@@ -205,6 +205,24 @@ fn chart_window_json(pair: Option<(f64, f64)>) -> serde_json::Value {
 }
 
 #[cfg(feature = "gallery-dev")]
+fn chart_numeric_window_json(pair: Option<(f64, f64)>) -> serde_json::Value {
+    pair.map(|(min, max)| {
+        let span = max - min;
+        serde_json::json!({
+            "present": true,
+            "min_milli": scaled_f32(min as f32, 1000.0),
+            "max_milli": scaled_f32(max as f32, 1000.0),
+            "span_milli": scaled_f32(span as f32, 1000.0),
+        })
+    })
+    .unwrap_or_else(|| {
+        serde_json::json!({
+            "present": false,
+        })
+    })
+}
+
+#[cfg(feature = "gallery-dev")]
 fn chart_torture_snapshot_json(app: &App, window: AppWindowId) -> Option<serde_json::Value> {
     let handle = app
         .global::<UiGalleryChartTortureOutputStore>()?
@@ -217,11 +235,24 @@ fn chart_torture_snapshot_json(app: &App, window: AppWindowId) -> Option<serde_j
         dataset: delinea::ids::DatasetId::new(1),
         field: delinea::FieldId::new(1),
     };
+    let y_explicit_domain_key = fret_chart::LinkAxisKey {
+        kind: delinea::AxisKind::Y,
+        dataset: delinea::ids::DatasetId::new(1),
+        field: delinea::FieldId::new(2),
+    };
     let full_x_pair = chart_torture_full_x_pair();
     let x_output_model_domain_pair = output
         .snapshot
         .domain_windows_by_key
         .get(&x_domain_key)
+        .copied()
+        .flatten()
+        .filter(|window| window.is_valid())
+        .map(|window| (window.min, window.max));
+    let y_output_model_domain_pair = output
+        .snapshot
+        .domain_windows_by_key
+        .get(&y_explicit_domain_key)
         .copied()
         .flatten()
         .filter(|window| window.is_valid())
@@ -256,6 +287,8 @@ fn chart_torture_snapshot_json(app: &App, window: AppWindowId) -> Option<serde_j
         chart_window_changed_from(x_axis_output_pair, full_x_pair);
     let x_output_model_domain_changed_from_full_domain =
         chart_window_changed_from(x_output_model_domain_pair, full_x_pair);
+    let y_output_model_domain_matches_explicit_fixture =
+        chart_windows_approx_eq(y_output_model_domain_pair, Some((-0.25, 0.75)));
     let tooltip_lines = &output.snapshot.tooltip_lines;
     let tooltip_axis_header_count = tooltip_lines
         .iter()
@@ -302,6 +335,7 @@ fn chart_torture_snapshot_json(app: &App, window: AppWindowId) -> Option<serde_j
             "link_events_revision": output.link_events_revision,
             "domain_windows_count": output.snapshot.domain_windows_by_key.len() as u64,
             "x_domain_window": chart_window_json(x_output_model_domain_pair),
+            "y_explicit_domain_window": chart_numeric_window_json(y_output_model_domain_pair),
             "tooltip_lines_count": output.snapshot.tooltip_lines.len() as u64,
             "tooltip": {
                 "lines_count": tooltip_lines.len() as u64,
@@ -319,6 +353,7 @@ fn chart_torture_snapshot_json(app: &App, window: AppWindowId) -> Option<serde_j
             "x_output_model_domain_matches_data_zoom": x_output_model_domain_matches_data_zoom,
             "x_axis_output_changed_from_full_domain": x_axis_output_changed_from_full_domain,
             "x_output_model_domain_changed_from_full_domain": x_output_model_domain_changed_from_full_domain,
+            "y_output_model_domain_matches_explicit_fixture": y_output_model_domain_matches_explicit_fixture,
         },
     }))
 }

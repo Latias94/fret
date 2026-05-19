@@ -212,6 +212,14 @@ date: 2026-05-12
   pass exposed a stale oracle rather than a chart defect: ADR 0301 does not auto-export the shared
   Y axis once two Y fields make the `(dataset, field)` key ambiguous. Fixed evidence is anchored at
   `target/fret-diag-chart-torture-multiseries-tooltip-v3/sessions/1779217007250-123724/1779217026347/ai.packet`.
+- Chart explicit link-axis map update:
+  `ui-gallery-chart-torture-explicit-y-link-map.json` and the focused retained-canvas regression
+  now cover the ADR 0301 explicit host-map companion path. A shared multi-series Y axis remains
+  omitted by auto mapping when ambiguous, but an explicit `AxisId -> LinkAxisKey` map publishes the
+  fixture `[-0.25, 0.75]` Y domain window to `ChartCanvasOutput`. The runtime gate is isolated in
+  `ui-gallery-chart-linking-explicit-y-map` so it does not inherit the pan/zoom-only Chart Torture
+  tail policy. Suite evidence is anchored at
+  `target/fret-diag-chart-linking-explicit-y-map-suite-v1/sessions/1779226956912-131628/suite.summary.json`.
 - AI transcript non-retained scroll update:
   `ui-gallery-ai-transcript-torture-scroll.json` now gates deterministic large-transcript mutation
   on the non-retained AI transcript path by asserting a hidden message-count semantics value moves

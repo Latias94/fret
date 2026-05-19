@@ -325,6 +325,13 @@ fn script_v2_roundtrip_chart_torture_pan_zoom() {
 }
 
 #[test]
+fn script_v2_roundtrip_chart_torture_explicit_y_link_map() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-chart-torture-explicit-y-link-map.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_carousel_state_gates() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-select-gate.json"

@@ -7886,6 +7886,75 @@ mod tests {
     }
 
     #[test]
+    fn explicit_link_axis_map_publishes_ambiguous_y_domain_window_to_output_model() {
+        let mut app = App::new();
+        let output: Model<ChartCanvasOutput> =
+            app.models_mut().insert(ChartCanvasOutput::default());
+
+        let y_axis = AxisId::new(3);
+        let y_key = LinkAxisKey {
+            kind: AxisKind::Y,
+            dataset: DatasetId::new(1),
+            field: FieldId::new(2),
+        };
+        let window = DataWindow {
+            min: -0.25,
+            max: 0.75,
+        };
+
+        let mut canvas = ChartCanvas::new(multi_axis_spec()).expect("spec should be valid");
+        canvas = canvas.output_model(output.clone());
+        canvas.with_engine_mut(|engine| {
+            engine.apply_action(Action::SetDataWindowY {
+                axis: y_axis,
+                window: Some(window),
+            });
+        });
+
+        let _ = canvas.publish_output(&mut app);
+        let published = output
+            .read(&mut app, |_app, state| state.clone())
+            .expect("expected output model to be readable");
+        assert_eq!(
+            published
+                .snapshot
+                .domain_windows_by_key
+                .get(&y_key)
+                .copied(),
+            None,
+            "ambiguous shared Y axes must not publish by default"
+        );
+
+        let mut explicit = BTreeMap::new();
+        explicit.insert(y_axis, y_key);
+        canvas = canvas.link_axis_map(explicit);
+
+        let output_changed = canvas.publish_output(&mut app);
+        assert!(
+            output_changed,
+            "explicit axis mapping should change the published output snapshot"
+        );
+
+        let published = output
+            .read(&mut app, |_app, state| state.clone())
+            .expect("expected output model to be readable");
+        assert_eq!(
+            published
+                .snapshot
+                .domain_windows_by_key
+                .get(&y_key)
+                .copied(),
+            Some(Some(window)),
+            "explicit Y mapping should publish the domain window in LinkAxisKey space"
+        );
+        assert_eq!(
+            published.snapshot.domain_windows_by_key.len(),
+            1,
+            "only the explicitly disambiguated Y axis should be published"
+        );
+    }
+
+    #[test]
     fn first_chart_bar_hover_publishes_tooltip_lines_to_output_model() {
         let mut app = App::new();
         let output: Model<ChartCanvasOutput> =

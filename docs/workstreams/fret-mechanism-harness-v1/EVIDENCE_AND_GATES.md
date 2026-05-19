@@ -5970,3 +5970,58 @@ Next slice recommendation:
 - focused runtime diagnostics:
   `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json --dir target\fret-diag-ui-gallery-combobox-rtl-intro-overlap-fixed-1624-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
   - result: passed; run id `1779219333574`.
+
+## Chart Explicit Link-Axis Mapping Output Gate
+
+- invariant:
+  ADR 0301's conservative auto mapping should omit an ambiguous shared Y axis, but an explicit
+  host-provided `AxisId -> LinkAxisKey` map must publish that Y domain window to
+  `ChartCanvasOutput`.
+- finding:
+  no retained chart output defect was reproduced. The missing coverage was the explicit-map
+  companion to F226's ambiguous-Y conservative path. The first attempt to place the gate in the
+  existing Chart Torture suite also exposed a diagnostics suite composition hazard: the pan/zoom
+  suite's `chart_sampling_window_shifts_min` tail check is not valid for an explicit-output-only
+  script.
+- implementation anchors:
+  `ecosystem/fret-chart/src/retained/canvas.rs`,
+  `apps/fret-ui-gallery/src/ui/previews/pages/torture/chart_torture.rs`,
+  `apps/fret-ui-gallery/src/driver/diag_snapshot.rs`,
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-chart-torture-explicit-y-link-map.json`,
+  `tools/diag-scripts/suites/ui-gallery-chart-linking-explicit-y-map/suite.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`, and
+  `crates/fret-diag/src/diag_suite.rs`.
+- evidence anchors:
+  focused explicit-Y AI packet:
+  `target/fret-diag-chart-torture-explicit-y-link-map-v2/sessions/1779221804831-35760/1779221899196/ai.packet`;
+  focused explicit-Y pack:
+  `target/fret-diag-chart-torture-explicit-y-link-map-v2/sessions/1779221804831-35760/share/1779221899196.zip`;
+  suite summary:
+  `target/fret-diag-chart-linking-explicit-y-map-suite-v1/sessions/1779226956912-131628/suite.summary.json`;
+  original suite recheck summary:
+  `target/fret-diag-chart-torture-suite-recheck-v1/sessions/1779226999698-96944/suite.summary.json`;
+  suite policy hazard summary:
+  `target/fret-diag-chart-torture-suite-explicit-y-link-map-v1/sessions/1779222142969-22864/suite.summary.json`.
+- format/JSON/registry:
+  `rustfmt --edition 2024 --check crates\fret-diag\src\diag_suite.rs apps\fret-ui-gallery\src\driver\diag_snapshot.rs apps\fret-ui-gallery\src\ui\previews\pages\torture\chart_torture.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs ecosystem\fret-chart\src\retained\canvas.rs`
+  - result: passed.
+  `python -m json.tool tools\diag-scripts\ui-gallery\perf\ui-gallery-chart-torture-explicit-y-link-map.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-chart-torture-explicit-y-link-map.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-chart-linking-explicit-y-map\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-chart-torture\suite.json > $null`
+  - result: passed.
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed.
+- focused Rust checks:
+  `cargo nextest run --cargo-profile dev-fast -p fret-chart explicit_link_axis_map_publishes_ambiguous_y_domain_window_to_output_model --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `6d65c626-9933-45ca-b30b-e15ce835bd83`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_chart_torture_explicit_y_link_map --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `1c0b302d-5894-4a6c-a90a-8e4505d72c2e`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag build_suite_core_default_post_run_checks_keeps_chart_linking_explicit_y_map_generic --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `9225e20a-b2db-445c-aae1-ef9e369cac20`.
+- runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-chart-linking-explicit-y-map --dir target\fret-diag-chart-linking-explicit-y-map-suite-v1 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  - result: passed; run id `1779226972500`.
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-chart-torture --dir target\fret-diag-chart-torture-suite-recheck-v1 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  - result: passed; run id `1779227011824`.

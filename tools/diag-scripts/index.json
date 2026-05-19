@@ -5321,6 +5321,29 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-chart-torture-explicit-y-link-map",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-chart-torture-explicit-y-link-map.json",
+      "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-chart"
+      ],
+      "suite_memberships": [
+        "ui-gallery-chart-linking-explicit-y-map"
+      ],
+      "tags": [
+        "adr_0301",
+        "chart",
+        "explicit_axis_map",
+        "linking",
+        "retained",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts from the retained Chart Torture page with an explicit Y-axis link map enabled.",
+        "Proves ADR 0301 explicit host mapping can publish an otherwise ambiguous multi-series Y domain window to ChartCanvasOutput."
+      ]
+    },
+    {
       "id": "ui-gallery-chart-torture-pan-zoom",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-chart-torture-pan-zoom.json",
       "required_capabilities": [],

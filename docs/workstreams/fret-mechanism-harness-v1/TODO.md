@@ -1333,3 +1333,12 @@ date: 2026-05-12
     to one `(dataset, field)`. With two Y fields on one Y axis, the Y key is ambiguous, so the
     correct output count is one X domain window; the gate still proves the X output model window
     matches dataZoom and changes from the full domain.
+- [x] Gate explicit ChartLinkRouter Y-axis mapping for ambiguous multi-series charts.
+  - Result:
+    `fret-chart` now has a retained-canvas regression proving an explicit host-provided
+    `AxisId -> LinkAxisKey` map publishes an otherwise ambiguous Y domain window to
+    `ChartCanvasOutput`. Chart Torture can opt into the same explicit map through
+    `FRET_UI_GALLERY_CHART_TORTURE_EXPLICIT_Y_LINK_MAP=1`; the runtime gate asserts the output
+    model publishes `dataset=1, field=2` with the fixture `[-0.25, 0.75]` Y domain window. The gate
+    lives in its own `ui-gallery-chart-linking-explicit-y-map` suite so it does not inherit the
+    pan/zoom-only `chart_sampling_window_shifts_min` tail check from `ui-gallery-chart-torture`.

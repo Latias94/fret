@@ -3145,3 +3145,39 @@ Status: complete for the persistent Combobox RTL Long Text startup overlap follo
   `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json --dir target\fret-diag-ui-gallery-combobox-rtl-intro-overlap-fixed-1624-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
   with run id `1779219333574` and AI packet
   `target/fret-diag-ui-gallery-combobox-rtl-intro-overlap-fixed-1624-v1/sessions/1779219328227-121516/1779219333574/ai.packet`.
+
+## M145: Chart Explicit Link-Axis Mapping Output Gate
+
+Status: complete for ADR 0301 explicit Y-axis output publication coverage.
+
+- Added a retained `fret-chart` mechanism regression proving that an explicit host
+  `AxisId -> LinkAxisKey` map publishes an otherwise ambiguous Y domain window to
+  `ChartCanvasOutput`. Without the map, the shared multi-series Y axis remains omitted as
+  ambiguous; with the map, the output model publishes `dataset=1, field=2` and the fixture
+  `[-0.25, 0.75]` window.
+- Added a Chart Torture runtime mode behind
+  `FRET_UI_GALLERY_CHART_TORTURE_EXPLICIT_Y_LINK_MAP=1`. The UI Gallery snapshot now exposes
+  `/chart_torture/output_model/y_explicit_domain_window` and the runtime oracle
+  `/chart_torture/runtime_oracles/y_output_model_domain_matches_explicit_fixture`.
+- Added `ui-gallery-chart-torture-explicit-y-link-map.json` plus direct protocol roundtrip
+  coverage. The gate asserts the explicit Y window is present and matches `min=-250`,
+  `max=750` in milli-units.
+- Split the gate into its own `ui-gallery-chart-linking-explicit-y-map` suite. A diagnostics
+  suite regression covers that this suite stays generic and does not inherit the
+  `ui-gallery-chart-torture` pan/zoom-only `chart_sampling_window_shifts_min` tail check.
+- Gates pass:
+  `rustfmt --edition 2024 --check crates\fret-diag\src\diag_suite.rs apps\fret-ui-gallery\src\driver\diag_snapshot.rs apps\fret-ui-gallery\src\ui\previews\pages\torture\chart_torture.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs ecosystem\fret-chart\src\retained\canvas.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-chart explicit_link_axis_map_publishes_ambiguous_y_domain_window_to_output_model --no-fail-fast --no-capture`
+  with Nextest run id `6d65c626-9933-45ca-b30b-e15ce835bd83`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_chart_torture_explicit_y_link_map --no-fail-fast --no-capture`
+  with Nextest run id `1c0b302d-5894-4a6c-a90a-8e4505d72c2e`; and
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag build_suite_core_default_post_run_checks_keeps_chart_linking_explicit_y_map_generic --no-fail-fast --no-capture`
+  with Nextest run id `9225e20a-b2db-445c-aae1-ef9e369cac20`.
+- Runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-chart-linking-explicit-y-map --dir target\fret-diag-chart-linking-explicit-y-map-suite-v1 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  with suite summary
+  `target/fret-diag-chart-linking-explicit-y-map-suite-v1/sessions/1779226956912-131628/suite.summary.json`
+  and run id `1779226972500`.
+- Original Chart Torture suite recheck passes after the suite split:
+  `target/fret-diag-chart-torture-suite-recheck-v1/sessions/1779226999698-96944/suite.summary.json`
+  with run id `1779227011824`.

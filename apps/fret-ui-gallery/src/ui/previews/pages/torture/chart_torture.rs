@@ -8,6 +8,7 @@ pub(in crate::ui) fn preview_chart_torture(
     _theme: &Theme,
 ) -> Vec<AnyElement> {
     use std::cell::RefCell;
+    use std::collections::BTreeMap;
     use std::rc::Rc;
 
     use delinea::data::{Column, DataTable};
@@ -140,6 +141,9 @@ pub(in crate::ui) fn preview_chart_torture(
         ],
     };
 
+    let explicit_y_link_map = std::env::var_os("FRET_UI_GALLERY_CHART_TORTURE_EXPLICIT_Y_LINK_MAP")
+        .is_some_and(|value| !value.is_empty() && value.to_string_lossy() != "0");
+
     let shared_engine = cx.local_model_keyed("chart_torture_engine", move || {
         let mut engine = ChartEngine::new(spec).expect("chart spec should be valid");
         let base_ms = 1_735_689_600_000.0;
@@ -165,6 +169,15 @@ pub(in crate::ui) fn preview_chart_torture(
         table.push_column(Column::F64(y_a));
         table.push_column(Column::F64(y_b));
         engine.datasets_mut().insert(dataset_id, table);
+        if explicit_y_link_map {
+            engine.apply_action(delinea::Action::SetDataWindowY {
+                axis: y_axis,
+                window: Some(delinea::engine::window::DataWindow {
+                    min: -0.25,
+                    max: 0.75,
+                }),
+            });
+        }
 
         Rc::new(RefCell::new(engine))
     });
@@ -200,6 +213,18 @@ pub(in crate::ui) fn preview_chart_torture(
 
                 let mut canvas = ChartCanvas::new_shared(shared_engine.clone());
                 canvas.set_input_map(fret_chart::input_map::ChartInputMap::default());
+                if explicit_y_link_map {
+                    let mut map = BTreeMap::new();
+                    map.insert(
+                        y_axis,
+                        fret_chart::LinkAxisKey {
+                            kind: AxisKind::Y,
+                            dataset: dataset_id,
+                            field: y_a_field,
+                        },
+                    );
+                    canvas = canvas.link_axis_map(map);
+                }
                 canvas = canvas.output_model(output.clone());
 
                 let node = ui.create_node_retained(canvas);

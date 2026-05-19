@@ -4190,6 +4190,23 @@ mod tests {
     }
 
     #[test]
+    fn build_suite_core_default_post_run_checks_keeps_chart_linking_explicit_y_map_generic() {
+        let profile = SuiteRunProfile::from_suite_args(&[
+            "ui-gallery-chart-linking-explicit-y-map".to_string(),
+        ]);
+        let defaults = build_suite_core_default_post_run_checks(
+            std::path::Path::new("ui-gallery-chart-torture-explicit-y-link-map.json"),
+            profile,
+            Some(BuiltinSuite::UiGallery),
+            &SuiteChecks::default(),
+            false,
+        );
+
+        assert_eq!(defaults.check_chart_sampling_window_shifts_min, None);
+        assert_eq!(defaults.check_pixels_changed_test_id, None);
+    }
+
+    #[test]
     fn build_suite_core_default_post_run_checks_sets_small_scroll_vlist_defaults() {
         let profile = SuiteRunProfile::from_suite_args(&[
             "ui-gallery-vlist-no-window-shifts-small-scroll".to_string(),
