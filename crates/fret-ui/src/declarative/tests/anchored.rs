@@ -3,8 +3,8 @@ use super::*;
 use std::cell::Cell;
 
 use crate::element::{
-    AnchoredProps, ColumnProps, ContainerProps, LayoutStyle, PressableProps, ScrollAxis,
-    ScrollProps, SizeStyle,
+    AnchoredProps, ColumnProps, ContainerProps, InsetEdge, LayoutStyle, PositionStyle,
+    PressableProps, ScrollAxis, ScrollProps, SizeStyle,
 };
 use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions, Side};
 use fret_core::{Event, MouseButton, Point, PointerEvent, Rect, Size, Transform2D};
@@ -270,6 +270,123 @@ fn anchored_can_resolve_anchor_element_bounds_in_layout() {
         AnchoredPanelOptions::default(),
     );
     assert_eq!(app.models().get_copied(&layout_out), Some(expected));
+}
+
+#[test]
+fn anchored_can_resolve_preceding_absolute_anchor_element_in_same_frame() {
+    let window = AppWindowId::default();
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let mut services = FakeTextService::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(200.0)),
+    );
+
+    let layout_out = app.models_mut().insert(AnchoredPanelLayout {
+        rect: Rect::default(),
+        side: Side::Bottom,
+        align: Align::Start,
+        arrow: None,
+    });
+
+    let anchor_element: Cell<Option<u64>> = Cell::new(None);
+    let anchor_element = &anchor_element;
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "anchored-preceding-absolute-anchor-element",
+        |cx| {
+            let layout_out = layout_out.clone();
+            vec![cx.container(ContainerProps::default(), |cx| {
+                let anchor = cx.pressable_with_id(
+                    PressableProps {
+                        layout: LayoutStyle {
+                            position: PositionStyle::Absolute,
+                            inset: crate::element::InsetStyle {
+                                left: InsetEdge::Px(Px(80.0)),
+                                top: InsetEdge::Px(Px(24.0)),
+                                ..Default::default()
+                            },
+                            size: SizeStyle {
+                                width: crate::element::Length::Px(Px(20.0)),
+                                height: crate::element::Length::Px(Px(10.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    |cx, _st, id| {
+                        anchor_element.set(Some(id.0));
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                let anchored = cx.anchored_props(
+                    AnchoredProps {
+                        anchor: Rect::new(
+                            Point::new(Px(0.0), Px(0.0)),
+                            Size::new(Px(1.0), Px(1.0)),
+                        ),
+                        anchor_element: anchor_element.get(),
+                        side: Side::Bottom,
+                        align: Align::Start,
+                        side_offset: Px(0.0),
+                        options: AnchoredPanelOptions::default(),
+                        layout_out: Some(layout_out),
+                        ..Default::default()
+                    },
+                    |cx| {
+                        vec![cx.container(
+                            ContainerProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: crate::element::Length::Px(Px(60.0)),
+                                        height: crate::element::Length::Px(Px(20.0)),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            |_cx| Vec::new(),
+                        )]
+                    },
+                );
+
+                vec![anchor, anchored]
+            })]
+        },
+    );
+
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let expected_anchor = Rect::new(
+        Point::new(Px(80.0), Px(24.0)),
+        Size::new(Px(20.0), Px(10.0)),
+    );
+    let expected = crate::overlay_placement::anchored_panel_layout_sized(
+        bounds,
+        expected_anchor,
+        Size::new(Px(60.0), Px(20.0)),
+        Px(0.0),
+        Side::Bottom,
+        Align::Start,
+        AnchoredPanelOptions::default(),
+    );
+    assert_eq!(
+        app.models().get_copied(&layout_out),
+        Some(expected),
+        "anchored placement should observe a preceding absolute anchor committed earlier in the same layout pass"
+    );
 }
 
 #[test]

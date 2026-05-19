@@ -1774,12 +1774,20 @@ fn try_layout_children_from_engine_with_manual_absolute<H: UiHost>(
 
     let base = Rect::new(base_for_absolute.origin, desired);
 
-    for (child, bounds) in non_absolute {
-        let _ = cx.layout_in(child, bounds);
-    }
-
-    for (child, inset) in absolute {
-        layout_positioned_child(cx, child, base, PositionedLayoutStyle::Absolute(inset));
+    let mut non_absolute_index = 0;
+    let mut absolute_index = 0;
+    for &child in cx.children {
+        if let Some(&(absolute_child, inset)) = absolute.get(absolute_index)
+            && absolute_child == child
+        {
+            layout_positioned_child(cx, child, base, PositionedLayoutStyle::Absolute(inset));
+            absolute_index += 1;
+        } else if let Some(&(non_absolute_child, bounds)) = non_absolute.get(non_absolute_index)
+            && non_absolute_child == child
+        {
+            let _ = cx.layout_in(child, bounds);
+            non_absolute_index += 1;
+        }
     }
 
     Some(desired)

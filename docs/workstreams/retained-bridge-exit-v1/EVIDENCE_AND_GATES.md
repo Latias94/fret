@@ -2779,3 +2779,60 @@ Broader gates not run:
 - `cargo nextest run --workspace`
   - Reason: this follow-up only backfills `fret-docking` tests. The package test gate, clippy,
     layering, catalog, format, and whitespace checks cover the changed files.
+
+## 2026-05-19 - RBX-M1-080 follow-up anchored layout order hardening
+
+Claim verified:
+
+- Declarative layout submission for wrappers that mix layout-engine static children and manually
+  positioned absolute children now preserves author child order when committing `layout_in(...)`
+  side effects.
+- A preceding absolute anchor element can be resolved by a later `Anchored` sibling in the same
+  layout pass. This keeps public declarative docking overlay-anchor parity from depending on
+  retained bridge behavior or previous-frame geometry.
+- The fix deliberately does not add a broad runtime current-bounds fallback for future siblings;
+  same-frame visibility remains ordered by author order to avoid implicit two-way layout feedback.
+
+Evidence:
+
+- `crates/fret-ui/src/declarative/host_widget/layout.rs`
+- `crates/fret-ui/src/declarative/tests/anchored.rs`
+- `ecosystem/fret-docking/src/dock/tests/dock_space.rs`
+- `ecosystem/fret-docking/tests/public_surface_policy.rs`
+
+Commands:
+
+- `cargo fmt --check`
+  - Result: passed after running `cargo fmt`.
+  - Scope proven: workspace Rust formatting is clean after the layout-order fix and anchored test.
+- `cargo nextest run -p fret-ui anchored_can_resolve_preceding_absolute_anchor_element_in_same_frame mechanism_harness_anchored_layout_invalidation_matches_oracles`
+  - Result: passed, 2 tests.
+  - Scope proven: the targeted regression proves a preceding absolute anchor is committed before a
+    later `Anchored` sibling reads it in the same frame, and the anchored invalidation fixture
+    suite remains green.
+- `cargo nextest run -p fret-docking`
+  - Result: passed, 89 tests.
+  - Scope proven: public declarative docking, split, viewport, tab, drop, floating, runtime, and
+    public-surface policy tests remain green with the retained bridge removed and the anchored
+    layout-order fix in place.
+- `cargo clippy -p fret-docking --all-targets --no-deps -- -D warnings`
+  - Result: passed.
+  - Scope proven: `fret-docking` all-targets remain warning-clean after the declarative host
+    mechanism fix.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained-bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+
+Known independent red gate:
+
+- `cargo nextest run -p fret-ui declarative::tests::layout::mechanism_harness::mechanism_harness_layout_primitives_match_oracles`
+  - Result: failed on `chrome-container-stretch-keeps-outer-box`.
+  - Scope assessed: this is a flex/chrome stretch fixture that does not use `Anchored` placement or
+    the mixed absolute/static fallback path changed in this follow-up. It should be tracked as a
+    separate layout primitive drift task rather than as docking retained-bridge regression evidence.

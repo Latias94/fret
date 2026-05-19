@@ -326,6 +326,15 @@ reachability, and missing non-viewport panel fallback UI. The viewport child rea
 a declarative `PointerRegion` that actively requests focus on pointer down, matching the old
 retained `FocusOnDown` test behavior.
 
+A follow-up anchored layout-order hardening fixed a `fret-ui` mechanism issue found while verifying
+the docking deletion: wrappers that mix layout-engine static children with manually positioned
+absolute children now commit child layout side effects in author order. This lets a later `Anchored`
+sibling resolve a preceding absolute anchor element in the same layout pass, without adding a broad
+future-sibling/current-bounds fallback. The targeted anchored regression and `fret-docking` package
+gate are green. The broader `fret-ui` layout primitive harness still has an independent
+`chrome-container-stretch-keeps-outer-box` flex/chrome drift that is not anchored- or
+docking-specific.
+
 ## Next Task
 
 Pick the next task from:
@@ -343,6 +352,8 @@ Recommended next implementation shape:
 
 Last run on 2026-05-19 for `RBX-M1-080` completion:
 
+- `cargo nextest run -p fret-ui anchored_can_resolve_preceding_absolute_anchor_element_in_same_frame mechanism_harness_anchored_layout_invalidation_matches_oracles` -
+  passed, 2 tests.
 - `cargo fmt --check -p fret-docking` - passed.
 - `cargo fmt --check` - passed.
 - `cargo check -p fret-docking` - passed.
@@ -357,6 +368,8 @@ Last run on 2026-05-19 for `RBX-M1-080` completion:
 - `python3 tools/check_workstream_catalog.py` - passed; validated 427 dedicated directories and 47
   standalone markdown files.
 - `git diff --check` - passed.
+- `cargo nextest run -p fret-ui declarative::tests::layout::mechanism_harness::mechanism_harness_layout_primitives_match_oracles` -
+  failed on independent `chrome-container-stretch-keeps-outer-box` flex/chrome layout drift.
 - `rg -n "DockSpace::|create_node_retained|retained_bridge|UiTreeRetainedExt|RetainedSubtree|DockPanelRegistry|with_panel_content|unstable-retained-bridge" ecosystem/fret-docking/src ecosystem/fret-docking/tests ecosystem/fret-docking/Cargo.toml -g '*.rs' -g 'Cargo.toml'` -
   only public-surface policy negative assertion strings matched.
 
