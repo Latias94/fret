@@ -3200,3 +3200,33 @@ Status: complete for ADR 0301 explicit Y-axis output publication coverage.
 - Original Chart Torture suite recheck passes after the suite split:
   `target/fret-diag-chart-torture-suite-recheck-v1/sessions/1779226999698-96944/suite.summary.json`
   with run id `1779227011824`.
+
+## M147: Combobox RTL Long Text Client-Height Startup Gate
+
+Status: complete for the decorated-window/client-area companion coverage.
+
+- A follow-up manual screenshot still showed `RTL Long Text` visually overlapping the docs intro,
+  but fresh `target\dev-fast\fret-ui-gallery.exe` repro attempts did not reproduce the overlap.
+  The current `dev-fast` focused gate still captures a clean frame-3 screenshot at `1083x752`.
+- The screenshot included the native Windows title bar, so the existing `1083x752` logical gate was
+  also complemented with a shorter `1083x721` client-area gate. This covers the same approximate
+  decorated `1624x1128` physical window on a 1.5x scale display after subtracting title-bar height.
+- Added `ui-gallery-combobox-rtl-long-text-doc-intro-client721-startup-non-overlap.json`, its root
+  redirect, suite membership, registry entry, and protocol roundtrip coverage.
+- Gates pass:
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_rtl_long_text_doc_intro_client721_startup_non_overlap --no-fail-fast --no-capture`
+  with Nextest run id `6814997f-e496-4dff-82a5-2c30636c7c54`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-client721-startup-non-overlap.json --dir target\fret-diag-combobox-rtl-long-text-client721-gate-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779232803236`, AI packet
+  `target/fret-diag-combobox-rtl-long-text-client721-gate-v1/sessions/1779232796961-55416/1779232803236/ai.packet`,
+  and screenshot size `1625x1082` physical pixels.
+- Full Combobox geometry-placement suite passes with 13/13 rows:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-combobox-geometry-placement --dir target\fret-diag-combobox-geometry-placement-client721-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with suite summary
+  `target/fret-diag-combobox-geometry-placement-client721-v1/sessions/1779232841519-125836/suite.summary.json`
+  and new client-height script run id `1779232938320`.
+- A plain `cargo build -p fret-ui-gallery` attempt to refresh `target\debug\fret-ui-gallery.exe`
+  timed out and was not used as evidence. Current runtime evidence is from `target\dev-fast`.

@@ -211,6 +211,14 @@ date: 2026-05-12
   helper regression is `doc_text_helpers_keep_fill_width_min_w_zero`, and the refreshed focused
   runtime evidence is anchored at
   `target/fret-diag-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap-v2/sessions/1779230951009-124292/1779230956616/ai.packet`.
+- Decorated-window client-height update:
+  `ui-gallery-combobox-rtl-long-text-doc-intro-client721-startup-non-overlap.json` complements the
+  logical1083 gate for manual screenshots that include the native Windows title bar. It starts at
+  `1083x721` client size, produces a `1625x1082` physical screenshot on the 1.5x display, and keeps
+  the same intro/title/description/content/trigger spacing oracles. Focused evidence is anchored at
+  `target/fret-diag-combobox-rtl-long-text-client721-gate-v1/sessions/1779232796961-55416/1779232803236/ai.packet`;
+  the full `ui-gallery-combobox-geometry-placement` suite now passes 13/13 with summary
+  `target/fret-diag-combobox-geometry-placement-client721-v1/sessions/1779232841519-125836/suite.summary.json`.
 - Chart Torture multi-series tooltip update:
   `ui-gallery-chart-torture-pan-zoom.json` now covers retained chart output freshness for a
   two-series line chart. After real drag/wheel pan/zoom, the gate proves the output model publishes

@@ -6626,6 +6626,34 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-combobox-rtl-long-text-doc-intro-client721-startup-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-doc-intro-client721-startup-non-overlap.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-combobox-geometry-placement"
+      ],
+      "tags": [
+        "combobox",
+        "gate",
+        "layout",
+        "long_text",
+        "rtl",
+        "shadcn",
+        "startup",
+        "text",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the focused Combobox RTL Long Text doc section at a client-height companion for the observed decorated 1624x1128 physical window on a 1.5x scale display.",
+        "Covers the case where a manually observed outer-window screenshot includes the Windows title bar, leaving a shorter drawable client area than the logical1083 gate.",
+        "Asserts the long docs intro owns enough measured height before the RTL Long Text section title, description, and live preview content."
+      ]
+    },
+    {
       "id": "ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap",
       "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json",
       "required_capabilities": [

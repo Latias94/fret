@@ -1349,3 +1349,11 @@ date: 2026-05-12
     `min-width: 0` alongside fill width, the focused helper test locks the shape, and the
     `1083x752` RTL Long Text startup diagnostics gate now captures a clean frame-3 screenshot with
     run id `1779230956616`.
+- [x] Add a client-height companion gate for the follow-up Combobox RTL Long Text screenshot.
+  - Result: fresh `target\dev-fast\fret-ui-gallery.exe` builds did not reproduce the new manual
+    overlap screenshot at either the existing `1083x752` client size or a shorter `1083x721`
+    client-height interpretation of the same decorated `1624x1128` screenshot. Added
+    `ui-gallery-combobox-rtl-long-text-doc-intro-client721-startup-non-overlap.json` so the
+    promoted suite covers that outer-window/client-area ambiguity. The focused gate passed with
+    run id `1779232803236`, and the full `ui-gallery-combobox-geometry-placement` suite passed
+    13/13 with the new row run id `1779232938320`.

@@ -6049,3 +6049,49 @@ Next slice recommendation:
   - result: passed; run id `1779226972500`.
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-chart-torture --dir target\fret-diag-chart-torture-suite-recheck-v1 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
   - result: passed; run id `1779227011824`.
+
+## Combobox RTL Long Text Client-Height Startup Gate
+
+- invariant:
+  the focused Combobox `RTL Long Text` docs section must not overlap the long docs intro at both the
+  canonical screenshot logical client size and the shorter client-area interpretation of a decorated
+  Windows screenshot.
+- finding:
+  a follow-up manual screenshot still showed visible overlap, but fresh `target\dev-fast`
+  diagnostics did not reproduce it. The most likely ambiguity was screenshot geometry: the manual
+  image included the native title bar, while diagnostics screenshots use the drawable client area.
+  The new gate locks a `1083x721` client size, producing a `1625x1082` physical screenshot at 1.5x.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-doc-intro-client721-startup-non-overlap.json`,
+  `tools/diag-scripts/ui-gallery-combobox-rtl-long-text-doc-intro-client721-startup-non-overlap.json`,
+  `tools/diag-scripts/suites/ui-gallery-combobox-geometry-placement/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused client-height AI packet:
+  `target/fret-diag-combobox-rtl-long-text-client721-gate-v1/sessions/1779232796961-55416/1779232803236/ai.packet`;
+  focused client-height pack:
+  `target/fret-diag-combobox-rtl-long-text-client721-gate-v1/sessions/1779232796961-55416/share/1779232803236.zip`;
+  full suite summary:
+  `target/fret-diag-combobox-geometry-placement-client721-v1/sessions/1779232841519-125836/suite.summary.json`.
+- JSON/registry/format:
+  `python -m json.tool tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-client721-startup-non-overlap.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-combobox-rtl-long-text-doc-intro-client721-startup-non-overlap.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-combobox-geometry-placement\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_rtl_long_text_doc_intro_client721_startup_non_overlap --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `6814997f-e496-4dff-82a5-2c30636c7c54`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-client721-startup-non-overlap.json --dir target\fret-diag-combobox-rtl-long-text-client721-gate-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779232803236`; screenshot size `1625x1082`.
+- full runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-combobox-geometry-placement --dir target\fret-diag-combobox-geometry-placement-client721-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; 13/13 rows; new client-height run id `1779232938320`.
+- residual note:
+  `cargo build -p fret-ui-gallery` was attempted to refresh `target\debug\fret-ui-gallery.exe`, but
+  timed out after five minutes and was stopped. Do not treat `target\debug` or older
+  `target\release` gallery binaries as evidence for this slice unless rebuilt separately.
