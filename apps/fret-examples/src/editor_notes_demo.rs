@@ -15,7 +15,7 @@ use fret_ui_editor::controls::{
 };
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::text as decl_text;
-use fret_ui_kit::{ColorRef, IntoUiElementInExt as _, Space};
+use fret_ui_kit::{IntoUiElementInExt as _, Space};
 use fret_workspace::WorkspaceFrame;
 
 const ENV_EDITOR_PRESET: &str = "FRET_EDITOR_NOTES_DEMO_PRESET";
@@ -274,6 +274,20 @@ fn editor_notes_readout_text<H: fret_ui::UiHost>(
     decl_text::text_control_readout(cx, text)
 }
 
+fn editor_notes_section_text<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_section_chrome_label(cx, text)
+}
+
+fn editor_notes_paragraph_text<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_paragraph(cx, text)
+}
+
 fn selection_button<'a, Cx>(
     cx: &mut Cx,
     label: impl Into<Arc<str>>,
@@ -383,14 +397,9 @@ where
     );
 
     let body = ui::v_flex(move |cx| {
-        let collection_summary = ui::text(editor_collection_status_label(selected))
-            .text_sm()
-            .text_color(ColorRef::Color(
-                cx.theme_snapshot().color_token("muted-foreground"),
-            ))
-            .wrap(fret_core::TextWrap::Word)
-            .test_id(TEST_ID_COLLECTION_SUMMARY)
-            .into_element(cx);
+        let collection_summary =
+            editor_notes_readout_text(cx, editor_collection_status_label(selected))
+                .test_id(TEST_ID_COLLECTION_SUMMARY);
         let collection_list = ui::v_flex(|_cx| [material_button, light_button, camera_button])
             .gap(Space::N2)
             .test_id(TEST_ID_COLLECTION_LIST)
@@ -438,22 +447,16 @@ where
     let title = asset.title.clone();
     let subtitle = asset.subtitle.clone();
     let header = shadcn::CardHeader::new([ui::v_flex(|cx| {
-        let muted = cx.theme_snapshot().color_token("muted-foreground");
         ui::children![
             cx;
             shadcn::CardTitle::new(title.clone()),
             shadcn::CardDescription::new(subtitle.clone()),
-            ui::text(ownership_note)
-                .text_sm()
-                .text_color(ColorRef::Color(muted))
-                .wrap(fret_core::TextWrap::Word)
-                .into_element(cx),
+            editor_notes_paragraph_text(cx, ownership_note),
         ]
     })
     .gap(Space::N1)
     .into_element_in(cx)]);
     let content = shadcn::CardContent::new([ui::v_flex(|cx| {
-        let muted = cx.theme_snapshot().color_token("muted-foreground");
         ui::children![
             cx;
             ui::h_flex(|cx| {
@@ -462,15 +465,8 @@ where
                     ui::v_flex(|cx| {
                         ui::children![
                             cx;
-                            ui::text("Active asset")
-                                .text_sm()
-                                .text_color(ColorRef::Color(muted))
-                                .into_element(cx),
-                            ui::text(name_value.clone())
-                                .text_base()
-                                .font_semibold()
-                                .wrap(fret_core::TextWrap::Word)
-                                .into_element(cx),
+                            editor_notes_section_text(cx, "Active asset"),
+                            editor_notes_paragraph_text(cx, name_value.clone()),
                         ]
                     })
                     .gap(Space::N1)
@@ -478,18 +474,9 @@ where
                     ui::v_flex(|cx| {
                         ui::children![
                             cx;
-                            ui::text("Inspector state")
-                                .text_sm()
-                                .text_color(ColorRef::Color(muted))
-                                .into_element(cx),
-                            ui::text(note_summary.clone())
-                                .text_sm()
-                                .into_element(cx),
-                            ui::text(format!("Last action: {outcome_label}"))
-                                .text_sm()
-                                .text_color(ColorRef::Color(muted))
-                                .wrap(fret_core::TextWrap::Word)
-                                .into_element(cx),
+                            editor_notes_section_text(cx, "Inspector state"),
+                            editor_notes_readout_text(cx, note_summary.clone()),
+                            editor_notes_readout_text(cx, format!("Last action: {outcome_label}")),
                         ]
                     })
                     .gap(Space::N1)
@@ -503,22 +490,11 @@ where
             .gap(Space::N4)
             .into_element(cx),
             ui::v_flex(|cx| {
-                let muted = cx.theme_snapshot().color_token("muted-foreground");
                 ui::children![
                     cx;
-                    ui::text("Committed notes")
-                        .text_sm()
-                        .font_semibold()
-                        .into_element(cx),
-                    ui::text(committed_notes_intro)
-                        .text_sm()
-                        .text_color(ColorRef::Color(muted))
-                        .wrap(fret_core::TextWrap::Word)
-                        .into_element(cx),
-                    ui::text(preview_text)
-                        .text_sm()
-                        .wrap(fret_core::TextWrap::Word)
-                        .into_element(cx),
+                    editor_notes_section_text(cx, "Committed notes"),
+                    editor_notes_paragraph_text(cx, committed_notes_intro),
+                    editor_notes_paragraph_text(cx, preview_text),
                 ]
             })
             .gap(Space::N2)

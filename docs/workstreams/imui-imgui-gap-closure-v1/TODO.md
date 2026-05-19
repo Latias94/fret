@@ -373,6 +373,9 @@ Readiness order for the next locally testable review slices:
    2026-05-17 editor notes proof text follow-up: `editor_notes_demo` inspector metadata labels,
    subtitle, and compact status values now teach the same property-label and control-readout roles
    instead of relying on bare `cx.text(...)` inside fixed property rows.
+   2026-05-19 editor notes center/collection text follow-up: collection summary/readouts and
+   center preview chrome/prose now route through local helpers backed by shared readout, section,
+   and paragraph roles instead of local `ui::text(...).wrap(...)` styling.
    2026-05-17 workspace shell prompt text follow-up: the dirty-close prompt title/details now
    reuse the shared section-chrome and control-readout text roles instead of bare dialog text.
    2026-05-17 editor proof readout follow-up: `imui_editor_proof_demo` now routes selected

@@ -178,6 +178,9 @@ Exit criteria:
   2026-05-17 proof teaching follow-up result: `imui_editor_proof_demo` property-grid labels now
   use `row_cx.label_text(...)`, and the source gate rejects representative proof labels if they
   return to bare `|cx| cx.text(...)` label slots.
+  2026-05-19 editor notes center/collection text result: `editor_notes_demo` collection summary
+  and center preview text now use local helpers backed by shared readout, section, and paragraph
+  roles instead of local `ui::text(...).wrap(...)` styling.
   2026-05-14 inspector follow-up result: `InspectorPanelCx` now exposes query behavior through
   methods and keeps `query_lower` private.
   2026-05-16 child-region resize result: `imui-child-region-resize-y-v1` and

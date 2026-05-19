@@ -622,6 +622,21 @@ Run evidence:
   `cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface --no-fail-fast`,
   `cargo check -p fret-demo --bin editor_notes_demo`, and
   `python tools/gate_imui_workstream_source.py`.
+- 2026-05-19: extended the `editor_notes_demo` proof text-role migration to the center preview and
+  collection summary surfaces. Collection summary/status values now use
+  `editor_notes_readout_text(...)`, center section labels use `editor_notes_section_text(...)`, and
+  app-owned explanatory/preview text uses `editor_notes_paragraph_text(...)` instead of local
+  `ui::text(...).wrap(...)` styling. The inspector `PropertyGrid` and `TextField` behavior remain
+  unchanged. Gates: `cargo nextest run -p fret-examples --test editor_notes_editor_rail_surface
+  editor_notes_demo_composes_shell_mounted_rails_through_workspace_frame_slots --no-fail-fast`,
+  `cargo check -p fret-demo --bin editor_notes_demo`, and `python
+  tools/gate_imui_workstream_source.py`.
+  Verification note: the first focused nextest attempt timed out while a background Cargo/Rustc
+  compile continued; after Cargo/Rustc exited, the same focused nextest command passed. `cargo
+  check -p fret-demo --bin editor_notes_demo`, `python tools/gate_imui_workstream_source.py`,
+  `cargo fmt --check -p fret-examples`, `python -m json.tool
+  docs/workstreams/imui-imgui-gap-closure-v1/WORKSTREAM.json > $null`, and `git diff --check`
+  passed.
 - 2026-05-17: migrated the `workspace_shell_demo` dirty-close prompt title/details to the same
   role vocabulary. The title now uses `workspace_shell_section_chrome_label(...)` backed by
   `text_section_chrome_label(...)`, while reason/dirty-detail lines use
