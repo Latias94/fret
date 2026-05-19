@@ -5971,6 +5971,30 @@ Next slice recommendation:
   `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json --dir target\fret-diag-ui-gallery-combobox-rtl-intro-overlap-fixed-1624-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
   - result: passed; run id `1779219333574`.
 
+## Combobox RTL Long Text Doc Scaffold Min-Width Clamp
+
+- invariant:
+  UI Gallery doc scaffold text that fills a card/flex content column must also opt into
+  `min-width: 0`, so startup wrapped-text measurement uses the resolved content width instead of
+  an over-wide first pass that can make following section content overlap until resize recovery.
+- finding:
+  the latest manual screenshot still showed `RTL Long Text` visually colliding with the docs intro.
+  The Combobox trigger was not the source; the remaining issue was in shared doc scaffold helpers:
+  `muted_full_width` and `section_title` set fill width but did not set `min_width=0`.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/doc_layout.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap-v2/sessions/1779230951009-124292/1779230956616/ai.packet`;
+  clean startup screenshot:
+  `target/fret-diag-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap-v2/sessions/1779230951009-124292/screenshots/1779230959201-ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap/window-4294967297-tick-3-frame-3.png`.
+- unit regression:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery doc_text_helpers_keep_fill_width_min_w_zero --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `3c572126-8add-42ad-8fc7-9b02766e5ba3`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json --dir target\fret-diag-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779230956616`.
+
 ## Chart Explicit Link-Axis Mapping Output Gate
 
 - invariant:

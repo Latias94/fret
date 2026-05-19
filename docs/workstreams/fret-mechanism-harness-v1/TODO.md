@@ -1342,12 +1342,10 @@ date: 2026-05-12
     model publishes `dataset=1, field=2` with the fixture `[-0.25, 0.75]` Y domain window. The gate
     lives in its own `ui-gallery-chart-linking-explicit-y-map` suite so it does not inherit the
     pan/zoom-only `chart_sampling_window_shifts_min` tail check from `ui-gallery-chart-torture`.
-- [ ] Investigate manually observed Combobox RTL Long Text overlap that current runtime gates do
-      not reproduce.
-  - Current evidence:
-    after M144, the current `target/dev-fast/fret-ui-gallery.exe` passes the promoted RTL Long Text
-    startup gate through both `cargo run` and prebuilt launch. A temporary full-page scroll probe
-    and a font-trace run also passed, and captured screenshots showed no title/description/content
-    overlap. Treat the latest user screenshot as an unresolved environment/state-dependent repro
-    until a frame-1 pixel oracle, a captured failing bundle, or a reproducible launch state is
-    available.
+- [x] Investigate manually observed Combobox RTL Long Text overlap that current runtime gates did
+  not reproduce.
+  - Result: the screenshot was a real first-visible-frame doc scaffold issue rather than a
+    Combobox trigger defect. `muted_full_width` and `section_title` now explicitly set
+    `min-width: 0` alongside fill width, the focused helper test locks the shape, and the
+    `1083x752` RTL Long Text startup diagnostics gate now captures a clean frame-3 screenshot with
+    run id `1779230956616`.

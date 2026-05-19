@@ -3146,7 +3146,26 @@ Status: complete for the persistent Combobox RTL Long Text startup overlap follo
   with run id `1779219333574` and AI packet
   `target/fret-diag-ui-gallery-combobox-rtl-intro-overlap-fixed-1624-v1/sessions/1779219328227-121516/1779219333574/ai.packet`.
 
-## M145: Chart Explicit Link-Axis Mapping Output Gate
+## M145: Combobox RTL Long Text Doc Scaffold Min-Width Clamp
+
+Status: complete for the user-visible first-frame doc scaffold overlap follow-up.
+
+- The manual screenshot remained valid after M144: the overlap was visible between the docs intro
+  and the focused `RTL Long Text` section even though the promoted gate passed on stable frames.
+- The immediate scaffold defect was that `muted_full_width` and `section_title` used fill-width
+  text without explicitly opting into `min-width: 0`. Under the card/flex doc layout, that leaves
+  startup text measurement vulnerable to an over-wide first pass before resize recovery.
+- `apps/fret-ui-gallery/src/ui/doc_layout.rs` now applies `min_width=0` to both helpers and
+  `doc_text_helpers_keep_fill_width_min_w_zero` locks the helper shape.
+- Gates pass:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery doc_text_helpers_keep_fill_width_min_w_zero --no-fail-fast --no-capture`
+  with Nextest run id `3c572126-8add-42ad-8fc7-9b02766e5ba3`.
+- Focused runtime diagnostics pass with a clean frame-3 startup screenshot:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json --dir target\fret-diag-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779230956616` and AI packet
+  `target/fret-diag-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap-v2/sessions/1779230951009-124292/1779230956616/ai.packet`.
+
+## M146: Chart Explicit Link-Axis Mapping Output Gate
 
 Status: complete for ADR 0301 explicit Y-axis output publication coverage.
 
