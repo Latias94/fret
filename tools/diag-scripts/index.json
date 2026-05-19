@@ -7587,7 +7587,9 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
-      "required_launch_features": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-data-table-view-cache-torture"
       ],

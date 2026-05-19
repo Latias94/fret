@@ -668,6 +668,13 @@ fn script_v2_roundtrip_ui_gallery_data_table_retained_window_boundary_scroll() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_data_table_view_cache_filter_shrink_vlist_inputs_change() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_data_table_listlike_pointer_selection() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-data-table-listlike-pointer-selection.json"

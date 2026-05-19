@@ -1158,3 +1158,10 @@ date: 2026-05-12
     DataTable UI/model stale-state defect was reproduced. The suite pass also required fixing old
     toolbar scoped-selector drift in faceted/reset scripts and replacing the old window-boundary
     `wheel + wait_frames` script with observable row-window assertions.
+- [x] Harden DataTable view-cache filter-shrink inputs-change gate.
+  - Result: `ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json` now declares
+    `gallery-dev`, carries its own `FRET_UI_GALLERY_VIEW_CACHE=1` default, asserts the UI Gallery
+    app snapshot reports `/view_cache/enabled=true`, and has direct protocol roundtrip coverage.
+    The focused run and suite run both pass without manually setting the environment variable,
+    proving the promoted gate is self-contained for the non-retained view-cache
+    `inputs_change` invalidation-detail path.

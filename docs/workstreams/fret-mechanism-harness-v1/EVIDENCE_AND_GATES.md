@@ -4954,3 +4954,52 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag-data-table-retained-suite-column-actions-state-v3/sessions/1779160314350-36592/suite.summary.json`;
     strengthened column-actions script run id `1779160434776`; window-boundary script run id
     `1779160736205`.
+
+## DataTable View-Cache Filter-Shrink Inputs-Change Gate
+
+- invariant:
+  the DataTable view-cache torture gate must actually run with UI Gallery view-cache enabled before
+  asserting the non-retained virtual-list `inputs_change` invalidation detail. Otherwise a caller
+  can accidentally run the script in default mode and weaken the meaning of the runtime pass.
+- finding:
+  no new mechanism or DataTable recipe defect was reproduced. The existing
+  `non_retained_rerender` and `scroll_handle_inputs_change_window_update` oracle still passes; the
+  gate now proves its own launch precondition through `env_defaults` and an app snapshot assertion.
+- diagnostics surface:
+  `ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json` now declares
+  `required_launch_features=["gallery-dev"]`, injects `FRET_UI_GALLERY_VIEW_CACHE=1` through
+  `env_defaults`, waits for `/view_cache/enabled=true`, then applies the global filter and asserts
+  the layout-sourced virtual-list window record with `reason=inputs_change`,
+  `apply_mode=non_retained_rerender`, and
+  `invalidation_detail=scroll_handle_inputs_change_window_update`.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json`,
+  `tools/diag-scripts/suites/ui-gallery-data-table-view-cache-torture/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- JSON validation:
+  `python -m json.tool tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json > $null`
+  - result: passed.
+- registry:
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed; registry is up to date.
+- formatting:
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_data_table_view_cache_filter_shrink_vlist_inputs_change --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `19530940-8e8e-477e-9b3e-80f8f0190843`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json --dir target\fret-diag-data-table-view-cache-filter-shrink-env-default-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  - result: passed without manually setting `FRET_UI_GALLERY_VIEW_CACHE`; run id `1779161694881`;
+    AI packet
+    `target/fret-diag-data-table-view-cache-filter-shrink-env-default-v1/sessions/1779161683796-54152/1779161694881/ai.packet`.
+- suite runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-data-table-view-cache-torture --dir target\fret-diag-data-table-view-cache-suite-env-default-v1 --session-auto --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  - result: passed without manually setting `FRET_UI_GALLERY_VIEW_CACHE`; 1/1 scripts passed;
+    suite summary
+    `target/fret-diag-data-table-view-cache-suite-env-default-v1/sessions/1779161746388-13892/suite.summary.json`;
+    script run id `1779161756820`.
+- static diff check:
+  `git diff --check`
+  - result: passed.
