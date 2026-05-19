@@ -864,6 +864,11 @@ Readiness order for the next locally testable review slices:
    fixed 44px header title through section-chrome text, the logical-window diagnostic identifier
    through code-label text, and status through control-readout text. The multi-window hit-test
    repro path stays unchanged; only local fixed chrome/readout text policy was removed.
+   2026-05-19 launcher utility window text follow-up: `launcher_utility_window_demo` now routes
+   its frameless-window drag title through section-chrome text, the effective-style diagnostic line
+   through code-label text, status through control-readout text, and the resize handle arrow
+   through chrome-glyph text. The BeginDrag/BeginResize/SetVisible proof path stays unchanged; only
+   local fixed chrome/readout/glyph text policy was removed.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

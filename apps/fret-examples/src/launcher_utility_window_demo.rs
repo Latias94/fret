@@ -9,9 +9,10 @@ use fret_runtime::{
     RunnerWindowStyleDiagnosticsStore, TimerToken, WindowDecorationsRequest, WindowResizeDirection,
     WindowStyleRequest, WindowZLevel,
 };
-use fret_ui::ElementContext;
 use fret_ui::element::{LayoutStyle, Length, PointerRegionProps, SemanticsDecoration, SizeStyle};
-use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
+use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::declarative::text as decl_text;
+use fret_ui_kit::{LayoutRefinement, Space, ui};
 use fret_ui_shadcn::facade as shadcn;
 
 const CMD_BLINK: &str = "launcher_utility_window_demo.blink";
@@ -25,6 +26,34 @@ const TEST_ID_BLINK: &str = "utility-window.blink";
 const TEST_ID_TOGGLE_ALWAYS_ON_TOP: &str = "utility-window.always_on_top";
 const TEST_ID_QUIT: &str = "utility-window.quit";
 const TEST_ID_STYLE_TEXT: &str = "utility-window.style_effective";
+
+fn launcher_utility_title_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    decl_text::text_section_chrome_label(cx, text)
+}
+
+fn launcher_utility_readout_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    decl_text::text_control_readout(cx, text)
+}
+
+fn launcher_utility_code_label_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    decl_text::text_code_label(cx, text)
+}
+
+fn launcher_utility_glyph_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    decl_text::text_chrome_glyph(cx, text)
+}
 
 fn install_commands(app: &mut KernelApp) {
     app.commands_mut().register(
@@ -182,7 +211,6 @@ fn view(
 ) -> ViewElements {
     let theme = cx.theme().snapshot();
     let color_background = theme.color_token("background");
-    let color_muted_foreground = theme.color_token("muted-foreground");
     let color_secondary = theme.color_token("secondary");
 
     let view_settings: LauncherUtilityWindowViewSettings = cx.data().selector_layout(
@@ -247,11 +275,10 @@ fn view(
                                 true
                             }));
 
-                            vec![
-                                ui::text("Launcher Utility Window (drag here)")
-                                    .font_semibold()
-                                    .into_element(cx),
-                            ]
+                            vec![launcher_utility_title_text(
+                                cx,
+                                "Launcher Utility Window (drag here)",
+                            )]
                         })
                         .attach_semantics(
                             SemanticsDecoration::default()
@@ -311,15 +338,8 @@ fn view(
         .into_element(cx),
         shadcn::CardContent::new([ui::v_flex(move |cx| {
             [
-                ui::text(style_text)
-                    .font_monospace()
-                    .text_sm()
-                    .test_id(TEST_ID_STYLE_TEXT)
-                    .into_element(cx),
-                ui::text(view_settings.status)
-                    .text_sm()
-                    .text_color(ColorRef::Color(color_muted_foreground))
-                    .into_element(cx),
+                launcher_utility_code_label_text(cx, style_text).test_id(TEST_ID_STYLE_TEXT),
+                launcher_utility_readout_text(cx, view_settings.status),
             ]
         })
         .gap(Space::N3)
@@ -352,7 +372,7 @@ fn view(
                     true
                 }));
 
-                vec![ui::text("↘").font_semibold().into_element(cx)]
+                vec![launcher_utility_glyph_text(cx, "↘")]
             })
             .attach_semantics(
                 SemanticsDecoration::default()

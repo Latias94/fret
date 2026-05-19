@@ -772,6 +772,11 @@ Exit criteria:
   hit-test repro logic unchanged while moving fixed header text to section chrome, logical window
   identifiers to code-label text, and status to control-readout text. This removes the old local
   `ui::text(...).text_sm()` policy from another resize-sensitive probe surface.
+  2026-05-19 launcher utility window text result: `launcher_utility_window_demo` keeps its
+  frameless utility-window proof behavior unchanged while moving the drag-region title to
+  section-chrome text, the effective style diagnostic to code-label text, status to
+  control-readout text, and the resize handle arrow to chrome-glyph text. This removes local
+  fixed-window chrome/readout/glyph text styling without adding new `fret-imui` API.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

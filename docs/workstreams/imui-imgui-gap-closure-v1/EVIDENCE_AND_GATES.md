@@ -3311,3 +3311,29 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   `cargo nextest run -p fret-examples --test window_hit_test_probe_demo_surface
   window_hit_test_probe_demo_keeps_fixed_text_on_roles --no-fail-fast` passed.
 - `cargo check -p fret-examples --test window_hit_test_probe_demo_surface` passed.
+
+2026-05-19 launcher utility window fixed text-role slice:
+
+- Source gap before fix: `apps/fret-examples/src/launcher_utility_window_demo.rs` used local
+  `ui::text(...)` builders for the frameless-window drag title, effective-style diagnostic line,
+  status readout, and resize-handle glyph. These are fixed chrome/readout/glyph slots under
+  resize, not paragraph text.
+- `launcher_utility_title_text(...)` now routes the drag title through
+  `decl_text::text_section_chrome_label(...)`, `launcher_utility_code_label_text(...)` routes the
+  effective-style diagnostic through `decl_text::text_code_label(...)`,
+  `launcher_utility_readout_text(...)` routes status through `decl_text::text_control_readout(...)`,
+  and `launcher_utility_glyph_text(...)` routes the resize arrow through
+  `decl_text::text_chrome_glyph(...)`.
+- `apps/fret-examples/tests/launcher_utility_window_demo_surface.rs` and
+  `tools/gate_imui_workstream_source.py` guard those role mappings and forbid the old local fixed
+  text policy from returning.
+- First post-fix `cargo nextest run -p fret-examples --test launcher_utility_window_demo_surface
+  launcher_utility_window_demo_keeps_fixed_text_on_roles --no-fail-fast` timed out while background
+  Cargo/Rustc compilation continued.
+- Retried after Cargo/Rustc exited:
+  `cargo nextest run -p fret-examples --test launcher_utility_window_demo_surface
+  launcher_utility_window_demo_keeps_fixed_text_on_roles --no-fail-fast` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo fmt --check -p fret-examples` passed.
+- `cargo check -p fret-examples --lib` passed.
