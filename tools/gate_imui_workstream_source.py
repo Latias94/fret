@@ -2524,6 +2524,8 @@ def main() -> None:
                 "chrome_title_text_uses_medium_fill_width_single_line_truncation",
                 "section_chrome_label_text_uses_single_line_truncation",
                 "base_single_line_text_roles_stay_single_line_under_narrow_layout",
+                'assert_single_line_text_role("control-readout-tabular"',
+                'assert_single_line_text_role("control-readout-tabular-emphasis"',
                 "assert_single_line_text_role(\"code-label\"",
                 "paragraph_text_role_measures_multiple_lines_under_narrow_layout",
                 "ui.layout_all(",

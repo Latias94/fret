@@ -1797,6 +1797,12 @@ mod tests {
         assert_single_line_text_role("control-readout", Px(16.0), move |cx| {
             text_control_readout(cx, long)
         });
+        assert_single_line_text_role("control-readout-tabular", Px(18.0), move |cx| {
+            text_control_readout_tabular(cx, "128 of 4096 selected")
+        });
+        assert_single_line_text_role("control-readout-tabular-emphasis", Px(18.0), move |cx| {
+            text_control_readout_tabular_emphasis(cx, "Page 12 of 128")
+        });
         assert_single_line_text_role("button-label", Px(18.0), move |cx| {
             text_button_label(cx, long)
         });

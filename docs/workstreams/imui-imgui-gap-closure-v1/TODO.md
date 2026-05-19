@@ -1042,6 +1042,9 @@ Readiness order for the next locally testable review slices:
    summaries consume shared tabular control-readout variants instead of local
    `ui::text(...).tabular_nums()` builders. This keeps numeric readouts inside the control-readout
    role family rather than adding a separate stable text role.
+   2026-05-20 tabular readout resize-gate follow-up: the tabular control-readout variants are now
+   explicitly covered by the shared narrow-layout single-line role gate and by the text role
+   matrix, so the derived readout helpers cannot exist without resize evidence.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

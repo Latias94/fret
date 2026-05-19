@@ -4135,6 +4135,23 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   cargo/rustc process was killed; after each compile chain exited naturally, focused checks were
   rerun and passed.
 
+2026-05-20 tabular control-readout resize gate slice:
+
+- Source gap before fix: `text_control_readout_tabular(...)` and
+  `text_control_readout_tabular_emphasis(...)` had role-local structure tests, but they were not
+  included in the shared narrow-layout single-line role gate or the text-role matrix's derived-role
+  catalog.
+- `base_single_line_text_roles_stay_single_line_under_narrow_layout` now asserts both tabular
+  control-readout variants stay one measured line under a narrow resize probe. This keeps numeric
+  DataTable/page/footer readouts on the same anti-wrap contract as ordinary readouts, button
+  labels, table cells, and code labels.
+- `P3_TEXT_ROLE_MATRIX_2026-05-17.md` now records the variants as control-readout derivatives
+  rather than a sixth stable role, and `tools/gate_imui_workstream_source.py` guards their
+  narrow-layout assertions.
+- Focused gates pending for this slice: `cargo nextest run -p fret-ui-kit --lib
+  base_single_line_text_roles_stay_single_line_under_narrow_layout --no-fail-fast`; source gate;
+  rustfmt check; JSON doc sanity; and `git diff --check`.
+
 2026-05-19 shadcn EmptyTitle children-role slice:
 
 - Source gap before fix: `EmptyTitle` only accepted a string payload, so empty-state title slots
