@@ -4421,6 +4421,21 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.
 
+2026-05-20 shadcn CardDescription children role-preservation gate:
+
+- Source gap before gate: `CardDescription::new_children(...)` scoped description typography on the
+  children container, but it did not have a focused regression proving caller-supplied shared
+  description/body roles keep their leaf wrap/overflow and inherited role metadata.
+- `card_description_children_preserve_shared_text_role_contracts` now proves a
+  `text_compact_paragraph_line_clamp(...)` child keeps `style: None`, role metadata,
+  word wrapping, and ellipsis overflow when mounted through `CardDescription::new_children(...)`.
+- This stays in `fret-ui-shadcn` as recipe/slot policy. It does not add a new text role or widen
+  `fret-imui`.
+- First focused `cargo nextest run -p fret-ui-shadcn --lib
+  card_description_children_preserve_shared_text_role_contracts --no-fail-fast` timed out while
+  Cargo/Rustc was still compiling. No process was killed; after Cargo/Rustc exited naturally, the
+  same focused command passed.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground

@@ -994,6 +994,10 @@ Readiness order for the next locally testable review slices:
    for card titles. Bare and ordinary rich title children still receive the shadcn card-title
    typography and wrapping fallback, while explicit shared title/chrome roles keep their
    role-owned single-line ellipsis contract under card composition.
+   2026-05-20 shadcn CardDescription children role-preservation follow-up:
+   CardDescription now has a focused gate proving shared description/body text roles keep their
+   role-owned wrap/overflow and inherited metadata when passed through the composable children
+   lane.
    2026-05-19 shadcn AlertTitle role-preservation follow-up: AlertTitle now follows the same split
    for alert titles. Bare and ordinary rich title children still receive the alert title fallback,
    while explicit shared title/chrome roles keep their role-owned single-line ellipsis contract

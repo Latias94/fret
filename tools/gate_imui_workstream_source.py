@@ -2061,6 +2061,8 @@ def main() -> None:
                 "2026-05-19 gallery Pagination text follow-up",
                 "route page labels through `text_button_label(...)` instead of no-context",
                 "`PaginationPrevious` / `PaginationNext` visible text",
+                "2026-05-20 shadcn CardDescription children role-preservation follow-up",
+                "CardDescription now has a focused gate proving shared description/body text roles",
             ],
             forbidden=[
                 "Remaining advanced-table candidates are freeze panes, persistence, and old columns API shape",
@@ -2098,6 +2100,8 @@ def main() -> None:
                 "probe copy/status no longer emits bare `ui::text`",
                 "2026-05-19 gallery Pagination text result",
                 "`fret-ui-shadcn` Previous/Next visible labels",
+                "2026-05-20 shadcn CardDescription children role-preservation result",
+                "shared description/body roles keep",
             ],
             forbidden=[
                 "remain advanced-table candidates",
@@ -2425,6 +2429,8 @@ def main() -> None:
                 "2026-05-20 tabular control-readout resize gate slice",
                 "base_single_line_text_roles_stay_single_line_under_narrow_layout --no-fail-fast`; `cargo fmt",
                 "`python tools\\gate_imui_workstream_source.py`",
+                "2026-05-20 shadcn CardDescription children role-preservation gate",
+                "card_description_children_preserve_shared_text_role_contracts --no-fail-fast` timed out",
                 "cargo check -p fret-examples",
             ],
             forbidden=[
@@ -3720,6 +3726,7 @@ def main() -> None:
                 "card_title_children_patch_bare_text_with_title_typography",
                 "card_title_children_patch_rich_text_with_title_typography",
                 "card_title_children_preserve_shared_text_role_contracts",
+                "card_description_children_preserve_shared_text_role_contracts",
             ],
             forbidden=[],
         ),

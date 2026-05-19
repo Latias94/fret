@@ -895,6 +895,9 @@ Exit criteria:
   2026-05-19 shadcn CardTitle role-preservation result: CardTitle keeps the shadcn title fallback
   for bare/rich card-title children, while shared title/chrome roles remain protected role scopes
   and keep their single-line ellipsis contract under card composition.
+  2026-05-20 shadcn CardDescription children role-preservation result: the composable
+  CardDescription children lane now has a focused gate proving shared description/body roles keep
+  their role-owned wrap/overflow and inherited metadata under card composition.
   2026-05-19 shadcn AlertTitle role-preservation result: AlertTitle keeps the shadcn title fallback
   for bare/rich alert-title children, while shared title/chrome roles remain protected role scopes
   and keep their single-line ellipsis contract under alert composition.
