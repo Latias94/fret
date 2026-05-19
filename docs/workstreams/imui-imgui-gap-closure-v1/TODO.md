@@ -884,6 +884,10 @@ Readiness order for the next locally testable review slices:
    line through control-readout text and its step help copy through paragraph text. The large count
    display remains an explicit visual readout until a dedicated large-display value role exists;
    the counter action/state path stays unchanged.
+   2026-05-19 simple todo text follow-up: `simple_todo_demo` now routes its summary/footer
+   readouts through control-readout text, empty-state copy through compact paragraph text, and row
+   labels through list-row text with app-owned done/active foreground state. The demo no longer has
+   `ui::text(...)` residuals.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

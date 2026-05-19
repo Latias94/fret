@@ -11843,6 +11843,25 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-examples/src/simple_todo_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::{ElementContextThemeExt as _, text as decl_text};",
+                "fn simple_todo_readout_text<H: UiHost>(",
+                "fn simple_todo_compact_paragraph_text<H: UiHost>(",
+                "fn simple_todo_row_label_text<H: UiHost>(",
+                "decl_text::text_control_readout(cx, text)",
+                "decl_text::text_compact_paragraph(cx, text)",
+                "decl_text::text_list_row_label(cx, text).inherit_foreground(foreground)",
+                "let summary = simple_todo_readout_text(cx.elements(), status_text);",
+                "let empty_text = simple_todo_compact_paragraph_text(",
+                "let remaining = simple_todo_readout_text(cx, format!(\"{active_count} left\"));",
+                "let text = simple_todo_row_label_text(cx, row_text.clone(), row_text_foreground);",
+            ],
+            forbidden=[
+                "ui::text(",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-examples/src/table_demo.rs"),
             required=[
                 "use fret_ui_kit::declarative::text as decl_text;",
@@ -12230,6 +12249,20 @@ def main() -> None:
                 "ui::text(count.to_string()).text_size_px(Px(72.0))",
                 "ui::text(status_text).text_color(",
                 "ui::text_block(ifstep_valid{",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/tests/simple_todo_demo_surface.rs"),
+            required=[
+                "fn simple_todo_demo_keeps_visible_text_on_roles()",
+                "fnsimple_todo_readout_text<H:UiHost>(",
+                "fnsimple_todo_compact_paragraph_text<H:UiHost>(",
+                "fnsimple_todo_row_label_text<H:UiHost>(",
+                "decl_text::text_control_readout(cx,text)",
+                "decl_text::text_compact_paragraph(cx,text)",
+                "decl_text::text_list_row_label(cx,text).inherit_foreground(foreground)",
+                "ui::text(",
             ],
             forbidden=[],
         ),

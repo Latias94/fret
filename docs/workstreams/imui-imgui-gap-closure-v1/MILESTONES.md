@@ -791,6 +791,10 @@ Exit criteria:
   unchanged while moving the status line to control-readout text and the step help copy to paragraph
   text. The large numeric counter display remains an explicit visual display value until a
   dedicated large-readout role exists.
+  2026-05-19 simple todo text result: `simple_todo_demo` keeps its typed action/list proof behavior
+  unchanged while moving app-owned visible text to control-readout, compact paragraph, and list-row
+  roles. The done/active row foreground stays app state policy, but row layout no longer relies on
+  local `ui::text(...)` truncation.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

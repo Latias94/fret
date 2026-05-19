@@ -3,12 +3,14 @@ use std::sync::Arc;
 use fret::app::LocalState;
 use fret::app::prelude::*;
 use fret::semantics::SemanticsRole;
-use fret::style::{ColorRef, Radius, Space, Theme, ThemeSnapshot};
+use fret::style::{ColorRef, Radius, Space, ThemeSnapshot};
 use fret_bootstrap::ui_app_driver;
+use fret_core::Color;
 use fret_icons::IconRegistry;
 use fret_runtime::PlatformCapabilities;
-use fret_ui::element::SemanticsDecoration;
-use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui::element::{AnyElement, SemanticsDecoration};
+use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::declarative::{ElementContextThemeExt as _, text as decl_text};
 
 mod act {
     fret::actions!([
@@ -31,6 +33,28 @@ const TEST_ID_ROWS: &str = "simple-todo.rows";
 const TEST_ID_ROW_PREFIX: &str = "simple-todo.row.";
 const TEST_ID_DONE_PREFIX: &str = "simple-todo.done.";
 const TEST_ID_REMOVE_PREFIX: &str = "simple-todo.remove.";
+
+fn simple_todo_readout_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_control_readout(cx, text)
+}
+
+fn simple_todo_compact_paragraph_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_compact_paragraph(cx, text)
+}
+
+fn simple_todo_row_label_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+    foreground: Color,
+) -> AnyElement {
+    decl_text::text_list_row_label(cx, text).inherit_foreground(foreground)
+}
 
 #[derive(Clone)]
 struct TodoRow {
@@ -143,7 +167,6 @@ impl View for SimpleTodoView {
         let total_count = todos.len();
         let active_count = total_count.saturating_sub(done_count);
         let add_enabled = !draft_value.trim().is_empty();
-        let muted_foreground = theme.color_token("muted-foreground");
         let status_text = if total_count == 0 {
             "Capture the next thing you need to do.".to_string()
         } else if active_count == 0 {
@@ -165,9 +188,7 @@ impl View for SimpleTodoView {
                     .numeric_range(0.0, (total_count.max(1)) as f64),
             );
 
-        let summary = ui::text(status_text)
-            .text_sm()
-            .text_color(ColorRef::Color(muted_foreground));
+        let summary = simple_todo_readout_text(cx.elements(), status_text);
 
         let title_block = ui::v_flex(|cx| {
             ui::children![
@@ -211,13 +232,13 @@ impl View for SimpleTodoView {
                 return ui::children![
                     cx;
                     ui::container(|cx| {
+                        let empty_text = simple_todo_compact_paragraph_text(
+                            cx,
+                            "No tasks yet. Add one above.",
+                        );
                         ui::single(
                             cx,
-                            ui::text("No tasks yet. Add one above.")
-                                .text_sm()
-                                .text_color(ColorRef::Color(
-                                    theme_for_rows.color_token("muted-foreground"),
-                                )),
+                            empty_text,
                         )
                     })
                     .rounded(Radius::Md)
@@ -254,12 +275,11 @@ impl View for SimpleTodoView {
             .test_id(TEST_ID_ROWS);
 
         let footer_summary = ui::h_flex(|cx| {
+            let remaining = simple_todo_readout_text(cx, format!("{active_count} left"));
             ui::children![
                 cx;
                 progress,
-                ui::text(format!("{active_count} left"))
-                    .text_sm()
-                    .text_color(ColorRef::Color(muted_foreground)),
+                remaining,
             ]
         })
         .gap(Space::N2)
@@ -322,16 +342,12 @@ fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {
         .a11y_label(row.text.clone())
         .test_id(format!("{TEST_ID_DONE_PREFIX}{}", row.id));
 
-    let text = ui::text(row.text.clone())
-        .truncate()
-        .text_sm()
-        .flex_1()
-        .min_w_0()
-        .text_color(ColorRef::Color(if row.done {
-            theme.color_token("muted-foreground")
-        } else {
-            theme.color_token("foreground")
-        }));
+    let row_text = row.text.clone();
+    let row_text_foreground = if row.done {
+        theme.color_token("muted-foreground")
+    } else {
+        theme.color_token("foreground")
+    };
 
     let remove_btn = shadcn::Button::new("Remove")
         .variant(shadcn::ButtonVariant::Ghost)
@@ -340,11 +356,14 @@ fn todo_row(theme: ThemeSnapshot, row: &TodoRow) -> impl UiChild {
         .action_payload(row.id)
         .test_id(format!("{TEST_ID_REMOVE_PREFIX}{}", row.id));
 
-    let leading = ui::h_flex(|cx| ui::children![cx; checkbox, text])
-        .gap(Space::N3)
-        .items_center()
-        .flex_1()
-        .min_w_0();
+    let leading = ui::h_flex(move |cx| {
+        let text = simple_todo_row_label_text(cx, row_text.clone(), row_text_foreground);
+        ui::children![cx; checkbox, text]
+    })
+    .gap(Space::N3)
+    .items_center()
+    .flex_1()
+    .min_w_0();
 
     ui::h_flex(|cx| ui::children![cx; leading, remove_btn])
         .gap(Space::N3)

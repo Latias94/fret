@@ -3420,3 +3420,30 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
   passed.
 - `git diff --check` passed.
+
+2026-05-19 simple todo visible text-role slice:
+
+- Source gap before fix: `apps/fret-examples/src/simple_todo_demo.rs` used local
+  `ui::text(...)` builders for the title summary, empty-state body copy, footer remaining-count
+  readout, and todo row labels. This is an ordinary app proof, not a text rendering capability
+  surface, so fixed/list/chrome text should not own ad-hoc wrap/truncate policy.
+- `simple_todo_readout_text(...)` now routes summary/footer status through
+  `decl_text::text_control_readout(...)`, `simple_todo_compact_paragraph_text(...)` routes the
+  empty-state copy through `decl_text::text_compact_paragraph(...)`, and
+  `simple_todo_row_label_text(...)` routes todo row labels through
+  `decl_text::text_list_row_label(...)`.
+- Row done/active foreground remains app-owned state policy via `inherit_foreground(...)`; the
+  shared role owns the single-line shrink/truncate layout semantics.
+- `apps/fret-examples/tests/simple_todo_demo_surface.rs` and
+  `tools/gate_imui_workstream_source.py` now guard the helper mapping and require
+  `simple_todo_demo.rs` to stay free of `ui::text(...)` residuals.
+- `cargo nextest run -p fret-examples --test simple_todo_demo_surface
+  simple_todo_demo_keeps_visible_text_on_roles --no-fail-fast` passed.
+- `cargo check -p fret-examples --lib` passed.
+- `cargo check -p fret-demo --bin simple_todo_demo` passed.
+- `cargo fmt --check -p fret-examples` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.
