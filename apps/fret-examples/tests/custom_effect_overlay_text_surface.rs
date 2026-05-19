@@ -62,6 +62,77 @@ fn assert_custom_effect_v2_web_overlay_text_roles(source: &str) {
     }
 }
 
+fn assert_custom_effect_v2_template_overlay_text_roles(
+    source: &str,
+    label: &str,
+    badge: &str,
+    hint: &str,
+) {
+    let source = compact(source);
+
+    for needle in [
+        "usefret_ui_kit::declarative::textasdecl_text;",
+        "fnoverlay_label_text<H:UiHost>(",
+        "fnoverlay_readout_text<H:UiHost>(",
+        "decl_text::text_section_chrome_label(cx,text).inherit_foreground(Self::srgb(255,255,255,0.92))",
+        "decl_text::text_control_readout(cx,text).inherit_foreground(foreground)",
+        "Self::overlay_readout_text(cx,\"CustomV2unsupportedonthisadapter/backend\",theme.color_token(\"muted_foreground\"),)",
+        &format!("letbadge_text=Self::overlay_label_text(cx,\"{badge}\");"),
+        &format!(
+            "Self::overlay_readout_text(cx,\"{hint}\",Self::with_alpha(theme.color_token(\"foreground\"),0.55),)"
+        ),
+    ] {
+        assert!(
+            source.contains(needle),
+            "{label} should keep fixed overlay/readout text on shared roles; missing `{needle}`",
+        );
+    }
+
+    for needle in [
+        "cx.text_props(TextProps{",
+        "TextProps{",
+        "wrap:fret_core::TextWrap::None",
+        "overflow:fret_core::TextOverflow::Clip",
+    ] {
+        assert!(
+            !source.contains(needle),
+            "{label} should not render overlay/readout text with local TextProps policy; unexpected `{needle}`",
+        );
+    }
+}
+
+fn assert_custom_effect_v2_glass_chrome_text_roles(source: &str) {
+    let source = compact(source);
+
+    for needle in [
+        "usefret_ui_kit::declarative::textasdecl_text;",
+        "fncontrol_label_text<H:UiHost>(",
+        "fncontrol_readout_text<H:UiHost>(",
+        "decl_text::text_control_label(cx,text).inherit_foreground(foreground)",
+        "decl_text::text_control_readout(cx,text).inherit_foreground(foreground)",
+        "Self::control_label_text(cx,label,theme.color_token(\"muted_foreground\"))",
+        "Self::control_readout_text(cx,value,theme.color_token(\"foreground\"))",
+        "Self::control_readout_text(cx,\"CustomV2unsupportedonthisadapter/backend\",theme.color_token(\"muted_foreground\"),)",
+    ] {
+        assert!(
+            source.contains(needle),
+            "custom_effect_v2_glass_chrome_web_demo should keep fixed control text on shared roles; missing `{needle}`",
+        );
+    }
+
+    for needle in [
+        "cx.text_props(TextProps{",
+        "TextProps{",
+        "wrap:fret_core::TextWrap::None",
+        "overflow:fret_core::TextOverflow::Clip",
+    ] {
+        assert!(
+            !source.contains(needle),
+            "custom_effect_v2_glass_chrome_web_demo should not render control text with local TextProps policy; unexpected `{needle}`",
+        );
+    }
+}
+
 #[test]
 fn custom_effect_v1_v2_overlay_labels_use_shared_chrome_role() {
     assert_custom_effect_overlay_text_roles(
@@ -78,5 +149,24 @@ fn custom_effect_v1_v2_overlay_labels_use_shared_chrome_role() {
 fn custom_effect_v2_web_overlay_readouts_use_shared_roles() {
     assert_custom_effect_v2_web_overlay_text_roles(include_str!(
         "../src/custom_effect_v2_web_demo.rs"
+    ));
+}
+
+#[test]
+fn custom_effect_v2_web_templates_use_shared_text_roles() {
+    assert_custom_effect_v2_template_overlay_text_roles(
+        include_str!("../src/custom_effect_v2_identity_web_demo.rs"),
+        "custom_effect_v2_identity_web_demo",
+        "CustomEffectV2(Starter)",
+        "PressVtotogglethelens.PressRtoresetcontrols.",
+    );
+    assert_custom_effect_v2_template_overlay_text_roles(
+        include_str!("../src/custom_effect_v2_lut_web_demo.rs"),
+        "custom_effect_v2_lut_web_demo",
+        "CustomEffectV2(LUT)",
+        "PressVtotogglethedemosurface.PressRtoresetcontrols.",
+    );
+    assert_custom_effect_v2_glass_chrome_text_roles(include_str!(
+        "../src/custom_effect_v2_glass_chrome_web_demo.rs"
     ));
 }

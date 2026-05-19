@@ -828,6 +828,11 @@ Exit criteria:
   effect ownership unchanged while moving the unsupported-state readout, badge label, and keyboard
   hint to shared text roles. The absolute keyboard hint now positions a container around
   control-readout text instead of constructing local `TextProps`.
+  2026-05-19 custom effect web template text result: `custom_effect_v2_identity_web_demo`,
+  `custom_effect_v2_lut_web_demo`, and `custom_effect_v2_glass_chrome_web_demo` keep their WebGPU
+  template behavior unchanged while moving fixed overlay/control text out of local `TextProps`.
+  Starter/LUT badges use section-chrome text, hints/status use readout text, and glass/chrome
+  slider names/values use control-label/readout roles.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

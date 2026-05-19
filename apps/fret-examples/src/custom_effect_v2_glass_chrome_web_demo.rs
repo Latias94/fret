@@ -27,10 +27,11 @@ use fret_runtime::{Model, PlatformCapabilities};
 use fret_ui::declarative;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, EffectLayerProps, Elements, FlexProps, LayoutStyle,
-    Length, MainAlign, Overflow, PositionStyle, SpacingLength, TextProps,
+    Length, MainAlign, Overflow, PositionStyle, SpacingLength,
 };
-use fret_ui::{ElementContext, Invalidation, UiTree};
+use fret_ui::{ElementContext, Invalidation, UiHost, UiTree};
 use fret_ui_kit::custom_effects::CustomEffectProgramV2;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::on_activate_request_redraw;
 use fret_ui_kit::ui;
 use fret_ui_kit::{IntoUiElement, Space, UiExt};
@@ -230,6 +231,22 @@ impl CustomEffectV2GlassChromeWebDriver {
         c
     }
 
+    fn control_label_text<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        text: impl Into<Arc<str>>,
+        foreground: fret_core::Color,
+    ) -> AnyElement {
+        decl_text::text_control_label(cx, text).inherit_foreground(foreground)
+    }
+
+    fn control_readout_text<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        text: impl Into<Arc<str>>,
+        foreground: fret_core::Color,
+    ) -> AnyElement {
+        decl_text::text_control_readout(cx, text).inherit_foreground(foreground)
+    }
+
     fn install_custom_effect_and_input(
         app: &mut App,
         context: &WgpuContext,
@@ -324,26 +341,8 @@ impl CustomEffectV2GlassChromeWebDriver {
 
         ui::h_flex(|cx| {
             [
-                cx.text_props(TextProps {
-                    layout: Default::default(),
-                    text: label.into(),
-                    style: None,
-                    color: Some(theme.color_token("muted_foreground")),
-                    align: fret_core::TextAlign::Start,
-                    wrap: fret_core::TextWrap::None,
-                    overflow: fret_core::TextOverflow::Clip,
-                    ink_overflow: Default::default(),
-                }),
-                cx.text_props(TextProps {
-                    layout: Default::default(),
-                    text: value.into(),
-                    style: None,
-                    color: Some(theme.color_token("foreground")),
-                    align: fret_core::TextAlign::End,
-                    wrap: fret_core::TextWrap::None,
-                    overflow: fret_core::TextOverflow::Clip,
-                    ink_overflow: Default::default(),
-                }),
+                Self::control_label_text(cx, label, theme.color_token("muted_foreground")),
+                Self::control_readout_text(cx, value, theme.color_token("foreground")),
             ]
         })
         .gap(Space::N2)
@@ -438,16 +437,11 @@ impl CustomEffectV2GlassChromeWebDriver {
                     ..Default::default()
                 },
                 |cx| {
-                    vec![cx.text_props(TextProps {
-                        layout: Default::default(),
-                        text: "CustomV2 unsupported on this adapter/backend".into(),
-                        style: None,
-                        color: Some(theme.color_token("muted_foreground")),
-                        align: fret_core::TextAlign::Start,
-                        wrap: fret_core::TextWrap::None,
-                        overflow: fret_core::TextOverflow::Clip,
-                        ink_overflow: Default::default(),
-                    })]
+                    vec![Self::control_readout_text(
+                        cx,
+                        "CustomV2 unsupported on this adapter/backend",
+                        theme.color_token("muted_foreground"),
+                    )]
                 },
             )
         };

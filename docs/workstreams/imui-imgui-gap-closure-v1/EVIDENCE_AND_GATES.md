@@ -2725,6 +2725,39 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   passed.
 - `git diff --check` passed.
 
+2026-05-19 custom effect web template overlay/control text-role slice:
+
+- Source gap before fix: `custom_effect_v2_identity_web_demo.rs`,
+  `custom_effect_v2_lut_web_demo.rs`, and `custom_effect_v2_glass_chrome_web_demo.rs` remained in
+  the residual direct-text allowlist for fixed Web template overlay/control labels. These were
+  ordinary demo chrome/readouts, not text-rendering capability probes.
+- Starter and LUT templates now use `overlay_label_text(...)` backed by
+  `text_section_chrome_label(...)` for their badges and `overlay_readout_text(...)` backed by
+  `text_control_readout(...)` for unsupported-state and keyboard-hint text. Their absolute hints
+  position containers around shared readout text instead of constructing local `TextProps`.
+- The glass/chrome template now routes slider row names through `text_control_label(...)`, values
+  through `text_control_readout(...)`, and the unsupported-state message through the same readout
+  helper. App-owned foreground colors are preserved through `inherit_foreground(...)`.
+- `apps/fret-examples/tests/custom_effect_overlay_text_surface.rs`,
+  `apps/fret-examples/tests/text_role_residual_surface.rs`, and
+  `tools/gate_imui_workstream_source.py` guard the migration and remove the three Web template demos
+  from the residual direct text allowlist.
+- `cargo fmt --check -p fret-examples` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo nextest run -p fret-examples --test custom_effect_overlay_text_surface
+  custom_effect_v2_web_templates_use_shared_text_roles --no-fail-fast` passed.
+- `cargo nextest run -p fret-examples --test custom_effect_overlay_text_surface
+  custom_effect_v2_web_overlay_readouts_use_shared_roles --no-fail-fast` passed.
+- `cargo nextest run -p fret-examples --test text_role_residual_surface
+  remaining_bare_text_in_fret_examples_is_explicit_capability_surface --no-fail-fast` passed.
+- `cargo check -p fret-examples --lib --target wasm32-unknown-unknown` passed.
+- `cargo check -p fret-demo-web --target wasm32-unknown-unknown` passed with existing unrelated
+  `fret-platform-native` clipboard dead-code warnings.
+- `cargo check -p fret-examples --lib` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+
 2026-05-19 custom effect web overlay/readout text-role slice:
 
 - Source gap before fix: `custom_effect_v2_web_demo.rs` still used three local `TextProps`
