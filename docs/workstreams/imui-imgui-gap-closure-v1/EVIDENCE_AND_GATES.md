@@ -3362,3 +3362,32 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_workstream_source.py` passed.
 - `cargo fmt --check -p fret-examples` passed.
 - `cargo check -p fret-examples --lib` passed.
+
+2026-05-19 API workbench lite fixed text-role slice:
+
+- Source gap before fix: `apps/fret-examples/src/api_workbench_lite_demo.rs` used local
+  `ui::text(...)` builders and a `ThemeSnapshot` parameter on `shell_frame(...)` for app title,
+  sidebar labels, first-contact copy, active base URL, and history loading/error/empty states.
+  These are fixed app chrome/readout/identifier or paragraph slots, not ad-hoc text policy.
+- `api_workbench_section_text(...)`, `api_workbench_readout_text(...)`,
+  `api_workbench_code_label_text(...)`, and `api_workbench_paragraph_text(...)` now bridge the
+  app-facing `AppRenderContext` to shared declarative text roles through `cx.elements()`.
+- The app title/sidebar labels route through `decl_text::text_section_chrome_label(...)`,
+  first-contact copy routes through `decl_text::text_paragraph(...)`, the active base URL routes
+  through `decl_text::text_code_label(...)`, and history loading/error/empty states route through
+  `decl_text::text_control_readout(...)`.
+- The old `shell_frame` `ThemeSnapshot` parameter was removed because it only existed to support
+  local muted text color policy.
+- `apps/fret-examples/tests/api_workbench_lite_demo_surface.rs` and
+  `tools/gate_imui_workstream_source.py` guard those role mappings and forbid the old local fixed
+  text policy from returning.
+- First post-fix `cargo nextest run -p fret-examples --test api_workbench_lite_demo_surface
+  api_workbench_lite_demo_keeps_fixed_text_on_roles --no-fail-fast` timed out while background
+  Cargo/Rustc compilation continued.
+- Retried after Cargo/Rustc exited:
+  `cargo nextest run -p fret-examples --test api_workbench_lite_demo_surface
+  api_workbench_lite_demo_keeps_fixed_text_on_roles --no-fail-fast` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo fmt --check -p fret-examples` passed.
+- `cargo check -p fret-demo --bin api_workbench_lite_demo` passed.

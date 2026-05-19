@@ -782,6 +782,11 @@ Exit criteria:
   unchanged while moving the fixed title to section-chrome text, the effective material/style
   diagnostic to code-label text, and status to control-readout text. This completes the paired
   utility-window chrome text cleanup without moving window-material policy into `fret-imui`.
+  2026-05-19 API workbench lite text result: `api_workbench_lite_demo` keeps its request,
+  mutation, query, and persisted-history proof behavior unchanged while moving app/sidebar chrome,
+  paragraph copy, base-URL identifiers, and history status states onto shared text roles. The slice
+  also removes the now-redundant `shell_frame` theme snapshot parameter, because text color policy
+  is no longer owned locally by that proof surface.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

@@ -874,6 +874,12 @@ Readiness order for the next locally testable review slices:
    section-chrome text, the effective material/style diagnostic through code-label text, and the
    status line through control-readout text. The background material request/diagnostics proof path
    stays unchanged; only local fixed chrome/readout text policy was removed.
+   2026-05-19 API workbench lite text follow-up: `api_workbench_lite_demo` now routes its app
+   title/sidebar labels through section-chrome text, first-contact copy through paragraph text,
+   active base URL through code-label text, and history loading/error/empty states through
+   control-readout text. The request/mutation/history proof path stays unchanged, and the old
+   `shell_frame` theme-snapshot parameter was removed because it only existed to support local text
+   color policy.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
