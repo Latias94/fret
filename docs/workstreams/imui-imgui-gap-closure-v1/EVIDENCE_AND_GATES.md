@@ -2302,6 +2302,16 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json` passed.
 - `git diff --check` passed.
 
+2026-05-20 child-region auto-width gate slice:
+
+- `cargo nextest run -p fret-imui child_region_without_width_constraint_auto_sizes_to_content --no-fail-fast` passed.
+
+2026-05-20 menu item row-anchor and shared-role slice:
+
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_item_root_pressable_owns_visible_row_children menu_item_label_text_uses_shared_list_row_text_role menu_item_shortcut_text_uses_shared_control_readout_role menu_item_indicator_text_uses_shared_chrome_glyph_role --no-fail-fast` passed.
+- `cargo nextest run -p fret-imui interaction_press::lifecycle::menu_item interaction_menu_tabs::menu_activation interaction_menu_tabs::submenu_hover --no-fail-fast` passed.
+- `python tools/gate_imui_workstream_source.py` passed.
+
 2026-05-18 AI AudioPlayer state-marker text-role slice:
 
 - `cargo fmt -p fret-ui-gallery` passed.

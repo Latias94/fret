@@ -1,7 +1,7 @@
 # P3 Component Surface Catalog - 2026-05-06
 
 Status: component surface audit; partially superseded by closed proof lanes
-Last updated: 2026-05-18
+Last updated: 2026-05-20
 
 Status note (2026-05-16): this catalog remains the current component-surface gap map, but the
 image-item and child-region manual-resize candidates below have since landed in narrow proof lanes:
@@ -24,10 +24,10 @@ has a caller-owned snapshot/restore seam through `TableColumnVisibilitySnapshot`
 pinning now has a narrow freeze-pane proof through `TableColumn::pinned_left()` /
 `TableColumn::pinned_right()`, with pinned left/right groups staying outside the shared center
 horizontal scroll handle. The old columns API shape has since been closed by making `TableColumn`
-builder/accessor-first with private fields. Child-region auto-height has also been narrowed:
-leaving child-region height unconstrained now has a focused composition gate proving the
-AutoResizeY-equivalent layout posture, so only more specific auto-resize behavior, clipping-return,
-and nav flattening remain candidates.
+builder/accessor-first with private fields. Child-region auto-height and auto-width have also been narrowed.
+Leaving the child-region size unconstrained on an axis now has focused composition gates proving
+the AutoResizeY-equivalent layout posture and AutoResizeX-equivalent layout posture, so only always
+auto-resize behavior, clipping-return, and nav flattening remain candidates.
 
 ## Decision
 
@@ -56,7 +56,7 @@ Keep the owner split:
 | Slider / drag value | `slider_f32_model` in kit, richer typed `Slider` / `DragValue` adapters in editor | Covered through split kit/editor ownership; generic numeric breadth belongs in editor controls first |
 | Combo / selectable / multi-select | `combo`, `combo_model`, `selectable`, `multi_selectable`, `SelectableOptions::highlighted`, `ImUiMultiSelectState` | Covered for current examples; full app collection helper and broader selectable flag mirrors remain candidate-only |
 | Tree / disclosure | `collapsing_header`, `tree_node`, explicit `TreeNodeOptions::level` | Covered with Fret-native explicit identity/depth; do not copy implicit indent/ID stacks |
-| Child windows / scrolling | `child_region`, `scroll`, `virtual_list`, `ChildRegionResize{X,Y}Options` | Covered for keyed scrollable panes, height-unconstrained auto-height layout, and manual axis resize; more specific Dear ImGui child behavior such as width/always auto-resize, clipping-return, and nav flattening stays behavior-specific candidate work |
+| Child windows / scrolling | `child_region`, `scroll`, `virtual_list`, `ChildRegionResize{X,Y}Options` | Covered for keyed scrollable panes, unconstrained-axis auto-size layout, and manual axis resize; more specific Dear ImGui child behavior such as always auto-resize, clipping-return, and nav flattening stays behavior-specific candidate work |
 | In-window floating windows / overlay areas | `floating_layer`, `floating_area`, `window`, `window_with_options`, `FloatingWindowOptions` | Covered for in-window drag, z-order hit-testing, focus/input policy, close, resize, and collapse; OS-window tear-out / multi-viewport parity stays in docking/runner lanes |
 | Menus / menu bars / popups / modals | `menu_bar`, `begin_menu`, `begin_submenu`, menu items, `open_popup`, `begin_popup_menu`, context menu helpers, modal helpers | Covered at policy layer; dismissal/focus policy stays in ecosystem |
 | Tooltips | `tooltip_text`, `tooltip`, `TooltipOptions` | Covered enough for current response-driven usage |
@@ -93,9 +93,9 @@ public helper widening:
      unless a new public construction failure appears.
 5. **Child-region flag mirrors beyond manual resize**
    - `ResizeY` and `ResizeX` now have closed proof lanes.
-   - Basic AutoResizeY-equivalent layout is covered by the height-unconstrained child-region
-     composition gate.
-   - Width/always auto-resize, nav flattening, and clipping-return behavior still need
+   - Basic AutoResizeY-equivalent and AutoResizeX-equivalent layout is covered by the
+     unconstrained-axis child-region composition gates.
+   - Always auto-resize, nav flattening, and clipping-return behavior still need
      behavior-specific proof and gates.
 
 ## Source-Backed Facts

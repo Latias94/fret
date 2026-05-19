@@ -293,6 +293,9 @@ Readiness order for the next locally testable review slices:
    2026-05-16 menu shortcut readout reuse follow-up: menu item shortcut labels now reuse
    `text_control_readout(...)` as muted compact auxiliary readouts instead of carrying local
    nowrap/clip `TextProps` policy.
+   2026-05-20 menu item row-anchor follow-up: the root pressable now owns the visible row children
+   instead of using an absolute overlay sibling, so the menu item's `test_id` and interaction box
+   stay on the same row as the visible label/shortcut/glyph children.
    2026-05-17 menu indicator glyph follow-up: menu checkbox/radio indicators and submenu chevrons
    now reuse `text_chrome_glyph(...)`, so glyph-only menu chrome no longer falls back to bare
    `cx.text(...)` default wrapping semantics.
@@ -1096,8 +1099,8 @@ Readiness order for the next locally testable review slices:
    keyed scrollable child areas, chrome, scroll handles, nested shell panes, and app-owned
    collection behavior. The closed `imui-child-region-resize-y-v1` and
    `imui-child-region-resize-x-v1` follow-ons now cover axis-specific manual resize with
-   app-owned size state; the height-unconstrained child-region path now has a focused AutoResizeY
-   composition gate, while visibility-return, nav-flattening, and more specific auto-resize
+   app-owned size state; the unconstrained-axis child-region paths now have focused AutoResizeY and
+   AutoResizeX composition gates, while visibility-return, nav-flattening, and always-auto-resize
    behavior remain behavior-specific candidates. Do not open a generic `BeginChild()` flag-mirror
    lane.
 8. Multi-window parity: continue in `docking-multiwindow-imgui-parity`.

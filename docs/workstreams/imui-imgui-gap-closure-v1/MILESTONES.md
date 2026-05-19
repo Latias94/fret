@@ -205,6 +205,10 @@ Exit criteria:
   Fret-native AutoResizeY-equivalent posture: width-constrained child regions with no explicit
   height auto-size to measured content and push following siblings down. This keeps the current
   layout contract explicit without adding a Dear ImGui `AutoResizeY` flag mirror.
+  2026-05-20 child-region auto-width result: a focused `fret-imui` composition gate now proves the
+  matching Fret-native AutoResizeX-equivalent posture: height-constrained child regions with no
+  explicit width auto-size to measured content and push following siblings right. This keeps the
+  current layout contract explicit without adding a Dear ImGui `AutoResizeX` flag mirror.
   2026-05-16 selectable highlight result: `imui-selectable-highlight-policy-v1` is the closed proof
   lane for forced selectable highlight visuals. Keyboard-active picker rows now use highlighted
   policy instead of selected semantics, while broader selectable flags remain candidate-only.
@@ -313,6 +317,10 @@ Exit criteria:
   label role for menu items, selectables, and tree/disclosure rows. It preserves regular `text-sm`
   styling with fill-width, min-width-zero, single-line ellipsis behavior, so row labels do not wrap
   or grow row height under resize.
+  2026-05-20 menu item row-anchor result: `menu_item_element_with_pressable_hook_inner(...)`
+  now makes the root pressable own the visible row children instead of using an absolute overlay
+  sibling. The menu item's `test_id`, focus, click, and keyboard behavior stay on the same row box
+  while the visible row layout remains a single pressable tree.
   2026-05-16 menu shortcut readout reuse result: IMUI menu shortcut labels now reuse
   `text_control_readout(...)` as muted compact auxiliary readouts, keeping shortcut text inside the
   stable control-readout role instead of adding another menu-specific text policy.
