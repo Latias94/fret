@@ -3322,3 +3322,66 @@ Broader gates not run:
   - Reason: `RBX-M2-060` changes only `fret-node` UI module gating and overlay/panel policy
     coverage. The default `fret-node` package gate, the full `compat-retained-canvas` package gate,
     both feature checks, layering, catalog, and whitespace gates cover the changed surface.
+
+## 2026-05-19 - RBX-M2-070 node graph portal editor chrome default gate extraction
+
+Claim verified:
+
+- Portal editor chrome helpers compile under the default declarative `fret-ui` feature without
+  enabling `compat-retained-canvas` or `fret-ui/unstable-retained-bridge`.
+- Retained portal text/number editor command handlers remain gated behind `compat-retained-canvas`.
+- Default `fret-node` test coverage now includes portal editor chrome tests.
+- The full retained canvas compatibility behavior matrix still passes after the extraction.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/mod.rs`
+- `ecosystem/fret-node/src/ui/editors/mod.rs`
+- `ecosystem/fret-node/src/ui/editors/chrome.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-node --no-default-features --features fret-ui`
+  - Result: passed.
+  - Scope proven: default declarative `fret-node` UI compiles with editor chrome available and
+    without the retained bridge feature.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed.
+  - Scope proven: retained portal text/number editor command handlers still compile inside the
+    explicit compatibility island.
+- `cargo nextest run -p fret-node editor_chrome_compiles_without_retained_canvas_compat ui::editors::chrome`
+  - Result: passed, 4 tests.
+  - Scope proven: editor chrome tests run in the default gate and policy coverage keeps retained
+    portal editor modules gated.
+- `cargo nextest run -p fret-node`
+  - Result: passed, 324 tests.
+  - Scope proven: default `fret-node` coverage now includes portal editor chrome tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas`
+  - Result: passed, 908 tests.
+  - Scope proven: retained canvas/editor/overlay behavior coverage remains green after moving
+    editor chrome into the default gate.
+
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting is clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist still pass after moving editor chrome
+    out of the retained compatibility feature gate.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly after the task ledger/evidence
+    update.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-070` changes only `fret-node` UI module gating and editor chrome default
+    coverage. The default `fret-node` package gate, the full `compat-retained-canvas` package gate,
+    both feature checks, layering, catalog, and whitespace gates cover the changed surface.

@@ -32,7 +32,6 @@ mod a11y;
 mod diag_anchors;
 #[cfg(feature = "compat-retained-canvas")]
 mod editor;
-#[cfg(feature = "compat-retained-canvas")]
 mod editors;
 mod overlays;
 #[cfg(feature = "compat-retained-canvas")]

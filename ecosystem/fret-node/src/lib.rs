@@ -58,6 +58,7 @@ mod surface_policy_tests {
     const UI_CONTROLLER_UPDATES_RS: &str = include_str!("ui/controller_updates.rs");
     const UI_CONTROLLER_VIEWPORT_RS: &str = include_str!("ui/controller_viewport.rs");
     const UI_DECLARATIVE_MOD_RS: &str = include_str!("ui/declarative/mod.rs");
+    const UI_EDITORS_MOD_RS: &str = include_str!("ui/editors/mod.rs");
     const UI_MOD_RS: &str = include_str!("ui/mod.rs");
     const UI_OVERLAYS_MOD_RS: &str = include_str!("ui/overlays/mod.rs");
     const UI_OVERLAY_CONTROLS_RS: &str = include_str!("ui/overlays/controls.rs");
@@ -373,6 +374,22 @@ mod surface_policy_tests {
             assert!(
                 UI_OVERLAYS_MOD_RS.contains(&marker),
                 "retained overlay widget module must stay behind compat-retained-canvas: {retained_widget_module}"
+            );
+        }
+    }
+
+    #[test]
+    fn editor_chrome_compiles_without_retained_canvas_compat() {
+        assert!(UI_MOD_RS.contains("mod editors;"));
+        assert!(!UI_MOD_RS.contains("#[cfg(feature = \"compat-retained-canvas\")]\nmod editors;"));
+        assert!(UI_EDITORS_MOD_RS.contains("mod chrome;"));
+
+        for retained_editor_module in ["mod portal_number;", "mod portal_text;"] {
+            let marker =
+                format!("#[cfg(feature = \"compat-retained-canvas\")]\n{retained_editor_module}");
+            assert!(
+                UI_EDITORS_MOD_RS.contains(&marker),
+                "retained portal editor module must stay behind compat-retained-canvas: {retained_editor_module}"
             );
         }
     }

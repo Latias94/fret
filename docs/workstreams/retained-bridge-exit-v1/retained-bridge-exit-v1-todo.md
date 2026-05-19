@@ -804,6 +804,34 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-070 Move node graph portal editor chrome tests onto the default declarative UI gate.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/mod.rs`
+    - `ecosystem/fret-node/src/ui/editors/mod.rs`
+    - `ecosystem/fret-node/src/lib.rs`
+  - Goal:
+    - Compile the portal editor chrome helpers under the default declarative `fret-ui` feature,
+      because they render declarative element chrome and do not require retained bridge lifecycle.
+    - Keep retained portal text/number editor command handlers behind `compat-retained-canvas`
+      until portal command submission and host lifecycle move to declarative composition.
+  - Result:
+    - `editors/chrome.rs` now compiles and tests in the default `fret-ui` path.
+    - `editors/portal_text.rs` and `editors/portal_number.rs` remain gated behind
+      `compat-retained-canvas`.
+    - Default `cargo nextest run -p fret-node` coverage increased from 319 to 324 tests, adding
+      editor chrome policy coverage to the declarative gate.
+    - Surface-policy coverage now rejects moving editor chrome back behind
+      `compat-retained-canvas`.
+  - Validation:
+    - `cargo check -p fret-node --no-default-features --features fret-ui`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node editor_chrome_compiles_without_retained_canvas_compat ui::editors::chrome`
+    - `cargo nextest run -p fret-node`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

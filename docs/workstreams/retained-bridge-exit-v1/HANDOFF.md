@@ -51,7 +51,8 @@ portal modules and root exports behind a crate-private/test-only compatibility i
 retained behavior matrix available while removing the public retained widget authoring surface.
 `RBX-M2-060` moved pure overlay/panel/screen-space policy and layout modules onto the default
 declarative `fret-ui` gate while keeping retained overlay widgets/paint behind
-`compat-retained-canvas`.
+`compat-retained-canvas`. `RBX-M2-070` moved declarative portal editor chrome tests onto the
+default gate while leaving retained portal text/number editor command handlers gated.
 
 ## Completed Implementation
 
@@ -369,11 +370,14 @@ their public root re-exports, with test-only crate-private access retained for t
 matrix. `RBX-M2-060` made `overlays` and `screen_space_placement` compile in the default
 declarative `fret-ui` path, expanding default `fret-node` nextest coverage from 269 to 319 tests
 with overlay/panel/minimap/toolbar/blackboard/rename/screen-space policy coverage. Retained overlay
-widgets and retained paint helpers remain gated behind `compat-retained-canvas`. The headless graph
-surface, default declarative UI surface, and explicit retained canvas compatibility island still
-compile. The retained canvas/editor stack still exists inside `fret-node` behind
-`compat-retained-canvas`; the next M2 slice should replace retained overlay/panel host composition
-with declarative elements and shrink the remaining retained leaf.
+widgets and retained paint helpers remain gated behind `compat-retained-canvas`. `RBX-M2-070`
+then made `editors/chrome.rs` compile in the default declarative path, expanding default
+`fret-node` nextest coverage from 319 to 324 tests, while retained portal text/number editor
+command handlers remain gated. The headless graph surface, default declarative UI surface, and
+explicit retained canvas compatibility island still compile. The retained canvas/editor stack still
+exists inside `fret-node` behind `compat-retained-canvas`; the next M2 slice should replace
+retained overlay/panel/editor host composition with declarative elements and shrink the remaining
+retained leaf.
 
 ## Next Task
 
