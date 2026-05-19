@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-05-19
+Last updated: 2026-05-20
 
 ## P0 - Source Baseline
 
@@ -1025,6 +1025,10 @@ Readiness order for the next locally testable review slices:
    `ContextMenuLabel`, and `MenubarLabel` now consume the same shared menu-group text role through
    local label element helpers. Menu item labels and icon/indicator color policy remain menu-owned;
    only the non-interactive group heading text policy moved out of local builders.
+   2026-05-20 shadcn CommandGroup heading follow-up: `CommandGroup::heading(...)` now renders
+   through a command-local helper backed by the same shared menu-group text role. This covers the
+   command/listbox group-heading path used by combobox, native select, and data-table recipes
+   without changing command item label/highlight rendering or widening `fret-imui`.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

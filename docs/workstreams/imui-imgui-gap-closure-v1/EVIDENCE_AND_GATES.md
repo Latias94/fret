@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-05-19
+Last updated: 2026-05-20
 
 ## Evidence Anchors
 
@@ -4006,6 +4006,41 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.
+
+2026-05-20 shadcn CommandGroup heading text role slice:
+
+- Source gap before fix: `CommandGroup::heading(...)` rendered command/listbox group headings in
+  both `CommandList` and `CommandPalette` through local `ui::text(...)` builders with command-local
+  heading typography, muted foreground, and `nowrap()` policy. That duplicated the same fixed-row
+  group-label contract already used by Select and menu-family labels.
+- `ecosystem/fret-ui-shadcn/src/command.rs` now uses a private
+  `command_group_heading_element(...)` helper for both heading render paths. The helper owns the
+  row padding/container shape and delegates the text leaf to
+  `fret-ui-kit::declarative::text::text_menu_group_label(...)`.
+- This intentionally keeps `CommandItem` label/highlight rendering command-owned. The slice only
+  moves non-interactive group heading text policy onto the shared role and indirectly covers
+  combobox, native select, and data-table recipe heading consumers through `CommandGroup::heading`.
+- `command_group_heading_uses_shared_menu_group_text_role` proves the heading text leaf has no
+  leaf-local `TextStyle`/color, uses fill-width/min-width-zero/shrink layout, and stays
+  `TextWrap::None` with ellipsis overflow. `tools/gate_imui_workstream_source.py` guards the
+  helper/import/test shape and rejects the old command-local heading text helper from returning.
+- Planned focused gates for this slice:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  command_group_heading_uses_shared_menu_group_text_role --no-fail-fast`, `cargo check -p
+  fret-ui-shadcn --lib`, `cargo fmt --check -p fret-ui-shadcn`, `python -m py_compile
+  tools\gate_imui_workstream_source.py`, `python -m json.tool
+  docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`, `python
+  tools\gate_imui_workstream_source.py`, and `git diff --check`.
+- Verification note: `cargo fmt --check -p fret-ui-shadcn` initially reported the new test block
+  formatting around `command_group_heading_uses_shared_menu_group_text_role`; `cargo fmt -p
+  fret-ui-shadcn` normalized the block, after which `cargo fmt --check -p fret-ui-shadcn` passed.
+  The first focused `cargo nextest run -p fret-ui-shadcn --lib
+  command_group_heading_uses_shared_menu_group_text_role --no-fail-fast` attempt timed out while
+  Cargo/Rustc still held build locks. No cargo/rustc process was killed; after the background
+  compile chain exited naturally, the same focused nextest command passed. `cargo check -p
+  fret-ui-shadcn --lib`, `python -m py_compile tools\gate_imui_workstream_source.py`, `python -m
+  json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`, `python
+  tools\gate_imui_workstream_source.py`, and `git diff --check` passed.
 
 2026-05-19 shadcn EmptyTitle children-role slice:
 

@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-19
+Last updated: 2026-05-20
 
 ## M0 - Current Source Baseline
 
@@ -915,6 +915,10 @@ Exit criteria:
   label rows now route their non-interactive group heading text through
   `text_menu_group_label(...)`. The helper reuse keeps fixed menu rows on one shared resize
   contract while preserving menu-owned item label rendering and icon foreground policy.
+  2026-05-20 shadcn CommandGroup heading text result: Command/Listbox group headings now route
+  through `text_menu_group_label(...)` via a command-local helper. Combobox, native select, and
+  data-table recipes benefit through `CommandGroup::heading(...)`, while command row
+  label/highlight rendering stays command-owned.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

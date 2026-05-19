@@ -3260,6 +3260,23 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/command.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "fn command_group_heading_element<H: UiHost>(",
+                "decl_text::text_menu_group_label(cx, heading)",
+                "command_group_heading_element(cx, heading, pad_x)",
+                "command_group_heading_uses_shared_menu_group_text_role",
+            ],
+            forbidden=[
+                "fn heading_text_style(",
+                "let heading_style = heading_text_style(&theme);",
+                "let style = heading_text_style(&theme);",
+                ".text_color(ColorRef::Color(fg_heading))",
+                "component.command.heading.text_px",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-shadcn/src/dropdown_menu.rs"),
             required=[
                 "use fret_ui_kit::declarative::text as decl_text;",
