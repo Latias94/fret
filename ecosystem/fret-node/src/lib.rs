@@ -70,6 +70,10 @@ mod surface_policy_tests {
         include_str!("../../../apps/fret-examples/src/node_graph_domain_demo.rs");
     const NODE_GRAPH_LEGACY_DEMO_RS: &str =
         include_str!("../../../apps/fret-examples/src/node_graph_legacy_demo.rs");
+    const UI_GALLERY_CARGO_TOML: &str = include_str!("../../../apps/fret-ui-gallery/Cargo.toml");
+    const UI_GALLERY_NODE_GRAPH_CULL_TORTURE_RS: &str = include_str!(
+        "../../../apps/fret-ui-gallery/src/ui/previews/pages/torture/node_graph_cull_torture.rs"
+    );
     const WORKFLOW_NODE_GRAPH_DEMO_RS: &str = include_str!(
         "../../../apps/fret-ui-gallery/src/ui/snippets/ai/workflow_node_graph_demo.rs"
     );
@@ -304,19 +308,52 @@ mod surface_policy_tests {
     #[test]
     fn workflow_gallery_surface_stays_binding_first_for_viewport_controls() {
         assert!(WORKFLOW_NODE_GRAPH_DEMO_RS.contains("NodeGraphSurfaceBinding::new("));
-        assert!(WORKFLOW_NODE_GRAPH_DEMO_RS.contains("controller: NodeGraphController,"));
-        assert!(
-            WORKFLOW_NODE_GRAPH_DEMO_RS.contains("NodeGraphController::new(binding.store_model())")
-        );
+        assert!(WORKFLOW_NODE_GRAPH_DEMO_RS.contains("binding.observe(cx);"));
+        assert!(WORKFLOW_NODE_GRAPH_DEMO_RS.contains("LayoutQueryRegionProps::default()"));
+        assert!(WORKFLOW_NODE_GRAPH_DEMO_RS.contains("node_graph_surface(cx, props)"));
         assert!(WORKFLOW_NODE_GRAPH_DEMO_RS.contains("binding.set_viewport_action_host("));
         assert!(
             WORKFLOW_NODE_GRAPH_DEMO_RS.contains("binding.fit_view_nodes_in_bounds_action_host(")
         );
+        assert!(WORKFLOW_NODE_GRAPH_DEMO_RS.contains("binding.fit_view_nodes_in_bounds(cx.app,"));
+        assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("RetainedSubtreeProps"));
+        assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("retained_bridge"));
+        assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("NodeGraphCanvas::new"));
+        assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("NodeGraphEditor::new"));
+        assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("create_node_retained"));
+        assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("retained_subtree"));
+        assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("NodeGraphController"));
         assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("binding.controller()"));
         assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains(".with_controller(binding.controller())"));
         assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("NodeGraphViewQueue"));
         assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("bind_controller_view_queue_transport"));
         assert!(!WORKFLOW_NODE_GRAPH_DEMO_RS.contains("use fret_node::ui::advanced::{"));
+    }
+
+    #[test]
+    fn first_party_gallery_node_graph_pages_stay_off_retained_canvas() {
+        assert!(
+            UI_GALLERY_CARGO_TOML
+                .contains("fret-node = { path = \"../../ecosystem/fret-node\", optional = true }")
+        );
+        assert!(!UI_GALLERY_CARGO_TOML.contains("fret-node/compat-retained-canvas"));
+        assert!(!UI_GALLERY_CARGO_TOML.contains(
+            "fret-node = { path = \"../../ecosystem/fret-node\", optional = true, features = [\"compat-retained-canvas\"] }"
+        ));
+
+        for source in [
+            WORKFLOW_NODE_GRAPH_DEMO_RS,
+            UI_GALLERY_NODE_GRAPH_CULL_TORTURE_RS,
+        ] {
+            assert!(source.contains("NodeGraphSurfaceBinding::new("));
+            assert!(source.contains("node_graph_surface"));
+            assert!(!source.contains("RetainedSubtreeProps"));
+            assert!(!source.contains("retained_bridge"));
+            assert!(!source.contains("NodeGraphCanvas::new"));
+            assert!(!source.contains("NodeGraphEditor::new"));
+            assert!(!source.contains("create_node_retained"));
+            assert!(!source.contains("retained_subtree"));
+        }
     }
 
     #[test]

@@ -625,6 +625,37 @@ Related plan:
     - `cargo check -p fret-node --no-default-features --features fret-ui`
     - `cargo check -p fret-node --features compat-retained-canvas`
     - `python3 tools/check_layering.py`
+- [x] RBX-M2-020 Migrate first-party gallery node graph pages off retained canvas.
+  - Scope:
+    - `apps/fret-ui-gallery/Cargo.toml`
+    - `apps/fret-ui-gallery/src/ui/previews/pages/torture/node_graph_cull_torture.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/ai/workflow_node_graph_demo.rs`
+    - `ecosystem/fret-node/src/lib.rs`
+  - Goal:
+    - Remove UI Gallery's `fret-node/compat-retained-canvas` dependency by switching gallery node
+      graph examples to `NodeGraphSurfaceBinding` plus declarative `node_graph_surface(...)`.
+    - Preserve workflow zoom/fit/reset controls by replacing the retained `BoundsRecorder` with a
+      declarative `LayoutQueryRegion` bounds query.
+  - Result:
+    - UI Gallery's `fret-node` dependency no longer enables `compat-retained-canvas`.
+    - `node_graph_cull_torture` and `workflow_node_graph_demo` no longer use
+      `RetainedSubtreeProps`, `retained_bridge`, `NodeGraphCanvas::new`, or
+      `NodeGraphEditor::new`.
+    - Added `fret-node` surface-policy coverage to keep first-party gallery node graph pages off
+      retained canvas.
+  - Validation:
+    - `cargo fmt --check`
+    - `cargo check -p fret-ui-gallery --features gallery-dev`
+    - `cargo check -p fret-node --no-default-features --features fret-ui`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node workflow_gallery_surface_stays_binding_first_for_viewport_controls first_party_gallery_node_graph_pages_stay_off_retained_canvas retained_compatibility_surface_stays_declarative_only`
+    - `cargo nextest run -p fret-node`
+    - `rg -n "RetainedSubtreeProps|retained_bridge|NodeGraphCanvas::new|NodeGraphEditor::new|create_node_retained|retained_subtree|compat-retained-canvas" apps/fret-ui-gallery/Cargo.toml apps/fret-ui-gallery/src/ui/previews/pages/torture/node_graph_cull_torture.rs apps/fret-ui-gallery/src/ui/snippets/ai/workflow_node_graph_demo.rs`
+    - `cargo tree -p fret-ui-gallery --features gallery-dev -e features -i fret-node | rg -n "compat-retained-canvas|fret-node feature|fret-ui-gallery|fret-node v"`
+    - `cargo tree -p fret-ui-gallery --features gallery-dev -e features -i fret-ui | tail -60`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

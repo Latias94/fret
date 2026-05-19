@@ -33,6 +33,12 @@ responsibilities now live in `fret-docking` policy code backed by `fret-ui`'s me
 `ManagedSurface`; retained bridge types are no longer part of `fret-docking`'s dependency or public
 surface.
 
+M2 is in progress. `RBX-M2-010` narrowed `fret-node` retained bridge access to the explicit
+`compat-retained-canvas` island. `RBX-M2-020` removed UI Gallery's dependency on that island by
+migrating the node graph cull torture page and AI workflow node graph demo to
+`NodeGraphSurfaceBinding` plus declarative `node_graph_surface(...)`; workflow viewport controls now
+use `LayoutQueryRegion` for stage bounds instead of a retained `BoundsRecorder`.
+
 ## Completed Implementation
 
 `RBX-M1-020` added a docking-private split geometry helper and migrated `fret-docking` source/tests

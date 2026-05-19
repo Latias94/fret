@@ -8,13 +8,12 @@ pub(in crate::ui) fn preview_node_graph_cull_torture(
 ) -> Vec<AnyElement> {
     use fret_core::{Px, SemanticsRole};
     use fret_node::io::{NodeGraphEditorConfig, NodeGraphViewState};
-    use fret_node::ui::NodeGraphCanvas;
+    use fret_node::ui::{NodeGraphSurfaceBinding, node_graph_surface};
     use fret_node::{
         Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port, PortCapacity,
         PortDirection, PortId, PortKey, PortKind, TypeDesc,
     };
-    use fret_ui::element::{LayoutStyle, Length, SemanticsProps};
-    use fret_ui::retained_bridge::RetainedSubtreeProps;
+    use fret_ui::element::{Length, SemanticsProps};
 
     fn uuid_from_tag(tag: u64, ix: u64) -> uuid::Uuid {
         uuid::Uuid::from_u128(((tag as u128) << 64) | (ix as u128))
@@ -235,40 +234,47 @@ pub(in crate::ui) fn preview_node_graph_cull_torture(
         graph
     }
 
-    let graph = cx.local_model_keyed("graph", || {
-        let graph_id = GraphId::from_u128(1);
-        build_stress_graph(graph_id, 8_000)
-    });
-    let view = cx.local_model_keyed("view", NodeGraphViewState::default);
-    let editor_config = cx.local_model_keyed("editor_config", NodeGraphEditorConfig::default);
+    let binding_slot = cx.keyed_slot_id("node_graph_cull_torture_binding");
+    let binding = match cx.state_for(
+        binding_slot,
+        || None::<NodeGraphSurfaceBinding>,
+        |slot| slot.clone(),
+    ) {
+        Some(binding) => binding,
+        None => {
+            let binding = NodeGraphSurfaceBinding::new(
+                cx.app.models_mut(),
+                build_stress_graph(GraphId::from_u128(1), 8_000),
+                NodeGraphViewState::default(),
+                NodeGraphEditorConfig::default(),
+            );
+            cx.state_for(
+                binding_slot,
+                || None::<NodeGraphSurfaceBinding>,
+                |slot| {
+                    *slot = Some(binding.clone());
+                },
+            );
+            binding
+        }
+    };
+    binding.observe(cx);
 
     let surface = cx.cached_subtree_with(
         CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
         |cx| {
-            let graph = graph.clone();
-            let view = view.clone();
-            let editor_config = editor_config.clone();
-
-            let mut layout = LayoutStyle::default();
-            layout.size.width = Length::Fill;
-            layout.size.height = Length::Px(Px(520.0));
-
-            let props = RetainedSubtreeProps::new::<App>(move |ui| {
-                use fret_ui::retained_bridge::UiTreeRetainedExt as _;
-                let canvas =
-                    NodeGraphCanvas::new(graph.clone(), view.clone(), editor_config.clone());
-                ui.create_node_retained(canvas)
-            })
-            .with_layout(layout);
-
-            let subtree = cx.retained_subtree(props);
+            let mut props = binding.surface_props();
+            props.pointer_region.layout.size.width = Length::Fill;
+            props.pointer_region.layout.size.height = Length::Px(Px(520.0));
+            props.test_id = Some(Arc::<str>::from("ui-gallery-node-graph-cull-canvas"));
+            let surface = node_graph_surface(cx, props);
             vec![cx.semantics(
                 SemanticsProps {
                     role: SemanticsRole::Group,
                     test_id: Some(Arc::<str>::from("ui-gallery-node-graph-cull-root")),
                     ..Default::default()
                 },
-                |_cx| vec![subtree],
+                |_cx| vec![surface],
             )]
         },
     );

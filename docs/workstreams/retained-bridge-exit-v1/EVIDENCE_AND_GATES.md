@@ -2898,3 +2898,84 @@ Follow-up:
   `compat-retained-canvas`. Next M2 work should migrate chrome/overlays/panels to declarative
   composition and shrink the retained leaf toward canvas-only rendering and interaction, then remove
   `compat-retained-canvas` from first-party apps.
+
+## 2026-05-19 - RBX-M2-020 first-party gallery node graph retained-canvas exit
+
+Claim verified:
+
+- `apps/fret-ui-gallery` no longer enables `fret-node/compat-retained-canvas`.
+- UI Gallery's node graph cull torture page and AI workflow node graph demo now use the
+  declarative `NodeGraphSurfaceBinding` plus `node_graph_surface(...)` path.
+- The workflow demo's zoom/fit/reset controls still have explicit stage bounds through
+  `LayoutQueryRegion`, replacing the retained `BoundsRecorder` widget.
+- `fret-node` policy tests now prevent first-party gallery node graph pages from reintroducing
+  retained canvas authoring.
+
+Evidence:
+
+- `apps/fret-ui-gallery/Cargo.toml`
+- `apps/fret-ui-gallery/src/ui/previews/pages/torture/node_graph_cull_torture.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/ai/workflow_node_graph_demo.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- `cargo fmt --check`
+  - Result: passed after running `cargo fmt`.
+  - Scope proven: workspace Rust formatting is clean after the gallery/node policy edits.
+- `cargo check -p fret-ui-gallery --features gallery-dev`
+  - Result: passed.
+  - Scope proven: UI Gallery compiles with the full dev feature set after removing its
+    `fret-node/compat-retained-canvas` dependency.
+- `cargo check -p fret-node --no-default-features --features fret-ui`
+  - Result: passed.
+  - Scope proven: declarative `fret-node` UI integration still compiles without the retained bridge.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed.
+  - Scope proven: the explicit retained canvas compatibility island still compiles for legacy
+    callers while first-party gallery no longer enables it.
+- `cargo nextest run -p fret-node workflow_gallery_surface_stays_binding_first_for_viewport_controls first_party_gallery_node_graph_pages_stay_off_retained_canvas retained_compatibility_surface_stays_declarative_only`
+  - Result: passed, 3 tests.
+  - Scope proven: `fret-node` policy coverage locks the gallery workflow/cull pages to declarative
+    node graph surfaces, keeps viewport controls binding-first, and preserves the explicit retained
+    compatibility island policy.
+- `cargo nextest run -p fret-node`
+  - Result: passed, 269 tests.
+  - Scope proven: full `fret-node` graph/runtime/controller/declarative-surface tests remain green
+    after moving the first-party gallery consumer off retained canvas.
+- `rg -n "RetainedSubtreeProps|retained_bridge|NodeGraphCanvas::new|NodeGraphEditor::new|create_node_retained|retained_subtree|compat-retained-canvas" apps/fret-ui-gallery/Cargo.toml apps/fret-ui-gallery/src/ui/previews/pages/torture/node_graph_cull_torture.rs apps/fret-ui-gallery/src/ui/snippets/ai/workflow_node_graph_demo.rs`
+  - Result: no matches.
+  - Scope proven: the targeted UI Gallery node graph files and manifest no longer name retained
+    bridge/canvas APIs or enable the retained canvas feature.
+- `cargo tree -p fret-ui-gallery --features gallery-dev -e features -i fret-node | rg -n "compat-retained-canvas|fret-node feature|fret-ui-gallery|fret-node v"`
+  - Result: passed; the `fret-node` feature path only lists `default`, `fret-ui`, and `kit`.
+  - Scope proven: `gallery-dev` no longer enables `fret-node/compat-retained-canvas`.
+- `cargo tree -p fret-ui-gallery --features gallery-dev -e features -i fret-ui | tail -60`
+  - Result: passed; remaining `fret-ui/unstable-retained-bridge` activation is through
+    `fret-chart`.
+  - Scope proven: UI Gallery still has retained bridge exposure from the M3 chart path, so this M2
+    slice correctly claims only node-graph retained-canvas exit rather than whole-gallery
+    retained-bridge exit.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-020` is a first-party gallery consumer migration plus source-policy coverage;
+    the gallery compile gate, `fret-node` declarative feature check, policy tests, layering, and
+    no-retained-search gate cover the changed surface.
+
+Follow-up:
+
+- First-party `apps/fret-examples` still contains legacy retained node graph demos behind
+  `node-graph-demos-legacy`. The next M2 slice should either migrate or explicitly quarantine
+  those examples before removing `compat-retained-canvas` from `fret-node` itself.
