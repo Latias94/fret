@@ -3587,6 +3587,19 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/popover.rs"),
+            required=[
+                "pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self",
+                "fn patch_popover_title_text_style_recursive_scoped(",
+                "let role_scope_active = role_scope_active || el.inherited_text_style.is_some();",
+                "if !role_scope_active {\n                patch_text_style(&mut props.style, px, line_height);",
+                "popover_title_children_patch_rich_text_with_title_typography",
+                "popover_title_children_preserve_shared_text_role_contracts",
+                "popover_description_scopes_inherited_text_style",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-ai/src/elements/prompt_input.rs"),
             required=[
                 "return crate::elements::empty_placeholder(cx);",

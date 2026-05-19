@@ -899,6 +899,9 @@ Exit criteria:
   2026-05-19 shadcn SheetTitle children-role result: SheetTitle now has a composable
   `new_children(...)` path. Bare/rich title children still receive sheet-title defaults, while
   shared title/chrome roles keep their own style, foreground, wrap, and overflow contracts.
+  2026-05-19 shadcn PopoverTitle children-role result: PopoverTitle now has a composable
+  `new_children(...)` path. Bare/rich title children still receive popover-title defaults, while
+  shared title/chrome roles keep their own style, foreground, wrap, and overflow contracts.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

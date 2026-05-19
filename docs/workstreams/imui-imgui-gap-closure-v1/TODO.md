@@ -1005,6 +1005,10 @@ Readiness order for the next locally testable review slices:
    2026-05-19 shadcn SheetTitle children-role follow-up: SheetTitle now exposes
    `new_children(...)` with the same split. Bare/rich sheet-title children keep sheet defaults,
    while explicit shared title/chrome roles keep their role-owned single-line ellipsis contract.
+   2026-05-19 shadcn PopoverTitle children-role follow-up: PopoverTitle now exposes
+   `new_children(...)` for overlay/panel title composition. Bare/rich popover-title children keep
+   popover defaults, while explicit shared title/chrome roles keep their role-owned single-line
+   ellipsis contract.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
