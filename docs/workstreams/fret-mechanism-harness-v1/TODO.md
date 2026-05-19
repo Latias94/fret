@@ -1132,3 +1132,15 @@ date: 2026-05-12
     and proves only `doc-b-1` is removed while `doc-a-2` remains. No runtime defect was reproduced;
     the gate locks the close-button ownership invariant that non-active pane tab closes must route
     through pane activation before model mutation.
+- [x] Promote workspace shell demo cross-pane Close Other Tabs context-menu ownership into the
+  runtime suite.
+  - Result:
+    `workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json` now starts
+    with `pane-a` active and `pane-b` selected on `doc-b-1`, right-clicks the real pane-b tab,
+    waits for handled `workspace.pane.activate.pane-b`, invokes the real context-menu
+    `Close Other Tabs` item, and asserts `workspace.tab.close.others` dispatches from that menu
+    item. The final state proves only pane-b's other tab `doc-b-0` is removed, `doc-b-1` remains
+    selected with set size `1`, and pane-a tabs plus selected `doc-a-2` remain intact. No ownership
+    defect was reproduced; the first draft did expose a diagnostics attribution weakness where the
+    right-click-triggered pane activation is recorded as programmatic/driver-handled rather than
+    pointer-sourced.

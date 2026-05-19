@@ -154,6 +154,14 @@ fn script_v2_roundtrip_workspace_shell_demo_tab_close_cross_pane_button_ownershi
 }
 
 #[test]
+fn script_v2_roundtrip_workspace_shell_demo_tab_close_others_cross_pane_context_menu_ownership_smoke()
+ {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_set_window_preferences_defaults() {
     assert_script_v2_roundtrip(
         r#"{

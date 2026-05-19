@@ -4781,3 +4781,60 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - result: passed; 13/13 scripts passed; suite summary
     `target/fret-diag-workspace-shell-demo-suite-cross-pane-close-ownership-v1/sessions/1779152081871-77896/suite.summary.json`;
     cross-pane close ownership script run id `1779152100416`.
+
+## Workspace Shell Demo Cross-Pane Close Others Context-Menu Ownership Gate
+
+- invariant:
+  context-menu aggregate commands from a tab in a non-active pane must establish pane ownership
+  before applying the aggregate model command. Otherwise `workspace.tab.close.others` can close
+  tabs relative to the previously active pane rather than the pane that owns the context-clicked
+  tab.
+- finding:
+  no runtime ownership defect was reproduced. The real right-click path activates pane-b before the
+  `Close Other Tabs` item dispatches `workspace.tab.close.others`, so the app model closes only
+  pane-b's other tab and leaves pane-a intact.
+- diagnostics surface:
+  the script asserts handled `workspace.pane.activate.pane-b`, asserts the aggregate close command
+  is pointer-sourced from `workspace-shell-pane-pane-b-tab-doc-b-1.menu.close_others`, then checks
+  `doc-b-0` disappears, `doc-b-1` remains selected with set size `1`, and pane-a tabs plus selected
+  `doc-a-2` remain present.
+- diagnostics attribution note:
+  the first focused draft showed `workspace.pane.activate.pane-b` recorded as
+  `source_kind=programmatic`, `source_test_id=None`, and `handled_by_driver=true` even though it was
+  triggered by the right-click. This is a source-attribution weakness in diagnostics rather than an
+  ownership defect, so the final gate keeps source assertions on the aggregate close menu item.
+- implementation anchors:
+  `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json`,
+  `tools/diag-scripts/workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json`,
+  `tools/diag-scripts/suites/workspace-shell-demo/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- JSON validation:
+  `python -m json.tool tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json > $null`
+  - result: passed.
+  `python -m json.tool tools\diag-scripts\workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json > $null`
+  - result: passed.
+- registry:
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed; registry is up to date.
+- formatting:
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_workspace_shell_demo_tab_close_others_cross_pane_context_menu_ownership_smoke --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `e7ce6c13-3096-4fb6-a9f1-7a5c81409066`.
+- build:
+  `cargo build --profile dev-fast -p fret-demo --bin workspace_shell_demo`
+  - result: passed.
+- static diff check:
+  `git diff --check`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json --dir target\fret-diag-workspace-shell-demo-cross-pane-context-close-others-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  - result: passed; run id `1779152893863`; AI packet
+    `target/fret-diag-workspace-shell-demo-cross-pane-context-close-others-v2/sessions/1779152888206-118016/1779152893863/ai.packet`.
+- full runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite workspace-shell-demo --dir target\fret-diag-workspace-shell-demo-suite-cross-pane-context-close-others-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  - result: passed; 14/14 scripts passed; suite summary
+    `target/fret-diag-workspace-shell-demo-suite-cross-pane-context-close-others-v1/sessions/1779153282522-114068/suite.summary.json`;
+    context-menu Close Others ownership script run id `1779153324733`.

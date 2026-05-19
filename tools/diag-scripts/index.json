@@ -12031,6 +12031,34 @@
       ]
     },
     {
+      "id": "workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json",
+      "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "close",
+        "context_menu",
+        "cross_pane",
+        "gate",
+        "ownership",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Starts with pane-a active while pane-b has two tabs.",
+        "Opens the real context menu from pane-b's selected doc-b-1 tab.",
+        "Asserts right-click dispatches pane-b activation before the aggregate close command.",
+        "Proves Close Other Tabs removes only pane-b's doc-b-0 and leaves pane-a tabs intact."
+      ]
+    },
+    {
       "id": "workspace-shell-demo-tab-close-others-dirty-aggregation-smoke",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-others-dirty-aggregation-smoke.json",
       "required_capabilities": [
