@@ -521,6 +521,34 @@ fn script_v2_roundtrip_ui_gallery_tree_retained_hierarchy_semantics_toggle() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_ai_file_tree_demo_toggle() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-ai-file-tree-demo-toggle.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_ai_file_tree_demo_actions() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-ai-file-tree-demo-actions.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_ai_file_tree_large_scroll() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-ai-file-tree-large-scroll.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_ai_file_tree_demo_screenshot_zinc_dark() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-ai-file-tree-demo-screenshot-zinc-dark.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_sonner_live_region_mutation() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-sonner-live-region-mutation.json"

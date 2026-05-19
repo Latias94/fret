@@ -4672,6 +4672,62 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `git diff --check`
   - result: passed.
 
+## AI FileTree Protocol Coverage And Auto-Height VirtualList Refresh
+
+- invariant:
+  promoted AI FileTree scripts must survive diagnostics protocol roundtrip, and an auto-height
+  `VirtualList` measured leaf must remeasure the parent flow whenever layout-affecting state changes
+  row count or items revision. Semantics rows and hit-test geometry must stay inside the same
+  expanded FileTree envelope.
+- finding:
+  the fresh `ui-gallery-ai-file-tree` runtime suite reproduced the stale measured-leaf failure
+  shape: `ui-ai-file-tree-file-lib` existed in semantics, but the click point hit the following
+  Basic Usage docs section because parent flow reused the old `VirtualList` intrinsic height. The
+  focused Rust regression failed with list height `30` instead of `60` before the fix. The screenshot
+  script also had two authoring weaknesses: it used a fixed two-frame wait after expanding `src`,
+  and it waited for a hidden marker with ordinary `exists` instead of a raw hidden-semantics
+  predicate.
+- implementation anchors:
+  `crates/fret-ui/src/layout/engine/flow.rs`,
+  `crates/fret-ui/src/declarative/tests/virtual_list/measurement.rs`,
+  `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-file-tree-demo-screenshot-zinc-dark.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- JSON and registry:
+  `python -m json.tool tools\diag-scripts\ui-gallery\ai\ui-gallery-ai-file-tree-demo-screenshot-zinc-dark.json > $null`
+  - result: passed.
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed; registry is up to date.
+- formatting:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\layout\engine\flow.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`
+  - result: passed.
+- focused regression gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui auto_height_virtual_list_len_growth_reflows_following_siblings --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `de3f626b-824f-4d21-82af-251d51680c64`.
+- VirtualList family gate:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui virtual_list --no-fail-fast --no-capture`
+  - result: passed; 50/50 tests; Nextest run id `a2e88f71-2c4c-431d-9b0c-8cefdced2a4b`.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_ai_file_tree --no-fail-fast --no-capture`
+  - result: passed; 4/4 tests; Nextest run id `ea3bdd56-e255-4d34-97f4-b97599cb7369`.
+- focused screenshot diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery-ai-file-tree-demo-screenshot-zinc-dark.json --dir target\fret-diag-ai-file-tree-screenshot-zinc-dark-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed; run id `1779168079984`; AI packet
+    `target/fret-diag-ai-file-tree-screenshot-zinc-dark-v2/sessions/1779168068402-29976/1779168079984/ai.packet`.
+- full runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-ai-file-tree --dir target\fret-diag-ai-file-tree-suite-v3 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed; 4/4 scripts; suite summary
+    `target/fret-diag-ai-file-tree-suite-v3/sessions/1779168118270-70184/suite.summary.json`;
+    screenshot script run id `1779168265307`; `scripts_with_evidence=4`.
+- static diff check:
+  `git diff --check`
+  - result: passed.
+
+Next slice recommendation:
+
+- AI FileTree now has focused mechanism coverage, protocol coverage, strict hidden-marker semantics
+  coverage, and fresh runtime suite evidence. Continue to another auto-size measured-leaf runtime
+  surface only if it can expose stale parent flow, overlap, or hit-test drift outside FileTree.
+
 - focused runtime diagnostics:
   `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\workspace-shell-demo-tab-close-button-dirty-shows-prompt-smoke.json --dir target\fret-diag-workspace-shell-demo-dirty-close-widget-v3 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\workspace_shell_demo.exe`
   - result: passed; run id `1779148945096`; AI packet

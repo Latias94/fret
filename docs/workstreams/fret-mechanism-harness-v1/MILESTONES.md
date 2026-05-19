@@ -2553,3 +2553,42 @@ mutation.
   `target/fret-diag-command-suite-retained-action-state-roundtrip-v2/sessions/1779164457116-49144/suite.summary.json`;
   18/18 scripts passed, `scripts_with_evidence=18`, the long-query script run id is
   `1779164551371`, and the retained action-state script run id is `1779165106416`.
+
+## M129: AI FileTree Protocol Coverage And Auto-Height VirtualList Refresh
+
+Status: complete for protocol coverage, measured-leaf dirtying refresh, screenshot-script
+stabilization, and fresh AI FileTree suite evidence.
+
+- Added direct `fret-diag-protocol` roundtrip coverage for the four promoted AI FileTree scripts:
+  toggle, actions, large-scroll, and zinc-dark screenshot.
+- The first fresh suite rerun reproduced the same high-risk mechanism shape as M80: expanded
+  FileTree rows could be present in semantics while the parent auto-height `VirtualList` measured
+  leaf kept a stale intrinsic height, so the next docs section overlapped the row's hit-test area.
+- `crates/fret-ui/src/layout/engine/flow.rs` now centralizes measured-leaf setup so any measured
+  Taffy leaf whose `UiTree` node is layout-invalidated is also marked dirty in the layout engine.
+  This covers VirtualList and the adjacent auto-sized measured leaf paths without introducing a
+  FileTree-specific workaround.
+- The screenshot script now waits for the expanded `file-lib` row instead of using a fixed
+  two-frame delay, then asserts the hidden selected marker through `raw_semantics_hidden_is` and
+  the actual selected row through `selected_is`.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\ai\ui-gallery-ai-file-tree-demo-screenshot-zinc-dark.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates\fret-ui\src\layout\engine\flow.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui auto_height_virtual_list_len_growth_reflows_following_siblings --no-fail-fast --no-capture`
+  with Nextest run id `de3f626b-824f-4d21-82af-251d51680c64`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui virtual_list --no-fail-fast --no-capture`
+  with Nextest run id `a2e88f71-2c4c-431d-9b0c-8cefdced2a4b`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_ai_file_tree --no-fail-fast --no-capture`
+  with Nextest run id `ea3bdd56-e255-4d34-97f4-b97599cb7369`; and
+  `git diff --check`.
+- Focused screenshot diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery-ai-file-tree-demo-screenshot-zinc-dark.json --dir target\fret-diag-ai-file-tree-screenshot-zinc-dark-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  with run id `1779168079984` and AI packet
+  `target/fret-diag-ai-file-tree-screenshot-zinc-dark-v2/sessions/1779168068402-29976/1779168079984/ai.packet`.
+- Full AI FileTree suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-ai-file-tree --dir target\fret-diag-ai-file-tree-suite-v3 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  with suite summary
+  `target/fret-diag-ai-file-tree-suite-v3/sessions/1779168118270-70184/suite.summary.json`;
+  4/4 scripts passed, `scripts_with_evidence=4`, and the screenshot script run id is
+  `1779168265307`.

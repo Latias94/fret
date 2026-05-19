@@ -1190,3 +1190,13 @@ date: 2026-05-12
     exposed diagnostics authoring drift in the Command long-query script: a pre-positioning
     `scroll_into_view` could emit a wheel with no follow-up frame when the docs demo was already
     visible. That guard now uses `ensure_visible(within_window=true)`.
+- [x] Refresh AI FileTree protocol coverage and auto-height VirtualList runtime proof.
+  - Result: the four promoted `ui-gallery-ai-file-tree` scripts now have direct
+    `fret-diag-protocol` roundtrip coverage. The fresh suite rerun re-exposed the auto-height
+    VirtualList measured-leaf dirtying risk: expanded FileTree rows could appear in semantics while
+    the parent flow still reused the old intrinsic height, causing the following docs section to
+    overlap hit testing. `flow.rs` now marks measured Taffy leaves dirty whenever their owning
+    `UiTree` node has layout invalidation, the existing focused VirtualList growth regression is
+    green again, and the full AI FileTree diagnostics suite passes 4/4. The screenshot script was
+    also tightened to wait for `file-lib` visibility/expanded state and assert the hidden selection
+    marker through `raw_semantics_hidden_is` plus `selected_is`.
