@@ -984,6 +984,9 @@ Readiness order for the next locally testable review slices:
    foreground through inherited foreground and only bare text receives the link default typography.
    Shared button-label roles keep their single-line ellipsis contract when used as custom link
    content.
+   2026-05-19 shadcn ItemTitle role-preservation follow-up: ItemTitle still applies its strong
+   title-slot fallback to bare and ordinary rich text children, but shared title/chrome text roles
+   are treated as protected role scopes and keep their own typography/ellipsis contract.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
