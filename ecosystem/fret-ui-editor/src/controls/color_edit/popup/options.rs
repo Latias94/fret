@@ -13,9 +13,10 @@ use crate::primitives::EditorDensity;
 use crate::primitives::colors::{editor_accent, editor_border};
 use crate::primitives::input_group::derived_test_id;
 use crate::primitives::popup_list::{
-    EditorPopupListRowState, editor_popup_list_centered_row_text_props,
-    editor_popup_list_option_caption_text_props, editor_popup_list_row_palette,
-    editor_popup_list_row_radius,
+    EditorPopupListRowState, editor_popup_list_row_palette, editor_popup_list_row_radius,
+};
+use crate::primitives::readout::{
+    editor_popup_list_centered_row_text_props, editor_popup_list_option_caption_text_props,
 };
 
 use super::super::model::{HsvColor, hsv_from_color, sanitize_hue};

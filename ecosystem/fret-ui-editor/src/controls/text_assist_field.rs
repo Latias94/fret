@@ -37,12 +37,13 @@ use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 use super::{TextField, TextFieldAssistiveSemantics, TextFieldOptions};
 use crate::primitives::colors::editor_muted_foreground;
 use crate::primitives::popup_list::{
-    EditorPopupListRowState, editor_popup_empty_text_props, editor_popup_list_content_height,
+    EditorPopupListRowState, editor_popup_list_content_height,
     editor_popup_list_default_max_content_height, editor_popup_list_row_gap,
-    editor_popup_list_row_palette, editor_popup_list_row_radius, editor_popup_list_row_text_props,
-    editor_popup_list_surface_padding, editor_popup_side_offset, editor_popup_window_margin,
+    editor_popup_list_row_palette, editor_popup_list_row_radius, editor_popup_list_surface_padding,
+    editor_popup_side_offset, editor_popup_window_margin,
 };
 use crate::primitives::popup_surface::resolve_editor_popup_surface_chrome;
+use crate::primitives::readout::{editor_popup_empty_text_props, editor_popup_list_row_text_props};
 use crate::primitives::style::EditorStyle;
 
 const TEXT_ASSIST_ROOT_GAP: Px = Px(6.0);

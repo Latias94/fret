@@ -48,11 +48,8 @@ OPAQUE_STRUCT_SUFFIXES = (
 IMUI_DIRECT_TEXT_PROPS_ALLOWED: dict[Path, dict[str, int]] = {}
 
 EDITOR_DIRECT_TEXT_PROPS_ALLOWED = {
-    Path("ecosystem/fret-ui-editor/src/primitives/popup_list.rs"): {
-        "TextProps {": 2,
-    },
     Path("ecosystem/fret-ui-editor/src/primitives/readout.rs"): {
-        "TextProps {": 17,
+        "TextProps {": 19,
     },
 }
 
@@ -8345,6 +8342,10 @@ def main() -> None:
                 "pub(crate) fn editor_input_segment_text_props",
                 "pub(crate) fn editor_input_value_text_props",
                 "pub(crate) fn editor_axis_marker_text_props",
+                "pub(crate) fn editor_popup_list_row_text_props",
+                "pub(crate) fn editor_popup_list_centered_row_text_props",
+                "pub(crate) fn editor_popup_list_option_caption_text_props",
+                "pub(crate) fn editor_popup_empty_text_props",
                 "pub(crate) fn editor_property_row_label_text_props",
                 "pub(crate) fn editor_property_row_reset_glyph_text_props",
                 "pub(crate) fn editor_preview_caption_text_props",
@@ -8367,6 +8368,10 @@ def main() -> None:
                 "editor_input_segment_text_keeps_fixed_segment_line_box",
                 "editor_input_value_text_props_are_single_line_and_shrinkable",
                 "editor_axis_marker_text_keeps_fixed_centered_line_box",
+                "popup_list_row_text_is_single_line_and_shrinkable",
+                "popup_empty_text_is_single_line_and_shrinkable",
+                "popup_list_centered_row_text_keeps_row_fill_and_center_alignment",
+                "popup_list_option_caption_text_keeps_fixed_caption_line_box",
                 "editor_property_row_label_text_is_single_line_and_shrinkable",
                 "editor_property_row_reset_glyph_text_keeps_fixed_button_line_box",
                 "editor_preview_caption_text_is_single_line_and_shrinkable",
@@ -8491,20 +8496,21 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/primitives/popup_list.rs"),
             required=[
-                "pub(crate) fn editor_popup_list_row_text_props",
-                "pub(crate) fn editor_popup_list_centered_row_text_props",
-                "pub(crate) fn editor_popup_list_option_caption_text_props",
-                "pub(crate) fn editor_popup_empty_text_props",
-                "min_width: Some(Length::Px(Px(0.0))),",
-                "wrap: TextWrap::None,",
-                "overflow: TextOverflow::Ellipsis,",
-                "popup_list_row_text_is_single_line_and_shrinkable",
-                "popup_empty_text_is_single_line_and_shrinkable",
-                "popup_list_centered_row_text_keeps_row_fill_and_center_alignment",
-                "popup_list_option_caption_text_keeps_fixed_caption_line_box",
+                "pub(crate) struct EditorPopupListRowState",
+                "pub(crate) struct EditorPopupListRowPalette",
+                "pub(crate) fn editor_popup_list_content_height",
+                "pub(crate) fn editor_popup_list_row_palette",
+                "popup_list_row_palette_uses_editor_highlight_and_muted_disabled_foreground",
+                "popup_list_height_helpers_share_the_same_row_gap_budget",
             ],
             forbidden=[
                 "TextProps::new(",
+                "TextProps {",
+                "TextStyle {",
+                "TextWrap::",
+                "TextOverflow::",
+                "use fret_ui_kit::typography;",
+                "editor_popup_list_row_text_style",
             ],
         ),
         SourceCheck(
@@ -8536,6 +8542,7 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/color_edit/popup/copy.rs"),
             required=[
+                "use crate::primitives::readout::editor_popup_list_row_text_props;",
                 "editor_popup_list_row_text_props(",
             ],
             forbidden=[
@@ -8549,6 +8556,7 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/color_edit/popup/options.rs"),
             required=[
+                "use crate::primitives::readout::{",
                 "editor_popup_list_centered_row_text_props(",
                 "editor_popup_list_option_caption_text_props(",
             ],
@@ -8650,6 +8658,7 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/enum_select.rs"),
             required=[
+                "use crate::primitives::readout::{",
                 "editor_input_value_text(",
                 "editor_popup_empty_text_props(",
                 "editor_popup_list_row_text_props(",
@@ -8665,6 +8674,7 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-editor/src/controls/text_assist_field.rs"),
             required=[
+                "use crate::primitives::readout::{",
                 "editor_popup_empty_text_props(",
                 "editor_popup_list_row_text_props(",
             ],

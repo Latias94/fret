@@ -191,6 +191,10 @@ Exit criteria:
   2026-05-19 editor notes device shell text result: `editor_notes_device_shell_demo` compact
   mobile header title/body copy now uses device-shell local helpers backed by shared
   section-chrome and paragraph roles instead of local `ui::text(...)` styling.
+  2026-05-19 editor popup-list text ownership result: popup list row, empty, centered-row, and
+  fixed-caption text props now live with the shared editor text roles in
+  `ecosystem/fret-ui-editor/src/primitives/readout.rs`. `popup_list.rs` keeps popup-list geometry,
+  state, and palette policy only, and the source gate rejects direct text props/wrap policy there.
   2026-05-14 inspector follow-up result: `InspectorPanelCx` now exposes query behavior through
   methods and keeps `query_lower` private.
   2026-05-16 child-region resize result: `imui-child-region-resize-y-v1` and

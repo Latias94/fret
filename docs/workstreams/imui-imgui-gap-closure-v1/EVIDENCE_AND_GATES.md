@@ -588,6 +588,13 @@ Run evidence:
   enum_select_item_test_id_segment_is_stable_ascii empty_label_is_inline_only
   color_copy_entries_match_imgui_copy_as_payloads
   popup_options_default_to_imgui_like_hue_bar_surface --no-fail-fast`.
+- 2026-05-19: centralized the popup-list text props family into
+  `ecosystem/fret-ui-editor/src/primitives/readout.rs`. `popup_list.rs` now owns only popup-list
+  geometry, row state, and palette helpers; popup row, empty-state, centered-row, and fixed-caption
+  text roles are part of the shared editor text role owner. The source gate now removes
+  `popup_list.rs` from the direct editor `TextProps` allowlist and forbids `TextProps`,
+  `TextWrap`, `TextOverflow`, and typography policy from returning there. Gate:
+  `python tools/gate_imui_workstream_source.py`.
 - 2026-05-17: introduced `editor_property_group_header_text_props(...)`,
   introduced `editor_property_row_reset_glyph_text_props(...)`. This slice also
   introduced `editor_inspector_panel_title_text_props(...)` in
