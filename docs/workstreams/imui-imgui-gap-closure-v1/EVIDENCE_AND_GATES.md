@@ -3391,3 +3391,32 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_workstream_source.py` passed.
 - `cargo fmt --check -p fret-examples` passed.
 - `cargo check -p fret-demo --bin api_workbench_lite_demo` passed.
+
+2026-05-19 hello counter status/help text-role slice:
+
+- Source gap before fix: `apps/fret-examples/src/hello_counter_demo.rs` used local text policy for
+  the compact status line and the step help copy. Those are resize-sensitive readout/body slots,
+  not text-rendering capability probes.
+- `hello_counter_status_text(...)` now routes the status line through
+  `decl_text::text_control_readout(...)`, and `hello_counter_paragraph_text(...)` routes the step
+  help copy through `decl_text::text_paragraph(...)`.
+- The large `ui::text(count.to_string()).text_size_px(Px(72.0))` counter display intentionally
+  remains local for this slice. It is a visual display value, not a compact control readout; forcing
+  it onto the existing compact role would encode the wrong semantics before a dedicated large
+  readout/display-number role exists.
+- `apps/fret-examples/tests/hello_counter_demo_surface.rs` and
+  `tools/gate_imui_workstream_source.py` guard the shared status/help roles, forbid the old local
+  status/help builders, and preserve the explicit large counter display exception.
+- First post-fix `cargo nextest run -p fret-examples --test hello_counter_demo_surface
+  hello_counter_demo_keeps_status_and_help_text_on_roles --no-fail-fast` timed out while background
+  Cargo/Rustc compilation continued.
+- Retried after Cargo/Rustc exited:
+  `cargo nextest run -p fret-examples --test hello_counter_demo_surface
+  hello_counter_demo_keeps_status_and_help_text_on_roles --no-fail-fast` passed.
+- `cargo fmt --check -p fret-examples` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo check -p fret-examples --lib` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `git diff --check` passed.

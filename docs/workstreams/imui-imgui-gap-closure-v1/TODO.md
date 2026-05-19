@@ -880,6 +880,10 @@ Readiness order for the next locally testable review slices:
    control-readout text. The request/mutation/history proof path stays unchanged, and the old
    `shell_frame` theme-snapshot parameter was removed because it only existed to support local text
    color policy.
+   2026-05-19 hello counter text follow-up: `hello_counter_demo` now routes its compact status
+   line through control-readout text and its step help copy through paragraph text. The large count
+   display remains an explicit visual readout until a dedicated large-display value role exists;
+   the counter action/state path stays unchanged.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

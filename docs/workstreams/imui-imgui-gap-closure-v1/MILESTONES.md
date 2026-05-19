@@ -787,6 +787,10 @@ Exit criteria:
   paragraph copy, base-URL identifiers, and history status states onto shared text roles. The slice
   also removes the now-redundant `shell_frame` theme snapshot parameter, because text color policy
   is no longer owned locally by that proof surface.
+  2026-05-19 hello counter text result: `hello_counter_demo` keeps its action/state proof behavior
+  unchanged while moving the status line to control-readout text and the step help copy to paragraph
+  text. The large numeric counter display remains an explicit visual display value until a
+  dedicated large-readout role exists.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

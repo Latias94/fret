@@ -11826,6 +11826,23 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-examples/src/hello_counter_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "fn hello_counter_status_text(cx: &mut AppUi<'_, '_>, text: impl Into<Arc<str>>) -> AnyElement",
+                "fn hello_counter_paragraph_text(cx: &mut AppUi<'_, '_>, text: impl Into<Arc<str>>) -> AnyElement",
+                "decl_text::text_control_readout(cx.elements(), text)",
+                "decl_text::text_paragraph(cx.elements(), text)",
+                "let status_line = hello_counter_status_text(cx, status_text);",
+                "let step_help = hello_counter_paragraph_text(\n            cx,\n            if step_valid {",
+                "let count_text = ui::text(count.to_string())",
+            ],
+            forbidden=[
+                "ui::text(status_text)",
+                "ui::text_block(if step_valid",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-examples/src/table_demo.rs"),
             required=[
                 "use fret_ui_kit::declarative::text as decl_text;",
@@ -12199,6 +12216,20 @@ def main() -> None:
                 "ui::text(\\\"APIWorkbenchLite\\\").font_semibold().text_base()",
                 "ui::text(base_url).text_xs()",
                 "theme:fret::style::ThemeSnapshot,",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/tests/hello_counter_demo_surface.rs"),
+            required=[
+                "fn hello_counter_demo_keeps_status_and_help_text_on_roles()",
+                "fnhello_counter_status_text(cx:&mutAppUi<'_,'_>,text:implInto<Arc<str>>)->AnyElement",
+                "fnhello_counter_paragraph_text(cx:&mutAppUi<'_,'_>,text:implInto<Arc<str>>)->AnyElement",
+                "decl_text::text_control_readout(cx.elements(),text)",
+                "decl_text::text_paragraph(cx.elements(),text)",
+                "ui::text(count.to_string()).text_size_px(Px(72.0))",
+                "ui::text(status_text).text_color(",
+                "ui::text_block(ifstep_valid{",
             ],
             forbidden=[],
         ),
