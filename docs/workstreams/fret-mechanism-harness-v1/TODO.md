@@ -1235,3 +1235,10 @@ date: 2026-05-12
     green again, and the full AI FileTree diagnostics suite passes 4/4. The screenshot script was
     also tightened to wait for `file-lib` visibility/expanded state and assert the hidden selection
     marker through `raw_semantics_hidden_is` plus `selected_is`.
+- [x] Repair paint-time text reprepare auto-height overlap and gate Combobox Popup docs intro.
+  - Result: `Text`, `StyledText`, and `SelectableText` now schedule a layout repair when
+    paint-time width/font-stack reprepare produces a taller auto-height text blob than the current
+    layout bounds. The focused mechanism regression covers the exact wrapped-text height growth
+    path, and `ui-gallery-combobox-popup-doc-intro-non-overlap.json` locks the user-visible
+    Combobox Popup docs intro/title spacing at a screenshot-like startup size before resize
+    recovery.

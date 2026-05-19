@@ -190,7 +190,11 @@ fn render_doc_page_raw(
     ui::v_flex(move |cx| {
         let mut out: Vec<AnyElement> = Vec::with_capacity(sections.len() + 1);
         if let Some(intro) = intro {
-            out.push(muted_full_width(cx, intro).into_element(cx));
+            out.push(
+                muted_full_width(cx, intro)
+                    .into_element(cx)
+                    .test_id("ui-gallery-doc-page-intro"),
+            );
         }
         out.extend(
             sections

@@ -88,6 +88,32 @@ fn text_prepare_depends_on_width(
         || !matches!(align, fret_core::TextAlign::Start)
 }
 
+fn maybe_repair_text_layout_after_paint_prepare<H: UiHost>(
+    cx: &mut PaintCx<'_, H>,
+    window: AppWindowId,
+    layout: &crate::element::LayoutStyle,
+    width_changed: bool,
+    font_stack_changed: bool,
+    metrics: fret_core::TextMetrics,
+    ink_pad_top: fret_core::Px,
+    ink_pad_bottom: fret_core::Px,
+) {
+    if !(width_changed || font_stack_changed) {
+        return;
+    }
+    if !matches!(layout.size.height, crate::element::Length::Auto) {
+        return;
+    }
+
+    let prepared_height = metrics.size.height.0 + ink_pad_top.0 + ink_pad_bottom.0;
+    if prepared_height <= cx.bounds.size.height.0 + 0.5 {
+        return;
+    }
+
+    cx.tree.invalidate(cx.node, Invalidation::Layout);
+    cx.app.request_redraw(window);
+}
+
 impl ElementHostWidget {
     pub(super) fn paint_impl<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
         let _element_id = self.element;
@@ -767,6 +793,16 @@ impl ElementHostWidget {
                         };
                     self.text_cache.ink_pad_top = pad_top;
                     self.text_cache.ink_pad_bottom = pad_bottom;
+                    maybe_repair_text_layout_after_paint_prepare(
+                        cx,
+                        window,
+                        &props.layout,
+                        width_changed,
+                        font_stack_changed,
+                        metrics,
+                        pad_top,
+                        pad_bottom,
+                    );
                 }
 
                 let Some(blob) = self.text_cache.blob else {
@@ -1007,6 +1043,16 @@ impl ElementHostWidget {
                         };
                     self.text_cache.ink_pad_top = pad_top;
                     self.text_cache.ink_pad_bottom = pad_bottom;
+                    maybe_repair_text_layout_after_paint_prepare(
+                        cx,
+                        window,
+                        &props.layout,
+                        width_changed,
+                        font_stack_changed,
+                        metrics,
+                        pad_top,
+                        pad_bottom,
+                    );
                 }
 
                 let Some(blob) = self.text_cache.blob else {
@@ -1260,6 +1306,16 @@ impl ElementHostWidget {
                         };
                     self.text_cache.ink_pad_top = pad_top;
                     self.text_cache.ink_pad_bottom = pad_bottom;
+                    maybe_repair_text_layout_after_paint_prepare(
+                        cx,
+                        window,
+                        &props.layout,
+                        width_changed,
+                        font_stack_changed,
+                        metrics,
+                        pad_top,
+                        pad_bottom,
+                    );
                 }
 
                 let Some(blob) = self.text_cache.blob else {

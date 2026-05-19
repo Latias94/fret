@@ -1,0 +1,102 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-combobox-popup-doc-intro-non-overlap",
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.screenshot_png"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "combobox",
+      "FRET_UI_GALLERY_START_SECTION": "Popup",
+      "FRET_UI_GALLERY_MAIN_WINDOW_SIZE": "671x460"
+    },
+    "tags": ["ui_gallery", "shadcn", "combobox", "popup", "layout", "text", "gate"],
+    "target_hints": [
+      "Starts directly on the focused Combobox Popup doc section at a 671x460 logical startup window (about 1006x690 physical at 1.5x scale).",
+      "Asserts the retained page intro wraps into its measured height and does not overlap the Popup section title as soon as the startup page is present, before any resize recovery."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-combobox" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-doc-page-intro" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "docsec-popup-title" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-popup-trigger" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-combobox-popup-doc-intro-non-overlap.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-combobox-popup-doc-intro-non-overlap"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-combobox-popup-doc-intro-non-overlap"
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_pair_delta",
+        "a": { "kind": "test_id", "id": "docsec-popup-title" },
+        "b": { "kind": "test_id", "id": "ui-gallery-doc-page-intro" },
+        "a_metric": "top",
+        "b_metric": "bottom",
+        "comparison": "ge",
+        "value_px": 8.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_pair_delta",
+        "a": { "kind": "test_id", "id": "docsec-popup-description" },
+        "b": { "kind": "test_id", "id": "docsec-popup-title" },
+        "a_metric": "top",
+        "b_metric": "bottom",
+        "comparison": "ge",
+        "value_px": 8.0,
+        "eps_px": 1.0
+      }
+    }
+  ]
+}

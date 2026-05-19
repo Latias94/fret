@@ -4772,6 +4772,66 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   `git diff --check`
   - result: passed.
 
+## Text Paint Reprepare Layout Repair And Combobox Intro Gate
+
+- invariant:
+  auto-height text nodes must not keep stale shorter layout bounds when paint-time text preparation
+  observes a narrower width or changed font stack and produces taller wrapped metrics. The next
+  frame must repair layout before the taller text can keep overlapping following content.
+- finding:
+  the user-observed Combobox page screenshot showed the docs intro text overlapping the Popup
+  heading until a resize forced layout recovery. The stable runtime script did not reproduce a
+  persistent post-wait overlap, but the mechanism path was real: paint-time reprepare could update
+  the prepared blob and metrics without scheduling layout when the new metrics outgrew auto-height
+  bounds.
+- fix:
+  `Text`, `StyledText`, and `SelectableText` now call the shared paint repair helper after
+  reprepare. The helper is restricted to width/font-stack reparations, auto-height layout, and
+  prepared height greater than current bounds by more than `0.5px`; it invalidates the current node
+  for layout and requests redraw.
+- diagnostics surface:
+  `ui-gallery-combobox-popup-doc-intro-non-overlap.json` starts UI Gallery on Combobox/Popup at
+  `671x460`, captures layout, screenshot, and bundle evidence, and asserts an `8px` vertical gap
+  between the doc intro and Popup title plus an `8px` gap between the title and description.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/host_widget/paint.rs`,
+  `crates/fret-ui/src/declarative/tests/text_cache.rs`,
+  `apps/fret-ui-gallery/src/ui/doc_layout.rs`,
+  `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-doc-intro-non-overlap.json`,
+  `tools/diag-scripts/ui-gallery-combobox-popup-doc-intro-non-overlap.json`,
+  `tools/diag-scripts/suites/ui-gallery-combobox-geometry-placement/suite.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- formatting:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\declarative\host_widget\paint.rs crates\fret-ui\src\declarative\tests\text_cache.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`
+  - result: passed.
+- registry:
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed; registry is up to date.
+- mechanism regression:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui wrapped_text_paint_width_shrink_reinvalidates_layout_when_height_grows --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `50e6ec15-0b4f-4340-b689-c10ae58055e2`.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_popup_doc_intro_non_overlap script_v2_roundtrip_ui_gallery_combobox_popup_trigger script_v2_roundtrip_ui_gallery_combobox_popup_trigger_bottom_room --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `05c76ef5-e683-4a03-a809-d71fc53256ca`.
+- build/check:
+  `cargo check --profile dev-fast -p fret-ui`
+  - result: passed with the existing `current_effective_opacity` dead-code warning in
+    `crates\fret-ui\src\elements\runtime.rs`.
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-popup-doc-intro-non-overlap.json --dir target\fret-diag-combobox-popup-doc-intro-overlap-671x460-repair-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779186094473`; AI packet
+    `target/fret-diag-combobox-popup-doc-intro-overlap-671x460-repair-v1/sessions/1779186086330-88228/1779186094473/ai.packet`.
+- full Combobox geometry placement suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-combobox-geometry-placement --dir target\fret-diag-combobox-geometry-placement-text-layout-repair-v2 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; suite summary
+    `target/fret-diag-combobox-geometry-placement-text-layout-repair-v2/sessions/1779186620899-17592/suite.summary.json`;
+    new intro non-overlap script run id `1779186747293`.
+- static diff check:
+  `git diff --check`
+  - result: passed.
+
 ## Combobox Checkmark Effective Opacity Gate
 
 - invariant:

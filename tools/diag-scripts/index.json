@@ -6357,6 +6357,31 @@
       ]
     },
     {
+      "id": "ui-gallery-combobox-popup-doc-intro-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-doc-intro-non-overlap.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-combobox-geometry-placement"
+      ],
+      "tags": [
+        "combobox",
+        "gate",
+        "layout",
+        "popup",
+        "shadcn",
+        "text",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the focused Combobox Popup doc section at a 671x460 logical startup window (about 1006x690 physical at 1.5x scale).",
+        "Asserts the retained page intro wraps into its measured height and does not overlap the Popup section title as soon as the startup page is present, before any resize recovery."
+      ]
+    },
+    {
       "id": "ui-gallery-combobox-popup-trigger",
       "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger.json",
       "required_capabilities": [
