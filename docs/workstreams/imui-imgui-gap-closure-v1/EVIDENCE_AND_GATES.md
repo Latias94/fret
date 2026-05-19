@@ -4158,9 +4158,11 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `P3_TEXT_ROLE_MATRIX_2026-05-17.md` now records the variants as control-readout derivatives
   rather than a sixth stable role, and `tools/gate_imui_workstream_source.py` guards their
   narrow-layout assertions.
-- Focused gates pending for this slice: `cargo nextest run -p fret-ui-kit --lib
-  base_single_line_text_roles_stay_single_line_under_narrow_layout --no-fail-fast`; source gate;
-  rustfmt check; JSON doc sanity; and `git diff --check`.
+- Focused gates passed: `cargo nextest run -p fret-ui-kit --lib
+  base_single_line_text_roles_stay_single_line_under_narrow_layout --no-fail-fast`; `cargo fmt
+  --check -p fret-ui-kit`; `python tools\gate_imui_workstream_source.py`; `python -m py_compile
+  tools\gate_imui_workstream_source.py`; `python -m json.tool
+  docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`; and `git diff --check`.
 
 2026-05-19 shadcn EmptyTitle children-role slice:
 

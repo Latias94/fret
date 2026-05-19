@@ -391,7 +391,7 @@ def main() -> None:
             required=[
                 '"slug": "imui-imgui-gap-closure-v1"',
                 '"status": "active"',
-                '"updated": "2026-05-19"',
+                '"updated": "2026-05-20"',
                 '"path": "docs/workstreams/imui-imgui-gap-closure-v1/P1_CLEANUP_AUDIT_2026-05-06.md"',
                 '"path": "docs/workstreams/imui-imgui-gap-closure-v1/P1_CLOSEOUT_AUDIT_2026-05-06.md"',
                 '"path": "docs/workstreams/imui-imgui-gap-closure-v1/P3_TEXT_ROLE_MATRIX_2026-05-17.md"',
@@ -2422,11 +2422,15 @@ def main() -> None:
                 "2026-05-19 typography table-cell text-role slice",
                 "`apps/fret-ui-gallery/src/ui/snippets/typography/table.rs`",
                 "typography_table_snippets_keep_fixed_cell_text_on_table_role --no-fail-fast",
+                "2026-05-20 tabular control-readout resize gate slice",
+                "base_single_line_text_roles_stay_single_line_under_narrow_layout --no-fail-fast`; `cargo fmt",
+                "`python tools\\gate_imui_workstream_source.py`",
                 "cargo check -p fret-examples",
             ],
             forbidden=[
                 "separate follow-ons at this point",
                 "candidate-only at this point",
+                "Focused gates pending for this slice",
             ],
         ),
         SourceCheck(
