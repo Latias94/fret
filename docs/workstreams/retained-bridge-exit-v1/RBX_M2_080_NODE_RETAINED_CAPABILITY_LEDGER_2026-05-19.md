@@ -22,6 +22,8 @@ Public/default node graph UI surface:
 - controller/store-first viewport and transaction helpers
 - declarative paint-only surface modules under `ecosystem/fret-node/src/ui/declarative/paint_only/`
 - default-gated overlay/panel/screen-space policy modules
+- default-gated controls overlay composition in
+  `ecosystem/fret-node/src/ui/overlays/controls_declarative.rs`
 - default-gated portal editor chrome
 
 Retained compatibility island:
@@ -59,7 +61,7 @@ Retained compatibility island:
 | Large graph paint, culling, paint cache, skin/style/geometry overrides | `ui/canvas/widget/**` retained paint/layout tests | `node_graph_surface(...)` paint-only surface and default `fret-node` tests | Add default declarative tests for the retained conformance families before deleting the retained canvas leaf. |
 | Pan/zoom, fit view, viewport helpers | retained canvas event/command/view queue tests | `NodeGraphSurfaceBinding` viewport helpers and gallery/demo declarative usage | Keep default binding tests as the contract; backfill any retained-only gesture semantics before deleting retained event code. |
 | Selection, drag, resize, wire creation/reconnect, marquee, context/searcher menus | retained canvas event tests under `ui/canvas/widget/tests` | store/controller transaction helpers plus paint-only input modules | Move event arbitration onto declarative mechanisms or add a Canvas-style event leaf; every retained interaction family needs default-path tests. |
-| Overlay panels: blackboard, controls, minimap, toolbars, rename | retained overlay widgets and retained overlay conformance tests | default overlay policy/layout tests from RBX-M2-060 | Replace retained widget composition with declarative elements, then move retained overlay conformance intent to default tests. |
+| Overlay panels: blackboard, controls, minimap, toolbars, rename | retained overlay widgets and retained overlay conformance tests | default overlay policy/layout tests from RBX-M2-060; default controls overlay composition tests from RBX-M2-100 | Continue replacing retained widget composition with declarative elements, then move retained overlay conformance intent to default tests. Controls still need default interaction/focus/paint parity before deleting the retained controls widget. |
 | Portal editor chrome and command submission | `portal_text.rs`, `portal_number.rs`, retained portal lifecycle tests | default editor chrome tests from RBX-M2-070; default portal command protocol from RBX-M2-085; default text/number command policy from RBX-M2-090; default text/number command session adapter from RBX-M2-095 | Replace retained portal subtree rendering/model adapters with declarative portal hosting before deleting retained portal files. |
 | Accessibility and diagnostics anchors | `a11y.rs`, `diag_anchors.rs`, retained semantics tests | declarative paint-only semantics/diagnostics modules exist | Add default declarative semantics/diagnostics anchor tests before deleting retained anchors. |
 | Middleware extension points | retained `EventCx` / `CommandCx` based `NodeGraphCanvasMiddleware` | no public retained authoring surface; middleware is crate-private/test-only | Replace or delete retained middleware after event/command handling has a declarative host contract. |
@@ -77,8 +79,9 @@ shrink the allowed list as declarative coverage replaces retained behavior.
 
 Recommended order:
 
-1. `RBX-M2-100`: replace overlay/panel retained widget composition with declarative elements for
-   blackboard, controls, minimap, toolbars, and rename.
+1. Continue `RBX-M2-100`-style overlay slices: replace retained widget composition with
+   declarative elements for blackboard, minimap, toolbars, and rename, then backfill default
+   interaction/focus/paint parity for controls before deleting its retained oracle.
 2. `RBX-M2-110`: extract a declarative event/canvas leaf for retained canvas interaction families
    or split those policies behind controller/store-first APIs.
 3. `RBX-M2-120`: remove `compat-retained-canvas` from `fret-node` only after the retained

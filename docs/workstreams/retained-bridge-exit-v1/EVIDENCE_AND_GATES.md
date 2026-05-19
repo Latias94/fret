@@ -3653,3 +3653,75 @@ Broader gates not run:
     portal handler adapters. The default package gate, retained compatibility package gate,
     targeted portal compat gate, both feature checks, layering, catalog, formatting, and whitespace
     gates cover the changed surface.
+
+## 2026-05-19 - RBX-M2-100 controls overlay declarative composition default gate
+
+Claim verified:
+
+- Controls overlay composition now has a default-gated declarative element tree that does not
+  construct the retained `NodeGraphControlsOverlay` widget.
+- The declarative controls tree preserves the retained overlay's static authoring capability:
+  panel sizing, six-button roster/order, stable button labels, a11y labels, test IDs, command
+  binding enabled/disabled state, and activation command dispatch hooks.
+- The retained controls widget remains behind `compat-retained-canvas` as the oracle for the
+  remaining pointer, keyboard, hover, focus, and retained paint conformance until those interaction
+  families have default declarative coverage.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/overlays/mod.rs`
+- `ecosystem/fret-node/src/ui/overlays/controls_declarative.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-node controls_declarative`
+  - Result before implementation: failed, 2 tests.
+  - Scope proven: the new tests were real red tests against the empty declarative controls stub.
+- `cargo nextest run -p fret-node controls_declarative overlay_policy_modules_compile_without_retained_canvas_compat controls_overlay_requires_explicit_editor_config_model`
+  - Result: passed, 5 tests.
+  - Scope proven: declarative controls composition, default overlay module gating, and
+    retained-dependency source policy are covered by targeted tests, including activation command
+    dispatch and disabled-command suppression.
+- `cargo nextest run -p fret-node`
+  - Result: passed, 334 tests.
+  - Scope proven: default `fret-node` coverage remains green and now includes declarative controls
+    composition tests.
+- `cargo check -p fret-node --no-default-features --features fret-ui`
+  - Result: passed.
+  - Scope proven: declarative controls composition compiles without enabling
+    `compat-retained-canvas`.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed.
+  - Scope proven: the retained controls widget and remaining retained island still compile beside
+    the new declarative controls composition.
+- `cargo nextest run -p fret-node --features compat-retained-canvas`
+  - Result: passed, 918 tests.
+  - Scope proven: the full retained canvas/editor/overlay oracle remains green after adding the
+    default declarative controls composition.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting is clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly after the new evidence update.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked Rust and documentation changes have no whitespace errors.
+- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/controls_declarative.rs 2>&1); test -z "$out"`
+  - Result: passed.
+  - Scope proven: the new untracked declarative controls composition file has no whitespace errors
+    before staging.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-100` changes only `fret-node` controls overlay declarative composition and
+    source-policy tests. The default package gate, retained compatibility package gate, both
+    feature checks, layering, catalog, formatting, and whitespace gates cover the changed surface.

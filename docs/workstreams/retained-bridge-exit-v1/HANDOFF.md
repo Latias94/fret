@@ -60,7 +60,13 @@ retained portal host and retained portal text/number command handlers continue t
 the explicit compatibility island. `RBX-M2-090` then moved portal text/number submit/cancel/step
 decision policy onto the default editor gate. `RBX-M2-095` moved portal text/number session command
 application onto the default editor gate; retained portal text/number command handlers now provide
-model/session I/O adapters around default command policy and session application.
+model/session I/O adapters around default command policy and session application. `RBX-M2-100`
+added a default-gated declarative controls overlay composition that builds the controls panel,
+six-button roster, labels, a11y labels/test IDs, enabled/disabled command binding state, and
+activation command dispatch hooks without constructing the retained controls widget. The retained
+controls widget remains behind `compat-retained-canvas` as the oracle for pointer, keyboard, hover,
+focus, and retained paint behavior until those interaction families have default declarative
+coverage.
 
 ## Completed Implementation
 

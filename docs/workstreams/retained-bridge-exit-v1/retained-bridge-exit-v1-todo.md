@@ -949,6 +949,39 @@ Related plan:
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
     - `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/editors/portal_command_session.rs 2>&1); test -z "$out"`
+- [x] RBX-M2-100 Add default declarative controls overlay composition.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/overlays/mod.rs`
+    - `ecosystem/fret-node/src/ui/overlays/controls_declarative.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move controls overlay composition coverage onto the default declarative `fret-ui` gate before
+      deleting retained overlay widget code.
+    - Preserve the retained controls overlay as the compatibility oracle for pointer/keyboard/focus
+      behavior until the full overlay interaction path has declarative coverage.
+  - Result:
+    - Added `NodeGraphControlsOverlayElementProps` and
+      `node_graph_controls_overlay_element(...)` under the default overlay module gate.
+    - The declarative controls tree now builds a panel container, column, six pressable buttons,
+      stable `node_graph.controls.*` test IDs, button labels, button a11y labels, enabled/disabled
+      command binding state, and activation command dispatch hooks.
+    - Added default tests for panel sizing, button roster/order, labels, a11y/test IDs, connection
+      mode labels, command activation dispatch, and disabled command suppression without
+      constructing the retained widget.
+    - Added a source-policy assertion that the declarative controls composition does not take a
+      retained bridge, retained subtree, or retained `Widget` dependency.
+  - Validation:
+    - `cargo nextest run -p fret-node controls_declarative overlay_policy_modules_compile_without_retained_canvas_compat controls_overlay_requires_explicit_editor_config_model`
+    - `cargo nextest run -p fret-node`
+    - `cargo check -p fret-node --no-default-features --features fret-ui`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+    - `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/controls_declarative.rs 2>&1); test -z "$out"`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

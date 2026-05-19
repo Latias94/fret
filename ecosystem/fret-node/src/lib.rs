@@ -64,6 +64,8 @@ mod surface_policy_tests {
     const UI_MOD_RS: &str = include_str!("ui/mod.rs");
     const UI_OVERLAYS_MOD_RS: &str = include_str!("ui/overlays/mod.rs");
     const UI_OVERLAY_CONTROLS_RS: &str = include_str!("ui/overlays/controls.rs");
+    const UI_OVERLAY_CONTROLS_DECLARATIVE_RS: &str =
+        include_str!("ui/overlays/controls_declarative.rs");
     const UI_OVERLAY_GROUP_RENAME_RS: &str = include_str!("ui/overlays/group_rename.rs");
     const UI_OVERLAY_BLACKBOARD_RS: &str = include_str!("ui/overlays/blackboard.rs");
     const UI_VIEWPORT_OPTIONS_RS: &str = include_str!("ui/viewport_options.rs");
@@ -428,6 +430,7 @@ mod surface_policy_tests {
         for module in [
             "mod blackboard_layout;",
             "mod blackboard_policy;",
+            "mod controls_declarative;",
             "mod controls_layout;",
             "mod controls_policy;",
             "mod minimap_drag_policy;",
@@ -489,6 +492,12 @@ mod surface_policy_tests {
             "pub fn new(\n        canvas_node: fret_core::NodeId,\n        view_state: Model<NodeGraphViewState>,\n        editor_config: Model<NodeGraphEditorConfig>,\n        style: NodeGraphStyle,\n    ) -> Self {"
         ));
         assert!(!UI_OVERLAY_CONTROLS_RS.contains("pub fn with_editor_config_model("));
+        assert!(
+            !UI_OVERLAY_CONTROLS_DECLARATIVE_RS.contains("retained_bridge")
+                && !UI_OVERLAY_CONTROLS_DECLARATIVE_RS.contains("RetainedSubtreeProps")
+                && !UI_OVERLAY_CONTROLS_DECLARATIVE_RS.contains("Widget<"),
+            "declarative controls composition must not take a retained dependency"
+        );
     }
 
     #[test]

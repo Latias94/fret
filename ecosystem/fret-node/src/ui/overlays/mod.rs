@@ -11,6 +11,7 @@ mod blackboard_paint;
 mod blackboard_policy;
 #[cfg(feature = "compat-retained-canvas")]
 mod controls;
+mod controls_declarative;
 mod controls_layout;
 mod controls_policy;
 mod group_rename;
