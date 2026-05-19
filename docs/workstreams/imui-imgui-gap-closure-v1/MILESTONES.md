@@ -808,6 +808,8 @@ Exit criteria:
   behavior unchanged while moving tool text to code-block, control-readout, and compact-paragraph
   roles. JSON/spec/schema/prompt panes now use code text, fixed toolbar/issue/status values use
   readout text, stream help uses paragraph text, and the empty text spacer is gone.
+  2026-05-19 extras marquee perf text result: `extras_marquee_perf_demo` keeps its marquee
+  animation/perf probe unchanged while moving the fixed title to the section-chrome text role.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

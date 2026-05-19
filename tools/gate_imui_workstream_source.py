@@ -11976,6 +11976,20 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-examples/src/extras_marquee_perf_demo.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "fn marquee_perf_title_text<H: UiHost>(",
+                "decl_text::text_section_chrome_label(cx, text)",
+                "marquee_perf_title_text(cx, \"Marquee perf probe (extras)\")",
+            ],
+            forbidden=[
+                "ui::text(\"Marquee perf probe (extras)\")",
+                ".font_semibold()",
+                ".text_sm()",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-examples/src/table_demo.rs"),
             required=[
                 "use fret_ui_kit::declarative::text as decl_text;",
@@ -12431,6 +12445,18 @@ def main() -> None:
                 "ui::text(",
                 ".text_sm()",
                 "editor_children.push(ui::text(\\\"\\\").text_sm().into_element(cx));",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("apps/fret-examples/tests/extras_marquee_perf_demo_surface.rs"),
+            required=[
+                "fn extras_marquee_perf_demo_keeps_title_on_chrome_role()",
+                "fnmarquee_perf_title_text<H:UiHost>(",
+                "decl_text::text_section_chrome_label(cx,text)",
+                "marquee_perf_title_text(cx,\\\"Marqueeperfprobe(extras)\\\")",
+                "ui::text(\\\"Marqueeperfprobe(extras)\\\")",
+                ".font_semibold()",
             ],
             forbidden=[],
         ),

@@ -2698,6 +2698,31 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `cargo fmt --check -p fret-ui-gallery` passed.
 - `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
   passed.
+
+2026-05-19 extras marquee perf fixed title text-role slice:
+
+- Source gap before fix: `apps/fret-examples/src/extras_marquee_perf_demo.rs` used local
+  `ui::text(...).font_semibold()` for the fixed perf-probe title. The demo is a marquee animation
+  perf surface, not a text rendering capability probe.
+- `marquee_perf_title_text(...)` now routes that title through
+  `decl_text::text_section_chrome_label(...)`, keeping fixed probe chrome single-line and
+  shrinkable under resize.
+- `apps/fret-examples/tests/extras_marquee_perf_demo_surface.rs` and
+  `tools/gate_imui_workstream_source.py` guard the role mapping and forbid the old local title
+  styling from returning.
+- The first post-fix `cargo nextest run -p fret-examples --test
+  extras_marquee_perf_demo_surface extras_marquee_perf_demo_keeps_title_on_chrome_role
+  --no-fail-fast` exposed a missing `AnyElement` import; after the import was added, a later
+  `nextest` attempt timed out while background Cargo/Rustc compilation continued.
+- Retried after Cargo/Rustc exited:
+  `cargo nextest run -p fret-examples --test extras_marquee_perf_demo_surface
+  extras_marquee_perf_demo_keeps_title_on_chrome_role --no-fail-fast` passed.
+- `cargo check -p fret-demo --bin extras_marquee_perf_demo` passed.
+- `cargo fmt --check -p fret-examples` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
 - `git diff --check` passed.
 
 2026-05-19 GenUI demo visible text-role slice:

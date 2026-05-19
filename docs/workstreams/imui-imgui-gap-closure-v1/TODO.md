@@ -902,6 +902,9 @@ Readiness order for the next locally testable review slices:
    guidance through compact paragraph text. The old empty `ui::text("")` spacer and local
    `ui::text(...).text_sm()` policy were removed without moving GenUI runtime/rendering ownership
    into `fret-imui`.
+   2026-05-19 extras marquee perf text follow-up: `extras_marquee_perf_demo` now routes its fixed
+   perf-probe title through a section-chrome text role instead of local
+   `ui::text(...).font_semibold()` styling. The marquee animation/perf path stays unchanged.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
