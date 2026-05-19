@@ -3178,3 +3178,77 @@ Broader gates not run:
     `fret-node` policy coverage; the package-wide `fret-node` nextest gate, both relevant
     `fret-node` feature checks, retained-symbol search, layering, and catalog gates cover the
     changed surface.
+
+## 2026-05-19 - RBX-M2-050 node graph retained widget public surface quarantine
+
+Claim verified:
+
+- `fret-node::ui` no longer exposes retained node graph widget/editor/overlay/panel/portal modules
+  or retained widget root re-exports as public API.
+- The explicit `compat-retained-canvas` compatibility island still compiles and its retained canvas,
+  editor, overlay, minimap, a11y, middleware, paint-cache, and skin conformance matrix remains green.
+- The default declarative `fret-node` UI surface still compiles and its package tests remain green
+  without enabling `compat-retained-canvas`.
+- First-party source no longer consumes the removed retained widget exports through
+  `fret_node::ui`.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/mod.rs`
+- `ecosystem/fret-node/src/ui/canvas/mod.rs`
+- `ecosystem/fret-node/src/ui/canvas/middleware.rs`
+- `ecosystem/fret-node/src/ui/editors/mod.rs`
+- `ecosystem/fret-node/src/ui/overlays/mod.rs`
+- retained conformance test imports under `ecosystem/fret-node/src/ui/canvas/widget/tests/`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-node --no-default-features --features fret-ui`
+  - Result: passed.
+  - Scope proven: the default declarative `fret-node` UI integration compiles without the retained
+    canvas compatibility feature or `fret-ui/unstable-retained-bridge`.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed.
+  - Scope proven: the explicit retained canvas compatibility island still compiles after removing
+    public retained widget module/export access.
+- `cargo nextest run -p fret-node`
+  - Result: passed, 269 tests.
+  - Scope proven: default graph/runtime/controller/declarative-surface coverage remains green after
+    the public retained widget quarantine.
+- `cargo nextest run -p fret-node --features compat-retained-canvas`
+  - Result: passed, 906 tests.
+  - Scope proven: retained canvas/editor/overlay/minimap/a11y/middleware/paint-cache/skin behavior
+    remains covered by the compatibility island after the public exports were removed.
+- `rg -n "fret_node::ui::(NodeGraphCanvas|NodeGraphCanvasWith|NodeGraphEditor|NodeGraphPanel|NodeGraphPortalHost|NodeGraphOverlayHost)|use fret_node::ui::\\{[^\\n]*(NodeGraphCanvas|NodeGraphCanvasWith|NodeGraphEditor|NodeGraphPanel|NodeGraphPortalHost|NodeGraphOverlayHost)" apps crates ecosystem tools docs --glob '!target/**' --glob '!docs/workstreams/**'`
+  - Result: no matches.
+  - Scope proven: first-party source outside the workstream notes does not consume the removed
+    public retained widget exports.
+- `rg -n "pub use (canvas|editor|editors|overlays|panel|portal)::|pub mod (canvas|a11y|diag_anchors|editor|editors|overlays|panel|portal);|NodeGraphSurfaceCompatRetainedProps|node_graph_surface_compat_retained|RetainedSubtreeProps" ecosystem/fret-node/src/ui ecosystem/fret-node/src/lib.rs ecosystem/fret-node/Cargo.toml --glob '!target/**'`
+  - Result: matches only negative policy assertions in `ecosystem/fret-node/src/lib.rs` plus the
+    still-public non-retained `NodeResizeHandle` export.
+  - Scope proven: the removed retained widget module/export surface and the earlier declarative
+    retained-subtree shim are absent from live `fret-node` UI exports.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting is clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist still pass after the quarantine.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly after the task ledger/evidence
+    update.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-050` changes the `fret-node` public surface and retained compatibility island
+    imports only. The default `fret-node` package gate, the full `compat-retained-canvas` package
+    gate, both relevant feature checks, public retained-symbol searches, layering, catalog, and
+    whitespace gates cover the changed surface.

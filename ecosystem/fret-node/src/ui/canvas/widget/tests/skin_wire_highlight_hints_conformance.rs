@@ -7,7 +7,8 @@ use fret_ui::{Invalidation, UiTree};
 use crate::core::{Edge, EdgeId, EdgeKind, Graph};
 use crate::ui::presenter::NodeGraphPresenter;
 use crate::ui::{
-    InteractionChromeHint, NodeGraphCanvas, NodeGraphSkin, NodeGraphStyle, WireHighlightHint,
+    InteractionChromeHint, NodeGraphSkin, NodeGraphStyle, WireHighlightHint,
+    canvas::NodeGraphCanvas,
 };
 
 use super::{

@@ -3,7 +3,7 @@ use fret_ui::retained_bridge::Widget;
 
 use crate::core::{Edge, EdgeId, EdgeKind};
 
-use crate::ui::NodeGraphCanvas;
+use crate::ui::canvas::NodeGraphCanvas;
 
 use super::prelude::{cubic_bezier, wire_ctrl_points};
 use super::{

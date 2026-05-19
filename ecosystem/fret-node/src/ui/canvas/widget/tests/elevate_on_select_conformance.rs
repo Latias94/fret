@@ -10,7 +10,7 @@ use crate::core::{
 };
 
 use crate::ui::presenter::NodeGraphPresenter;
-use crate::ui::{NodeGraphCanvas, NodeGraphStyle};
+use crate::ui::{NodeGraphStyle, canvas::NodeGraphCanvas};
 
 use super::{
     NullServices, TestUiHostImpl, insert_graph_view_editor_config_with,

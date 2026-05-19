@@ -20,7 +20,7 @@ use serde_json::Value;
 
 macro_rules! new_canvas {
     ($host:ident, $graph:expr, $view:expr, $editor_config:expr) => {
-        crate::ui::NodeGraphCanvas::new($graph, $view, $editor_config)
+        crate::ui::canvas::NodeGraphCanvas::new($graph, $view, $editor_config)
     };
 }
 

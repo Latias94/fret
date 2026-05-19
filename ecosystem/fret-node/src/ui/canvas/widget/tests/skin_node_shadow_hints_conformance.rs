@@ -8,7 +8,9 @@ use fret_core::{
 use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
-use crate::ui::{NodeChromeHint, NodeGraphCanvas, NodeGraphSkin, NodeGraphStyle, NodeShadowHint};
+use crate::ui::{
+    NodeChromeHint, NodeGraphSkin, NodeGraphStyle, NodeShadowHint, canvas::NodeGraphCanvas,
+};
 
 use super::{
     NullServices, TestUiHostImpl, insert_graph_view_editor_config_with, make_test_graph_two_nodes,

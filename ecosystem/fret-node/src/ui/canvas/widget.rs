@@ -52,6 +52,7 @@ use crate::ui::commands::{
     CMD_NODE_GRAPH_PASTE, CMD_NODE_GRAPH_REDO, CMD_NODE_GRAPH_SELECT_ALL, CMD_NODE_GRAPH_UNDO,
 };
 use crate::ui::compat_transport::NodeGraphEditQueue;
+use crate::ui::overlays::{GroupRenameOverlay, NodeGraphOverlayState};
 use crate::ui::presenter::{
     DefaultNodeGraphPresenter, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate,
     NodeGraphContextMenuAction, NodeGraphContextMenuItem, NodeGraphPresenter, NodeResizeHandleSet,
@@ -59,10 +60,10 @@ use crate::ui::presenter::{
 };
 use crate::ui::style::{NodeGraphBackgroundStyle, NodeGraphColorMode, NodeGraphStyle};
 use crate::ui::{
-    FallbackMeasuredNodeGraphPresenter, GroupRenameOverlay, MeasuredGeometryStore,
-    NodeGraphCanvasTransform, NodeGraphController, NodeGraphEdgeTypes,
-    NodeGraphGeometryOverridesRef, NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
-    NodeGraphOverlayState, NodeGraphPaintOverridesRef, NodeGraphSkinRef,
+    FallbackMeasuredNodeGraphPresenter, MeasuredGeometryStore, NodeGraphCanvasTransform,
+    NodeGraphController, NodeGraphEdgeTypes, NodeGraphGeometryOverridesRef,
+    NodeGraphInternalsSnapshot, NodeGraphInternalsStore, NodeGraphPaintOverridesRef,
+    NodeGraphSkinRef,
 };
 
 use super::middleware::{

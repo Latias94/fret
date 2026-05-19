@@ -8,7 +8,7 @@ use fret_ui::{Invalidation, UiTree};
 use crate::core::{Edge, EdgeId, EdgeKind};
 use crate::ui::edge_types::NodeGraphEdgeTypes;
 use crate::ui::presenter::{EdgeMarker, EdgeRenderHint, EdgeRouteKind, NodeGraphPresenter};
-use crate::ui::{NodeGraphCanvas, NodeGraphStyle};
+use crate::ui::{NodeGraphStyle, canvas::NodeGraphCanvas};
 
 use super::prelude::{cubic_bezier_derivative, wire_ctrl_points};
 use super::{

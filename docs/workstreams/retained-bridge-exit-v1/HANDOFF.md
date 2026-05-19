@@ -46,7 +46,9 @@ removed the first-party legacy retained node graph demo feature/bins/modules, le
 `RBX-M2-040` removed the public declarative retained-subtree shim
 (`node_graph_surface_compat_retained(...)` / `NodeGraphSurfaceCompatRetainedProps`) while keeping
 the lower-level `compat-retained-canvas` feature compiling for the remaining retained canvas/editor
-implementation island.
+implementation island. `RBX-M2-050` then moved retained node graph widget/editor/overlay/panel/
+portal modules and root exports behind a crate-private/test-only compatibility island, keeping the
+retained behavior matrix available while removing the public retained widget authoring surface.
 
 ## Completed Implementation
 
@@ -359,7 +361,9 @@ first-party legacy retained node graph demo feature/bins/modules and locked that
 `fret-node` policy tests. `RBX-M2-040` deleted the declarative retained-subtree compatibility module
 and removed its public re-exports, then tightened the
 `retained_compatibility_surface_stays_declarative_only` policy test so the symbols cannot return.
-The headless graph surface, default declarative UI surface, and explicit retained canvas
+`RBX-M2-050` made the retained widget/editor/overlay/panel/portal modules crate-private and removed
+their public root re-exports, with test-only crate-private access retained for the conformance
+matrix. The headless graph surface, default declarative UI surface, and explicit retained canvas
 compatibility island still compile. The retained canvas/editor stack still exists inside
 `fret-node` behind `compat-retained-canvas`; the next M2 slice should migrate chrome/overlays/panels
 toward declarative composition and shrink the remaining retained leaf.

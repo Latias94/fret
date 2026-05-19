@@ -11,7 +11,7 @@ use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
 use crate::core::{Edge, EdgeId, EdgeKind};
-use crate::ui::{EdgeRenderHint, NodeGraphCanvas, NodeGraphSkin, NodeGraphStyle};
+use crate::ui::{EdgeRenderHint, NodeGraphSkin, NodeGraphStyle, canvas::NodeGraphCanvas};
 
 use super::{
     TestUiHostImpl, insert_graph_view_editor_config_with, make_test_graph_two_nodes_with_ports,

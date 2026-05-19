@@ -4,7 +4,7 @@ use fret_ui::{Invalidation, UiTree};
 
 use crate::core::CanvasPoint;
 
-use crate::ui::{NodeGraphCanvas, NodeGraphStyle};
+use crate::ui::{NodeGraphStyle, canvas::NodeGraphCanvas};
 
 use super::{
     NullServices, TestUiHostImpl, insert_graph_view_editor_config_with,

@@ -11,8 +11,6 @@ use crate::ui::style::NodeGraphStyle;
 
 mod middleware_chain;
 mod middleware_validation;
-pub use middleware_chain::NodeGraphCanvasMiddlewareChain;
-pub use middleware_validation::{RejectInvalidSizeTx, RejectNonFiniteTx};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NodeGraphCanvasEventOutcome {

@@ -265,7 +265,26 @@ mod surface_policy_tests {
     }
 
     #[test]
-    fn retained_public_widgets_keep_controller_only_binding_surface() {
+    fn retained_widget_compat_island_stays_crate_private_and_controller_bound() {
+        assert!(UI_MOD_RS.contains("mod canvas;"));
+        assert!(!UI_MOD_RS.contains("pub mod canvas;"));
+        assert!(!UI_MOD_RS.contains("pub use canvas::NodeGraphCanvas"));
+        assert!(!UI_MOD_RS.contains("pub(crate) use canvas::NodeGraphCanvas"));
+        assert!(!UI_MOD_RS.contains("pub use canvas::NodeGraphCanvasWith"));
+        assert!(!UI_MOD_RS.contains("pub(crate) use canvas::NodeGraphCanvasWith"));
+        assert!(!UI_MOD_RS.contains("pub mod a11y;"));
+        assert!(!UI_MOD_RS.contains("pub mod diag_anchors;"));
+        assert!(!UI_MOD_RS.contains("pub mod editor;"));
+        assert!(!UI_MOD_RS.contains("pub mod editors;"));
+        assert!(!UI_MOD_RS.contains("pub mod overlays;"));
+        assert!(!UI_MOD_RS.contains("pub mod panel;"));
+        assert!(!UI_MOD_RS.contains("pub mod portal;"));
+        assert!(!UI_MOD_RS.contains("pub use editor::NodeGraphEditor"));
+        assert!(!UI_MOD_RS.contains("pub use panel::{NodeGraphPanel"));
+        assert!(!UI_MOD_RS.contains("pub use portal::{"));
+        assert!(!UI_MOD_RS.contains("pub use overlays::{"));
+        assert!(UI_MOD_RS.contains("#[cfg(all(test, feature = \"compat-retained-canvas\"))]"));
+
         assert!(UI_CANVAS_RS.contains(
             "pub fn new(\n        graph: Model<Graph>,\n        view_state: Model<NodeGraphViewState>,\n        editor_config: Model<NodeGraphEditorConfig>,\n    ) -> Self {"
         ));
@@ -274,34 +293,36 @@ mod surface_policy_tests {
         ));
         assert!(!UI_CANVAS_BUILDERS_RS.contains("with_editor_config_model("));
         assert!(UI_CANVAS_BUILDERS_RS.contains("pub(crate) fn with_view_queue("));
-        assert!(UI_CANVAS_BUILDERS_RS.contains("advanced retained composition seam"));
-        assert!(UI_CANVAS_BUILDERS_RS.contains("crate-internal compatibility plumbing"));
+        assert!(UI_CANVAS_BUILDERS_RS.contains("retained compatibility plumbing"));
+        assert!(UI_CANVAS_BUILDERS_RS.contains("declarative node graph surface"));
 
         assert!(PORTAL_RS.contains(
             "pub fn with_controller(mut self, controller: NodeGraphController) -> Self {"
         ));
         assert!(PORTAL_RS.contains("pub(crate) fn with_edit_queue("));
-        assert!(PORTAL_RS.contains("public advanced retained seam"));
-        assert!(PORTAL_RS.contains("crate-internal compatibility plumbing"));
+        assert!(PORTAL_RS.contains("retained compatibility plumbing"));
+        assert!(PORTAL_RS.contains("declarative node graph surface"));
 
         assert!(UI_OVERLAY_GROUP_RENAME_RS.contains(
             "pub fn with_controller(mut self, controller: NodeGraphController) -> Self {"
         ));
         assert!(UI_OVERLAY_GROUP_RENAME_RS.contains("pub(crate) fn with_edit_queue("));
-        assert!(UI_OVERLAY_GROUP_RENAME_RS.contains("public advanced retained seam"));
+        assert!(UI_OVERLAY_GROUP_RENAME_RS.contains("retained compatibility plumbing"));
+        assert!(UI_OVERLAY_GROUP_RENAME_RS.contains("declarative node graph surface"));
 
         assert!(UI_OVERLAY_BLACKBOARD_RS.contains(
             "pub fn with_controller(mut self, controller: NodeGraphController) -> Self {"
         ));
         assert!(UI_OVERLAY_BLACKBOARD_RS.contains("pub(crate) fn with_edit_queue("));
-        assert!(UI_OVERLAY_BLACKBOARD_RS.contains("public advanced retained seam"));
+        assert!(UI_OVERLAY_BLACKBOARD_RS.contains("retained compatibility plumbing"));
+        assert!(UI_OVERLAY_BLACKBOARD_RS.contains("declarative node graph surface"));
 
         assert!(MINIMAP_RS.contains(
             "pub fn with_controller(mut self, controller: NodeGraphController) -> Self {"
         ));
         assert!(!MINIMAP_RS.contains("pub(crate) fn with_view_queue("));
-        assert!(MINIMAP_RS.contains("public advanced retained seam"));
-        assert!(MINIMAP_RS.contains("crate-internal compatibility plumbing"));
+        assert!(MINIMAP_RS.contains("retained compatibility plumbing"));
+        assert!(MINIMAP_RS.contains("declarative node graph surface"));
     }
 
     #[test]

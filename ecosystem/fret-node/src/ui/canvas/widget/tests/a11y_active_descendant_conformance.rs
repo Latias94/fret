@@ -7,8 +7,8 @@ use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 use crate::core::{NodeId, PortId};
 use crate::ui::internals::{NodeGraphInternalsSnapshot, NodeGraphInternalsStore};
 use crate::ui::{
-    NodeGraphA11yFocusedEdge, NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort, NodeGraphCanvas,
-    NodeGraphEditor,
+    NodeGraphA11yFocusedEdge, NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort, NodeGraphEditor,
+    canvas::NodeGraphCanvas,
 };
 
 use super::{

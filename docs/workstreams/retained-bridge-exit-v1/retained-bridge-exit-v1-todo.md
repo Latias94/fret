@@ -735,6 +735,38 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-050 Quarantine retained node graph widget surface behind a crate-private compat island.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/mod.rs`
+    - retained canvas/editor/overlay/portal modules under `ecosystem/fret-node/src/ui/`
+    - retained canvas conformance test imports
+    - `ecosystem/fret-node/src/lib.rs`
+  - Goal:
+    - Remove the public root `fret-node::ui` exports for retained node graph widgets, editors,
+      overlays, panels, portals, and retained canvas middleware.
+    - Keep the retained canvas/editor implementation available only as private compatibility
+      plumbing for the explicit `compat-retained-canvas` feature and its conformance tests.
+    - Prove no capability was deleted by running both the declarative default test set and the full
+      `compat-retained-canvas` retained behavior matrix.
+  - Result:
+    - `canvas`, `a11y`, `diag_anchors`, `editor`, `editors`, `overlays`, `panel`, and `portal`
+      are crate-private modules instead of public `fret-node::ui` modules.
+    - Root exports such as `NodeGraphCanvas`, `NodeGraphCanvasWith`, `NodeGraphEditor`,
+      retained overlays, retained panels, and retained portal helpers are no longer public API.
+    - Retained canvas conformance tests use crate-private/test-only module access, so the
+      compatibility island can still guard behavior while public authoring stays declarative-first.
+    - Surface-policy coverage now rejects reintroducing the retained widget public exports.
+  - Validation:
+    - `cargo fmt --check`
+    - `cargo check -p fret-node --no-default-features --features fret-ui`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas`
+    - `rg -n "fret_node::ui::(NodeGraphCanvas|NodeGraphCanvasWith|NodeGraphEditor|NodeGraphPanel|NodeGraphPortalHost|NodeGraphOverlayHost)|use fret_node::ui::\\{[^\\n]*(NodeGraphCanvas|NodeGraphCanvasWith|NodeGraphEditor|NodeGraphPanel|NodeGraphPortalHost|NodeGraphOverlayHost)" apps crates ecosystem tools docs --glob '!target/**' --glob '!docs/workstreams/**'`
+    - `rg -n "pub use (canvas|editor|editors|overlays|panel|portal)::|pub mod (canvas|a11y|diag_anchors|editor|editors|overlays|panel|portal);|NodeGraphSurfaceCompatRetainedProps|node_graph_surface_compat_retained|RetainedSubtreeProps" ecosystem/fret-node/src/ui ecosystem/fret-node/src/lib.rs ecosystem/fret-node/Cargo.toml --glob '!target/**'`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

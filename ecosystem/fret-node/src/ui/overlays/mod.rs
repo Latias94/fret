@@ -26,19 +26,21 @@ mod rename_policy;
 mod toolbar_policy;
 mod toolbars;
 
+#[cfg(test)]
 pub use blackboard::NodeGraphBlackboardOverlay;
+#[cfg(test)]
 pub use controls::NodeGraphControlsOverlay;
+#[cfg(test)]
 pub use controls_policy::{NodeGraphControlsBindings, NodeGraphControlsCommandBinding};
-pub use group_rename::{
-    GroupRenameOverlay, NodeGraphOverlayHost, NodeGraphOverlayState, SymbolRenameOverlay,
-};
+#[cfg(test)]
+pub use group_rename::NodeGraphOverlayHost;
+pub use group_rename::{GroupRenameOverlay, NodeGraphOverlayState, SymbolRenameOverlay};
+#[cfg(test)]
 pub use minimap::NodeGraphMiniMapOverlay;
-pub use minimap_navigation_policy::{NodeGraphMiniMapBindings, NodeGraphMiniMapNavigationBinding};
 pub(in crate::ui) use rename_policy::{open_group_rename_session, open_symbol_rename_session};
-pub use toolbar_policy::{
-    NodeGraphToolbarAlign, NodeGraphToolbarPosition, NodeGraphToolbarSize,
-    NodeGraphToolbarVisibility,
-};
+#[cfg(test)]
+pub use toolbar_policy::{NodeGraphToolbarAlign, NodeGraphToolbarPosition, NodeGraphToolbarSize};
+#[cfg(test)]
 pub use toolbars::{NodeGraphEdgeToolbar, NodeGraphNodeToolbar};
 
 use fret_core::{Px, Rect, Size};

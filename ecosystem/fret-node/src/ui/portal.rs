@@ -298,9 +298,8 @@ impl<P, C> NodeGraphPortalHost<P, C> {
 
     /// Routes retained portal command commits through a store-backed controller.
     ///
-    /// This is the public advanced retained seam. Raw edit-queue fallback remains
-    /// crate-internal compatibility plumbing for focused retained tests and temporary
-    /// migration harnesses.
+    /// This is retained compatibility plumbing for focused retained tests and temporary migration
+    /// harnesses. Public composition should use the declarative node graph surface.
     pub fn with_controller(mut self, controller: NodeGraphController) -> Self {
         self.controller = Some(controller);
         self
