@@ -15,9 +15,12 @@ fn workspace_shell_demo_composes_editor_rail_through_workspace_frame_slots() {
         "use fret_ui_kit::declarative::text as decl_text;",
         "fn workspace_shell_readout_text<",
         "fn workspace_shell_section_chrome_label<",
+        "fn workspace_shell_paragraph_text<",
         "decl_text::text_control_readout(cx, text)",
         "decl_text::text_button_label(cx, label.clone())",
         "decl_text::text_section_chrome_label(cx, text)",
+        "decl_text::text_paragraph(cx, text)",
+        "workspace_shell_paragraph_text(\n                    cx,\n                    \"Workspace shell slot + editor-owned inner panel\",",
         "row_cx.label_text(cx, \"Active pane\")",
         "row_cx.label_text(cx, \"Dirty close prompt\")",
         "active_pane_label.clone(),",
@@ -42,6 +45,8 @@ fn workspace_shell_demo_composes_editor_rail_through_workspace_frame_slots() {
         "cx.text(Arc::<str>::from(\n                                                        \"Dirty close confirmation\",\n                                                    ))",
         "cx.text(Arc::<str>::from(format!(\n                                                        \"reason={reason} active={active_tab} close_count={close_count}\"",
         "cx.text(Arc::<str>::from(format!(\n                                                        \"dirty=[{dirty_list}]\"",
+        "fret_ui_kit::ui::text(\"Workspace shell slot + editor-owned inner panel\")",
+        ".text_color(fret_ui_kit::ColorRef::Color(muted))",
     ] {
         assert!(
             !source.contains(needle),

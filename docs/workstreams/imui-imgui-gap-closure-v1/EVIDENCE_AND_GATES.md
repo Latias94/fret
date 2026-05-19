@@ -632,6 +632,19 @@ Run evidence:
   Gates: `cargo nextest run -p fret-examples --test workspace_shell_editor_rail_surface
   --no-fail-fast`, `cargo check -p fret-demo --bin workspace_shell_demo`, and
   `python tools/gate_imui_workstream_source.py`.
+- 2026-05-19: migrated the remaining `workspace_shell_demo` editor-rail header copy to a local
+  `workspace_shell_paragraph_text(...)` helper backed by shared `text_paragraph(...)` instead of
+  app-local `fret_ui_kit::ui::text(...).text_sm().text_color(...)` styling. This keeps the shell
+  proof's explanatory text in the shared paragraph role while leaving compact rail values on
+  `workspace_shell_readout_text(...)`. Gates: `cargo nextest run -p fret-examples --test
+  workspace_shell_editor_rail_surface
+  workspace_shell_demo_composes_editor_rail_through_workspace_frame_slots --no-fail-fast`,
+  `cargo check -p fret-demo --bin workspace_shell_demo`, `cargo nextest run -p fret-examples
+  --test text_role_residual_surface remaining_bare_text_in_fret_examples_is_explicit_capability_surface
+  --no-fail-fast`, and `python tools/gate_imui_workstream_source.py`.
+  Verification note: the first focused nextest attempt timed out during background compile; after
+  Cargo/Rustc exited, the same focused nextest command passed. `cargo fmt --check -p
+  fret-examples` also passed.
 - 2026-05-17: migrated the `editor_notes_demo` inspector metadata surface to the same resize-safe
   text roles. Property-grid labels now use `row_cx.label_text(...)`, inspector subtitle and compact
   committed/outcome/draft/summary status values route through a local

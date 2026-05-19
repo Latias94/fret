@@ -182,6 +182,9 @@ Exit criteria:
   explanatory copy now use proof-local IMUI helpers backed by shared section-chrome,
   control-readout, and compact paragraph roles instead of local `fret_ui_kit::ui::text(...)`
   styling.
+  2026-05-19 workspace shell paragraph text result: the remaining editor-rail header copy now uses
+  `workspace_shell_paragraph_text(...)` backed by shared `text_paragraph(...)` instead of local
+  `fret_ui_kit::ui::text(...).text_sm().text_color(...)` styling.
   2026-05-19 editor notes center/collection text result: `editor_notes_demo` collection summary
   and center preview text now use local helpers backed by shared readout, section, and paragraph
   roles instead of local `ui::text(...).wrap(...)` styling.

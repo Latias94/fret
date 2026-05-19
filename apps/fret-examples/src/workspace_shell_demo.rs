@@ -164,6 +164,13 @@ fn workspace_shell_section_chrome_label<H: fret_ui::UiHost>(
     decl_text::text_section_chrome_label(cx, text)
 }
 
+fn workspace_shell_paragraph_text<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    decl_text::text_paragraph(cx, text)
+}
+
 fn workspace_shell_editor_rail<'a, Cx>(
     cx: &mut Cx,
     state: WorkspaceShellEditorRailState,
@@ -197,13 +204,10 @@ where
         .into_element_in(
             cx,
             move |cx, _panel_cx| {
-                let muted = cx.theme_snapshot().color_token("muted-foreground");
-                vec![
-                    fret_ui_kit::ui::text("Workspace shell slot + editor-owned inner panel")
-                        .text_sm()
-                        .text_color(fret_ui_kit::ColorRef::Color(muted))
-                        .into_element(cx),
-                ]
+                vec![workspace_shell_paragraph_text(
+                    cx,
+                    "Workspace shell slot + editor-owned inner panel",
+                )]
             },
             move |cx, _panel_cx| {
                 vec![
