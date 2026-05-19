@@ -16,9 +16,9 @@ use crate::ui::editors::chrome::{
     PORTAL_BUTTON_STACK_GAP, PortalSmallButtonUi, PortalTextInputUi, portal_button_stack_height,
     portal_text_input_props, render_pressable_small_button, render_small_button,
 };
-use crate::ui::editors::portal_command_policy::{
-    PortalNumberCommandPlan, PortalNumberCommandSubmit, PortalNumberEditSpec,
-    PortalNumberEditSubmit, plan_portal_number_command,
+use crate::ui::editors::portal_command_policy::PortalNumberEditSpec;
+use crate::ui::editors::portal_command_session::{
+    PortalNumberCommandSession, handle_portal_number_command_with_session,
 };
 use crate::ui::portal::{
     NodeGraphPortalCommandHandler, NodeGraphPortalNodeLayout, PortalCommandOutcome,
@@ -539,82 +539,6 @@ impl<S: PortalNumberEditSpec> PortalNumberEditHandler<S> {
             spec,
         }
     }
-
-    fn current_input_text<H: UiHost>(
-        &self,
-        app: &mut H,
-        window: AppWindowId,
-        graph: &Graph,
-        node: NodeId,
-    ) -> Option<String> {
-        let initial_value = self.spec.initial_value(graph, node)?;
-        let input_model = self.editor.ensure_input_model(
-            app,
-            window,
-            node,
-            self.spec.format_value(initial_value),
-        );
-        Some(
-            input_model
-                .read_ref(app, |v| v.clone())
-                .ok()
-                .unwrap_or_default(),
-        )
-    }
-
-    fn apply_submit<H: UiHost>(
-        &mut self,
-        cx: &mut fret_ui::retained_bridge::CommandCx<'_, H>,
-        window: AppWindowId,
-        graph: &Graph,
-        node: NodeId,
-        submit: PortalNumberCommandSubmit,
-    ) -> PortalCommandOutcome {
-        let Some(initial_value) = self.spec.initial_value(graph, node) else {
-            return PortalCommandOutcome::NotHandled;
-        };
-
-        let input_model = self.editor.ensure_input_model(
-            cx.app,
-            window,
-            node,
-            self.spec.format_value(initial_value),
-        );
-        match submit {
-            PortalNumberCommandSubmit::ParseError { message } => {
-                self.editor
-                    .set_error(cx.app, window, node, &input_model, Some(message));
-                PortalCommandOutcome::Handled
-            }
-            PortalNumberCommandSubmit::Submit(submit) => match submit {
-                PortalNumberEditSubmit::NotHandled => PortalCommandOutcome::NotHandled,
-                PortalNumberEditSubmit::Handled { normalized_text } => {
-                    self.editor
-                        .set_error(cx.app, window, node, &input_model, None);
-                    if let Some(normalized) = normalized_text {
-                        let _ = input_model.update(cx.app, |v, _cx| *v = normalized);
-                    }
-                    PortalCommandOutcome::Handled
-                }
-                PortalNumberEditSubmit::Error { message } => {
-                    self.editor
-                        .set_error(cx.app, window, node, &input_model, Some(message));
-                    PortalCommandOutcome::Handled
-                }
-                PortalNumberEditSubmit::Commit {
-                    tx,
-                    normalized_text,
-                } => {
-                    self.editor
-                        .set_error(cx.app, window, node, &input_model, None);
-                    if let Some(normalized) = normalized_text {
-                        let _ = input_model.update(cx.app, |v, _cx| *v = normalized);
-                    }
-                    PortalCommandOutcome::Commit(tx)
-                }
-            },
-        }
-    }
 }
 
 impl<H: UiHost, S: PortalNumberEditSpec> NodeGraphPortalCommandHandler<H>
@@ -630,44 +554,45 @@ impl<H: UiHost, S: PortalNumberEditSpec> NodeGraphPortalCommandHandler<H>
             return PortalCommandOutcome::NotHandled;
         };
 
-        let current_text = match command {
-            PortalTextCommand::Submit { node } | PortalTextCommand::Step { node, .. } => {
-                self.current_input_text(cx.app, window, graph, node)
-            }
-            PortalTextCommand::Cancel { .. } => None,
+        let mut session = RetainedPortalNumberCommandSession {
+            editor: self.editor.clone(),
+            app: cx.app,
+            window,
         };
+        handle_portal_number_command_with_session(graph, &self.spec, &mut session, command)
+    }
+}
 
-        match plan_portal_number_command(graph, &self.spec, command, current_text.as_deref()) {
-            PortalNumberCommandPlan::NotHandled => PortalCommandOutcome::NotHandled,
-            PortalNumberCommandPlan::Handled => PortalCommandOutcome::Handled,
-            PortalNumberCommandPlan::Cancel { node, reset_text } => {
-                let input_model =
-                    self.editor
-                        .ensure_input_model(cx.app, window, node, reset_text.clone());
-                let error_model = self.editor.ensure_error_model(cx.app, window, node);
+struct RetainedPortalNumberCommandSession<'a, H: UiHost> {
+    editor: PortalNumberEditor,
+    app: &'a mut H,
+    window: AppWindowId,
+}
 
-                let _ = input_model.update(cx.app, |v, _cx| *v = reset_text);
-                let _ = error_model.update(cx.app, |v, _cx| *v = None);
+impl<H: UiHost> PortalNumberCommandSession for RetainedPortalNumberCommandSession<'_, H> {
+    fn current_text(&mut self, node: NodeId, initial_text: String) -> String {
+        let model = self
+            .editor
+            .ensure_input_model(self.app, self.window, node, initial_text);
+        model
+            .read_ref(self.app, |v| v.clone())
+            .ok()
+            .unwrap_or_default()
+    }
 
-                PortalCommandOutcome::Handled
-            }
-            PortalNumberCommandPlan::Submit { node, submit, .. } => {
-                self.apply_submit(cx, window, graph, node, submit)
-            }
-            PortalNumberCommandPlan::StepSubmit { node, text, submit } => {
-                let Some(initial_value) = self.spec.initial_value(graph, node) else {
-                    return PortalCommandOutcome::NotHandled;
-                };
-                let input_model = self.editor.ensure_input_model(
-                    cx.app,
-                    window,
-                    node,
-                    self.spec.format_value(initial_value),
-                );
-                let _ = input_model.update(cx.app, |v, _cx| *v = text.clone());
-                self.apply_submit(cx, window, graph, node, submit)
-            }
-        }
+    fn write_text(&mut self, node: NodeId, text: String) {
+        let model = self
+            .editor
+            .ensure_input_model(self.app, self.window, node, text.clone());
+        let _ = model.update(self.app, |v, _cx| *v = text);
+    }
+
+    fn set_error(&mut self, node: NodeId, message: Option<Arc<str>>) {
+        let input_model =
+            self.editor
+                .ensure_input_model(self.app, self.window, node, String::new());
+        self.editor
+            .set_error(self.app, self.window, node, &input_model, message);
     }
 }
 

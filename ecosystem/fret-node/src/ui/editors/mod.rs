@@ -5,6 +5,7 @@
 
 mod chrome;
 mod portal_command_policy;
+mod portal_command_session;
 #[cfg(feature = "compat-retained-canvas")]
 mod portal_number;
 #[cfg(feature = "compat-retained-canvas")]

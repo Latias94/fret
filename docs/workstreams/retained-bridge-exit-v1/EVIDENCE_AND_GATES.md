@@ -3578,3 +3578,78 @@ Broader gates not run:
     portal handler adapters. The default package gate, retained compatibility package gate,
     targeted portal compat gate, both feature checks, layering, catalog, formatting, and whitespace
     gates cover the changed surface.
+
+## 2026-05-19 - RBX-M2-095 portal editor command session default gate
+
+Claim verified:
+
+- Portal text/number session command application now lives in a default-gated editor session module
+  instead of being owned by retained `CommandCx` handlers.
+- Retained `portal_text.rs` and `portal_number.rs` remain behind `compat-retained-canvas`, but their
+  command handlers now provide retained model/session I/O adapters around the default command
+  policy and session application.
+- Default declarative `fret-node` coverage proves text/number cancel, submit, parse/error,
+  normalization, and commit outcomes can be applied without retained `CommandCx`, while the retained
+  portal/compatibility oracle remains green.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/editors/mod.rs`
+- `ecosystem/fret-node/src/ui/editors/portal_command_session.rs`
+- `ecosystem/fret-node/src/ui/editors/portal_text.rs`
+- `ecosystem/fret-node/src/ui/editors/portal_number.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-node without_retained_command_cx editor_chrome_compiles_without_retained_canvas_compat`
+  - Result: passed, 3 tests.
+  - Scope proven: portal text/number session command application compiles and is tested on the
+    default gate, and the editor policy/session surface remains outside `compat-retained-canvas`.
+- `cargo check -p fret-node --no-default-features --features fret-ui`
+  - Result: passed.
+  - Scope proven: the extracted portal command session adapter compiles without retained bridge
+    features.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed.
+  - Scope proven: retained portal text/number handlers still compile after being converted into
+    session I/O adapters.
+- `cargo nextest run -p fret-node --features compat-retained-canvas portal`
+  - Result: passed, 30 tests.
+  - Scope proven: retained portal lifecycle/keyboard/pointer/measured conformance, default portal
+    command policy tests, and default portal command session tests remain green together.
+- `cargo nextest run -p fret-node`
+  - Result: passed, 331 tests.
+  - Scope proven: default `fret-node` coverage remains green and now includes portal command
+    session tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas`
+  - Result: passed, 915 tests.
+  - Scope proven: the full retained canvas/editor/overlay oracle remains green after the portal
+    command session extraction.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting is clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly after the new evidence update.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked Rust and documentation changes have no whitespace errors.
+- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/editors/portal_command_session.rs 2>&1); test -z "$out"`
+  - Result: passed.
+  - Scope proven: the new untracked portal command session file has no whitespace errors before
+    staging.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-095` changes only `fret-node` editor command session extraction and retained
+    portal handler adapters. The default package gate, retained compatibility package gate,
+    targeted portal compat gate, both feature checks, layering, catalog, formatting, and whitespace
+    gates cover the changed surface.

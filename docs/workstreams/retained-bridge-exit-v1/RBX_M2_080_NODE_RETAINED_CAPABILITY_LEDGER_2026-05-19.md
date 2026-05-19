@@ -60,7 +60,7 @@ Retained compatibility island:
 | Pan/zoom, fit view, viewport helpers | retained canvas event/command/view queue tests | `NodeGraphSurfaceBinding` viewport helpers and gallery/demo declarative usage | Keep default binding tests as the contract; backfill any retained-only gesture semantics before deleting retained event code. |
 | Selection, drag, resize, wire creation/reconnect, marquee, context/searcher menus | retained canvas event tests under `ui/canvas/widget/tests` | store/controller transaction helpers plus paint-only input modules | Move event arbitration onto declarative mechanisms or add a Canvas-style event leaf; every retained interaction family needs default-path tests. |
 | Overlay panels: blackboard, controls, minimap, toolbars, rename | retained overlay widgets and retained overlay conformance tests | default overlay policy/layout tests from RBX-M2-060 | Replace retained widget composition with declarative elements, then move retained overlay conformance intent to default tests. |
-| Portal editor chrome and command submission | `portal_text.rs`, `portal_number.rs`, retained portal lifecycle tests | default editor chrome tests from RBX-M2-070; default portal command protocol from RBX-M2-085; default text/number command policy from RBX-M2-090 | Add a declarative portal editor session adapter that consumes the default command policy without retained `CommandCx` before deleting retained portal handlers. |
+| Portal editor chrome and command submission | `portal_text.rs`, `portal_number.rs`, retained portal lifecycle tests | default editor chrome tests from RBX-M2-070; default portal command protocol from RBX-M2-085; default text/number command policy from RBX-M2-090; default text/number command session adapter from RBX-M2-095 | Replace retained portal subtree rendering/model adapters with declarative portal hosting before deleting retained portal files. |
 | Accessibility and diagnostics anchors | `a11y.rs`, `diag_anchors.rs`, retained semantics tests | declarative paint-only semantics/diagnostics modules exist | Add default declarative semantics/diagnostics anchor tests before deleting retained anchors. |
 | Middleware extension points | retained `EventCx` / `CommandCx` based `NodeGraphCanvasMiddleware` | no public retained authoring surface; middleware is crate-private/test-only | Replace or delete retained middleware after event/command handling has a declarative host contract. |
 
@@ -77,13 +77,11 @@ shrink the allowed list as declarative coverage replaces retained behavior.
 
 Recommended order:
 
-1. Portal follow-on: add a declarative portal editor session adapter that consumes the default
-   command protocol/policy without retained `CommandCx`.
-2. `RBX-M2-100`: replace overlay/panel retained widget composition with declarative elements for
+1. `RBX-M2-100`: replace overlay/panel retained widget composition with declarative elements for
    blackboard, controls, minimap, toolbars, and rename.
-3. `RBX-M2-110`: extract a declarative event/canvas leaf for retained canvas interaction families
+2. `RBX-M2-110`: extract a declarative event/canvas leaf for retained canvas interaction families
    or split those policies behind controller/store-first APIs.
-4. `RBX-M2-120`: remove `compat-retained-canvas` from `fret-node` only after the retained
+3. `RBX-M2-120`: remove `compat-retained-canvas` from `fret-node` only after the retained
    conformance families above have default declarative coverage.
 
 ## Verification

@@ -915,6 +915,40 @@ Related plan:
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
     - `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/editors/portal_command_policy.rs 2>&1); test -z "$out"`
+- [x] RBX-M2-095 Move portal editor command session application onto the default declarative UI gate.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/editors/mod.rs`
+    - `ecosystem/fret-node/src/ui/editors/portal_command_session.rs`
+    - `ecosystem/fret-node/src/ui/editors/portal_text.rs`
+    - `ecosystem/fret-node/src/ui/editors/portal_number.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move portal text/number session command application out of retained `CommandCx` handlers and
+      into a default-gated adapter module.
+    - Keep retained portal text/number command handlers as thin model I/O adapters for the
+      remaining retained portal host.
+    - Add default tests proving cancel, submit, parse/error, normalization, and commit outcomes can
+      be applied without retained `CommandCx`.
+  - Result:
+    - Added `ui/editors/portal_command_session.rs` under the default `fret-ui` path.
+    - Added `PortalTextCommandSession` and `PortalNumberCommandSession` traits plus default command
+      application functions that consume `portal_command_policy`.
+    - Converted retained `PortalTextEditHandler` and `PortalNumberEditHandler` to provide retained
+      model/session I/O adapters around the default session application functions.
+    - Removed redundant retained handler-owned submit/cancel/step application code.
+  - Validation:
+    - `cargo nextest run -p fret-node without_retained_command_cx editor_chrome_compiles_without_retained_canvas_compat`
+    - `cargo check -p fret-node --no-default-features --features fret-ui`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas portal`
+    - `cargo nextest run -p fret-node`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+    - `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/editors/portal_command_session.rs 2>&1); test -z "$out"`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

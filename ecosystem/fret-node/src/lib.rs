@@ -471,6 +471,7 @@ mod surface_policy_tests {
         assert!(!UI_MOD_RS.contains("#[cfg(feature = \"compat-retained-canvas\")]\nmod editors;"));
         assert!(UI_EDITORS_MOD_RS.contains("mod chrome;"));
         assert!(UI_EDITORS_MOD_RS.contains("mod portal_command_policy;"));
+        assert!(UI_EDITORS_MOD_RS.contains("mod portal_command_session;"));
 
         for retained_editor_module in ["mod portal_number;", "mod portal_text;"] {
             let marker =
