@@ -912,6 +912,12 @@ Readiness order for the next locally testable review slices:
    `hello_counter_demo`'s large numeric display and `hello_world_compare_demo`'s GPUI/Fret
    comparison title. Ordinary app/proof visible text must continue moving to shared roles instead
    of relying on those exceptions.
+   2026-05-19 query detail text follow-up: the residual gate tightening exposed `ui::raw_text(...)`
+   as another uncounted text-policy path. `query_demo` and `query_async_tokio_demo` now route their
+   query status/error/duration/retry lines through `text_control_readout(...)` and their data values
+   through `text_code_label(...)`, preserving app-owned error foreground via `inherit_foreground`.
+   `imui_editor_proof_demo` also deleted its old direct `EditorCompactReadoutStyle::text_props(...)`
+   readout helper and now uses the shared control-readout role.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

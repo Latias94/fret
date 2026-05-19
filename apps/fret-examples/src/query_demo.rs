@@ -3,10 +3,13 @@ use std::time::Duration;
 
 use fret::app::RenderContextAccess as _;
 use fret::app::prelude::*;
-use fret::children::UiElementSinkExt as _;
 use fret::query::{QueryError, QueryKey, QueryPolicy, QueryRetryPolicy};
 use fret::style::{ColorRef, Space, ThemeSnapshot};
+use fret_core::Color;
+use fret_ui::element::AnyElement;
+use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::IntoUiElementInExt as _;
+use fret_ui_kit::declarative::text as decl_text;
 
 mod act {
     fret::actions!([
@@ -36,6 +39,28 @@ fn query_policy() -> QueryPolicy {
         retry: QueryRetryPolicy::exponential(3, Duration::from_millis(250), Duration::from_secs(2)),
         ..Default::default()
     }
+}
+
+fn query_readout_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_control_readout(cx, text)
+}
+
+fn query_readout_text_with_color<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+    foreground: Color,
+) -> AnyElement {
+    query_readout_text(cx, text).inherit_foreground(foreground)
+}
+
+fn query_data_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_code_label(cx, text)
 }
 
 struct QueryDemoView;
@@ -151,25 +176,22 @@ impl View for QueryDemoView {
         .into_element_in(cx);
 
         let detail_body = ui::v_flex_build(|cx, out| {
-            out.push_ui(cx, ui::raw_text(info_line));
-            out.push_ui(cx, ui::raw_text(data_line));
-            out.push_ui(
-                cx,
-                ui::raw_text(error_line).text_color(ColorRef::Color(error_color)),
-            );
+            out.push(query_readout_text(cx, info_line));
+            out.push(query_data_text(cx, data_line));
+            out.push(query_readout_text_with_color(cx, error_line, error_color));
             if let Some(duration_line) = duration_line {
-                out.push_ui(
+                out.push(query_readout_text_with_color(
                     cx,
-                    ui::raw_text(duration_line)
-                        .text_color(ColorRef::Color(theme.color_token("muted-foreground"))),
-                );
+                    duration_line,
+                    theme.color_token("muted-foreground"),
+                ));
             }
             if let Some(retry_line) = retry_line {
-                out.push_ui(
+                out.push(query_readout_text_with_color(
                     cx,
-                    ui::raw_text(retry_line)
-                        .text_color(ColorRef::Color(theme.color_token("muted-foreground"))),
-                );
+                    retry_line,
+                    theme.color_token("muted-foreground"),
+                ));
             }
         })
         .gap(Space::N2)

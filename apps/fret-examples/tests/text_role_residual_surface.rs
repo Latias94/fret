@@ -5,7 +5,10 @@ use std::path::{Path, PathBuf};
 struct DirectTextCounts {
     ui_text: usize,
     ui_rich_text: usize,
+    ui_raw_text: usize,
+    ui_text_block: usize,
     cx_text: usize,
+    cx_text_props: usize,
     text_props_new: usize,
     text_props_literal: usize,
 }
@@ -41,7 +44,10 @@ fn direct_text_counts() -> BTreeMap<String, DirectTextCounts> {
         let count = counts.entry(rel).or_default();
         count.ui_text += source.matches("ui::text(").count();
         count.ui_rich_text += source.matches("ui::rich_text(").count();
+        count.ui_raw_text += source.matches("ui::raw_text(").count();
+        count.ui_text_block += source.matches("ui::text_block(").count();
         count.cx_text += source.matches("cx.text(").count();
+        count.cx_text_props += source.matches("cx.text_props(").count();
         count.text_props_new += source.matches("TextProps::new(").count();
         count.text_props_literal += source.matches("cx.text_props(TextProps {").count()
             + source
@@ -52,7 +58,10 @@ fn direct_text_counts() -> BTreeMap<String, DirectTextCounts> {
     counts.retain(|_, count| {
         count.ui_text > 0
             || count.ui_rich_text > 0
+            || count.ui_raw_text > 0
+            || count.ui_text_block > 0
             || count.cx_text > 0
+            || count.cx_text_props > 0
             || count.text_props_new > 0
             || count.text_props_literal > 0
     });
@@ -67,7 +76,10 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
             DirectTextCounts {
                 ui_text: 0,
                 ui_rich_text: 0,
+                ui_raw_text: 0,
+                ui_text_block: 0,
                 cx_text: 4,
+                cx_text_props: 3,
                 text_props_new: 3,
                 text_props_literal: 0,
             },
@@ -77,7 +89,10 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
             DirectTextCounts {
                 ui_text: 0,
                 ui_rich_text: 0,
+                ui_raw_text: 0,
+                ui_text_block: 0,
                 cx_text: 0,
+                cx_text_props: 7,
                 text_props_new: 0,
                 text_props_literal: 7,
             },
@@ -87,7 +102,10 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
             DirectTextCounts {
                 ui_text: 0,
                 ui_rich_text: 0,
+                ui_raw_text: 0,
+                ui_text_block: 0,
                 cx_text: 0,
+                cx_text_props: 1,
                 text_props_new: 0,
                 text_props_literal: 1,
             },
@@ -97,7 +115,10 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
             DirectTextCounts {
                 ui_text: 0,
                 ui_rich_text: 0,
+                ui_raw_text: 0,
+                ui_text_block: 0,
                 cx_text: 0,
+                cx_text_props: 1,
                 text_props_new: 0,
                 text_props_literal: 1,
             },
@@ -107,7 +128,10 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
             DirectTextCounts {
                 ui_text: 0,
                 ui_rich_text: 0,
+                ui_raw_text: 0,
+                ui_text_block: 0,
                 cx_text: 0,
+                cx_text_props: 3,
                 text_props_new: 0,
                 text_props_literal: 3,
             },
@@ -117,7 +141,10 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
             DirectTextCounts {
                 ui_text: 0,
                 ui_rich_text: 0,
+                ui_raw_text: 0,
+                ui_text_block: 0,
                 cx_text: 0,
+                cx_text_props: 3,
                 text_props_new: 0,
                 text_props_literal: 3,
             },
@@ -127,7 +154,10 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
             DirectTextCounts {
                 ui_text: 0,
                 ui_rich_text: 0,
+                ui_raw_text: 0,
+                ui_text_block: 0,
                 cx_text: 0,
+                cx_text_props: 3,
                 text_props_new: 0,
                 text_props_literal: 3,
             },
@@ -137,7 +167,10 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
             DirectTextCounts {
                 ui_text: 0,
                 ui_rich_text: 0,
+                ui_raw_text: 0,
+                ui_text_block: 0,
                 cx_text: 0,
+                cx_text_props: 3,
                 text_props_new: 0,
                 text_props_literal: 3,
             },
@@ -147,7 +180,10 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
             DirectTextCounts {
                 ui_text: 0,
                 ui_rich_text: 0,
+                ui_raw_text: 0,
+                ui_text_block: 0,
                 cx_text: 0,
+                cx_text_props: 1,
                 text_props_new: 0,
                 text_props_literal: 1,
             },
@@ -157,7 +193,10 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
             DirectTextCounts {
                 ui_text: 0,
                 ui_rich_text: 0,
+                ui_raw_text: 0,
+                ui_text_block: 0,
                 cx_text: 0,
+                cx_text_props: 5,
                 text_props_new: 0,
                 text_props_literal: 5,
             },
@@ -167,7 +206,10 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
             DirectTextCounts {
                 ui_text: 1,
                 ui_rich_text: 0,
+                ui_raw_text: 0,
+                ui_text_block: 0,
                 cx_text: 0,
+                cx_text_props: 0,
                 text_props_new: 0,
                 text_props_literal: 0,
             },
@@ -177,7 +219,10 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
             DirectTextCounts {
                 ui_text: 1,
                 ui_rich_text: 0,
+                ui_raw_text: 0,
+                ui_text_block: 0,
                 cx_text: 0,
+                cx_text_props: 0,
                 text_props_new: 0,
                 text_props_literal: 0,
             },
@@ -187,7 +232,10 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
             DirectTextCounts {
                 ui_text: 0,
                 ui_rich_text: 0,
+                ui_raw_text: 0,
+                ui_text_block: 0,
                 cx_text: 8,
+                cx_text_props: 0,
                 text_props_new: 0,
                 text_props_literal: 0,
             },
@@ -197,7 +245,10 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
             DirectTextCounts {
                 ui_text: 0,
                 ui_rich_text: 0,
+                ui_raw_text: 0,
+                ui_text_block: 0,
                 cx_text: 0,
+                cx_text_props: 2,
                 text_props_new: 0,
                 text_props_literal: 2,
             },
@@ -207,7 +258,10 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
             DirectTextCounts {
                 ui_text: 0,
                 ui_rich_text: 0,
+                ui_raw_text: 0,
+                ui_text_block: 0,
                 cx_text: 0,
+                cx_text_props: 2,
                 text_props_new: 0,
                 text_props_literal: 2,
             },
@@ -217,7 +271,10 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
             DirectTextCounts {
                 ui_text: 0,
                 ui_rich_text: 0,
+                ui_raw_text: 0,
+                ui_text_block: 0,
                 cx_text: 0,
+                cx_text_props: 2,
                 text_props_new: 0,
                 text_props_literal: 2,
             },
@@ -227,7 +284,10 @@ fn remaining_bare_text_in_fret_examples_is_explicit_capability_surface() {
             DirectTextCounts {
                 ui_text: 0,
                 ui_rich_text: 0,
+                ui_raw_text: 0,
+                ui_text_block: 0,
                 cx_text: 0,
+                cx_text_props: 1,
                 text_props_new: 0,
                 text_props_literal: 1,
             },

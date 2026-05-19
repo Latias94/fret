@@ -75,9 +75,11 @@ component should construct `TextProps` locally.
 3. If the text is code-like, choose among `text_code_block(...)` for scrollable block code,
    `text_code_wrap(...)` for inline prose code that can wrap long identifiers, and
    `text_code_label(...)` for fixed-height identifier slots that must truncate under resize.
-4. New direct `TextProps` construction under `fret-ui-kit::imui` or editor controls is a contract
-   change. It must either move into a role helper or update the source gate with a documented owner
-   and proof.
+4. New direct `TextProps` / `StyledTextProps` construction under `fret-ui-kit::imui`, editor
+   controls, or first-party proof apps is a contract change. It must either move into a role helper
+   or update the source gate with a documented owner and proof. Builder-style `ui::raw_text(...)`
+   and `ui::text_block(...)` count as direct text policy too, unless the surface is an explicit
+   text/rendering capability probe.
 5. Do not add a public `TextRole` enum until at least two consumers need a data-driven role value.
    The current API remains helper-based to avoid freezing unnecessary public surface.
 6. Remaining bare text in first-party proof apps is allowed only when the surface is itself testing

@@ -3593,3 +3593,37 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `cargo nextest run -p fret-examples --test text_role_residual_surface
   remaining_bare_text_in_fret_examples_is_explicit_capability_surface --no-fail-fast` passed.
 - `git diff --check` passed.
+
+2026-05-19 query detail raw-text role cleanup:
+
+- Source gap before fix: `query_demo.rs` and `query_async_tokio_demo.rs` used `ui::raw_text(...)`
+  for query detail rows. `text_role_residual_surface` did not count `ui::raw_text(...)`,
+  `ui::text_block(...)`, or all `cx.text_props(...)` calls, so proof apps could bypass the text-role
+  contract even after builder-style `ui::text(...)` started being counted.
+- `query_readout_text(...)`, `query_readout_text_with_color(...)`, and `query_data_text(...)` now
+  route the query detail rows through shared `decl_text` roles. Status/error/duration/retry lines
+  use `text_control_readout(...)`; fetched data values use `text_code_label(...)`; destructive or
+  muted foreground remains app-owned state policy through `inherit_foreground(...)`.
+- `imui_editor_proof_demo` deleted the old `EditorCompactReadoutStyle::text_props(...)` readout
+  helper path and now uses the shared control-readout role for those proof readouts.
+- `text_role_residual_surface` now counts `ui::raw_text(...)`, `ui::text_block(...)`, and all
+  `cx.text_props(...)` calls in addition to the earlier residual counters.
+- `apps/fret-examples/tests/query_demo_surface.rs` and `tools/gate_imui_workstream_source.py` guard
+  the query role mapping and forbid the old raw-text policy from returning.
+- First post-fix parallel nextest runs for `query_demo_surface` and `text_role_residual_surface`
+  timed out while background Cargo/Rustc compilation continued. Retried after Cargo/Rustc exited.
+- `cargo fmt --check -p fret-examples` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo nextest run -p fret-examples --test query_demo_surface
+  query_demos_keep_detail_text_on_roles --no-fail-fast` passed.
+- `cargo nextest run -p fret-examples --test text_role_residual_surface
+  remaining_bare_text_in_fret_examples_is_explicit_capability_surface --no-fail-fast` passed.
+- `cargo nextest run -p fret-examples proof_drag_preview_card_uses_single_line_text_roles
+  --no-fail-fast` passed.
+- `cargo check -p fret-examples --lib` passed.
+- `cargo check -p fret-demo` passed with an existing unrelated warning in
+  `apps/fret-demo/src/bin/wgpu_hello_world_control.rs` about an unused `Result`.
+- `git diff --check` passed.

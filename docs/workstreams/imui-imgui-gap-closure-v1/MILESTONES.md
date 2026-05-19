@@ -815,6 +815,11 @@ Exit criteria:
   text-role contract by using the builder-style text facade. The remaining builder-style residuals
   are explicit capability/display payloads: the large numeric counter display and the GPUI/Fret
   hello-world comparison title.
+  2026-05-19 query detail text result: `query_demo` and `query_async_tokio_demo` no longer use
+  `ui::raw_text(...)` for query detail rows. Status/error/timing/retry diagnostics now use shared
+  control-readout text, fetched data uses code-label text, and error foreground remains app-owned
+  state styling. `imui_editor_proof_demo` also removed its old direct editor-style readout
+  `TextProps` construction in favor of the shared control-readout role.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

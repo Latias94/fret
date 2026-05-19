@@ -9,10 +9,8 @@ use fret::advanced::view::{AppRenderDataExt as _, ViewWindowState};
 use fret::imui::{kit::ImUiMultiSelectState, prelude::*};
 use fret::{Defaults, FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
-use fret_core::text::TextOverflow;
 use fret_core::{
     Color, Corners, Edges, KeyCode, Modifiers, PanelKind, Point, PointerId, Px, Rect, Size,
-    TextAlign,
 };
 use fret_docking::{
     DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
@@ -43,7 +41,7 @@ use fret_ui_editor::controls::{
     VecEditOptions,
 };
 use fret_ui_editor::imui as editor_imui;
-use fret_ui_editor::primitives::{EditSessionOutcome, EditorCompactReadoutStyle, EditorTokenKeys};
+use fret_ui_editor::primitives::{EditSessionOutcome, EditorTokenKeys};
 use fret_ui_editor::theme::EditorThemePresetV1;
 use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::headless::text_assist::{
@@ -241,31 +239,11 @@ fn proof_compact_readout<H: UiHost>(
     readout: String,
     test_id: Option<Arc<str>>,
 ) -> fret_ui::element::AnyElement {
-    let theme = fret_ui::Theme::global(&*cx.app);
-    let row_height = theme
-        .metric_by_key(EditorTokenKeys::DENSITY_ROW_HEIGHT)
-        .unwrap_or(Px(24.0));
-    let readout_style = EditorCompactReadoutStyle::resolve(theme, row_height);
     let readout = Arc::<str>::from(readout);
-
-    let mut el = cx.text_props(readout_style.text_props(
-        readout.clone(),
-        LayoutStyle {
-            size: SizeStyle {
-                width: Length::Fill,
-                height: Length::Auto,
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-        TextAlign::Start,
-        TextOverflow::Ellipsis,
-    ));
-
+    let mut el = decl_text::text_control_readout(cx, readout.clone());
     if let Some(test_id) = test_id {
         el = el.test_id(test_id);
     }
-
     el.a11y_label(readout)
 }
 
@@ -4275,7 +4253,7 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, TextWrap};
+    use fret_core::{AppWindowId, TextOverflow, TextWrap};
     use fret_ui::element::ElementKind;
     use fret_ui::elements;
 
