@@ -107,6 +107,11 @@ date: 2026-05-12
   hit-test records with the moved cache root. The promoted script now also has protocol roundtrip
   coverage, and the current `ui-gallery-resizable` suite refresh proves both the multi-viewport and
   cached-source movement placement gates still produce top-side overlay traces.
+  `ui-gallery-resizable-multi-viewport-select-placement.json` adds the Select overlay-family
+  companion: it opens a popper-positioned Select control near the bottom of the right Resizable
+  panel, proves the `placed_rect` trace uses the panel-sized `outer`, flips to `top` with
+  `side_offset=6`, preserves Select relation edges, and keeps the selected item state after close
+  and reopen. The latest `ui-gallery-resizable` suite now has 3/3 passing scripts with evidence.
 - Read-only non-list action-state update:
   `read_only_is` now lets diagnostics assert the semantics read-only flag directly. The UI Gallery
   Switch gate `ui-gallery-switch-read-only-action-state.json` proves a read-only Switch remains

@@ -5440,6 +5440,56 @@ Next slice recommendation:
   `git diff --check`
   - result: passed.
 
+## Resizable Multi-Viewport Select Root-Boundary Gate
+
+- invariant:
+  a popper-positioned Select opened inside a Resizable panel viewport root must use the panel root,
+  not the OS window, as its placement boundary. When the panel has insufficient space below but the
+  window still has room, the listbox should flip to the top and keep Select relation edges coherent.
+- finding:
+  no Select root-boundary defect was reproduced. The new runtime companion proves Select follows
+  the same panel-root ownership invariant already covered for Combobox, broadening overlay family
+  coverage inside Resizable roots.
+- diagnostics surface:
+  `ui-gallery-resizable-multi-viewport-select-placement.json` injects
+  `FRET_UI_GALLERY_START_PAGE=resizable`,
+  `FRET_UI_GALLERY_START_SECTION=ui-gallery-resizable-multi-viewport-select-docsec`, and
+  `FRET_UI_GALLERY_RESIZABLE_MULTI_VIEWPORT_SELECT=1`; opens the Select control near the bottom of
+  the right panel; waits for a `placed_rect` trace with `chosen_side=top`, `flipped=true`, and
+  `side_offset=6`; asserts listbox window containment and relation edges; selects `Release Ready`;
+  then reopens and verifies the selected item state.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/resizable/multi_viewport_select.rs`,
+  `apps/fret-ui-gallery/src/ui/pages/resizable.rs`,
+  `tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-multi-viewport-select-placement.json`,
+  `tools/diag-scripts/suites/ui-gallery-resizable/suite.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- JSON/registry:
+  `python -m json.tool tools\diag-scripts\ui-gallery\resizable\ui-gallery-resizable-multi-viewport-select-placement.json > $null`
+  and `python tools\check_diag_scripts_registry.py`
+  - result: passed.
+- formatting:
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\snippets\resizable\multi_viewport_select.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_resizable_multi_viewport_select_placement --no-fail-fast --no-capture`
+  - result: passed; latest Nextest run id `7944bf63-93b6-476d-aa9a-7b6b53771d9e`.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\resizable\ui-gallery-resizable-multi-viewport-select-placement.json --dir target\fret-diag-resizable-multi-viewport-select-placement-v8 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779193025213`; AI packet
+    `target/fret-diag-resizable-multi-viewport-select-placement-v8/sessions/1779193017299-99444/1779193025213/ai.packet`.
+- full Resizable suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-resizable --dir target\fret-diag-ui-gallery-resizable-suite-select-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; 3/3 scripts; suite summary
+    `target/fret-diag-ui-gallery-resizable-suite-select-v1/sessions/1779193114796-63336/suite.summary.json`;
+    Select run id `1779193162410`; `scripts_with_evidence=3`.
+- static diff check:
+  `git diff --check`
+  - result: passed.
+
 ## Command Retained Active-Descendant Action-State Protocol Gate
 
 - invariant:

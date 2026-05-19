@@ -1242,3 +1242,13 @@ date: 2026-05-12
     path, and `ui-gallery-combobox-popup-doc-intro-non-overlap.json` locks the user-visible
     Combobox Popup docs intro/title spacing at a screenshot-like startup size before resize
     recovery.
+- [x] Promote Resizable multi-viewport Select root-boundary placement into the runtime suite.
+  - Result: `ui-gallery-resizable-multi-viewport-select-placement.json` adds a Select companion to
+    the existing Resizable multi-viewport Combobox proof. The fixture opens a popper-positioned
+    Select control near the bottom of the right Resizable panel while the OS window still has room
+    below, waits for a `placed_rect` trace with panel-sized `outer`, `chosen_side=top`, `flipped`,
+    and `side_offset=6`, then selects `Release Ready` and verifies it persists on reopen. No Select
+    root-boundary defect was reproduced. The first runtime drafts instead exposed script authoring
+    hazards around selecting the outer fixture instead of the Select control, over-constraining the
+    exact top-side gap, and querying underlay panel bounds after the modal overlay barrier was
+    installed.

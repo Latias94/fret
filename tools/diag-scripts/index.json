@@ -9924,6 +9924,33 @@
       ]
     },
     {
+      "id": "ui-gallery-resizable-multi-viewport-select-placement",
+      "path": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-multi-viewport-select-placement.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-resizable"
+      ],
+      "tags": [
+        "multi_viewport",
+        "overlay",
+        "resizable",
+        "root_boundary",
+        "select",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Resizable Multi-Viewport Select fixture.",
+        "Opens a popper-positioned Select control near the bottom of a Resizable panel viewport root.",
+        "The OS window has room below the trigger, but the panel viewport root does not; correct root-boundary ownership flips the Select listbox to the top and keeps relation edges intact."
+      ]
+    },
+    {
       "id": "ui-gallery-resizable-view-cache-moving-combobox-root-boundary",
       "path": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json",
       "required_capabilities": [

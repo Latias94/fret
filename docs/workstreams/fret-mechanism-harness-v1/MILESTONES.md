@@ -2788,3 +2788,41 @@ non-overlap runtime gate.
   with suite summary
   `target/fret-diag-combobox-geometry-placement-text-layout-repair-v2/sessions/1779186620899-17592/suite.summary.json`;
   the new intro non-overlap script run id is `1779186747293`.
+
+## M135: Resizable Multi-Viewport Select Root-Boundary Gate
+
+Status: complete for Select popper placement coverage inside a Resizable panel viewport root.
+
+- Added `multi_viewport_select.rs` to the Resizable UI Gallery page as an opt-in diagnostics
+  fixture. The Select control sits near the bottom of the right Resizable panel so the OS window has
+  room below, but the panel viewport root does not.
+- Promoted `ui-gallery-resizable-multi-viewport-select-placement.json` into the
+  `ui-gallery-resizable` suite with direct `fret-diag-protocol` roundtrip coverage and a top-level
+  redirect script.
+- The runtime gate waits for a `placed_rect` overlay trace with
+  `anchor_test_id=ui-gallery-resizable-multi-viewport-select-root`,
+  `content_test_id=ui-gallery-resizable-multi-viewport-select-listbox`, `preferred_side=bottom`,
+  `chosen_side=top`, `flipped=true`, and `side_offset=6`. The trace records the Resizable panel
+  bounds as the placement `outer`, proving panel-root ownership for Select as a second overlay
+  family after Combobox.
+- No Select placement/root-boundary defect was reproduced. The first runtime drafts exposed script
+  authoring hazards instead: the outer fixture id was not the Select control, exact top-side gap
+  checks overfit the placement solver, and underlay panel selectors are hidden behind the modal
+  overlay barrier once the Select listbox opens.
+- Gates pass:
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\snippets\resizable\multi_viewport_select.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_resizable_multi_viewport_select_placement --no-fail-fast --no-capture`
+  with latest Nextest run id `7944bf63-93b6-476d-aa9a-7b6b53771d9e`;
+  and `git diff --check`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\resizable\ui-gallery-resizable-multi-viewport-select-placement.json --dir target\fret-diag-resizable-multi-viewport-select-placement-v8 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779193025213` and AI packet
+  `target/fret-diag-resizable-multi-viewport-select-placement-v8/sessions/1779193017299-99444/1779193025213/ai.packet`.
+- Full runtime suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-resizable --dir target\fret-diag-ui-gallery-resizable-suite-select-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with suite summary
+  `target/fret-diag-ui-gallery-resizable-suite-select-v1/sessions/1779193114796-63336/suite.summary.json`;
+  3/3 scripts passed, `scripts_with_evidence=3`, and the new Select script run id is
+  `1779193162410`.

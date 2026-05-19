@@ -1,0 +1,257 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-resizable-multi-viewport-select-placement",
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.screenshot_png",
+      "diag.overlay_placement_trace"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "resizable",
+      "FRET_UI_GALLERY_START_SECTION": "ui-gallery-resizable-multi-viewport-select-docsec",
+      "FRET_UI_GALLERY_RESIZABLE_MULTI_VIEWPORT_SELECT": "1"
+    },
+    "tags": [
+      "ui_gallery",
+      "shadcn",
+      "resizable",
+      "select",
+      "multi_viewport",
+      "overlay",
+      "root_boundary"
+    ],
+    "target_hints": [
+      "Starts directly on the Resizable Multi-Viewport Select fixture.",
+      "Opens a popper-positioned Select control near the bottom of a Resizable panel viewport root.",
+      "The OS window has room below the trigger, but the panel viewport root does not; correct root-boundary ownership flips the Select listbox to the top and keeps relation edges intact."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 900.0, "height_px": 980.0 },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-resizable" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-multi-viewport-select-docsec-content"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-resizable-multi-viewport-select-root"
+      },
+      "delta_y": -160.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-multi-viewport-select-root"
+        },
+        "padding_px": 2.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_metric_pair_delta",
+        "a": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-multi-viewport-select-root"
+        },
+        "b": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-multi-viewport-select-panel"
+        },
+        "a_metric": "bottom",
+        "b_metric": "bottom",
+        "comparison": "le",
+        "value_px": -2.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_metric_pair_delta",
+        "a": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-multi-viewport-select-root"
+        },
+        "b": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-multi-viewport-select-panel"
+        },
+        "a_metric": "bottom",
+        "b_metric": "bottom",
+        "comparison": "ge",
+        "value_px": -48.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-resizable-multi-viewport-select-root"
+      },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-multi-viewport-select-listbox"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_overlay_placement_trace",
+      "query": {
+        "kind": "placed_rect",
+        "anchor_test_id": "ui-gallery-resizable-multi-viewport-select-root",
+        "content_test_id": "ui-gallery-resizable-multi-viewport-select-listbox",
+        "preferred_side": "bottom",
+        "chosen_side": "top",
+        "flipped": true,
+        "side_offset_px": 6.0,
+        "side_offset_eps_px": 0.25
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-multi-viewport-select-listbox"
+        },
+        "padding_px": 2.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_relation_includes",
+        "source": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-multi-viewport-select-root"
+        },
+        "relation": "controls",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-multi-viewport-select-listbox"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_relation_includes",
+        "source": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-multi-viewport-select-listbox"
+        },
+        "relation": "labelled_by",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-multi-viewport-select-root"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-resizable-multi-viewport-select-item-release"
+      },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-multi-viewport-select-listbox"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-resizable-multi-viewport-select-root"
+      },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "selected": true,
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-multi-viewport-select-item-release"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-resizable-multi-viewport-select-placement.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-resizable-multi-viewport-select-placement"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-resizable-multi-viewport-select-placement"
+    }
+  ]
+}
