@@ -43,6 +43,10 @@ migrating the node graph cull torture page and AI workflow node graph demo to
 use `LayoutQueryRegion` for stage bounds instead of a retained `BoundsRecorder`. `RBX-M2-030`
 removed the first-party legacy retained node graph demo feature/bins/modules, leaving
 `node_graph_demo` behind `node-graph-demos` as the supported first-party node graph demo path.
+`RBX-M2-040` removed the public declarative retained-subtree shim
+(`node_graph_surface_compat_retained(...)` / `NodeGraphSurfaceCompatRetainedProps`) while keeping
+the lower-level `compat-retained-canvas` feature compiling for the remaining retained canvas/editor
+implementation island.
 
 ## Completed Implementation
 
@@ -352,10 +356,13 @@ the redundant `compat-retained-bridge` feature alias was deleted, and
 `fret-ui/unstable-retained-bridge`. `RBX-M2-020` moved UI Gallery's node graph pages to
 `NodeGraphSurfaceBinding` plus declarative `node_graph_surface(...)`. `RBX-M2-030` removed the
 first-party legacy retained node graph demo feature/bins/modules and locked that with
-`fret-node` policy tests. The headless graph surface, default declarative UI surface, and explicit
-retained canvas compatibility island still compile. The retained canvas/editor stack still exists
-inside `fret-node` behind `compat-retained-canvas`; the next M2 slice should migrate
-chrome/overlays/panels toward declarative composition and shrink the remaining retained leaf.
+`fret-node` policy tests. `RBX-M2-040` deleted the declarative retained-subtree compatibility module
+and removed its public re-exports, then tightened the
+`retained_compatibility_surface_stays_declarative_only` policy test so the symbols cannot return.
+The headless graph surface, default declarative UI surface, and explicit retained canvas
+compatibility island still compile. The retained canvas/editor stack still exists inside
+`fret-node` behind `compat-retained-canvas`; the next M2 slice should migrate chrome/overlays/panels
+toward declarative composition and shrink the remaining retained leaf.
 
 ## Next Task
 

@@ -3112,3 +3112,69 @@ Broader gates not run:
   - Reason: this slice removes first-party retained node graph demo entry points and migrates
     first-party docking examples exposed by the deletion; the targeted app checks, policy tests,
     source-policy gates, layering gate, and no-retained-search gates cover the changed surfaces.
+
+## 2026-05-19 - RBX-M2-040 node graph declarative retained-subtree shim removal
+
+Claim verified:
+
+- `fret-node` no longer exposes `node_graph_surface_compat_retained(...)` or
+  `NodeGraphSurfaceCompatRetainedProps` from its declarative node graph public surface.
+- The declarative node graph surface no longer depends on `RetainedSubtreeProps`.
+- The lower-level `compat-retained-canvas` feature still compiles, so this slice removes the public
+  retained-subtree compatibility entry point without deleting the remaining retained canvas/editor
+  implementation island prematurely.
+- The existing declarative node graph, controller, runtime, graph model, and policy tests remain
+  green after the public shim removal.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/declarative/mod.rs`
+- `ecosystem/fret-node/src/ui/mod.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- Deleted: `ecosystem/fret-node/src/ui/declarative/compat_retained.rs`
+
+Commands:
+
+- `rg -n "node_graph_surface_compat_retained|NodeGraphSurfaceCompatRetainedProps|compat_retained|RetainedSubtreeProps" ecosystem/fret-node/src ecosystem/fret-node/Cargo.toml --glob '!target/**'`
+  - Result: matches only negative policy assertions in `ecosystem/fret-node/src/lib.rs`.
+  - Scope proven: the removed retained-subtree compatibility symbols no longer exist in live
+    `fret-node` UI implementation/export code.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting is clean after the shim removal.
+- `cargo nextest run -p fret-node retained_compatibility_surface_stays_declarative_only`
+  - Result: passed, 1 test.
+  - Scope proven: the public surface policy rejects declarative retained-subtree compatibility
+    entry points and keeps retained compatibility out of `fret-node::ui::declarative`.
+- `cargo check -p fret-node --no-default-features --features fret-ui`
+  - Result: passed.
+  - Scope proven: the declarative `fret-node` UI integration still compiles without
+    `compat-retained-canvas` or `fret-ui/unstable-retained-bridge`.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed.
+  - Scope proven: the explicit retained canvas compatibility island still compiles after deleting
+    the public declarative retained-subtree shim.
+- `cargo nextest run -p fret-node`
+  - Result: passed, 269 tests.
+  - Scope proven: full `fret-node` graph/runtime/controller/declarative-surface coverage remains
+    green after the public shim removal.
+
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and the retained bridge allowlist remain valid after deleting the
+    public `fret-node` retained-subtree shim.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly after the task ledger/evidence
+    update.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-040` removes one `fret-node` public compatibility shim and tightens
+    `fret-node` policy coverage; the package-wide `fret-node` nextest gate, both relevant
+    `fret-node` feature checks, retained-symbol search, layering, and catalog gates cover the
+    changed surface.

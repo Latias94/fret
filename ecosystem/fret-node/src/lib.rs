@@ -48,7 +48,6 @@ mod surface_policy_tests {
     const CARGO_TOML: &str = include_str!("../Cargo.toml");
     const APP_RS: &str = include_str!("app.rs");
     const ADVANCED_RS: &str = include_str!("advanced.rs");
-    const COMPAT_RETAINED_RS: &str = include_str!("ui/declarative/compat_retained.rs");
     const UI_BINDING_RS: &str = include_str!("ui/binding.rs");
     const UI_BINDING_QUERIES_RS: &str = include_str!("ui/binding_queries.rs");
     const UI_BINDING_STORE_SYNC_RS: &str = include_str!("ui/binding_store_sync.rs");
@@ -58,6 +57,7 @@ mod surface_policy_tests {
     const UI_CONTROLLER_RS: &str = include_str!("ui/controller.rs");
     const UI_CONTROLLER_UPDATES_RS: &str = include_str!("ui/controller_updates.rs");
     const UI_CONTROLLER_VIEWPORT_RS: &str = include_str!("ui/controller_viewport.rs");
+    const UI_DECLARATIVE_MOD_RS: &str = include_str!("ui/declarative/mod.rs");
     const UI_MOD_RS: &str = include_str!("ui/mod.rs");
     const UI_OVERLAY_CONTROLS_RS: &str = include_str!("ui/overlays/controls.rs");
     const UI_OVERLAY_GROUP_RENAME_RS: &str = include_str!("ui/overlays/group_rename.rs");
@@ -114,20 +114,26 @@ mod surface_policy_tests {
         assert!(!public_surface.contains("pub mod imui;"));
         assert!(!CARGO_TOML.contains("\nimui = ["));
         assert!(!CARGO_TOML.contains("fret-authoring"));
-        assert!(COMPAT_RETAINED_RS.contains("This is a **compatibility** surface:"));
-        assert!(COMPAT_RETAINED_RS.contains("delete-planned"));
-        assert!(
-            COMPAT_RETAINED_RS
-                .contains("keeps retained authoring out of the downstream API surface")
-        );
         assert!(!CARGO_TOML.contains("compat-retained-bridge"));
         assert!(CARGO_TOML.contains(
             "compat-retained-canvas = [\"fret-ui\", \"fret-ui/unstable-retained-bridge\"]"
         ));
-        assert!(COMPAT_RETAINED_RS.contains("pub editor_config: Model<NodeGraphEditorConfig>,"));
-        assert!(COMPAT_RETAINED_RS.contains(
-            "pub fn new(\n        graph: Model<Graph>,\n        view_state: Model<NodeGraphViewState>,\n        editor_config: Model<NodeGraphEditorConfig>,\n    ) -> Self {"
-        ));
+        assert!(
+            !UI_DECLARATIVE_MOD_RS.contains("compat_retained")
+                && !UI_DECLARATIVE_MOD_RS.contains("node_graph_surface_compat_retained")
+                && !UI_DECLARATIVE_MOD_RS.contains("NodeGraphSurfaceCompatRetainedProps"),
+            "`fret-node` declarative surface must not expose a retained-subtree compatibility entry point"
+        );
+        assert!(
+            !UI_MOD_RS.contains("node_graph_surface_compat_retained")
+                && !UI_MOD_RS.contains("NodeGraphSurfaceCompatRetainedProps"),
+            "`fret-node::ui` must not re-export retained-subtree declarative compatibility"
+        );
+        assert!(
+            !UI_DECLARATIVE_MOD_RS.contains("RetainedSubtreeProps")
+                && !UI_MOD_RS.contains("RetainedSubtreeProps"),
+            "retained subtree compatibility must stay out of the public declarative node graph path"
+        );
     }
 
     #[test]

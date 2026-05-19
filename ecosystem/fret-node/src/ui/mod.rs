@@ -104,8 +104,6 @@ pub use a11y::NodeGraphA11yActiveDescendant;
 #[cfg(feature = "compat-retained-canvas")]
 pub use a11y::{NodeGraphA11yFocusedEdge, NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort};
 #[cfg(feature = "compat-retained-canvas")]
-pub use declarative::{NodeGraphSurfaceCompatRetainedProps, node_graph_surface_compat_retained};
-#[cfg(feature = "compat-retained-canvas")]
 pub use diag_anchors::{NodeGraphDiagAnchor, NodeGraphDiagConnectingFlag};
 #[cfg(feature = "compat-retained-canvas")]
 pub use editor::NodeGraphEditor;

@@ -705,6 +705,36 @@ Related plan:
     - `cargo check -p fret-examples --features node-graph-demos`
     - `cargo nextest run -p fret-node first_party_node_graph_demos_stay_declarative_only retained_compatibility_surface_stays_declarative_only first_party_gallery_node_graph_pages_stay_off_retained_canvas`
     - `rg -n "node-graph-demos-legacy|fret-node/compat-retained-canvas|node_graph_legacy_demo|node_graph_domain_demo|imui_node_graph_demo|node_graph_tuning_overlay" apps crates ecosystem tools docs --glob '!docs/workstreams/**' --glob '!docs/audits/**' --glob '!target/**'`
+- [x] RBX-M2-040 Remove the node graph declarative retained-subtree compatibility entry point.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/compat_retained.rs`
+    - `ecosystem/fret-node/src/ui/declarative/mod.rs`
+    - `ecosystem/fret-node/src/ui/mod.rs`
+    - `ecosystem/fret-node/src/lib.rs`
+  - Goal:
+    - Delete the public declarative retained-subtree shim
+      (`node_graph_surface_compat_retained(...)` / `NodeGraphSurfaceCompatRetainedProps`) so
+      `fret-node`'s declarative authoring surface cannot be backed by `RetainedSubtreeProps`.
+    - Keep the lower-level `compat-retained-canvas` feature compiling for the remaining retained
+      canvas/editor implementation island until its behavior has been migrated or quarantined.
+  - Result:
+    - `fret-node::ui::declarative` exports only `NodeGraphSurfaceBinding`,
+      `node_graph_surface(...)`, and related declarative paint-only configuration.
+    - `fret-node::ui` no longer re-exports `node_graph_surface_compat_retained(...)` or
+      `NodeGraphSurfaceCompatRetainedProps`.
+    - The retained canvas/editor stack remains behind `compat-retained-canvas` as a private
+      implementation island for follow-up M2 work.
+    - Surface-policy coverage now rejects declarative retained-subtree compatibility symbols.
+  - Validation:
+    - `cargo fmt --check`
+    - `cargo nextest run -p fret-node retained_compatibility_surface_stays_declarative_only`
+    - `cargo check -p fret-node --no-default-features --features fret-ui`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node`
+    - `rg -n "node_graph_surface_compat_retained|NodeGraphSurfaceCompatRetainedProps|compat_retained|RetainedSubtreeProps" ecosystem/fret-node/src ecosystem/fret-node/Cargo.toml --glob '!target/**'`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
