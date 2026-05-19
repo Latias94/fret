@@ -1974,14 +1974,28 @@ where
 }
 
 /// shadcn/ui `DialogTitle` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DialogTitle {
-    text: Arc<str>,
+    content: DialogTitleContent,
+}
+
+#[derive(Debug)]
+enum DialogTitleContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
 }
 
 impl DialogTitle {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            content: DialogTitleContent::Text(text.into()),
+        }
+    }
+
+    pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: DialogTitleContent::Children(children.into_iter().collect()),
+        }
     }
 
     #[track_caller]
@@ -2000,21 +2014,122 @@ impl DialogTitle {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-        let title = ui::text(self.text)
-            .text_size_px(px)
-            .line_height_px(line_height)
-            .font_semibold()
-            .text_color(ColorRef::Color(fg))
-            .wrap(TextWrap::Word)
-            .overflow(TextOverflow::Clip)
-            .into_element(cx)
-            .attach_semantics(
-                SemanticsDecoration::default()
-                    .role(SemanticsRole::Heading)
-                    .level(2),
-            );
+        let title = match self.content {
+            DialogTitleContent::Text(text) => ui::text(text)
+                .text_size_px(px)
+                .line_height_px(line_height)
+                .font_semibold()
+                .text_color(ColorRef::Color(fg))
+                .wrap(TextWrap::Word)
+                .overflow(TextOverflow::Clip)
+                .into_element(cx),
+            DialogTitleContent::Children(mut children) => {
+                for child in &mut children {
+                    patch_dialog_title_text_style_recursive(child, px, line_height, fg);
+                }
+
+                match children.len() {
+                    0 => ui::text("")
+                        .text_size_px(px)
+                        .line_height_px(line_height)
+                        .font_semibold()
+                        .text_color(ColorRef::Color(fg))
+                        .wrap(TextWrap::Word)
+                        .overflow(TextOverflow::Clip)
+                        .into_element(cx),
+                    1 => children.pop().expect("children.len() == 1"),
+                    _ => ui::v_flex(move |_cx| children)
+                        .gap(Space::N0)
+                        .items_start()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .into_element(cx),
+                }
+            }
+        }
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Heading)
+                .level(2),
+        );
         crate::a11y_modal::register_modal_title(cx.app, title.id);
         title
+    }
+}
+
+fn patch_dialog_title_text_style_recursive(
+    el: &mut AnyElement,
+    px: Px,
+    line_height: Px,
+    color: Color,
+) {
+    patch_dialog_title_text_style_recursive_scoped(el, px, line_height, color, false);
+}
+
+fn patch_dialog_title_text_style_recursive_scoped(
+    el: &mut AnyElement,
+    px: Px,
+    line_height: Px,
+    color: Color,
+    role_scope_active: bool,
+) {
+    fn patch_text_style(style: &mut Option<fret_core::TextStyle>, px: Px, line_height: Px) {
+        let mut style_value = style.take().unwrap_or_default();
+        style_value.size = px;
+        style_value.weight = fret_core::FontWeight::SEMIBOLD;
+        style_value.line_height = Some(line_height);
+        style_value.line_height_em = None;
+        *style = Some(style_value);
+    }
+
+    fn ensure_fill_width(layout: &mut fret_ui::element::LayoutStyle) {
+        if matches!(layout.size.width, Length::Auto) {
+            layout.size.width = Length::Fill;
+        }
+        if layout.size.min_width.is_none() {
+            layout.size.min_width = Some(Length::Px(Px(0.0)));
+        }
+    }
+
+    let role_scope_active = role_scope_active || el.inherited_text_style.is_some();
+    match &mut el.kind {
+        ElementKind::Text(props) => {
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height);
+                ensure_fill_width(&mut props.layout);
+                props.color = Some(color);
+                props.wrap = TextWrap::Word;
+                props.overflow = TextOverflow::Clip;
+            }
+        }
+        ElementKind::StyledText(props) => {
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height);
+                ensure_fill_width(&mut props.layout);
+                props.color = Some(color);
+                props.wrap = TextWrap::Word;
+                props.overflow = TextOverflow::Clip;
+            }
+        }
+        ElementKind::SelectableText(props) => {
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height);
+                ensure_fill_width(&mut props.layout);
+                props.color = Some(color);
+                props.wrap = TextWrap::Word;
+                props.overflow = TextOverflow::Clip;
+            }
+        }
+        _ => {}
+    }
+
+    for child in &mut el.children {
+        patch_dialog_title_text_style_recursive_scoped(
+            child,
+            px,
+            line_height,
+            color,
+            role_scope_active,
+        );
     }
 }
 
@@ -2098,6 +2213,7 @@ mod tests {
     use fret_ui::element::PositionStyle;
     use fret_ui_kit::UiExt as _;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
+    use fret_ui_kit::declarative::text as decl_text;
     use fret_ui_kit::ui::UiElementSinkExt as _;
 
     fn contains_plain_text(el: &AnyElement, needle: &str) -> bool {
@@ -2295,6 +2411,103 @@ mod tests {
             fret_ui::element::ElementKind::Text(props) => Some(props),
             _ => None,
         }
+    }
+
+    fn find_first_styled_text(el: &AnyElement) -> Option<&fret_ui::element::StyledTextProps> {
+        if let ElementKind::StyledText(props) = &el.kind {
+            return Some(props);
+        }
+        el.children.iter().find_map(find_first_styled_text)
+    }
+
+    #[test]
+    fn dialog_title_children_patch_rich_text_with_title_typography() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(140.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let rich = fret_core::AttributedText::new(
+                Arc::<str>::from("Edit profile dialog title"),
+                Arc::<[fret_core::TextSpan]>::from([fret_core::TextSpan::new(
+                    "Edit profile dialog title".len(),
+                )]),
+            );
+
+            DialogTitle::new_children([cx.styled_text(rich)]).into_element(cx)
+        });
+
+        let props = find_first_styled_text(&element)
+            .expect("expected DialogTitle children to keep the rich text node");
+        let style = props
+            .style
+            .as_ref()
+            .expect("expected DialogTitle children to receive explicit title text style");
+        let theme = Theme::global(&app).snapshot();
+        let expected_px = theme
+            .metric_by_key("component.dialog.title_px")
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or_else(|| theme.metric_token("font.size"));
+        let expected_line_height = theme
+            .metric_by_key("component.dialog.title_line_height")
+            .or_else(|| theme.metric_by_key("font.line_height"))
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
+        let expected_fg = theme
+            .color_by_key("foreground")
+            .unwrap_or_else(|| theme.color_token("foreground"));
+
+        assert_eq!(style.size, expected_px);
+        assert_eq!(style.weight, fret_core::FontWeight::SEMIBOLD);
+        assert_eq!(style.line_height, Some(expected_line_height));
+        assert_eq!(props.color, Some(expected_fg));
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(
+            element.semantics_decoration.as_ref().and_then(|d| d.role),
+            Some(SemanticsRole::Heading)
+        );
+        assert_eq!(
+            element.semantics_decoration.as_ref().and_then(|d| d.level),
+            Some(2)
+        );
+    }
+
+    #[test]
+    fn dialog_title_children_preserve_shared_text_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(140.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            DialogTitle::new_children([decl_text::text_chrome_title(cx, "Dialog role title")])
+                .into_element(cx)
+        });
+
+        let text = find_text_element(&element, "Dialog role title")
+            .expect("expected DialogTitle role child text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(text.inherited_text_style.is_some());
+        assert_eq!(
+            element.semantics_decoration.as_ref().and_then(|d| d.role),
+            Some(SemanticsRole::Heading)
+        );
+        assert_eq!(
+            element.semantics_decoration.as_ref().and_then(|d| d.level),
+            Some(2)
+        );
     }
 
     #[test]

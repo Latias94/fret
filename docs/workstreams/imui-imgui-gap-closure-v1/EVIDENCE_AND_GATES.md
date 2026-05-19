@@ -3939,6 +3939,36 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.
 
+2026-05-19 shadcn DialogTitle children-role slice:
+
+- Source gap before fix: `DialogTitle` only accepted a string payload, so callers could not provide
+  a shared title/chrome role child at all. That made dialog titles an exception to the emerging
+  component contract: recipes may own bare-text defaults, but caller-supplied role children must be
+  expressible and protected.
+- `DialogTitle` now mirrors the other title slots with `new_children(...)`. The text path preserves
+  the existing shadcn dialog-title defaults; the children path patches bare `Text`, `StyledText`,
+  and `SelectableText` children with dialog-title typography/foreground, but skips subtrees that
+  already carry inherited text-role metadata.
+- `dialog_title_children_patch_rich_text_with_title_typography` proves the strong fallback remains;
+  `dialog_title_children_preserve_shared_text_role_contracts` proves a
+  `text_chrome_title(...)` child keeps `style: None`, `color: None`, ellipsis overflow, role
+  metadata, and heading semantics; `dialog_description_children_scope_inherited_text_style` stays
+  in the focused run to prove the existing description scope is unchanged.
+- `tools/gate_imui_workstream_source.py` now guards the DialogTitle children API, scoped helper, and
+  tests.
+- Focused run passed:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  dialog_title_children_patch_rich_text_with_title_typography
+  dialog_title_children_preserve_shared_text_role_contracts
+  dialog_description_children_scope_inherited_text_style --no-fail-fast`.
+- `cargo fmt --check -p fret-ui-shadcn` passed.
+- `cargo check -p fret-ui-shadcn --lib` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.
+
 2026-05-19 shadcn AlertDialogTitle role-preservation slice:
 
 - Source gap before fix: `AlertDialogTitle` recursively wrote dialog-title typography, foreground,
