@@ -832,6 +832,54 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-080 Record the node graph retained capability ledger and lock retained source usage.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+    - workstream evidence/handoff docs
+  - Goal:
+    - Treat the remaining `compat-retained-canvas` island as a deletion oracle rather than a
+      public authoring path.
+    - Record the remaining retained capability families and the declarative/default tests required
+      before deleting each family.
+    - Add a source-policy gate proving code-level retained bridge usage cannot spread outside the
+      explicit migration ledger.
+  - Result:
+    - Added `surface_policy_tests::retained_bridge_source_usage_stays_on_the_migration_ledger`.
+    - Recorded remaining retained node graph capability families: canvas paint/cache, pan/zoom,
+      interactions, overlays, portal editor commands, a11y/diagnostics anchors, and middleware.
+    - Confirmed deletion should proceed by shrinking the ledger as default declarative tests replace
+      retained conformance coverage, not by deleting retained oracle code without replacement.
+  - Validation:
+    - `cargo nextest run -p fret-node retained_bridge_source_usage_stays_on_the_migration_ledger`
+    - `rg -l "use fret_ui::retained_bridge|use fret_ui::\\{UiHost, retained_bridge|fret_ui::retained_bridge::|RetainedSubtreeProps|UiTreeRetainedExt" ecosystem/fret-node/src/ui -g '*.rs' | sort`
+- [x] RBX-M2-085 Move node graph portal command protocol onto the default declarative UI gate.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/mod.rs`
+    - `ecosystem/fret-node/src/ui/portal.rs`
+    - `ecosystem/fret-node/src/ui/portal_commands.rs`
+  - Goal:
+    - Extract the submit/cancel/step command IDs, parser, step-mode enum, command enum, and command
+      outcome type from the retained `NodeGraphPortalHost` module into a default-gated protocol
+      module.
+    - Keep the retained portal host and retained portal text/number command handlers gated for now,
+      while making the command protocol available to future declarative portal command handling.
+  - Result:
+    - Added `ui/portal_commands.rs` under the default `fret-ui` path.
+    - `ui/portal.rs` now re-exports the protocol for retained compat consumers instead of owning
+      it.
+    - Added default-gated roundtrip and malformed-command tests for the portal text command
+      protocol.
+  - Validation:
+    - `cargo nextest run -p fret-node portal_text_command_protocol`
+    - `cargo check -p fret-node --no-default-features --features fret-ui`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

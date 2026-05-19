@@ -3385,3 +3385,126 @@ Broader gates not run:
   - Reason: `RBX-M2-070` changes only `fret-node` UI module gating and editor chrome default
     coverage. The default `fret-node` package gate, the full `compat-retained-canvas` package gate,
     both feature checks, layering, catalog, and whitespace gates cover the changed surface.
+
+## 2026-05-19 - RBX-M2-080 node graph retained capability ledger and source usage gate
+
+Claim verified:
+
+- The remaining `fret-node` retained bridge usage is recorded as an explicit
+  `compat-retained-canvas` migration ledger rather than a public authoring path.
+- A new source-policy test fails if code-level retained bridge usage spreads outside the current
+  retained migration ledger.
+- Default declarative `fret-node` coverage and the full retained compatibility oracle both remain
+  green after adding the gate and ledger.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- `cargo nextest run -p fret-node retained_bridge_source_usage_stays_on_the_migration_ledger`
+  - Result: passed, 1 test.
+  - Scope proven: the new source-policy gate recognizes only the explicit retained migration ledger.
+- `cargo check -p fret-node --no-default-features --features fret-ui`
+  - Result: passed.
+  - Scope proven: default declarative `fret-node` UI compiles without the retained bridge feature.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed.
+  - Scope proven: the retained compatibility island still compiles.
+- `cargo nextest run -p fret-node`
+  - Result: passed, 325 tests.
+  - Scope proven: default `fret-node` coverage remains green and now includes the retained source
+    usage ledger gate.
+- `cargo nextest run -p fret-node --features compat-retained-canvas`
+  - Result: passed, 909 tests.
+  - Scope proven: the retained canvas/editor/overlay oracle remains green after adding the ledger
+    gate and documentation.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting is clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly after adding the new audit note.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+- `rg -l "use fret_ui::retained_bridge|use fret_ui::\\{UiHost, retained_bridge|fret_ui::retained_bridge::|RetainedSubtreeProps|UiTreeRetainedExt" ecosystem/fret-node/src/ui -g '*.rs' | sort | wc -l`
+  - Result: 175 files.
+  - Scope proven: the retained oracle is still substantial and must be replaced family-by-family;
+    it is now tracked by the ledger instead of treated as a hidden default-path dependency.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-080` is a `fret-node` source-policy/audit slice. The default `fret-node`
+    package gate, the full `compat-retained-canvas` package gate, both feature checks, layering,
+    catalog, and whitespace gates cover the changed surface.
+
+## 2026-05-19 - RBX-M2-085 portal command protocol default gate
+
+Claim verified:
+
+- Portal submit/cancel/step command IDs, parsing, step modes, and command outcomes now live in a
+  default-gated protocol module instead of being owned by the retained portal host module.
+- The retained `NodeGraphPortalHost` and retained portal text/number command handlers remain inside
+  the explicit `compat-retained-canvas` island and consume the protocol through re-exports.
+- Default declarative `fret-node` coverage includes protocol roundtrip and malformed-command tests,
+  and the full retained compatibility oracle remains green after the extraction.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/mod.rs`
+- `ecosystem/fret-node/src/ui/portal_commands.rs`
+- `ecosystem/fret-node/src/ui/portal.rs`
+- `ecosystem/fret-node/src/ui/editors/portal_text.rs`
+- `ecosystem/fret-node/src/ui/editors/portal_number.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-node portal_text_command_protocol`
+  - Result: passed, 2 tests.
+  - Scope proven: default-gated portal command builders/parsers roundtrip valid submit/cancel/step
+    commands and reject malformed commands.
+- `cargo check -p fret-node --no-default-features --features fret-ui`
+  - Result: passed.
+  - Scope proven: the portal command protocol compiles on the default declarative `fret-ui` path
+    without enabling `compat-retained-canvas`.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed.
+  - Scope proven: retained portal host and editor handlers still compile while consuming the
+    extracted protocol.
+- `cargo nextest run -p fret-node`
+  - Result: passed, 327 tests.
+  - Scope proven: default `fret-node` coverage remains green and now includes portal command
+    protocol tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas`
+  - Result: passed, 911 tests.
+  - Scope proven: retained canvas/editor/overlay behavior coverage remains green after the protocol
+    extraction.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting is clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly after the new evidence update.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed Rust and documentation files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-085` changes only `fret-node` portal command protocol ownership. The default
+    package gate, the full retained compatibility oracle, both feature checks, layering, catalog,
+    formatting, and whitespace gates cover the changed surface.

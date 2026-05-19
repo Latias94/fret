@@ -17,6 +17,7 @@ pub mod geometry_overrides;
 pub mod internals;
 pub mod measured;
 pub mod paint_overrides;
+mod portal_commands;
 pub mod portal_layout;
 pub mod presenter;
 pub mod presets;

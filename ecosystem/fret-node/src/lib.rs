@@ -44,6 +44,8 @@ pub mod app;
 
 #[cfg(test)]
 mod surface_policy_tests {
+    use std::path::{Path, PathBuf};
+
     const LIB_RS: &str = include_str!("lib.rs");
     const CARGO_TOML: &str = include_str!("../Cargo.toml");
     const APP_RS: &str = include_str!("app.rs");
@@ -94,6 +96,27 @@ mod surface_policy_tests {
             UI_BINDING_VIEWPORT_RS,
         ]
         .join("\n")
+    }
+
+    fn collect_rs_files(dir: &Path, files: &mut Vec<PathBuf>) {
+        for entry in std::fs::read_dir(dir).expect("source directory should be readable") {
+            let entry = entry.expect("source directory entry should be readable");
+            let path = entry.path();
+            if path.is_dir() {
+                collect_rs_files(&path, files);
+            } else if path.extension().is_some_and(|ext| ext == "rs") {
+                files.push(path);
+            }
+        }
+    }
+
+    fn source_rel_path(path: &Path, root: &Path) -> String {
+        let rel = path
+            .strip_prefix(root)
+            .expect("source file should be under scan root")
+            .to_string_lossy()
+            .replace('\\', "/");
+        format!("src/ui/{rel}")
     }
 
     #[test]
@@ -325,6 +348,70 @@ mod surface_policy_tests {
         assert!(!MINIMAP_RS.contains("pub(crate) fn with_view_queue("));
         assert!(MINIMAP_RS.contains("retained compatibility plumbing"));
         assert!(MINIMAP_RS.contains("declarative node graph surface"));
+    }
+
+    #[test]
+    fn retained_bridge_source_usage_stays_on_the_migration_ledger() {
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let ui_root = manifest_dir.join("src/ui");
+        let mut files = Vec::new();
+        collect_rs_files(&ui_root, &mut files);
+
+        let allowed_exact = [
+            "src/ui/a11y.rs",
+            "src/ui/diag_anchors.rs",
+            "src/ui/editor.rs",
+            "src/ui/panel.rs",
+            "src/ui/portal.rs",
+            "src/ui/retained_event_tail.rs",
+            "src/ui/retained_submit.rs",
+            "src/ui/editors/portal_number.rs",
+            "src/ui/editors/portal_text.rs",
+            "src/ui/canvas/middleware.rs",
+            "src/ui/canvas/widget.rs",
+            "src/ui/overlays/blackboard.rs",
+            "src/ui/overlays/blackboard_paint.rs",
+            "src/ui/overlays/controls.rs",
+            "src/ui/overlays/group_rename.rs",
+            "src/ui/overlays/minimap.rs",
+            "src/ui/overlays/mod.rs",
+            "src/ui/overlays/panel_button_paint.rs",
+            "src/ui/overlays/panel_pointer_policy.rs",
+            "src/ui/overlays/toolbars.rs",
+            "src/ui/overlays/toolbars_layout.rs",
+        ];
+        let allowed_prefixes = ["src/ui/canvas/widget/"];
+        let retained_terms = [
+            "use fret_ui::retained_bridge",
+            "use fret_ui::{UiHost, retained_bridge",
+            "fret_ui::retained_bridge::",
+            "RetainedSubtreeProps",
+            "UiTreeRetainedExt",
+        ];
+
+        let mut offenders = Vec::new();
+        for path in files {
+            let source =
+                std::fs::read_to_string(&path).expect("source file should be readable as UTF-8");
+            if !retained_terms.iter().any(|term| source.contains(term)) {
+                continue;
+            }
+
+            let rel = source_rel_path(&path, &ui_root);
+            let allowed = allowed_exact.contains(&rel.as_str())
+                || allowed_prefixes
+                    .iter()
+                    .any(|prefix| rel.starts_with(prefix));
+            if !allowed {
+                offenders.push(rel);
+            }
+        }
+
+        assert!(
+            offenders.is_empty(),
+            "retained bridge source usage must stay on the explicit compat-retained-canvas migration ledger:\n{}",
+            offenders.join("\n")
+        );
     }
 
     #[test]

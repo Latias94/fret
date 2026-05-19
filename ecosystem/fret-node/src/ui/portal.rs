@@ -9,28 +9,25 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use fret_core::{Point, Px, Rect, Size};
-use fret_runtime::CommandId;
-use fret_runtime::Model;
+use fret_runtime::{CommandId, Model};
 use fret_ui::declarative::RenderRootContext;
 use fret_ui::element::{AnyElement, Elements};
 use fret_ui::elements::{ElementContext, GlobalElementId, peek_node_for_element};
 use fret_ui::{UiHost, retained_bridge::*};
-use uuid::Uuid;
 
 use crate::core::{CanvasPoint, Graph, NodeId};
 use crate::io::NodeGraphViewState;
-use crate::ops::GraphTransaction;
 use crate::ui::NodeGraphController;
 use crate::ui::compat_transport::NodeGraphEditQueue;
 use crate::ui::measured::MeasuredGeometryStore;
 use crate::ui::style::NodeGraphStyle;
 
 use super::canvas::{node_order, node_ports, node_size_default_px};
+pub use super::portal_commands::{
+    PortalCommandOutcome, PortalTextCommand, PortalTextStepMode, parse_portal_text_command,
+    portal_cancel_text_command, portal_step_text_command_with_mode, portal_submit_text_command,
+};
 pub use super::portal_layout::NodeGraphPortalNodeLayout;
-
-pub const CMD_SUBMIT_TEXT_PREFIX: &str = "fret_node.portal.submit_text:";
-pub const CMD_CANCEL_TEXT_PREFIX: &str = "fret_node.portal.cancel_text:";
-pub const CMD_STEP_TEXT_PREFIX: &str = "fret_node.portal.step_text:";
 
 const DEFAULT_PORTAL_CULL_MARGIN_PX: f32 = 256.0;
 
@@ -77,109 +74,6 @@ fn inflate_rect(rect: Rect, margin: f32) -> Rect {
             Px(rect.size.height.0 + 2.0 * margin),
         ),
     )
-}
-
-pub fn portal_submit_text_command(node: NodeId) -> CommandId {
-    CommandId::new(format!("{CMD_SUBMIT_TEXT_PREFIX}{}", node.0))
-}
-
-pub fn portal_cancel_text_command(node: NodeId) -> CommandId {
-    CommandId::new(format!("{CMD_CANCEL_TEXT_PREFIX}{}", node.0))
-}
-
-pub fn portal_step_text_command(node: NodeId, delta: i32) -> CommandId {
-    CommandId::new(format!(
-        "{CMD_STEP_TEXT_PREFIX}{}:{delta}:{}",
-        node.0,
-        PortalTextStepMode::Normal.as_str()
-    ))
-}
-
-pub fn portal_step_text_command_with_mode(
-    node: NodeId,
-    delta: i32,
-    mode: PortalTextStepMode,
-) -> CommandId {
-    CommandId::new(format!(
-        "{CMD_STEP_TEXT_PREFIX}{}:{delta}:{}",
-        node.0,
-        mode.as_str()
-    ))
-}
-
-pub fn parse_portal_text_command(command: &CommandId) -> Option<PortalTextCommand> {
-    let s = command.as_str();
-    if let Some(rest) = s.strip_prefix(CMD_SUBMIT_TEXT_PREFIX) {
-        let uuid = Uuid::parse_str(rest).ok()?;
-        return Some(PortalTextCommand::Submit { node: NodeId(uuid) });
-    }
-    if let Some(rest) = s.strip_prefix(CMD_CANCEL_TEXT_PREFIX) {
-        let uuid = Uuid::parse_str(rest).ok()?;
-        return Some(PortalTextCommand::Cancel { node: NodeId(uuid) });
-    }
-    if let Some(rest) = s.strip_prefix(CMD_STEP_TEXT_PREFIX) {
-        let mut parts = rest.split(':');
-        let uuid_str = parts.next()?;
-        let delta_str = parts.next()?;
-        let mode_str = parts.next().unwrap_or("normal");
-        let uuid = Uuid::parse_str(uuid_str).ok()?;
-        let delta = delta_str.parse::<i32>().ok()?;
-        let mode = PortalTextStepMode::parse(mode_str)?;
-        return Some(PortalTextCommand::Step {
-            node: NodeId(uuid),
-            delta,
-            mode,
-        });
-    }
-    None
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PortalTextStepMode {
-    Fine,
-    Normal,
-    Coarse,
-}
-
-impl PortalTextStepMode {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Fine => "fine",
-            Self::Normal => "normal",
-            Self::Coarse => "coarse",
-        }
-    }
-
-    pub fn parse(s: &str) -> Option<Self> {
-        match s.trim().to_ascii_lowercase().as_str() {
-            "fine" => Some(Self::Fine),
-            "normal" => Some(Self::Normal),
-            "coarse" => Some(Self::Coarse),
-            _ => None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PortalTextCommand {
-    Submit {
-        node: NodeId,
-    },
-    Cancel {
-        node: NodeId,
-    },
-    Step {
-        node: NodeId,
-        delta: i32,
-        mode: PortalTextStepMode,
-    },
-}
-
-#[derive(Debug, Clone)]
-pub enum PortalCommandOutcome {
-    NotHandled,
-    Handled,
-    Commit(GraphTransaction),
 }
 
 pub trait NodeGraphPortalCommandHandler<H: UiHost> {

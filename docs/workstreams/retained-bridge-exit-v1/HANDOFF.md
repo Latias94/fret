@@ -52,7 +52,12 @@ retained behavior matrix available while removing the public retained widget aut
 `RBX-M2-060` moved pure overlay/panel/screen-space policy and layout modules onto the default
 declarative `fret-ui` gate while keeping retained overlay widgets/paint behind
 `compat-retained-canvas`. `RBX-M2-070` moved declarative portal editor chrome tests onto the
-default gate while leaving retained portal text/number editor command handlers gated.
+default gate while leaving retained portal text/number editor command handlers gated. `RBX-M2-080`
+recorded the remaining retained node graph capability ledger and added a source-policy gate that
+keeps code-level retained bridge usage on the explicit migration ledger. `RBX-M2-085` moved the
+portal submit/cancel/step command protocol onto the default declarative `fret-ui` gate while the
+retained portal host and retained portal text/number command handlers continue to consume it from
+the explicit compatibility island.
 
 ## Completed Implementation
 
@@ -373,11 +378,19 @@ with overlay/panel/minimap/toolbar/blackboard/rename/screen-space policy coverag
 widgets and retained paint helpers remain gated behind `compat-retained-canvas`. `RBX-M2-070`
 then made `editors/chrome.rs` compile in the default declarative path, expanding default
 `fret-node` nextest coverage from 319 to 324 tests, while retained portal text/number editor
-command handlers remain gated. The headless graph surface, default declarative UI surface, and
-explicit retained canvas compatibility island still compile. The retained canvas/editor stack still
-exists inside `fret-node` behind `compat-retained-canvas`; the next M2 slice should replace
-retained overlay/panel/editor host composition with declarative elements and shrink the remaining
-retained leaf.
+command handlers remain gated. `RBX-M2-080` added
+`surface_policy_tests::retained_bridge_source_usage_stays_on_the_migration_ledger`, recorded the
+remaining retained capability families in
+`RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`, and verified both default
+declarative `fret-node` coverage and the full retained compatibility oracle. The headless graph
+surface, default declarative UI surface, and explicit retained canvas compatibility island still
+compile. The retained canvas/editor stack still exists inside `fret-node` behind
+`compat-retained-canvas`. `RBX-M2-085` added `ui/portal_commands.rs` as a default-gated protocol
+module for portal text command builders/parsers, made `ui/portal.rs` re-export that protocol for
+retained compatibility consumers, and verified both default protocol tests and the full retained
+oracle. The next M2 slice should shrink the ledger by moving portal command handling out of retained
+`CommandCx` handlers or by replacing overlay/panel composition with declarative coverage before
+deleting retained code.
 
 ## Next Task
 
@@ -387,16 +400,50 @@ Pick the next task from:
 
 Recommended next implementation shape:
 
-- Continue M2: split node graph chrome/overlays/panels toward declarative composition, shrink the
-  remaining retained canvas leaf, then remove `compat-retained-canvas` / `unstable-retained-bridge`
-  from `fret-node`.
+- Continue M2 by shrinking the RBX-M2-080 ledger. The sharpest next slice is `RBX-M2-090`: move
+  portal submit/cancel/step handling from retained `portal_text.rs` / `portal_number.rs`
+  `CommandCx` handlers into a default-gated service/policy and add default declarative tests. The
+  next independent family is overlay/panel composition (blackboard, controls, minimap, toolbars,
+  rename). Each slice should first add default declarative tests, then remove or gate less retained
+  code.
+- After the ledger no longer contains behavior-only retained files, remove
+  `compat-retained-canvas` / `unstable-retained-bridge` from `fret-node`.
 - Keep the known independent `fret-ui` layout primitive drift
   (`chrome-container-stretch-keeps-outer-box`) separate from retained-bridge exit unless a future
   slice touches that layout path directly.
 
 ## Gates
 
-Last run on 2026-05-19 for `RBX-M1-080` completion:
+Last run on 2026-05-19 for `RBX-M2-085`:
+
+- `cargo nextest run -p fret-node portal_text_command_protocol` - passed, 2 tests.
+- `cargo check -p fret-node --no-default-features --features fret-ui` - passed.
+- `cargo check -p fret-node --features compat-retained-canvas` - passed.
+- `cargo nextest run -p fret-node` - passed, 327 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas` - passed, 911 tests.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 427 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+
+Earlier run on 2026-05-19 for `RBX-M2-080`:
+
+- `cargo nextest run -p fret-node retained_bridge_source_usage_stays_on_the_migration_ledger` -
+  passed, 1 test.
+- `cargo check -p fret-node --no-default-features --features fret-ui` - passed.
+- `cargo check -p fret-node --features compat-retained-canvas` - passed.
+- `cargo nextest run -p fret-node` - passed, 325 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas` - passed, 909 tests.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 427 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+- `rg -l "use fret_ui::retained_bridge|use fret_ui::\\{UiHost, retained_bridge|fret_ui::retained_bridge::|RetainedSubtreeProps|UiTreeRetainedExt" ecosystem/fret-node/src/ui -g '*.rs' | sort | wc -l` -
+  reported 175 retained-ledger source files.
+
+Earlier run on 2026-05-19 for `RBX-M1-080` completion:
 
 - `cargo nextest run -p fret-ui anchored_can_resolve_preceding_absolute_anchor_element_in_same_frame mechanism_harness_anchored_layout_invalidation_matches_oracles` -
   passed, 2 tests.
