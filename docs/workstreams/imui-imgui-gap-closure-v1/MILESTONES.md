@@ -884,6 +884,9 @@ Exit criteria:
   2026-05-19 shadcn ItemTitle role-preservation result: ItemTitle keeps its strong title-slot
   fallback for bare/rich text, while shared title-role children keep their role-owned style and
   ellipsis contract under item composition.
+  2026-05-19 shadcn CardTitle role-preservation result: CardTitle keeps the shadcn title fallback
+  for bare/rich card-title children, while shared title/chrome roles remain protected role scopes
+  and keep their single-line ellipsis contract under card composition.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

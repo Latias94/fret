@@ -814,6 +814,7 @@ mod tests {
         ContainerProps, CrossAlign, FlexProps, GridProps, Length, MainAlign, Overflow,
     };
     use fret_ui::elements::GlobalElementId;
+    use fret_ui_kit::declarative::text as decl_text;
     use fret_ui_kit::ui::UiElementSinkExt as _;
     use fret_ui_kit::{MetricRef, UiExt as _};
 
@@ -857,6 +858,18 @@ mod tests {
                 .iter()
                 .find_map(|child| find_text(child, needle)),
         }
+    }
+
+    fn find_text_element<'a>(element: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &element.kind
+            && props.text.as_ref() == needle
+        {
+            return Some(element);
+        }
+        element
+            .children
+            .iter()
+            .find_map(|child| find_text_element(child, needle))
     }
 
     fn find_first_styled_text(element: &AnyElement) -> Option<&fret_ui::element::StyledTextProps> {
@@ -1086,6 +1099,66 @@ mod tests {
             element.inherited_foreground,
             Some(theme.color_token("card-foreground"))
         );
+    }
+
+    #[test]
+    fn card_title_children_patch_bare_text_with_title_typography() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            CardTitle::new_children([cx.text("Card title")]).into_element(cx)
+        });
+
+        let props = find_text(&element, "Card title").expect("expected card title text");
+        let style = props
+            .style
+            .as_ref()
+            .expect("expected bare CardTitle child to receive title style");
+        let theme = Theme::global(&app);
+        let expected_px = theme
+            .metric_by_key("component.card.title_px")
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or_else(|| theme.metric_token("font.size"));
+        let expected_line_height = theme
+            .metric_by_key("component.card.title_line_height")
+            .unwrap_or(expected_px);
+
+        assert_eq!(style.size, expected_px);
+        assert_eq!(style.weight, FontWeight::SEMIBOLD);
+        assert_eq!(style.line_height, Some(expected_line_height));
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+    }
+
+    #[test]
+    fn card_title_children_preserve_shared_text_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            CardTitle::new_children([decl_text::text_chrome_title(cx, "Pinned editor surface")])
+                .into_element(cx)
+        });
+
+        let text = find_text_element(&element, "Pinned editor surface")
+            .expect("expected CardTitle role child text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(text.inherited_text_style.is_some());
     }
 
     #[test]
@@ -2637,6 +2710,15 @@ impl CardTitle {
 }
 
 fn patch_card_title_text_style_recursive(el: &mut AnyElement, px: Px, line_height: Px) {
+    patch_card_title_text_style_recursive_scoped(el, px, line_height, false);
+}
+
+fn patch_card_title_text_style_recursive_scoped(
+    el: &mut AnyElement,
+    px: Px,
+    line_height: Px,
+    role_scope_active: bool,
+) {
     fn patch_text_style(style: &mut Option<fret_core::TextStyle>, px: Px, line_height: Px) {
         let mut style_value = style.take().unwrap_or_default();
         style_value.size = px;
@@ -2655,30 +2737,37 @@ fn patch_card_title_text_style_recursive(el: &mut AnyElement, px: Px, line_heigh
         }
     }
 
+    let role_scope_active = role_scope_active || el.inherited_text_style.is_some();
     match &mut el.kind {
         ElementKind::Text(props) => {
-            patch_text_style(&mut props.style, px, line_height);
-            ensure_fill_width(&mut props.layout);
-            props.wrap = TextWrap::Word;
-            props.overflow = TextOverflow::Clip;
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height);
+                ensure_fill_width(&mut props.layout);
+                props.wrap = TextWrap::Word;
+                props.overflow = TextOverflow::Clip;
+            }
         }
         ElementKind::StyledText(props) => {
-            patch_text_style(&mut props.style, px, line_height);
-            ensure_fill_width(&mut props.layout);
-            props.wrap = TextWrap::Word;
-            props.overflow = TextOverflow::Clip;
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height);
+                ensure_fill_width(&mut props.layout);
+                props.wrap = TextWrap::Word;
+                props.overflow = TextOverflow::Clip;
+            }
         }
         ElementKind::SelectableText(props) => {
-            patch_text_style(&mut props.style, px, line_height);
-            ensure_fill_width(&mut props.layout);
-            props.wrap = TextWrap::Word;
-            props.overflow = TextOverflow::Clip;
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height);
+                ensure_fill_width(&mut props.layout);
+                props.wrap = TextWrap::Word;
+                props.overflow = TextOverflow::Clip;
+            }
         }
         _ => {}
     }
 
     for child in &mut el.children {
-        patch_card_title_text_style_recursive(child, px, line_height);
+        patch_card_title_text_style_recursive_scoped(child, px, line_height, role_scope_active);
     }
 }
 
