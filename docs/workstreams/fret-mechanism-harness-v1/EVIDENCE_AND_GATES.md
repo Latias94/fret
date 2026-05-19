@@ -4802,7 +4802,7 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   the first focused draft showed `workspace.pane.activate.pane-b` recorded as
   `source_kind=programmatic`, `source_test_id=None`, and `handled_by_driver=true` even though it was
   triggered by the right-click. This is a source-attribution weakness in diagnostics rather than an
-  ownership defect, so the final gate keeps source assertions on the aggregate close menu item.
+  ownership defect. The follow-up source-attribution gate below now closes this gap.
 - implementation anchors:
   `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json`,
   `tools/diag-scripts/workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json`,
@@ -4838,3 +4838,57 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
   - result: passed; 14/14 scripts passed; suite summary
     `target/fret-diag-workspace-shell-demo-suite-cross-pane-context-close-others-v1/sessions/1779153282522-114068/suite.summary.json`;
     context-menu Close Others ownership script run id `1779153324733`.
+
+## Workspace Shell Demo Right-Click Pane Activation Source Attribution
+
+- invariant:
+  pane activation dispatched by a pointer-down path should carry pointer-source diagnostics, even
+  when the activation is emitted by the pane-level policy hook before inner tab/context-menu hooks
+  run.
+- finding:
+  the F205 attribution gap was real diagnostics behavior. The pane pointer region dispatched
+  `workspace.pane.activate.pane-b` without first recording pending source metadata, so the demo
+  runner consumed `programmatic` even though the trigger was a right-click on
+  `workspace-shell-pane-pane-b-tab-doc-b-1`.
+- fix:
+  `ecosystem/fret-workspace/src/panes.rs` now records pending command dispatch source for the pane
+  activation command. It uses `PointerDownCx.hit_pressable_target` when available, so the source
+  points at the clicked tab pressable instead of the pane container.
+- diagnostics surface:
+  `workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json` now asserts
+  `workspace.pane.activate.pane-b` with `source_kind=pointer` and
+  `source_test_id=workspace-shell-pane-pane-b-tab-doc-b-1`, then keeps the existing menu-item
+  pointer-source assertion for `workspace.tab.close.others`.
+- implementation anchors:
+  `ecosystem/fret-workspace/src/panes.rs`,
+  `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`, and
+  `tools/diag-scripts/suites/workspace-shell-demo/suite.json`.
+- formatting:
+  `rustfmt --edition 2024 --check ecosystem\fret-workspace\src\panes.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`
+  - result: passed.
+- registry:
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed; registry is up to date.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_workspace_shell_demo_tab_close_others_cross_pane_context_menu_ownership_smoke --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `bb71150c-c340-4217-9dee-e71eaab872f9`.
+- workspace tests:
+  `cargo nextest run --cargo-profile dev-fast -p fret-workspace --lib --no-fail-fast`
+  - result: passed; 72/72 tests passed; Nextest run id
+    `8e889da8-a462-49bf-9685-1bb9750deba6`.
+- build:
+  `cargo build --profile dev-fast -p fret-demo --bin workspace_shell_demo`
+  - result: passed.
+- static diff check:
+  `git diff --check`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json --dir target\fret-diag-workspace-shell-demo-cross-pane-context-close-others-source-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  - result: passed; run id `1779156237310`; AI packet
+    `target/fret-diag-workspace-shell-demo-cross-pane-context-close-others-source-v1/sessions/1779156234065-53332/1779156237310/ai.packet`.
+- full runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite workspace-shell-demo --dir target\fret-diag-workspace-shell-demo-suite-cross-pane-context-source-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  - result: passed; 14/14 scripts passed; suite summary
+    `target/fret-diag-workspace-shell-demo-suite-cross-pane-context-source-v1/sessions/1779156335684-11164/suite.summary.json`;
+    strengthened context-menu Close Others ownership script run id `1779156370933`.

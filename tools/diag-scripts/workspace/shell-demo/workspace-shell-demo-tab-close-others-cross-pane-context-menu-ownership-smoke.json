@@ -57,7 +57,9 @@
       "type": "wait_command_dispatch_trace",
       "query": {
         "command": "workspace.pane.activate.pane-b",
-        "handled": true
+        "handled": true,
+        "source_kind": "pointer",
+        "source_test_id": "workspace-shell-pane-pane-b-tab-doc-b-1"
       },
       "timeout_frames": 240
     },

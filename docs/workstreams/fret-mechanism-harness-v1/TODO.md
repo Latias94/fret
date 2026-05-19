@@ -1144,3 +1144,9 @@ date: 2026-05-12
     defect was reproduced; the first draft did expose a diagnostics attribution weakness where the
     right-click-triggered pane activation is recorded as programmatic/driver-handled rather than
     pointer-sourced.
+- [x] Fix workspace shell demo right-click pane activation source attribution.
+  - Result: pane-level pointer activation now records pending command dispatch source before
+    dispatching the pane activation command, using the hit pressable target when available. The
+    context-menu ownership gate now strictly asserts `workspace.pane.activate.pane-b` is
+    pointer-sourced from `workspace-shell-pane-pane-b-tab-doc-b-1`, while preserving the aggregate
+    Close Other Tabs ownership proof.

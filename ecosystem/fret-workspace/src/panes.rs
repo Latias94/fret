@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use fret_core::{AppWindowId, Axis, Color, Corners, Edges, InternalDragKind, Point, Px};
 use fret_runtime::{CommandId, Model};
-use fret_ui::action::{OnInternalDrag, OnPointerDown, UiDragActionHost};
+use fret_ui::action::{ActivateReason, OnInternalDrag, OnPointerDown, UiDragActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, InsetStyle, InternalDragRegionProps, LayoutStyle,
     Length, PointerRegionProps, PositionStyle, ResizablePanelGroupProps, ViewCacheProps,
@@ -957,7 +957,16 @@ where
         |cx| {
             if let Some(cmd) = activate_cmd {
                 let cmd = cmd.clone();
-                let handler: OnPointerDown = Arc::new(move |host, acx, _down| {
+                let handler: OnPointerDown = Arc::new(move |host, acx, down| {
+                    let source_cx = fret_ui::action::ActionCx {
+                        window: acx.window,
+                        target: down.hit_pressable_target.unwrap_or(acx.target),
+                    };
+                    host.record_pending_command_dispatch_source(
+                        source_cx,
+                        &cmd,
+                        ActivateReason::Pointer,
+                    );
                     host.dispatch_command(Some(acx.window), cmd.clone());
                     false
                 });
