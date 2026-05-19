@@ -1021,6 +1021,10 @@ Readiness order for the next locally testable review slices:
    the muted, single-line, fill-width group-label text role, and `SelectLabel` consumes that role
    instead of hand-rolling local `ui::text(...).text_size_px(...).nowrap()` policy in the overlay
    row renderer.
+   2026-05-20 shadcn menu-family group-label follow-up: `DropdownMenuLabel`,
+   `ContextMenuLabel`, and `MenubarLabel` now consume the same shared menu-group text role through
+   local label element helpers. Menu item labels and icon/indicator color policy remain menu-owned;
+   only the non-interactive group heading text policy moved out of local builders.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

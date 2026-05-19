@@ -3260,6 +3260,53 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/dropdown_menu.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "fn dropdown_menu_label_element<H: UiHost>(",
+                "decl_text::text_menu_group_label(cx, text)",
+                "rows.push(dropdown_menu_label_element(",
+                "out.push(dropdown_menu_label_element(",
+                "dropdown_menu_label_element_uses_shared_menu_group_text_role",
+            ],
+            forbidden=[
+                ".text_color(ColorRef::Color(style.label_fg))",
+                "vec![ui::text( text)",
+                "let fg = label_fg;\n                                                        let text = label.text;",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/context_menu.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "fn context_menu_label_element<H: UiHost>(",
+                "decl_text::text_menu_group_label(cx, text)",
+                "ContextMenuEntry::Label(label) => out.push(self.render_label(cx, label))",
+                "out.push(context_menu_label_element(",
+                "context_menu_label_element_uses_shared_menu_group_text_role",
+            ],
+            forbidden=[
+                ".fixed_line_box_px(font_line_height)\n                        .line_box_in_bounds()\n                        .font_medium()\n                        .nowrap()\n                        .text_color(ColorRef::Color(label_fg))",
+                ".text_size_px(font_size)\n                                                                    .line_height_px(font_line_height)",
+                "vec![ui::text( text)",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/menubar.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "fn menubar_label_element<H: UiHost>(",
+                "decl_text::text_menu_group_label(cx, text)",
+                "out.push(menubar_label_element(",
+                "menubar_label_element_uses_shared_menu_group_text_role",
+            ],
+            forbidden=[
+                "vec![ui::text( text)",
+                ".font_medium()\n                                                                            .text_color(ColorRef::Color(fg))\n                                                                            .nowrap()",
+                ".font_medium()\n                                                                                    .text_color(ColorRef::Color(fg))\n                                                                                    .nowrap()",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/options/collections.rs"),
             required=[
                 "visible: bool",

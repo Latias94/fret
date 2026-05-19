@@ -911,6 +911,10 @@ Exit criteria:
   2026-05-20 shadcn SelectLabel menu-group text result: `text_menu_group_label(...)` now owns the
   muted fixed-row menu/select group-label role, and SelectLabel consumes it instead of local
   overlay text sizing/nowrap policy.
+  2026-05-20 shadcn menu-family group-label text result: DropdownMenu, ContextMenu, and Menubar
+  label rows now route their non-interactive group heading text through
+  `text_menu_group_label(...)`. The helper reuse keeps fixed menu rows on one shared resize
+  contract while preserving menu-owned item label rendering and icon foreground policy.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.
