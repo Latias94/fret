@@ -19,9 +19,9 @@ use crate::ui::style::NodeGraphStyle;
 #[cfg(feature = "compat-retained-canvas")]
 use super::layout_hidden_child_and_release_focus;
 #[cfg(feature = "compat-retained-canvas")]
-use super::rename_host_event::{
-    apply_rename_host_key_decision, close_rename_host_sessions, decide_rename_host_key,
-};
+use super::rename_command::decide_rename_host_key;
+#[cfg(feature = "compat-retained-canvas")]
+use super::rename_host_event::{apply_rename_host_key_decision, close_rename_host_sessions};
 #[cfg(feature = "compat-retained-canvas")]
 use super::rename_host_layout::{RenameHostLayoutPlan, plan_rename_host_layout};
 #[cfg(feature = "compat-retained-canvas")]
@@ -124,9 +124,9 @@ impl<H: UiHost> Widget<H> for NodeGraphOverlayHost {
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &fret_core::Event) {
-        let Some(session) = self.active_rename_session(&*cx.app) else {
+        if self.active_rename_session(&*cx.app).is_none() {
             return;
-        };
+        }
 
         let fret_core::Event::KeyDown { key, .. } = event else {
             return;
@@ -139,7 +139,6 @@ impl<H: UiHost> Widget<H> for NodeGraphOverlayHost {
             &self.graph,
             &self.group_rename_text,
             &self.overlays,
-            &session,
             self.controller.as_ref(),
             self.edits.as_ref(),
         ) {

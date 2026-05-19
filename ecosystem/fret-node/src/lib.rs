@@ -68,6 +68,13 @@ mod surface_policy_tests {
         include_str!("ui/overlays/controls_declarative.rs");
     const UI_OVERLAY_BLACKBOARD_DECLARATIVE_RS: &str =
         include_str!("ui/overlays/blackboard_declarative.rs");
+    const UI_OVERLAY_MINIMAP_DECLARATIVE_RS: &str =
+        include_str!("ui/overlays/minimap_declarative.rs");
+    const UI_OVERLAY_TOOLBARS_DECLARATIVE_RS: &str =
+        include_str!("ui/overlays/toolbars_declarative.rs");
+    const UI_OVERLAY_RENAME_DECLARATIVE_RS: &str =
+        include_str!("ui/overlays/rename_declarative.rs");
+    const UI_OVERLAY_RENAME_COMMAND_RS: &str = include_str!("ui/overlays/rename_command.rs");
     const UI_OVERLAY_GROUP_RENAME_RS: &str = include_str!("ui/overlays/group_rename.rs");
     const UI_OVERLAY_BLACKBOARD_RS: &str = include_str!("ui/overlays/blackboard.rs");
     const UI_VIEWPORT_OPTIONS_RS: &str = include_str!("ui/viewport_options.rs");
@@ -437,16 +444,20 @@ mod surface_policy_tests {
             "mod controls_layout;",
             "mod controls_policy;",
             "mod minimap_drag_policy;",
+            "mod minimap_declarative;",
             "mod minimap_navigation_policy;",
             "mod minimap_policy;",
             "mod minimap_projection;",
             "mod panel_item_state;",
             "mod panel_navigation_policy;",
             "mod panel_pointer_policy;",
+            "mod rename_command;",
             "mod rename_host_event;",
             "mod rename_host_layout;",
+            "mod rename_declarative;",
             "mod rename_policy;",
             "mod toolbar_policy;",
+            "mod toolbars_declarative;",
         ] {
             assert!(
                 UI_OVERLAYS_MOD_RS.contains(module),
@@ -506,6 +517,30 @@ mod surface_policy_tests {
                 && !UI_OVERLAY_BLACKBOARD_DECLARATIVE_RS.contains("RetainedSubtreeProps")
                 && !UI_OVERLAY_BLACKBOARD_DECLARATIVE_RS.contains("Widget<"),
             "declarative blackboard composition must not take a retained dependency"
+        );
+        assert!(
+            !UI_OVERLAY_MINIMAP_DECLARATIVE_RS.contains("retained_bridge")
+                && !UI_OVERLAY_MINIMAP_DECLARATIVE_RS.contains("RetainedSubtreeProps")
+                && !UI_OVERLAY_MINIMAP_DECLARATIVE_RS.contains("Widget<"),
+            "declarative minimap composition must not take a retained dependency"
+        );
+        assert!(
+            !UI_OVERLAY_TOOLBARS_DECLARATIVE_RS.contains("retained_bridge")
+                && !UI_OVERLAY_TOOLBARS_DECLARATIVE_RS.contains("RetainedSubtreeProps")
+                && !UI_OVERLAY_TOOLBARS_DECLARATIVE_RS.contains("Widget<"),
+            "declarative toolbar composition must not take a retained dependency"
+        );
+        assert!(
+            !UI_OVERLAY_RENAME_DECLARATIVE_RS.contains("retained_bridge")
+                && !UI_OVERLAY_RENAME_DECLARATIVE_RS.contains("RetainedSubtreeProps")
+                && !UI_OVERLAY_RENAME_DECLARATIVE_RS.contains("Widget<"),
+            "declarative rename composition must not take a retained dependency"
+        );
+        assert!(
+            !UI_OVERLAY_RENAME_COMMAND_RS.contains("retained_bridge")
+                && !UI_OVERLAY_RENAME_COMMAND_RS.contains("RetainedSubtreeProps")
+                && !UI_OVERLAY_RENAME_COMMAND_RS.contains("Widget<"),
+            "default rename command/session policy must not take a retained dependency"
         );
     }
 

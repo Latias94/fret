@@ -1,11 +1,8 @@
-use fret_core::KeyCode;
 #[cfg(feature = "compat-retained-canvas")]
 use fret_runtime::Model;
 #[cfg(feature = "compat-retained-canvas")]
 use fret_ui::UiHost;
 
-#[cfg(feature = "compat-retained-canvas")]
-use crate::ops::GraphTransaction;
 #[cfg(feature = "compat-retained-canvas")]
 use crate::ui::compat_transport::NodeGraphEditQueue;
 #[cfg(feature = "compat-retained-canvas")]
@@ -14,24 +11,11 @@ use crate::ui::controller::NodeGraphController;
 #[cfg(feature = "compat-retained-canvas")]
 use super::group_rename::NodeGraphOverlayState;
 #[cfg(feature = "compat-retained-canvas")]
-use super::rename_policy::{
-    RenameOverlaySession, build_rename_commit_transaction, clear_rename_sessions,
+use super::rename_command::RenameHostKeyDecision;
+#[cfg(feature = "compat-retained-canvas")]
+use super::rename_command::{
+    RenameCommandOutcome, apply_rename_host_key_decision as apply_rename_host_key_decision_in_state,
 };
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum RenameHostKeyDecision {
-    Close,
-    CommitAndClose,
-    Ignore,
-}
-
-pub(super) fn decide_rename_host_key(key: KeyCode) -> RenameHostKeyDecision {
-    match key {
-        KeyCode::Escape => RenameHostKeyDecision::Close,
-        KeyCode::Enter | KeyCode::NumpadEnter => RenameHostKeyDecision::CommitAndClose,
-        _ => RenameHostKeyDecision::Ignore,
-    }
-}
 
 #[cfg(feature = "compat-retained-canvas")]
 pub(super) fn apply_rename_host_key_decision<H: UiHost>(
@@ -40,52 +24,35 @@ pub(super) fn apply_rename_host_key_decision<H: UiHost>(
     graph: &Model<crate::Graph>,
     rename_text: &Model<String>,
     overlays: &Model<NodeGraphOverlayState>,
-    session: &RenameOverlaySession,
     controller: Option<&NodeGraphController>,
     edits: Option<&Model<NodeGraphEditQueue>>,
 ) -> bool {
-    match decision {
-        RenameHostKeyDecision::Ignore => false,
-        RenameHostKeyDecision::Close => {
-            close_rename_host_sessions(host, overlays);
-            true
-        }
-        RenameHostKeyDecision::CommitAndClose => {
-            if let Some(tx) = rename_commit_transaction(host, graph, rename_text, session) {
-                submit_rename_transaction(host, graph, controller, edits, &tx);
-            }
-            close_rename_host_sessions(host, overlays);
-            true
-        }
-    }
-}
-
-#[cfg(feature = "compat-retained-canvas")]
-fn rename_commit_transaction<H: UiHost>(
-    host: &H,
-    graph: &Model<crate::Graph>,
-    rename_text: &Model<String>,
-    session: &RenameOverlaySession,
-) -> Option<GraphTransaction> {
-    let to = rename_text
+    let graph_snapshot = graph
+        .read_ref(host, |graph| graph.clone())
+        .ok()
+        .unwrap_or_default();
+    let rename_text = rename_text
         .read_ref(host, |text| text.clone())
         .ok()
         .unwrap_or_default();
-    graph
-        .read_ref(host, |g| build_rename_commit_transaction(g, session, &to))
-        .ok()
-        .flatten()
-}
 
-#[cfg(feature = "compat-retained-canvas")]
-fn submit_rename_transaction<H: UiHost>(
-    host: &mut H,
-    graph: &Model<crate::Graph>,
-    controller: Option<&NodeGraphController>,
-    edits: Option<&Model<NodeGraphEditQueue>>,
-    tx: &GraphTransaction,
-) {
-    crate::ui::retained_submit::submit_graph_transaction(host, controller, edits, graph, tx);
+    let outcome = overlays
+        .update(host, |state, _cx| {
+            apply_rename_host_key_decision_in_state(&graph_snapshot, state, &rename_text, decision)
+        })
+        .ok()
+        .unwrap_or(RenameCommandOutcome::NotHandled);
+
+    match outcome {
+        RenameCommandOutcome::NotHandled => false,
+        RenameCommandOutcome::Handled => true,
+        RenameCommandOutcome::Commit(tx) => {
+            crate::ui::retained_submit::submit_graph_transaction(
+                host, controller, edits, graph, &tx,
+            );
+            true
+        }
+    }
 }
 
 #[cfg(feature = "compat-retained-canvas")]
@@ -94,13 +61,13 @@ pub(super) fn close_rename_host_sessions<H: UiHost>(
     overlays: &Model<NodeGraphOverlayState>,
 ) {
     let _ = overlays.update(host, |state, _cx| {
-        clear_rename_sessions(state);
+        crate::ui::overlays::rename_policy::clear_rename_sessions(state);
     });
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{RenameHostKeyDecision, decide_rename_host_key};
+    use super::super::rename_command::{RenameHostKeyDecision, decide_rename_host_key};
     use fret_core::KeyCode;
 
     #[test]

@@ -3794,3 +3794,311 @@ Broader gates not run:
   - Reason: `RBX-M2-105` changes only `fret-node` blackboard overlay declarative composition and
     source-policy tests. The default package gate, retained compatibility package gate, both
     feature checks, layering, catalog, formatting, and whitespace gates cover the changed surface.
+
+## 2026-05-19 - RBX-M2-106 minimap overlay declarative composition default gate
+
+Claim verified:
+
+- Minimap overlay composition now has a default-gated declarative element tree that does not
+  construct the retained `NodeGraphMiniMapOverlay` widget.
+- The declarative minimap tree preserves the retained overlay's static composition and paint-plan
+  capability: fixed panel sizing, root panel semantics, stable `node_graph.minimap` test ID,
+  declarative canvas child, panel quad, projected node markers, and viewport marker.
+- The retained minimap widget remains behind `compat-retained-canvas` as the oracle for keyboard
+  pan/zoom/focus, pointer drag panning, focus/capture propagation, retained hit testing, and
+  store/controller viewport updates until those interaction families have default declarative
+  coverage.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/overlays/mod.rs`
+- `ecosystem/fret-node/src/ui/overlays/minimap_declarative.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-node minimap_declarative overlay_policy_modules_compile_without_retained_canvas_compat controls_overlay_requires_explicit_editor_config_model`
+  - Result: passed, 4 tests.
+  - Scope proven: declarative minimap composition, minimap paint-plan ops, default overlay module
+    gating, and retained-dependency source policy are covered by targeted tests.
+- `cargo nextest run -p fret-node`
+  - Result: passed, 339 tests.
+  - Scope proven: default `fret-node` coverage remains green and now includes declarative minimap
+    composition and paint-plan tests.
+- `cargo check -p fret-node --no-default-features --features fret-ui`
+  - Result: passed.
+  - Scope proven: declarative minimap composition compiles without enabling
+    `compat-retained-canvas`.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed.
+  - Scope proven: the retained minimap widget and remaining retained island still compile beside
+    the new declarative minimap composition.
+- `cargo nextest run -p fret-node --features compat-retained-canvas`
+  - Result: passed, 923 tests.
+  - Scope proven: the full retained canvas/editor/overlay oracle remains green after adding the
+    default declarative minimap composition.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting is clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly after the new evidence update.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked Rust and documentation changes have no whitespace errors.
+- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/minimap_declarative.rs 2>&1); test -z "$out"`
+  - Result: passed.
+  - Scope proven: the new untracked declarative minimap composition file has no whitespace errors
+    before staging.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-106` changes only `fret-node` minimap overlay declarative composition and
+    source-policy tests. The default package gate, retained compatibility package gate, both
+    feature checks, layering, catalog, formatting, and whitespace gates cover the changed surface.
+
+## 2026-05-19 - RBX-M2-107 toolbar overlay declarative composition default gate
+
+Claim verified:
+
+- Node and edge toolbar placement now has a default-gated declarative element tree that does not
+  construct the retained `NodeGraphNodeToolbar` / `NodeGraphEdgeToolbar` widgets.
+- The declarative toolbar trees preserve the retained overlay's placement and composition
+  capability: retained-compatible anchor planning, `WhenSelected` / `Always` visibility,
+  absolute toolbar layout, semantics/test IDs, and passthrough declarative children.
+- The retained toolbar widgets remain behind `compat-retained-canvas` as the oracle for child
+  measurement, retained child-root layout/paint, hit testing, and model/internals-driven target
+  resolution until those families have default declarative coverage.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/overlays/mod.rs`
+- `ecosystem/fret-node/src/ui/overlays/toolbars_declarative.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-node toolbars_declarative overlay_policy_modules_compile_without_retained_canvas_compat controls_overlay_requires_explicit_editor_config_model`
+  - Result: passed, 6 tests.
+  - Scope proven: declarative toolbar composition, retained-compatible placement planning, default
+    overlay module gating, and retained-dependency source policy are covered by targeted tests.
+- `cargo nextest run -p fret-node`
+  - Result: passed, 343 tests.
+  - Scope proven: default `fret-node` coverage remains green and now includes declarative toolbar
+    placement/composition tests.
+- `cargo check -p fret-node --no-default-features --features fret-ui`
+  - Result: passed.
+  - Scope proven: declarative toolbar composition compiles without enabling
+    `compat-retained-canvas`.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed.
+  - Scope proven: the retained toolbar widgets and remaining retained island still compile beside
+    the new declarative toolbar composition.
+- `cargo nextest run -p fret-node --features compat-retained-canvas`
+  - Result: passed, 927 tests.
+  - Scope proven: the full retained canvas/editor/overlay oracle remains green after adding the
+    default declarative toolbar composition.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting is clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly after the new evidence update.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked Rust and documentation changes have no whitespace errors.
+- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/toolbars_declarative.rs 2>&1); test -z "$out"`
+  - Result: passed.
+  - Scope proven: the new untracked declarative toolbar composition file has no whitespace errors
+    before staging.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-107` changes only `fret-node` toolbar overlay declarative composition and
+    source-policy tests. The default package gate, retained compatibility package gate, both
+    feature checks, layering, catalog, formatting, and whitespace gates cover the changed surface.
+
+## 2026-05-19 - RBX-M2-108 rename overlay declarative composition default gate
+
+Claim verified:
+
+- Inline rename overlay composition now has a default-gated declarative element tree that does not
+  construct the retained `NodeGraphOverlayHost` widget.
+- The declarative rename tree preserves the retained overlay's static composition and command
+  wiring capability: shared rename host layout planning, hidden/no-session behavior, group and
+  symbol root/input semantics, stable test IDs, caller-owned text-model preservation, and
+  submit/cancel command protocol roundtrips.
+- The retained rename host remains behind `compat-retained-canvas` as the oracle for seed-text
+  ownership, focus-loss close, focus request/restore, keyboard submit/cancel event routing,
+  graph/edit queue transaction submission, blackboard rename handoff, and retained paint/hit
+  testing until those families have default declarative coverage.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/overlays/mod.rs`
+- `ecosystem/fret-node/src/ui/overlays/rename_declarative.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-node rename_declarative overlay_policy_modules_compile_without_retained_canvas_compat controls_overlay_requires_explicit_editor_config_model`
+  - Result: passed, 6 tests.
+  - Scope proven: declarative rename composition, submit/cancel command protocol, default overlay
+    module gating, and retained-dependency source policy are covered by targeted tests.
+- `cargo nextest run -p fret-node rename_declarative minimap_declarative toolbars_declarative overlay_policy_modules_compile_without_retained_canvas_compat controls_overlay_requires_explicit_editor_config_model`
+  - Result: passed, 12 tests.
+  - Scope proven: the current default overlay composition set for minimap, toolbars, and rename is
+    mutually compatible and remains outside the retained canvas compatibility gate.
+- `cargo nextest run -p fret-node`
+  - Result: passed, 347 tests.
+  - Scope proven: default `fret-node` coverage remains green and now includes declarative rename
+    composition and command protocol tests.
+- `cargo check -p fret-node --no-default-features --features fret-ui`
+  - Result: passed.
+  - Scope proven: declarative rename composition compiles without enabling
+    `compat-retained-canvas`.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed.
+  - Scope proven: the retained rename host and remaining retained island still compile beside the
+    new declarative rename composition.
+- `cargo nextest run -p fret-node --features compat-retained-canvas`
+  - Result: passed, 931 tests.
+  - Scope proven: the full retained canvas/editor/overlay oracle remains green after adding the
+    default declarative rename composition.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting is clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly after the new evidence update.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked Rust and documentation changes have no whitespace errors.
+- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/minimap_declarative.rs 2>&1); test -z "$out"`
+  - Result: passed.
+  - Scope proven: the new untracked declarative minimap composition file has no whitespace errors
+    before staging.
+- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/toolbars_declarative.rs 2>&1); test -z "$out"`
+  - Result: passed.
+  - Scope proven: the new untracked declarative toolbar composition file has no whitespace errors
+    before staging.
+- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/rename_declarative.rs 2>&1); test -z "$out"`
+  - Result: passed.
+  - Scope proven: the new untracked declarative rename composition file has no whitespace errors
+    before staging.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-108` changes only `fret-node` overlay declarative composition and source-policy
+    tests. The default package gate, retained compatibility package gate, both feature checks,
+    layering, catalog, formatting, and whitespace gates cover the changed surface.
+
+## 2026-05-19 - RBX-M2-109 rename command/session application default gate
+
+Claim verified:
+
+- Rename submit/cancel command parsing, keyboard submit/cancel decision, and active-session
+  application now live on the default overlay gate in `rename_command.rs` without constructing the
+  retained `NodeGraphOverlayHost` widget.
+- The default rename command/session policy can reject malformed commands, ignore stale-session
+  submit/cancel requests, close matching active sessions, and return a `GraphTransaction` for
+  active group/symbol rename commits.
+- The retained rename host remains behind `compat-retained-canvas` as a model I/O and
+  controller/edit-queue submission adapter. Its retained oracle coverage still proves Enter/Escape,
+  focus-loss close, controller-backed commit, hit-test transparency, and focus restoration.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/overlays/mod.rs`
+- `ecosystem/fret-node/src/ui/overlays/rename_command.rs`
+- `ecosystem/fret-node/src/ui/overlays/rename_declarative.rs`
+- `ecosystem/fret-node/src/ui/overlays/rename_host_event.rs`
+- `ecosystem/fret-node/src/ui/overlays/group_rename.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-node rename_command rename_declarative rename_host_event overlay_policy_modules_compile_without_retained_canvas_compat controls_overlay_requires_explicit_editor_config_model`
+  - Result: passed, 10 tests.
+  - Scope proven: default rename command/session application, declarative rename command wiring,
+    retained-host key decision coverage, default overlay module gating, and retained-dependency
+    source policy are covered by targeted tests.
+- `cargo check -p fret-node --no-default-features --features fret-ui`
+  - Result: passed.
+  - Scope proven: rename command/session policy compiles without enabling `compat-retained-canvas`.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed.
+  - Scope proven: the retained rename host and remaining retained island still compile after
+    delegating close/commit decisions to default rename command/session policy.
+- `cargo nextest run -p fret-node --features compat-retained-canvas rename_command rename_host_event overlay_group_rename_conformance`
+  - Result: passed, 10 tests.
+  - Scope proven: retained rename oracle behavior remains green for Escape close/focus restore,
+    Enter commit, controller-backed commit, focus-loss close, hit testing, and stale-session
+    replacement after the default policy extraction.
+- `cargo nextest run -p fret-node`
+  - Result: passed, 350 tests.
+  - Scope proven: default `fret-node` coverage remains green and now includes default rename
+    command/session application tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas`
+  - Result: passed, 934 tests.
+  - Scope proven: the full retained canvas/editor/overlay oracle remains green after extracting
+    rename command/session policy onto the default gate.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting is clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog metadata still indexes cleanly after the new evidence update.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked Rust and documentation changes have no whitespace errors.
+- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/minimap_declarative.rs 2>&1); test -z "$out"`
+  - Result: passed.
+  - Scope proven: the new untracked declarative minimap composition file has no whitespace errors
+    before staging.
+- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/toolbars_declarative.rs 2>&1); test -z "$out"`
+  - Result: passed.
+  - Scope proven: the new untracked declarative toolbar composition file has no whitespace errors
+    before staging.
+- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/rename_declarative.rs 2>&1); test -z "$out"`
+  - Result: passed.
+  - Scope proven: the new untracked declarative rename composition file has no whitespace errors
+    before staging.
+- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/rename_command.rs 2>&1); test -z "$out"`
+  - Result: passed.
+  - Scope proven: the new untracked default rename command/session policy file has no whitespace
+    errors before staging.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-109` changes only `fret-node` overlay command/session policy plus retained
+    rename I/O adaptation. The default package gate, retained compatibility package gate, both
+    feature checks, layering, catalog, formatting, and whitespace gates cover the changed surface.

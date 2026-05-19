@@ -18,6 +18,7 @@ mod controls_policy;
 mod group_rename;
 #[cfg(feature = "compat-retained-canvas")]
 mod minimap;
+mod minimap_declarative;
 mod minimap_drag_policy;
 mod minimap_navigation_policy;
 mod minimap_policy;
@@ -27,12 +28,15 @@ mod panel_button_paint;
 mod panel_item_state;
 mod panel_navigation_policy;
 mod panel_pointer_policy;
+mod rename_command;
+mod rename_declarative;
 mod rename_host_event;
 mod rename_host_layout;
 mod rename_policy;
 mod toolbar_policy;
 #[cfg(feature = "compat-retained-canvas")]
 mod toolbars;
+mod toolbars_declarative;
 
 #[cfg(all(test, feature = "compat-retained-canvas"))]
 pub use blackboard::NodeGraphBlackboardOverlay;

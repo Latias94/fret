@@ -1016,6 +1016,152 @@ Related plan:
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
     - `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/blackboard_declarative.rs 2>&1); test -z "$out"`
+- [x] RBX-M2-106 Add default declarative minimap overlay composition.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/overlays/mod.rs`
+    - `ecosystem/fret-node/src/ui/overlays/minimap_declarative.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move minimap overlay composition and paint-plan coverage onto the default declarative
+      `fret-ui` gate before deleting retained minimap widget code.
+    - Preserve the retained minimap overlay as the compatibility oracle for keyboard pan/zoom/focus,
+      pointer drag panning, focus/capture propagation, retained hit testing, and store/controller
+      viewport updates until those families have default declarative coverage.
+  - Result:
+    - Added `NodeGraphMiniMapOverlayElementProps`, `NodeGraphMiniMapSnapshot`, and
+      `node_graph_minimap_overlay_element(...)` under the default overlay module gate.
+    - The declarative minimap tree now builds a root panel container, declarative `Canvas`, stable
+      `node_graph.minimap` semantics/test ID, and a paint plan for the minimap panel, projected node
+      markers, and viewport marker without constructing the retained minimap widget.
+    - Added default tests for panel sizing, root semantics, declarative canvas composition, and
+      panel/node/viewport paint ops without constructing the retained widget.
+    - Added a source-policy assertion that the declarative minimap composition does not take a
+      retained bridge, retained subtree, or retained `Widget` dependency.
+  - Validation:
+    - `cargo nextest run -p fret-node minimap_declarative overlay_policy_modules_compile_without_retained_canvas_compat controls_overlay_requires_explicit_editor_config_model`
+    - `cargo nextest run -p fret-node`
+    - `cargo check -p fret-node --no-default-features --features fret-ui`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+    - `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/minimap_declarative.rs 2>&1); test -z "$out"`
+- [x] RBX-M2-107 Add default declarative toolbar overlay composition.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/overlays/mod.rs`
+    - `ecosystem/fret-node/src/ui/overlays/toolbars_declarative.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move node/edge toolbar placement and composition coverage onto the default declarative
+      `fret-ui` gate before deleting retained toolbar widget code.
+    - Preserve the retained toolbar widgets as the compatibility oracle for child measurement,
+      retained child-root layout/paint, hit testing, and model/internals-driven target resolution
+      until those families have default declarative coverage.
+  - Result:
+    - Added `NodeGraphNodeToolbarElementProps`, `NodeGraphEdgeToolbarElementProps`, target structs,
+      `node_graph_node_toolbar_element(...)`, and `node_graph_edge_toolbar_element(...)` under the
+      default overlay module gate.
+    - The declarative toolbar path now plans retained-compatible node-rect and edge-center
+      placement, honors `WhenSelected`/`Always` visibility, emits an absolute declarative toolbar
+      container, stamps toolbar semantics/test IDs, and preserves caller-supplied declarative
+      children without constructing retained toolbar widgets.
+    - Added default tests for node toolbar placement/visibility, edge toolbar placement/visibility,
+      node toolbar declarative composition, and edge toolbar declarative composition.
+    - Added a source-policy assertion that the declarative toolbar composition does not take a
+      retained bridge, retained subtree, or retained `Widget` dependency.
+  - Validation:
+    - `cargo nextest run -p fret-node toolbars_declarative overlay_policy_modules_compile_without_retained_canvas_compat controls_overlay_requires_explicit_editor_config_model`
+    - `cargo nextest run -p fret-node`
+    - `cargo check -p fret-node --no-default-features --features fret-ui`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+    - `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/toolbars_declarative.rs 2>&1); test -z "$out"`
+- [x] RBX-M2-108 Add default declarative rename overlay composition.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/overlays/mod.rs`
+    - `ecosystem/fret-node/src/ui/overlays/rename_declarative.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move inline rename overlay composition and text-input submit/cancel command wiring onto the
+      default declarative `fret-ui` gate before deleting retained rename host code.
+    - Preserve the retained rename host as the compatibility oracle for seed-text ownership,
+      focus-loss close, focus request/restore, keyboard submit/cancel event routing, graph/edit
+      queue transaction submission, blackboard rename handoff, and retained paint/hit testing until
+      those families have default declarative coverage.
+  - Result:
+    - Added `NodeGraphRenameOverlayElementProps` and `node_graph_rename_overlay_element(...)`
+      under the default overlay module gate, backed by default rename command protocol helpers.
+    - The declarative rename path now consumes shared `plan_rename_host_layout(...)`, emits an
+      absolute panel container, builds a declarative `TextInput`, preserves caller-owned bound text
+      models, stamps root/input semantics and stable test IDs, and wires submit/cancel commands
+      without constructing the retained `NodeGraphOverlayHost` widget.
+    - Added default tests for hidden/no-session behavior, group and symbol text input composition,
+      shared layout-policy consumption, caller-owned text-model preservation, and submit/cancel
+      command protocol roundtrips.
+    - Extended the source-policy assertion so declarative rename composition cannot take a retained
+      bridge, retained subtree, or retained `Widget` dependency.
+  - Validation:
+    - `cargo nextest run -p fret-node rename_declarative overlay_policy_modules_compile_without_retained_canvas_compat controls_overlay_requires_explicit_editor_config_model`
+    - `cargo nextest run -p fret-node rename_declarative minimap_declarative toolbars_declarative overlay_policy_modules_compile_without_retained_canvas_compat controls_overlay_requires_explicit_editor_config_model`
+    - `cargo nextest run -p fret-node`
+    - `cargo check -p fret-node --no-default-features --features fret-ui`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+    - `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/rename_declarative.rs 2>&1); test -z "$out"`
+- [x] RBX-M2-109 Move rename command/session application onto the default overlay gate.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/overlays/mod.rs`
+    - `ecosystem/fret-node/src/ui/overlays/rename_command.rs`
+    - `ecosystem/fret-node/src/ui/overlays/rename_declarative.rs`
+    - `ecosystem/fret-node/src/ui/overlays/rename_host_event.rs`
+    - `ecosystem/fret-node/src/ui/overlays/group_rename.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move rename submit/cancel command parsing, keyboard submit/cancel decision, and active
+      session application onto the default declarative `fret-ui` gate.
+    - Leave retained `NodeGraphOverlayHost` as an I/O adapter that reads models, submits any
+      produced transaction through the existing controller/edit-queue transport, and restores focus.
+  - Result:
+    - Added default `rename_command.rs` with `RenameTextCommand`, `RenameCommandOutcome`,
+      `RenameHostKeyDecision`, command ID helpers, command parsing, text-command application, and
+      keyboard-decision application.
+    - Moved rename submit/cancel command protocol out of `rename_declarative.rs` so declarative
+      composition only wires commands onto `TextInput` while default command/session policy owns
+      command semantics.
+    - Updated retained `rename_host_event.rs` to delegate active-session close/commit decisions to
+      default rename command/session policy; it now only performs retained model I/O and retained
+      transaction submission transport.
+    - Added default tests for malformed command rejection, stale-session no-op behavior, active
+      group/symbol submit/cancel application, and keyboard Enter/Escape/ignore application without
+      retained `EventCx`.
+    - Extended the source-policy assertion so default rename command/session policy cannot take a
+      retained bridge, retained subtree, or retained `Widget` dependency.
+  - Validation:
+    - `cargo nextest run -p fret-node rename_command rename_declarative rename_host_event overlay_policy_modules_compile_without_retained_canvas_compat controls_overlay_requires_explicit_editor_config_model`
+    - `cargo check -p fret-node --no-default-features --features fret-ui`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas rename_command rename_host_event overlay_group_rename_conformance`
+    - `cargo nextest run -p fret-node`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+    - `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/rename_command.rs 2>&1); test -z "$out"`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
