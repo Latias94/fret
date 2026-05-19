@@ -3287,3 +3287,27 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `cargo nextest run -p fret-examples --test embedded_viewport_demo_surface
   embedded_viewport_demo_keeps_fixed_chrome_text_on_roles --no-fail-fast` passed.
 - `cargo check -p fret-demo --bin embedded_viewport_demo` passed.
+
+2026-05-19 window hit-test probe fixed text-role slice:
+
+- Source gap before fix: `apps/fret-examples/src/window_hit_test_probe_demo.rs` had a fixed 44px
+  header title and compact diagnostic/status lines built with local
+  `ui::text(...).font_semibold().text_sm()`, `ui::text(...).font_monospace().text_sm()`, and
+  `ui::text(status).text_sm()` policy. These are fixed chrome/readout slots under resize, not
+  paragraph text.
+- `window_hit_test_title_text(...)` now routes the header through
+  `decl_text::text_section_chrome_label(...)`, `window_hit_test_code_label_text(...)` routes the
+  logical-window diagnostic identifier through `decl_text::text_code_label(...)`, and
+  `window_hit_test_readout_text(...)` routes status through `decl_text::text_control_readout(...)`.
+- `apps/fret-examples/tests/window_hit_test_probe_demo_surface.rs` and
+  `tools/gate_imui_workstream_source.py` guard those role mappings and forbid the old local fixed
+  text policy from returning.
+- `cargo fmt --check -p fret-examples` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- First post-fix `cargo nextest run -p fret-examples --test window_hit_test_probe_demo_surface
+  window_hit_test_probe_demo_keeps_fixed_text_on_roles --no-fail-fast` timed out while background
+  Cargo/Rustc compilation continued.
+- Retried after Cargo/Rustc exited:
+  `cargo nextest run -p fret-examples --test window_hit_test_probe_demo_surface
+  window_hit_test_probe_demo_keeps_fixed_text_on_roles --no-fail-fast` passed.
+- `cargo check -p fret-examples --test window_hit_test_probe_demo_surface` passed.

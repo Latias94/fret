@@ -10,15 +10,37 @@ use fret_launch::{WindowCreateSpec, WindowLogicalSize, WinitRunnerConfig};
 use fret_runtime::{
     ActivationPolicy, WindowDecorationsRequest, WindowRole, WindowStyleRequest, WindowZLevel,
 };
-use fret_ui::ElementContext;
 use fret_ui::element::{LayoutStyle, Length, SizeStyle};
-use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
+use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::declarative::text as decl_text;
+use fret_ui_kit::{LayoutRefinement, Space, ui};
 use fret_ui_shadcn::facade as shadcn;
 
 const OVERLAY_LOGICAL_WINDOW_ID: &str = "overlay";
 
 const TEST_ID_BASE_ROOT: &str = "window-hit-test-probe.base.root";
 const TEST_ID_OVERLAY_ROOT: &str = "window-hit-test-probe.overlay.root";
+
+fn window_hit_test_title_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    decl_text::text_section_chrome_label(cx, text)
+}
+
+fn window_hit_test_readout_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    decl_text::text_control_readout(cx, text)
+}
+
+fn window_hit_test_code_label_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    decl_text::text_code_label(cx, text)
+}
 
 pub fn run() -> anyhow::Result<()> {
     let driver = ui_app_driver::UiAppDriver::new("window-hit-test-probe-demo", init_window, view)
@@ -125,7 +147,6 @@ fn window_created(app: &mut KernelApp, request: &CreateWindowRequest, new_window
 
 fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut WindowState) -> ViewElements {
     let theme = cx.theme().snapshot();
-    let color_muted_foreground = theme.color_token("muted-foreground");
     let color_secondary = theme.color_token("secondary");
     let color_background = theme.color_token("background");
 
@@ -176,12 +197,10 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut WindowState) -> ViewEle
                     ..Default::default()
                 },
                 move |cx| {
-                    vec![
-                        ui::text("Hit-test passthrough probe")
-                            .font_semibold()
-                            .text_sm()
-                            .into_element(cx),
-                    ]
+                    vec![window_hit_test_title_text(
+                        cx,
+                        "Hit-test passthrough probe",
+                    )]
                 },
             );
 
@@ -193,18 +212,14 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut WindowState) -> ViewEle
                     )
                     .into_element(cx),
                 ])
-                .into_element(cx),
+                    .into_element(cx),
                 shadcn::CardContent::new([
                     ui::v_flex(move |cx| {
-                        let logical_line =
-                            ui::text(format!("logical_window_id={logical}"))
-                                .font_monospace()
-                                .text_sm()
-                                .into_element(cx);
-                        let status_line = ui::text(status)
-                            .text_sm()
-                            .text_color(ColorRef::Color(color_muted_foreground))
-                            .into_element(cx);
+                        let logical_line = window_hit_test_code_label_text(
+                            cx,
+                            format!("logical_window_id={logical}"),
+                        );
+                        let status_line = window_hit_test_readout_text(cx, status);
                         [logical_line, status_line]
                     })
                     .gap(Space::N3)

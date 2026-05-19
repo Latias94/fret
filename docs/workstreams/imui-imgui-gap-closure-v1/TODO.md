@@ -860,6 +860,10 @@ Readiness order for the next locally testable review slices:
    control-readout role instead of local `ui::text(...).text_sm()` builders. This closes another
    resize-sensitive app-owned chrome surface while leaving embedded viewport/input forwarding
    behavior unchanged.
+   2026-05-19 window hit-test probe text follow-up: `window_hit_test_probe_demo` now routes its
+   fixed 44px header title through section-chrome text, the logical-window diagnostic identifier
+   through code-label text, and status through control-readout text. The multi-window hit-test
+   repro path stays unchanged; only local fixed chrome/readout text policy was removed.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

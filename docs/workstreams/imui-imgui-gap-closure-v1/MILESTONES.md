@@ -768,6 +768,10 @@ Exit criteria:
   ToggleGroup labels on shared button-label text and status lines on shared control-readout text.
   This removes local fixed-chrome `ui::text(...).text_sm()` policy from the embedded viewport proof
   without changing the embedded RenderTarget/input-forwarding interop path.
+  2026-05-19 window hit-test probe text result: `window_hit_test_probe_demo` keeps its multi-window
+  hit-test repro logic unchanged while moving fixed header text to section chrome, logical window
+  identifiers to code-label text, and status to control-readout text. This removes the old local
+  `ui::text(...).text_sm()` policy from another resize-sensitive probe surface.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.
