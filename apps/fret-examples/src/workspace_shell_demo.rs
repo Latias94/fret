@@ -1535,7 +1535,7 @@ fn handle_command(
         }
     }
 
-    if outcome.applied || did_dispatch_ui {
+    if outcome.applied || outcome.blocked_dirty_close.is_some() || did_dispatch_ui {
         app.request_redraw(window);
     }
 }

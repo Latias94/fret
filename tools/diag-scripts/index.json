@@ -11929,6 +11929,32 @@
       ]
     },
     {
+      "id": "workspace-shell-demo-tab-close-button-dirty-shows-prompt-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-dirty-shows-prompt-smoke.json",
+      "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "close",
+        "dirty",
+        "gate",
+        "prompt",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Marks the active pane A tab dirty through the demo debug button.",
+        "Clicks the real tab close button for doc-a-2 instead of the demo close-active button.",
+        "Asserts the widget command path dispatches workspace.tab.close.doc-a-2 and dirty-close policy shows the prompt before discard closes the tab."
+      ]
+    },
+    {
       "id": "workspace-shell-demo-tab-close-dirty-shows-prompt-and-discard-closes-smoke",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-shows-prompt-and-discard-closes-smoke.json",
       "required_capabilities": [

@@ -2191,3 +2191,41 @@ reorder runtime coverage.
   passed with suite summary
   `target/fret-diag-workspace-shell-demo-suite-after-scope-owner-v1/sessions/1779147074217-22776/suite.summary.json`
   and overflow reorder run id `1779147195864`.
+
+## M119: Workspace Shell Demo Dirty Close Button Gate
+
+Status: complete for dirty-close policy under widget-dispatched tab close commands.
+
+- Added `workspace-shell-demo-tab-close-button-dirty-shows-prompt-smoke.json` and promoted it into
+  the `workspace-shell-demo` suite.
+- The script marks the active `doc-a-2` tab dirty, clicks the real tab close button
+  `workspace-shell-pane-pane-a-tab-doc-a-2.close`, and asserts the pointer dispatch trace records
+  `workspace.tab.close.doc-a-2` before the dirty-close prompt appears.
+- The script cancels the first prompt and verifies the dirty tab and dirty marker remain, then
+  repeats the real close-button path and discards to verify the tab is removed.
+- The first runtime failure exposed an app-shell redraw defect: `handle_command` installed the
+  blocked dirty-close prompt model but only requested redraw for applied outcomes or UI-driver
+  fallback dispatch. The demo now redraws for `blocked_dirty_close`.
+- The companion `fret-workspace` unit test proves close-by-id commands can be blocked by
+  `BlockDirtyClosePolicy` without removing the dirty tab.
+- Runtime authoring note: while the modal prompt is open, the diagnostics modal barrier filters
+  background tab selectors. The script intentionally clicks Cancel before asserting preserved
+  background tab state.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-tab-close-button-dirty-shows-prompt-smoke.json > $null`;
+  `cargo test --profile dev-fast -p fret-workspace --lib dirty_close_policy_can_block_close_by_id -- --nocapture`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_workspace_shell_demo_tab_close_button_dirty_shows_prompt_smoke --no-fail-fast --no-capture`
+  with Nextest run id `4c8b4510-ec3f-421a-b0dc-826a0faa27ed`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps\fret-examples\src\workspace_shell_demo.rs ecosystem\fret-workspace\src\tabs.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `cargo build --profile dev-fast -p fret-demo --bin workspace_shell_demo`; and
+  `git diff --check`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\workspace-shell-demo-tab-close-button-dirty-shows-prompt-smoke.json --dir target\fret-diag-workspace-shell-demo-dirty-close-widget-v3 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  with run id `1779148945096` and AI packet
+  `target/fret-diag-workspace-shell-demo-dirty-close-widget-v3/sessions/1779148942029-109108/1779148945096/ai.packet`.
+- Full runtime suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite workspace-shell-demo --dir target\fret-diag-workspace-shell-demo-suite-dirty-close-widget-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  with suite summary
+  `target/fret-diag-workspace-shell-demo-suite-dirty-close-widget-v1/sessions/1779148963907-13484/suite.summary.json`
+  and 11/11 scripts passed.

@@ -133,6 +133,13 @@ fn script_v2_roundtrip_workspace_shell_demo_tab_overflow_activate_hidden_smoke()
 }
 
 #[test]
+fn script_v2_roundtrip_workspace_shell_demo_tab_close_button_dirty_shows_prompt_smoke() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/workspace-shell-demo-tab-close-button-dirty-shows-prompt-smoke.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_set_window_preferences_defaults() {
     assert_script_v2_roundtrip(
         r#"{

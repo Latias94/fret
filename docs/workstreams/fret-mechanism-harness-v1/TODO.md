@@ -1107,3 +1107,12 @@ date: 2026-05-12
     exposed a command ownership defect: the demo runner and `WorkspaceCommandScope` both applied
     non-idempotent workspace model commands. The demo now keeps scope-owned focus-transfer hooks but
     disables scope replay of model commands already handled by the runner.
+- [x] Promote workspace shell demo dirty-close policy through the real tab close button.
+  - Result: `workspace-shell-demo-tab-close-button-dirty-shows-prompt-smoke.json` now marks
+    `doc-a-2` dirty, clicks the actual tab close button
+    `workspace-shell-pane-pane-a-tab-doc-a-2.close`, asserts the pointer command dispatches
+    `workspace.tab.close.doc-a-2`, cancels the dirty-close prompt to prove the dirty tab remains,
+    then repeats the widget close path and discards to prove the tab is removed. The first runtime
+    failure exposed an app-shell redraw gap: a blocked dirty-close request installed the prompt
+    model but did not request a redraw when no UI driver fallback ran. The demo now redraws when
+    `blocked_dirty_close` is present, and `fret-workspace` has focused close-by-id policy coverage.
