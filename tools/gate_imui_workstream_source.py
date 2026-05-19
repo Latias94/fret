@@ -3488,6 +3488,17 @@ def main() -> None:
             forbidden=[],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/data_table.rs"),
+            required=[
+                "fn apply_default_text_style_recursive_scoped(",
+                "let role_scope_active = role_scope_active || el.inherited_text_style.is_some();",
+                "if props.style.is_none() && !role_scope_active",
+                "data_table_default_text_style_applies_to_bare_body_text",
+                "data_table_default_text_style_preserves_shared_text_role_contracts",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-ai/src/elements/prompt_input.rs"),
             required=[
                 "return crate::elements::empty_placeholder(cx);",

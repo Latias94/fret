@@ -874,6 +874,10 @@ Exit criteria:
   caller-supplied shared text roles instead of rewriting their leaf typography or overflow. Bare
   text children still receive table defaults, so recipe ergonomics remain intact while role-owned
   resize semantics survive nested shadcn composition.
+  2026-05-19 shadcn DataTable role-preservation result: the virtualized DataTable body-cell
+  default text-style wrapper now skips shared text-role scopes. This keeps data-table ergonomics
+  for bare cell renderers while preserving role-owned typography and ellipsis for callers that
+  already supply `text_table_cell(...)`.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

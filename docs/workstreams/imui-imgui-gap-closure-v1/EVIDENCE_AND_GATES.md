@@ -3905,3 +3905,35 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.
+
+2026-05-19 shadcn DataTable role-preservation slice:
+
+- Source gap before fix: `DataTable` wrapped body-cell renderers with
+  `apply_default_text_style_recursive(...)`, which recursively wrote a table `TextStyle` into leaf
+  text when `props.style` was empty. Shared text-role helpers intentionally keep leaf `style` empty
+  and carry typography through `inherited_text_style`, so body cells built with
+  `text_table_cell(...)` could lose their role-owned typography/overflow contract.
+- `apply_default_text_style_recursive(...)` now delegates to a scoped helper that treats
+  `inherited_text_style` as a protected role scope. Bare body text still receives the default table
+  style; caller-supplied shared text roles retain their leaf style, wrap, overflow, and role
+  metadata.
+- `data_table_default_text_style_applies_to_bare_body_text` proves the ergonomic fallback remains;
+  `data_table_default_text_style_preserves_shared_text_role_contracts` proves shared table-cell
+  text roles survive the wrapper.
+- `tools/gate_imui_workstream_source.py` now guards the DataTable helper/test shape.
+- Red run before fix:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  data_table_default_text_style_applies_to_bare_body_text
+  data_table_default_text_style_preserves_shared_text_role_contracts --no-fail-fast` failed because
+  the role-preservation test observed a leaf `style`.
+- Post-fix focused run passed:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  data_table_default_text_style_applies_to_bare_body_text
+  data_table_default_text_style_preserves_shared_text_role_contracts --no-fail-fast`.
+- `cargo fmt --check -p fret-ui-shadcn` passed.
+- `cargo check -p fret-ui-shadcn --lib` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.
