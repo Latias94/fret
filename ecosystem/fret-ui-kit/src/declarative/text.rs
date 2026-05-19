@@ -340,6 +340,38 @@ pub fn text_menu_group_label<H: UiHost>(
     )
 }
 
+/// Declarative text helper for non-interactive status messages.
+///
+/// Use this for compact empty/loading/status messages in list and command surfaces. It keeps a
+/// muted `text-sm` treatment while truncating instead of increasing fixed-row height under resize.
+pub fn text_status_message<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let (refinement, foreground) = {
+        let theme = Theme::global(&*cx.app);
+        (
+            text_sm_refinement(theme),
+            ui_typography::muted_foreground_color(theme),
+        )
+    };
+
+    ui_typography::scope_text_style_with_color(
+        cx.text_props(TextProps {
+            layout: shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+        foreground,
+    )
+}
+
 /// Declarative text helper for compact button labels.
 ///
 /// Button labels are intentionally single-line. In constrained toolbars/editor panels they should
@@ -1439,6 +1471,34 @@ mod tests {
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
         assert_eq!(el.inherited_text_style, Some(text_xs_refinement(&theme)));
+        assert_eq!(
+            el.inherited_foreground,
+            Some(ui_typography::muted_foreground_color(theme))
+        );
+    }
+
+    #[test]
+    fn status_message_text_uses_muted_sm_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_status_message(cx, "No results found")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_status_message(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
         assert_eq!(
             el.inherited_foreground,
             Some(ui_typography::muted_foreground_color(theme))

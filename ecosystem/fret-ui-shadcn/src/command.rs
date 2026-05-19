@@ -1092,12 +1092,6 @@ impl CommandEmpty {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let (fg, text_style) = {
-            let theme = Theme::global(&*cx.app).snapshot();
-            let fg = theme.color_token("muted-foreground");
-            let text_style = item_text_style(&theme);
-            (fg, text_style)
-        };
         cx.container(
             ContainerProps {
                 layout: {
@@ -1128,25 +1122,7 @@ impl CommandEmpty {
                         justify: MainAlign::Center,
                         align: CrossAlign::Center,
                     },
-                    move |cx| {
-                        let mut text = ui::text(self.text.clone())
-                            .text_size_px(text_style.size)
-                            .font_weight(text_style.weight)
-                            .nowrap()
-                            .text_color(ColorRef::Color(fg));
-
-                        if let Some(line_height) = text_style.line_height {
-                            text = text.line_height_px(line_height).line_height_policy(
-                                fret_core::TextLineHeightPolicy::FixedFromStyle,
-                            );
-                        }
-
-                        if let Some(letter_spacing_em) = text_style.letter_spacing_em {
-                            text = text.letter_spacing_em(letter_spacing_em);
-                        }
-
-                        vec![text.into_element(cx)]
-                    },
+                    move |cx| vec![decl_text::text_status_message(cx, self.text.clone())],
                 )]
             },
         )
@@ -1199,13 +1175,6 @@ impl CommandLoading {
         let test_id = self.test_id.clone();
         let progress = self.progress;
 
-        let (fg, text_style) = {
-            let theme = Theme::global(&*cx.app).snapshot();
-            let fg = theme.color_token("muted-foreground");
-            let text_style = item_text_style(&theme);
-            (fg, text_style)
-        };
-
         let mut row = cx.container(
             ContainerProps {
                 layout: {
@@ -1236,25 +1205,7 @@ impl CommandLoading {
                         justify: MainAlign::Center,
                         align: CrossAlign::Center,
                     },
-                    move |cx| {
-                        let mut text = ui::text(text_for_render.clone())
-                            .text_size_px(text_style.size)
-                            .font_weight(text_style.weight)
-                            .nowrap()
-                            .text_color(ColorRef::Color(fg));
-
-                        if let Some(line_height) = text_style.line_height {
-                            text = text.line_height_px(line_height).line_height_policy(
-                                fret_core::TextLineHeightPolicy::FixedFromStyle,
-                            );
-                        }
-
-                        if let Some(letter_spacing_em) = text_style.letter_spacing_em {
-                            text = text.letter_spacing_em(letter_spacing_em);
-                        }
-
-                        vec![text.into_element(cx)]
-                    },
+                    move |cx| vec![decl_text::text_status_message(cx, text_for_render.clone())],
                 )]
             },
         );
@@ -4419,6 +4370,45 @@ mod tests {
         assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
         assert!(text.inherited_text_style.is_some());
         assert!(text.inherited_foreground.is_some());
+    }
+
+    fn assert_command_status_text_role(text: &AnyElement, label: &str) {
+        let fret_ui::element::ElementKind::Text(props) = &text.kind else {
+            panic!("expected Text element for {label}");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(
+            props.layout.size.min_width,
+            Some(fret_ui::element::Length::Px(Px(0.0)))
+        );
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.wrap, fret_core::TextWrap::None);
+        assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
+        assert!(text.inherited_text_style.is_some());
+        assert!(text.inherited_foreground.is_some());
+    }
+
+    #[test]
+    fn command_empty_and_loading_use_shared_status_message_text_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let empty = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "empty", |cx| {
+            CommandEmpty::new("No matching commands").into_element(cx)
+        });
+        let empty_text = find_text_element(&empty, "No matching commands")
+            .expect("expected command empty status text");
+        assert_command_status_text_role(empty_text, "CommandEmpty");
+
+        let loading =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "loading", |cx| {
+                CommandLoading::new("Fetching commands").into_element(cx)
+            });
+        let loading_text = find_text_element(&loading, "Fetching commands")
+            .expect("expected command loading status text");
+        assert_command_status_text_role(loading_text, "CommandLoading");
     }
 
     #[test]

@@ -919,6 +919,9 @@ Exit criteria:
   through `text_menu_group_label(...)` via a command-local helper. Combobox, native select, and
   data-table recipes benefit through `CommandGroup::heading(...)`, while command row
   label/highlight rendering stays command-owned.
+  2026-05-20 shared status-message text result: `text_status_message(...)` now covers muted
+  `text-sm` non-interactive empty/loading/status messages, and shadcn `CommandEmpty` /
+  `CommandLoading` use it for their fixed command-surface status text.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

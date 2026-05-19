@@ -3238,10 +3238,12 @@ def main() -> None:
             Path("ecosystem/fret-ui-kit/src/declarative/text.rs"),
             required=[
                 "pub fn text_menu_group_label<H: UiHost>(",
+                "pub fn text_status_message<H: UiHost>(",
                 "layout: fill_shrinkable_single_line_layout()",
                 "wrap: TextWrap::None",
                 "overflow: TextOverflow::Ellipsis",
                 "menu_group_label_text_uses_muted_xs_single_line_truncation",
+                "status_message_text_uses_muted_sm_single_line_truncation",
             ],
             forbidden=[],
         ),
@@ -3267,6 +3269,9 @@ def main() -> None:
                 "decl_text::text_menu_group_label(cx, heading)",
                 "command_group_heading_element(cx, heading, pad_x)",
                 "command_group_heading_uses_shared_menu_group_text_role",
+                "decl_text::text_status_message(cx, self.text.clone())",
+                "decl_text::text_status_message(cx, text_for_render.clone())",
+                "command_empty_and_loading_use_shared_status_message_text_role",
             ],
             forbidden=[
                 "fn heading_text_style(",
@@ -3274,6 +3279,8 @@ def main() -> None:
                 "let style = heading_text_style(&theme);",
                 ".text_color(ColorRef::Color(fg_heading))",
                 "component.command.heading.text_px",
+                "let mut text = ui::text(self.text.clone())",
+                "let mut text = ui::text(text_for_render.clone())",
             ],
         ),
         SourceCheck(

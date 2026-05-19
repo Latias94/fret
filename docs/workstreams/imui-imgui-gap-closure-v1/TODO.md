@@ -1029,6 +1029,10 @@ Readiness order for the next locally testable review slices:
    through a command-local helper backed by the same shared menu-group text role. This covers the
    command/listbox group-heading path used by combobox, native select, and data-table recipes
    without changing command item label/highlight rendering or widening `fret-imui`.
+   2026-05-20 shared status-message/CommandEmpty follow-up: `text_status_message(...)` now owns
+   the muted `text-sm` non-interactive empty/loading/status message role, and shadcn
+   `CommandEmpty` / `CommandLoading` consume it instead of duplicating local text sizing/color
+   builders.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

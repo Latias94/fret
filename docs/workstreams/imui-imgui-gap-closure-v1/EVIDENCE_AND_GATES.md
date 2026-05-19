@@ -4042,6 +4042,36 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`, `python
   tools\gate_imui_workstream_source.py`, and `git diff --check` passed.
 
+2026-05-20 shared status-message / CommandEmpty text role slice:
+
+- Source gap before fix: shadcn `CommandEmpty` and `CommandLoading` rendered non-interactive
+  empty/loading status messages through local `ui::text(...)` builders with duplicated
+  text-sm/line-height/muted foreground and `nowrap()` policy. This kept command status messages
+  outside the shared resize role vocabulary even after group headings moved to
+  `text_menu_group_label(...)`.
+- `fret-ui-kit::declarative::text::text_status_message(...)` now owns the muted `text-sm`,
+  shrinkable, single-line ellipsis role for non-interactive empty/loading/status messages. It is a
+  derived role distinct from `text_menu_group_label(...)` (`text-xs` group headings) and
+  `text_control_readout(...)` (`text-xs` compact auxiliary values).
+- `CommandEmpty` and `CommandLoading` keep their existing `py-6` container and centered row shape,
+  but their text leaves now consume `decl_text::text_status_message(...)`. Command item labels and
+  highlighted query spans remain command-owned.
+- `status_message_text_uses_muted_sm_single_line_truncation` proves the shared role contract.
+  `command_empty_and_loading_use_shared_status_message_text_role` proves both shadcn command status
+  consumers use shared-role text leaves with no leaf-local `TextStyle`/color and with
+  shrink/nowrap/ellipsis behavior.
+- Focused gates passed: `cargo fmt --check -p fret-ui-kit -p fret-ui-shadcn`; `cargo nextest run
+  -p fret-ui-kit --features imui --lib status_message_text_uses_muted_sm_single_line_truncation
+  --no-fail-fast`; `cargo nextest run -p fret-ui-shadcn --lib
+  command_empty_and_loading_use_shared_status_message_text_role --no-fail-fast`; `cargo check -p
+  fret-ui-kit --features imui --lib`; `cargo check -p fret-ui-shadcn --lib`; `python -m
+  py_compile tools\gate_imui_workstream_source.py`; `python -m json.tool
+  docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`; `python
+  tools\gate_imui_workstream_source.py`; and `git diff --check`.
+- Verification note: the first focused shadcn nextest attempt timed out during background
+  compilation. No cargo/rustc process was killed; after the compile chain exited naturally, the
+  same command passed.
+
 2026-05-19 shadcn EmptyTitle children-role slice:
 
 - Source gap before fix: `EmptyTitle` only accepted a string payload, so empty-state title slots
