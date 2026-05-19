@@ -1017,6 +1017,10 @@ Readiness order for the next locally testable review slices:
    `new_children(...)` for empty-state title composition. Bare/rich empty-title children keep the
    shadcn empty-title defaults, while explicit shared title/chrome roles keep their role-owned
    single-line ellipsis contract.
+   2026-05-20 shadcn SelectLabel menu-group text follow-up: `text_menu_group_label(...)` now owns
+   the muted, single-line, fill-width group-label text role, and `SelectLabel` consumes that role
+   instead of hand-rolling local `ui::text(...).text_size_px(...).nowrap()` policy in the overlay
+   row renderer.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

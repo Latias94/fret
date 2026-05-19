@@ -3939,6 +3939,40 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.
 
+2026-05-20 shadcn SelectLabel menu-group text role slice:
+
+- Source gap before fix: `SelectLabel` rendered fixed select/listbox group labels with local
+  `ui::text(...)` sizing, muted foreground, and `nowrap()` policy inside the overlay row renderer.
+  That kept menu/select group labels outside the shared text-role vocabulary and made the same
+  fixed-row resize policy likely to be duplicated by ContextMenu, DropdownMenu, and Menubar.
+- `fret-ui-kit::declarative::text::text_menu_group_label(...)` now owns the muted `text-xs`,
+  fill-width, shrinkable, single-line ellipsis contract for non-interactive menu/listbox group
+  headings. It is a derived role, not a control readout.
+- `SelectLabel` now consumes `decl_text::text_menu_group_label(...)` while keeping its existing
+  entry data model cloneable. This avoids pushing move-only `AnyElement` children into
+  `SelectEntry` just to fix text policy.
+- `menu_group_label_text_uses_muted_xs_single_line_truncation` proves the role contract; existing
+  Select tests keep label/separator focus positions and group semantics in the focused run; and
+  `tools/gate_imui_workstream_source.py` guards the role helper plus the Select consumption path.
+- Red run before fix:
+  `cargo nextest run -p fret-ui-kit --features imui --lib
+  menu_group_label_text_uses_muted_xs_single_line_truncation --no-fail-fast` failed because
+  `text_menu_group_label(...)` did not exist.
+- Post-fix focused runs passed:
+  `cargo nextest run -p fret-ui-kit --features imui --lib
+  menu_group_label_text_uses_muted_xs_single_line_truncation --no-fail-fast`; and
+  `cargo nextest run -p fret-ui-shadcn --lib
+  select_label_and_separator_do_not_affect_positions_or_initial_focus
+  select_group_renders_group_semantics_node --no-fail-fast`.
+- `cargo fmt --check -p fret-ui-kit -p fret-ui-shadcn` passed.
+- `cargo check -p fret-ui-kit --features imui --lib` passed.
+- `cargo check -p fret-ui-shadcn --lib` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.
+
 2026-05-19 shadcn EmptyTitle children-role slice:
 
 - Source gap before fix: `EmptyTitle` only accepted a string payload, so empty-state title slots

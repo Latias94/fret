@@ -28,6 +28,7 @@ use fret_ui_kit::declarative::motion::{
 };
 use fret_ui_kit::declarative::overlay_motion;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::active_descendant as active_desc;
 use fret_ui_kit::primitives::control_registry::{
@@ -3662,25 +3663,6 @@ fn select_impl<H: UiHost>(
                                                                                       out: &mut Vec<AnyElement>| {
                                                                     match row {
                                                                         SelectRow::Label(label) => {
-                                                                            let theme = Theme::global(&*cx.app).snapshot();
-                                                                            let fg = theme
-                                                                                .color_by_key("muted.foreground")
-                                                                                .or_else(|| theme.color_by_key("muted-foreground"))
-                                                                                .unwrap_or_else(|| theme.color_token("muted.foreground"));
-
-                                                                            let base_size = theme.metric_token(
-                                                                                theme_tokens::metric::COMPONENT_TEXT_SM_PX,
-                                                                            );
-                                                                            let base_line_height = theme.metric_token(
-                                                                                theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT,
-                                                                            );
-                                                                            let label_text_px =
-                                                                                Px((base_size.0 - 2.0).max(10.0));
-                                                                            let label_line_height = Px(
-                                                                                (base_line_height.0 - 4.0)
-                                                                                    .max(label_text_px.0),
-                                                                            );
-
                                                                             out.push(cx.container(
                                                                                 ContainerProps {
                                                                                     layout: {
@@ -3704,17 +3686,10 @@ fn select_impl<H: UiHost>(
                                                                                     ..Default::default()
                                                                                 },
                                                                                 move |cx| {
-                                                                                    vec![ui::text( label.text)
-                                                                                        .w_full()
-                                                                                        .text_size_px(label_text_px)
-                                                                                        .line_height_px(label_line_height)
-                                                                                        .line_height_policy(
-                                                                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                                                        )
-                                                                                        .font_normal()
-                                                                                        .text_color(ColorRef::Color(fg))
-                                                                                        .nowrap()
-                                                                                        .into_element(cx)]
+                                                                                    vec![decl_text::text_menu_group_label(
+                                                                                        cx,
+                                                                                        label.text,
+                                                                                    )]
                                                                                 },
                                                                             ));
                                                                         }

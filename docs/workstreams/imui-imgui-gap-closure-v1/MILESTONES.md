@@ -908,6 +908,9 @@ Exit criteria:
   2026-05-19 shadcn EmptyTitle children-role result: EmptyTitle now has a composable
   `new_children(...)` path. Bare/rich empty-state title children still receive empty-title
   defaults, while shared title/chrome roles keep their own ellipsis contracts.
+  2026-05-20 shadcn SelectLabel menu-group text result: `text_menu_group_label(...)` now owns the
+  muted fixed-row menu/select group-label role, and SelectLabel consumes it instead of local
+  overlay text sizing/nowrap policy.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

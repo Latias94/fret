@@ -3235,6 +3235,31 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/declarative/text.rs"),
+            required=[
+                "pub fn text_menu_group_label<H: UiHost>(",
+                "layout: fill_shrinkable_single_line_layout()",
+                "wrap: TextWrap::None",
+                "overflow: TextOverflow::Ellipsis",
+                "menu_group_label_text_uses_muted_xs_single_line_truncation",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/select.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_menu_group_label(",
+                "select_label_and_separator_do_not_affect_positions_or_initial_focus",
+                "select_group_renders_group_semantics_node",
+            ],
+            forbidden=[
+                ".text_size_px(label_text_px)",
+                ".line_height_px(label_line_height)",
+                ".text_color(ColorRef::Color(fg))\n                                                                                        .nowrap()",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/options/collections.rs"),
             required=[
                 "visible: bool",

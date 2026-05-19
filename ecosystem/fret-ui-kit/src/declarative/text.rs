@@ -307,6 +307,39 @@ pub fn text_control_readout<H: UiHost>(
     )
 }
 
+/// Declarative text helper for muted menu/select group labels.
+///
+/// Use this for non-interactive group headings inside fixed-height menu/listbox rows. These labels
+/// keep the shadcn-like `text-xs` muted treatment while truncating instead of increasing row
+/// height under resize.
+pub fn text_menu_group_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let (refinement, foreground) = {
+        let theme = Theme::global(&*cx.app);
+        (
+            text_xs_refinement(theme),
+            ui_typography::muted_foreground_color(theme),
+        )
+    };
+
+    ui_typography::scope_text_style_with_color(
+        cx.text_props(TextProps {
+            layout: fill_shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+        foreground,
+    )
+}
+
 /// Declarative text helper for compact button labels.
 ///
 /// Button labels are intentionally single-line. In constrained toolbars/editor panels they should
@@ -1372,6 +1405,35 @@ mod tests {
 
         assert!(props.style.is_none());
         assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(el.inherited_text_style, Some(text_xs_refinement(&theme)));
+        assert_eq!(
+            el.inherited_foreground,
+            Some(ui_typography::muted_foreground_color(theme))
+        );
+    }
+
+    #[test]
+    fn menu_group_label_text_uses_muted_xs_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_menu_group_label(cx, "Recently opened projects")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_menu_group_label(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
         assert_eq!(props.layout.flex.shrink, 1.0);
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(props.wrap, TextWrap::None);
