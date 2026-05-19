@@ -5099,3 +5099,64 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
 - static diff check:
   `git diff --check`
   - result: passed.
+
+## Command Retained Active-Descendant Action-State Protocol Gate
+
+- invariant:
+  a retained/windowed Command active row must not leave a stale active-descendant relation while the
+  row is detached, and when the row reattaches its disabled/invoke semantics must reflect the latest
+  model state. The promoted runtime script must also survive diagnostics schema roundtrips.
+- finding:
+  no new retained relation/action-state mechanism defect was reproduced. The runtime gate still
+  proves active-descendant clearing on detach and refreshed `disabled=true` plus `invoke=false` on
+  reattach. The first full-suite rerun exposed diagnostics authoring drift in the Command
+  long-query script instead: a pre-positioning `scroll_into_view` could stall with
+  `timeout.no_frames` when the docs demo was already visible.
+- diagnostics surface:
+  `ui-gallery-command-retained-active-descendant-action-state.json` injects
+  `FRET_UI_GALLERY_START_PAGE=command` and `FRET_UI_GALLERY_STATUS_BAR=1`, resets the retained
+  Command demo, scrolls the active row away, asserts `active_item_is_none`, disables the active row,
+  scrolls it back, then asserts `active_item_is`, `disabled_is=true`, `semantics_action_is
+  invoke=false`, and the status label.
+- authoring fix:
+  `ui-gallery-command-docs-demo-long-query-text.json` now uses
+  `ensure_visible(within_window=true)` for the docs-demo content precondition. The input-level
+  `scroll_into_view`, long query injection, font trace, overflow, offset, cursor area, viewport, and
+  screenshot/bundle assertions remain unchanged.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/command/ui-gallery-command-retained-active-descendant-action-state.json`,
+  `tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-long-query-text.json`,
+  `tools/diag-scripts/suites/ui-gallery-command/suite.json`,
+  `apps/fret-ui-gallery/src/ui/snippets/command/retained_active_descendant.rs`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- JSON validation:
+  `python -m json.tool tools\diag-scripts\ui-gallery\command\ui-gallery-command-docs-demo-long-query-text.json > $null`
+  - result: passed.
+  `python -m json.tool tools\diag-scripts\ui-gallery\command\ui-gallery-command-retained-active-descendant-action-state.json > $null`
+  - result: passed.
+- registry:
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed; registry is up to date.
+- formatting:
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_command_docs_demo_long_query_text script_v2_roundtrip_ui_gallery_command_retained_active_descendant_action_state --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `07836627-15f2-45ec-9209-2915b9d38a3e`.
+- focused retained action-state runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\command\ui-gallery-command-retained-active-descendant-action-state.json --dir target\fret-diag-command-retained-active-descendant-action-state-roundtrip-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  - result: passed; run id `1779164006100`; AI packet
+    `target/fret-diag-command-retained-active-descendant-action-state-roundtrip-v1/sessions/1779163988388-20728/1779164006100/ai.packet`.
+- focused long-query runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\command\ui-gallery-command-docs-demo-long-query-text.json --dir target\fret-diag-command-long-query-ensure-visible-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  - result: passed; run id `1779164428287`; AI packet
+    `target/fret-diag-command-long-query-ensure-visible-v1/sessions/1779164416925-56876/1779164428287/ai.packet`.
+- full Command suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-command --dir target\fret-diag-command-suite-retained-action-state-roundtrip-v2 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  - result: passed; 18/18 scripts passed; suite summary
+    `target/fret-diag-command-suite-retained-action-state-roundtrip-v2/sessions/1779164457116-49144/suite.summary.json`;
+    `scripts_with_evidence=18`; long-query run id `1779164551371`; retained action-state run id
+    `1779165106416`.
+- static diff check:
+  `git diff --check`
+  - result: passed.

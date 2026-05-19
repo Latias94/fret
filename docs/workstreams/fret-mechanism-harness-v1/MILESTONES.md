@@ -2514,3 +2514,42 @@ placement.
   `target/fret-diag-resizable-suite-view-cache-roundtrip-v1/sessions/1779163144561-38700/suite.summary.json`;
   2/2 scripts passed, `scripts_with_evidence=2`, `overlay_chosen_side_counts.top=2`, and the
   moving cached Combobox script run id is `1779163184863`.
+
+## M128: Command Retained Active-Descendant Action-State Protocol Gate
+
+Status: complete for protocol coverage and fresh runtime evidence on retained relation/action-state
+mutation.
+
+- Added direct `fret-diag-protocol` roundtrip coverage for
+  `ui-gallery-command-retained-active-descendant-action-state.json`.
+- The script already gates the retained/windowed Command invariant: the active descendant clears
+  when the active row detaches, and after reattach the same row must expose refreshed
+  `disabled=true` and `invoke=false` semantics.
+- No retained relation/action-state mechanism defect was reproduced. The focused runtime pass and
+  full Command suite confirm the existing synthetic retained active-descendant fixture remains
+  locked by a real UI Gallery runtime surface.
+- The first full-suite rerun exposed diagnostics authoring drift in
+  `ui-gallery-command-docs-demo-long-query-text.json`: the docs demo was already visible, so a
+  pre-positioning `scroll_into_view` could emit a no-op wheel and stall with `timeout.no_frames`.
+  The script now uses `ensure_visible(within_window=true)` for that precondition while preserving
+  the input-level long-text oracle.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\command\ui-gallery-command-docs-demo-long-query-text.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery\command\ui-gallery-command-retained-active-descendant-action-state.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_command_docs_demo_long_query_text script_v2_roundtrip_ui_gallery_command_retained_active_descendant_action_state --no-fail-fast --no-capture`
+  with Nextest run id `07836627-15f2-45ec-9209-2915b9d38a3e`; and `git diff --check`.
+- Focused retained action-state runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\command\ui-gallery-command-retained-active-descendant-action-state.json --dir target\fret-diag-command-retained-active-descendant-action-state-roundtrip-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with run id `1779164006100` and AI packet
+  `target/fret-diag-command-retained-active-descendant-action-state-roundtrip-v1/sessions/1779163988388-20728/1779164006100/ai.packet`.
+- Focused long-query runtime diagnostics pass after the authoring fix:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\command\ui-gallery-command-docs-demo-long-query-text.json --dir target\fret-diag-command-long-query-ensure-visible-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with run id `1779164428287`.
+- Full Command suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-command --dir target\fret-diag-command-suite-retained-action-state-roundtrip-v2 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with suite summary
+  `target/fret-diag-command-suite-retained-action-state-roundtrip-v2/sessions/1779164457116-49144/suite.summary.json`;
+  18/18 scripts passed, `scripts_with_evidence=18`, the long-query script run id is
+  `1779164551371`, and the retained action-state script run id is `1779165106416`.

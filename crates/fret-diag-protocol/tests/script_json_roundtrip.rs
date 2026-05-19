@@ -493,6 +493,13 @@ fn script_v2_roundtrip_ui_gallery_command_scrollable_collection_metadata_mutatio
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_command_retained_active_descendant_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/command/ui-gallery-command-retained-active-descendant-action-state.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_data_table_default_pagination_collection_metadata() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-data-table-default-pagination-collection-metadata.json"

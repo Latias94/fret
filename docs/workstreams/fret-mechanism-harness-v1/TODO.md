@@ -1180,3 +1180,13 @@ date: 2026-05-12
     move, flip to the top with shadcn `sideOffset=6`, stay inside the right panel/window boundary,
     and preserve Combobox input/listbox relation edges. No new cached movement/root-boundary
     mechanism defect was reproduced.
+- [x] Add protocol coverage to the Command retained active-descendant action-state gate.
+  - Result:
+    `ui-gallery-command-retained-active-descendant-action-state.json` now has direct
+    `fret-diag-protocol` roundtrip coverage. Fresh focused and full `ui-gallery-command` suite runs
+    still prove that a retained/windowed Command active row clears its active-descendant relation
+    while detached, then reattaches with refreshed `disabled=true` and `invoke=false` semantics. No
+    new retained relation/action-state mechanism defect was reproduced. The first full-suite rerun
+    exposed diagnostics authoring drift in the Command long-query script: a pre-positioning
+    `scroll_into_view` could emit a wheel with no follow-up frame when the docs demo was already
+    visible. That guard now uses `ensure_visible(within_window=true)`.
