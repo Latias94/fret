@@ -228,6 +228,8 @@ mod node_drag;
 mod node_drag_constraints;
 mod node_drag_constraints_anchor;
 mod node_drag_constraints_extent;
+mod node_drag_geometry_cx;
+mod node_drag_geometry_retained_cx;
 mod node_drag_move_tail_cx;
 mod node_drag_move_tail_retained_cx;
 mod node_drag_preview;

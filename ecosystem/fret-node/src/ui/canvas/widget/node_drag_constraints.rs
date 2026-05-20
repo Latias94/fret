@@ -3,7 +3,10 @@ use fret_ui::UiHost;
 use crate::core::{CanvasPoint, CanvasRect, CanvasSize, NodeId as GraphNodeId};
 use crate::io::NodeGraphNodeOrigin;
 
-use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot};
+use super::{
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot,
+    node_drag_geometry_cx::NodeDragGeometryCx,
+};
 
 pub(super) fn clamp_anchor_in_rect_with_size(
     anchor: CanvasPoint,
@@ -23,14 +26,18 @@ pub(super) fn union_rect(a: CanvasRect, b: CanvasRect) -> CanvasRect {
     super::node_drag_constraints_anchor::union_rect(a, b)
 }
 
-pub(super) fn apply_multi_drag_extent_delta<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn apply_multi_drag_extent_delta<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     node_ids: &[GraphNodeId],
     delta: CanvasPoint,
     multi_drag: bool,
-) -> CanvasPoint {
+) -> CanvasPoint
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: NodeDragGeometryCx<H>,
+{
     super::node_drag_constraints_extent::apply_multi_drag_extent_delta(
         canvas, cx, snapshot, node_ids, delta, multi_drag,
     )

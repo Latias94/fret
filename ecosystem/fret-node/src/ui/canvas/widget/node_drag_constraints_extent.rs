@@ -5,16 +5,23 @@ use fret_ui::UiHost;
 
 use crate::core::{CanvasPoint, NodeId as GraphNodeId};
 
-use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot};
+use super::{
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot,
+    node_drag_geometry_cx::NodeDragGeometryCx,
+};
 
-pub(super) fn apply_multi_drag_extent_delta<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn apply_multi_drag_extent_delta<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     node_ids: &[GraphNodeId],
     delta: CanvasPoint,
     multi_drag: bool,
-) -> CanvasPoint {
+) -> CanvasPoint
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: NodeDragGeometryCx<H>,
+{
     if !multi_drag {
         return delta;
     }
@@ -23,7 +30,10 @@ pub(super) fn apply_multi_drag_extent_delta<H: UiHost, M: NodeGraphCanvasMiddlew
         return delta;
     };
 
-    let geometry = canvas.canvas_geometry(&*cx.app, snapshot);
+    let geometry = {
+        let host = cx.host();
+        canvas.canvas_geometry(&*host, snapshot)
+    };
     let Some((group_min, group_size)) = bounds::dragged_group_bounds(&geometry, node_ids) else {
         return delta;
     };

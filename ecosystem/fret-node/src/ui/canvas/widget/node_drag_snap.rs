@@ -7,11 +7,14 @@ use fret_ui::UiHost;
 use crate::core::{CanvasPoint, NodeId as GraphNodeId};
 use crate::ui::canvas::state::NodeDrag;
 
-use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot};
+use super::{
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot,
+    node_drag_geometry_cx::NodeDragGeometryCx,
+};
 
-pub(super) fn apply_snaplines_delta<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn apply_snaplines_delta<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     drag: &NodeDrag,
     mut delta: CanvasPoint,
@@ -19,14 +22,21 @@ pub(super) fn apply_snaplines_delta<H: UiHost, M: NodeGraphCanvasMiddleware>(
     snaplines_threshold_screen: f32,
     modifiers: Modifiers,
     zoom: f32,
-) -> CanvasPoint {
+) -> CanvasPoint
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: NodeDragGeometryCx<H>,
+{
     if !snaplines {
         canvas.interaction.snap_guides = None;
         return delta;
     }
 
     let threshold_canvas = canvas_units_from_screen_px(snaplines_threshold_screen, zoom);
-    let geom = canvas.canvas_geometry(&*cx.app, snapshot);
+    let geom = {
+        let host = cx.host();
+        canvas.canvas_geometry(&*host, snapshot)
+    };
     let drag_nodes: HashSet<GraphNodeId> = drag.nodes.iter().map(|(id, _)| *id).collect();
 
     let mut group: Option<Rect> = None;

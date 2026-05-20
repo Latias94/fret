@@ -144,6 +144,14 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/group_resize/tail.rs");
     const UI_CANVAS_WIDGET_GROUP_PREVIEW_MOVE_CX_RS: &str =
         include_str!("ui/canvas/widget/group_preview_move_cx.rs");
+    const UI_CANVAS_WIDGET_NODE_DRAG_CONSTRAINTS_RS: &str =
+        include_str!("ui/canvas/widget/node_drag_constraints.rs");
+    const UI_CANVAS_WIDGET_NODE_DRAG_CONSTRAINTS_EXTENT_RS: &str =
+        include_str!("ui/canvas/widget/node_drag_constraints_extent.rs");
+    const UI_CANVAS_WIDGET_NODE_DRAG_GEOMETRY_CX_RS: &str =
+        include_str!("ui/canvas/widget/node_drag_geometry_cx.rs");
+    const UI_CANVAS_WIDGET_NODE_DRAG_SNAP_RS: &str =
+        include_str!("ui/canvas/widget/node_drag_snap.rs");
     const UI_CANVAS_WIDGET_NODE_DRAG_TAIL_RS: &str =
         include_str!("ui/canvas/widget/node_drag/tail.rs");
     const UI_CANVAS_WIDGET_NODE_DRAG_MOVE_TAIL_CX_RS: &str =
@@ -404,6 +412,30 @@ mod surface_policy_tests {
             assert!(
                 !node_drag_move_tail_sources.contains(forbidden),
                 "node drag move tail helpers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn node_drag_geometry_helpers_stay_off_retained_bridge() {
+        let node_drag_geometry_sources = [
+            UI_CANVAS_WIDGET_NODE_DRAG_CONSTRAINTS_RS,
+            UI_CANVAS_WIDGET_NODE_DRAG_CONSTRAINTS_EXTENT_RS,
+            UI_CANVAS_WIDGET_NODE_DRAG_GEOMETRY_CX_RS,
+            UI_CANVAS_WIDGET_NODE_DRAG_SNAP_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !node_drag_geometry_sources.contains(forbidden),
+                "node drag geometry helpers must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }
