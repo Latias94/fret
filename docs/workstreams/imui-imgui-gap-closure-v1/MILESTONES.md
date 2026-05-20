@@ -972,6 +972,10 @@ Exit criteria:
   caller-supplied button-label roles in primitive list children while retaining breadcrumb
   typography fallback for bare loose text. List-level muted foreground now flows as inherited
   foreground instead of being forced into text leaves.
+  2026-05-20 shadcn AnnouncementTitle role-preservation result: raw extras AnnouncementTitle now
+  preserves caller-supplied button-label roles while retaining the recipe-owned clipped title
+  container and bare-text single-line ellipsis fallback. Title typography is applied to bare text
+  leaves instead of the root, avoiding inherited-style merging into shared roles.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

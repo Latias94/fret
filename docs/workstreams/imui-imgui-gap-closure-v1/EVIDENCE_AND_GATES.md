@@ -4643,6 +4643,36 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_facade_teaching_source.py` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 
+2026-05-20 shadcn AnnouncementTitle role-preservation slice:
+
+- Source gap before fix: raw extras `AnnouncementTitle` owned the correct clipped title container
+  and bare-text single-line ellipsis fallback, but its recursive title contract rewrote every
+  descendant passive text leaf. Shared text-role helpers intentionally keep leaf `style` and
+  `color` empty while carrying typography through `inherited_text_style`, so a custom title child
+  built with `text_button_label(...)` could lose its role-owned leaf contract under resize.
+- `apply_announcement_title_text_contract_recursive(...)` now delegates to a scoped helper that
+  treats `inherited_text_style` as a protected role scope. Title typography is applied to bare text
+  leaves instead of the title root, so shared role children are not polluted by parent inherited
+  style merging. Bare `cx.text(...)` title children still receive the announcement-title
+  single-line ellipsis contract, while shared role children keep `style: None`, `color: None`,
+  no-wrap, ellipsis overflow, zero minimum width, shrink, and inherited role metadata.
+- `announcement_title_keeps_composable_children_on_truncated_title_contract` proves the existing
+  bare/composable title contract remains. `announcement_title_preserves_shared_button_label_role_contracts`
+  proves a shared button-label role survives `AnnouncementTitle::new(...)` children.
+- First focused `cargo nextest run -p fret-ui-shadcn --lib
+  announcement_title_keeps_composable_children_on_truncated_title_contract
+  announcement_title_preserves_shared_button_label_role_contracts --no-fail-fast` timed out while
+  Cargo/Rustc was still compiling. No process was killed; after Cargo/Rustc exited naturally, the
+  same focused command passed.
+- `cargo fmt --check -p fret-ui-shadcn` passed.
+- `cargo check -p fret-ui-shadcn --lib` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`
+  passed.
+- `python tools\gate_imui_facade_teaching_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground

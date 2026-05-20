@@ -158,7 +158,18 @@ fn announcement_title_text_refinement(theme: &Theme) -> TextStyleRefinement {
     refinement
 }
 
-fn apply_announcement_title_text_contract_recursive(el: &mut AnyElement) {
+fn apply_announcement_title_text_contract_recursive(
+    el: &mut AnyElement,
+    title_refinement: &TextStyleRefinement,
+) {
+    apply_announcement_title_text_contract_recursive_scoped(el, title_refinement, false);
+}
+
+fn apply_announcement_title_text_contract_recursive_scoped(
+    el: &mut AnyElement,
+    title_refinement: &TextStyleRefinement,
+    role_scope_active: bool,
+) {
     fn apply_text_layout(
         layout: &mut LayoutStyle,
         wrap: &mut TextWrap,
@@ -170,21 +181,29 @@ fn apply_announcement_title_text_contract_recursive(el: &mut AnyElement) {
         *overflow = TextOverflow::Ellipsis;
     }
 
+    let role_scope_active = role_scope_active || el.inherited_text_style.is_some();
     match &mut el.kind {
-        ElementKind::Text(props) => {
+        ElementKind::Text(props) if !role_scope_active => {
             apply_text_layout(&mut props.layout, &mut props.wrap, &mut props.overflow);
+            el.inherited_text_style = Some(title_refinement.clone());
         }
-        ElementKind::StyledText(props) => {
+        ElementKind::StyledText(props) if !role_scope_active => {
             apply_text_layout(&mut props.layout, &mut props.wrap, &mut props.overflow);
+            el.inherited_text_style = Some(title_refinement.clone());
         }
-        ElementKind::SelectableText(props) => {
+        ElementKind::SelectableText(props) if !role_scope_active => {
             apply_text_layout(&mut props.layout, &mut props.wrap, &mut props.overflow);
+            el.inherited_text_style = Some(title_refinement.clone());
         }
         _ => {}
     }
 
     for child in &mut el.children {
-        apply_announcement_title_text_contract_recursive(child);
+        apply_announcement_title_text_contract_recursive_scoped(
+            child,
+            title_refinement,
+            role_scope_active,
+        );
     }
 }
 
@@ -218,7 +237,7 @@ impl AnnouncementTitle {
         let test_id = self.test_id.clone();
         let mut children = self.children;
         for child in &mut children {
-            apply_announcement_title_text_contract_recursive(child);
+            apply_announcement_title_text_contract_recursive(child, &title_refinement);
         }
 
         let el = cx.container(props, move |cx| {
@@ -236,7 +255,6 @@ impl AnnouncementTitle {
                     .into_element(cx),
             ]
         });
-        let el = typography::scope_text_style(el, title_refinement);
 
         attach_test_id(
             el,
@@ -253,6 +271,7 @@ mod tests {
     use fret_core::{AppWindowId, FontWeight, Point, Rect, Size, TextOverflow, TextWrap};
     use fret_ui::Theme;
     use fret_ui::element::{ElementKind, Length, Overflow};
+    use fret_ui_kit::declarative::text as decl_text;
 
     fn bounds_240x120() -> Rect {
         Rect::new(
@@ -288,30 +307,68 @@ mod tests {
         assert_eq!(props.layout.flex.shrink, 1.0);
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(props.layout.overflow, Overflow::Clip);
+        assert!(
+            element.inherited_text_style.is_none(),
+            "AnnouncementTitle should not stamp title typography on the root because that would merge into shared-role children"
+        );
 
         let theme = Theme::global(&app);
-        let inherited = element
-            .inherited_text_style
-            .as_ref()
-            .expect("expected AnnouncementTitle to scope title text style");
         let expected = fret_ui_kit::typography::composable_refinement_from_style(
             &fret_ui_kit::typography::control_text_style(
                 theme,
                 fret_ui_kit::typography::UiTextSize::Sm,
             ),
         );
-        assert_eq!(inherited.size, expected.size);
-        assert_eq!(inherited.line_height, expected.line_height);
-        assert_eq!(inherited.weight, Some(FontWeight::MEDIUM));
 
         let text = find_text(&element, title).expect("expected nested composable title text");
         let ElementKind::Text(props) = &text.kind else {
             panic!("expected nested AnnouncementTitle child to stay a Text element");
         };
+        let inherited = text
+            .inherited_text_style
+            .as_ref()
+            .expect("expected bare AnnouncementTitle text to receive title text style");
+        assert_eq!(inherited.size, expected.size);
+        assert_eq!(inherited.line_height, expected.line_height);
+        assert_eq!(inherited.weight, Some(FontWeight::MEDIUM));
         assert!(props.style.is_none());
         assert_eq!(props.layout.flex.shrink, 1.0);
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
+    }
+
+    #[test]
+    fn announcement_title_preserves_shared_button_label_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let title = "Shadcn Extras landed in Fret with a very long title";
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds_240x120(), "test", |cx| {
+                let role = decl_text::text_button_label(cx, title);
+                let role_text_style = role.inherited_text_style.clone();
+                let element = AnnouncementTitle::new([role]).into_element(cx);
+                (element, role_text_style)
+            });
+        let (element, role_text_style) = element;
+
+        assert!(
+            element.inherited_text_style.is_none(),
+            "AnnouncementTitle should not install title typography above shared text-role children"
+        );
+
+        let text = find_text(&element, title).expect("expected nested shared title text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected nested shared title text to stay a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(text.inherited_text_style, role_text_style);
     }
 }

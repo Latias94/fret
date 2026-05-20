@@ -1090,6 +1090,12 @@ Readiness order for the next locally testable review slices:
    defaults skip shared text-role scopes. Bare loose breadcrumb text still receives breadcrumb
    typography, while caller-supplied `text_button_label(...)` children keep their role-owned
    no-wrap, ellipsis, zero-min-width, shrink, and inherited metadata contract.
+   2026-05-20 shadcn AnnouncementTitle role-preservation follow-up: the extras title keeps its
+   recipe-owned clipped title container and bare-text single-line ellipsis fallback, but title
+   typography is now applied to bare text leaves instead of the title root. The recursive title
+   contract treats `inherited_text_style` as a protected shared-role scope, so caller-supplied
+   `text_button_label(...)` children keep their role-owned leaf style/color, no-wrap, ellipsis,
+   zero-min-width, shrink, and inherited metadata contract under the raw extras title surface.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
