@@ -3,6 +3,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use fret_canvas::view::PanZoom2D;
 use fret_core::{
@@ -30,15 +31,15 @@ use super::{
     DeclarativeKeyboardZoomAction, DerivedGeometryCacheState, DragState, HoverAnchorStore,
     Invalidation, LeftPointerDownOutcome, LeftPointerDownSnapshot, LeftPointerReleaseOutcome,
     MarqueeDragState, MarqueePointerMoveOutcome, NodeDragPhase, NodeDragPointerMoveOutcome,
-    NodeDragReleaseOutcome, NodeDragState, NodeGraphDiagnosticsConfig,
-    NodeGraphVisibleSubsetPortalConfig, NodeRectDraw, PendingSelectionState, PortalBoundsStore,
-    PortalDebugFlags, PortalMeasuredGeometryState, apply_declarative_diag_view_preset_action_host,
-    authoritative_surface_boundary_snapshot, begin_left_pointer_down_action_host,
-    begin_pan_pointer_down_action_host, build_click_selection_preview_nodes,
-    build_diag_normalize_visible_node_transaction, build_diag_nudge_visible_node_transaction,
-    build_marquee_preview_selected_nodes, build_node_drag_transaction,
-    collect_portal_label_infos_for_visible_subset, commit_graph_transaction,
-    commit_marquee_selection_action_host, commit_node_drag_transaction,
+    NodeDragReleaseOutcome, NodeDragState, NodeGraphDeclarativePortalRenderer,
+    NodeGraphDiagnosticsConfig, NodeGraphVisibleSubsetPortalConfig, NodeRectDraw,
+    PendingSelectionState, PortalBoundsStore, PortalDebugFlags, PortalMeasuredGeometryState,
+    apply_declarative_diag_view_preset_action_host, authoritative_surface_boundary_snapshot,
+    begin_left_pointer_down_action_host, begin_pan_pointer_down_action_host,
+    build_click_selection_preview_nodes, build_diag_normalize_visible_node_transaction,
+    build_diag_nudge_visible_node_transaction, build_marquee_preview_selected_nodes,
+    build_node_drag_transaction, collect_portal_label_infos_for_visible_subset,
+    commit_graph_transaction, commit_marquee_selection_action_host, commit_node_drag_transaction,
     commit_pending_selection_action_host, complete_left_pointer_release_action_host,
     complete_node_drag_release_action_host, derived_geometry_cache_key, edges_cache_key,
     effective_selected_nodes_for_paint, escape_cancel_declarative_interactions_action_host,
@@ -70,7 +71,8 @@ use crate::runtime::store::NodeGraphStore;
 use crate::ui::measured::MEASURED_GEOMETRY_EPSILON_PX;
 use crate::ui::paint_overrides::{NodeGraphPaintOverrides, NodeGraphPaintOverridesMap};
 use crate::ui::{
-    MeasuredGeometryStore, NodeGraphController, NodeGraphSurfaceBinding, node_graph_surface,
+    MeasuredGeometryStore, NodeGraphController, NodeGraphNodeTypes, NodeGraphSurfaceBinding,
+    node_graph_surface, node_graph_surface_with_portal_renderer,
 };
 use serde_json::Value;
 
@@ -1189,6 +1191,43 @@ fn render_surface_frame_for_binding(
         |cx| {
             let props = props_for_binding(binding);
             vec![node_graph_surface(cx, props)]
+        },
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(host, services, bounds, 1.0);
+    let mut scene = fret_core::Scene::default();
+    ui.paint_all(host, services, bounds, &mut scene, 1.0);
+    host.frame_id = fret_runtime::FrameId(host.frame_id.0.saturating_add(1));
+    ui.semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot")
+}
+
+fn render_surface_frame_with_portal_renderer_for_binding(
+    ui: &mut fret_ui::UiTree<TestActionHostImpl>,
+    host: &mut TestActionHostImpl,
+    services: &mut FakeUiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    binding: &NodeGraphSurfaceBinding,
+    props_for_binding: impl FnOnce(&NodeGraphSurfaceBinding) -> super::NodeGraphSurfaceProps,
+    portal_renderer: &mut dyn NodeGraphDeclarativePortalRenderer<TestActionHostImpl>,
+) -> fret_core::SemanticsSnapshot {
+    let root = fret_ui::declarative::render_root(
+        ui,
+        host,
+        services,
+        window,
+        bounds,
+        "node-graph-surface-custom-portal-frame",
+        |cx| {
+            let props = props_for_binding(binding);
+            vec![node_graph_surface_with_portal_renderer(
+                cx,
+                props,
+                portal_renderer,
+            )]
         },
     );
     ui.set_root(root);
@@ -4174,6 +4213,402 @@ fn declarative_visible_subset_portal_identity_persists_and_resets_on_kind_or_ver
     assert_ne!(
         fourth_id, third_id,
         "portal subtree identity must reset when node kind changes"
+    );
+}
+
+struct KindSwitchPortalRenderer {
+    custom_kind: NodeKindKey,
+    next_instance: Arc<AtomicUsize>,
+    last_instance: Arc<AtomicUsize>,
+}
+
+impl NodeGraphDeclarativePortalRenderer<TestActionHostImpl> for KindSwitchPortalRenderer {
+    fn render_portal(
+        &mut self,
+        cx: &mut fret_ui::ElementContext<'_, TestActionHostImpl>,
+        graph: &Graph,
+        layout: crate::ui::NodeGraphPortalNodeLayout,
+    ) -> fret_ui::element::Elements {
+        let Some(node) = graph.nodes.get(&layout.node) else {
+            return Vec::new().into();
+        };
+        if node.kind != self.custom_kind {
+            return Vec::new().into();
+        }
+        let instance = cx.root_state(
+            || self.next_instance.fetch_add(1, Ordering::SeqCst),
+            |state| *state,
+        );
+        self.last_instance.store(instance, Ordering::SeqCst);
+
+        let mut props = fret_ui::element::SemanticsProps::default();
+        props.label = Some(Arc::<str>::from("Custom portal body"));
+        props.value = Some(Arc::<str>::from(format!(
+            "node={}; window_x={:.1}; zoom={:.1}; instance={instance}",
+            layout.node.0, layout.node_window.origin.x.0, layout.zoom,
+        )));
+        props.layout.size.width = fret_ui::element::Length::Px(Px(64.0));
+        props.layout.size.height = fret_ui::element::Length::Px(Px(28.0));
+
+        vec![cx.semantics(props, |_cx| Vec::new()).attach_semantics(
+            fret_ui::element::SemanticsDecoration::default().test_id(Arc::<str>::from(format!(
+                "node_graph.portal.custom.{}",
+                layout.node.0
+            ))),
+        )]
+        .into()
+    }
+}
+
+#[test]
+fn declarative_portal_renderer_hosts_custom_subtrees_by_node_kind_with_default_fallback() {
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let mut services = FakeUiServices;
+    let window = AppWindowId::default();
+    let bounds = test_node_graph_surface_bounds();
+    ui.set_window(window);
+    host.bounds = bounds;
+
+    let custom_kind = NodeKindKey::new("test.portal.custom");
+    let custom_node = NodeId::from_u128(0x9301);
+    let fallback_node = NodeId::from_u128(0x9302);
+    let mut graph = Graph::new(GraphId::from_u128(0x9300));
+    let mut custom = test_node(CanvasPoint { x: 10.0, y: 20.0 });
+    custom.kind = custom_kind.clone();
+    custom.size = Some(CanvasSize {
+        width: 140.0,
+        height: 80.0,
+    });
+    graph.nodes.insert(custom_node, custom);
+    let mut fallback = test_node(CanvasPoint { x: 240.0, y: 20.0 });
+    fallback.kind = NodeKindKey::new("test.portal.fallback");
+    fallback.size = Some(CanvasSize {
+        width: 140.0,
+        height: 80.0,
+    });
+    graph.nodes.insert(fallback_node, fallback);
+
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            draw_order: vec![custom_node, fallback_node],
+            ..NodeGraphViewState::default()
+        },
+        default_editor_config(),
+    );
+    let portal_props = |binding: &NodeGraphSurfaceBinding| {
+        let mut props = binding.surface_props();
+        props.cull_margin_screen_px = 0.0;
+        props.portal_hosting = NodeGraphVisibleSubsetPortalConfig {
+            enabled: true,
+            max_nodes: 8,
+        };
+        props
+    };
+    let next_instance = Arc::new(AtomicUsize::new(0));
+    let last_instance = Arc::new(AtomicUsize::new(usize::MAX));
+    let mut renderer = KindSwitchPortalRenderer {
+        custom_kind: custom_kind.clone(),
+        next_instance: next_instance.clone(),
+        last_instance: last_instance.clone(),
+    };
+
+    let custom_test_id = format!("node_graph.portal.custom.{}", custom_node.0);
+    let mut snapshot = None;
+    for _ in 0..4 {
+        let next = render_surface_frame_with_portal_renderer_for_binding(
+            &mut ui,
+            &mut host,
+            &mut services,
+            window,
+            bounds,
+            &binding,
+            portal_props,
+            &mut renderer,
+        );
+        if next
+            .nodes
+            .iter()
+            .any(|node| node.test_id.as_deref() == Some(custom_test_id.as_str()))
+        {
+            snapshot = Some(next);
+            break;
+        }
+        snapshot = Some(next);
+    }
+    let snapshot = snapshot.expect("surface frame rendered");
+    let first_instance = last_instance.load(Ordering::SeqCst);
+    let custom = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some(custom_test_id.as_str()))
+        .expect("custom portal subtree must be hosted");
+    assert_eq!(custom.label.as_deref(), Some("Custom portal body"));
+    assert!(
+        custom
+            .value
+            .as_deref()
+            .is_some_and(|value| value.contains("zoom=1.0")),
+        "custom renderer should receive screen-space portal layout"
+    );
+    assert!(
+        snapshot
+            .nodes
+            .iter()
+            .any(|node| node.test_id.as_deref() == Some("node_graph.portal.node.1")),
+        "empty renderer output must fall back to the default portal label"
+    );
+    assert!(
+        snapshot
+            .nodes
+            .iter()
+            .all(|node| node.test_id.as_deref() != Some("node_graph.portal.node.0")),
+        "custom subtree should replace the default label for the matching node kind"
+    );
+
+    let _second = render_surface_frame_with_portal_renderer_for_binding(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        portal_props,
+        &mut renderer,
+    );
+    assert_eq!(
+        first_instance,
+        last_instance.load(Ordering::SeqCst),
+        "custom portal renderer state should persist for the same node kind/version"
+    );
+
+    let mut changed = host
+        .models
+        .read(&binding.graph_model(), Clone::clone)
+        .expect("graph readable");
+    changed
+        .nodes
+        .get_mut(&custom_node)
+        .expect("custom node exists")
+        .kind_version = 2;
+    binding
+        .replace_graph_action_host(&mut host, changed)
+        .expect("replace graph");
+    let changed_models = host.take_changed_models();
+    ui.propagate_model_changes(&mut host, &changed_models);
+
+    let _third = render_surface_frame_with_portal_renderer_for_binding(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        portal_props,
+        &mut renderer,
+    );
+    assert_ne!(
+        first_instance,
+        last_instance.load(Ordering::SeqCst),
+        "custom portal renderer state should reset when node kind_version changes"
+    );
+}
+
+#[test]
+fn declarative_surface_hosts_node_type_registry_without_retained_portal_host() {
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let mut services = FakeUiServices;
+    let window = AppWindowId::default();
+    let bounds = test_node_graph_surface_bounds();
+    ui.set_window(window);
+    host.bounds = bounds;
+
+    let registered_kind = NodeKindKey::new("test.portal.registry");
+    let registered_node = NodeId::from_u128(0x9311);
+    let fallback_node = NodeId::from_u128(0x9312);
+    let mut graph = Graph::new(GraphId::from_u128(0x9310));
+    let mut registered = test_node(CanvasPoint { x: 16.0, y: 24.0 });
+    registered.kind = registered_kind.clone();
+    registered.size = Some(CanvasSize {
+        width: 140.0,
+        height: 80.0,
+    });
+    graph.nodes.insert(registered_node, registered);
+    let mut fallback = test_node(CanvasPoint { x: 220.0, y: 24.0 });
+    fallback.kind = NodeKindKey::new("test.portal.registry.fallback");
+    fallback.size = Some(CanvasSize {
+        width: 140.0,
+        height: 80.0,
+    });
+    graph.nodes.insert(fallback_node, fallback);
+
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            draw_order: vec![registered_node, fallback_node],
+            ..NodeGraphViewState::default()
+        },
+        default_editor_config(),
+    );
+    let portal_props = |binding: &NodeGraphSurfaceBinding| {
+        let mut props = binding.surface_props();
+        props.cull_margin_screen_px = 0.0;
+        props.portal_hosting = NodeGraphVisibleSubsetPortalConfig {
+            enabled: true,
+            max_nodes: 8,
+        };
+        props
+    };
+    let mut registry = NodeGraphNodeTypes::new()
+        .register(registered_kind, |cx, _graph, layout| {
+            let mut props = fret_ui::element::SemanticsProps {
+                label: Some(Arc::<str>::from("Registered portal node")),
+                ..Default::default()
+            };
+            props.layout.size.width = fret_ui::element::Length::Px(Px(52.0));
+            props.layout.size.height = fret_ui::element::Length::Px(Px(20.0));
+            vec![cx.semantics(props, |_cx| Vec::new()).attach_semantics(
+                fret_ui::element::SemanticsDecoration::default().test_id(Arc::<str>::from(
+                    format!("node_graph.portal.registry.{}", layout.node.0),
+                )),
+            )]
+        })
+        .with_fallback(|cx, _graph, layout| {
+            let mut props = fret_ui::element::SemanticsProps {
+                label: Some(Arc::<str>::from("Fallback portal node")),
+                ..Default::default()
+            };
+            props.layout.size.width = fret_ui::element::Length::Px(Px(44.0));
+            props.layout.size.height = fret_ui::element::Length::Px(Px(20.0));
+            vec![cx.semantics(props, |_cx| Vec::new()).attach_semantics(
+                fret_ui::element::SemanticsDecoration::default().test_id(Arc::<str>::from(
+                    format!("node_graph.portal.registry.fallback.{}", layout.node.0),
+                )),
+            )]
+        });
+
+    let registered_test_id = format!("node_graph.portal.registry.{}", registered_node.0);
+    let fallback_test_id = format!("node_graph.portal.registry.fallback.{}", fallback_node.0);
+    let mut snapshot = None;
+    for _ in 0..4 {
+        let next = render_surface_frame_with_portal_renderer_for_binding(
+            &mut ui,
+            &mut host,
+            &mut services,
+            window,
+            bounds,
+            &binding,
+            portal_props,
+            &mut registry,
+        );
+        let has_registered = next
+            .nodes
+            .iter()
+            .any(|node| node.test_id.as_deref() == Some(registered_test_id.as_str()));
+        let has_fallback = next
+            .nodes
+            .iter()
+            .any(|node| node.test_id.as_deref() == Some(fallback_test_id.as_str()));
+        if has_registered && has_fallback {
+            snapshot = Some(next);
+            break;
+        }
+        snapshot = Some(next);
+    }
+    let snapshot = snapshot.expect("surface frame rendered");
+
+    assert!(
+        snapshot.nodes.iter().any(|node| node.test_id.as_deref()
+            == Some(registered_test_id.as_str())
+            && node.label.as_deref() == Some("Registered portal node")),
+        "registered node kind should use its renderer"
+    );
+    assert!(
+        snapshot.nodes.iter().any(|node| node.test_id.as_deref()
+            == Some(fallback_test_id.as_str())
+            && node.label.as_deref() == Some("Fallback portal node")),
+        "unregistered node kind should use the registry fallback renderer"
+    );
+}
+
+#[test]
+fn declarative_portal_renderer_publishes_custom_subtree_measurements() {
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let mut services = FakeUiServices;
+    let window = AppWindowId::default();
+    let bounds = test_node_graph_surface_bounds();
+    ui.set_window(window);
+    host.bounds = bounds;
+
+    let custom_kind = NodeKindKey::new("test.portal.measured");
+    let measured_node = NodeId::from_u128(0x9321);
+    let mut graph = Graph::new(GraphId::from_u128(0x9320));
+    let mut node = test_node(CanvasPoint { x: 20.0, y: 28.0 });
+    node.kind = custom_kind.clone();
+    graph.nodes.insert(measured_node, node);
+
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            draw_order: vec![measured_node],
+            ..NodeGraphViewState::default()
+        },
+        default_editor_config(),
+    );
+    let measured_geometry = Arc::new(MeasuredGeometryStore::new());
+    let portal_props = |binding: &NodeGraphSurfaceBinding| {
+        let mut props = binding.surface_props();
+        props.cull_margin_screen_px = 0.0;
+        props.measured_geometry = Some(measured_geometry.clone());
+        props.portal_hosting = NodeGraphVisibleSubsetPortalConfig {
+            enabled: true,
+            max_nodes: 4,
+        };
+        props
+    };
+    let mut registry = NodeGraphNodeTypes::new().register(custom_kind, |cx, _graph, layout| {
+        let mut props = fret_ui::element::SemanticsProps {
+            label: Some(Arc::<str>::from("Measured portal node")),
+            ..Default::default()
+        };
+        props.layout.size.width = fret_ui::element::Length::Px(Px(360.0));
+        props.layout.size.height = fret_ui::element::Length::Px(Px(220.0));
+        vec![cx.semantics(props, |_cx| Vec::new()).attach_semantics(
+            fret_ui::element::SemanticsDecoration::default().test_id(Arc::<str>::from(format!(
+                "node_graph.portal.measured.{}",
+                layout.node.0
+            ))),
+        )]
+    });
+
+    for _ in 0..6 {
+        let _ = render_surface_frame_with_portal_renderer_for_binding(
+            &mut ui,
+            &mut host,
+            &mut services,
+            window,
+            bounds,
+            &binding,
+            portal_props,
+            &mut registry,
+        );
+        if measured_geometry.node_size_px(measured_node).is_some() {
+            break;
+        }
+    }
+
+    let measured = measured_geometry
+        .node_size_px(measured_node)
+        .expect("custom declarative portal subtree should publish a measured node size");
+    assert!(
+        measured.0 >= 360.0 && measured.1 >= 220.0,
+        "custom portal measurement should use the rendered subtree bounds, got {measured:?}"
     );
 }
 

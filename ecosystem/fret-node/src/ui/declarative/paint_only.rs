@@ -15,7 +15,8 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::canvas::{CanvasKey, CanvasPainter};
 use fret_ui::element::{
-    AnyElement, CanvasProps, Length, PointerRegionProps, SemanticsDecoration, SemanticsProps,
+    AnyElement, CanvasProps, Elements, Length, PointerRegionProps, SemanticsDecoration,
+    SemanticsProps,
 };
 use fret_ui::{ElementContext, ElementContextAccess, GlobalElementId, Invalidation, UiHost};
 
@@ -31,8 +32,8 @@ use crate::ui::paint_overrides::{NodeGraphPaintOverridesMap, NodeGraphPaintOverr
 use crate::ui::presenter::DefaultNodeGraphPresenter;
 use crate::ui::style::NodeGraphStyle;
 use crate::ui::{
-    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphInternalsStore, NodeGraphPresenter,
-    NodeGraphSurfaceBinding,
+    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphInternalsStore,
+    NodeGraphPortalNodeLayout, NodeGraphPresenter, NodeGraphSurfaceBinding,
 };
 
 #[path = "paint_only/cache.rs"]
@@ -223,6 +224,21 @@ pub struct NodeGraphDiagnosticsConfig {
     pub hover_tooltip_enabled: bool,
 }
 
+/// Per-node portal renderer for the declarative visible-subset portal layer.
+///
+/// This is the default-path replacement for the retained `NodeGraphPortalHost` renderer callback.
+/// It receives a graph snapshot plus the screen-space layout for the currently visible node and
+/// returns regular declarative elements. Returning an empty list falls back to the built-in portal
+/// label chrome.
+pub trait NodeGraphDeclarativePortalRenderer<H: UiHost> {
+    fn render_portal(
+        &mut self,
+        cx: &mut ElementContext<'_, H>,
+        graph: &Graph,
+        layout: NodeGraphPortalNodeLayout,
+    ) -> Elements;
+}
+
 #[derive(Clone)]
 pub struct NodeGraphSurfaceProps {
     binding: NodeGraphSurfaceBinding,
@@ -311,6 +327,29 @@ impl NodeGraphSurfaceProps {
 pub fn node_graph_surface<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     props: NodeGraphSurfaceProps,
+) -> AnyElement {
+    node_graph_surface_impl(cx, props, None)
+}
+
+/// Declarative node-graph surface with custom visible-subset portal subtree hosting.
+///
+/// The renderer is invoked only for visible nodes selected by `portal_hosting`. Its output is
+/// mounted through the same screen-space portal layer as the built-in lightweight labels and is
+/// keyed by `(node id, node kind, node kind_version)` so local element state follows the retained
+/// portal lifecycle contract.
+#[track_caller]
+pub fn node_graph_surface_with_portal_renderer<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    props: NodeGraphSurfaceProps,
+    portal_renderer: &mut dyn NodeGraphDeclarativePortalRenderer<H>,
+) -> AnyElement {
+    node_graph_surface_impl(cx, props, Some(portal_renderer))
+}
+
+fn node_graph_surface_impl<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    props: NodeGraphSurfaceProps,
+    portal_renderer: Option<&mut dyn NodeGraphDeclarativePortalRenderer<H>>,
 ) -> AnyElement {
     let NodeGraphSurfaceProps {
         binding,
@@ -439,6 +478,7 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                     max_zoom,
                     wheel_zoom,
                     pinch_zoom_speed,
+                    portal_renderer,
                     surface_models: PaintOnlySurfaceModels {
                         drag: drag.clone(),
                         marquee_drag: marquee_drag.clone(),
@@ -605,4 +645,17 @@ where
     Cx: ElementContextAccess<'a, H>,
 {
     node_graph_surface(cx.elements(), props)
+}
+
+/// Capability-first adapter for [`node_graph_surface_with_portal_renderer`].
+#[track_caller]
+pub fn node_graph_surface_with_portal_renderer_in<'a, H: UiHost + 'static + 'a, Cx>(
+    cx: &mut Cx,
+    props: NodeGraphSurfaceProps,
+    portal_renderer: &mut dyn NodeGraphDeclarativePortalRenderer<H>,
+) -> AnyElement
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    node_graph_surface_with_portal_renderer(cx.elements(), props, portal_renderer)
 }

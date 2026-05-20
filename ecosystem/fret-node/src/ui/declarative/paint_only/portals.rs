@@ -12,7 +12,7 @@ use fret_ui::{ElementContext, ThemeSnapshot, UiHost};
 
 use crate::core::{Graph, NodeId};
 use crate::ui::declarative::view_reducer::apply_fit_view_to_canvas_rect;
-use crate::ui::{NodeGraphSurfaceBinding, style::NodeGraphStyle};
+use crate::ui::{NodeGraphPortalNodeLayout, NodeGraphSurfaceBinding, style::NodeGraphStyle};
 
 use super::record_portal_measured_node_size_in_state;
 use super::surface_support::collect_node_label_and_ports;
@@ -55,6 +55,16 @@ pub(super) fn declarative_portal_node_key(
         kind_hash: stable_hash_u64(0xF0_07A1, &node_value.kind),
         kind_version: node_value.kind_version,
     })
+}
+
+fn portal_label_screen_rect(bounds: Rect, info: &PortalLabelInfo) -> Rect {
+    Rect::new(
+        Point::new(
+            Px(bounds.origin.x.0 + info.left.0),
+            Px(bounds.origin.y.0 + info.top.0),
+        ),
+        fret_core::Size::new(info.width, info.height),
+    )
 }
 
 fn portal_node_rect_for_surface(
@@ -145,6 +155,80 @@ pub(super) fn collect_portal_label_infos_for_visible_subset(
     infos
 }
 
+fn render_default_portal_label<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    info: &PortalLabelInfo,
+    ordinal: usize,
+    style_tokens: &NodeGraphStyle,
+    theme: &ThemeSnapshot,
+) -> Vec<AnyElement> {
+    let mut props = ContainerProps::default();
+    props.layout.size.width = Length::Px(info.width);
+    props.layout.size.height = Length::Px(info.height);
+    props.padding = SpacingEdges::all(SpacingLength::Px(Px(4.0)));
+    props.snap_to_device_pixels = true;
+    props.background = Some(Color {
+        a: if info.selected {
+            0.98
+        } else if info.hovered {
+            0.95
+        } else {
+            0.92
+        },
+        ..style_tokens.paint.node_background
+    });
+    props.border = fret_core::Edges::all(Px(1.0));
+    props.border_color = Some(Color {
+        a: 0.35,
+        ..style_tokens.paint.node_border
+    });
+
+    let header_color = theme.color_token("card-foreground");
+    let ports_color = theme.color_token("muted-foreground");
+
+    let header =
+        {
+            let mut props = TextProps::new(info.label.clone());
+            props.color = Some(header_color);
+            cx.text_props(props)
+                .attach_semantics(SemanticsDecoration::default().test_id(Arc::<str>::from(
+                    format!("node_graph.portal.node.{ordinal}.header"),
+                )))
+        };
+    let ports =
+        {
+            let mut props = TextProps::new(Arc::<str>::from(format!(
+                "in:{} out:{}",
+                info.ports_in, info.ports_out
+            )));
+            props.color = Some(ports_color);
+            cx.text_props(props)
+                .attach_semantics(SemanticsDecoration::default().test_id(Arc::<str>::from(
+                    format!("node_graph.portal.node.{ordinal}.ports"),
+                )))
+        };
+
+    vec![
+        cx.container(props, move |cx| {
+            let mut col = ColumnProps::default();
+            col.layout.size.width = Length::Fill;
+            col.layout.size.height = Length::Fill;
+            col.gap = SpacingLength::Px(Px(2.0));
+            vec![cx.column(col, move |_cx| vec![header, ports])]
+        })
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .test_id(Arc::<str>::from(format!(
+                    "node_graph.portal.node.{ordinal}"
+                )))
+                .value(Arc::<str>::from(format!(
+                    "node_id={}; ports_in={} ports_out={}",
+                    info.id.0, info.ports_in, info.ports_out
+                ))),
+        ),
+    ]
+}
+
 pub(super) fn host_visible_portal_labels<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     overlay_children: &mut Vec<AnyElement>,
@@ -162,6 +246,7 @@ pub(super) fn host_visible_portal_labels<H: UiHost + 'static>(
     measured_geometry_enabled: bool,
     style_tokens: &NodeGraphStyle,
     theme: &ThemeSnapshot,
+    mut portal_renderer: Option<&mut dyn super::NodeGraphDeclarativePortalRenderer<H>>,
 ) -> bool {
     if portal_hosting.max_nodes == 0
         || !bounds.size.width.0.is_finite()
@@ -194,6 +279,13 @@ pub(super) fn host_visible_portal_labels<H: UiHost + 'static>(
 
     let hovered_portal_hosted =
         hovered_node.is_some_and(|id| portal_infos.iter().any(|portal| portal.id == id));
+    let custom_portal_renderer_enabled = portal_renderer.is_some();
+    let graph_snapshot = if portal_renderer.is_some() {
+        read_authoritative_graph_in_models(cx.app.models_mut(), binding, Clone::clone)
+            .unwrap_or_default()
+    } else {
+        Graph::default()
+    };
 
     let visible: BTreeSet<NodeId> = portal_infos.iter().map(|portal| portal.id).collect();
     let should_prune = cx
@@ -220,113 +312,63 @@ pub(super) fn host_visible_portal_labels<H: UiHost + 'static>(
         let theme = theme.clone();
         let portal_bounds_store = portal_bounds_store.clone();
         let portal_measured_geometry_state = portal_measured_geometry_state.clone();
-        overlay_children.push(
-            cx.keyed(("fret-node.portal-label.v2", info.key), move |cx| {
-                let mut query = LayoutQueryRegionProps {
-                    name: Some("fret-node.portal.node_label.v1".into()),
-                    ..Default::default()
-                };
-                query.layout.position = PositionStyle::Absolute;
-                query.layout.inset.left = Some(info.left).into();
-                query.layout.inset.top = Some(info.top).into();
+        overlay_children.push(cx.keyed(("fret-node.portal-label.v2", info.key), |cx| {
+            let mut query = LayoutQueryRegionProps {
+                name: Some("fret-node.portal.node_label.v1".into()),
+                ..Default::default()
+            };
+            query.layout.position = PositionStyle::Absolute;
+            query.layout.inset.left = Some(info.left).into();
+            query.layout.inset.top = Some(info.top).into();
+            if !custom_portal_renderer_enabled {
                 query.layout.size.width = Length::Px(info.width);
                 query.layout.size.height = Length::Px(info.height);
+            }
 
-                cx.layout_query_region_with_id(query, move |cx, element| {
-                    let visual_bounds = cx
-                        .last_visual_bounds_for_element(element)
-                        .or_else(|| cx.last_bounds_for_element(element));
+            cx.layout_query_region_with_id(query, |cx, element| {
+                let visual_bounds = cx
+                    .last_visual_bounds_for_element(element)
+                    .or_else(|| cx.last_bounds_for_element(element));
 
-                    if let Some(visual_bounds) = visual_bounds {
-                        let canvas_bounds = screen_rect_to_canvas_rect(bounds, view, visual_bounds);
+                if let Some(visual_bounds) = visual_bounds {
+                    let canvas_bounds = screen_rect_to_canvas_rect(bounds, view, visual_bounds);
 
-                        let mut request_frame = sync_portal_canvas_bounds_in_models(
+                    let mut request_frame = sync_portal_canvas_bounds_in_models(
+                        cx.app.models_mut(),
+                        &portal_bounds_store,
+                        info.id,
+                        canvas_bounds,
+                    );
+                    if measured_geometry_enabled {
+                        request_frame |= record_portal_measured_node_size_in_state(
                             cx.app.models_mut(),
-                            &portal_bounds_store,
+                            &portal_measured_geometry_state,
                             info.id,
-                            canvas_bounds,
+                            (visual_bounds.size.width.0, visual_bounds.size.height.0),
                         );
-                        if measured_geometry_enabled {
-                            request_frame |= record_portal_measured_node_size_in_state(
-                                cx.app.models_mut(),
-                                &portal_measured_geometry_state,
-                                info.id,
-                                (visual_bounds.size.width.0, visual_bounds.size.height.0),
-                            );
-                        }
-                        if request_frame {
-                            cx.request_frame();
-                        }
                     }
+                    if request_frame {
+                        cx.request_frame();
+                    }
+                }
 
-                    let mut props = ContainerProps::default();
-                    props.layout.size.width = Length::Fill;
-                    props.layout.size.height = Length::Fill;
-                    props.padding = SpacingEdges::all(SpacingLength::Px(Px(4.0)));
-                    props.snap_to_device_pixels = true;
-                    props.background = Some(Color {
-                        a: if info.selected {
-                            0.98
-                        } else if info.hovered {
-                            0.95
-                        } else {
-                            0.92
-                        },
-                        ..style_tokens.paint.node_background
-                    });
-                    props.border = fret_core::Edges::all(Px(1.0));
-                    props.border_color = Some(Color {
-                        a: 0.35,
-                        ..style_tokens.paint.node_border
-                    });
-
-                    let header_color = theme.color_token("card-foreground");
-                    let ports_color = theme.color_token("muted-foreground");
-
-                    let header = {
-                        let mut props = TextProps::new(info.label.clone());
-                        props.color = Some(header_color);
-                        cx.text_props(props).attach_semantics(
-                            SemanticsDecoration::default().test_id(Arc::<str>::from(format!(
-                                "node_graph.portal.node.{ordinal}.header"
-                            ))),
-                        )
+                if let Some(renderer) = portal_renderer.as_deref_mut() {
+                    let layout = NodeGraphPortalNodeLayout {
+                        node: info.id,
+                        node_window: portal_label_screen_rect(bounds, &info),
+                        zoom: view.zoom,
                     };
-                    let ports = {
-                        let mut props = TextProps::new(Arc::<str>::from(format!(
-                            "in:{} out:{}",
-                            info.ports_in, info.ports_out
-                        )));
-                        props.color = Some(ports_color);
-                        cx.text_props(props).attach_semantics(
-                            SemanticsDecoration::default().test_id(Arc::<str>::from(format!(
-                                "node_graph.portal.node.{ordinal}.ports"
-                            ))),
-                        )
-                    };
+                    let rendered = renderer
+                        .render_portal(cx, &graph_snapshot, layout)
+                        .into_vec();
+                    if !rendered.is_empty() {
+                        return rendered;
+                    }
+                }
 
-                    vec![
-                        cx.container(props, move |cx| {
-                            let mut col = ColumnProps::default();
-                            col.layout.size.width = Length::Fill;
-                            col.layout.size.height = Length::Fill;
-                            col.gap = SpacingLength::Px(Px(2.0));
-                            vec![cx.column(col, move |_cx| vec![header, ports])]
-                        })
-                        .attach_semantics(
-                            SemanticsDecoration::default()
-                                .test_id(Arc::<str>::from(format!(
-                                    "node_graph.portal.node.{ordinal}"
-                                )))
-                                .value(Arc::<str>::from(format!(
-                                    "node_id={}; ports_in={} ports_out={}",
-                                    info.id.0, info.ports_in, info.ports_out
-                                ))),
-                        ),
-                    ]
-                })
-            }),
-        );
+                render_default_portal_label(cx, &info, ordinal, &style_tokens, &theme)
+            })
+        }));
     }
 
     hovered_portal_hosted

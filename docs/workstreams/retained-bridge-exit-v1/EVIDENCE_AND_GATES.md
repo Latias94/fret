@@ -6005,3 +6005,91 @@ Broader gates:
 - `git diff --check`
   - Result: passed.
   - Scope proven: tracked changed files have no whitespace errors.
+
+## 2026-05-20 - RBX-M2-140 declarative portal renderer hosting
+
+Claim verified:
+
+- The default declarative node graph surface can host arbitrary per-kind visible-subset portal
+  subtrees without enabling `compat-retained-canvas`.
+- `NodeGraphNodeTypes` now works as a default declarative portal renderer registry, including a
+  fallback renderer for unregistered node kinds.
+- Custom declarative portal renderer output preserves the retained-compatible `(node id, node kind,
+  node kind_version)` lifecycle key and replaces the built-in lightweight label only when it returns
+  a non-empty subtree.
+- Custom portal subtree measurements publish through the same default portal measured-geometry
+  pipeline into `MeasuredGeometryStore`.
+- Retained portal lifecycle, measured-geometry, and measured-internals oracle tests still pass under
+  `compat-retained-canvas`; retained portal files are intentionally kept only for command-adapter
+  deletion-preflight work.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/portals.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+- `ecosystem/fret-node/src/ui/registry.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_lifecycle_conformance.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_measured_geometry_conformance.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_measured_internals_conformance.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- `cargo nextest run -p fret-node declarative_portal_renderer_hosts_custom_subtrees_by_node_kind_with_default_fallback declarative_surface_hosts_node_type_registry_without_retained_portal_host declarative_portal_renderer_publishes_custom_subtree_measurements`
+  - Result: passed, 3 tests.
+  - Scope proven: default declarative portal renderer hosting covers custom per-kind subtree
+    replacement, empty-output fallback to the built-in label, registry fallback rendering, lifecycle
+    persistence/reset, and custom subtree measured-geometry publishing without
+    `compat-retained-canvas`.
+- `cargo nextest run -p fret-node --features compat-retained-canvas portal_lifecycle_conformance portal_measured_geometry_conformance portal_measured_internals_conformance declarative_portal_renderer_hosts_custom_subtrees_by_node_kind_with_default_fallback declarative_surface_hosts_node_type_registry_without_retained_portal_host declarative_portal_renderer_publishes_custom_subtree_measurements`
+  - Result: passed, 7 tests.
+  - Scope proven: retained portal lifecycle, measurement publishing, measured-internals, and
+    command-preference oracle coverage remains green while the default declarative renderer path
+    carries arbitrary per-kind subtree hosting.
+
+Broader gates:
+
+- `cargo check -p fret-node`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the default package compiles after adding the public declarative portal renderer
+    surface.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the remaining retained compatibility island compiles after the default portal
+    renderer addition.
+- `cargo nextest run -p fret-node retained_bridge_source_usage_stays_on_the_migration_ledger`
+  - Result: passed, 1 test.
+  - Scope proven: retained bridge source usage did not spread while adding the default declarative
+    portal renderer surface.
+- `cargo nextest run -p fret-node --features compat-retained-canvas retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+  - Result: passed, 2 tests.
+  - Scope proven: the retained compatibility island remains crate-private and controller-bound
+    under the compat feature after the default portal renderer addition.
+- `cargo fmt -p fret-node`
+  - Result: passed.
+  - Scope proven: touched `fret-node` Rust files were formatted.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-140` changes the `fret-node` default declarative portal hosting surface and
+    keeps retained files as oracle code; default/compat targeted tests, compile gates, source-policy
+    gates, formatting, layering, catalog, and whitespace checks cover the changed surface.

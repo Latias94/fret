@@ -17,7 +17,7 @@ use super::{
     push_overlay_layer_if_needed, sync_hover_anchor_store_in_models,
 };
 
-pub(super) struct SurfaceRegionChildrenParams {
+pub(super) struct SurfaceRegionChildrenParams<'a, H: UiHost> {
     pub(super) canvas: CanvasProps,
     pub(super) binding: crate::ui::NodeGraphSurfaceBinding,
     pub(super) hovered_node_model: Model<Option<NodeId>>,
@@ -30,6 +30,7 @@ pub(super) struct SurfaceRegionChildrenParams {
     pub(super) portal_hosting: super::NodeGraphVisibleSubsetPortalConfig,
     pub(super) diagnostics: super::NodeGraphDiagnosticsConfig,
     pub(super) portals_disabled: bool,
+    pub(super) portal_renderer: Option<&'a mut dyn super::NodeGraphDeclarativePortalRenderer<H>>,
     pub(super) cull_margin_screen_px: f32,
     pub(super) min_zoom: f32,
     pub(super) max_zoom: f32,
@@ -51,9 +52,9 @@ pub(super) struct SurfaceRegionChildrenParams {
     pub(super) paint_overrides_ref: Option<NodeGraphPaintOverridesRef>,
 }
 
-pub(super) fn build_surface_region_children<H: UiHost + 'static>(
+pub(super) fn build_surface_region_children<'a, H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
-    params: SurfaceRegionChildrenParams,
+    params: SurfaceRegionChildrenParams<'a, H>,
 ) -> Vec<AnyElement> {
     let SurfaceRegionChildrenParams {
         canvas,
@@ -68,6 +69,7 @@ pub(super) fn build_surface_region_children<H: UiHost + 'static>(
         portal_hosting,
         diagnostics,
         portals_disabled,
+        portal_renderer,
         cull_margin_screen_px,
         min_zoom,
         max_zoom,
@@ -150,6 +152,7 @@ pub(super) fn build_surface_region_children<H: UiHost + 'static>(
             measured_geometry_present,
             &style_tokens,
             &theme,
+            portal_renderer,
         )
     } else {
         false

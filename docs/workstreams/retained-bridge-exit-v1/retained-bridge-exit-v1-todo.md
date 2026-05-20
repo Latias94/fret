@@ -2059,6 +2059,49 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-140 Host per-kind portal renderers on the default declarative surface.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/portals.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_content.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_shell.rs`
+    - `ecosystem/fret-node/src/ui/registry.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Replace the retained `NodeGraphPortalHost` arbitrary per-kind renderer callback with a
+      default declarative authoring path.
+    - Let `NodeGraphNodeTypes` host per-kind portal subtrees through `node_graph_surface(...)`
+      family APIs without enabling `compat-retained-canvas`.
+    - Preserve the retained portal lifecycle key contract from `RBX-M2-135` and prove custom
+      subtree measurement flows into `MeasuredGeometryStore`.
+    - Keep retained portal files in place only as command-adapter/deletion-preflight oracle code.
+  - Result:
+    - Added `NodeGraphDeclarativePortalRenderer` plus
+      `node_graph_surface_with_portal_renderer(...)` /
+      `node_graph_surface_with_portal_renderer_in(...)`.
+    - Implemented `NodeGraphDeclarativePortalRenderer` for `NodeGraphNodeTypes`, so existing
+      ReactFlow-style per-kind registries can render directly through the default declarative
+      visible-subset portal layer.
+    - Changed the declarative portal label host so custom portal subtrees replace the built-in
+      lightweight label when they return elements, and empty custom output falls back to the
+      built-in label.
+    - Kept all hosted portal subtrees keyed by `(node id, node kind, node kind_version)` and made
+      custom renderer measurements participate in the same portal measured-geometry pipeline.
+    - Verified retained portal lifecycle, measured-geometry, and measured-internals oracle tests
+      still pass under `compat-retained-canvas`.
+  - Validation:
+    - `cargo nextest run -p fret-node declarative_portal_renderer_hosts_custom_subtrees_by_node_kind_with_default_fallback declarative_surface_hosts_node_type_registry_without_retained_portal_host declarative_portal_renderer_publishes_custom_subtree_measurements`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas portal_lifecycle_conformance portal_measured_geometry_conformance portal_measured_internals_conformance declarative_portal_renderer_hosts_custom_subtrees_by_node_kind_with_default_fallback declarative_surface_hosts_node_type_registry_without_retained_portal_host declarative_portal_renderer_publishes_custom_subtree_measurements`
+    - `cargo check -p fret-node`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node retained_bridge_source_usage_stays_on_the_migration_ledger`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - `cargo fmt -p fret-node`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

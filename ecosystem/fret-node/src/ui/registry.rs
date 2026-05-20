@@ -17,7 +17,7 @@ use fret_ui::element::Elements;
 use fret_ui::elements::ElementContext;
 
 use crate::core::{Graph, NodeKindKey};
-use crate::ui::NodeGraphPortalNodeLayout;
+use crate::ui::{NodeGraphDeclarativePortalRenderer, NodeGraphPortalNodeLayout};
 
 pub type NodeGraphNodeRenderer<H> =
     dyn for<'a> FnMut(&mut ElementContext<'a, H>, &Graph, NodeGraphPortalNodeLayout) -> Elements;
@@ -110,5 +110,16 @@ impl<H: UiHost> NodeGraphNodeTypes<H> {
         }
 
         Elements::default()
+    }
+}
+
+impl<H: UiHost> NodeGraphDeclarativePortalRenderer<H> for NodeGraphNodeTypes<H> {
+    fn render_portal(
+        &mut self,
+        cx: &mut ElementContext<'_, H>,
+        graph: &Graph,
+        layout: NodeGraphPortalNodeLayout,
+    ) -> Elements {
+        self.render(cx, graph, layout)
     }
 }

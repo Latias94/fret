@@ -49,8 +49,9 @@ pub use controller::{
     NodeGraphNodeConnectionsQuery, NodeGraphNodeUpdate, NodeGraphPortConnectionsQuery,
 };
 pub use declarative::{
-    NodeGraphDiagnosticsConfig, NodeGraphSurfaceProps, NodeGraphVisibleSubsetPortalConfig,
-    node_graph_surface, node_graph_surface_in,
+    NodeGraphDeclarativePortalRenderer, NodeGraphDiagnosticsConfig, NodeGraphSurfaceProps,
+    NodeGraphVisibleSubsetPortalConfig, node_graph_surface, node_graph_surface_in,
+    node_graph_surface_with_portal_renderer, node_graph_surface_with_portal_renderer_in,
 };
 pub use edge_types::{EdgeCustomPath, EdgePathInput, EdgeTypeKey, NodeGraphEdgeTypes};
 pub use geometry_overrides::{

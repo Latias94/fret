@@ -12,7 +12,7 @@ use super::{
     build_wheel_handler,
 };
 
-pub(super) struct SurfaceShellParams {
+pub(super) struct SurfaceShellParams<'a, H: UiHost> {
     pub(super) binding: NodeGraphSurfaceBinding,
     pub(super) pointer_region: PointerRegionProps,
     pub(super) canvas: crate::ui::declarative::paint_only::CanvasProps,
@@ -24,14 +24,15 @@ pub(super) struct SurfaceShellParams {
     pub(super) max_zoom: f32,
     pub(super) wheel_zoom: super::NodeGraphWheelZoomConfig,
     pub(super) pinch_zoom_speed: f32,
+    pub(super) portal_renderer: Option<&'a mut dyn super::NodeGraphDeclarativePortalRenderer<H>>,
     pub(super) surface_models: PaintOnlySurfaceModels,
     pub(super) prepared_frame: PreparedPaintOnlySurfaceFrame,
 }
 
-pub(super) fn build_surface_shell<H: UiHost + 'static>(
+pub(super) fn build_surface_shell<'a, H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     element: fret_ui::GlobalElementId,
-    params: SurfaceShellParams,
+    params: SurfaceShellParams<'a, H>,
 ) -> Vec<AnyElement> {
     let SurfaceShellParams {
         binding,
@@ -45,6 +46,7 @@ pub(super) fn build_surface_shell<H: UiHost + 'static>(
         max_zoom,
         wheel_zoom,
         pinch_zoom_speed,
+        portal_renderer,
         surface_models,
         prepared_frame,
     } = params;
@@ -174,6 +176,7 @@ pub(super) fn build_surface_shell<H: UiHost + 'static>(
                 measured_geometry_present,
                 portal_hosting,
                 portals_disabled: prepared_frame.portals_disabled,
+                portal_renderer,
                 cull_margin_screen_px,
                 min_zoom,
                 max_zoom,
