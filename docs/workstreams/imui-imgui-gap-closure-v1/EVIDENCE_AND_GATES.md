@@ -4900,6 +4900,40 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   `python tools\gate_imui_workstream_source.py`,
   `python tools\gate_imui_facade_teaching_source.py`, and `git diff --check`.
 
+2026-05-20 shadcn Kbd/ShortcutHint keycap text-role slice:
+
+- Source gap before fix: `Kbd` and `ShortcutHint` both live in fixed `h-5` keycap/hint chrome but
+  still rendered text through local `ui::label(...).fixed_line_box_px(...).line_box_in_bounds()`
+  builders with leaf-local style/color. That kept the keycap resize contract outside the shared
+  text-role vocabulary and allowed future fixed-chrome key labels to drift from no-wrap/ellipsis
+  behavior.
+- `fret-ui-kit::declarative::text::text_keycap_label(...)` now owns the compact keycap label role:
+  `text-xs font-medium`, shrink, `min-width: 0`, no-wrap, and ellipsis. It is a narrow derived
+  role for fixed key chrome, not a new `fret-imui` runtime surface.
+- `Kbd` and `ShortcutHint` now consume `text_keycap_label(...)` and layer their shadcn
+  `component.kbd.text_px` / `component.kbd.line_height` typography plus foreground through
+  inherited text/foreground metadata. Keycap chrome, tooltip-slot colors, icon escape hatches, and
+  hint-row layout remain recipe-owned.
+- Focused gates passed:
+  `cargo nextest run -p fret-ui-kit --features imui --lib
+  keycap_label_text_uses_xs_medium_single_line_truncation
+  base_single_line_text_roles_stay_single_line_under_narrow_layout --no-fail-fast` and
+  `cargo nextest run -p fret-ui-shadcn --lib
+  kbd_defaults_match_shadcn_constraints_and_typography
+  shortcut_hint_label_uses_shared_keycap_role --no-fail-fast`.
+- Environment note: the first `fret-ui-shadcn` run failed before compiling crate code because
+  `C:\Users\Frankorz\AppData\Local\Temp` had no free space (`os error 112`). The successful retry
+  set `TMP`/`TEMP` to `F:\SourceCodes\Rust\fret\.fret\tmp`; Cargo still warned that the global
+  cache last-use database on C: was full, but both focused tests passed.
+- Source/format gates passed:
+  `cargo fmt -p fret-ui-kit -p fret-ui-shadcn`,
+  `cargo fmt --check -p fret-ui-kit -p fret-ui-shadcn`,
+  `cargo check -p fret-ui-kit --features imui --lib`,
+  `cargo check -p fret-ui-shadcn --lib`,
+  `python -m py_compile tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_facade_teaching_source.py`, and `git diff --check`.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground

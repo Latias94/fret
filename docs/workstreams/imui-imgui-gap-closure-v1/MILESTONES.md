@@ -1011,6 +1011,11 @@ Exit criteria:
   day-cell helper instead of direct `TextProps::new(day_text)` fixed-line/clipped text. Hijri keeps
   RTL order, Persian digits, Gregorian-date test ids, and selection chrome; shared roles own the
   fixed-cell text resize contract.
+  2026-05-20 shadcn Kbd/ShortcutHint keycap text-role result: fixed keycap/hint chrome now consumes
+  `text_keycap_label(...)` instead of local `ui::label(...).fixed_line_box_px(...)` builders. Kbd
+  and ShortcutHint still own shadcn `component.kbd.*` typography refinements, foreground, tooltip
+  slot colors, icon children, and row layout; the shared role owns no-wrap, shrink,
+  min-width-zero, and ellipsis.
   2026-05-20 shadcn menu item label text-role result: shared `text_list_row_label(...)` now truly
   owns fill/grow/basis-zero row-label layout, and DropdownMenu, ContextMenu, and Menubar overlay
   item labels consume a shared shadcn menu item label helper instead of local

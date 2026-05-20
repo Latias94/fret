@@ -68,6 +68,9 @@ component should construct `TextProps` locally.
   for button-like rows whose label owns the remaining inline space between icons/actions. They
   remain in the button-label family, add fill/grow/basis-zero layout, and keep single-line
   ellipsis; the compact variant owns `text-xs font-medium` for small trigger rows.
+- `text_keycap_label(...)`: compact keycap/shortcut-hint labels for fixed `h-5` key chrome. It
+  owns the same single-line shrink/min-width-zero/ellipsis contract as other fixed chrome roles,
+  while keycap recipes may refine typography from `component.kbd.*` tokens and set foreground.
 - Component-local refinements may layer font features, variable font axes, or explicit weight
   overrides onto button-label roles through inherited text refinement. That keeps the role-owned
   no-wrap/ellipsis layout intact instead of forcing components back to leaf-local `TextStyle`
@@ -133,6 +136,7 @@ component should construct `TextProps` locally.
 
 - Shared role behavior:
   - `cargo nextest run -p fret-ui-kit --features imui --lib control_readout_text_uses_muted_compact_single_line_truncation control_readout_tabular_text_uses_muted_single_line_truncation control_readout_tabular_emphasis_text_uses_medium_single_line_truncation button_label_text_uses_medium_single_line_truncation prose_variants_and_code_wrap_install_semantic_inherited_overrides table_cell_text_uses_compact_single_line_truncation attributed_list_row_label_text_uses_fill_width_single_line_truncation --no-fail-fast`
+  - `cargo nextest run -p fret-ui-kit --features imui --lib keycap_label_text_uses_xs_medium_single_line_truncation base_single_line_text_roles_stay_single_line_under_narrow_layout --no-fail-fast`
   - `cargo nextest run -p fret-ui-kit --features imui --lib list_row_label_text_uses_fill_width_single_line_truncation attributed_list_row_label_text_uses_fill_width_single_line_truncation --no-fail-fast`
   - `cargo nextest run -p fret-ui-kit --features imui --lib menu_group_label_text_uses_muted_xs_single_line_truncation --no-fail-fast`
   - `cargo nextest run -p fret-ui-kit --features imui --lib status_message_text_uses_muted_sm_single_line_truncation --no-fail-fast`

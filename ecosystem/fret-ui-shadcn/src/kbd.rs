@@ -9,8 +9,10 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, Radius, Space, ui,
+    ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, Radius, Space,
 };
 
 use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
@@ -144,6 +146,12 @@ fn kbd_with_patch<H: UiHost>(
         .metric_by_key("component.kbd.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
+    let mut keycap_text_style =
+        typography::fixed_line_box_style(fret_core::FontId::ui(), px, line_height);
+    keycap_text_style.weight = FontWeight::MEDIUM;
+    let mut keycap_text_refinement =
+        typography::composable_refinement_from_style(&keycap_text_style);
+    keycap_text_refinement.weight = Some(FontWeight::MEDIUM);
 
     cx.container(props, |cx| {
         vec![cx.flex(
@@ -163,13 +171,11 @@ fn kbd_with_patch<H: UiHost>(
                 wrap: false,
             },
             move |cx| match content {
-                KbdContent::Text(text) => vec![ui::label( text)
-                    .text_size_px(px)
-                    .fixed_line_box_px(line_height)
-                    .line_box_in_bounds()
-                    .font_weight(FontWeight::MEDIUM)
-                    .text_color(ColorRef::Color(fg))
-                    .into_element(cx)],
+                KbdContent::Text(text) => vec![
+                    decl_text::text_keycap_label(cx, text)
+                        .inherit_text_style(keycap_text_refinement.clone())
+                        .inherit_foreground(fg),
+                ],
                 KbdContent::Children(children) => children,
             },
         )]
@@ -230,7 +236,9 @@ mod tests {
 
     use crate::direction::LayoutDirection;
     use fret_app::App;
-    use fret_core::{AppWindowId, Color, Point, Px, Rect, Size as CoreSize};
+    use fret_core::{
+        AppWindowId, Color, Point, Px, Rect, Size as CoreSize, TextOverflow, TextWrap,
+    };
     use fret_ui::element::{ElementKind, Length, MarginEdge, SpacingLength};
 
     fn bounds() -> Rect {
@@ -245,14 +253,14 @@ mod tests {
         c
     }
 
-    fn find_first_text_style(el: &AnyElement) -> Option<&fret_core::TextStyle> {
+    fn find_first_text_role<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
         match &el.kind {
-            ElementKind::Text(props) => props.style.as_ref(),
-            ElementKind::StyledText(props) => props.style.as_ref(),
-            ElementKind::SelectableText(props) => props.style.as_ref(),
-            _ => None,
+            ElementKind::Text(props) if props.text.as_ref() == needle => Some(el),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_first_text_role(child, needle)),
         }
-        .or_else(|| el.children.iter().find_map(find_first_text_style))
     }
 
     #[test]
@@ -296,10 +304,27 @@ mod tests {
         assert_eq!(props.corner_radii.bottom_left, expected_radius);
         assert_eq!(props.corner_radii.bottom_right, expected_radius);
 
-        let style = find_first_text_style(&element).expect("text style");
-        assert_eq!(style.size, Px(12.0));
-        assert_eq!(style.line_height, Some(Px(16.0)));
-        assert_eq!(style.weight, FontWeight::MEDIUM);
+        let text = find_first_text_role(&element, "K").expect("keycap text role");
+        let ElementKind::Text(text_props) = &text.kind else {
+            panic!("expected keycap text leaf");
+        };
+        assert!(text_props.style.is_none());
+        assert!(text_props.color.is_none());
+        assert_eq!(text_props.layout.flex.shrink, 1.0);
+        assert_eq!(text_props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(text_props.wrap, TextWrap::None);
+        assert_eq!(text_props.overflow, TextOverflow::Ellipsis);
+
+        let mut expected_style =
+            typography::fixed_line_box_style(fret_core::FontId::ui(), Px(12.0), Px(16.0));
+        expected_style.weight = FontWeight::MEDIUM;
+        let mut expected = typography::composable_refinement_from_style(&expected_style);
+        expected.weight = Some(FontWeight::MEDIUM);
+        assert_eq!(text.inherited_text_style.as_ref(), Some(&expected));
+        assert_eq!(
+            text.inherited_foreground,
+            Some(theme.color_token("muted-foreground"))
+        );
     }
 
     #[test]

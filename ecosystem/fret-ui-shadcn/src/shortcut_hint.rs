@@ -4,7 +4,9 @@ use fret_core::{FontWeight, Px};
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign};
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
+use fret_ui_kit::declarative::text as decl_text;
+use fret_ui_kit::typography;
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
 use fret_ui_kit::{MetricRef, ui};
 
 /// A small, keyboard-first hint row: a keycap (`Kbd`) followed by a text label.
@@ -88,6 +90,11 @@ fn shortcut_hint_label<H: UiHost>(
         .metric_by_key("component.kbd.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
+    let mut label_style =
+        typography::fixed_line_box_style(fret_core::FontId::ui(), px, line_height);
+    label_style.weight = FontWeight::MEDIUM;
+    let mut label_refinement = typography::composable_refinement_from_style(&label_style);
+    label_refinement.weight = Some(FontWeight::MEDIUM);
 
     let chrome = ChromeRefinement::default().px(Space::N1).py(Space::N0p5);
     let layout = LayoutRefinement::default().h_px(Px(20.0)).min_h(Px(20.0));
@@ -97,13 +104,9 @@ fn shortcut_hint_label<H: UiHost>(
         vec![
             ui::h_flex(|cx| {
                 vec![
-                    ui::label(label)
-                        .text_size_px(px)
-                        .fixed_line_box_px(line_height)
-                        .line_box_in_bounds()
-                        .font_weight(FontWeight::MEDIUM)
-                        .text_color(ColorRef::Color(fg))
-                        .into_element(cx),
+                    decl_text::text_keycap_label(cx, label)
+                        .inherit_text_style(label_refinement.clone())
+                        .inherit_foreground(fg),
                 ]
             })
             .w_full()
@@ -113,4 +116,66 @@ fn shortcut_hint_label<H: UiHost>(
             .into_element(cx),
         ]
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size, TextOverflow, TextWrap};
+    use fret_ui::element::{ElementKind, Length};
+
+    fn find_text<'a>(node: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &node.kind
+            && props.text.as_ref() == needle
+        {
+            return Some(node);
+        }
+
+        node.children
+            .iter()
+            .find_map(|child| find_text(child, needle))
+    }
+
+    #[test]
+    fn shortcut_hint_label_uses_shared_keycap_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(260.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ShortcutHint::new("Ctrl", "Open command palette").into_element(cx)
+        });
+
+        let label = find_text(&element, "Open command palette").expect("expected hint label text");
+        let ElementKind::Text(props) = &label.kind else {
+            panic!("expected hint label text leaf");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+
+        let mut expected_style =
+            typography::fixed_line_box_style(fret_core::FontId::ui(), Px(12.0), Px(16.0));
+        expected_style.weight = FontWeight::MEDIUM;
+        let mut expected = typography::composable_refinement_from_style(&expected_style);
+        expected.weight = Some(FontWeight::MEDIUM);
+        assert_eq!(label.inherited_text_style.as_ref(), Some(&expected));
+        assert_eq!(
+            label.inherited_foreground,
+            Some(Theme::global(&app).color_token("muted-foreground"))
+        );
+    }
 }

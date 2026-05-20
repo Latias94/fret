@@ -1135,6 +1135,11 @@ Readiness order for the next locally testable review slices:
    calendar day-cell helper instead of direct `TextProps::new(day_text)` fixed-line/clipped text.
    Hijri remains responsible for RTL order, Persian digits, Gregorian-date test ids, selection
    updates, and cell chrome; shared text roles own the fixed-cell resize semantics.
+   2026-05-20 shadcn Kbd/ShortcutHint keycap text-role follow-up: fixed keycap/hint labels now
+   route through `text_keycap_label(...)` instead of local
+   `ui::label(...).fixed_line_box_px(...).line_box_in_bounds()` builders. Kbd and ShortcutHint keep
+   shadcn `component.kbd.*` typography refinements, foreground, tooltip slot colors, icon children,
+   and row layout; the shared role owns no-wrap, shrink, min-width-zero, and ellipsis.
    2026-05-20 shadcn menu item label follow-up: `text_list_row_label(...)` now includes the
    grow/basis-zero contract its name and tests already implied, and DropdownMenu, ContextMenu, and
    Menubar overlay item labels route through `menu_text::menu_item_label(...)`. The helper layers
