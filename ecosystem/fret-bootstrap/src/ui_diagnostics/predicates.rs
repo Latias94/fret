@@ -200,6 +200,16 @@ fn semantics_pressed_state_from_protocol(
     }
 }
 
+fn semantics_invalid_from_protocol(
+    invalid: fret_diag_protocol::UiSemanticsInvalidV1,
+) -> fret_core::SemanticsInvalid {
+    match invalid {
+        fret_diag_protocol::UiSemanticsInvalidV1::True => fret_core::SemanticsInvalid::True,
+        fret_diag_protocol::UiSemanticsInvalidV1::Grammar => fret_core::SemanticsInvalid::Grammar,
+        fret_diag_protocol::UiSemanticsInvalidV1::Spelling => fret_core::SemanticsInvalid::Spelling,
+    }
+}
+
 fn semantics_action_value(
     actions: fret_core::SemanticsActions,
     action: fret_diag_protocol::UiSemanticsActionV1,
@@ -1030,6 +1040,18 @@ fn eval_predicate(
                 return false;
             };
             node.flags.pressed_state == state.map(semantics_pressed_state_from_protocol)
+        }
+        UiPredicateV1::RequiredIs { target, required } => {
+            let Some(node) = select_node(target) else {
+                return false;
+            };
+            node.flags.required == *required
+        }
+        UiPredicateV1::InvalidIs { target, invalid } => {
+            let Some(node) = select_node(target) else {
+                return false;
+            };
+            node.flags.invalid == invalid.map(semantics_invalid_from_protocol)
         }
         UiPredicateV1::ExpandedIs { target, expanded } => {
             let Some(node) = select_node(target) else {
@@ -2141,8 +2163,8 @@ mod predicate_tests {
     use super::*;
     use fret_core::{
         NodeId, Point, PointerId, Px, Rect, RenderTargetId, SemanticsActions,
-        SemanticsCheckedState, SemanticsFlags, SemanticsLive, SemanticsNode, SemanticsPressedState,
-        SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size,
+        SemanticsCheckedState, SemanticsFlags, SemanticsInvalid, SemanticsLive, SemanticsNode,
+        SemanticsPressedState, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size,
     };
     use fret_diag_protocol::UiSemanticsRelationV1;
     use slotmap::KeyData;
@@ -3235,6 +3257,128 @@ mod predicate_tests {
                     root_z_index: None,
                 },
                 state: Some(fret_diag_protocol::UiSemanticsPressedStateV1::False),
+            },
+        ));
+    }
+
+    #[test]
+    fn required_and_invalid_is_match_form_control_semantics_flags() {
+        let window = window_id(1);
+        let mut root = semantics_node(1, "root", false);
+        root.role = SemanticsRole::Window;
+        let mut required = semantics_node(2, "required-input", false);
+        required.parent = Some(root.id);
+        required.role = SemanticsRole::TextField;
+        required.flags.required = true;
+        let mut invalid = semantics_node(3, "invalid-input", false);
+        invalid.parent = Some(root.id);
+        invalid.role = SemanticsRole::TextField;
+        invalid.flags.invalid = Some(SemanticsInvalid::True);
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![root, required, invalid],
+        };
+
+        assert!(eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::RequiredIs {
+                target: UiSelectorV1::TestId {
+                    id: "required-input".to_string(),
+                    root_z_index: None,
+                },
+                required: true,
+            },
+        ));
+        assert!(eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::InvalidIs {
+                target: UiSelectorV1::TestId {
+                    id: "invalid-input".to_string(),
+                    root_z_index: None,
+                },
+                invalid: Some(fret_diag_protocol::UiSemanticsInvalidV1::True),
+            },
+        ));
+        assert!(eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::InvalidIs {
+                target: UiSelectorV1::TestId {
+                    id: "required-input".to_string(),
+                    root_z_index: None,
+                },
+                invalid: None,
             },
         ));
     }

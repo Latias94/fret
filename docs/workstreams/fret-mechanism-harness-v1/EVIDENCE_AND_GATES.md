@@ -6936,3 +6936,79 @@ Next slice recommendation:
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-toggle-pressed-v2 --session-auto --timeout-ms 1200000 --launch -- target\dev-fast\fret-ui-gallery.exe`
   - result: passed 18/18; `stage_counts={"passed":18}`; `reason_code_counts={}`;
     Toggle pressed-state row run id `1779317023787`.
+
+
+## Input Required/Invalid Form-State Runtime Gate
+
+- invariant:
+  a shadcn Input must expose required and invalid semantics on the concrete TextInput control, not
+  only through Field chrome. Invalid examples should export `invalid=true` and `required=false`;
+  required examples should export `required=true` and no invalid state. Both controls remain enabled
+  and must keep `focus=true` and `set_value=true`.
+- finding:
+  no Input recipe/runtime defect was reproduced. The slice closed a diagnostics expressiveness gap
+  (`required_is` / `invalid_is`) and a UI Gallery automation surface gap: the Invalid and Required
+  snippets now stamp stable concrete TextInput test ids so gates can target the owning node.
+- implementation anchors:
+  `crates/fret-diag-protocol/src/lib.rs`,
+  `crates/fret-diag-protocol/src/builder.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs`,
+  `crates/fret-mechanism-harness/src/observe.rs`,
+  `crates/fret-mechanism-harness/src/oracle.rs`,
+  `crates/fret-mechanism-harness/src/lib.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/input/invalid.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/input/required.rs`,
+  `docs/ui-diagnostics-and-scripted-tests.md`,
+  `tools/diag-scripts/ui-gallery/input/ui-gallery-input-required-invalid-semantics.json`,
+  `tools/diag-scripts/suites/ui-gallery-input-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-input-required-invalid-semantics-v2/sessions/1779318958257-166004/1779318973423/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-input-required-invalid-semantics-v2/sessions/1779318958257-166004/share/1779318973423.zip`;
+  dedicated suite summary:
+  `target/fret-diag-input-semantics-suite-v1/sessions/1779319043334-48440/suite.summary.json`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-input-required-invalid-v1/sessions/1779319155073-96032/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\input\ui-gallery-input-required-invalid-semantics.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-input-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\snippets\input\invalid.rs apps\fret-ui-gallery\src\ui\snippets\input\required.rs crates\fret-diag-protocol\src\builder.rs crates\fret-diag-protocol\src\lib.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs crates\fret-mechanism-harness\src\lib.rs crates\fret-mechanism-harness\src\observe.rs crates\fret-mechanism-harness\src\oracle.rs ecosystem\fret-bootstrap\src\ui_diagnostics\predicates.rs ecosystem\fret-bootstrap\src\ui_diagnostics\script_steps_wait.rs`;
+  `git diff --check`
+  - result: passed.
+- protocol/bootstrap/mechanism gates:
+  `cargo test --profile dev-fast -p fret-diag-protocol predicate_required_is_serializes_and_deserializes --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-diag-protocol predicate_invalid_is_serializes_and_deserializes --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics required_and_invalid_is_match_form_control_semantics_flags --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-mechanism-harness semantics_value_state_actions_and_structured_metadata_are_queryable --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui mechanism_harness_semantics_relations_match_oracles --lib -- --nocapture`
+  - result: passed; 1 test.
+- protocol script roundtrip:
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_input_required_invalid_semantics -- --nocapture`
+  - result: passed; 1 test.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery`
+  - result: passed.
+  - note: the run emitted the pre-existing unrelated unused `start` warning from
+    `crates/fret-ui/src/declarative/host_widget/paint.rs`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\input\ui-gallery-input-required-invalid-semantics.json --dir target\fret-diag-input-required-invalid-semantics-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779318973423`.
+- dedicated runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-input-semantics --dir target\fret-diag-input-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 2/2; `stage_counts={"passed":2}`; script run id `1779319084263`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-input-required-invalid-v1 --session-auto --timeout-ms 1200000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 19/19; `stage_counts={"passed":19}`; `reason_code_counts={}`;
+    Input required/invalid row run id `1779319975211`.

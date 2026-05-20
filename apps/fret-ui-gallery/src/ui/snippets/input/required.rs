@@ -31,6 +31,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .control_id(required_id)
             .required(true)
             .placeholder("This field is required")
+            .test_id(required_id)
             .into_element(cx),
         shadcn::FieldDescription::new("This field must be filled out.")
             .for_control(required_id)

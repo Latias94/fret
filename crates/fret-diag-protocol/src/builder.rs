@@ -9,8 +9,9 @@ use crate::{
     UiActionScriptV2, UiActionStepV2, UiBoundsMetricV1, UiCommandDispatchTraceQueryV1,
     UiComparisonV1, UiImeEventV1, UiIncomingOpenInjectItemV1, UiKeyModifiersV1, UiMouseButtonV1,
     UiOverlayPlacementTraceQueryV1, UiPointerKindV1, UiPredicateV1, UiSelectorV1,
-    UiSemanticsActionV1, UiSemanticsCheckedStateV1, UiSemanticsLiveV1, UiSemanticsPressedStateV1,
-    UiSemanticsRelationV1, UiShortcutRoutingTraceQueryV1, UiWindowTargetV1,
+    UiSemanticsActionV1, UiSemanticsCheckedStateV1, UiSemanticsInvalidV1, UiSemanticsLiveV1,
+    UiSemanticsPressedStateV1, UiSemanticsRelationV1, UiShortcutRoutingTraceQueryV1,
+    UiWindowTargetV1,
 };
 
 pub fn test_id(id: impl Into<String>) -> UiSelectorV1 {
@@ -112,6 +113,24 @@ pub fn pressed_state_is_none(target: UiSelectorV1) -> UiPredicateV1 {
     UiPredicateV1::PressedStateIs {
         target,
         state: None,
+    }
+}
+
+pub fn required_is(target: UiSelectorV1, required: bool) -> UiPredicateV1 {
+    UiPredicateV1::RequiredIs { target, required }
+}
+
+pub fn invalid_is(target: UiSelectorV1, invalid: UiSemanticsInvalidV1) -> UiPredicateV1 {
+    UiPredicateV1::InvalidIs {
+        target,
+        invalid: Some(invalid),
+    }
+}
+
+pub fn invalid_is_none(target: UiSelectorV1) -> UiPredicateV1 {
+    UiPredicateV1::InvalidIs {
+        target,
+        invalid: None,
     }
 }
 

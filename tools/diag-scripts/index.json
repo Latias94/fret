@@ -8880,6 +8880,7 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-input-semantics",
         "ui-gallery-shadcn-runtime-evidence"
       ],
       "tags": [
@@ -9047,6 +9048,32 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-input-required-invalid-semantics",
+      "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-required-invalid-semantics.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-input-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "form-state",
+        "input",
+        "invalid",
+        "required",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Input page.",
+        "Verifies that required and invalid form-state semantics live on the concrete TextInput nodes, not just on Field chrome."
+      ]
     },
     {
       "id": "ui-gallery-inspector-help-lock-match-copy-selector-steady",

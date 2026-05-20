@@ -1835,6 +1835,8 @@ fn record_wait_until_predicate_selector_trace(
         | UiPredicateV1::CheckedIs { target, .. }
         | UiPredicateV1::CheckedStateIs { target, .. }
         | UiPredicateV1::PressedStateIs { target, .. }
+        | UiPredicateV1::RequiredIs { target, .. }
+        | UiPredicateV1::InvalidIs { target, .. }
         | UiPredicateV1::ExpandedIs { target, .. }
         | UiPredicateV1::SemanticsLiveIs { target, .. }
         | UiPredicateV1::SemanticsLiveAtomicIs { target, .. }

@@ -18,6 +18,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .control_id(invalid_id)
             .placeholder("Error")
             .aria_invalid(true)
+            .test_id(invalid_id)
             .into_element(cx),
         shadcn::FieldDescription::new("This field contains validation errors.")
             .for_control(invalid_id)

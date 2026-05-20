@@ -1530,3 +1530,17 @@ date: 2026-05-12
     `target/fret-diag-toggle-semantics-suite-v1/sessions/1779314830681-87028/suite.summary.json`,
     and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 18/18 with the Toggle row
     run id `1779317023787`.
+
+- [x] Add an Input required/invalid form-state semantics runtime gate.
+  - Result:
+    `required_is` and `invalid_is` are now first-class diagnostics predicates over form-control
+    semantics, with protocol, bootstrap runtime, wait-trace, and mechanism-harness oracle support.
+    `ui-gallery-input-required-invalid-semantics.json` starts directly on the Input page, gates the
+    Invalid control as `invalid=true` and `required=false`, gates the Required control as
+    `required=true` and `invalid=null`, and proves both concrete TextInput nodes keep enabled
+    `focus`/`set_value` actions. The Input snippets now stamp stable control-level test ids so the
+    gate targets the TextInput nodes rather than surrounding Field chrome. Focused runtime passed
+    with run id `1779318973423`, the new `ui-gallery-input-semantics` suite passed 2/2 with summary
+    `target/fret-diag-input-semantics-suite-v1/sessions/1779319043334-48440/suite.summary.json`,
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 19/19 with the new Input
+    row run id `1779319975211`.

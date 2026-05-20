@@ -477,6 +477,13 @@ fn script_v2_roundtrip_ui_gallery_input_disabled_action_state() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_input_required_invalid_semantics() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/input/ui-gallery-input-required-invalid-semantics.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_checkbox_disabled_action_state() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-disabled-action-state.json"

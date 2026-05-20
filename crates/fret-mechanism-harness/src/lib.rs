@@ -16,9 +16,10 @@ pub use fixture::{
 pub use observe::{
     BoundsSpace, ObservedHitTestSample, ObservedMechanismMetric, ObservedNode, ObservedOverlay,
     ObservedRoot, ObservedSemanticsAction, ObservedSemanticsActions, ObservedSemanticsCheckedState,
-    ObservedSemanticsFlag, ObservedSemanticsLive, ObservedSemanticsNumeric,
-    ObservedSemanticsPressedState, ObservedSemanticsRelation, ObservedSemanticsScroll,
-    ObservedTextRange, ObservedTextSelection, ObservedTree, QueryError, role_label,
+    ObservedSemanticsFlag, ObservedSemanticsInvalid, ObservedSemanticsLive,
+    ObservedSemanticsNumeric, ObservedSemanticsPressedState, ObservedSemanticsRelation,
+    ObservedSemanticsScroll, ObservedTextRange, ObservedTextSelection, ObservedTree, QueryError,
+    role_label,
 };
 pub use oracle::{
     MechanismPredicate, OracleEvalError, PredicateFailure, PredicatePass, evaluate_predicate,
@@ -32,8 +33,8 @@ mod tests {
     use fret_core::{Point, Px, Rect, Size};
     use fret_diag_protocol::{
         UiBoundsMetricV1, UiComparisonV1, UiPredicateV1, UiSelectorV1, UiSemanticsActionV1,
-        UiSemanticsLiveV1, UiSemanticsNumericFieldV1, UiSemanticsPressedStateV1,
-        UiSemanticsScrollFieldV1,
+        UiSemanticsInvalidV1, UiSemanticsLiveV1, UiSemanticsNumericFieldV1,
+        UiSemanticsPressedStateV1, UiSemanticsScrollFieldV1,
     };
     use serde::Deserialize;
 
@@ -480,6 +481,8 @@ mod tests {
         input.label = Some("Editor".to_string());
         input.value = Some("hello".to_string());
         input.disabled = Some(true);
+        input.required = Some(true);
+        input.invalid = Some(ObservedSemanticsInvalid::True);
         input.text_selection = Some(ObservedTextSelection {
             anchor: 2,
             focus: 2,
@@ -576,6 +579,26 @@ mod tests {
                 predicate: UiPredicateV1::DisabledIs {
                     target: editor.clone(),
                     disabled: true,
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::RequiredIs {
+                    target: editor.clone(),
+                    required: true,
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::InvalidIs {
+                    target: editor.clone(),
+                    invalid: Some(UiSemanticsInvalidV1::True),
                 },
             },
         )

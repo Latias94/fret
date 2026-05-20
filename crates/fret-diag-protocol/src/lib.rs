@@ -1964,6 +1964,14 @@ pub enum UiSemanticsPressedStateV1 {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+pub enum UiSemanticsInvalidV1 {
+    True,
+    Grammar,
+    Spelling,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum UiSemanticsActionV1 {
     Focus,
     Invoke,
@@ -2131,6 +2139,21 @@ pub enum UiPredicateV1 {
         target: UiSelectorV1,
         /// Use `null` to assert that no tri-state pressed semantics are exposed.
         state: Option<UiSemanticsPressedStateV1>,
+    },
+    /// True when the target exists and its required form-control semantics matches.
+    ///
+    /// This gates ARIA-like `aria-required` outcomes on the concrete control node rather than on
+    /// surrounding form-field chrome.
+    RequiredIs {
+        target: UiSelectorV1,
+        required: bool,
+    },
+    /// True when the target exists and its invalid form-control semantics matches.
+    ///
+    /// Use `null` to assert that no invalid-state semantics are exposed.
+    InvalidIs {
+        target: UiSelectorV1,
+        invalid: Option<UiSemanticsInvalidV1>,
     },
     ExpandedIs {
         target: UiSelectorV1,
@@ -4708,6 +4731,54 @@ mod tests {
 
         let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
         assert!(matches!(roundtrip, UiPredicateV1::PressedStateIs { .. }));
+    }
+
+    #[test]
+    fn predicate_required_is_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::RequiredIs {
+            target: UiSelectorV1::TestId {
+                id: "required-input".to_string(),
+                root_z_index: None,
+            },
+            required: true,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "required_is",
+                "target": { "kind": "test_id", "id": "required-input" },
+                "required": true,
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(roundtrip, UiPredicateV1::RequiredIs { .. }));
+    }
+
+    #[test]
+    fn predicate_invalid_is_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::InvalidIs {
+            target: UiSelectorV1::TestId {
+                id: "invalid-input".to_string(),
+                root_z_index: None,
+            },
+            invalid: Some(UiSemanticsInvalidV1::True),
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "invalid_is",
+                "target": { "kind": "test_id", "id": "invalid-input" },
+                "invalid": "true",
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(roundtrip, UiPredicateV1::InvalidIs { .. }));
     }
 
     #[test]

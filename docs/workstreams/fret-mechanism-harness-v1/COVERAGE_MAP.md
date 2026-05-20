@@ -456,3 +456,15 @@ mechanism can visibly fail.
   `target/fret-diag-toggle-pressed-state-interaction-v1/sessions/1779314794606-180768/1779314805300/ai.packet`,
   and the dedicated suite evidence is anchored at
   `target/fret-diag-toggle-semantics-suite-v1/sessions/1779314830681-87028/suite.summary.json`.
+
+- Input required/invalid form-state update:
+  `required_is` and `invalid_is` now cover required and invalid form-control semantics across
+  protocol roundtrip, bootstrap runtime evaluation, wait-until selector tracing, and
+  mechanism-harness oracles. The new `ui-gallery-input-required-invalid-semantics.json` gate starts
+  on the Input page, targets concrete TextInput nodes via stable control-level test ids, proves the
+  Invalid control exports `invalid=true` and `required=false`, proves the Required control exports
+  `required=true` and `invalid=null`, and keeps enabled `focus`/`set_value` actions on both.
+  Focused runtime evidence is anchored at
+  `target/fret-diag-input-required-invalid-semantics-v2/sessions/1779318958257-166004/1779318973423/ai.packet`,
+  and the dedicated suite evidence is anchored at
+  `target/fret-diag-input-semantics-suite-v1/sessions/1779319043334-48440/suite.summary.json`.

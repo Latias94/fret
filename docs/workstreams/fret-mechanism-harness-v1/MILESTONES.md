@@ -3785,3 +3785,52 @@ Status: complete for the Toggle pressed semantics companion and diagnostics pred
   with summary
   `target/fret-diag-shadcn-runtime-evidence-toggle-pressed-v2/sessions/1779316094427-64032/suite.summary.json`
   and new row run id `1779317023787`.
+
+## M166: Input Required/Invalid Form-State Runtime Gate
+
+Status: complete for the Input form-state semantics companion and diagnostics predicate gap.
+
+- Added `required_is` and `invalid_is` to `fret-diag-protocol` so scripts can assert required
+  form-control semantics and invalid form-control semantics (`true`, `grammar`, `spelling`, or
+  `null`) without relying on Field chrome or bundle inspection.
+- Wired both predicates through `fret-bootstrap` runtime evaluation, selector-resolution trace
+  recording, and `fret-mechanism-harness` oracles.
+- Added stable control-level test ids to the Input `Invalid` and `Required` snippets so diagnostics
+  can target the concrete TextInput semantics nodes:
+  `ui-gallery-input-invalid-control` and `ui-gallery-input-required-field`.
+- Added `ui-gallery-input-required-invalid-semantics.json`, which starts directly on the Input
+  page, proves the invalid control exports `invalid=true` and `required=false`, proves the required
+  control exports `required=true` and `invalid=null`, and verifies both controls keep enabled
+  `focus` and `set_value` actions.
+- Added the focused `ui-gallery-input-semantics` suite, promoted the new script into
+  `ui-gallery-shadcn-runtime-evidence`, refreshed the registry, and added protocol roundtrip
+  coverage.
+- No Input recipe/runtime defect was reproduced. The real gap was diagnostics expressiveness plus
+  missing stable control-level selectors for the Required/Invalid examples.
+- Gates pass:
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo test --profile dev-fast -p fret-diag-protocol predicate_required_is_serializes_and_deserializes --lib -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-diag-protocol predicate_invalid_is_serializes_and_deserializes --lib -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics required_and_invalid_is_match_form_control_semantics_flags --lib -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-mechanism-harness semantics_value_state_actions_and_structured_metadata_are_queryable --lib -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-ui mechanism_harness_semantics_relations_match_oracles --lib -- --nocapture`;
+  and
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_input_required_invalid_semantics -- --nocapture`.
+- Build passes:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\input\ui-gallery-input-required-invalid-semantics.json --dir target\fret-diag-input-required-invalid-semantics-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779318973423`, AI packet
+  `target/fret-diag-input-required-invalid-semantics-v2/sessions/1779318958257-166004/1779318973423/ai.packet`,
+  and pack
+  `target/fret-diag-input-required-invalid-semantics-v2/sessions/1779318958257-166004/share/1779318973423.zip`.
+- Dedicated runtime suite passes:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-input-semantics --dir target\fret-diag-input-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with `stage_counts={"passed":2}` and summary
+  `target/fret-diag-input-semantics-suite-v1/sessions/1779319043334-48440/suite.summary.json`.
+- The broad `ui-gallery-shadcn-runtime-evidence` suite now passes 19/19 with the new Input
+  required/invalid row:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-input-required-invalid-v1 --session-auto --timeout-ms 1200000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with summary
+  `target/fret-diag-shadcn-runtime-evidence-input-required-invalid-v1/sessions/1779319155073-96032/suite.summary.json`
+  and new row run id `1779319975211`.
