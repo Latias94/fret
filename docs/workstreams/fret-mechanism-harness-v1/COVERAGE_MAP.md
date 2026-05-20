@@ -310,6 +310,15 @@ date: 2026-05-12
   visible text label and renderer text trace, captures layout/screenshot/bundle evidence, and locks
   dynamic-text spacing plus following Popover/List non-overlap. Suite evidence is anchored at
   `target/fret-diag-ui-gallery-view-cache-suite-dynamic-text-v1/sessions/1779244758600-135808/suite.summary.json`.
+- HitTestOnly paint-cache replay update:
+  `ui-gallery-hit-test-only-paint-cache-probe-sweep.json` now gates the self-drawn
+  hit-test-only/paint-cache replay path with first-class diagnostics counters. The script
+  self-selects the hidden UI Gallery probe page, enables `FRET_UI_GALLERY_PAINT_CACHE=1`, sweeps
+  pointer movement over a stable cached region, proves at least one hit-test-only replay was
+  allowed, proves key-mismatch rejections stayed at zero, and runs in the dedicated
+  `ui-gallery-hit-test-only-paint-cache` suite with zero-warning lint policy. Suite evidence is
+  anchored at
+  `target/fret-diag-hit-test-only-paint-cache-suite-v3/sessions/1779249174760-142600/suite.summary.json`.
 - Node Graph cull-window update:
   `ui-gallery-node-graph-cull`, `ui-gallery-node-graph-cull-window-shifts`, and
   `ui-gallery-node-graph-cull-window-no-shifts-small-pan` now have protocol roundtrip coverage for

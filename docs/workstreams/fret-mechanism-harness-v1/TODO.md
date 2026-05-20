@@ -1408,3 +1408,16 @@ date: 2026-05-12
     Focused runtime passed with run id `1779244734657`, and the full `ui-gallery-view-cache` suite
     passed 2/2 with summary
     `target/fret-diag-ui-gallery-view-cache-suite-dynamic-text-v1/sessions/1779244758600-135808/suite.summary.json`.
+- [x] Promote HitTestOnly paint-cache replay into a runtime counter gate.
+  - Result:
+    `ui-gallery-hit-test-only-paint-cache-probe-sweep.json` now declares `gallery-dev`, injects
+    `FRET_UI_GALLERY_PAINT_CACHE=1`, navigates to the hidden HitTestOnly Paint-Cache Probe page,
+    waits for `/selected_page == "hit_test_only_paint_cache_probe"`, sweeps the pointer over the
+    stable cached region, and gates the new diagnostics predicates
+    `paint_cache_hit_test_only_replay_allowed_ge(min=1)` and
+    `paint_cache_hit_test_only_replay_rejected_key_mismatch_le(max=0)`. The new
+    `ui-gallery-hit-test-only-paint-cache` suite passed with zero-warning lint policy after the
+    probe page fixed a duplicate `ui-gallery-hit-test-only-probe-region` id by renaming the outer
+    panel to `ui-gallery-hit-test-only-probe-panel`. Focused runtime passed with run id
+    `1779247865248`, and the suite passed with summary
+    `target/fret-diag-hit-test-only-paint-cache-suite-v3/sessions/1779249174760-142600/suite.summary.json`.

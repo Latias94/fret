@@ -856,6 +856,13 @@ fn script_v2_roundtrip_ui_gallery_view_cache_dynamic_text_mutation_through_cache
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_hit_test_only_paint_cache_probe_sweep() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/diag/ui-gallery-hit-test-only-paint-cache-probe-sweep.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_data_table_listlike_pointer_selection() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-data-table-listlike-pointer-selection.json"

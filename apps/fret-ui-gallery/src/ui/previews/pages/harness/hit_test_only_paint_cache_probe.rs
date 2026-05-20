@@ -113,7 +113,7 @@ pub(in crate::ui) fn preview_hit_test_only_paint_cache_probe(
                 vec![region]
             },
         )
-        .test_id("ui-gallery-hit-test-only-probe-region");
+        .test_id("ui-gallery-hit-test-only-probe-panel");
 
     let probe_region = DocSection::build(cx, "Probe region", panel)
         .descriptions([

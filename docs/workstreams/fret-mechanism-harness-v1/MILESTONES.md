@@ -3384,3 +3384,38 @@ Status: complete for cached-subtree dynamic wrapped-text mutation coverage.
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-view-cache --dir target\fret-diag-ui-gallery-view-cache-suite-dynamic-text-v1 --session-auto --timeout-ms 600000 --launch -- target\dev-fast\fret-ui-gallery.exe`
   with suite summary
   `target/fret-diag-ui-gallery-view-cache-suite-dynamic-text-v1/sessions/1779244758600-135808/suite.summary.json`.
+
+## M153: HitTestOnly Paint-Cache Replay Runtime Gate
+
+Status: complete for stable cached hit-test-only replay counter coverage.
+
+- Promoted `ui-gallery-hit-test-only-paint-cache-probe-sweep.json` from a local capture script into
+  a self-contained UI Gallery runtime gate. The script now declares `gallery-dev`, injects
+  `FRET_UI_GALLERY_PAINT_CACHE=1`, uses nav search to select the hidden
+  `hit_test_only_paint_cache_probe` page, verifies `/selected_page`, resets diagnostics, sweeps the
+  pointer over a stable cached canvas, asserts the region size, and captures a bundle.
+- Added protocol/runtime predicates for `paint_cache_hit_test_only_replay_allowed_ge` and
+  `paint_cache_hit_test_only_replay_rejected_key_mismatch_le`. Bootstrap diagnostics now export the
+  matching frame counters and can evaluate them from the recent debug snapshot ring.
+- The initial focused run exposed a script-authoring hole: without page navigation the script stayed
+  on the default Overlay page and timed out. A later suite run exposed a real diagnostics hygiene
+  issue: the probe page duplicated `ui-gallery-hit-test-only-probe-region`; the outer panel now uses
+  `ui-gallery-hit-test-only-probe-panel` while the inner hit region keeps the stable id.
+- No paint-cache key-mismatch defect reproduced after promotion. The passing gate proves at least
+  one hit-test-only replay was allowed and zero key-mismatch rejections were observed during the
+  sweep.
+- Gates pass:
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_paint_cache_hit_test_only_replay_counters_serialize script_v2_roundtrip_ui_gallery_hit_test_only_paint_cache_probe_sweep --no-fail-fast --no-capture`
+  with Nextest run id `5c85e308-22d9-4ab5-8d94-3ca48ccf3819`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics paint_cache_hit_test_only_replay_predicates_count_ring_snapshot_maxes --no-fail-fast --no-capture`
+  with Nextest run id `34eb1b6e-b6f7-4d06-80b0-ea1b1c6e764a`; and
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\diag\ui-gallery-hit-test-only-paint-cache-probe-sweep.json --dir target\fret-diag-hit-test-only-paint-cache-probe-sweep-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  with run id `1779247865248` and AI packet
+  `target/fret-diag-hit-test-only-paint-cache-probe-sweep-v2/sessions/1779247851157-129852/1779247865248/ai.packet`.
+- The new `ui-gallery-hit-test-only-paint-cache` suite passes with zero-warning lint policy:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-hit-test-only-paint-cache --dir target\fret-diag-hit-test-only-paint-cache-suite-v3 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  with suite summary
+  `target/fret-diag-hit-test-only-paint-cache-suite-v3/sessions/1779249174760-142600/suite.summary.json`.

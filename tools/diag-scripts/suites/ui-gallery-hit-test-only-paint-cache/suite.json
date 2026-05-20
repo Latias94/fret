@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "lint_policy": {
+    "max_warning_issues": 0
+  },
+  "scripts": [
+    "tools/diag-scripts/ui-gallery/diag/ui-gallery-hit-test-only-paint-cache-probe-sweep.json"
+  ]
+}

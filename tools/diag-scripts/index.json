@@ -8552,6 +8552,31 @@
       ]
     },
     {
+      "id": "ui-gallery-hit-test-only-paint-cache-probe-sweep",
+      "path": "tools/diag-scripts/ui-gallery/diag/ui-gallery-hit-test-only-paint-cache-probe-sweep.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
+      "suite_memberships": [
+        "ui-gallery-hit-test-only-paint-cache"
+      ],
+      "tags": [
+        "hit_test",
+        "hit_test_only",
+        "mechanism_harness",
+        "paint_cache",
+        "runtime",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the gallery-dev HitTestOnly Paint-Cache Probe page.",
+        "Sweeps pointer movement over a stable cached canvas and gates hit-test-only paint-cache replay counters."
+      ]
+    },
+    {
       "id": "ui-gallery-hit-test-torture-stripes-move-sweep-via-nav-steady",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-hit-test-torture-stripes-move-sweep-via-nav-steady.json",
       "required_capabilities": [],
