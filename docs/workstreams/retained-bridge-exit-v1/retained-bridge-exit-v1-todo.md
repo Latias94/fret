@@ -2367,6 +2367,34 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-210 Isolate wire-drag commit retained Cx adapters.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/mod.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/commit_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/retained_commit_cx.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Keep `wire_drag/commit_cx.rs` as the retained-agnostic wire commit side-effect seam.
+    - Move retained `EventCx` / `CommandCx` implementations into a retained adapter module.
+    - Extend the default source-policy gate so the pure commit seam cannot re-import retained
+      bridge Cx types.
+  - Result:
+    - Added `wire_drag/retained_commit_cx.rs` for retained `EventCx` and `CommandCx`
+      `WireCommitCx` implementations.
+    - Removed direct retained bridge imports and impls from `wire_drag/commit_cx.rs`.
+    - Added a retained-agnostic unit test for `invalidate_commit_paint(...)` sequencing.
+    - Extended `retained_canvas_tail_policy_helpers_stay_off_retained_bridge` to include
+      `wire_drag/commit_cx.rs`.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas retained_canvas_tail_policy_helpers_stay_off_retained_bridge widget_tail commit_cx retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/paint_invalidation.rs ecosystem/fret-node/src/ui/canvas/widget/redraw_request.rs ecosystem/fret-node/src/ui/canvas/widget/widget_tail.rs ecosystem/fret-node/src/ui/canvas/widget/wire_drag/commit_cx.rs`
+    - `cargo fmt -p fret-node`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

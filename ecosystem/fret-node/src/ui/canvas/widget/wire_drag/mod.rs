@@ -2,6 +2,7 @@ mod commit;
 mod commit_cx;
 mod diagnostics;
 mod move_update;
+mod retained_commit_cx;
 
 pub(super) use commit::{handle_wire_left_up, handle_wire_left_up_with_forced_target};
 #[allow(unused_imports)]

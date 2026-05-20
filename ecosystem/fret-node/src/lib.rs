@@ -97,6 +97,8 @@ mod surface_policy_tests {
     const UI_CANVAS_WIDGET_REDRAW_REQUEST_RS: &str =
         include_str!("ui/canvas/widget/redraw_request.rs");
     const UI_CANVAS_WIDGET_TAIL_RS: &str = include_str!("ui/canvas/widget/widget_tail.rs");
+    const UI_CANVAS_WIDGET_WIRE_DRAG_COMMIT_CX_RS: &str =
+        include_str!("ui/canvas/widget/wire_drag/commit_cx.rs");
     const UI_VIEW_QUEUE_RS: &str = include_str!("ui/canvas/widget/view_queue.rs");
     const FRET_EXAMPLES_CARGO_TOML: &str = include_str!("../../../apps/fret-examples/Cargo.toml");
     const FRET_EXAMPLES_LIB_RS: &str = include_str!("../../../apps/fret-examples/src/lib.rs");
@@ -195,6 +197,7 @@ mod surface_policy_tests {
             UI_CANVAS_WIDGET_PAINT_INVALIDATION_RS,
             UI_CANVAS_WIDGET_REDRAW_REQUEST_RS,
             UI_CANVAS_WIDGET_TAIL_RS,
+            UI_CANVAS_WIDGET_WIRE_DRAG_COMMIT_CX_RS,
         ]
         .join("\n");
 

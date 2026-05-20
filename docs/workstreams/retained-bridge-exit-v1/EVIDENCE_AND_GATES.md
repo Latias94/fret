@@ -6617,3 +6617,62 @@ Broader gates not run:
   - Reason: `RBX-M2-200` is a narrow `fret-node` retained canvas widget adapter-boundary slice.
     Targeted default/compat source-policy tests, the new unit tests, the compat compile gate, and
     boundary checks cover the changed surface.
+
+## 2026-05-20 - RBX-M2-210 wire-drag commit retained Cx adapter isolation
+
+Claim verified:
+
+- `wire_drag/commit_cx.rs` now defines only the retained-agnostic `WireCommitCx` seam and commit
+  invalidation helper.
+- Retained `EventCx` / `CommandCx` implementations for wire commit side effects live in
+  `wire_drag/retained_commit_cx.rs`.
+- The default source-policy gate now includes `wire_drag/commit_cx.rs`, preventing that pure seam
+  from reintroducing retained bridge Cx names.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/commit_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/retained_commit_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/mod.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving wire commit
+    retained Cx implementations to the adapter module.
+- `cargo nextest run -p fret-node --features compat-retained-canvas retained_canvas_tail_policy_helpers_stay_off_retained_bridge widget_tail commit_cx retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+  - Result: passed, 6 tests.
+  - Scope proven: compat source-policy gates remain green, the pure helper files stay off retained
+    bridge Cx names, and wire commit invalidation sequencing remains redraw then paint invalidation.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/paint_invalidation.rs ecosystem/fret-node/src/ui/canvas/widget/redraw_request.rs ecosystem/fret-node/src/ui/canvas/widget/widget_tail.rs ecosystem/fret-node/src/ui/canvas/widget/wire_drag/commit_cx.rs`
+  - Result: no matches.
+  - Scope proven: the extracted tail and wire commit policy helpers no longer depend on retained
+    bridge Cx names.
+- `cargo fmt -p fret-node`
+  - Result: passed.
+  - Scope proven: touched `fret-node` Rust files were formatted.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after moving
+    the wire commit retained Cx impls into the adapter module.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-210` is a narrow retained adapter relocation inside `fret-node`'s canvas widget
+    island. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.
