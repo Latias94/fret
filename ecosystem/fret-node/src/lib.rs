@@ -144,6 +144,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/group_resize/tail.rs");
     const UI_CANVAS_WIDGET_GROUP_PREVIEW_MOVE_CX_RS: &str =
         include_str!("ui/canvas/widget/group_preview_move_cx.rs");
+    const UI_CANVAS_WIDGET_KEYBOARD_PAN_ACTIVATION_RS: &str =
+        include_str!("ui/canvas/widget/keyboard_pan_activation.rs");
     const UI_CANVAS_WIDGET_NODE_DRAG_CONSTRAINTS_RS: &str =
         include_str!("ui/canvas/widget/node_drag_constraints.rs");
     const UI_CANVAS_WIDGET_NODE_DRAG_CONSTRAINTS_EXTENT_RS: &str =
@@ -436,6 +438,22 @@ mod surface_policy_tests {
             assert!(
                 !node_drag_geometry_sources.contains(forbidden),
                 "node drag geometry helpers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn keyboard_pan_activation_stays_off_retained_bridge() {
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_KEYBOARD_PAN_ACTIVATION_RS.contains(forbidden),
+                "keyboard pan activation helper must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

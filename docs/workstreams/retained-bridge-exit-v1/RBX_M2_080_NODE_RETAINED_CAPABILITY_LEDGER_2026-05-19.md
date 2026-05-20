@@ -157,6 +157,10 @@ Compat-gated but retained-bridge-free support:
   - `RBX-M2-370` moved node drag snapline geometry reads and multi-drag extent geometry reads
     behind the retained-agnostic `NodeDragGeometryCx` seam. Retained `EventCx` implements that seam
     in `node_drag_geometry_retained_cx.rs`.
+- `ecosystem/fret-node/src/ui/canvas/widget/keyboard_pan_activation.rs`
+  - `RBX-M2-380` moved keyboard pan activation paint invalidation and stop-propagation side
+    effects behind the retained-agnostic `widget_tail` seams already implemented by retained
+    `EventCx`.
 
 Deleted retained overlay files:
 
@@ -215,6 +219,7 @@ Deleted retained overlay files:
 | Marquee begin/finish Cx seam | retained canvas still adapts retained `EventCx` host access and self pointer capture through `marquee_retained_cx.rs`; release-capture/paint invalidation still flows through `retained_widget_tail.rs` | `RBX-M2-350` moves marquee begin capture/paint invalidation and finish selection-clear/release tail actions onto retained-agnostic `MarqueeCx` and source-policy gates the begin/finish helpers plus pure seam | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 | Node drag preview compute Cx seam | retained canvas still adapts retained `EventCx` host access through `node_drag_preview_retained_cx.rs`; the higher-level node drag event route still receives retained `EventCx` | `RBX-M2-360` moves node drag preview host/graph-read I/O onto retained-agnostic `NodeDragPreviewCx` and source-policy gates the preview wrapper/compute helpers plus pure seam | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 | Node drag geometry Cx seam | retained canvas still adapts retained `EventCx` host access through `node_drag_geometry_retained_cx.rs`; the higher-level node drag event route still receives retained `EventCx` | `RBX-M2-370` moves snapline geometry reads and multi-drag extent geometry reads onto retained-agnostic `NodeDragGeometryCx` and source-policy gates the snap/constraint helpers plus pure seam | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
+| Keyboard pan activation tail seam | retained canvas still adapts retained `EventCx` paint invalidation and stop-propagation through `retained_widget_tail.rs`; the higher-level keyboard event route still receives retained `EventCx` | `RBX-M2-380` moves keyboard pan activation key-down/key-up side effects onto retained-agnostic `WidgetHandledCx` / `WidgetPaintInvalidationCx` and source-policy gates the helper | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level keyboard event routing with a declarative/event-leaf path. |
 
 ## New Gate
 

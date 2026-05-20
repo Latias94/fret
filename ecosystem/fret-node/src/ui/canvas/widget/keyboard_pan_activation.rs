@@ -1,18 +1,24 @@
-use super::*;
+use super::widget_tail::{WidgetHandledCx, WidgetPaintInvalidationCx};
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot, menu_session};
+use fret_ui::UiHost;
 
-pub(super) fn handle_pan_activation_key_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_pan_activation_key_down<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     key: fret_core::KeyCode,
     modifiers: fret_core::Modifiers,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: WidgetHandledCx<H>,
+{
     if modifiers.ctrl || modifiers.meta || modifiers.alt || modifiers.alt_gr {
         return false;
     }
 
     if !snapshot.interaction.space_to_pan
-        || super::menu_session::has_active_menu_session(&canvas.interaction)
+        || menu_session::has_active_menu_session(&canvas.interaction)
     {
         return false;
     }
@@ -32,12 +38,16 @@ pub(super) fn handle_pan_activation_key_down<H: UiHost, M: NodeGraphCanvasMiddle
     true
 }
 
-pub(super) fn handle_pan_activation_key_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_pan_activation_key_up<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     key: fret_core::KeyCode,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: WidgetPaintInvalidationCx<H>,
+{
     let Some(crate::io::NodeGraphKeyCode(key_code)) = snapshot.interaction.pan_activation_key_code
     else {
         return false;
@@ -52,6 +62,6 @@ pub(super) fn handle_pan_activation_key_up<H: UiHost, M: NodeGraphCanvasMiddlewa
     true
 }
 
-fn invalidate_pan_activation<H: UiHost>(cx: &mut EventCx<'_, H>) {
-    super::paint_invalidation::invalidate_paint(cx);
+fn invalidate_pan_activation<H: UiHost>(cx: &mut impl WidgetPaintInvalidationCx<H>) {
+    super::widget_tail::invalidate_widget_paint(cx);
 }

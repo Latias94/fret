@@ -2864,6 +2864,29 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-380 Isolate keyboard pan activation retained Cx adapters.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/keyboard_pan_activation.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move keyboard pan activation paint invalidation and stop-propagation side effects behind
+      existing retained-agnostic `widget_tail` seams.
+    - Extend the default source-policy gate so keyboard pan activation cannot re-import retained
+      bridge Cx names.
+  - Result:
+    - Moved `keyboard_pan_activation.rs` off direct retained `EventCx` signatures.
+    - Reused `WidgetHandledCx` for key-down stop-propagation plus paint invalidation.
+    - Reused `WidgetPaintInvalidationCx` for key-up paint invalidation.
+    - Added `keyboard_pan_activation_stays_off_retained_bridge` source-policy coverage.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas keyboard_pan_activation_stays_off_retained_bridge space_to_pan_starts_left_mouse_panning_and_updates_viewport pan_activation_key_code_must_match_to_enable_space_to_pan pan_activation_key_code_none_disables_space_to_pan_activation space_enables_pan_on_scroll_even_when_pan_on_scroll_is_disabled retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/keyboard_pan_activation.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

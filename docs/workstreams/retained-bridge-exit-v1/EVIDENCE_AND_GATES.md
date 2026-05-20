@@ -7612,3 +7612,56 @@ Broader gates not run:
   - Reason: `RBX-M2-370` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-20 - RBX-M2-380 keyboard pan activation retained Cx adapter isolation
+
+Claim verified:
+
+- Keyboard pan activation key-down/key-up paint invalidation and key-down stop-propagation now
+  flow through retained-agnostic `widget_tail` seams.
+- Retained `EventCx` already implements those seams through `retained_widget_tail.rs`.
+- `keyboard_pan_activation.rs` no longer imports or names retained bridge Cx types, and the default
+  source-policy gate locks that boundary.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/keyboard_pan_activation.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving keyboard pan
+    activation side effects behind retained-agnostic widget tail seams.
+- `cargo nextest run -p fret-node --features compat-retained-canvas keyboard_pan_activation_stays_off_retained_bridge space_to_pan_starts_left_mouse_panning_and_updates_viewport pan_activation_key_code_must_match_to_enable_space_to_pan pan_activation_key_code_none_disables_space_to_pan_activation space_enables_pan_on_scroll_even_when_pan_on_scroll_is_disabled retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+  - Result: passed, 7 tests.
+  - Scope proven: the new source-policy gate locks keyboard pan activation off retained bridge Cx
+    names; existing space-to-pan key down/up, configured pan activation key, disabled activation,
+    scroll pan integration, retained bridge ledger, and retained compat island gates remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/keyboard_pan_activation.rs`
+  - Result: no matches.
+  - Scope proven: keyboard pan activation no longer depends on retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after the
+    keyboard pan activation seam extraction.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-380` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.
