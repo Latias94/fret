@@ -19,7 +19,8 @@ use time::{Date, OffsetDateTime, Weekday};
 
 use crate::bool_model::IntoBoolModel;
 use crate::calendar::{
-    CalendarLocale, clamp_start_month, date_in_month_bounds, max_start_month, month_le, month_lt,
+    CalendarLocale, calendar_day_button_children, clamp_start_month, date_in_month_bounds,
+    max_start_month, month_le, month_lt,
 };
 use crate::calendar_month_model::IntoCalendarMonthModel;
 use crate::date_vec_model::IntoDateVecModel;
@@ -1000,6 +1001,9 @@ fn calendar_multi_day_cell<H: UiHost>(
     let text_sm_line_height = theme
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
+    let mut day_text_style =
+        typography::fixed_line_box_style(fret_core::FontId::ui(), text_sm_px, text_sm_line_height);
+    day_text_style.weight = FontWeight::NORMAL;
 
     control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
         if focus_candidate
@@ -1080,48 +1084,19 @@ fn calendar_multi_day_cell<H: UiHost>(
         };
 
         let children = move |cx: &mut ElementContext<'_, H>| {
-            vec![cx.flex(
-                FlexProps {
-                    layout: LayoutStyle {
-                        size: fret_ui::element::SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    direction: fret_core::Axis::Vertical,
-                    gap: Px(0.0).into(),
-                    padding: fret_core::Edges::all(Px(0.0)).into(),
-                    justify: MainAlign::Center,
-                    align: fret_ui::element::CrossAlign::Center,
-                    wrap: false,
-                },
-                move |cx| {
-                    let label = ui::label(day_text.clone())
-                        .text_size_px(text_sm_px)
-                        .line_height_px(text_sm_line_height)
-                        .font_medium()
-                        .w_full()
-                        .text_align(fret_core::TextAlign::Center)
-                        .text_color(ColorRef::Color(if disabled {
-                            muted_fg
-                        } else if today && !selected {
-                            theme.color_token("accent-foreground")
-                        } else {
-                            fg
-                        }))
-                        .nowrap();
-
-                    let label = if disabled {
-                        cx.opacity(0.5, |cx| vec![label.into_element(cx)])
-                    } else {
-                        label.into_element(cx)
-                    };
-
-                    vec![label]
-                },
-            )]
+            calendar_day_button_children(
+                cx,
+                theme,
+                day_text.clone(),
+                None,
+                None,
+                day_text_style.clone(),
+                muted_fg,
+                fg,
+                disabled,
+                today,
+                selected,
+            )
         };
 
         (pressable, chrome_props, children)
@@ -1159,6 +1134,58 @@ mod tests {
         }
 
         None
+    }
+
+    fn find_text_element<'a>(node: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &node.kind
+            && props.text.as_ref() == needle
+        {
+            return Some(node);
+        }
+
+        node.children
+            .iter()
+            .find_map(|child| find_text_element(child, needle))
+    }
+
+    #[test]
+    fn calendar_multiple_day_text_uses_shared_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(112.0), Px(240.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let month = cx
+                .app
+                .models_mut()
+                .insert(CalendarMonth::new(2026, Month::May));
+            let selected = cx.app.models_mut().insert(Vec::<Date>::new());
+
+            let el = CalendarMultiple::new(month, selected).into_element(cx);
+            let day = find_text_element(&el, "12").expect("expected day number text");
+            let ElementKind::Text(day_text) = &day.kind else {
+                panic!("expected day number text leaf");
+            };
+            assert!(day_text.style.is_none());
+            assert!(day_text.color.is_none());
+            assert_eq!(day_text.layout.size.width, Length::Fill);
+            assert_eq!(day_text.layout.flex.shrink, 1.0);
+            assert_eq!(day_text.layout.size.min_width, Some(Length::Px(Px(0.0))));
+            assert_eq!(day_text.wrap, TextWrap::None);
+            assert_eq!(day_text.overflow, TextOverflow::Ellipsis);
+            assert_eq!(day_text.align, fret_core::TextAlign::Center);
+
+            let theme = Theme::global(&*cx.app);
+            let mut expected_day_style = typography::composable_refinement_from_style(
+                &typography::control_text_style(theme, typography::UiTextSize::Sm),
+            );
+            expected_day_style.weight = Some(FontWeight::NORMAL);
+            assert_eq!(day.inherited_text_style.as_ref(), Some(&expected_day_style));
+            assert!(day.inherited_foreground.is_some());
+        });
     }
 
     #[test]

@@ -4028,6 +4028,21 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/calendar_multiple.rs"),
+            required=[
+                "calendar_day_button_children(",
+                "day_text_style.weight = FontWeight::NORMAL;",
+                "calendar_multiple_day_text_uses_shared_role",
+                "assert_eq!(day_text.wrap, TextWrap::None);",
+                "assert_eq!(day_text.overflow, TextOverflow::Ellipsis);",
+                "assert!(day.inherited_foreground.is_some());",
+            ],
+            forbidden=[
+                "let label = ui::label(day_text.clone())",
+                ".font_medium()\n                        .w_full()\n                        .text_align(fret_core::TextAlign::Center)",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-shadcn/src/tooltip.rs"),
             required=[
                 "fn apply_tooltip_inherited_defaults_scoped(",

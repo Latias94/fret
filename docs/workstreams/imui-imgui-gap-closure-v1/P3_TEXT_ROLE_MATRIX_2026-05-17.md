@@ -75,7 +75,8 @@ component should construct `TextProps` locally.
 - Calendar-like fixed button cells may consume the button-label/readout role families with
   component-local inherited refinements for normal weight and center alignment. The role still owns
   no-wrap, shrink, min-width-zero, and ellipsis; the calendar recipe owns cell chrome, selection
-  foreground, and date/range semantics.
+  foreground, and date/range semantics. This now covers single-date, range, and multiple-selection
+  shadcn calendar day cells.
 - Menu-family item labels (`DropdownMenu`, `ContextMenu`, `Menubar` overlay rows) consume the
   list-row label family with component-local inherited refinements for the resolved shadcn menu text
   style and row foreground. Icon/currentColor slot foreground stays recipe-owned and must not wrap

@@ -1126,6 +1126,11 @@ Readiness order for the next locally testable review slices:
    `ui::label(...).line_height_px(...).nowrap()` builders. Single-date and range calendars share the
    same helper contract; Calendar remains responsible for fixed cell chrome, selected/today/range
    foreground, center alignment, and disabled opacity.
+   2026-05-20 shadcn CalendarMultiple text-role follow-up: multiple-selection calendar day numbers
+   now share `calendar_day_button_children(...)` with single/range day cells instead of carrying a
+   local `ui::label(day_text).text_size_px(...).line_height_px(...).font_medium()` builder.
+   CalendarMultiple remains responsible for multi-select updates and cell chrome; shared text roles
+   own no-wrap, shrink, min-width-zero, ellipsis, and inherited text/foreground semantics.
    2026-05-20 shadcn menu item label follow-up: `text_list_row_label(...)` now includes the
    grow/basis-zero contract its name and tests already implied, and DropdownMenu, ContextMenu, and
    Menubar overlay item labels route through `menu_text::menu_item_label(...)`. The helper layers

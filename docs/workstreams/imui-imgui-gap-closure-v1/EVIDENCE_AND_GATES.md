@@ -4850,6 +4850,31 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   `python tools\gate_imui_facade_teaching_source.py`,
   `cargo fmt --check -p fret-ui-kit -p fret-ui-shadcn`, and `git diff --check`.
 
+2026-05-20 shadcn CalendarMultiple shared text-role slice:
+
+- Source gap before fix: `CalendarMultiple` still rendered multiple-selection day numbers with a
+  local `ui::label(day_text).text_size_px(...).line_height_px(...).font_medium().w_full()
+  .text_align(...).text_color(...).nowrap()` builder, even though `Calendar` and `CalendarRange`
+  had already moved day-cell text into the shared button-label/readout role helper.
+- `CalendarMultiple` now reuses `calendar_day_button_children(...)` with the same normal-weight
+  `day_text_style` as the single-date/range calendar day cells. Multiple selection still owns
+  fixed cell chrome, selected/today foregrounds, disabled opacity, and selection updates; the day
+  number text contract is no longer component-local.
+- `calendar_multiple_day_text_uses_shared_role` proves multiple calendar day text keeps leaf
+  `style: None`, `color: None`, fill width, shrink, `min-width: 0`, no-wrap, ellipsis, center
+  alignment, inherited text style, and inherited foreground.
+- `tools/gate_imui_workstream_source.py` now requires the CalendarMultiple helper/test shape and
+  forbids the old local `ui::label(day_text.clone())` fixed-style block from returning.
+- Focused gates passed:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  calendar_multiple_day_text_uses_shared_role
+  calendar_multiple_nav_buttons_render_svg_icons --no-fail-fast`,
+  `cargo check -p fret-ui-shadcn --lib`,
+  `cargo fmt --check -p fret-ui-shadcn`,
+  `python -m py_compile tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_facade_teaching_source.py`, and `git diff --check`.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground

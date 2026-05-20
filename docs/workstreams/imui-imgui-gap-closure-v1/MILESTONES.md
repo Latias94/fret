@@ -1002,6 +1002,11 @@ Exit criteria:
   `ui::label(...).line_height_px(...).nowrap()` builders. Calendar still owns fixed day-cell
   chrome, center alignment, range/selected/today foreground, and disabled opacity, while both
   single and range calendar day cells share the same single-line shrink/ellipsis text contract.
+  2026-05-20 shadcn CalendarMultiple text-role result: multiple-selection calendar day numbers now
+  consume the same `calendar_day_button_children(...)` helper as single/range day cells instead of
+  carrying a local `ui::label(day_text).text_size_px(...).line_height_px(...).font_medium()`
+  builder. Multiple selection still owns selection updates and cell chrome, while shared text roles
+  own no-wrap, shrink, min-width-zero, ellipsis, and inherited typography/foreground.
   2026-05-20 shadcn menu item label text-role result: shared `text_list_row_label(...)` now truly
   owns fill/grow/basis-zero row-label layout, and DropdownMenu, ContextMenu, and Menubar overlay
   item labels consume a shared shadcn menu item label helper instead of local
