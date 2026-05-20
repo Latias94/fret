@@ -4588,6 +4588,36 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   `cargo nextest run -p fret-ui-shadcn --lib
   button_inline_children_preserve_shared_button_label_role_contracts --no-fail-fast`.
 
+2026-05-20 shadcn TooltipContent role-preservation slice:
+
+- Source gap before fix: `TooltipContent` recursively wrote tooltip foreground, tooltip text style,
+  and max-width/min-width hints into descendant text leaves whenever those leaf props were empty.
+  Shared text-role helpers intentionally keep leaf `style` and `color` empty while carrying
+  typography through `inherited_text_style`, so rich tooltip content built with
+  `text_control_readout(...)` could lose its role-owned single-line shrink/ellipsis contract under
+  narrow overlay chrome.
+- `apply_tooltip_inherited_defaults(...)` now delegates to a scoped helper that treats
+  `inherited_text_style` as a protected role scope and propagates that scope through descendants.
+  Bare tooltip text still receives tooltip `text-xs`, foreground, and max-width defaults; shared
+  role children keep `style: None`, `color: None`, no-wrap, ellipsis overflow, zero minimum width,
+  shrink, and inherited role metadata.
+- `TooltipContent` now stamps tooltip foreground as inherited foreground on the content root. This
+  preserves shadcn `text-background` behavior for shared text roles without mutating role-owned text
+  leaves.
+- `tooltip_content_applies_default_style_to_bare_text` proves the bare-text fallback remains.
+  `tooltip_content_preserves_shared_control_readout_role_contracts` proves a shared control-readout
+  role survives `TooltipContent::new(...)` rich content.
+- First combined focused runs timed out while Cargo/Rustc was still compiling. No process was
+  killed; after Cargo/Rustc exited naturally, the combined focused run passed:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  tooltip_content_applies_default_style_to_bare_text
+  tooltip_content_preserves_shared_control_readout_role_contracts --no-fail-fast`.
+- `cargo fmt --check -p fret-ui-shadcn` passed.
+- `cargo check -p fret-ui-shadcn --lib` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_facade_teaching_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground

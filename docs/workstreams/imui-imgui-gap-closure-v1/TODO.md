@@ -1080,6 +1080,11 @@ Readiness order for the next locally testable review slices:
    `Button::leading_children(...)`, and `Button::trailing_children(...)` now have focused gates
    proving caller-supplied `text_button_label(...)` roles keep their leaf no-wrap, ellipsis,
    zero-min-width, shrink, and inherited metadata contract under button chrome composition.
+   2026-05-20 shadcn TooltipContent role-preservation follow-up: tooltip content defaults now treat
+   `inherited_text_style` as a protected role scope and stamp tooltip foreground as inherited
+   foreground on the content root. Bare tooltip text still receives tooltip `text-xs`/foreground
+   defaults, while caller-supplied `text_control_readout(...)` children keep their role-owned
+   no-wrap, ellipsis, zero-min-width, shrink, and inherited metadata contract.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

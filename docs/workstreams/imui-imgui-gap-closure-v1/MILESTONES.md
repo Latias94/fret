@@ -964,6 +964,10 @@ Exit criteria:
   2026-05-20 shadcn Button role-preservation result: Button now has focused gates proving
   caller-supplied button-label roles survive both full custom content and inline leading/trailing
   slot composition.
+  2026-05-20 shadcn TooltipContent role-preservation result: TooltipContent now preserves
+  caller-supplied control-readout roles in rich tooltip content while retaining tooltip-owned
+  typography/foreground fallback for bare text. Tooltip foreground now flows as inherited
+  foreground from the content root instead of being forced into shared role text leaves.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.
