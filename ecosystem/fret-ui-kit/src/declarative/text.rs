@@ -335,10 +335,9 @@ pub fn text_menu_group_label<H: UiHost>(
 ) -> AnyElement {
     let (refinement, foreground) = {
         let theme = Theme::global(&*cx.app);
-        (
-            text_xs_refinement(theme),
-            ui_typography::muted_foreground_color(theme),
-        )
+        let mut refinement = text_xs_refinement(theme);
+        refinement.weight = Some(FontWeight::MEDIUM);
+        (refinement, ui_typography::muted_foreground_color(theme))
     };
 
     ui_typography::scope_text_style_with_color(
@@ -1526,7 +1525,7 @@ mod tests {
     }
 
     #[test]
-    fn menu_group_label_text_uses_muted_xs_single_line_truncation() {
+    fn menu_group_label_text_uses_muted_medium_xs_single_line_truncation() {
         let window = AppWindowId::default();
         let mut app = test_app();
         let bounds = test_bounds();
@@ -1547,7 +1546,9 @@ mod tests {
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
-        assert_eq!(el.inherited_text_style, Some(text_xs_refinement(&theme)));
+        let mut expected = text_xs_refinement(&theme);
+        expected.weight = Some(FontWeight::MEDIUM);
+        assert_eq!(el.inherited_text_style, Some(expected));
         assert_eq!(
             el.inherited_foreground,
             Some(ui_typography::muted_foreground_color(theme))

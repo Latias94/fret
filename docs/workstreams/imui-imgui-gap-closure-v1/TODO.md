@@ -1096,6 +1096,12 @@ Readiness order for the next locally testable review slices:
    contract treats `inherited_text_style` as a protected shared-role scope, so caller-supplied
    `text_button_label(...)` children keep their role-owned leaf style/color, no-wrap, ellipsis,
    zero-min-width, shrink, and inherited metadata contract under the raw extras title surface.
+   2026-05-20 shadcn SidebarGroupLabel resize follow-up: the fixed-height sidebar group label no
+   longer hand-rolls `ui::text(...).wrap(TextWrap::Word)` inside a 32px chrome row. The shared
+   `text_menu_group_label(...)` role now carries `text-xs font-medium` plus fill/shrink/min-width-0
+   single-line ellipsis semantics, and `SidebarGroupLabel` consumes it while overriding foreground
+   from sidebar context. This directly targets the resize failure mode where chrome labels wrap
+   into a second line and overrun the row bottom.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

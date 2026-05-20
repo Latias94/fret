@@ -3323,13 +3323,31 @@ def main() -> None:
             required=[
                 "pub fn text_menu_group_label<H: UiHost>(",
                 "pub fn text_status_message<H: UiHost>(",
+                "refinement.weight = Some(FontWeight::MEDIUM);",
                 "layout: fill_shrinkable_single_line_layout()",
                 "wrap: TextWrap::None",
                 "overflow: TextOverflow::Ellipsis",
-                "menu_group_label_text_uses_muted_xs_single_line_truncation",
+                "menu_group_label_text_uses_muted_medium_xs_single_line_truncation",
                 "status_message_text_uses_muted_sm_single_line_truncation",
             ],
             forbidden=[],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/sidebar.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_menu_group_label(cx, label.clone()).inherit_foreground(fg)",
+                "fn sidebar_group_label_uses_shared_menu_group_text_role()",
+                "find_text_element(&element, \"Recently opened projects and pinned workspaces\")",
+                "expected_style.weight = Some(FontWeight::MEDIUM);",
+                "assert_eq!(text.wrap, TextWrap::None);",
+                "assert_eq!(text.overflow, TextOverflow::Ellipsis);",
+            ],
+            forbidden=[
+                ".text_size_px(size)",
+                ".text_color(ColorRef::Color(fg))\n                                .wrap(TextWrap::Word)",
+                ".font_medium()\n                                .text_color(ColorRef::Color(fg))",
+            ],
         ),
         SourceCheck(
             Path("ecosystem/fret-ui-shadcn/src/select.rs"),

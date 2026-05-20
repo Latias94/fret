@@ -976,6 +976,11 @@ Exit criteria:
   preserves caller-supplied button-label roles while retaining the recipe-owned clipped title
   container and bare-text single-line ellipsis fallback. Title typography is applied to bare text
   leaves instead of the root, avoiding inherited-style merging into shared roles.
+  2026-05-20 shadcn SidebarGroupLabel resize result: fixed-height sidebar group labels now consume
+  the shared menu-group text role instead of local wrapping text builders. The role carries
+  `text-xs font-medium`, fill/shrink/min-width-0, no-wrap, and ellipsis semantics, while sidebar
+  still owns its muted foreground. Narrow sidebars therefore truncate the label instead of letting
+  wrapped text exceed the 32px chrome row.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

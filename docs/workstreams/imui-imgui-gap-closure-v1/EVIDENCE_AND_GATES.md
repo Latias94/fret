@@ -4673,6 +4673,32 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.
 
+2026-05-20 shadcn SidebarGroupLabel resize text-role slice:
+
+- Source gap before fix: `SidebarGroupLabel` rendered its default fixed-height label with local
+  `ui::text(...).text_size_px(...).line_height_px(...).font_medium().text_color(...).wrap(TextWrap::Word)`.
+  The outer chrome row is fixed at 32px, so narrow sidebars could wrap group labels into multiple
+  lines and let text exceed the row bottom, matching the resize failure mode reported in the UI.
+- `text_menu_group_label(...)` now carries the complete shadcn menu/group label role:
+  `text-xs font-medium`, fill-width, shrink, zero minimum width, no-wrap, and ellipsis overflow.
+  It remains muted by default for menu/select/command surfaces.
+- `SidebarGroupLabel` now consumes `decl_text::text_menu_group_label(...)` for its default label
+  while overriding inherited foreground with the sidebar-specific 70% foreground. The `as_child`
+  custom-child path remains unchanged.
+- `menu_group_label_text_uses_muted_medium_xs_single_line_truncation` proves the shared role
+  semantics. `sidebar_group_label_uses_shared_menu_group_text_role` proves the fixed sidebar label
+  uses that role and keeps sidebar foreground ownership without leaf style/color writes.
+- `cargo nextest run -p fret-ui-kit --lib
+  menu_group_label_text_uses_muted_medium_xs_single_line_truncation --no-fail-fast` passed.
+- First `cargo nextest run -p fret-ui-shadcn --lib
+  sidebar_group_label_uses_shared_menu_group_text_role --no-fail-fast` timed out at 304s while
+  Cargo/Rustc was still compiling. No process was killed; after Cargo/Rustc exited naturally, the
+  same focused command was rerun with a longer timeout and passed.
+- `cargo fmt --check -p fret-ui-kit -p fret-ui-shadcn` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo check -p fret-ui-shadcn --lib` passed.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground
