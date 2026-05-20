@@ -5796,3 +5796,53 @@ Broader gates not run:
     deletion-preflight retained oracle, default rename gates, compat compile/test gates,
     `ManagedSurface` mechanism gate, source scan, formatting, layering, catalog, and whitespace
     gates cover the changed behavior surface.
+
+## 2026-05-20 - RBX-M2-133 retained diagnostics anchor deletion
+
+Claim verified:
+
+- The retained diagnostics-only `NodeGraphDiagAnchor` and `NodeGraphDiagConnectingFlag` widgets had
+  no callers outside their own module and were deleted.
+- The dead retained canvas diagnostics anchor port plumbing was deleted with them:
+  `with_diagnostics_anchor_ports`, `diagnostics_anchor_ports`, and
+  `retained_widget_layout_publish.rs`.
+- `diag_anchors.rs` was removed from the retained bridge source usage ledger.
+- `a11y.rs` remains intentionally because retained canvas active-descendant child semantics still
+  need default declarative proof before deletion.
+
+Evidence:
+
+- deleted `ecosystem/fret-node/src/ui/diag_anchors.rs`
+- deleted `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_layout_publish.rs`
+- `ecosystem/fret-node/src/ui/mod.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/widget_surface/builders.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/widget_surface/construct.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_layout.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_layout_children.rs`
+- `docs/ui-diagnostics-and-scripted-tests.md`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed.
+  - Scope proven: the remaining retained canvas compatibility island compiles after deleting the
+    diagnostics anchor widgets and dead anchor-port layout plumbing.
+- `cargo nextest run -p fret-node --features compat-retained-canvas retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+  - Result: passed, 2 tests.
+  - Scope proven: retained source usage ledger and crate-private compatibility island policy remain
+    green after removing `diag_anchors.rs` from the allowlist.
+- `rg -n "DiagnosticsAnchorPorts|diagnostics_anchor_ports|with_diagnostics_anchor_ports|retained_widget_layout_publish|publish_diagnostics_derived_outputs|NodeGraphDiagAnchor|NodeGraphDiagConnectingFlag|diag_anchors" ecosystem/fret-node/src docs/ui-diagnostics-and-scripted-tests.md docs/workstreams/retained-bridge-exit-v1 -g '*.rs' -g '*.md'`
+  - Result: only historical workstream references remain.
+  - Scope proven: runtime source and diagnostics docs no longer expose the deleted retained
+    diagnostics anchor API.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-133` removes no-user retained diagnostics anchor widgets and dead retained
+    canvas anchor-port plumbing; the compat compile gate, retained source-policy gate, and no-user
+    scan cover the changed behavior surface.

@@ -30,8 +30,6 @@ mod viewport_options;
 #[cfg(feature = "compat-retained-canvas")]
 mod a11y;
 #[cfg(feature = "compat-retained-canvas")]
-mod diag_anchors;
-#[cfg(feature = "compat-retained-canvas")]
 mod editor;
 mod editors;
 mod overlays;

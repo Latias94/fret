@@ -1947,6 +1947,36 @@ Related plan:
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
     - `rg -n "NodeGraphOverlayHost|rename_host_event|overlay_group_rename_conformance|overlay_symbol_rename_conformance|layout_hidden_child_and_release_focus|src/ui/overlays/group_rename\\.rs" ecosystem/fret-node/src -g '*.rs'`
+- [x] RBX-M2-133 Delete no-user retained diagnostics anchor widgets.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/diag_anchors.rs`
+    - `ecosystem/fret-node/src/ui/mod.rs`
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/widget_surface/builders.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/widget_surface/construct.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_layout.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_layout_children.rs`
+    - deleted `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_layout_publish.rs`
+    - `docs/ui-diagnostics-and-scripted-tests.md`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Delete retained diagnostics-only semantics anchor widgets that have no callers.
+    - Remove the dead retained canvas diagnostics-anchor child layout plumbing that only existed to
+      support those widgets.
+    - Shrink the retained bridge source usage ledger by removing `diag_anchors.rs`.
+  - Result:
+    - Deleted `NodeGraphDiagAnchor` and `NodeGraphDiagConnectingFlag`.
+    - Removed `mod diag_anchors`, the retained bridge source allowlist entry, and stale diagnostic
+      anchor docs that pointed users at retained anchor widgets.
+    - Removed `with_diagnostics_anchor_ports`, `diagnostics_anchor_ports`, and the retained layout
+      publish helper because no retained or declarative caller remains.
+    - Kept `a11y.rs` for now because retained canvas active-descendant child semantics still need
+      a default declarative proof before deletion.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - `rg -n "DiagnosticsAnchorPorts|diagnostics_anchor_ports|with_diagnostics_anchor_ports|retained_widget_layout_publish|publish_diagnostics_derived_outputs|NodeGraphDiagAnchor|NodeGraphDiagConnectingFlag|diag_anchors" ecosystem/fret-node/src docs/ui-diagnostics-and-scripted-tests.md docs/workstreams/retained-bridge-exit-v1 -g '*.rs' -g '*.md'`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

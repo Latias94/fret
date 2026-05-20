@@ -320,7 +320,6 @@ mod surface_policy_tests {
         assert!(!UI_MOD_RS.contains("pub use canvas::NodeGraphCanvasWith"));
         assert!(!UI_MOD_RS.contains("pub(crate) use canvas::NodeGraphCanvasWith"));
         assert!(!UI_MOD_RS.contains("pub mod a11y;"));
-        assert!(!UI_MOD_RS.contains("pub mod diag_anchors;"));
         assert!(!UI_MOD_RS.contains("pub mod editor;"));
         assert!(!UI_MOD_RS.contains("pub mod editors;"));
         assert!(!UI_MOD_RS.contains("pub mod overlays;"));
@@ -360,7 +359,6 @@ mod surface_policy_tests {
 
         let allowed_exact = [
             "src/ui/a11y.rs",
-            "src/ui/diag_anchors.rs",
             "src/ui/editor.rs",
             "src/ui/panel.rs",
             "src/ui/portal.rs",

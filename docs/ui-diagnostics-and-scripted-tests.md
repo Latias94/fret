@@ -1207,8 +1207,8 @@ Rules:
 
 ## Diagnostics-only geometry anchors (retained/canvas UIs)
 
-Some UIs (notably retained/canvas-style widgets like node graphs) have important interactive targets
-whose geometry is not naturally represented as a normal semantics subtree (e.g. a port handle that is
+Some UIs (notably canvas-style widgets like node graphs) have important interactive targets whose
+geometry is not naturally represented as a normal semantics subtree (e.g. a port handle that is
 painted inside a cached canvas tile).
 
 In those cases, add **diagnostics-only semantics anchors**:
@@ -1229,17 +1229,19 @@ Node graph example (port anchors):
 
 Implementation pointers:
 
-- Anchor widget (semantics-only): `ecosystem/fret-node/src/ui/diag_anchors.rs` (`NodeGraphDiagAnchor`)
-- Wiring anchors to the retained canvas: `ecosystem/fret-node/src/ui/canvas/widget/retained_widget.rs`
-  (`NodeGraphCanvas::with_diagnostics_anchor_ports(...)`)
+- Declarative node graph surfaces expose the canvas root with `NodeGraphSurfaceProps::test_id`
+  (default: `node_graph.canvas`) and diagnostics behavior through
+  `NodeGraphSurfaceProps::diagnostics`.
+- Scripts should drive the declarative surface and any explicit app-provided diagnostic anchors by
+  stable `test_id` selectors instead of constructing retained anchor widgets.
 - Script that drives a wire drag via anchors (no pixel coords):
   - `tools/diag-scripts/extras/node-graph-demo-preset-families-paint-only.json`
 
 Script authoring tip:
 
 - Avoid `value_contains` / `value_equals` gates when `FRET_DIAG_REDACT_TEXT=1` (default): text/value fields may be
-  redacted. Prefer `exists(test_id)` + intent steps, or add a value-free semantics flag that uses
-  `semantics_present()` (see `NodeGraphDiagConnectingFlag`).
+  redacted. Prefer `exists(test_id)` + intent steps, or add an explicit value-free declarative
+  semantics/test-id marker for the state under test.
 
 ### Supported role strings (MVP)
 
