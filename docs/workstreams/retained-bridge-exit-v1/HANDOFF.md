@@ -588,7 +588,14 @@ declarative node graph binding/surface for focused port, edge, and node, preserv
 active-descendant priority order of port before edge before node, verified both
 `NodeGraphSurfaceBinding::surface_props()` and `NodeGraphSurfaceProps::new(...)`, suppressed stale
 active descendants for missing graph items, then deleted retained `a11y.rs` and its retained oracle
-test after deletion-preflight retained/default coverage.
+test after deletion-preflight retained/default coverage. `RBX-M2-135` then moved the retained portal
+subtree lifecycle key contract onto the default visible-subset portal path by keying portal labels
+with node id plus node kind plus node kind version. Default tests now prove stable subtree identity
+across frames, reset on node kind/kind_version changes, growth-only measured node-size hints, and
+removed-node measured-geometry cleanup. The retained portal lifecycle/measured-geometry/internals
+oracle remains green under `compat-retained-canvas`; retained portal files are still kept because
+arbitrary per-kind renderer subtree hosting and retained command adapters have not yet been
+deleted.
 
 ## Next Task
 
@@ -601,10 +608,11 @@ Recommended next implementation shape:
 - Continue M2 by shrinking the RBX-M2-080 ledger. The retained controls widget is now gone; the
   retained toolbar widgets are gone; retained minimap is gone; retained blackboard is gone; retained
   rename host is gone; retained diagnostics anchors are gone; retained a11y active-descendant
-  anchors are gone. The remaining portal family work is declarative portal subtree hosting/model
-  lifecycle replacement, and the remaining canvas interaction families still need default-path
-  tests before their retained widget/event code can be deleted. Each slice should first add default
-  declarative tests, then remove or gate less retained code.
+  anchors are gone. The remaining portal family work is arbitrary per-kind declarative portal
+  renderer subtree hosting and retained command-adapter deletion; the lifecycle/measurement parity
+  proof is now in place from `RBX-M2-135`. The remaining canvas interaction families still need
+  default-path tests before their retained widget/event code can be deleted. Each slice should first
+  add default declarative tests, then remove or gate less retained code.
 - After the ledger no longer contains behavior-only retained files, remove
   `compat-retained-canvas` / `unstable-retained-bridge` from `fret-node`.
 - Keep the known independent `fret-ui` layout primitive drift
@@ -613,7 +621,14 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-20 for `RBX-M2-134`:
+Last run on 2026-05-20 for `RBX-M2-135`:
+
+- `cargo nextest run -p fret-node declarative_visible_subset_portal_identity_persists_and_resets_on_kind_or_version_change flush_portal_measured_geometry_state_keeps_growth_only_and_removes_missing_nodes` -
+  passed, 2 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas portal_lifecycle_conformance portal_measured_geometry_conformance portal_measured_internals_conformance declarative_visible_subset_portal_identity_persists_and_resets_on_kind_or_version_change flush_portal_measured_geometry_state_keeps_growth_only_and_removes_missing_nodes` -
+  passed, 6 tests.
+
+Previous run on 2026-05-20 for `RBX-M2-134`:
 
 - deletion-preflight `cargo nextest run -p fret-node node_graph_surface_active_descendant` -
   passed, 2 tests.

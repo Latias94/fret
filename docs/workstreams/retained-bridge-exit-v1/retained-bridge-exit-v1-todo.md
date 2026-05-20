@@ -2022,6 +2022,43 @@ Related plan:
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
     - `rg -n "^\\s*(pub\\s+)?mod a11y;|NodeGraphA11yActiveDescendant|NodeGraphA11yFocused|a11y_active_descendant_conformance" ecosystem/fret-node/src -S`
+- [x] RBX-M2-135 Prove declarative portal subtree lifecycle and measurement parity.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/portals.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the retained portal subtree lifecycle key contract onto the default declarative
+      visible-subset portal path.
+    - Prove default portal subtree identity persists across frames and resets when node
+      `kind_version` or `kind` changes, matching the retained `NodeGraphPortalHost` lifecycle
+      oracle.
+    - Backfill default measurement tests for growth-only node-size hints and removed-node cleanup
+      before deleting retained portal host code.
+    - Keep retained portal files in place as the oracle because arbitrary per-kind renderer subtree
+      hosting and retained command adapters are not deleted in this slice.
+  - Result:
+    - Added `DeclarativePortalNodeKey` and keyed declarative visible-subset portal labels by
+      `(node id, node kind hash, node kind_version)` instead of only node id.
+    - Added a default declarative surface test that renders real surface frames, waits for the
+      frame-lagged portal layer, proves stable semantics identity across frames, and proves identity
+      reset on `kind_version` and `kind` changes.
+    - Added a default portal measured-geometry flush test covering growth-only hint behavior and
+      cleanup when a previously-published node is removed from the graph.
+    - Verified retained portal lifecycle, measured-geometry, and measured-internals oracle tests
+      still pass under `compat-retained-canvas`.
+  - Validation:
+    - `cargo nextest run -p fret-node declarative_visible_subset_portal_identity_persists_and_resets_on_kind_or_version_change flush_portal_measured_geometry_state_keeps_growth_only_and_removes_missing_nodes`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas portal_lifecycle_conformance portal_measured_geometry_conformance portal_measured_internals_conformance declarative_visible_subset_portal_identity_persists_and_resets_on_kind_or_version_change flush_portal_measured_geometry_state_keeps_growth_only_and_removes_missing_nodes`
+    - `cargo check -p fret-node`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node retained_bridge_source_usage_stays_on_the_migration_ledger`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - `cargo fmt -p fret-node`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

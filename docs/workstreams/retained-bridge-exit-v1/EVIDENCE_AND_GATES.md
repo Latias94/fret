@@ -5937,3 +5937,71 @@ Broader gates:
     deletes a retained `fret-node` oracle. The default semantic tests, compat compile/test gates,
     source-policy scan, formatting, layering, catalog, and whitespace gates cover the changed
     behavior surface.
+
+## 2026-05-20 - RBX-M2-135 declarative portal lifecycle and measurement parity
+
+Claim verified:
+
+- The default declarative visible-subset portal path now uses the retained-compatible subtree
+  lifecycle key: node id plus node kind plus node kind version.
+- Default declarative tests prove portal subtree identity persists across frames for the same node
+  kind/version and resets when either `kind_version` or `kind` changes.
+- Default declarative measured-geometry flush coverage now proves portal node-size hints are
+  growth-only and that removed graph nodes are pruned from `MeasuredGeometryStore`.
+- Retained portal lifecycle, measured-geometry, and measured-internals oracle tests still pass
+  under `compat-retained-canvas`; retained portal files are intentionally kept for arbitrary
+  per-kind renderer subtree hosting and retained command-adapter follow-up work.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/declarative/paint_only/portals.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+- `ecosystem/fret-node/src/ui/portal.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_lifecycle_conformance.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_measured_geometry_conformance.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_measured_internals_conformance.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- `cargo nextest run -p fret-node declarative_visible_subset_portal_identity_persists_and_resets_on_kind_or_version_change flush_portal_measured_geometry_state_keeps_growth_only_and_removes_missing_nodes`
+  - Result: passed, 2 tests.
+  - Scope proven: default declarative portal lifecycle identity and measured-geometry flush
+    behavior are covered without enabling `compat-retained-canvas`.
+- `cargo nextest run -p fret-node --features compat-retained-canvas portal_lifecycle_conformance portal_measured_geometry_conformance portal_measured_internals_conformance declarative_visible_subset_portal_identity_persists_and_resets_on_kind_or_version_change flush_portal_measured_geometry_state_keeps_growth_only_and_removes_missing_nodes`
+  - Result: passed, 6 tests.
+  - Scope proven: retained portal lifecycle, measurement publishing, and measured-internals oracle
+    behavior still agree with the new default declarative coverage.
+
+Broader gates:
+
+- `cargo check -p fret-node`
+  - Result: passed.
+  - Scope proven: the default package compiles after the declarative portal lifecycle-key change.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed.
+  - Scope proven: the retained compatibility island compiles after the default portal change.
+- `cargo nextest run -p fret-node retained_bridge_source_usage_stays_on_the_migration_ledger`
+  - Result: passed, 1 test.
+  - Scope proven: retained bridge source usage did not spread while adding default portal parity
+    coverage.
+- `cargo nextest run -p fret-node --features compat-retained-canvas retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+  - Result: passed, 2 tests.
+  - Scope proven: the retained compatibility island remains crate-private and controller-bound
+    under the compat feature.
+- `cargo fmt -p fret-node`
+  - Result: passed.
+  - Scope proven: touched `fret-node` Rust files were formatted.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.

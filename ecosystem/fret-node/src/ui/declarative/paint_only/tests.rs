@@ -1140,6 +1140,100 @@ fn render_surface_semantics_snapshot_with_props(
         .expect("semantics snapshot")
 }
 
+fn surface_snapshot_node_id(
+    snapshot: &fret_core::SemanticsSnapshot,
+    test_id: &str,
+) -> fret_core::NodeId {
+    snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some(test_id))
+        .unwrap_or_else(|| {
+            let available = snapshot
+                .nodes
+                .iter()
+                .filter_map(|node| node.test_id.as_deref())
+                .collect::<Vec<_>>();
+            panic!("missing semantics node with test id {test_id}; available={available:?}")
+        })
+        .id
+}
+
+fn maybe_surface_snapshot_node_id(
+    snapshot: &fret_core::SemanticsSnapshot,
+    test_id: &str,
+) -> Option<fret_core::NodeId> {
+    snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some(test_id))
+        .map(|node| node.id)
+}
+
+fn render_surface_frame_for_binding(
+    ui: &mut fret_ui::UiTree<TestActionHostImpl>,
+    host: &mut TestActionHostImpl,
+    services: &mut FakeUiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    binding: &NodeGraphSurfaceBinding,
+    props_for_binding: impl FnOnce(&NodeGraphSurfaceBinding) -> super::NodeGraphSurfaceProps,
+) -> fret_core::SemanticsSnapshot {
+    let root = fret_ui::declarative::render_root(
+        ui,
+        host,
+        services,
+        window,
+        bounds,
+        "node-graph-surface-frame",
+        |cx| {
+            let props = props_for_binding(binding);
+            vec![node_graph_surface(cx, props)]
+        },
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(host, services, bounds, 1.0);
+    let mut scene = fret_core::Scene::default();
+    ui.paint_all(host, services, bounds, &mut scene, 1.0);
+    host.frame_id = fret_runtime::FrameId(host.frame_id.0.saturating_add(1));
+    ui.semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot")
+}
+
+fn render_until_surface_test_id_for_binding(
+    ui: &mut fret_ui::UiTree<TestActionHostImpl>,
+    host: &mut TestActionHostImpl,
+    services: &mut FakeUiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    binding: &NodeGraphSurfaceBinding,
+    test_id: &str,
+    props_for_binding: impl Copy + FnOnce(&NodeGraphSurfaceBinding) -> super::NodeGraphSurfaceProps,
+) -> (fret_core::SemanticsSnapshot, fret_core::NodeId) {
+    let mut last = None;
+    for _ in 0..4 {
+        let snapshot = render_surface_frame_for_binding(
+            ui,
+            host,
+            services,
+            window,
+            bounds,
+            binding,
+            props_for_binding,
+        );
+        if let Some(id) = maybe_surface_snapshot_node_id(&snapshot, test_id) {
+            return (snapshot, id);
+        }
+        last = Some(snapshot);
+    }
+
+    let snapshot = last.expect("at least one frame rendered");
+    let _ = surface_snapshot_node_id(&snapshot, test_id);
+    unreachable!()
+}
+
 fn assert_canvas_active_descendant_label(snapshot: &fret_core::SemanticsSnapshot, expected: &str) {
     let canvas = snapshot
         .nodes
@@ -3959,6 +4053,131 @@ fn collect_portal_label_infos_for_visible_subset_respects_draw_order_and_cap() {
 }
 
 #[test]
+fn declarative_visible_subset_portal_identity_persists_and_resets_on_kind_or_version_change() {
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let mut services = FakeUiServices;
+    let window = AppWindowId::default();
+    let bounds = test_node_graph_surface_bounds();
+    ui.set_window(window);
+    host.bounds = bounds;
+
+    let node = NodeId::from_u128(0x9201);
+    let mut graph = Graph::new(GraphId::from_u128(0x9200));
+    let mut value = test_node(CanvasPoint { x: 10.0, y: 20.0 });
+    value.kind = NodeKindKey::new("test.portal.lifecycle.a");
+    value.kind_version = 1;
+    value.size = Some(CanvasSize {
+        width: 140.0,
+        height: 80.0,
+    });
+    graph.nodes.insert(node, value);
+
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            draw_order: vec![node],
+            ..NodeGraphViewState::default()
+        },
+        default_editor_config(),
+    );
+
+    let portal_props = |binding: &NodeGraphSurfaceBinding| {
+        let mut props = binding.surface_props();
+        props.cull_margin_screen_px = 0.0;
+        props.portal_hosting = NodeGraphVisibleSubsetPortalConfig {
+            enabled: true,
+            max_nodes: 8,
+        };
+        props
+    };
+
+    let (_first, first_id) = render_until_surface_test_id_for_binding(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        "node_graph.portal.node.0",
+        portal_props,
+    );
+
+    let (_second, second_id) = render_until_surface_test_id_for_binding(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        "node_graph.portal.node.0",
+        portal_props,
+    );
+    assert_eq!(
+        first_id, second_id,
+        "portal subtree identity must persist across frames for the same node kind/version"
+    );
+
+    let mut version_changed = host
+        .models
+        .read(&binding.graph_model(), Clone::clone)
+        .expect("graph readable");
+    version_changed
+        .nodes
+        .get_mut(&node)
+        .expect("node exists")
+        .kind_version = 2;
+    binding
+        .replace_graph_action_host(&mut host, version_changed)
+        .expect("replace graph");
+    let changed = host.take_changed_models();
+    ui.propagate_model_changes(&mut host, &changed);
+
+    let (_third, third_id) = render_until_surface_test_id_for_binding(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        "node_graph.portal.node.0",
+        portal_props,
+    );
+    assert_ne!(
+        third_id, second_id,
+        "portal subtree identity must reset when node kind_version changes"
+    );
+
+    let mut kind_changed = host
+        .models
+        .read(&binding.graph_model(), Clone::clone)
+        .expect("graph readable");
+    kind_changed.nodes.get_mut(&node).expect("node exists").kind =
+        NodeKindKey::new("test.portal.lifecycle.b");
+    binding
+        .replace_graph_action_host(&mut host, kind_changed)
+        .expect("replace graph");
+    let changed = host.take_changed_models();
+    ui.propagate_model_changes(&mut host, &changed);
+
+    let (_fourth, fourth_id) = render_until_surface_test_id_for_binding(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        &binding,
+        "node_graph.portal.node.0",
+        portal_props,
+    );
+    assert_ne!(
+        fourth_id, third_id,
+        "portal subtree identity must reset when node kind changes"
+    );
+}
+
+#[test]
 fn sync_portal_canvas_bounds_in_models_ignores_epsilon_churn() {
     let mut host = TestActionHostImpl::default();
     let node = NodeId::from_u128(9121);
@@ -4355,6 +4574,47 @@ fn flush_portal_measured_geometry_state_skips_explicit_size_nodes() {
     assert_eq!(measured.node_size_px(node), None);
     assert!(state.published_nodes.is_empty());
     assert!(state.pending_node_sizes_px.is_empty());
+}
+
+#[test]
+fn flush_portal_measured_geometry_state_keeps_growth_only_and_removes_missing_nodes() {
+    let mut graph = Graph::new(GraphId::from_u128(9407));
+    let node = NodeId::from_u128(9408);
+    graph
+        .nodes
+        .insert(node, test_node(CanvasPoint { x: 0.0, y: 0.0 }));
+
+    let measured = MeasuredGeometryStore::new();
+    let style = crate::ui::style::NodeGraphStyle::default();
+    let mut state = PortalMeasuredGeometryState::default();
+    state.pending_node_sizes_px.insert(node, (320.0, 180.0));
+
+    let first = flush_portal_measured_geometry_state(&graph, &style, &measured, &mut state);
+    assert!(first.store_changed);
+    assert_eq!(measured.node_size_px(node), Some((320.0, 180.0)));
+    assert_eq!(state.published_nodes, vec![node]);
+
+    state.pending_node_sizes_px.insert(node, (120.0, 80.0));
+    let shrink = flush_portal_measured_geometry_state(&graph, &style, &measured, &mut state);
+    assert!(!shrink.store_changed);
+    assert!(shrink.state_changed);
+    assert_eq!(
+        measured.node_size_px(node),
+        Some((320.0, 180.0)),
+        "portal measurements must remain growth-only hints"
+    );
+    assert_eq!(state.published_nodes, vec![node]);
+
+    graph.nodes.remove(&node);
+    let removed = flush_portal_measured_geometry_state(&graph, &style, &measured, &mut state);
+    assert!(removed.store_changed);
+    assert!(removed.state_changed);
+    assert_eq!(
+        measured.node_size_px(node),
+        None,
+        "removed graph nodes must be pruned from the measured-geometry store"
+    );
+    assert!(state.published_nodes.is_empty());
 }
 
 #[test]
