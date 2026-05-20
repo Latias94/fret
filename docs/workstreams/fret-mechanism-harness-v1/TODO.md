@@ -1465,3 +1465,12 @@ date: 2026-05-12
     widget while the stale lower-child path records a cache miss. A third move proves the refreshed
     higher-z dispatch path is cache-reusable. Focused checks passed with Nextest run id
     `093b8a5d-e67a-4b35-ab82-e02389f63173`.
+- [x] Add a Switch choice-card checked-state semantics runtime gate.
+  - Result:
+    `ui-gallery-switch-choice-card-checked-state-mutation.json` now starts directly on the Switch
+    page, scrolls to the docs-path Choice Card section, proves initial independent `checked`
+    semantics for Share and Notifications, asserts both nested controls expose `invoke=true`, then
+    toggles through each card-style label and through the Share control itself. The new
+    `ui-gallery-switch-semantics` suite passed 1/1, and the broad
+    `ui-gallery-shadcn-runtime-evidence` suite now passes 14/14 with the Switch row run id
+    `1779302260684`. No Switch runtime defect was reproduced.

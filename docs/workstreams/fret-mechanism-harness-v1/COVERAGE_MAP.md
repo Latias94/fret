@@ -135,6 +135,16 @@ date: 2026-05-12
   UI Gallery driver-handled commands could be visible only as `UiTree` `handled=false` traces, so
   the driver now records `handled_by_driver=true` command dispatch decisions for owned command
   paths.
+- Switch choice-card checked-state update:
+  `ui-gallery-switch-choice-card-checked-state-mutation.json` now covers the docs-path Choice Card
+  form composition. It starts directly on the Switch page, asserts Share and Notifications expose
+  independent `checked` semantics and `invoke=true`, toggles both switches through card-style
+  `FieldLabel` activation, toggles Share again through the control, and is promoted into both the
+  focused `ui-gallery-switch-semantics` suite and the broad `ui-gallery-shadcn-runtime-evidence`
+  suite. Focused evidence is anchored at
+  `target/fret-diag-switch-choice-card-checked-state-mutation-v1/sessions/1779301451133-110692/1779301465865/ai.packet`,
+  and the broad suite now passes 14/14 at
+  `target/fret-diag-shadcn-runtime-evidence-switch-choice-card-v1/sessions/1779301689107-175712/suite.summary.json`.
 - Leaf TextInput disabled action-state update:
   `ui-gallery-input-disabled-action-state.json` now covers the Input page disabled TextInput leaf
   directly. The gate asserts the concrete TextInput semantics node reports `disabled=true` while

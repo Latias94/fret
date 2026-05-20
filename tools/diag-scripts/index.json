@@ -11176,6 +11176,33 @@
       ]
     },
     {
+      "id": "ui-gallery-switch-choice-card-checked-state-mutation",
+      "path": "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-choice-card-checked-state-mutation.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-runtime-evidence",
+        "ui-gallery-switch-semantics"
+      ],
+      "tags": [
+        "checked-state",
+        "choice-card",
+        "label",
+        "mutation",
+        "semantics",
+        "shadcn",
+        "switch",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Switch page.",
+        "Verifies that card-style FieldLabel activation toggles paired Switch checked semantics independently."
+      ]
+    },
+    {
       "id": "ui-gallery-switch-command-gated-action-state",
       "path": "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-command-gated-action-state.json",
       "required_capabilities": [

@@ -3586,3 +3586,35 @@ Status: complete for the cheap owning-layer regression that generalizes M159.
   `cargo test --profile dev-fast -p fret-launch overlapping_repeating_timers --lib -- --nocapture`;
   and `cargo test --profile dev-fast -p fret-launch repeating_timer --lib -- --nocapture` with 3
   passing timer tests.
+
+## M161: Switch Choice-Card Checked-State Semantics Runtime Gate
+
+Status: complete for the Switch Choice Card recipe-consumer semantics companion.
+
+- Added `ui-gallery-switch-choice-card-checked-state-mutation.json`, which starts directly on the
+  Switch page, scrolls to the docs-path Choice Card section, proves initial independent checked
+  semantics (`share=false`, `notifications=true`), asserts both controls expose `invoke=true`,
+  toggles both switches through card-style `FieldLabel` activation, and toggles the share switch
+  back through the control itself.
+- Added the focused `ui-gallery-switch-semantics` suite, promoted the script into
+  `ui-gallery-shadcn-runtime-evidence`, refreshed the registry, and added protocol roundtrip
+  coverage.
+- No runtime defect was reproduced; this slice closes a missing real-surface gate for whole-card
+  label association plus dynamic `checked` semantics.
+- Gates pass:
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_switch_choice_card_checked_state_mutation --no-fail-fast --no-capture`
+  with Nextest run id `3d7a846c-ec57-4044-8222-e81a4b9f978f`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\switch\ui-gallery-switch-choice-card-checked-state-mutation.json --dir target\fret-diag-switch-choice-card-checked-state-mutation-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779301465865` and AI packet
+  `target/fret-diag-switch-choice-card-checked-state-mutation-v1/sessions/1779301451133-110692/1779301465865/ai.packet`.
+- Dedicated runtime suite passes:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-switch-semantics --dir target\fret-diag-switch-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with summary
+  `target/fret-diag-switch-semantics-suite-v1/sessions/1779301571842-137052/suite.summary.json`.
+- The broad `ui-gallery-shadcn-runtime-evidence` suite now passes 14/14 with the new Switch row:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-switch-choice-card-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with summary
+  `target/fret-diag-shadcn-runtime-evidence-switch-choice-card-v1/sessions/1779301689107-175712/suite.summary.json`
+  and new row run id `1779302260684`.

@@ -6633,3 +6633,50 @@ Next slice recommendation:
 - full timer regression filter:
   `cargo test --profile dev-fast -p fret-launch repeating_timer --lib -- --nocapture`
   - result: passed; 3 tests.
+
+## Switch Choice-Card Checked-State Runtime Gate
+
+- invariant:
+  card-style `FieldLabel::wrap(...)` activation on the shadcn Switch docs-path Choice Card must
+  toggle the associated nested `Switch` and refresh the exported `checked` semantics for each
+  independent control. Visual card chrome and associated label hit testing are not enough without
+  proving the control semantics update.
+- finding:
+  no Switch recipe/runtime defect was reproduced. This slice closes missing coverage for a real
+  non-list form composition where card label activation, `ControlId` association, model mutation,
+  and exported `checked` semantics all have to stay aligned.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-choice-card-checked-state-mutation.json`,
+  `tools/diag-scripts/suites/ui-gallery-switch-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-switch-choice-card-checked-state-mutation-v1/sessions/1779301451133-110692/1779301465865/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-switch-choice-card-checked-state-mutation-v1/sessions/1779301451133-110692/share/1779301465865.zip`;
+  dedicated suite summary:
+  `target/fret-diag-switch-semantics-suite-v1/sessions/1779301571842-137052/suite.summary.json`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-switch-choice-card-v1/sessions/1779301689107-175712/suite.summary.json`.
+- JSON/registry:
+  `python -m json.tool tools\diag-scripts\ui-gallery\switch\ui-gallery-switch-choice-card-checked-state-mutation.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-switch-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_switch_choice_card_checked_state_mutation --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `3d7a846c-ec57-4044-8222-e81a4b9f978f`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\switch\ui-gallery-switch-choice-card-checked-state-mutation.json --dir target\fret-diag-switch-choice-card-checked-state-mutation-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779301465865`.
+- dedicated runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-switch-semantics --dir target\fret-diag-switch-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; `stage_counts={"passed":1}`; script run id `1779301586186`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-switch-choice-card-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 14/14; `stage_counts={"passed":14}`; `reason_code_counts={}`;
+    Switch choice-card row run id `1779302260684`.

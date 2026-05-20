@@ -709,6 +709,13 @@ fn script_v2_roundtrip_ui_gallery_switch_command_gated_action_state() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_switch_choice_card_checked_state_mutation() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-choice-card-checked-state-mutation.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_card_description_no_early_wrap() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-card-description-no-early-wrap.json"
