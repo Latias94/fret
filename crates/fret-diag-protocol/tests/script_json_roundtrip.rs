@@ -112,6 +112,13 @@ fn script_v2_roundtrip_ui_gallery_platform_preferences_runtime_environment_mutat
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_item_vs_field_doc_intro_client721_startup_non_overlap() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/item/ui-gallery-item-vs-field-doc-intro-client721-startup-non-overlap.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_workspace_tabstrip_overflow_select_command() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/workspace-tabstrip/ui-gallery-workspace-tabstrip-overflow-select-command.json"

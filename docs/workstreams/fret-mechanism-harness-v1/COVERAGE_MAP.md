@@ -258,6 +258,13 @@ date: 2026-05-12
   `fixed_line_box_word_wrap_preserves_paragraph_layout_on_cold_metrics_cache`; focused runtime
   evidence is anchored at
   `target/fret-diag-combobox-rtl-long-text-devfast-client721-fixed-v1/sessions/1779237666672-136820/1779237680925/ai.packet`.
+- Item cold startup long-docs text update:
+  `ui-gallery-item-vs-field-doc-intro-client721-startup-non-overlap.json` now extends the
+  fixed-line-box cold word-wrap runtime coverage beyond Combobox. The gate starts a cold Item docs
+  page at the `Item vs Field` section and proves the long docs intro, section title, description,
+  and content preserve their vertical separation at the screenshot-derived `1083x721` client size.
+  Runtime suite evidence is anchored at
+  `target/fret-diag-ui-gallery-shadcn-runtime-evidence-item-vs-field-v1/sessions/1779242784682-41468/suite.summary.json`.
 - AI transcript non-retained scroll update:
   `ui-gallery-ai-transcript-torture-scroll.json` now gates deterministic large-transcript mutation
   on the non-retained AI transcript path by asserting a hidden message-count semantics value moves

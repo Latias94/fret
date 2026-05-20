@@ -1385,3 +1385,15 @@ date: 2026-05-12
     top, and bottom X windows all match. Focused runtime passed with run id `1779239505892`, and
     the new `chart-multi-axis-linking` suite passed with summary
     `target/fret-diag-chart-multi-axis-linking-suite-v1/sessions/1779239623009-133816/suite.summary.json`.
+- [x] Add a non-Combobox cold startup long-docs text gate.
+  - Result:
+    the follow-up manual Combobox screenshot was rechecked against rebuilt `debug`, `dev-fast`, and
+    `release` Gallery binaries plus a normal OS-window startup capture. Current binaries did not
+    reproduce the visible overlap, and `target\release\fret-ui-gallery.exe` had been an old
+    2026-05-14 build before it was refreshed. To keep fixed-line-box cold word-wrap covered beyond
+    the original Combobox page, added
+    `ui-gallery-item-vs-field-doc-intro-client721-startup-non-overlap.json`. The gate starts from a
+    cold process on the Item docs page, focuses `Item vs Field`, captures layout/screenshot/bundle
+    evidence, and asserts the long docs intro, section title, description, and content keep their
+    expected vertical separation. Focused runtime passed with run id `1779242679435`, and the
+    `ui-gallery-shadcn-runtime-evidence` suite passed with the new script run id `1779242852622`.

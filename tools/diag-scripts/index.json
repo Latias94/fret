@@ -9060,6 +9060,32 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-item-vs-field-doc-intro-client721-startup-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/item/ui-gallery-item-vs-field-doc-intro-client721-startup-non-overlap.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "gate",
+        "item",
+        "layout",
+        "shadcn",
+        "startup",
+        "text",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Item docs page and focuses the Item vs Field section at the same client-height companion used by the Combobox startup text gate.",
+        "Covers a non-Combobox fixed-line-box long paragraph surface so cold wrapped docs text cannot regress back to one-line startup measurement.",
+        "Asserts the long docs intro owns enough measured height before the Item vs Field section title, description, and content."
+      ]
+    },
+    {
       "id": "ui-gallery-label-click-label-toggles-checkbox",
       "path": "tools/diag-scripts/ui-gallery/label/ui-gallery-label-click-label-toggles-checkbox.json",
       "required_capabilities": [

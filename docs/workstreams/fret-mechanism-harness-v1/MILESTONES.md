@@ -3320,3 +3320,35 @@ Status: complete for the `chart_multi_axis_demo` linked-domain runtime companion
   `target\dev-fast\fretboard-dev.exe diag suite chart-multi-axis-linking --dir target\fret-diag-chart-multi-axis-linking-suite-v1 --session-auto --timeout-ms 420000 --launch -- target\dev-fast\chart_multi_axis_demo.exe`
   with suite summary
   `target/fret-diag-chart-multi-axis-linking-suite-v1/sessions/1779239623009-133816/suite.summary.json`.
+
+## M151: Item Cold Startup Long-Docs Text Runtime Gate
+
+Status: complete for the non-Combobox fixed-line-box wrapped docs text companion.
+
+- Rechecked the follow-up manual Combobox RTL Long Text overlap against current binaries. Rebuilt
+  `target\release\fret-ui-gallery.exe` because it was still a 2026-05-14 artifact, then verified the
+  focused client-height Combobox gate and a normal OS-window startup capture against current
+  `release`. Current rebuilt binaries did not reproduce the visible overlap.
+- Added
+  `ui-gallery-item-vs-field-doc-intro-client721-startup-non-overlap.json` as the adjacent runtime
+  lock recommended by F232/F233: it opens a different fixed-line-height wrapped docs paragraph from
+  a cold process, focuses the Item `Item vs Field` section, captures layout/screenshot/bundle
+  evidence, and asserts the long docs intro leaves space before the section title, description, and
+  content.
+- Added the root redirect, `ui-gallery-shadcn-runtime-evidence` suite membership, registry entry,
+  and protocol roundtrip coverage.
+- Gates pass:
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python tools\check_diag_scripts_registry.py`;
+  and
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_item_vs_field_doc_intro_client721_startup_non_overlap --no-fail-fast --no-capture`
+  with Nextest run id `ee8a6ea4-70e4-4a81-af24-980b7b1f603c`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\item\ui-gallery-item-vs-field-doc-intro-client721-startup-non-overlap.json --dir target\fret-diag-item-vs-field-client721-startup-non-overlap-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\release\fret-ui-gallery.exe`
+  with run id `1779242679435` and AI packet
+  `target/fret-diag-item-vs-field-client721-startup-non-overlap-v1/sessions/1779242677744-141216/1779242679435/ai.packet`.
+- Suite runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-ui-gallery-shadcn-runtime-evidence-item-vs-field-v1 --session-auto --timeout-ms 900000 --launch -- target\release\fret-ui-gallery.exe`
+  with suite summary
+  `target/fret-diag-ui-gallery-shadcn-runtime-evidence-item-vs-field-v1/sessions/1779242784682-41468/suite.summary.json`
+  and new script run id `1779242852622`.
