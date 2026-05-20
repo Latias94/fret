@@ -220,6 +220,9 @@ Compat-gated but retained-bridge-free support:
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui/event.rs`
   - `RBX-M2-520` moved context menu open/restore/dismiss/finish/invalidate tail helpers behind the
     retained-agnostic widget-tail seams plus a narrow `ContextMenuFocusCx` focus seam.
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/pointer_move.rs`
+  - `RBX-M2-530` moved context menu pointer-move routing behind the retained-agnostic
+    `WidgetPaintInvalidationCx` seam.
 
 Compat-gated retained adapters:
 
@@ -302,6 +305,7 @@ Deleted retained overlay files:
 | Searcher key-down route seam | retained `searcher.rs` still calls key routes with retained `EventCx`, but key dispatch only needs handled finish behavior plus row activation I/O | `RBX-M2-500` moves `searcher_input.rs`, `searcher_input/dispatch.rs`, and `searcher_input_query.rs` onto `SearcherInputCx`, keeps retained row activation I/O in `searcher_input/activation_retained_cx.rs`, source-policy gates key helpers, and adds Enter, ArrowDown, query, Ctrl text, and no-searcher tests | Continue with `searcher.rs` top-level retained route wrapper or replace the higher-level searcher event route with a declarative/event-leaf path. |
 | Searcher top-level route seam | retained canvas event routing still calls top-level searcher routes from retained `EventCx` callers, but `searcher.rs` itself only needs the existing retained-agnostic searcher pointer-down, release, and input capabilities | `RBX-M2-510` moves `searcher.rs` onto `SearcherCx`, source-policy gates the top-level route, and adds top-level Escape dismiss/finish, Enter activation, and pointer-down row-drag arming tests | Replace the remaining higher-level canvas event routes with a declarative/event-leaf path, or continue isolating other retained canvas interaction families such as context menu and edge insert. |
 | Context menu UI tail seam | retained context menu callers still use retained `EventCx`, but UI open/restore/dismiss/finish/invalidate helpers only need handled/paint widget-tail behavior plus a focus-self side effect on open | `RBX-M2-520` moves `context_menu/ui.rs` and `context_menu/ui/event.rs` onto `WidgetHandledCx`, `WidgetPaintInvalidationCx`, and `ContextMenuFocusCx`; retained focus-self I/O lives in `context_menu/ui/event_retained_cx.rs`; source-policy gates UI tail helpers and adds open/restore/dismiss/invalidate tests | Continue with context menu key/pointer selection routes, then replace the higher-level context menu event route with a declarative/event-leaf path. |
+| Context menu pointer-move route seam | retained context menu pointer-move callers still pass retained `EventCx`, but the pointer-move helper only needs paint invalidation after hover state changes | `RBX-M2-530` moves `context_menu/key_navigation/pointer_move.rs` onto `WidgetPaintInvalidationCx`, source-policy gates the helper, and adds no-menu, hover-update, and repeated-hover tests | Continue with context menu key-down and pointer-down selection routes, then replace the higher-level context menu event route with a declarative/event-leaf path. |
 
 ## New Gate
 

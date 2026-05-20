@@ -3265,6 +3265,30 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-530 Isolate context menu pointer-move retained Cx route.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/pointer_move.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/tests.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move context menu pointer-move routing off direct retained bridge Cx names by using the
+      retained-agnostic paint invalidation seam.
+    - Extend source-policy coverage so the pointer-move helper cannot re-import retained bridge Cx
+      names.
+  - Result:
+    - Context menu pointer-move routing now takes `WidgetPaintInvalidationCx`.
+    - Added focused tests for no-menu no-op behavior, hover update paint invalidation, and repeated
+      hover no-op invalidation behavior.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(context_menu_pointer_move_route_stays_off_retained_bridge) | test(pointer_move_without_context_menu_is_side_effect_free) | test(pointer_move_updates_hover_and_invalidates_paint) | test(pointer_move_same_hover_does_not_invalidate_paint_again) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/pointer_move.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

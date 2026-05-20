@@ -8496,3 +8496,60 @@ Broader gates not run:
   - Reason: `RBX-M2-520` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-21 - RBX-M2-530 context menu pointer-move retained Cx route isolation
+
+Claim verified:
+
+- Context menu pointer-move routing no longer imports or names retained bridge Cx types in
+  `context_menu/key_navigation/pointer_move.rs`.
+- Context menu pointer-move routing now uses the retained-agnostic `WidgetPaintInvalidationCx` seam.
+- Context menu pointer-move behavior remains intact for no-menu no-op behavior, hover update paint
+  invalidation, and repeated-hover no-op invalidation behavior.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/pointer_move.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/tests.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving context menu
+    pointer-move routing behind retained-agnostic paint invalidation.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(context_menu_pointer_move_route_stays_off_retained_bridge) | test(pointer_move_without_context_menu_is_side_effect_free) | test(pointer_move_updates_hover_and_invalidates_paint) | test(pointer_move_same_hover_does_not_invalidate_paint_again) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 7 tests.
+  - Scope proven: source-policy locks the context menu pointer-move helper off retained bridge Cx
+    names; pointer-move hover/invalidation behavior and retained ledger behavior remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/pointer_move.rs`
+  - Result: no matches.
+  - Scope proven: the context menu pointer-move helper no longer depends on retained bridge Cx
+    names.
+
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after formatting the context menu
+    pointer-move seam changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after moving
+    context menu pointer-move routing behind retained-agnostic seams.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-530` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.

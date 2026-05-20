@@ -1,13 +1,12 @@
-use fret_ui::UiHost;
-
+use crate::ui::canvas::widget::widget_tail::WidgetPaintInvalidationCx;
 use crate::ui::canvas::widget::*;
 
 use super::super::ui;
 use super::hover;
 
-pub(super) fn handle_context_menu_pointer_move_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_context_menu_pointer_move_event<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl WidgetPaintInvalidationCx<H>,
     position: Point,
     zoom: f32,
 ) -> bool {

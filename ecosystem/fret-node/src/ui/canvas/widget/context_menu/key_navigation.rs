@@ -10,6 +10,7 @@ mod typeahead;
 
 use fret_ui::UiHost;
 
+use crate::ui::canvas::widget::widget_tail::WidgetPaintInvalidationCx;
 use crate::ui::canvas::widget::*;
 
 pub(super) fn handle_context_menu_key_down_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
@@ -20,9 +21,9 @@ pub(super) fn handle_context_menu_key_down_event<H: UiHost, M: NodeGraphCanvasMi
     key_down::handle_context_menu_key_down_event(canvas, cx, key)
 }
 
-pub(super) fn handle_context_menu_pointer_move_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_context_menu_pointer_move_event<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl WidgetPaintInvalidationCx<H>,
     position: Point,
     zoom: f32,
 ) -> bool {

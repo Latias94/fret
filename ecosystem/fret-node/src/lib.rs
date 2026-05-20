@@ -188,6 +188,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/context_menu/ui.rs");
     const UI_CANVAS_WIDGET_CONTEXT_MENU_UI_EVENT_RS: &str =
         include_str!("ui/canvas/widget/context_menu/ui/event.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_KEY_NAVIGATION_POINTER_MOVE_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/key_navigation/pointer_move.rs");
     const UI_CANVAS_WIDGET_SEARCHER_RS: &str = include_str!("ui/canvas/widget/searcher.rs");
     const UI_CANVAS_WIDGET_SEARCHER_ACTIVATION_RS: &str =
         include_str!("ui/canvas/widget/searcher_activation.rs");
@@ -506,6 +508,22 @@ mod surface_policy_tests {
             assert!(
                 !context_menu_ui_tail_sources.contains(forbidden),
                 "context menu UI tail helpers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn context_menu_pointer_move_route_stays_off_retained_bridge() {
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_CONTEXT_MENU_KEY_NAVIGATION_POINTER_MOVE_RS.contains(forbidden),
+                "context menu pointer-move helper must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }
