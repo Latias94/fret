@@ -8871,3 +8871,66 @@ Broader gates not run:
   - Reason: `RBX-M2-580` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-21 - RBX-M2-590 context menu background execution retained Cx route isolation
+
+Claim verified:
+
+- Context menu background insert execution no longer imports or names retained bridge Cx types in
+  `context_menu/background_execution.rs`, `context_menu/background_execution/activate.rs`, or
+  `context_menu/background_execution/apply.rs`.
+- `BackgroundInsertMenuCx` carries the background executor's host/window access while retained
+  `EventCx` field access stays isolated in `context_menu/background_execution/retained_cx.rs`.
+- Background insert action behavior remains intact for missing candidates, ignored non-candidate
+  actions, rejected candidates, toast surfacing, recent-kind recording, and retained ledger
+  behavior.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution/activate.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution/apply.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution/retained_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution/tests.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving context menu
+    background execution behind retained-agnostic seams.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(context_menu_background_execution_stays_off_retained_bridge) | test(background_insert_menu_plan_surfaces_create_node_errors) | test(background_insert_action_with_missing_candidate_is_handled_without_side_effects) | test(background_insert_action_ignores_non_candidate_actions) | test(background_insert_action_records_candidate_and_surfaces_rejection_toast) | test(context_menu_activation_route_stays_off_retained_bridge) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 7 tests.
+  - Scope proven: source-policy locks background execution off retained bridge Cx names; plan
+    rejection, candidate gating, ignored action, rejection toast, activation route, and retained
+    ledger behavior remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution/activate.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution/apply.rs`
+  - Result: no matches.
+  - Scope proven: the context menu background execution route files no longer depend on retained
+    bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after formatting the context menu
+    background execution seam changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after moving
+    context menu background execution behind retained-agnostic seams.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-590` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.

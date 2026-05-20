@@ -2,7 +2,7 @@ use crate::ui::canvas::widget::*;
 
 pub(super) fn activate_background_context_action<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl super::BackgroundInsertMenuCx<H>,
     at: CanvasPoint,
     action: NodeGraphContextMenuAction,
     menu_candidates: &[InsertNodeCandidate],
@@ -13,7 +13,7 @@ pub(super) fn activate_background_context_action<H: UiHost, M: NodeGraphCanvasMi
                 return true;
             };
             canvas.record_recent_kind(&candidate.kind);
-            let plan = canvas.plan_background_insert_menu_candidate(cx.app, &candidate, at);
+            let plan = canvas.plan_background_insert_menu_candidate(cx.host(), &candidate, at);
             canvas.apply_background_insert_menu_plan(cx, plan);
             true
         }

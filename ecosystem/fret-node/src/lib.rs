@@ -196,6 +196,12 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/context_menu/activate/command.rs");
     const UI_CANVAS_WIDGET_CONTEXT_MENU_ACTIVATE_TARGET_RS: &str =
         include_str!("ui/canvas/widget/context_menu/activate/target.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_BACKGROUND_EXECUTION_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/background_execution.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_BACKGROUND_EXECUTION_ACTIVATE_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/background_execution/activate.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_BACKGROUND_EXECUTION_APPLY_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/background_execution/apply.rs");
     const UI_CANVAS_WIDGET_CONTEXT_MENU_OPENING_RS: &str =
         include_str!("ui/canvas/widget/context_menu/opening.rs");
     const UI_CANVAS_WIDGET_CONTEXT_MENU_OPENING_BACKGROUND_RS: &str =
@@ -584,6 +590,29 @@ mod surface_policy_tests {
             assert!(
                 !context_menu_activation_sources.contains(forbidden),
                 "context menu activation route must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn context_menu_background_execution_stays_off_retained_bridge() {
+        let context_menu_background_execution_sources = [
+            UI_CANVAS_WIDGET_CONTEXT_MENU_BACKGROUND_EXECUTION_RS,
+            UI_CANVAS_WIDGET_CONTEXT_MENU_BACKGROUND_EXECUTION_ACTIVATE_RS,
+            UI_CANVAS_WIDGET_CONTEXT_MENU_BACKGROUND_EXECUTION_APPLY_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !context_menu_background_execution_sources.contains(forbidden),
+                "context menu background execution must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

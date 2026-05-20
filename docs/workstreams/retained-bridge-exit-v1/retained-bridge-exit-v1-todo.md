@@ -3448,6 +3448,36 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-590 Isolate context menu background execution retained Cx route.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution/activate.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution/apply.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution/retained_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution/tests.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move background insert context-menu execution off direct retained bridge Cx names by
+      introducing `BackgroundInsertMenuCx` for host/window access.
+    - Keep retained `EventCx` host/window field access isolated in
+      `context_menu/background_execution/retained_cx.rs`.
+    - Lock background execution files with source-policy coverage and prove candidate gating,
+      ignored action, and rejection-toast behavior.
+  - Result:
+    - `background_execution.rs`, `background_execution/activate.rs`, and
+      `background_execution/apply.rs` now use `BackgroundInsertMenuCx`.
+    - Added `background_execution/retained_cx.rs` as the retained adapter for host/window access.
+    - Added focused tests for missing candidate handled/no-op behavior, non-candidate action
+      ignored behavior, and candidate rejection toast plus recent-kind recording.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(context_menu_background_execution_stays_off_retained_bridge) | test(background_insert_menu_plan_surfaces_create_node_errors) | test(background_insert_action_with_missing_candidate_is_handled_without_side_effects) | test(background_insert_action_ignores_non_candidate_actions) | test(background_insert_action_records_candidate_and_surfaces_rejection_toast) | test(context_menu_activation_route_stays_off_retained_bridge) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution/activate.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution/apply.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
