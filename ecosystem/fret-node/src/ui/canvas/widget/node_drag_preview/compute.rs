@@ -9,21 +9,29 @@ use crate::io::NodeGraphNodeOrigin;
 use crate::ui::canvas::geometry::{CanvasGeometry, node_rect_origin_from_anchor};
 use crate::ui::canvas::state::NodeDrag;
 
-use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot};
+use super::super::{
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot,
+    node_drag_preview_cx::NodeDragPreviewCx,
+};
 
-pub(super) fn compute_preview_positions<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn compute_preview_positions<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     drag: &NodeDrag,
     delta: CanvasPoint,
     multi_drag: bool,
-) -> (Vec<(GraphNodeId, CanvasPoint)>, Vec<(GroupId, CanvasRect)>) {
-    let geometry = canvas.canvas_geometry(&*cx.app, snapshot);
+) -> (Vec<(GraphNodeId, CanvasPoint)>, Vec<(GroupId, CanvasRect)>)
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: NodeDragPreviewCx<H>,
+{
+    let host = cx.host();
+    let geometry = canvas.canvas_geometry(&*host, snapshot);
     let node_origin = snapshot.interaction.node_origin.normalized();
     canvas
         .graph
-        .read_ref(cx.app, |graph| {
+        .read_ref(&*host, |graph| {
             let mut next_nodes: Vec<(GraphNodeId, CanvasPoint)> =
                 Vec::with_capacity(drag.nodes.len());
             let mut group_overrides: HashMap<GroupId, CanvasRect> = HashMap::new();
