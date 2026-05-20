@@ -92,6 +92,11 @@ mod surface_policy_tests {
     const UI_OVERLAY_RENAME_COMMAND_RS: &str = include_str!("ui/overlays/rename_command.rs");
     const UI_OVERLAY_RENAME_LIFECYCLE_RS: &str = include_str!("ui/overlays/rename_lifecycle.rs");
     const UI_VIEWPORT_OPTIONS_RS: &str = include_str!("ui/viewport_options.rs");
+    const UI_CANVAS_WIDGET_PAINT_INVALIDATION_RS: &str =
+        include_str!("ui/canvas/widget/paint_invalidation.rs");
+    const UI_CANVAS_WIDGET_REDRAW_REQUEST_RS: &str =
+        include_str!("ui/canvas/widget/redraw_request.rs");
+    const UI_CANVAS_WIDGET_TAIL_RS: &str = include_str!("ui/canvas/widget/widget_tail.rs");
     const UI_VIEW_QUEUE_RS: &str = include_str!("ui/canvas/widget/view_queue.rs");
     const FRET_EXAMPLES_CARGO_TOML: &str = include_str!("../../../apps/fret-examples/Cargo.toml");
     const FRET_EXAMPLES_LIB_RS: &str = include_str!("../../../apps/fret-examples/src/lib.rs");
@@ -182,6 +187,29 @@ mod surface_policy_tests {
                 && !UI_MOD_RS.contains("RetainedSubtreeProps"),
             "retained subtree compatibility must stay out of the public declarative node graph path"
         );
+    }
+
+    #[test]
+    fn retained_canvas_tail_policy_helpers_stay_off_retained_bridge() {
+        let tail_policy_sources = [
+            UI_CANVAS_WIDGET_PAINT_INVALIDATION_RS,
+            UI_CANVAS_WIDGET_REDRAW_REQUEST_RS,
+            UI_CANVAS_WIDGET_TAIL_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !tail_policy_sources.contains(forbidden),
+                "canvas widget tail policy helpers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
     }
 
     #[test]

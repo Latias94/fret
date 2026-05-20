@@ -6553,3 +6553,67 @@ Broader gates not run:
     Pre-delete middleware oracle coverage plus post-delete default/compat targeted tests, compile
     gates, formatting, layering, catalog, and whitespace checks cover the changed behavior and
     boundary surface.
+
+## 2026-05-20 - RBX-M2-200 retained canvas widget tail Cx adapter isolation
+
+Claim verified:
+
+- Canvas widget tail actions for redraw, paint invalidation, and handled-event propagation stop now
+  flow through retained-agnostic internal traits in `widget_tail.rs`.
+- Retained `EventCx` / `CommandCx` / `LayoutCx` / `PaintCx` implementations for those tail actions
+  are isolated in `retained_widget_tail.rs`.
+- `paint_invalidation.rs`, `redraw_request.rs`, and `widget_tail.rs` no longer import or name
+  retained bridge Cx types, and a default source-policy test locks that boundary.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/widget_tail.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_tail.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_invalidation.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/redraw_request.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_shared.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the remaining retained compatibility island compiles after moving tail action
+    adapters behind traits.
+- `cargo nextest run -p fret-node retained_canvas_tail_policy_helpers_stay_off_retained_bridge retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+  - Result: passed, 3 tests.
+  - Scope proven: default source-policy gates now reject retained bridge/Cx imports in the extracted
+    tail policy helpers and keep the retained widget island crate-private/controller-bound.
+- `cargo nextest run -p fret-node --features compat-retained-canvas widget_tail retained_canvas_tail_policy_helpers_stay_off_retained_bridge retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+  - Result: passed, 5 tests.
+  - Scope proven: compat retained source-policy gates remain green and the new retained-agnostic
+    tail helper unit tests prove redraw/paint-invalidation/handled-event side-effect sequencing.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/paint_invalidation.rs ecosystem/fret-node/src/ui/canvas/widget/redraw_request.rs ecosystem/fret-node/src/ui/canvas/widget/widget_tail.rs`
+  - Result: no matches.
+  - Scope proven: the extracted tail policy helpers no longer depend on retained bridge Cx names.
+- `cargo fmt -p fret-node`
+  - Result: passed.
+  - Scope proven: touched `fret-node` Rust files were formatted.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after the
+    adapter-boundary extraction.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-200` is a narrow `fret-node` retained canvas widget adapter-boundary slice.
+    Targeted default/compat source-policy tests, the new unit tests, the compat compile gate, and
+    boundary checks cover the changed surface.

@@ -2328,6 +2328,45 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-200 Isolate retained canvas widget tail Cx adapters.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/widget_tail.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_tail.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/paint_invalidation.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/redraw_request.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_shared.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/command_ui.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_ui/event.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui/event.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/commit_cx.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move retained canvas widget tail actions (`request_redraw`, paint invalidation, and
+      handled-event propagation stop) behind retained-agnostic internal traits.
+    - Keep retained `EventCx` / `CommandCx` / `LayoutCx` / `PaintCx` implementations in one
+      retained adapter module instead of leaking those Cx types into policy helpers.
+    - Lock the extracted pure helper files with a default source-policy gate.
+  - Result:
+    - Added `widget_tail.rs` as a retained-agnostic tail action seam with unit tests.
+    - Added `retained_widget_tail.rs` as the only new retained Cx adapter for those tail actions.
+    - Moved `paint_invalidation.rs` and `redraw_request.rs` off direct retained bridge imports.
+    - Removed the generic retained Cx tail trait from `retained_widget_runtime_shared.rs`, leaving
+      that file responsible only for retained runtime theme/service sync.
+    - Added `retained_canvas_tail_policy_helpers_stay_off_retained_bridge` so
+      `paint_invalidation.rs`, `redraw_request.rs`, and `widget_tail.rs` cannot reintroduce
+      retained bridge/Cx imports.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node retained_canvas_tail_policy_helpers_stay_off_retained_bridge retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas widget_tail retained_canvas_tail_policy_helpers_stay_off_retained_bridge retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/paint_invalidation.rs ecosystem/fret-node/src/ui/canvas/widget/redraw_request.rs ecosystem/fret-node/src/ui/canvas/widget/widget_tail.rs`
+    - `cargo fmt -p fret-node`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

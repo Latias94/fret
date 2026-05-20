@@ -4,11 +4,11 @@ use super::super::*;
 use super::{ContextMenuHoverEdgePolicy, overlay};
 
 pub(super) fn invalidate_context_menu_paint<H: UiHost>(cx: &mut EventCx<'_, H>) {
-    super::super::retained_widget_runtime_shared::invalidate_widget_paint(cx);
+    super::super::widget_tail::invalidate_widget_paint(cx);
 }
 
 pub(super) fn finish_context_menu_event<H: UiHost>(cx: &mut EventCx<'_, H>) -> bool {
-    super::super::retained_widget_runtime_shared::finish_middleware_handled(cx);
+    super::super::widget_tail::finish_widget_handled(cx);
     true
 }
 

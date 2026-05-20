@@ -11,7 +11,7 @@ pub(in super::super) trait WireCommitCx<H: UiHost> {
 }
 
 pub(in super::super) fn invalidate_commit_paint<H: UiHost>(cx: &mut impl WireCommitCx<H>) {
-    super::super::redraw_request::request_commit_redraw(cx);
+    cx.request_redraw();
     cx.invalidate_paint();
 }
 
