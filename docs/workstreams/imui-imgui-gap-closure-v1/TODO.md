@@ -1076,6 +1076,10 @@ Readiness order for the next locally testable review slices:
    `inherited_text_style` as a protected role scope. Bare leading/trailing text keeps the badge
    foreground fallback, while caller-supplied `text_button_label(...)` children keep their role-owned
    no-wrap, ellipsis, zero-min-width, and shrink contract.
+   2026-05-20 shadcn Button children-role follow-up: `Button::children(...)`,
+   `Button::leading_children(...)`, and `Button::trailing_children(...)` now have focused gates
+   proving caller-supplied `text_button_label(...)` roles keep their leaf no-wrap, ellipsis,
+   zero-min-width, shrink, and inherited metadata contract under button chrome composition.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

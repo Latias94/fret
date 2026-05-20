@@ -961,6 +961,9 @@ Exit criteria:
   2026-05-20 shadcn Badge role-preservation result: Badge now preserves caller-supplied
   button-label roles in leading/trailing children while retaining foreground fallback for bare
   child text.
+  2026-05-20 shadcn Button role-preservation result: Button now has focused gates proving
+  caller-supplied button-label roles survive both full custom content and inline leading/trailing
+  slot composition.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

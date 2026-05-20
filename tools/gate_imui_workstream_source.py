@@ -3826,6 +3826,22 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/button.rs"),
+            required=[
+                "current_color::scope_children(cx, fg.clone(), |cx| {",
+                "button_children_preserve_shared_button_label_role_contracts",
+                "button_inline_children_preserve_shared_button_label_role_contracts",
+                "Button::new(\"Ignored\")\n                    .children([decl_text::text_button_label(cx, \"Run Build\")])",
+                "Button::new(\"Main\")\n                    .leading_children([decl_text::text_button_label(cx, \"Before\")])\n                    .trailing_children([decl_text::text_button_label(cx, \"After\")])",
+                "assert_eq!(props.wrap, fret_core::TextWrap::None);",
+                "assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);",
+                "assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));",
+                "assert_eq!(props.layout.flex.shrink, 1.0);",
+                "assert!(text.inherited_text_style.is_some());",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-shadcn/src/item.rs"),
             required=[
                 "fn patch_item_title_text_style_recursive_scoped(",

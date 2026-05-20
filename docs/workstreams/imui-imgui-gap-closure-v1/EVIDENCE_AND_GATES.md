@@ -4565,6 +4565,29 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   `cargo nextest run -p fret-ui-shadcn --lib
   badge_children_preserve_shared_button_label_role_contracts --no-fail-fast`.
 
+2026-05-20 shadcn Button children role-preservation gate:
+
+- Source gap before gate: `Button` already used `current_color::scope_children(...)` for custom
+  content instead of recursively rewriting text leaves, but the test suite did not prove
+  caller-supplied shared button-label roles kept their leaf text contract through the full
+  `children(...)` override path or the `leading_children(...)` / `trailing_children(...)` inline
+  slot path.
+- `button_children_preserve_shared_button_label_role_contracts` now proves a `text_button_label(...)`
+  child keeps `style: None`, `color: None`, no-wrap, ellipsis overflow, zero minimum width, shrink,
+  inherited role metadata, and inherited foreground through `Button::children(...)`.
+- `button_inline_children_preserve_shared_button_label_role_contracts` proves the same contract for
+  `Button::leading_children(...)` and `Button::trailing_children(...)`, while the existing inline
+  ordering test continues to cover label preservation and RTL order flipping.
+- First focused `cargo nextest run -p fret-ui-shadcn --lib
+  button_children_preserve_shared_button_label_role_contracts
+  button_inline_children_preserve_shared_button_label_role_contracts --no-fail-fast` timed out while
+  Cargo/Rustc was still compiling. No process was killed; after Cargo/Rustc exited naturally, the
+  split focused runs passed:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  button_children_preserve_shared_button_label_role_contracts --no-fail-fast` and
+  `cargo nextest run -p fret-ui-shadcn --lib
+  button_inline_children_preserve_shared_button_label_role_contracts --no-fail-fast`.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground
