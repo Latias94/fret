@@ -3152,6 +3152,33 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-490 Isolate searcher pointer move/wheel retained Cx routes.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer/move_event.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer/move_event/tests.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer/wheel_event.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer/wheel_event/tests.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move searcher pointer move/wheel routing off direct retained bridge Cx names by using the
+      retained-agnostic paint invalidation seam.
+    - Extend source-policy coverage so `searcher_pointer.rs`, `move_event.rs`, and
+      `wheel_event.rs` cannot re-import retained bridge Cx names.
+  - Result:
+    - Searcher pointer move and wheel routes now take `WidgetPaintInvalidationCx`.
+    - Added focused tests for no-searcher move/wheel side-effect-free behavior, hover update paint
+      invalidation, repeated hover no-op behavior, wheel scroll paint invalidation, boundary wheel
+      consumption without paint, and Ctrl-wheel pass-through.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(searcher_dismiss_tail_helpers_stay_off_retained_bridge) | test(searcher_pointer_move_without_searcher_is_side_effect_free) | test(searcher_pointer_move_updates_hover_and_invalidates_paint) | test(searcher_pointer_move_same_hover_does_not_invalidate_paint_again) | test(searcher_wheel_without_searcher_is_side_effect_free) | test(searcher_wheel_scrolls_and_invalidates_paint) | test(searcher_wheel_at_scroll_boundary_consumes_plain_wheel_without_paint) | test(searcher_wheel_with_ctrl_does_not_consume_or_paint) | test(retained_bridge_source_usage_stays_on_the_migration_ledger) | test(retained_widget_compat_island_stays_crate_private_and_controller_bound)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/searcher_activation.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation/pointer_down.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation/pointer_up.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/arm.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/clear.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/release.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer/move_event.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer/wheel_event.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_ui.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_ui/event.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

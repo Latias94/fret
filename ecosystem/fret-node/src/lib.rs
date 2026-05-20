@@ -196,6 +196,12 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/searcher_activation_state/clear.rs");
     const UI_CANVAS_WIDGET_SEARCHER_ACTIVATION_STATE_RELEASE_RS: &str =
         include_str!("ui/canvas/widget/searcher_activation_state/release.rs");
+    const UI_CANVAS_WIDGET_SEARCHER_POINTER_RS: &str =
+        include_str!("ui/canvas/widget/searcher_pointer.rs");
+    const UI_CANVAS_WIDGET_SEARCHER_POINTER_MOVE_EVENT_RS: &str =
+        include_str!("ui/canvas/widget/searcher_pointer/move_event.rs");
+    const UI_CANVAS_WIDGET_SEARCHER_POINTER_WHEEL_EVENT_RS: &str =
+        include_str!("ui/canvas/widget/searcher_pointer/wheel_event.rs");
     const UI_CANVAS_WIDGET_SEARCHER_UI_RS: &str = include_str!("ui/canvas/widget/searcher_ui.rs");
     const UI_CANVAS_WIDGET_SEARCHER_UI_EVENT_RS: &str =
         include_str!("ui/canvas/widget/searcher_ui/event.rs");
@@ -464,6 +470,9 @@ mod surface_policy_tests {
             UI_CANVAS_WIDGET_SEARCHER_ACTIVATION_STATE_ARM_RS,
             UI_CANVAS_WIDGET_SEARCHER_ACTIVATION_STATE_CLEAR_RS,
             UI_CANVAS_WIDGET_SEARCHER_ACTIVATION_STATE_RELEASE_RS,
+            UI_CANVAS_WIDGET_SEARCHER_POINTER_RS,
+            UI_CANVAS_WIDGET_SEARCHER_POINTER_MOVE_EVENT_RS,
+            UI_CANVAS_WIDGET_SEARCHER_POINTER_WHEEL_EVENT_RS,
             UI_CANVAS_WIDGET_SEARCHER_UI_RS,
             UI_CANVAS_WIDGET_SEARCHER_UI_EVENT_RS,
         ]

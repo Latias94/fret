@@ -1,12 +1,13 @@
 use fret_core::Modifiers;
-use fret_ui::UiHost;
 
 use super::super::searcher_ui::invalidate_searcher_paint;
-use super::super::*;
+use super::super::widget_tail::WidgetPaintInvalidationCx;
+use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use fret_core::Point;
 
-pub(super) fn handle_searcher_wheel_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_searcher_wheel_event<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl WidgetPaintInvalidationCx<H>,
     delta: Point,
     modifiers: Modifiers,
 ) -> bool {
@@ -21,3 +22,6 @@ pub(super) fn handle_searcher_wheel_event<H: UiHost, M: NodeGraphCanvasMiddlewar
 
     !modifiers.ctrl && !modifiers.meta
 }
+
+#[cfg(test)]
+mod tests;
