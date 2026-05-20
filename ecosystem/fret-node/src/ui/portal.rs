@@ -24,8 +24,7 @@ use crate::ui::style::NodeGraphStyle;
 
 use super::canvas::{node_order, node_ports, node_size_default_px};
 pub use super::portal_commands::{
-    PortalCommandOutcome, PortalTextCommand, PortalTextStepMode, parse_portal_text_command,
-    portal_cancel_text_command, portal_step_text_command_with_mode, portal_submit_text_command,
+    PortalCommandOutcome, PortalTextCommand, parse_portal_text_command,
 };
 pub use super::portal_layout::NodeGraphPortalNodeLayout;
 

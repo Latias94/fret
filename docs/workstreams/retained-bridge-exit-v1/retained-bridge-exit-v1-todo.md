@@ -2142,6 +2142,49 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-150 Delete retained portal text/number command adapters after default handler proof.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/editors/portal_text.rs`
+    - `ecosystem/fret-node/src/ui/editors/portal_number.rs`
+    - `ecosystem/fret-node/src/ui/editors/mod.rs`
+    - `ecosystem/fret-node/src/ui/declarative/mod.rs`
+    - `ecosystem/fret-node/src/ui/mod.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/ui/portal.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_lifecycle_conformance.rs`
+    - `ecosystem/fret-node/src/lib.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move first-party portal text/number editor command handlers onto the default declarative
+      command-handler seam.
+    - Delete the retained `CommandCx` adapter implementations from `portal_text.rs` and
+      `portal_number.rs`.
+    - Keep retained `NodeGraphPortalHost` only as lifecycle/measurement oracle code while default
+      text/number editor handlers own command policy and session model I/O.
+  - Result:
+    - `PortalTextEditor` and `PortalNumberEditor` now own cloneable, model-backed session state
+      instead of storing editor sessions in host globals.
+    - `PortalTextEditHandler` and `PortalNumberEditHandler` implement
+      `NodeGraphDeclarativePortalCommandHandler`, expose `with_editor(...)` for explicit renderer /
+      command-handler state sharing, and are re-exported from default `fret-node::ui` /
+      `fret-node::ui::declarative`.
+    - Deleted retained `NodeGraphPortalCommandHandler` impls for text/number editor handlers and
+      removed `portal_text.rs` / `portal_number.rs` from the retained bridge source migration
+      ledger.
+    - Added default declarative surface tests proving both text and number editor handlers submit
+      binding-backed graph transactions without retained `CommandCx`.
+    - Kept retained portal lifecycle/measurement oracle tests green after deletion.
+  - Validation:
+    - pre-delete `cargo nextest run -p fret-node --features compat-retained-canvas portal_lifecycle_conformance portal_measured_geometry_conformance portal_measured_internals_conformance declarative_portal_text_editor_handler_submits_transactions_without_retained_command_cx`
+    - post-delete `cargo nextest run -p fret-node declarative_portal_text_editor_handler_submits_transactions_without_retained_command_cx declarative_portal_number_editor_handler_submits_transactions_without_retained_command_cx retained_bridge_source_usage_stays_on_the_migration_ledger editor_chrome_compiles_without_retained_canvas_compat portal_command_session`
+    - post-delete `cargo nextest run -p fret-node --features compat-retained-canvas portal_lifecycle_conformance portal_measured_geometry_conformance portal_measured_internals_conformance declarative_portal_text_editor_handler_submits_transactions_without_retained_command_cx declarative_portal_number_editor_handler_submits_transactions_without_retained_command_cx retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - `cargo check -p fret-node`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo fmt -p fret-node`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

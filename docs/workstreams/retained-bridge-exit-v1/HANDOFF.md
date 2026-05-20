@@ -605,8 +605,11 @@ the default declarative surface by adding `NodeGraphDeclarativePortalCommandHand
 `NodeGraphSurfaceProps::portal_command_handler`, default re-exports for the portal command protocol,
 and a surface-root command hook that parses portal commands, routes handled commits through
 `NodeGraphSurfaceBinding`, restores focus to the surface, requests redraw/notify, and leaves
-unclaimed portal commands unhandled. Retained portal files are now kept only for text/number
-command-adapter deletion-preflight oracle work.
+unclaimed portal commands unhandled. `RBX-M2-150` then moved first-party portal text/number editor
+handlers onto that default declarative command seam, converted their session state from host globals
+to cloneable model-backed editor state, deleted the retained `CommandCx` adapters from
+`portal_text.rs` / `portal_number.rs`, and removed those files from the retained bridge source
+ledger after pre-delete and post-delete retained portal oracle runs.
 
 ## Next Task
 
@@ -619,9 +622,9 @@ Recommended next implementation shape:
 - Continue M2 by shrinking the RBX-M2-080 ledger. The retained controls widget is now gone; the
   retained toolbar widgets are gone; retained minimap is gone; retained blackboard is gone; retained
   rename host is gone; retained diagnostics anchors are gone; retained a11y active-descendant
-  anchors are gone; arbitrary per-kind portal renderer hosting and portal command routing now have
-  default declarative coverage. The remaining portal family work is retained text/number
-  command-adapter deletion after a focused deletion-preflight oracle slice. The remaining canvas
+  anchors are gone; arbitrary per-kind portal renderer hosting, portal command routing, and
+  first-party portal text/number command handlers now have default declarative coverage. The
+  remaining portal retained files are lifecycle/measurement oracle code; the remaining canvas
   interaction families still need default-path tests before their retained widget/event code can be
   deleted. Each slice should first add default declarative tests, then remove or gate less retained
   code.

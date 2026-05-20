@@ -58,6 +58,10 @@ pub use declarative::{
     portal_step_text_command_with_mode, portal_submit_text_command,
 };
 pub use edge_types::{EdgeCustomPath, EdgePathInput, EdgeTypeKey, NodeGraphEdgeTypes};
+pub use editors::{
+    PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalNumberEditor,
+    PortalTextEditHandler, PortalTextEditSpec, PortalTextEditSubmit, PortalTextEditor,
+};
 pub use geometry_overrides::{
     EdgeGeometryOverrideV1, NodeGeometryOverrideV1, NodeGraphGeometryOverrides,
     NodeGraphGeometryOverridesMap, NodeGraphGeometryOverridesRef,

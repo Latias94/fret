@@ -1,8 +1,10 @@
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{AppWindowId, Color, Edges, Px, TextStyle};
-use fret_runtime::Model;
+use fret_runtime::{Model, ModelStore};
 use fret_ui::action::PressablePointerDownResult;
 use fret_ui::element::{
     ColumnProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableProps, RowProps,
@@ -20,12 +22,12 @@ use crate::ui::editors::portal_command_policy::PortalTextEditSpec;
 use crate::ui::editors::portal_command_session::{
     PortalTextCommandSession, handle_portal_text_command_with_session,
 };
-use crate::ui::portal::{
-    NodeGraphPortalCommandHandler, NodeGraphPortalNodeLayout, PortalCommandOutcome,
-    PortalTextCommand, PortalTextStepMode, portal_cancel_text_command,
+use crate::ui::portal_commands::{
+    PortalCommandOutcome, PortalTextCommand, PortalTextStepMode, portal_cancel_text_command,
     portal_step_text_command_with_mode, portal_submit_text_command,
 };
 use crate::ui::style::NodeGraphStyle;
+use crate::ui::{NodeGraphDeclarativePortalCommandHandler, NodeGraphPortalNodeLayout};
 
 #[derive(Debug, Clone)]
 pub struct PortalTextEditorUi {
@@ -76,12 +78,14 @@ impl Default for PortalTextEditorUi {
 #[derive(Debug, Clone)]
 pub struct PortalTextEditor {
     root_name: Arc<str>,
+    sessions: Rc<RefCell<HashMap<PortalTextEditorSessionKey, PortalTextEditorSession>>>,
 }
 
 impl PortalTextEditor {
     pub fn new(root_name: impl Into<Arc<str>>) -> Self {
         Self {
             root_name: root_name.into(),
+            sessions: Rc::default(),
         }
     }
 
@@ -289,10 +293,21 @@ impl PortalTextEditor {
         f: impl FnOnce(&mut PortalTextEditorSession, &mut H) -> R,
     ) -> R {
         let key = self.session_key(window);
-        app.with_global_mut(PortalTextEditorGlobalState::default, |global, app| {
-            let session = global.sessions.entry(key).or_default();
-            f(session, app)
-        })
+        let mut sessions = self.sessions.borrow_mut();
+        let session = sessions.entry(key).or_default();
+        f(session, app)
+    }
+
+    fn with_session_models<R>(
+        &self,
+        models: &mut ModelStore,
+        window: AppWindowId,
+        f: impl FnOnce(&mut PortalTextEditorSession, &mut ModelStore) -> R,
+    ) -> R {
+        let key = self.session_key(window);
+        let mut sessions = self.sessions.borrow_mut();
+        let session = sessions.entry(key).or_default();
+        f(session, models)
     }
 
     fn sync_session_for_graph<H: UiHost>(&self, app: &mut H, window: AppWindowId, graph: &Graph) {
@@ -334,6 +349,23 @@ impl PortalTextEditor {
         })
     }
 
+    fn ensure_input_model_with_initial_models(
+        &self,
+        models: &mut ModelStore,
+        window: AppWindowId,
+        node: NodeId,
+        initial_text: String,
+    ) -> Model<String> {
+        self.with_session_models(models, window, |session, models| {
+            session.inputs.entry(node).or_insert_with(|| {
+                session.last_synced.insert(node, initial_text.clone());
+                session.last_seen.insert(node, initial_text.clone());
+                models.insert(initial_text)
+            });
+            session.inputs.get(&node).expect("model exists").clone()
+        })
+    }
+
     fn ensure_error_model<H: UiHost>(
         &self,
         app: &mut H,
@@ -362,6 +394,19 @@ impl PortalTextEditor {
         });
     }
 
+    fn set_error_models(
+        &self,
+        models: &mut ModelStore,
+        window: AppWindowId,
+        node: NodeId,
+        error: Option<Arc<str>>,
+    ) {
+        let model = self.ensure_error_model_models(models, window, node);
+        let _ = models.update(&model, |v| {
+            *v = error;
+        });
+    }
+
     fn write_input_text<H: UiHost>(
         &self,
         app: &mut H,
@@ -375,6 +420,24 @@ impl PortalTextEditor {
             *v = text;
         });
         self.with_session_mut(app, window, |session, _app| {
+            session.last_synced.insert(node, synced.clone());
+            session.last_seen.insert(node, synced);
+        });
+    }
+
+    fn write_input_text_models(
+        &self,
+        models: &mut ModelStore,
+        window: AppWindowId,
+        node: NodeId,
+        text: String,
+    ) {
+        let synced = text.clone();
+        let model = self.ensure_input_model_with_initial_models(models, window, node, text.clone());
+        let _ = models.update(&model, |v| {
+            *v = text;
+        });
+        self.with_session_models(models, window, |session, _models| {
             session.last_synced.insert(node, synced.clone());
             session.last_seen.insert(node, synced);
         });
@@ -451,6 +514,21 @@ impl PortalTextEditor {
             });
         }
     }
+
+    fn ensure_error_model_models(
+        &self,
+        models: &mut ModelStore,
+        window: AppWindowId,
+        node: NodeId,
+    ) -> Model<Option<Arc<str>>> {
+        self.with_session_models(models, window, |session, models| {
+            session
+                .errors
+                .entry(node)
+                .or_insert_with(|| models.insert(None))
+                .clone()
+        })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -461,65 +539,64 @@ pub struct PortalTextEditHandler<S> {
 
 impl<S> PortalTextEditHandler<S> {
     pub fn new(root_name: impl Into<Arc<str>>, spec: S) -> Self {
-        Self {
-            editor: PortalTextEditor::new(root_name),
-            spec,
-        }
+        Self::with_editor(PortalTextEditor::new(root_name), spec)
+    }
+
+    pub fn with_editor(editor: PortalTextEditor, spec: S) -> Self {
+        Self { editor, spec }
+    }
+
+    pub fn editor(&self) -> PortalTextEditor {
+        self.editor.clone()
     }
 }
 
-impl<H: UiHost, S: PortalTextEditSpec> NodeGraphPortalCommandHandler<H>
-    for PortalTextEditHandler<S>
-{
+impl<S: PortalTextEditSpec> NodeGraphDeclarativePortalCommandHandler for PortalTextEditHandler<S> {
     fn handle_portal_command(
         &mut self,
-        cx: &mut fret_ui::retained_bridge::CommandCx<'_, H>,
+        host: &mut dyn fret_ui::action::UiFocusActionHost,
+        cx: fret_ui::action::ActionCx,
         graph: &Graph,
         command: PortalTextCommand,
     ) -> PortalCommandOutcome {
-        let Some(window) = cx.window else {
-            return PortalCommandOutcome::NotHandled;
-        };
-
-        let mut session = RetainedPortalTextCommandSession {
+        let mut session = ModelPortalTextCommandSession {
             editor: self.editor.clone(),
-            app: cx.app,
-            window,
+            models: host.models_mut(),
+            window: cx.window,
         };
         handle_portal_text_command_with_session(graph, &self.spec, &mut session, command)
     }
 }
 
-struct RetainedPortalTextCommandSession<'a, H: UiHost> {
+struct ModelPortalTextCommandSession<'a> {
     editor: PortalTextEditor,
-    app: &'a mut H,
+    models: &'a mut ModelStore,
     window: AppWindowId,
 }
 
-impl<H: UiHost> PortalTextCommandSession for RetainedPortalTextCommandSession<'_, H> {
+impl PortalTextCommandSession for ModelPortalTextCommandSession<'_> {
     fn current_text(&mut self, node: NodeId, initial_text: String) -> String {
-        let model =
-            self.editor
-                .ensure_input_model_with_initial(self.app, self.window, node, initial_text);
-        model
-            .read_ref(self.app, |v| v.clone())
+        let model = self.editor.ensure_input_model_with_initial_models(
+            self.models,
+            self.window,
+            node,
+            initial_text,
+        );
+        self.models
+            .read(&model, |v| v.clone())
             .ok()
             .unwrap_or_default()
     }
 
     fn write_text(&mut self, node: NodeId, text: String) {
         self.editor
-            .write_input_text(self.app, self.window, node, text);
+            .write_input_text_models(self.models, self.window, node, text);
     }
 
     fn set_error(&mut self, node: NodeId, message: Option<Arc<str>>) {
-        self.editor.set_error(self.app, self.window, node, message);
+        self.editor
+            .set_error_models(self.models, self.window, node, message);
     }
-}
-
-#[derive(Debug, Default)]
-struct PortalTextEditorGlobalState {
-    sessions: HashMap<PortalTextEditorSessionKey, PortalTextEditorSession>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

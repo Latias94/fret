@@ -61,6 +61,8 @@ mod surface_policy_tests {
     const UI_CONTROLLER_VIEWPORT_RS: &str = include_str!("ui/controller_viewport.rs");
     const UI_DECLARATIVE_MOD_RS: &str = include_str!("ui/declarative/mod.rs");
     const UI_EDITORS_MOD_RS: &str = include_str!("ui/editors/mod.rs");
+    const UI_EDITOR_PORTAL_NUMBER_RS: &str = include_str!("ui/editors/portal_number.rs");
+    const UI_EDITOR_PORTAL_TEXT_RS: &str = include_str!("ui/editors/portal_text.rs");
     const UI_MOD_RS: &str = include_str!("ui/mod.rs");
     const UI_OVERLAYS_MOD_RS: &str = include_str!("ui/overlays/mod.rs");
     const UI_OVERLAY_CONTROLS_DECLARATIVE_RS: &str =
@@ -367,8 +369,6 @@ mod surface_policy_tests {
             "src/ui/portal.rs",
             "src/ui/retained_event_tail.rs",
             "src/ui/retained_submit.rs",
-            "src/ui/editors/portal_number.rs",
-            "src/ui/editors/portal_text.rs",
             "src/ui/canvas/middleware.rs",
             "src/ui/canvas/widget.rs",
             "src/ui/overlays/panel_button_paint.rs",
@@ -472,13 +472,22 @@ mod surface_policy_tests {
         assert!(UI_EDITORS_MOD_RS.contains("mod chrome;"));
         assert!(UI_EDITORS_MOD_RS.contains("mod portal_command_policy;"));
         assert!(UI_EDITORS_MOD_RS.contains("mod portal_command_session;"));
+        assert!(UI_EDITORS_MOD_RS.contains("mod portal_number;"));
+        assert!(UI_EDITORS_MOD_RS.contains("mod portal_text;"));
+        assert!(
+            !UI_EDITORS_MOD_RS
+                .contains("#[cfg(feature = \"compat-retained-canvas\")]\nmod portal_number;")
+        );
+        assert!(
+            !UI_EDITORS_MOD_RS
+                .contains("#[cfg(feature = \"compat-retained-canvas\")]\nmod portal_text;")
+        );
 
-        for retained_editor_module in ["mod portal_number;", "mod portal_text;"] {
-            let marker =
-                format!("#[cfg(feature = \"compat-retained-canvas\")]\n{retained_editor_module}");
+        for retained_bridge_free_editor in [UI_EDITOR_PORTAL_NUMBER_RS, UI_EDITOR_PORTAL_TEXT_RS] {
             assert!(
-                UI_EDITORS_MOD_RS.contains(&marker),
-                "retained portal editor module must stay behind compat-retained-canvas: {retained_editor_module}"
+                !retained_bridge_free_editor.contains("retained_bridge")
+                    && !retained_bridge_free_editor.contains("CommandCx"),
+                "default portal editor modules must not depend on retained bridge command adapters"
             );
         }
     }

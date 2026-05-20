@@ -6,7 +6,11 @@
 mod chrome;
 mod portal_command_policy;
 mod portal_command_session;
-#[cfg(feature = "compat-retained-canvas")]
 mod portal_number;
-#[cfg(feature = "compat-retained-canvas")]
 mod portal_text;
+
+pub use portal_command_policy::{
+    PortalNumberEditSpec, PortalNumberEditSubmit, PortalTextEditSpec, PortalTextEditSubmit,
+};
+pub use portal_number::{PortalNumberEditHandler, PortalNumberEditor};
+pub use portal_text::{PortalTextEditHandler, PortalTextEditor};

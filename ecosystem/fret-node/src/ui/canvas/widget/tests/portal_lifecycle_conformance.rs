@@ -17,8 +17,8 @@ use crate::ui::controller::NodeGraphController;
 use crate::ui::measured::MeasuredGeometryStore;
 use crate::ui::portal::{
     NodeGraphPortalCommandHandler, NodeGraphPortalHost, PortalCommandOutcome, PortalTextCommand,
-    portal_submit_text_command,
 };
+use crate::ui::portal_commands::portal_submit_text_command;
 use crate::ui::style::NodeGraphStyle;
 
 use super::{

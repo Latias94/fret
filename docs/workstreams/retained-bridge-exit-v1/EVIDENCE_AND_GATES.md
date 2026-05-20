@@ -6171,3 +6171,82 @@ Broader gates not run:
   - Reason: `RBX-M2-145` changes only the `fret-node` declarative portal command surface and
     workstream docs. Default/compat targeted tests, compile gates, source-policy gates, formatting,
     layering, catalog, and whitespace checks cover the changed behavior and boundary surface.
+
+## 2026-05-20 - RBX-M2-150 portal text/number command adapter deletion
+
+Claim verified:
+
+- First-party portal text and number editor command handlers now run on the default declarative
+  `NodeGraphDeclarativePortalCommandHandler` seam without retained `CommandCx`.
+- `portal_text.rs` and `portal_number.rs` no longer contain retained bridge command adapters and
+  are no longer allowed in the retained bridge source usage ledger.
+- Retained `NodeGraphPortalHost` lifecycle, controller-first command submission, measured-geometry,
+  and measured-internals oracle coverage remains green after deleting the text/number retained
+  adapters.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/editors/portal_text.rs`
+- `ecosystem/fret-node/src/ui/editors/portal_number.rs`
+- `ecosystem/fret-node/src/ui/editors/mod.rs`
+- `ecosystem/fret-node/src/ui/declarative/mod.rs`
+- `ecosystem/fret-node/src/ui/mod.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+- `ecosystem/fret-node/src/ui/portal.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_lifecycle_conformance.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- Pre-delete `cargo nextest run -p fret-node --features compat-retained-canvas portal_lifecycle_conformance portal_measured_geometry_conformance portal_measured_internals_conformance declarative_portal_text_editor_handler_submits_transactions_without_retained_command_cx`
+  - Result: passed, 5 tests.
+  - Scope proven: retained portal lifecycle, controller-first command submission, measured geometry,
+    and measured internals were green in the current worktree before deleting the retained
+    text/number command adapters.
+- `cargo nextest run -p fret-node declarative_portal_text_editor_handler_submits_transactions_without_retained_command_cx declarative_portal_number_editor_handler_submits_transactions_without_retained_command_cx retained_bridge_source_usage_stays_on_the_migration_ledger editor_chrome_compiles_without_retained_canvas_compat portal_command_session`
+  - Result: passed, 6 tests.
+  - Scope proven: default text and number portal editor handlers submit binding-backed graph
+    transactions without retained `CommandCx`; editor modules compile on the default gate; text and
+    number command session policy remains green; retained bridge source usage no longer allows
+    `portal_text.rs` / `portal_number.rs`.
+- `cargo nextest run -p fret-node --features compat-retained-canvas portal_lifecycle_conformance portal_measured_geometry_conformance portal_measured_internals_conformance declarative_portal_text_editor_handler_submits_transactions_without_retained_command_cx declarative_portal_number_editor_handler_submits_transactions_without_retained_command_cx retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+  - Result: passed, 8 tests.
+  - Scope proven: retained portal host lifecycle/measurement oracle coverage remains green after
+    the retained text/number adapter deletion, and the retained compatibility island/source ledger
+    still stays bounded.
+- `cargo check -p fret-node`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the default package compiles after moving editor handlers onto the declarative
+    command seam.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained compatibility island still compiles after the retained text/number
+    adapter deletion.
+- `cargo fmt -p fret-node`
+  - Result: passed.
+  - Scope proven: touched `fret-node` Rust files were formatted.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after removing
+    `portal_text.rs` / `portal_number.rs` from the retained bridge source ledger.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-150` changes only `fret-node` portal editor command handling and retained
+    source-policy documentation. Default/compat targeted tests, compile gates, source-policy gates,
+    formatting, layering, catalog, and whitespace checks cover the changed behavior and boundary
+    surface.

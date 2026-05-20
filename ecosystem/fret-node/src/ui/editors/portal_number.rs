@@ -1,8 +1,10 @@
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{AppWindowId, Color, Edges, MouseButton, Px, SemanticsRole, TextStyle};
-use fret_runtime::Model;
+use fret_runtime::{Model, ModelStore};
 use fret_ui::action::{PointerDownCx, PointerMoveCx, PointerUpCx};
 use fret_ui::element::{
     ColumnProps, HoverRegionProps, InsetStyle, LayoutStyle, Length, PointerRegionProps,
@@ -20,12 +22,12 @@ use crate::ui::editors::portal_command_policy::PortalNumberEditSpec;
 use crate::ui::editors::portal_command_session::{
     PortalNumberCommandSession, handle_portal_number_command_with_session,
 };
-use crate::ui::portal::{
-    NodeGraphPortalCommandHandler, NodeGraphPortalNodeLayout, PortalCommandOutcome,
-    PortalTextCommand, PortalTextStepMode, portal_cancel_text_command,
+use crate::ui::portal_commands::{
+    PortalCommandOutcome, PortalTextCommand, PortalTextStepMode, portal_cancel_text_command,
     portal_step_text_command_with_mode, portal_submit_text_command,
 };
 use crate::ui::style::NodeGraphStyle;
+use crate::ui::{NodeGraphDeclarativePortalCommandHandler, NodeGraphPortalNodeLayout};
 
 #[derive(Debug, Clone)]
 pub struct PortalNumberEditorUi {
@@ -72,12 +74,14 @@ impl Default for PortalNumberEditorUi {
 #[derive(Debug, Clone)]
 pub struct PortalNumberEditor {
     root_name: Arc<str>,
+    sessions: Rc<RefCell<HashMap<PortalNumberEditorSessionKey, PortalNumberEditorSession>>>,
 }
 
 impl PortalNumberEditor {
     pub fn new(root_name: impl Into<Arc<str>>) -> Self {
         Self {
             root_name: root_name.into(),
+            sessions: Rc::default(),
         }
     }
 
@@ -393,10 +397,21 @@ impl PortalNumberEditor {
         f: impl FnOnce(&mut PortalNumberEditorSession, &mut H) -> R,
     ) -> R {
         let key = self.session_key(window);
-        app.with_global_mut(PortalNumberEditorGlobalState::default, |global, app| {
-            let session = global.sessions.entry(key).or_default();
-            f(session, app)
-        })
+        let mut sessions = self.sessions.borrow_mut();
+        let session = sessions.entry(key).or_default();
+        f(session, app)
+    }
+
+    fn with_session_models<R>(
+        &self,
+        models: &mut ModelStore,
+        window: AppWindowId,
+        f: impl FnOnce(&mut PortalNumberEditorSession, &mut ModelStore) -> R,
+    ) -> R {
+        let key = self.session_key(window);
+        let mut sessions = self.sessions.borrow_mut();
+        let session = sessions.entry(key).or_default();
+        f(session, models)
     }
 
     fn sync_session_for_graph<H: UiHost>(&self, app: &mut H, window: AppWindowId, graph: &Graph) {
@@ -419,6 +434,22 @@ impl PortalNumberEditor {
             session.inputs.entry(node).or_insert_with(|| {
                 session.last_synced.insert(node, initial_text.clone());
                 app.models_mut().insert(initial_text)
+            });
+            session.inputs.get(&node).expect("inserted").clone()
+        })
+    }
+
+    fn ensure_input_model_models(
+        &self,
+        models: &mut ModelStore,
+        window: AppWindowId,
+        node: NodeId,
+        initial_text: String,
+    ) -> Model<String> {
+        self.with_session_models(models, window, |session, models| {
+            session.inputs.entry(node).or_insert_with(|| {
+                session.last_synced.insert(node, initial_text.clone());
+                models.insert(initial_text)
             });
             session.inputs.get(&node).expect("inserted").clone()
         })
@@ -524,6 +555,42 @@ impl PortalNumberEditor {
             });
         });
     }
+
+    fn set_error_models(
+        &self,
+        models: &mut ModelStore,
+        window: AppWindowId,
+        node: NodeId,
+        input_model: &Model<String>,
+        message: Option<Arc<str>>,
+    ) {
+        let model = self.ensure_error_model_models(models, window, node);
+        let last_input = models
+            .read(input_model, |v| v.clone())
+            .ok()
+            .unwrap_or_default();
+        let _ = models.update(&model, |v| {
+            *v = message.map(|message| PortalNumberEditorError {
+                last_input,
+                message,
+            });
+        });
+    }
+
+    fn ensure_error_model_models(
+        &self,
+        models: &mut ModelStore,
+        window: AppWindowId,
+        node: NodeId,
+    ) -> Model<Option<PortalNumberEditorError>> {
+        self.with_session_models(models, window, |session, models| {
+            session
+                .errors
+                .entry(node)
+                .or_insert_with(|| models.insert(None))
+                .clone()
+        })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -534,65 +601,67 @@ pub struct PortalNumberEditHandler<S: PortalNumberEditSpec> {
 
 impl<S: PortalNumberEditSpec> PortalNumberEditHandler<S> {
     pub fn new(root_name: impl Into<Arc<str>>, spec: S) -> Self {
-        Self {
-            editor: PortalNumberEditor::new(root_name),
-            spec,
-        }
+        Self::with_editor(PortalNumberEditor::new(root_name), spec)
+    }
+
+    pub fn with_editor(editor: PortalNumberEditor, spec: S) -> Self {
+        Self { editor, spec }
+    }
+
+    pub fn editor(&self) -> PortalNumberEditor {
+        self.editor.clone()
     }
 }
 
-impl<H: UiHost, S: PortalNumberEditSpec> NodeGraphPortalCommandHandler<H>
+impl<S: PortalNumberEditSpec> NodeGraphDeclarativePortalCommandHandler
     for PortalNumberEditHandler<S>
 {
     fn handle_portal_command(
         &mut self,
-        cx: &mut fret_ui::retained_bridge::CommandCx<'_, H>,
+        host: &mut dyn fret_ui::action::UiFocusActionHost,
+        cx: fret_ui::action::ActionCx,
         graph: &Graph,
         command: PortalTextCommand,
     ) -> PortalCommandOutcome {
-        let Some(window) = cx.window else {
-            return PortalCommandOutcome::NotHandled;
-        };
-
-        let mut session = RetainedPortalNumberCommandSession {
+        let mut session = ModelPortalNumberCommandSession {
             editor: self.editor.clone(),
-            app: cx.app,
-            window,
+            models: host.models_mut(),
+            window: cx.window,
         };
         handle_portal_number_command_with_session(graph, &self.spec, &mut session, command)
     }
 }
 
-struct RetainedPortalNumberCommandSession<'a, H: UiHost> {
+struct ModelPortalNumberCommandSession<'a> {
     editor: PortalNumberEditor,
-    app: &'a mut H,
+    models: &'a mut ModelStore,
     window: AppWindowId,
 }
 
-impl<H: UiHost> PortalNumberCommandSession for RetainedPortalNumberCommandSession<'_, H> {
+impl PortalNumberCommandSession for ModelPortalNumberCommandSession<'_> {
     fn current_text(&mut self, node: NodeId, initial_text: String) -> String {
-        let model = self
-            .editor
-            .ensure_input_model(self.app, self.window, node, initial_text);
-        model
-            .read_ref(self.app, |v| v.clone())
+        let model =
+            self.editor
+                .ensure_input_model_models(self.models, self.window, node, initial_text);
+        self.models
+            .read(&model, |v| v.clone())
             .ok()
             .unwrap_or_default()
     }
 
     fn write_text(&mut self, node: NodeId, text: String) {
-        let model = self
-            .editor
-            .ensure_input_model(self.app, self.window, node, text.clone());
-        let _ = model.update(self.app, |v, _cx| *v = text);
+        let model =
+            self.editor
+                .ensure_input_model_models(self.models, self.window, node, text.clone());
+        let _ = self.models.update(&model, |v| *v = text);
     }
 
     fn set_error(&mut self, node: NodeId, message: Option<Arc<str>>) {
         let input_model =
             self.editor
-                .ensure_input_model(self.app, self.window, node, String::new());
+                .ensure_input_model_models(self.models, self.window, node, String::new());
         self.editor
-            .set_error(self.app, self.window, node, &input_model, message);
+            .set_error_models(self.models, self.window, node, &input_model, message);
     }
 }
 
@@ -777,11 +846,6 @@ fn handle_drag_pointer_up(
     }
     host.request_redraw(window);
     true
-}
-
-#[derive(Debug, Default)]
-struct PortalNumberEditorGlobalState {
-    sessions: HashMap<PortalNumberEditorSessionKey, PortalNumberEditorSession>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

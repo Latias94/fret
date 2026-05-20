@@ -72,8 +72,11 @@ use crate::ui::measured::MEASURED_GEOMETRY_EPSILON_PX;
 use crate::ui::paint_overrides::{NodeGraphPaintOverrides, NodeGraphPaintOverridesMap};
 use crate::ui::{
     MeasuredGeometryStore, NodeGraphController, NodeGraphDeclarativePortalCommandHandler,
-    NodeGraphNodeTypes, NodeGraphSurfaceBinding, PortalCommandOutcome, PortalTextCommand,
-    node_graph_surface, node_graph_surface_with_portal_renderer, portal_submit_text_command,
+    NodeGraphNodeTypes, NodeGraphSurfaceBinding, PortalCommandOutcome, PortalNumberEditHandler,
+    PortalNumberEditSpec, PortalNumberEditSubmit, PortalTextCommand, PortalTextEditHandler,
+    PortalTextEditSpec, PortalTextEditSubmit, PortalTextStepMode, node_graph_surface,
+    node_graph_surface_with_portal_renderer, portal_step_text_command_with_mode,
+    portal_submit_text_command,
 };
 use serde_json::Value;
 
@@ -4371,6 +4374,259 @@ fn declarative_portal_command_host_submits_transactions_without_retained_portal_
         ),
         "unclaimed portal commands must keep bubbling instead of being swallowed"
     );
+}
+
+#[derive(Debug, Clone, Copy)]
+struct DeclarativePortalTextMoveSpec {
+    node: NodeId,
+}
+
+impl PortalTextEditSpec for DeclarativePortalTextMoveSpec {
+    fn initial_text(&self, _graph: &Graph, _node: NodeId) -> String {
+        "start".to_string()
+    }
+
+    fn submit(&self, _graph: &Graph, node: NodeId, text: &str) -> PortalTextEditSubmit {
+        if node != self.node {
+            return PortalTextEditSubmit::NotHandled;
+        }
+
+        match text {
+            "moved" => PortalTextEditSubmit::Commit {
+                tx: crate::ops::GraphTransaction {
+                    label: Some("Text Portal Move".to_string()),
+                    ops: vec![GraphOp::SetNodePos {
+                        id: node,
+                        from: CanvasPoint { x: 10.0, y: 20.0 },
+                        to: CanvasPoint { x: 96.0, y: 48.0 },
+                    }],
+                },
+                normalized_text: Some("moved".to_string()),
+            },
+            _ => PortalTextEditSubmit::Handled {
+                normalized_text: Some(text.to_ascii_uppercase()),
+            },
+        }
+    }
+
+    fn step_text_with_mode(
+        &self,
+        _graph: &Graph,
+        node: NodeId,
+        text: &str,
+        delta: i32,
+        mode: PortalTextStepMode,
+    ) -> Option<String> {
+        (node == self.node && text == "start" && delta == 1 && mode == PortalTextStepMode::Coarse)
+            .then(|| "moved".to_string())
+    }
+}
+
+#[test]
+fn declarative_portal_text_editor_handler_submits_transactions_without_retained_command_cx() {
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let mut services = FakeUiServices;
+    let window = AppWindowId::default();
+    let bounds = test_node_graph_surface_bounds();
+    ui.set_window(window);
+    host.bounds = bounds;
+
+    let node = NodeId::from_u128(0x9343);
+    let mut graph = Graph::new(GraphId::from_u128(0x9344));
+    graph
+        .nodes
+        .insert(node, test_node(CanvasPoint { x: 10.0, y: 20.0 }));
+
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            draw_order: vec![node],
+            ..NodeGraphViewState::default()
+        },
+        default_editor_config(),
+    );
+    let handler = Rc::new(RefCell::new(PortalTextEditHandler::new(
+        "node-graph-surface-text-editor-command",
+        DeclarativePortalTextMoveSpec { node },
+    )));
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        "node-graph-surface-text-editor-command",
+        |cx| {
+            let mut props = binding.surface_props();
+            props.portal_command_handler = Some(handler.clone());
+            vec![node_graph_surface(cx, props)]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut host, &mut services, bounds, 1.0);
+
+    assert!(ui.dispatch_command(
+        &mut host,
+        &mut services,
+        &portal_step_text_command_with_mode(node, 1, PortalTextStepMode::Coarse),
+    ));
+
+    let graph_pos = host
+        .models
+        .read(&binding.graph_model(), |graph| {
+            graph.nodes.get(&node).map(|node| node.pos)
+        })
+        .ok()
+        .flatten()
+        .expect("graph node pos");
+    let store_pos = host
+        .models
+        .read(&binding.store_model(), |store| {
+            store.graph().nodes.get(&node).map(|node| node.pos)
+        })
+        .ok()
+        .flatten()
+        .expect("store node pos");
+
+    assert_eq!(graph_pos, CanvasPoint { x: 96.0, y: 48.0 });
+    assert_eq!(store_pos, CanvasPoint { x: 96.0, y: 48.0 });
+
+    assert!(
+        !ui.dispatch_command(
+            &mut host,
+            &mut services,
+            &portal_step_text_command_with_mode(
+                NodeId::from_u128(0x9345),
+                1,
+                PortalTextStepMode::Coarse
+            ),
+        ),
+        "commands for nodes outside the text edit spec should keep bubbling"
+    );
+}
+
+#[derive(Debug, Clone, Copy)]
+struct DeclarativePortalNumberMoveSpec {
+    node: NodeId,
+}
+
+impl PortalNumberEditSpec for DeclarativePortalNumberMoveSpec {
+    fn initial_value(&self, _graph: &Graph, node: NodeId) -> Option<f64> {
+        (node == self.node).then_some(1.0)
+    }
+
+    fn format_value(&self, value: f64) -> String {
+        format!("{value:.0}")
+    }
+
+    fn submit_value(
+        &self,
+        _graph: &Graph,
+        node: NodeId,
+        value: f64,
+        _text: &str,
+    ) -> PortalNumberEditSubmit {
+        if node != self.node {
+            return PortalNumberEditSubmit::NotHandled;
+        }
+        if value < 2.0 {
+            return PortalNumberEditSubmit::Handled {
+                normalized_text: Some(format!("{value:.0}")),
+            };
+        }
+
+        PortalNumberEditSubmit::Commit {
+            tx: crate::ops::GraphTransaction {
+                label: Some("Number Portal Move".to_string()),
+                ops: vec![GraphOp::SetNodePos {
+                    id: node,
+                    from: CanvasPoint { x: 10.0, y: 20.0 },
+                    to: CanvasPoint { x: 128.0, y: 72.0 },
+                }],
+            },
+            normalized_text: Some(format!("{value:.0}")),
+        }
+    }
+
+    fn step_size(&self, _graph: &Graph, node: NodeId, mode: PortalTextStepMode) -> Option<f64> {
+        (node == self.node && mode == PortalTextStepMode::Fine).then_some(0.5)
+    }
+}
+
+#[test]
+fn declarative_portal_number_editor_handler_submits_transactions_without_retained_command_cx() {
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let mut services = FakeUiServices;
+    let window = AppWindowId::default();
+    let bounds = test_node_graph_surface_bounds();
+    ui.set_window(window);
+    host.bounds = bounds;
+
+    let node = NodeId::from_u128(0x9346);
+    let mut graph = Graph::new(GraphId::from_u128(0x9347));
+    graph
+        .nodes
+        .insert(node, test_node(CanvasPoint { x: 10.0, y: 20.0 }));
+
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            draw_order: vec![node],
+            ..NodeGraphViewState::default()
+        },
+        default_editor_config(),
+    );
+    let handler = Rc::new(RefCell::new(PortalNumberEditHandler::new(
+        "node-graph-surface-number-editor-command",
+        DeclarativePortalNumberMoveSpec { node },
+    )));
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        "node-graph-surface-number-editor-command",
+        |cx| {
+            let mut props = binding.surface_props();
+            props.portal_command_handler = Some(handler.clone());
+            vec![node_graph_surface(cx, props)]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut host, &mut services, bounds, 1.0);
+
+    assert!(ui.dispatch_command(
+        &mut host,
+        &mut services,
+        &portal_step_text_command_with_mode(node, 2, PortalTextStepMode::Fine),
+    ));
+
+    let graph_pos = host
+        .models
+        .read(&binding.graph_model(), |graph| {
+            graph.nodes.get(&node).map(|node| node.pos)
+        })
+        .ok()
+        .flatten()
+        .expect("graph node pos");
+    let store_pos = host
+        .models
+        .read(&binding.store_model(), |store| {
+            store.graph().nodes.get(&node).map(|node| node.pos)
+        })
+        .ok()
+        .flatten()
+        .expect("store node pos");
+
+    assert_eq!(graph_pos, CanvasPoint { x: 128.0, y: 72.0 });
+    assert_eq!(store_pos, CanvasPoint { x: 128.0, y: 72.0 });
 }
 
 #[test]
