@@ -661,6 +661,9 @@ activation no longer takes an unused retained Cx parameter, and `pending_group_d
 pointer-up release tail actions behind `PointerCaptureReleaseCx`; retained `EventCx` already
 implements that seam in `retained_widget_tail.rs`, and the pending release helper files are now
 source-policy gated as retained-bridge-free support.
+`RBX-M2-310` then moved pending wire drag pointer-up release/promotion tail actions behind
+`PointerCaptureReleaseCx`; `pointer_up_pending/wire_drag.rs` is now source-policy gated as
+retained-bridge-free support.
 
 ## Next Task
 
@@ -683,12 +686,14 @@ Recommended next implementation shape:
   seam; group drag/resize preview move handlers now use a retained-agnostic host/bounds seam;
   pending group drag activation now uses a retained-agnostic host seam, while pending group resize
   activation no longer carries a Cx parameter; pending group/node release helpers now use the
+  retained-agnostic release-capture tail seam; pending wire release now uses the same
   retained-agnostic release-capture tail seam.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
   `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`,
   `pointer_up_session/release.rs`, `pointer_up_pending/release.rs`,
   `pointer_up_pending/release/group.rs`, `pointer_up_pending/release/node.rs`,
+  `pointer_up_pending/wire_drag.rs`,
   `sticky_wire_connect/finish.rs`, `edge_insert_drag/drag/tail.rs`, `cancel_cleanup.rs`,
   `sticky_wire_targets/picker.rs`, `group_drag/tail.rs`, `group_resize/tail.rs`,
   `group_preview_move_cx.rs`, `group_drag.rs`, `group_resize.rs`,
@@ -705,7 +710,28 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-20 for `RBX-M2-300`:
+Last run on 2026-05-20 for `RBX-M2-310`:
+
+- `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
+  `fret-ui` `current_effective_opacity` dead-code warning.
+- `cargo nextest run -p fret-node --features compat-retained-canvas retained_canvas_tail_policy_helpers_stay_off_retained_bridge should_promote_pending_wire_drag_requires_click_connect_and_new_drag click_connect_target_port_click_commits_wire_and_clears_click_connect_state retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound` -
+  passed, 5 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/wire_drag.rs` -
+  no matches.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 428 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-310` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.
+
+Previous run on 2026-05-20 for `RBX-M2-300`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.
@@ -718,13 +744,6 @@ Last run on 2026-05-20 for `RBX-M2-300`:
 - `python3 tools/check_workstream_catalog.py` - passed; validated 428 dedicated directories and 47
   standalone markdown files.
 - `git diff --check` - passed.
-
-Broader gates not run:
-
-- `cargo nextest run --workspace`
-  - Reason: `RBX-M2-300` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
-    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
-    layering, catalog, and whitespace checks cover the changed surface.
 
 Previous run on 2026-05-20 for `RBX-M2-290`:
 

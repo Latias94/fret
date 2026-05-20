@@ -2663,6 +2663,32 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-310 Isolate pending wire release retained Cx adapters.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/wire_drag.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move pending wire drag pointer-up release tail actions behind the retained-agnostic
+      `PointerCaptureReleaseCx` seam.
+    - Keep promotion logic retained-agnostic and reuse the retained `EventCx` implementation that
+      already lives in `retained_widget_tail.rs`.
+    - Extend the default source-policy gate so pending wire release helpers cannot re-import
+      retained bridge Cx names.
+  - Result:
+    - Moved `pointer_up_pending/wire_drag.rs` off direct retained `EventCx` signatures.
+    - Reused `PointerCaptureReleaseCx` for pointer capture release plus paint invalidation after
+      pending wire drag release/promotion.
+    - Extended `retained_canvas_tail_policy_helpers_stay_off_retained_bridge` to include the
+      pending wire release helper.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas retained_canvas_tail_policy_helpers_stay_off_retained_bridge should_promote_pending_wire_drag_requires_click_connect_and_new_drag click_connect_target_port_click_commits_wire_and_clears_click_connect_state retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/wire_drag.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

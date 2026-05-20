@@ -116,6 +116,10 @@ Compat-gated but retained-bridge-free support:
   - `RBX-M2-300` moved pending group drag, pending group resize, and pending node resize
     pointer-up release tail actions behind the retained-agnostic `PointerCaptureReleaseCx` seam.
     Retained `EventCx` already implements that seam in `retained_widget_tail.rs`.
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/wire_drag.rs`
+  - `RBX-M2-310` moved pending wire drag pointer-up release/promotion tail actions behind the
+    retained-agnostic `PointerCaptureReleaseCx` seam. Retained `EventCx` already implements that
+    seam in `retained_widget_tail.rs`.
 
 Deleted retained overlay files:
 
@@ -167,6 +171,7 @@ Deleted retained overlay files:
 | Group preview move handler/tail action | retained canvas still adapts host/bounds access through `group_preview_move_retained_cx.rs` and paint invalidation through `retained_widget_tail.rs` | `RBX-M2-270` moves group drag/resize preview state update tails onto retained-agnostic `WidgetPaintInvalidationCx`; `RBX-M2-280` moves group drag/resize move handlers onto retained-agnostic `GroupPreviewMoveCx` and source-policy gates both handlers plus the pure seam | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 | Pending group activation Cx seam | retained canvas still adapts pending group drag host access through `pending_group_activation_retained_cx.rs`; pending group resize no longer needs retained Cx | `RBX-M2-290` moves pending group drag activation onto retained-agnostic `PendingGroupActivationCx`, removes the unused pending group resize Cx parameter, and source-policy gates both handlers plus the pure seam | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 | Pending release tail action | retained canvas still adapts retained `EventCx` release-capture/paint invalidation through `retained_widget_tail.rs` | `RBX-M2-300` moves pending group drag, pending group resize, and pending node resize pointer-up release helpers onto retained-agnostic `PointerCaptureReleaseCx` and source-policy gates the pending release helper files | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
+| Pending wire release tail action | retained canvas still adapts retained `EventCx` release-capture/paint invalidation through `retained_widget_tail.rs` | `RBX-M2-310` moves pending wire drag pointer-up release/promotion helper onto retained-agnostic `PointerCaptureReleaseCx` and source-policy gates the helper file | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 
 ## New Gate
 
