@@ -3288,3 +3288,35 @@ Status: complete for the Combobox RTL Long Text first-visible-frame text/layout 
   `target\fret-diag-combobox-rtl-long-text-debug-client721-fixed-v1\sessions\1779238353963-52416\1779238359542\ai.packet`.
   `target\release\fret-ui-gallery.exe` remains an older 2026-05-14 binary and was not used as
   evidence.
+
+## M150: Chart Multi-Axis Linked-Domain Runtime Snapshot Gate
+
+Status: complete for the `chart_multi_axis_demo` linked-domain runtime companion.
+
+- M148 left a runtime gap: the retained chart mechanism test proved source-to-target linked-domain
+  propagation, but `chart_multi_axis_demo` only exposed the same behavior through logs and pixels.
+  The runtime gate could show a visual change, but could not assert shared/top/bottom linked-domain
+  state directly.
+- Added a bounded diagnostics snapshot provider to `apps/fret-examples/src/chart_multi_axis_demo.rs`.
+  It publishes `/chart_multi_axis/linked_domain_windows` and runtime oracles for the shared
+  linked-domain model plus the top and bottom `ChartCanvasOutput` models.
+- Added `chart-multi-axis-linked-domain-window-app-snapshot.json`, which runs against
+  `chart_multi_axis_demo`, waits for the existing diagnostics-only deterministic top-chart X
+  window change to `[-75, 75]`, then asserts shared/top/bottom X windows all match that fixture.
+- Added the `chart-multi-axis-linking` suite so this app-specific gate can be rerun without mixing
+  the launch target with UI Gallery chart suites.
+- Gates pass:
+  `rustfmt --edition 2024 --check apps\fret-examples\src\chart_multi_axis_demo.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo build --profile dev-fast -p fret-demo --bin chart_multi_axis_demo`;
+  and
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_chart_multi_axis_linked_domain_window_app_snapshot --no-fail-fast --no-capture`
+  with Nextest run id `1872c4bc-48ce-4a41-a564-ed9f74f83461`.
+- Runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\charts\chart-multi-axis-linked-domain-window-app-snapshot.json --dir target\fret-diag-chart-multi-axis-linked-domain-app-snapshot-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target\dev-fast\chart_multi_axis_demo.exe`
+  with run id `1779239505892` and AI packet
+  `target/fret-diag-chart-multi-axis-linked-domain-app-snapshot-v1/sessions/1779239502304-133288/1779239505892/ai.packet`.
+- Suite runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite chart-multi-axis-linking --dir target\fret-diag-chart-multi-axis-linking-suite-v1 --session-auto --timeout-ms 420000 --launch -- target\dev-fast\chart_multi_axis_demo.exe`
+  with suite summary
+  `target/fret-diag-chart-multi-axis-linking-suite-v1/sessions/1779239623009-133816/suite.summary.json`.

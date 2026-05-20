@@ -332,6 +332,13 @@ fn script_v2_roundtrip_chart_torture_explicit_y_link_map() {
 }
 
 #[test]
+fn script_v2_roundtrip_chart_multi_axis_linked_domain_window_app_snapshot() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/charts/chart-multi-axis-linked-domain-window-app-snapshot.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_carousel_state_gates() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-select-gate.json"

@@ -242,6 +242,13 @@ date: 2026-05-12
   model through `sync_linked_domain_windows`, and target output republishes the propagated window.
   Focused chart evidence uses Nextest run id `620beddb-8a62-4de0-81fd-d5f2fadb28f1`. The remaining
   runtime companion gap is a bounded app snapshot provider for `chart_multi_axis_demo`.
+- Chart multi-axis runtime snapshot update:
+  `chart_multi_axis_demo` now exposes shared/top/bottom linked-domain state through
+  `/chart_multi_axis` app snapshots. The `chart-multi-axis-linked-domain-window-app-snapshot.json`
+  gate waits for the deterministic diagnostics auto-zoom to publish `[-75, 75]` on the top chart's
+  X axis, then asserts the shared model, top output, and bottom output all match that window. The
+  new `chart-multi-axis-linking` suite records runtime evidence at
+  `target/fret-diag-chart-multi-axis-linking-suite-v1/sessions/1779239623009-133816/suite.summary.json`.
 - Fixed-line-box cold word-wrap update:
   `ParleyShaper::shape_paragraph_with_wrap` now computes fixed line-box base metrics before
   building the real paragraph into the shared Parley layout. This prevents the internal `Hg`

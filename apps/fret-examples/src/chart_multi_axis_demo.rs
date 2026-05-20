@@ -11,7 +11,8 @@ use fret_launch::{
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::{FixedSplit, Invalidation, UiTree};
-use std::collections::BTreeMap;
+use serde_json::json;
+use std::{collections::BTreeMap, sync::Arc};
 
 use delinea::data::{Column, DataTable};
 use delinea::engine::ChartEngine;
@@ -28,6 +29,18 @@ use fret_chart::{
     LinkedChartGroup, LinkedChartMember,
 };
 use fret_runtime::Model;
+
+#[derive(Clone)]
+struct ChartMultiAxisDemoDiagnosticsHandles {
+    shared_domain_windows: Model<BTreeMap<LinkAxisKey, Option<DataWindow>>>,
+    top_output: Model<ChartCanvasOutput>,
+    bottom_output: Model<ChartCanvasOutput>,
+}
+
+#[derive(Default)]
+struct ChartMultiAxisDemoDiagnosticsStore {
+    per_window: BTreeMap<AppWindowId, ChartMultiAxisDemoDiagnosticsHandles>,
+}
 
 pub struct ChartMultiAxisDemoWindowState {
     ui: UiTree<App>,
@@ -51,6 +64,121 @@ pub struct ChartMultiAxisDemoWindowState {
 
 #[derive(Default)]
 pub struct ChartMultiAxisDemoDriver;
+
+fn scaled_f64_json(value: f64, scale: f64) -> serde_json::Value {
+    if value.is_finite() && value >= i64::MIN as f64 && value <= i64::MAX as f64 {
+        json!((value * scale).round() as i64)
+    } else {
+        serde_json::Value::Null
+    }
+}
+
+fn chart_window_json(window: Option<DataWindow>) -> serde_json::Value {
+    window
+        .filter(|window| window.is_valid())
+        .map(|window| {
+            let span = window.max - window.min;
+            json!({
+                "present": true,
+                "min_milli": scaled_f64_json(window.min, 1000.0),
+                "max_milli": scaled_f64_json(window.max, 1000.0),
+                "span_milli": scaled_f64_json(span, 1000.0),
+            })
+        })
+        .unwrap_or_else(|| {
+            json!({
+                "present": false,
+            })
+        })
+}
+
+fn chart_window_approx_eq(left: Option<DataWindow>, right: Option<DataWindow>) -> bool {
+    const EPSILON: f64 = 0.001;
+    match (
+        left.filter(|w| w.is_valid()),
+        right.filter(|w| w.is_valid()),
+    ) {
+        (Some(left), Some(right)) => {
+            (left.min - right.min).abs() <= EPSILON
+                && (left.max - right.max).abs() <= EPSILON
+                && ((left.max - left.min) - (right.max - right.min)).abs() <= EPSILON
+        }
+        _ => false,
+    }
+}
+
+fn chart_multi_axis_demo_snapshot_json(
+    app: &App,
+    window: AppWindowId,
+) -> Option<serde_json::Value> {
+    let handles = app
+        .global::<ChartMultiAxisDemoDiagnosticsStore>()?
+        .per_window
+        .get(&window)?;
+    let shared_domain_windows = app.models().get_cloned(&handles.shared_domain_windows)?;
+    let top_output = app.models().get_cloned(&handles.top_output)?;
+    let bottom_output = app.models().get_cloned(&handles.bottom_output)?;
+
+    let x_domain_key = LinkAxisKey {
+        kind: AxisKind::X,
+        dataset: delinea::ids::DatasetId::new(1),
+        field: FieldId::new(1),
+    };
+    let expected_auto_zoom = Some(DataWindow {
+        min: -75.0,
+        max: 75.0,
+    });
+    let shared_x = shared_domain_windows
+        .get(&x_domain_key)
+        .copied()
+        .unwrap_or(None);
+    let top_x = top_output
+        .snapshot
+        .domain_windows_by_key
+        .get(&x_domain_key)
+        .copied()
+        .unwrap_or(None);
+    let bottom_x = bottom_output
+        .snapshot
+        .domain_windows_by_key
+        .get(&x_domain_key)
+        .copied()
+        .unwrap_or(None);
+
+    Some(json!({
+        "schema_version": 1,
+        "linked_domain_windows": {
+            "shared_count": shared_domain_windows.len() as u64,
+            "top_count": top_output.snapshot.domain_windows_by_key.len() as u64,
+            "bottom_count": bottom_output.snapshot.domain_windows_by_key.len() as u64,
+            "shared_x": chart_window_json(shared_x),
+            "top_x": chart_window_json(top_x),
+            "bottom_x": chart_window_json(bottom_x),
+        },
+        "outputs": {
+            "top_revision": top_output.revision,
+            "top_link_events_revision": top_output.link_events_revision,
+            "bottom_revision": bottom_output.revision,
+            "bottom_link_events_revision": bottom_output.link_events_revision,
+        },
+        "runtime_oracles": {
+            "shared_x_matches_auto_zoom": chart_window_approx_eq(shared_x, expected_auto_zoom),
+            "top_x_matches_auto_zoom": chart_window_approx_eq(top_x, expected_auto_zoom),
+            "bottom_x_matches_auto_zoom": chart_window_approx_eq(bottom_x, expected_auto_zoom),
+            "shared_top_bottom_x_match": chart_window_approx_eq(shared_x, top_x)
+                && chart_window_approx_eq(shared_x, bottom_x),
+        }
+    }))
+}
+
+fn install_chart_multi_axis_demo_snapshot_provider(app: &mut App) {
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+        svc.set_app_snapshot_provider(Some(Arc::new(|app, window| {
+            chart_multi_axis_demo_snapshot_json(app, window)
+                .map(|chart_multi_axis| json!({ "chart_multi_axis": chart_multi_axis }))
+        })));
+    });
+}
 
 impl ChartMultiAxisDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> ChartMultiAxisDemoWindowState {
@@ -78,6 +206,20 @@ impl ChartMultiAxisDemoDriver {
             .insert(BTreeMap::<LinkAxisKey, Option<DataWindow>>::default());
         let top_output = app.models_mut().insert(ChartCanvasOutput::default());
         let bottom_output = app.models_mut().insert(ChartCanvasOutput::default());
+
+        app.with_global_mut_untracked(
+            ChartMultiAxisDemoDiagnosticsStore::default,
+            |store, _app| {
+                store.per_window.insert(
+                    window,
+                    ChartMultiAxisDemoDiagnosticsHandles {
+                        shared_domain_windows: shared_domain_windows.clone(),
+                        top_output: top_output.clone(),
+                        bottom_output: bottom_output.clone(),
+                    },
+                );
+            },
+        );
 
         ChartMultiAxisDemoWindowState {
             ui,
@@ -911,6 +1053,7 @@ fn configure_fn_driver_hooks(
 pub fn build_app() -> App {
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
+    install_chart_multi_axis_demo_snapshot_provider(&mut app);
     app
 }
 

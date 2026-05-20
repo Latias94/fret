@@ -6172,3 +6172,47 @@ Next slice recommendation:
   `target\debug\fret-ui-gallery.exe` and `target\dev-fast\fret-ui-gallery.exe` were rebuilt after
   the fix. `target\release\fret-ui-gallery.exe` is still from 2026-05-14 and was not used as
   evidence.
+
+## Chart Multi-Axis Linked-Domain Runtime Snapshot Gate
+
+- invariant:
+  the live `chart_multi_axis_demo` shell must propagate a top-chart X domain-window change through
+  `LinkedChartGroup` into the shared linked-domain model and the bottom chart output model. The
+  runtime gate must assert state, not only pixels or logs.
+- finding:
+  no runtime linked-domain defect was reproduced. The missing piece was an app snapshot surface:
+  the demo already applies a deterministic diagnostics-only top-chart X window change to
+  `[-75, 75]`, but prior evidence could only observe logs/pixels rather than shared/top/bottom
+  `ChartCanvasOutput` state.
+- implementation anchors:
+  `apps/fret-examples/src/chart_multi_axis_demo.rs`,
+  `tools/diag-scripts/charts/chart-multi-axis-linked-domain-window-app-snapshot.json`,
+  `tools/diag-scripts/suites/chart-multi-axis-linking/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-chart-multi-axis-linked-domain-app-snapshot-v1/sessions/1779239502304-133288/1779239505892/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-chart-multi-axis-linked-domain-app-snapshot-v1/sessions/1779239502304-133288/share/1779239505892.zip`;
+  suite summary:
+  `target/fret-diag-chart-multi-axis-linking-suite-v1/sessions/1779239623009-133816/suite.summary.json`.
+- format/JSON/registry:
+  `rustfmt --edition 2024 --check apps\fret-examples\src\chart_multi_axis_demo.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python -m json.tool tools\diag-scripts\charts\chart-multi-axis-linked-domain-window-app-snapshot.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\chart-multi-axis-linking\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed.
+- build:
+  `cargo build --profile dev-fast -p fret-demo --bin chart_multi_axis_demo`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_chart_multi_axis_linked_domain_window_app_snapshot --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `1872c4bc-48ce-4a41-a564-ed9f74f83461`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\charts\chart-multi-axis-linked-domain-window-app-snapshot.json --dir target\fret-diag-chart-multi-axis-linked-domain-app-snapshot-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target\dev-fast\chart_multi_axis_demo.exe`
+  - result: passed; run id `1779239505892`.
+- suite runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag suite chart-multi-axis-linking --dir target\fret-diag-chart-multi-axis-linking-suite-v1 --session-auto --timeout-ms 420000 --launch -- target\dev-fast\chart_multi_axis_demo.exe`
+  - result: passed; run id `1779239625616`.

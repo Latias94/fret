@@ -1,0 +1,106 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "chart-multi-axis-linked-domain-window-app-snapshot",
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.screenshot_png"
+    ],
+    "tags": ["chart", "retained", "linking", "app_snapshot", "domain_window"],
+    "target_hints": [
+      "Runs against chart_multi_axis_demo.",
+      "The demo applies a deterministic top-chart X window in diagnostics mode after the before screenshot.",
+      "Asserts the shared linked-domain model and both chart output models converge to the same X window."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "chart-multi-axis-top" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "chart-multi-axis-bottom" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "capture_bundle",
+      "label": "chart-multi-axis-linked-domain-window-app-snapshot-before"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "chart-multi-axis-linked-domain-window-app-snapshot-before"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_multi_axis/runtime_oracles/shared_x_matches_auto_zoom",
+        "value": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_multi_axis/runtime_oracles/top_x_matches_auto_zoom",
+        "value": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_multi_axis/runtime_oracles/bottom_x_matches_auto_zoom",
+        "value": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_multi_axis/runtime_oracles/shared_top_bottom_x_match",
+        "value": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_multi_axis/linked_domain_windows/shared_x/min_milli",
+        "value": -75000
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/chart_multi_axis/linked_domain_windows/shared_x/max_milli",
+        "value": 75000
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_bundle",
+      "label": "chart-multi-axis-linked-domain-window-app-snapshot-after"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "chart-multi-axis-linked-domain-window-app-snapshot-after"
+    }
+  ]
+}

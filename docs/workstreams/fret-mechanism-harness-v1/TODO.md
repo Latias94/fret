@@ -1376,3 +1376,12 @@ date: 2026-05-12
     `fret-render-text` nextest suite passed with run id
     `a16c3aa8-c5dc-4b48-a26f-df17e39f442e`; rebuilt `dev-fast` and debug Gallery focused
     `client721` gates passed with run ids `1779237680925` and `1779238359542`.
+- [x] Promote `chart_multi_axis_demo` linked-domain propagation into a runtime app-snapshot gate.
+  - Result:
+    added a bounded app snapshot provider to `chart_multi_axis_demo` so diagnostics can assert the
+    shared linked-domain model and both chart output models, not just pixels/logs. The new
+    `chart-multi-axis-linked-domain-window-app-snapshot.json` gate waits for the demo's existing
+    deterministic diagnostics auto-zoom to set the top X window to `[-75, 75]`, then proves shared,
+    top, and bottom X windows all match. Focused runtime passed with run id `1779239505892`, and
+    the new `chart-multi-axis-linking` suite passed with summary
+    `target/fret-diag-chart-multi-axis-linking-suite-v1/sessions/1779239623009-133816/suite.summary.json`.
