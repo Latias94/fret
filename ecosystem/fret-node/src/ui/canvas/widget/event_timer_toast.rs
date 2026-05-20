@@ -1,10 +1,17 @@
-use super::*;
+use fret_core::TimerToken;
+use fret_ui::UiHost;
 
-pub(super) fn clear_expired_toast<H: UiHost, M: NodeGraphCanvasMiddleware>(
+use super::widget_tail::{WidgetPaintInvalidationCx, invalidate_widget_paint};
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+
+pub(super) fn clear_expired_toast<H: UiHost, M>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
-    token: fret_core::TimerToken,
-) -> bool {
+    cx: &mut impl WidgetPaintInvalidationCx<H>,
+    token: TimerToken,
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+{
     if !canvas
         .interaction
         .toast
@@ -15,6 +22,6 @@ pub(super) fn clear_expired_toast<H: UiHost, M: NodeGraphCanvasMiddleware>(
     }
 
     canvas.interaction.toast = None;
-    super::paint_invalidation::invalidate_paint(cx);
+    invalidate_widget_paint(cx);
     true
 }

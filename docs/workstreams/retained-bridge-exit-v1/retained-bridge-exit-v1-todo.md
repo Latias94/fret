@@ -2919,6 +2919,31 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-400 Isolate toast timer retained Cx adapter.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_toast.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/toast_timer_conformance.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/mod.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move toast timer paint invalidation behind retained-agnostic `WidgetPaintInvalidationCx`.
+    - Extend source-policy coverage so toast timer helpers cannot re-import retained bridge Cx
+      names.
+    - Backfill behavior coverage for matching and stale toast timer ticks.
+  - Result:
+    - `event_timer_toast.rs` no longer imports or names retained bridge Cx types.
+    - Matching toast timer ticks clear the toast, request redraw, and invalidate paint through the
+      retained-agnostic widget tail seam.
+    - Stale toast timer ticks leave the toast and feedback side effects untouched.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(feedback_motion_helpers_stay_off_retained_bridge) | test(matching_toast_timer_clears_toast_and_invalidates_paint) | test(stale_toast_timer_keeps_toast_without_feedback_side_effects) | test(retained_bridge_source_usage_stays_on_the_migration_ledger) | test(retained_widget_compat_island_stays_crate_private_and_controller_bound)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/event_timer_toast.rs ecosystem/fret-node/src/ui/canvas/widget/event_clipboard_feedback.rs ecosystem/fret-node/src/ui/canvas/widget/event_clipboard_feedback_cx.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_shared.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

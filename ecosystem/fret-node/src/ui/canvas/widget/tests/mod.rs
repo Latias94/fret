@@ -108,6 +108,7 @@ mod skin_wire_outline_hints_conformance;
 mod spatial_index_equivalence_conformance;
 mod theme_style_invalidation_conformance;
 mod threshold_zoom_conformance;
+mod toast_timer_conformance;
 mod translate_extent_conformance;
 mod viewport_animation_conformance;
 mod z_order_conformance;

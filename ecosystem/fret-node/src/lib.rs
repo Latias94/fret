@@ -136,6 +136,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/event_clipboard_feedback.rs");
     const UI_CANVAS_WIDGET_EVENT_CLIPBOARD_FEEDBACK_CX_RS: &str =
         include_str!("ui/canvas/widget/event_clipboard_feedback_cx.rs");
+    const UI_CANVAS_WIDGET_EVENT_TIMER_TOAST_RS: &str =
+        include_str!("ui/canvas/widget/event_timer_toast.rs");
     const UI_CANVAS_WIDGET_CANCEL_CLEANUP_RS: &str =
         include_str!("ui/canvas/widget/cancel_cleanup.rs");
     const UI_CANVAS_WIDGET_STICKY_WIRE_TARGETS_PICKER_RS: &str =
@@ -469,6 +471,7 @@ mod surface_policy_tests {
         let feedback_motion_sources = [
             UI_CANVAS_WIDGET_EVENT_CLIPBOARD_FEEDBACK_RS,
             UI_CANVAS_WIDGET_EVENT_CLIPBOARD_FEEDBACK_CX_RS,
+            UI_CANVAS_WIDGET_EVENT_TIMER_TOAST_RS,
             UI_CANVAS_WIDGET_TIMER_MOTION_SHARED_RS,
         ]
         .join("\n");

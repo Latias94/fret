@@ -7727,3 +7727,60 @@ Broader gates not run:
   - Reason: `RBX-M2-390` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-20 - RBX-M2-400 toast timer retained Cx adapter isolation
+
+Claim verified:
+
+- Expired-toast timer paint invalidation now flows through retained-agnostic
+  `WidgetPaintInvalidationCx`.
+- `event_timer_toast.rs` no longer imports or names retained bridge Cx types, and the default
+  source-policy gate locks that boundary.
+- Matching toast timer ticks still clear toast state, request redraw, and invalidate paint; stale
+  toast timer ticks remain side-effect free.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/event_timer_toast.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/toast_timer_conformance.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving expired-toast
+    timer invalidation behind the retained-agnostic widget tail seam.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(feedback_motion_helpers_stay_off_retained_bridge) | test(matching_toast_timer_clears_toast_and_invalidates_paint) | test(stale_toast_timer_keeps_toast_without_feedback_side_effects) | test(retained_bridge_source_usage_stays_on_the_migration_ledger) | test(retained_widget_compat_island_stays_crate_private_and_controller_bound)'`
+  - Result: passed, 5 tests.
+  - Scope proven: the source-policy gate locks feedback/motion/toast timer helpers off retained
+    bridge Cx names; matching toast timers clear toast state, request redraw, and invalidate paint;
+    stale toast timers do not clear state, request redraw, or invalidate paint; retained bridge
+    ledger and retained compat island gates remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/event_timer_toast.rs ecosystem/fret-node/src/ui/canvas/widget/event_clipboard_feedback.rs ecosystem/fret-node/src/ui/canvas/widget/event_clipboard_feedback_cx.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_shared.rs`
+  - Result: no matches.
+  - Scope proven: feedback/motion/toast timer helpers no longer depend on retained bridge Cx
+    names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after the toast
+    timer seam extraction.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-400` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.
