@@ -1,5 +1,3 @@
-use fret_ui::UiHost;
-
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use crate::interaction::NodeGraphConnectionMode;
 use crate::runtime::callbacks::ConnectEndOutcome;
@@ -25,15 +23,79 @@ pub(super) fn clear_hover_and_focus<M: NodeGraphCanvasMiddleware>(
     super::cancel_session::clear_hover_edge_focus(&mut canvas.interaction);
 }
 
-pub(super) fn finish_cancel<H: UiHost, M: NodeGraphCanvasMiddleware>(
-    canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+pub(super) fn finish_cancel<H>(
+    cx: &mut impl super::widget_tail::HandledPointerCaptureReleaseCx<H>,
     consume: bool,
 ) {
-    canvas.stop_auto_pan_timer(cx.app);
     cx.release_pointer_capture();
     if consume {
         cx.stop_propagation();
     }
-    super::paint_invalidation::invalidate_paint(cx);
+    super::widget_tail::invalidate_widget_paint(cx);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::widget_tail::{
+        PointerCaptureReleaseCx, WidgetHandledCx, WidgetPaintInvalidationCx, WidgetRedrawCx,
+    };
+    use super::*;
+
+    struct StubHost;
+
+    #[derive(Default)]
+    struct StubCx {
+        released: bool,
+        stopped: bool,
+        redraws: usize,
+        paint_invalidations: usize,
+    }
+
+    impl WidgetRedrawCx<StubHost> for StubCx {
+        fn request_redraw(&mut self) {
+            self.redraws += 1;
+        }
+    }
+
+    impl WidgetPaintInvalidationCx<StubHost> for StubCx {
+        fn invalidate_paint(&mut self) {
+            self.paint_invalidations += 1;
+        }
+    }
+
+    impl WidgetHandledCx<StubHost> for StubCx {
+        fn stop_propagation(&mut self) {
+            self.stopped = true;
+        }
+    }
+
+    impl PointerCaptureReleaseCx<StubHost> for StubCx {
+        fn release_pointer_capture(&mut self) {
+            self.released = true;
+        }
+    }
+
+    #[test]
+    fn finish_cancel_releases_and_invalidates_without_consuming() {
+        let mut cx = StubCx::default();
+
+        finish_cancel(&mut cx, false);
+
+        assert!(cx.released);
+        assert!(!cx.stopped);
+        assert_eq!(cx.redraws, 1);
+        assert_eq!(cx.paint_invalidations, 1);
+    }
+
+    #[test]
+    fn finish_cancel_releases_stops_and_invalidates_when_consuming() {
+        let mut cx = StubCx::default();
+
+        finish_cancel(&mut cx, true);
+
+        assert!(cx.released);
+        assert!(cx.stopped);
+        assert_eq!(cx.redraws, 1);
+        assert_eq!(cx.paint_invalidations, 1);
+    }
 }

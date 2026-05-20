@@ -17,7 +17,8 @@ fn cancel_active_gestures_inner<H: UiHost, M: NodeGraphCanvasMiddleware>(
     super::cancel_cleanup::clear_hover_and_focus(canvas);
 
     if canceled {
-        super::cancel_cleanup::finish_cancel(canvas, cx, consume);
+        canvas.stop_auto_pan_timer(cx.app);
+        super::cancel_cleanup::finish_cancel(cx, consume);
     }
 }
 
