@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-05-18
+Catalog updated: 2026-05-20
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 427
+- Dedicated directories: 428
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 

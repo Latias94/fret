@@ -6375,3 +6375,137 @@ Next slice recommendation:
 - suite runtime diagnostics:
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-hit-test-only-paint-cache --dir target\fret-diag-hit-test-only-paint-cache-suite-v3 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
   - result: passed; run id `1779249205997`.
+
+## Moved Cache-Root Root-Only Hit Path Gate
+
+- invariant:
+  a root-only `hit_test_path_cache` entry from the previous pointer position must not hide a clean
+  view-cache child that moves under the same pointer while prepaint reuses translated interaction
+  records.
+- finding:
+  no stale hit-routing defect was reproduced. The focused guard shows the existing cached-path
+  fallback rejects a root-only cached path when the terminal node still has hit-testable children,
+  then performs a full hit test and returns the moved leaf.
+- implementation anchors:
+  `crates/fret-ui/src/tree/tests/prepaint.rs`,
+  `crates/fret-ui/src/tree/hit_test.rs`, and
+  `crates/fret-ui/src/tree/prepaint/interaction.rs`.
+- workstream/static checks:
+  `python -m json.tool docs\workstreams\fret-mechanism-harness-v1\WORKSTREAM.json > $null`;
+  `python tools\check_workstream_catalog.py`;
+  `git diff --check`
+  - result: passed.
+  - note: `check_workstream_catalog.py` required refreshing the global
+    `docs/workstreams/README.md` dedicated-directory count/date from 427 to 428 / 2026-05-20.
+- format:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\tree\tests\prepaint.rs`
+  - result: passed.
+- focused mechanism regression:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui prepaint_interaction_cache_root_move_invalidates_stale_root_only_hit_path prepaint_interaction_cache_replay_translates_records_when_cache_root_moves --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `84167c6c-c03b-4feb-aa11-0693f55659b2`.
+  - note: the run emitted the pre-existing `current_effective_opacity` dead-code warning in
+    `crates\fret-ui\src\elements\runtime.rs`; this slice did not touch that file.
+
+## Hit-Test Path Cache Higher-Z Sibling Gate
+
+- invariant:
+  a cached `root -> lower_child` hit path must not remain valid when a higher-z sibling moves under
+  the same pointer. The cached-path fast path must reject the stale lower-child path before runtime
+  routing can diverge from fallback hit testing.
+- finding:
+  no stale z-order routing defect was reproduced. The focused guard shows the existing sibling
+  scan rejects the stale child path, fallback hit testing accepts the moved higher-z sibling, and
+  the fallback result refreshes the path cache for subsequent reuse.
+- implementation anchors:
+  `crates/fret-ui/src/tree/tests/hit_test.rs` and
+  `crates/fret-ui/src/tree/hit_test.rs`.
+- format:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\tree\tests\hit_test.rs`
+  - result: passed.
+- focused mechanism regression:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer hit_test_layers_cached_reuses_path_and_respects_layer_order --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `92315d8d-56fd-4c3e-bfc1-bbfc849e954b`.
+  - note: the run emitted the pre-existing `current_effective_opacity` dead-code warning in
+    `crates\fret-ui\src\elements\runtime.rs`; this slice did not touch that file.
+
+## Pointer-Move Dispatch Stale Hit-Path Gate
+
+- invariant:
+  pointer-move dispatch must not deliver events through a stale cached `root -> lower_child` path
+  after a higher-z sibling moves under the same pointer. The real dispatch path must reject stale
+  path-cache reuse before building the mapped event chain.
+- finding:
+  no stale pointer-move dispatch defect was reproduced. The focused dispatch guard shows
+  `UiTree::dispatch_event` routes the first move to the lower child, rejects that stale path after a
+  higher-z sibling moves under the same pointer, delivers the second move to the moved sibling, and
+  then records a cache hit for the refreshed higher-z path on a third move.
+- implementation anchors:
+  `crates/fret-ui/src/tree/tests/hit_test.rs`,
+  `crates/fret-ui/src/tree/hit_test.rs`, and
+  `crates/fret-ui/src/tree/dispatch/window.rs`.
+- workstream/static checks:
+  `python -m json.tool docs\workstreams\fret-mechanism-harness-v1\WORKSTREAM.json > $null`;
+  `python tools\check_workstream_catalog.py`;
+  `git diff --check`
+  - result: passed.
+- format:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\tree\tests\hit_test.rs`
+  - result: passed.
+- focused mechanism regression:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui pointer_move_dispatch_rejects_stale_path_when_higher_z_sibling_moves_under_pointer hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `093b8a5d-e67a-4b35-ab82-e02389f63173`.
+  - note: the run emitted the pre-existing `current_effective_opacity` dead-code warning in
+    `crates\fret-ui\src\elements\runtime.rs`; this slice did not touch that file.
+
+
+## Hit-Test Path-Cache Runtime Hit Counter Gate
+
+- invariant:
+  UI Gallery pointer sweeps over a stable HitTestOnly/paint-cache surface must exercise the
+  cached hit-test path fast path when bounds-tree queries are disabled. The runtime gate should
+  prove both paint-cache replay and `hit_test_path_cache_hits` from debug snapshot history.
+- finding:
+  the strict gate initially failed: large-ring bundles showed paint-cache replay was allowed, but
+  path-cache hits stayed at zero while misses reached two. The pointer and hit path were correct;
+  the mechanism was over-conservative. Cached-path sibling validation rejected reuse whenever a
+  higher-z sibling used transforms or non-clipping hit-test policy, even when full hit testing for
+  that sibling returned no hit. The fix validates siblings with real hit-test semantics.
+- implementation anchors:
+  `crates/fret-ui/src/tree/hit_test.rs`,
+  `crates/fret-ui/src/tree/tests/hit_test.rs`,
+  `crates/fret-diag-protocol/src/lib.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_predicates.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`,
+  `tools/diag-scripts/ui-gallery/diag/ui-gallery-hit-test-only-paint-cache-probe-sweep.json`, and
+  `apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_cursor_demo.rs`.
+- evidence anchors:
+  strict-predicate failing bundle before the mechanism fix:
+  `target/fret-diag-hit-test-only-paint-cache-path-cache-debug2/sessions/1779257690739-143660/1779257705567/bundle.schema2.json`;
+  passing focused runtime AI packet:
+  `target/fret-diag-hit-test-only-paint-cache-path-cache-v2/sessions/1779259321228-145468/1779259408910/ai.packet`;
+  passing focused runtime pack:
+  `target/fret-diag-hit-test-only-paint-cache-path-cache-v2/sessions/1779259321228-145468/share/1779259408910.zip`;
+  passing suite summary:
+  `target/fret-diag-hit-test-only-paint-cache-suite-path-cache-v2/sessions/1779259631852-148980/suite.summary.json`.
+- format:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\tree\hit_test.rs crates\fret-ui\src\tree\tests\hit_test.rs`
+  - result: passed.
+- focused mechanism regression:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui hit_test_layers_cached_ignores_non_hit_testable_overlapping_higher_z_siblings hit_test_layers_cached_checks_transformed_higher_z_siblings_before_reuse hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer pointer_move_dispatch_rejects_stale_path_when_higher_z_sibling_moves_under_pointer --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `3d58d069-af7b-4675-a455-9f6ace214151`.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- bootstrap predicate evaluation:
+  `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics hit_test_path_cache_predicates_count_ring_snapshot_maxes paint_cache_hit_test_only_replay_predicates_count_ring_snapshot_maxes --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `affc9fa2-0c6d-47e8-b252-ae83c14e9059`.
+- protocol roundtrip and predicate serialization:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_hit_test_path_cache_counters_serialize script_v2_roundtrip_ui_gallery_hit_test_only_paint_cache_probe_sweep --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `f0505399-96a7-4a92-95d7-398b48b1fd96`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\diag\ui-gallery-hit-test-only-paint-cache-probe-sweep.json --dir target\fret-diag-hit-test-only-paint-cache-path-cache-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed; run id `1779259408910`.
+- runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-hit-test-only-paint-cache --dir target\fret-diag-hit-test-only-paint-cache-suite-path-cache-v2 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed; script run id `1779259645062`; summary
+    `target/fret-diag-hit-test-only-paint-cache-suite-path-cache-v2/sessions/1779259631852-148980/suite.summary.json`.

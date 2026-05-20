@@ -106,6 +106,73 @@ fn prepaint_interaction_cache_replay_translates_records_when_cache_root_moves() 
     );
 }
 
+#[test]
+fn prepaint_interaction_cache_root_move_invalidates_stale_root_only_hit_path() {
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let cache_root = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
+    ui.set_root(root);
+    ui.add_child(root, cache_root);
+    ui.add_child(cache_root, leaf);
+    ui.set_node_view_cache_flags(cache_root, true, false, false);
+
+    ui.nodes[root].bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(100.0)),
+    );
+    ui.nodes[cache_root].bounds =
+        Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(20.0), Px(20.0)));
+    ui.nodes[leaf].bounds = ui.nodes[cache_root].bounds;
+
+    let mut services = FakeUiServices;
+    let inputs = PrepaintAfterLayoutInputs::new(&mut services, 1.0);
+    ui.prepaint_after_layout(&mut app, inputs);
+    for node in [root, cache_root, leaf] {
+        ui.test_clear_node_invalidations(node);
+    }
+
+    assert_eq!(
+        ui.hit_test_layers_cached(&[root], Point::new(Px(60.0), Px(10.0))),
+        Some(root),
+        "prime a root-only cached path at a point where the cached child is absent"
+    );
+
+    app.advance_frame();
+    let moved_bounds = Rect::new(Point::new(Px(50.0), Px(0.0)), Size::new(Px(20.0), Px(20.0)));
+    ui.nodes[cache_root].bounds = moved_bounds;
+    ui.nodes[leaf].bounds = moved_bounds;
+    for node in [root, cache_root, leaf] {
+        ui.test_clear_node_invalidations(node);
+    }
+
+    let inputs = PrepaintAfterLayoutInputs::new(&mut services, 1.0);
+    ui.prepaint_after_layout(&mut app, inputs);
+    let stats = ui.debug_stats();
+    assert!(
+        stats.interaction_cache_hits >= 1,
+        "expected cache-root movement to reuse translated interaction records (stats={stats:?})"
+    );
+
+    let stats_before_rehit = ui.debug_stats();
+    assert_eq!(
+        ui.hit_test_layers_cached(&[root], Point::new(Px(60.0), Px(10.0))),
+        Some(leaf),
+        "a stale root-only path cache must not hide a cache-root child that moved under the pointer"
+    );
+    let stats_after_rehit = ui.debug_stats();
+    assert!(
+        stats_after_rehit.hit_test_path_cache_misses
+            > stats_before_rehit.hit_test_path_cache_misses,
+        "expected the stale root-only path cache to miss and force a full hit-test before accepting the moved child"
+    );
+}
+
 struct PrepaintCountStack {
     calls: std::sync::Arc<std::sync::atomic::AtomicUsize>,
 }

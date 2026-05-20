@@ -2786,6 +2786,23 @@ pub enum UiPredicateV1 {
     PaintCacheHitTestOnlyReplayRejectedKeyMismatchLe {
         max: u64,
     },
+    /// True when recent debug snapshots contain a frame whose hit-test path-cache hit counter is at
+    /// least `min`.
+    ///
+    /// This is a mechanism-level predicate for pointer routing diagnostics. It proves runtime
+    /// pointer movement reached the cached hit-test fast path, rather than only exercising fallback
+    /// hit testing or bounds-tree queries.
+    HitTestPathCacheHitsGe {
+        min: u64,
+    },
+    /// True when recent debug snapshots contain a frame whose hit-test path-cache miss counter is at
+    /// least `min`.
+    ///
+    /// This complements `hit_test_path_cache_hits_ge` for stale-path probes: a moved target should
+    /// reject the old cached path and increment misses before fallback hit testing refreshes it.
+    HitTestPathCacheMissesGe {
+        min: u64,
+    },
     /// True when `debug.input_arbitration.pointer_capture_active == active`.
     ///
     /// This is a mechanism-level predicate for self-drawn input routing. It lets scripts gate
@@ -5467,6 +5484,38 @@ mod tests {
         assert!(matches!(
             roundtrip,
             UiPredicateV1::PaintCacheHitTestOnlyReplayRejectedKeyMismatchLe { max: 0 }
+        ));
+    }
+
+    #[test]
+    fn predicate_hit_test_path_cache_counters_serialize() {
+        let hits = serde_json::to_value(UiPredicateV1::HitTestPathCacheHitsGe { min: 1 }).unwrap();
+        assert_eq!(
+            hits,
+            serde_json::json!({
+                "kind": "hit_test_path_cache_hits_ge",
+                "min": 1,
+            })
+        );
+        let roundtrip: UiPredicateV1 = serde_json::from_value(hits).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::HitTestPathCacheHitsGe { min: 1 }
+        ));
+
+        let misses =
+            serde_json::to_value(UiPredicateV1::HitTestPathCacheMissesGe { min: 1 }).unwrap();
+        assert_eq!(
+            misses,
+            serde_json::json!({
+                "kind": "hit_test_path_cache_misses_ge",
+                "min": 1,
+            })
+        );
+        let roundtrip: UiPredicateV1 = serde_json::from_value(misses).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::HitTestPathCacheMissesGe { min: 1 }
         ));
     }
 

@@ -1421,3 +1421,26 @@ date: 2026-05-12
     panel to `ui-gallery-hit-test-only-probe-panel`. Focused runtime passed with run id
     `1779247865248`, and the suite passed with summary
     `target/fret-diag-hit-test-only-paint-cache-suite-v3/sessions/1779249174760-142600/suite.summary.json`.
+- [x] Add a focused stale hit-path guard for clean moved view-cache roots.
+  - Result:
+    `prepaint_interaction_cache_root_move_invalidates_stale_root_only_hit_path` now keeps a
+    root-only `hit_test_path_cache` entry alive across a clean view-cache root move. It proves
+    prepaint still reuses translated interaction records, but hit testing rejects the stale
+    root-only path, increments `hit_test_path_cache_misses`, and returns the moved leaf under the
+    pointer. Focused checks passed with Nextest run id
+    `84167c6c-c03b-4feb-aa11-0693f55659b2`.
+- [x] Add a focused stale child-path guard for moved higher-z siblings.
+  - Result:
+    `hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer` now
+    primes a cached lower-child path, moves a higher-z sibling under the same pointer, and proves
+    cached-path reuse misses before fallback hit testing accepts the moved sibling. The refreshed
+    higher-z path is then cache-reusable. Focused checks passed with Nextest run id
+    `92315d8d-56fd-4c3e-bfc1-bbfc849e954b`.
+- [x] Add a dispatch-level pointer-move stale-path guard for moved higher-z siblings.
+  - Result:
+    `pointer_move_dispatch_rejects_stale_path_when_higher_z_sibling_moves_under_pointer` now sends
+    real pointer moves through `UiTree::dispatch_event`, primes dispatch on a lower-z widget, moves
+    a higher-z sibling under the same pointer, and proves the next move routes to the higher-z
+    widget while the stale lower-child path records a cache miss. A third move proves the refreshed
+    higher-z dispatch path is cache-reusable. Focused checks passed with Nextest run id
+    `093b8a5d-e67a-4b35-ab82-e02389f63173`.

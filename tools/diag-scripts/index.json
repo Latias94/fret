@@ -8573,7 +8573,8 @@
       ],
       "target_hints": [
         "Navigates to the gallery-dev HitTestOnly Paint-Cache Probe page.",
-        "Sweeps pointer movement over a stable cached canvas and gates hit-test-only paint-cache replay counters."
+        "Sweeps pointer movement over a stable cached canvas and gates hit-test-only paint-cache replay plus hit-test path-cache counters.",
+        "Disables the hit-test bounds tree so the runtime oracle deterministically exercises the path-cache fast path."
       ]
     },
     {

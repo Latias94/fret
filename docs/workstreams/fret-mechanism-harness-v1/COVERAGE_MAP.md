@@ -319,6 +319,32 @@ date: 2026-05-12
   `ui-gallery-hit-test-only-paint-cache` suite with zero-warning lint policy. Suite evidence is
   anchored at
   `target/fret-diag-hit-test-only-paint-cache-suite-v3/sessions/1779249174760-142600/suite.summary.json`.
+- Hit-test path-cache runtime update:
+  the same promoted script now also injects `FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1` and waits for
+  `hit_test_path_cache_hits_ge(min=1)`, proving real cached-path reuse during the runtime pointer
+  sweep. The stricter gate exposed an over-conservative sibling validator in
+  `try_hit_test_along_cached_path`: transformed or non-clipping higher-z siblings forced misses even
+  when real hit testing showed they did not intercept the pointer. The mechanism now validates
+  higher-z siblings with `hit_test_node`, with focused guards for non-hit-testable overlaps and
+  transformed interceptors. Fresh suite evidence is anchored at
+  `target/fret-diag-hit-test-only-paint-cache-suite-path-cache-v2/sessions/1779259631852-148980/suite.summary.json`.
+- Moved cache-root stale hit-path update:
+  `prepaint_interaction_cache_root_move_invalidates_stale_root_only_hit_path` now covers the
+  focused mechanism path where a root-only `hit_test_path_cache` entry survives across a clean
+  view-cache root move. The guard proves translated interaction-cache replay still happens, but the
+  stale root-only cached path is rejected before hit testing returns the moved leaf. Focused
+  evidence uses Nextest run id `84167c6c-c03b-4feb-aa11-0693f55659b2`.
+- Higher-z sibling stale hit-path update:
+  `hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer` now covers
+  the child-path variant: a cached lower-child path must miss when a higher-z sibling moves under
+  the same pointer, then refresh to the moved sibling for subsequent cache hits. Focused evidence
+  uses Nextest run id `92315d8d-56fd-4c3e-bfc1-bbfc849e954b`.
+- Pointer-move dispatch stale hit-path update:
+  `pointer_move_dispatch_rejects_stale_path_when_higher_z_sibling_moves_under_pointer` now proves
+  the same child-path invariant through `UiTree::dispatch_event`. Real pointer-move delivery first
+  targets the lower-z widget, then after the higher-z sibling moves under the same pointer the
+  stale path records a miss and mapped event-chain delivery reaches the moved sibling. Focused
+  evidence uses Nextest run id `093b8a5d-e67a-4b35-ab82-e02389f63173`.
 - Node Graph cull-window update:
   `ui-gallery-node-graph-cull`, `ui-gallery-node-graph-cull-window-shifts`, and
   `ui-gallery-node-graph-cull-window-no-shifts-small-pan` now have protocol roundtrip coverage for
