@@ -899,6 +899,10 @@
     {
       "name": "fret-ui-prepaint-moving-cache-root-stale-hit-path",
       "command": "cargo nextest run --cargo-profile dev-fast -p fret-ui prepaint_interaction_cache_root_move_invalidates_stale_root_only_hit_path prepaint_interaction_cache_replay_translates_records_when_cache_root_moves --no-fail-fast --no-capture"
+    },
+    {
+      "name": "fret-ui-hit-test-path-cache-higher-z-sibling",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-ui hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer hit_test_layers_cached_reuses_path_and_respects_layer_order --no-fail-fast --no-capture"
     }
   ],
   "evidence": [
@@ -1191,7 +1195,8 @@
     "tools/diag-scripts/suites/ui-gallery-hit-test-only-paint-cache/suite.json",
     "target/fret-diag-hit-test-only-paint-cache-probe-sweep-v2/sessions/1779247851157-129852/1779247865248/ai.packet",
     "target/fret-diag-hit-test-only-paint-cache-suite-v3/sessions/1779249174760-142600/suite.summary.json",
-    "crates/fret-ui/src/tree/hit_test.rs"
+    "crates/fret-ui/src/tree/hit_test.rs",
+    "crates/fret-ui/src/tree/tests/hit_test.rs"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",

@@ -6405,3 +6405,25 @@ Next slice recommendation:
   - result: passed; Nextest run id `84167c6c-c03b-4feb-aa11-0693f55659b2`.
   - note: the run emitted the pre-existing `current_effective_opacity` dead-code warning in
     `crates\fret-ui\src\elements\runtime.rs`; this slice did not touch that file.
+
+## Hit-Test Path Cache Higher-Z Sibling Gate
+
+- invariant:
+  a cached `root -> lower_child` hit path must not remain valid when a higher-z sibling moves under
+  the same pointer. The cached-path fast path must reject the stale lower-child path before runtime
+  routing can diverge from fallback hit testing.
+- finding:
+  no stale z-order routing defect was reproduced. The focused guard shows the existing sibling
+  scan rejects the stale child path, fallback hit testing accepts the moved higher-z sibling, and
+  the fallback result refreshes the path cache for subsequent reuse.
+- implementation anchors:
+  `crates/fret-ui/src/tree/tests/hit_test.rs` and
+  `crates/fret-ui/src/tree/hit_test.rs`.
+- format:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\tree\tests\hit_test.rs`
+  - result: passed.
+- focused mechanism regression:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer hit_test_layers_cached_reuses_path_and_respects_layer_order --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `92315d8d-56fd-4c3e-bfc1-bbfc849e954b`.
+  - note: the run emitted the pre-existing `current_effective_opacity` dead-code warning in
+    `crates\fret-ui\src\elements\runtime.rs`; this slice did not touch that file.

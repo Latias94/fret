@@ -1429,3 +1429,10 @@ date: 2026-05-12
     root-only path, increments `hit_test_path_cache_misses`, and returns the moved leaf under the
     pointer. Focused checks passed with Nextest run id
     `84167c6c-c03b-4feb-aa11-0693f55659b2`.
+- [x] Add a focused stale child-path guard for moved higher-z siblings.
+  - Result:
+    `hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer` now
+    primes a cached lower-child path, moves a higher-z sibling under the same pointer, and proves
+    cached-path reuse misses before fallback hit testing accepts the moved sibling. The refreshed
+    higher-z path is then cache-reusable. Focused checks passed with Nextest run id
+    `92315d8d-56fd-4c3e-bfc1-bbfc849e954b`.

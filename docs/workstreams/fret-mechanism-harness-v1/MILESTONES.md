@@ -3437,3 +3437,19 @@ Status: complete for the focused stale root-only hit-path-cache guard.
   `rustfmt --edition 2024 --check crates\fret-ui\src\tree\tests\prepaint.rs`;
   `cargo nextest run --cargo-profile dev-fast -p fret-ui prepaint_interaction_cache_root_move_invalidates_stale_root_only_hit_path prepaint_interaction_cache_replay_translates_records_when_cache_root_moves --no-fail-fast --no-capture`
   with Nextest run id `84167c6c-c03b-4feb-aa11-0693f55659b2`.
+
+## M155: Hit-Test Path Cache Higher-Z Sibling Guard
+
+Status: complete for focused stale child-path z-order reuse coverage.
+
+- Added `hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer` to
+  complement M154. It primes a cached `root -> lower_child` path, moves a higher-z sibling under
+  the same pointer, and proves cached-path reuse rejects the stale lower-child path before fallback
+  hit testing accepts the moved higher sibling.
+- The test asserts both sides of the cache behavior: `hit_test_path_cache_misses` increments for
+  the stale child path, then `hit_test_path_cache_hits` increments after fallback refreshes the
+  path to the higher-z sibling.
+- Gates pass:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\tree\tests\hit_test.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer hit_test_layers_cached_reuses_path_and_respects_layer_order --no-fail-fast --no-capture`
+  with Nextest run id `92315d8d-56fd-4c3e-bfc1-bbfc849e954b`.

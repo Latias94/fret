@@ -325,6 +325,11 @@ date: 2026-05-12
   view-cache root move. The guard proves translated interaction-cache replay still happens, but the
   stale root-only cached path is rejected before hit testing returns the moved leaf. Focused
   evidence uses Nextest run id `84167c6c-c03b-4feb-aa11-0693f55659b2`.
+- Higher-z sibling stale hit-path update:
+  `hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer` now covers
+  the child-path variant: a cached lower-child path must miss when a higher-z sibling moves under
+  the same pointer, then refresh to the moved sibling for subsequent cache hits. Focused evidence
+  uses Nextest run id `92315d8d-56fd-4c3e-bfc1-bbfc849e954b`.
 - Node Graph cull-window update:
   `ui-gallery-node-graph-cull`, `ui-gallery-node-graph-cull-window-shifts`, and
   `ui-gallery-node-graph-cull-window-no-shifts-small-pan` now have protocol roundtrip coverage for

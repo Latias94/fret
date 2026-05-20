@@ -746,6 +746,59 @@ fn hit_test_layers_cached_reuses_path_and_respects_layer_order() {
 }
 
 #[test]
+fn hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_debug_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let lower = ui.create_node(TestStack);
+    let higher = ui.create_node(TestStack);
+    ui.set_root(root);
+    ui.set_children(root, vec![lower, higher]);
+
+    ui.nodes[root].bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.nodes[lower].bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(20.0), Px(20.0)));
+    ui.nodes[higher].bounds =
+        Rect::new(Point::new(Px(60.0), Px(0.0)), Size::new(Px(20.0), Px(20.0)));
+
+    let pointer = Point::new(Px(10.0), Px(10.0));
+    assert_eq!(
+        ui.hit_test_layers_cached(&[root], pointer),
+        Some(lower),
+        "prime a cached path to the lower-z child"
+    );
+
+    ui.nodes[higher].bounds = ui.nodes[lower].bounds;
+    let stats_before_rehit = ui.debug_stats();
+    assert_eq!(
+        ui.hit_test_layers_cached(&[root], pointer),
+        Some(higher),
+        "a higher-z sibling that moved under the pointer must invalidate the stale lower-child path"
+    );
+    let stats_after_rehit = ui.debug_stats();
+    assert!(
+        stats_after_rehit.hit_test_path_cache_misses
+            > stats_before_rehit.hit_test_path_cache_misses,
+        "expected the stale child path to miss before fallback hit testing accepts the moved sibling"
+    );
+
+    assert_eq!(
+        ui.hit_test_layers_cached(&[root], pointer),
+        Some(higher),
+        "the fallback result should refresh the cached path to the moved higher-z sibling"
+    );
+    let stats_after_cached_reuse = ui.debug_stats();
+    assert!(
+        stats_after_cached_reuse.hit_test_path_cache_hits
+            > stats_after_rehit.hit_test_path_cache_hits,
+        "expected the refreshed higher-z sibling path to be cache-reusable"
+    );
+}
+
+#[test]
 fn hit_test_works_with_view_cache_root_and_prepaint_reuse_under_render_transform() {
     struct TransformedOverlayRoot;
 
