@@ -870,6 +870,11 @@ retained-agnostic `PendingNodeDragReleaseCx` seam. `pointer_up_left_route/dispat
 now source-policy gated as retained-bridge-free support. Focused real-route tests prove pending
 group drag/resize release, pending node click-select release, and pending wire-drag release
 promotion still work through `pointer_up::handle_pointer_up`.
+`RBX-M2-700` then moved the left pointer-up active release dispatch chain behind
+`WireCommitCx + PointerUpReleaseCx`. `pointer_up_left_route/dispatch/active.rs` is now
+source-policy gated as retained-bridge-free support, and its direct edge-insert/edge-drag
+pointer-up leaf helpers now use retained-agnostic release capabilities. Focused tests prove wire
+left-up, edge-insert left-up, and edge-drag left-up behavior remain green.
 
 ## Next Task
 
@@ -927,7 +932,8 @@ Recommended next implementation shape:
   release and pan release helpers now use retained-agnostic `PointerUpReleaseCx` / widget-tail
   paint seams; pointer-up left double-click edge-insert release now uses `PointerUpReleaseCx`;
   pointer-up commit dispatch and node-drag commit release now use `PointerUpCommitCx`; pointer-up
-  pending dispatch now uses `PendingNodeDragReleaseCx`.
+  pending dispatch now uses `PendingNodeDragReleaseCx`; pointer-up active dispatch now uses
+  `WireCommitCx + PointerUpReleaseCx`.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
   `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`,
@@ -939,6 +945,9 @@ Recommended next implementation shape:
   `pointer_up_commit.rs`, `pointer_up_node_drag.rs`,
   `pointer_up_left_route/dispatch/commit.rs`,
   `pointer_up_left_route/dispatch/pending.rs`,
+  `pointer_up_left_route/dispatch/active.rs`,
+  `edge_insert_drag/pointer_up.rs`, `edge_insert_drag/pointer_up/active.rs`,
+  `edge_insert_drag/pointer_up/pending.rs`, `edge_drag/pointer_up.rs`,
   `node_drag_constraints.rs`, `node_drag_constraints_extent.rs`, `node_drag_geometry_cx.rs`,
   `node_drag_snap.rs`,
   `node_drag/tail.rs`, `node_drag_move_tail_cx.rs`,
@@ -997,13 +1006,13 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-21 for `RBX-M2-690`:
+Last run on 2026-05-21 for `RBX-M2-700`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.
-- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_pending_dispatch_stays_off_retained_bridge) | test(pending_group_drag_release_clears_session_without_committing) | test(pending_group_resize_release_clears_session_without_committing) | test(pending_node_drag_click_select_release_toggles_selection_and_finishes) | test(pending_wire_drag_release_promotes_to_active_wire_drag_and_finishes) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_active_dispatch_stays_off_retained_bridge) | test(edge_reconnect_drop_on_empty_can_disconnect_edge) | test(edge_insert_left_up_does_not_open_picker_when_searcher_is_open) | test(plain_double_click_edge_insert_left_up_opens_picker_and_invalidates_paint) | test(edge_drag_left_up_clears_edge_drag_and_invalidates_paint) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
   passed, 6 tests.
-- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/dispatch/pending.rs` -
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/dispatch/active.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pointer_up.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pointer_up/active.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pointer_up/pending.rs ecosystem/fret-node/src/ui/canvas/widget/edge_drag/pointer_up.rs` -
   no matches.
 - `cargo fmt --check` - passed.
 - `python3 tools/check_layering.py` - passed.
@@ -1014,7 +1023,7 @@ Last run on 2026-05-21 for `RBX-M2-690`:
 Broader gates not run:
 
 - `cargo nextest run --workspace`
-  - Reason: `RBX-M2-690` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+  - Reason: `RBX-M2-700` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
 

@@ -136,6 +136,16 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_up_left_route/dispatch/commit.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_LEFT_ROUTE_DISPATCH_PENDING_RS: &str =
         include_str!("ui/canvas/widget/pointer_up_left_route/dispatch/pending.rs");
+    const UI_CANVAS_WIDGET_POINTER_UP_LEFT_ROUTE_DISPATCH_ACTIVE_RS: &str =
+        include_str!("ui/canvas/widget/pointer_up_left_route/dispatch/active.rs");
+    const UI_CANVAS_WIDGET_EDGE_INSERT_DRAG_POINTER_UP_RS: &str =
+        include_str!("ui/canvas/widget/edge_insert_drag/pointer_up.rs");
+    const UI_CANVAS_WIDGET_EDGE_INSERT_DRAG_POINTER_UP_ACTIVE_RS: &str =
+        include_str!("ui/canvas/widget/edge_insert_drag/pointer_up/active.rs");
+    const UI_CANVAS_WIDGET_EDGE_INSERT_DRAG_POINTER_UP_PENDING_RS: &str =
+        include_str!("ui/canvas/widget/edge_insert_drag/pointer_up/pending.rs");
+    const UI_CANVAS_WIDGET_EDGE_DRAG_POINTER_UP_RS: &str =
+        include_str!("ui/canvas/widget/edge_drag/pointer_up.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_COMMIT_GROUP_DRAG_RS: &str =
         include_str!("ui/canvas/widget/pointer_up_commit/group_drag.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_COMMIT_RESIZE_RS: &str =
@@ -554,6 +564,31 @@ mod surface_policy_tests {
             assert!(
                 !UI_CANVAS_WIDGET_POINTER_UP_LEFT_ROUTE_DISPATCH_PENDING_RS.contains(forbidden),
                 "pointer-up pending dispatch must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pointer_up_active_dispatch_stays_off_retained_bridge() {
+        let pointer_up_active_sources = [
+            UI_CANVAS_WIDGET_POINTER_UP_LEFT_ROUTE_DISPATCH_ACTIVE_RS,
+            UI_CANVAS_WIDGET_EDGE_INSERT_DRAG_POINTER_UP_RS,
+            UI_CANVAS_WIDGET_EDGE_INSERT_DRAG_POINTER_UP_ACTIVE_RS,
+            UI_CANVAS_WIDGET_EDGE_INSERT_DRAG_POINTER_UP_PENDING_RS,
+            UI_CANVAS_WIDGET_EDGE_DRAG_POINTER_UP_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !pointer_up_active_sources.contains(forbidden),
+                "pointer-up active dispatch must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

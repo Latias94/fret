@@ -1,12 +1,18 @@
-use super::prelude::*;
+use fret_ui::UiHost;
 
-pub(super) fn handle_edge_left_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
+use super::super::{
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, pointer_up_release_cx::PointerUpReleaseCx,
+};
+
+pub(super) fn handle_edge_left_up<H: UiHost, M>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
-) -> bool {
+    cx: &mut impl PointerUpReleaseCx<H>,
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+{
     if canvas.interaction.edge_drag.take().is_some() {
-        cx.release_pointer_capture();
-        invalidate_paint(cx);
+        super::super::pointer_up_finish::finish_pointer_up(cx);
         return true;
     }
 

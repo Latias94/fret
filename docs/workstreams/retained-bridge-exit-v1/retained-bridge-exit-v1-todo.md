@@ -3777,6 +3777,39 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-700 Isolate pointer-up active dispatch retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/dispatch/active.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pointer_up.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pointer_up/active.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pointer_up/pending.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/edge_drag/mod.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/edge_drag/pointer_up.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_drag_conformance.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the left pointer-up active release dispatch chain off direct retained bridge Cx names.
+    - Migrate its direct edge-insert and edge-drag pointer-up leaf helpers behind retained-agnostic
+      release capabilities so the source-policy gate covers a real leaf boundary.
+    - Prove wire left-up, edge-insert left-up, and edge-drag left-up behavior remain green.
+  - Result:
+    - `pointer_up_left_route/dispatch/active.rs` now accepts `WireCommitCx + PointerUpReleaseCx`
+      instead of naming retained `EventCx`.
+    - `edge_insert_drag/pointer_up*.rs` now uses `PointerUpReleaseCx` /
+      `PointerCaptureReleaseCx` for host/window access and pointer-up finish side effects.
+    - `edge_drag/pointer_up.rs` now uses `PointerUpReleaseCx`.
+    - Added `pointer_up_active_dispatch_stays_off_retained_bridge` source-policy coverage and a
+      focused edge-drag left-up behavior test.
+  - Validation:
+    - Red: `cargo nextest run -p fret-node --features compat-retained-canvas pointer_up_active_dispatch_stays_off_retained_bridge`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_active_dispatch_stays_off_retained_bridge) | test(edge_reconnect_drop_on_empty_can_disconnect_edge) | test(edge_insert_left_up_does_not_open_picker_when_searcher_is_open) | test(plain_double_click_edge_insert_left_up_opens_picker_and_invalidates_paint) | test(edge_drag_left_up_clears_edge_drag_and_invalidates_paint) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/dispatch/active.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pointer_up.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pointer_up/active.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pointer_up/pending.rs ecosystem/fret-node/src/ui/canvas/widget/edge_drag/pointer_up.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

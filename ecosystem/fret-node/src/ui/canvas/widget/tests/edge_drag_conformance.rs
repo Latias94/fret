@@ -10,6 +10,7 @@ use crate::rules::EdgeEndpoint;
 use super::prelude::edge_drag;
 use super::{NullServices, TestUiHostImpl, event_cx, insert_graph_view_editor_config_with};
 use crate::ui::canvas::state::{EdgeDrag, WireDragKind};
+use fret_ui::Invalidation;
 
 fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {
     let mut graph = Graph::new(GraphId::new());
@@ -181,6 +182,38 @@ fn edge_drag_prefers_from_endpoint_when_port_centers_are_equidistant() {
         }
         other => panic!("unexpected wire drag kind: {other:?}"),
     }
+}
+
+#[test]
+fn edge_drag_left_up_clears_edge_drag_and_invalidates_paint() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, edge, _out, _inn) = make_test_graph_edge_reconnect();
+    let (graph, view, editor_config) =
+        insert_graph_view_editor_config_with(&mut host, graph_value, |_| {});
+
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
+    canvas.interaction.edge_drag = Some(EdgeDrag {
+        edge,
+        start_pos: Point::new(Px(16.0), Px(12.0)),
+    });
+
+    let mut services = NullServices::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds(),
+        &mut prevented_default_actions,
+    );
+
+    assert!(edge_drag::handle_edge_left_up(&mut canvas, &mut cx));
+
+    assert!(canvas.interaction.edge_drag.is_none());
+    assert!(
+        cx.invalidations
+            .iter()
+            .any(|(_, kind)| *kind == Invalidation::Paint)
+    );
 }
 
 #[test]

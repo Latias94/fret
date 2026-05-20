@@ -9570,3 +9570,75 @@ Broader gates not run:
   - Reason: `RBX-M2-690` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-21 - RBX-M2-700 pointer-up active dispatch retained Cx route isolation
+
+Claim verified:
+
+- Pointer-up active dispatch no longer imports or names retained bridge Cx types in
+  `pointer_up_left_route/dispatch/active.rs`.
+- Direct active pointer-up leaf helpers for edge insert and edge drag no longer import or name
+  retained bridge Cx types.
+- Active dispatch composes existing `WireCommitCx` with `PointerUpReleaseCx`; retained `EventCx`
+  adaptation remains in the existing retained adapter files.
+- Wire left-up, edge-insert left-up, and edge-drag left-up behavior remain green.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/dispatch/active.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pointer_up.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pointer_up/active.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pointer_up/pending.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/edge_drag/mod.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/edge_drag/pointer_up.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_drag_conformance.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Red evidence:
+
+- `cargo nextest run -p fret-node --features compat-retained-canvas pointer_up_active_dispatch_stays_off_retained_bridge`
+  - Result: failed before implementation, 1 failed test.
+  - Failure: `pointer-up active dispatch must stay retained-Cx agnostic; found retained_bridge`.
+  - Scope proven: the new source-policy test caught direct retained Cx naming in active dispatch
+    and active leaf helpers before the seam extraction.
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving active dispatch
+    and active leaf helpers behind retained-agnostic seams.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_active_dispatch_stays_off_retained_bridge) | test(edge_reconnect_drop_on_empty_can_disconnect_edge) | test(edge_insert_left_up_does_not_open_picker_when_searcher_is_open) | test(plain_double_click_edge_insert_left_up_opens_picker_and_invalidates_paint) | test(edge_drag_left_up_clears_edge_drag_and_invalidates_paint) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 6 tests.
+  - Scope proven: source-policy locks active pointer-up dispatch and direct active leaf helpers off
+    retained bridge Cx names; wire left-up, edge-insert left-up, and edge-drag left-up behavior
+    remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/dispatch/active.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pointer_up.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pointer_up/active.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pointer_up/pending.rs ecosystem/fret-node/src/ui/canvas/widget/edge_drag/pointer_up.rs`
+  - Result: no matches.
+  - Scope proven: the migrated active pointer-up dispatch helpers no longer depend on retained
+    bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after formatting the pointer-up active
+    seam changes and behavior test.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after moving
+    pointer-up active dispatch behind retained-agnostic seams.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-700` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.

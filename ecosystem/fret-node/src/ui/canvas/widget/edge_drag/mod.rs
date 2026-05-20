@@ -16,7 +16,7 @@ pub(super) fn handle_edge_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
 pub(super) fn handle_edge_left_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl super::pointer_up_release_cx::PointerUpReleaseCx<H>,
 ) -> bool {
     pointer_up::handle_edge_left_up(canvas, cx)
 }
