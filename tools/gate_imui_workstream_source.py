@@ -4043,6 +4043,22 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/calendar_hijri.rs"),
+            required=[
+                "use crate::calendar::calendar_day_button_children;",
+                "calendar_day_button_children(",
+                "day_text_style.weight = FontWeight::NORMAL;",
+                "calendar_hijri_day_text_uses_shared_role",
+                "assert_eq!(day_text.wrap, TextWrap::None);",
+                "assert_eq!(day_text.overflow, TextOverflow::Ellipsis);",
+                "assert!(day.inherited_foreground.is_some());",
+            ],
+            forbidden=[
+                "let mut props = TextProps::new(Arc::clone(&day_text));",
+                "props.style = Some(style);\n                    props.color = Some(fg);\n                    props.wrap = TextWrap::None;",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-shadcn/src/tooltip.rs"),
             required=[
                 "fn apply_tooltip_inherited_defaults_scoped(",

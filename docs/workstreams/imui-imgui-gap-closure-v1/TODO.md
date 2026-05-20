@@ -1131,6 +1131,10 @@ Readiness order for the next locally testable review slices:
    local `ui::label(day_text).text_size_px(...).line_height_px(...).font_medium()` builder.
    CalendarMultiple remains responsible for multi-select updates and cell chrome; shared text roles
    own no-wrap, shrink, min-width-zero, ellipsis, and inherited text/foreground semantics.
+   2026-05-20 shadcn CalendarHijri text-role follow-up: Hijri day numbers now share the Gregorian
+   calendar day-cell helper instead of direct `TextProps::new(day_text)` fixed-line/clipped text.
+   Hijri remains responsible for RTL order, Persian digits, Gregorian-date test ids, selection
+   updates, and cell chrome; shared text roles own the fixed-cell resize semantics.
    2026-05-20 shadcn menu item label follow-up: `text_list_row_label(...)` now includes the
    grow/basis-zero contract its name and tests already implied, and DropdownMenu, ContextMenu, and
    Menubar overlay item labels route through `menu_text::menu_item_label(...)`. The helper layers

@@ -1007,6 +1007,10 @@ Exit criteria:
   carrying a local `ui::label(day_text).text_size_px(...).line_height_px(...).font_medium()`
   builder. Multiple selection still owns selection updates and cell chrome, while shared text roles
   own no-wrap, shrink, min-width-zero, ellipsis, and inherited typography/foreground.
+  2026-05-20 shadcn CalendarHijri text-role result: Hijri day numbers now consume the same shared
+  day-cell helper instead of direct `TextProps::new(day_text)` fixed-line/clipped text. Hijri keeps
+  RTL order, Persian digits, Gregorian-date test ids, and selection chrome; shared roles own the
+  fixed-cell text resize contract.
   2026-05-20 shadcn menu item label text-role result: shared `text_list_row_label(...)` now truly
   owns fill/grow/basis-zero row-label layout, and DropdownMenu, ContextMenu, and Menubar overlay
   item labels consume a shared shadcn menu item label helper instead of local

@@ -4875,6 +4875,31 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   `python tools\gate_imui_workstream_source.py`,
   `python tools\gate_imui_facade_teaching_source.py`, and `git diff --check`.
 
+2026-05-20 shadcn CalendarHijri shared text-role slice:
+
+- Source gap before fix: `CalendarHijri` kept a separate day-cell text implementation that created
+  `TextProps::new(day_text)` directly, installed a local fixed line box and foreground, and clipped
+  overflow inside fixed-size day cells. This duplicated the day-cell text contract already shared
+  by single, range, and multiple Gregorian calendars.
+- `hijri_day_cell(...)` now reuses `calendar_day_button_children(...)` with normal-weight inherited
+  typography and Persian-digit day labels. Hijri still owns RTL visual order, Gregorian-date test
+  ids, fixed cell chrome, outside-month foreground, selected foreground, and selection updates.
+- `calendar_hijri_day_text_uses_shared_role` proves the selected Hijri day text keeps leaf
+  `style: None`, `color: None`, fill width, shrink, `min-width: 0`, no-wrap, ellipsis, center
+  alignment, inherited text style, and inherited foreground.
+- `tools/gate_imui_workstream_source.py` now requires the CalendarHijri helper/test shape and
+  forbids the old day-cell `TextProps::new(Arc::clone(&day_text))` style block from returning.
+- Focused gates passed:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  calendar_hijri_day_text_uses_shared_role
+  calendar_hijri_day_cells_render_stable_test_ids --no-fail-fast`,
+  `cargo fmt -p fret-ui-shadcn`,
+  `cargo fmt --check -p fret-ui-shadcn`,
+  `cargo check -p fret-ui-shadcn --lib`,
+  `python -m py_compile tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_facade_teaching_source.py`, and `git diff --check`.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground
