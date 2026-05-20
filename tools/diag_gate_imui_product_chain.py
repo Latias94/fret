@@ -49,6 +49,23 @@ DOCKING_PERF_THRESHOLDS: tuple[tuple[str, str, int], ...] = (
 FIRST_OPEN_DOC = "docs/diagnostics-first-open.md"
 DEVTOOLS_GUI_DOC = "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
 DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md"
+DEMO_METRICS_DEBUG_ROUTE_ID = "demo-metrics-debug"
+DEMO_METRICS_DEBUG_ROUTE_COMMANDS = {
+    "demo_commands": {
+        "demo editor proof": "cargo run -p fret-demo --bin imui_editor_proof_demo",
+        "demo editor notes": "cargo run -p fret-demo --bin editor_notes_demo",
+        "demo device shell": "cargo run -p fret-demo --bin editor_notes_device_shell_demo",
+    },
+    "metrics_commands": {
+        "metrics stats": "cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json",
+        "metrics layout perf": "cargo run -p fretboard-dev -- diag layout-perf-summary <bundle-or-dir> --json",
+        "metrics memory": "cargo run -p fretboard-dev -- diag memory-summary <bundle-or-dir> --json",
+    },
+    "debug_commands": {
+        "debug triage": "cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json",
+        "debug hotspots": "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json",
+    },
+}
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
 DEVTOOLS_GUI_WS_SOURCE = "apps/fret-devtools/src/ws.rs"
 DEVTOOLS_GUI_SEMANTICS_SOURCE = "apps/fret-devtools/src/semantics.rs"
@@ -314,6 +331,38 @@ def _validate_tool_apps_json(payload: dict) -> None:
         raise SystemExit(
             "Step failed: list tool apps json (missing imui-product-chain perf artifacts)"
         )
+
+    first_open_routes = payload.get("first_open_routes")
+    if not isinstance(first_open_routes, list):
+        raise SystemExit("Step failed: list tool apps json (missing first_open_routes array)")
+    demo_metrics_route = next(
+        (
+            item
+            for item in first_open_routes
+            if isinstance(item, dict) and item.get("id") == DEMO_METRICS_DEBUG_ROUTE_ID
+        ),
+        None,
+    )
+    if demo_metrics_route is None:
+        raise SystemExit("Step failed: list tool apps json (missing demo-metrics-debug route)")
+    if demo_metrics_route.get("docs") != FIRST_OPEN_DOC:
+        raise SystemExit("Step failed: list tool apps json (unexpected demo-metrics-debug docs)")
+    if not isinstance(demo_metrics_route.get("purpose"), str) or not demo_metrics_route["purpose"]:
+        raise SystemExit("Step failed: list tool apps json (missing demo-metrics-debug purpose)")
+    for group, expected_commands in DEMO_METRICS_DEBUG_ROUTE_COMMANDS.items():
+        commands = demo_metrics_route.get(group)
+        if not isinstance(commands, list):
+            raise SystemExit(f"Step failed: list tool apps json (missing {group})")
+        commands_by_label = {
+            item.get("label"): item.get("command")
+            for item in commands
+            if isinstance(item, dict)
+        }
+        for label, command in expected_commands.items():
+            if commands_by_label.get(label) != command:
+                raise SystemExit(
+                    f"Step failed: list tool apps json (unexpected demo-metrics-debug {label})"
+                )
 
     tool_apps = payload.get("tool_apps")
     if not isinstance(tool_apps, list):
@@ -853,6 +902,10 @@ def _validate_discovery(repo_root: Path, fretboard_exe: Path) -> None:
     _assert_contains(tool_apps.stdout, "perf-docking/regression.summary.json", "list tool apps")
     _assert_contains(tool_apps.stdout, "perf-docking/check.perf_thresholds.json", "list tool apps")
     _assert_contains(tool_apps.stdout, "perf-docking/*/trace.chrome.json", "list tool apps")
+    _assert_contains(tool_apps.stdout, "route: demo-metrics-debug", "list tool apps")
+    for command_groups in DEMO_METRICS_DEBUG_ROUTE_COMMANDS.values():
+        for label, command in command_groups.items():
+            _assert_contains(tool_apps.stdout, f"{label}: {command}", "list tool apps")
     _assert_contains(tool_apps.stdout, "fret-devtools", "list tool apps")
     _assert_contains(tool_apps.stdout, "cargo run -p fret-devtools", "list tool apps")
     _assert_contains(tool_apps.stdout, DEVTOOLS_GUI_DOC, "list tool apps")

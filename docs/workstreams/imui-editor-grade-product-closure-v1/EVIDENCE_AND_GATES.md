@@ -910,6 +910,24 @@ command, `tools/diag-scripts/suites/perf-docking-arbitration-steady/suite.json`,
 `perf-docking/*/trace.chrome.json` artifacts so DevTools-style consumers can surface the
 product-chain evidence path without hard-coding GUI-only knowledge.
 
+DevTools demo/metrics/debug discovery follow-up (2026-05-21): `fretboard-dev list tool-apps` now
+prints a `route: demo-metrics-debug` row, and `fretboard-dev list tool-apps --json` exposes the
+same route under `first_open_routes`. The route groups the editor proof/editor notes/device shell
+demos separately from the `diag stats`, `diag layout-perf-summary`, `diag memory-summary`,
+`diag triage`, and `diag hotspots` commands. This keeps the Dear ImGui-style Demo/Metrics/Debug
+entrypoint discoverable from CLI/JSON consumers rather than only from the DevTools GUI guide panel.
+Focused gates passed locally for this slice:
+
+```text
+cargo fmt -p fretboard-dev --check
+cargo nextest run -p fretboard-dev tool_apps_list_names_first_open_routes tool_apps_json_value_exposes_stable_machine_readable_shape --no-fail-fast
+python -m py_compile tools/diag_gate_imui_p2_devtools_first_open.py tools/diag_gate_imui_product_chain.py tools/gate_imui_workstream_source.py
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built
+python tools/diag_gate_imui_product_chain.py --only discovery --reuse-built
+python tools/gate_imui_workstream_source.py
+git diff --check
+```
+
 Goal completion audit refresh (2026-05-15):
 `GOAL_COMPLETION_AUDIT_2026-05-15.md` keeps the umbrella in maintenance and explicitly not
 complete. The strict blockers remain real-host Wayland compositor acceptance for `DW-P1-linux-003`,

@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-20
+Last updated: 2026-05-21
 
 ## M0 - Current Source Baseline
 
@@ -1076,6 +1076,10 @@ Exit criteria:
   2026-05-16 first-open gate wording result: diagnostics/DevTools entrypoint discovery now has an
   explicit cold-start gate and an explicit `--reuse-built` drift check. This keeps DevTools
   discoverability source-backed without treating Rust build latency as a GUI/MCP product failure.
+  2026-05-21 demo/metrics/debug discovery result: `fretboard-dev list tool-apps` and its JSON form
+  now expose the `demo-metrics-debug` first-open route with grouped demo, metrics, and debug
+  commands. This moves the Dear ImGui-style Demo/Metrics/Debug entrypoint into the shared CLI/JSON
+  discovery surface instead of leaving it discoverable only inside the DevTools GUI guide.
   Current performance-alignment review result: `P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md`
   belongs in the active gap lane's evidence set. Keep runtime smoothness work in
   `diag-perf-attribution-v1`, `ui-perf-zed-smoothness-v1`, and the product-chain docking perf gate;

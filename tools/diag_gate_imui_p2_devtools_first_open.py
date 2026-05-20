@@ -248,6 +248,15 @@ def _validate_tool_app_discovery(
         f"repo preflight: {REPO_PREFLIGHT_COMMAND}",
         f"repo preflight json: {REPO_PREFLIGHT_JSON_COMMAND}",
         f"gui branch: {DEVTOOLS_GUI_DOC}",
+        "route: demo-metrics-debug",
+        "demo editor proof: cargo run -p fret-demo --bin imui_editor_proof_demo",
+        "demo editor notes: cargo run -p fret-demo --bin editor_notes_demo",
+        "demo device shell: cargo run -p fret-demo --bin editor_notes_device_shell_demo",
+        "metrics stats: cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json",
+        "metrics layout perf: cargo run -p fretboard-dev -- diag layout-perf-summary <bundle-or-dir> --json",
+        "metrics memory: cargo run -p fretboard-dev -- diag memory-summary <bundle-or-dir> --json",
+        "debug triage: cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json",
+        "debug hotspots: cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json",
         "fret-devtools",
         "cargo run -p fret-devtools",
         DEVTOOLS_GUI_DOC,
@@ -277,6 +286,53 @@ def _validate_tool_app_discovery(
         raise SystemExit("list tool-apps --json should expose the repo preflight command")
     if repo_preflight.get("json_command") != REPO_PREFLIGHT_JSON_COMMAND:
         raise SystemExit("list tool-apps --json should expose the repo preflight JSON command")
+    first_open_routes = payload.get("first_open_routes")
+    if not isinstance(first_open_routes, list):
+        raise SystemExit("list tool-apps --json should expose a first_open_routes array")
+    demo_metrics_route = next(
+        (
+            item
+            for item in first_open_routes
+            if isinstance(item, dict) and item.get("id") == "demo-metrics-debug"
+        ),
+        None,
+    )
+    if demo_metrics_route is None:
+        raise SystemExit("list tool-apps --json should expose demo-metrics-debug")
+    if demo_metrics_route.get("docs") != FIRST_OPEN_DOC:
+        raise SystemExit("list tool-apps --json should expose demo-metrics-debug docs")
+    if not isinstance(demo_metrics_route.get("purpose"), str) or not demo_metrics_route["purpose"]:
+        raise SystemExit("list tool-apps --json should expose demo-metrics-debug purpose")
+    route_groups = {
+        "demo_commands": {
+            "demo editor proof": "cargo run -p fret-demo --bin imui_editor_proof_demo",
+            "demo editor notes": "cargo run -p fret-demo --bin editor_notes_demo",
+            "demo device shell": "cargo run -p fret-demo --bin editor_notes_device_shell_demo",
+        },
+        "metrics_commands": {
+            "metrics stats": "cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json",
+            "metrics layout perf": "cargo run -p fretboard-dev -- diag layout-perf-summary <bundle-or-dir> --json",
+            "metrics memory": "cargo run -p fretboard-dev -- diag memory-summary <bundle-or-dir> --json",
+        },
+        "debug_commands": {
+            "debug triage": "cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json",
+            "debug hotspots": "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json",
+        },
+    }
+    for group, expected_commands in route_groups.items():
+        commands = demo_metrics_route.get(group)
+        if not isinstance(commands, list):
+            raise SystemExit(f"list tool-apps --json should expose demo-metrics-debug {group}")
+        commands_by_label = {
+            item.get("label"): item.get("command")
+            for item in commands
+            if isinstance(item, dict)
+        }
+        for label, command in expected_commands.items():
+            if commands_by_label.get(label) != command:
+                raise SystemExit(
+                    f"list tool-apps --json should expose demo-metrics-debug {label}"
+                )
     tool_apps = payload.get("tool_apps")
     if not isinstance(tool_apps, list):
         raise SystemExit("list tool-apps --json should expose a tool_apps array")

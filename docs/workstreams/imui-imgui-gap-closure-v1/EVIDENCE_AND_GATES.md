@@ -1591,6 +1591,16 @@ Run evidence:
   surface. Focused gates passed locally:
   `cargo nextest run -p fret-devtools devtools_first_open_next_action_lines_prioritize_stateful_workflow devtools_first_open_lines_surface_canonical_paths devtools_dogfood_workflow_lines_surface_ui_gallery_loop devtools_demo_metrics_debug_lines_surface_canonical_routes devtools_gate_command_lines_surface_first_class_gates --no-fail-fast`
   and `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`.
+- 2026-05-21: DevTools demo/metrics/debug discovery now has a shared CLI/JSON route, not only a
+  GUI guide panel. `fretboard-dev list tool-apps` prints `route: demo-metrics-debug`, and
+  `fretboard-dev list tool-apps --json` exposes the same route under `first_open_routes` with
+  grouped editor demo, metrics, and debug commands. Focused gates passed locally for this slice:
+  `cargo fmt -p fretboard-dev --check`,
+  `cargo nextest run -p fretboard-dev tool_apps_list_names_first_open_routes tool_apps_json_value_exposes_stable_machine_readable_shape --no-fail-fast`,
+  `python -m py_compile tools/diag_gate_imui_p2_devtools_first_open.py tools/diag_gate_imui_product_chain.py tools/gate_imui_workstream_source.py`,
+  `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`,
+  `python tools/diag_gate_imui_product_chain.py --only discovery --reuse-built`,
+  `python tools/gate_imui_workstream_source.py`, and `git diff --check`.
 - 2026-05-14: tightened the first-open discovery gate so `docs/diagnostics-first-open.md` must link
   maintainers from aggregate `skipped_policy` outcomes to the policy-skip / capability-provenance
   checklist, while preserving the distinction between `capability_source` and
