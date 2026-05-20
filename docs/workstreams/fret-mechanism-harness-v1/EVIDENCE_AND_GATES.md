@@ -6725,3 +6725,69 @@ Next slice recommendation:
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-checkbox-disabled-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
   - result: passed 15/15; `stage_counts={"passed":15}`; `reason_code_counts={}`;
     Checkbox disabled-action row run id `1779304154355`.
+
+
+## Slider Numeric Action-State and Thumb Test-ID Runtime Gate
+
+- invariant:
+  an enabled shadcn Slider thumb must export numeric value/min/max/step/jump plus enabled
+  `set_value`, `increment`, and `decrement`; a disabled Slider thumb must keep numeric metadata but
+  export `disabled=true` and suppress `set_value`, `increment`, `decrement`, and `focus`. Derived
+  thumb automation ids must also stay unique across multi-thumb recipe chrome and semantic thumbs.
+- finding:
+  the new runtime script did not reproduce a Slider numeric/action semantics defect. The first
+  linted suite run did find a real recipe diagnostics defect: visual thumb chrome reused bare
+  `{prefix}-thumb` ids for every thumb, creating duplicate `test_id`s in multi-thumb Slider
+  examples. The script also needed focus hygiene after scrolling away from a focused single thumb.
+- implementation anchors:
+  `ecosystem/fret-ui-shadcn/src/slider.rs`,
+  `ecosystem/fret-ui-shadcn/src/test_id.rs`,
+  `tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-numeric-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-slider-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- discovery evidence:
+  initial lint failure before repair:
+  `target/fret-diag-slider-semantics-suite-v1/sessions/1779306432063-174216/1779306461660-ui-gallery-slider-numeric-action-state/check.lint.json`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-slider-numeric-action-state-v2/sessions/1779307920873-121240/1779307931755/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-slider-numeric-action-state-v2/sessions/1779307920873-121240/share/1779307931755.zip`;
+  dedicated suite summary:
+  `target/fret-diag-slider-semantics-suite-v2/sessions/1779307963346-175080/suite.summary.json`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-slider-numeric-v1/sessions/1779308003840-152848/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\slider\ui-gallery-slider-numeric-action-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-slider-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check ecosystem\fret-ui-shadcn\src\test_id.rs ecosystem\fret-ui-shadcn\src\slider.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- Slider recipe unit gates:
+  `cargo test --profile dev-fast -p fret-ui-shadcn multi_thumb_slider_derives_unique_thumb_test_ids --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-shadcn slider_set_value_numeric_updates_model_via_accessibility_driver --lib -- --nocapture`
+  - result: passed; 1 test.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_slider_numeric_action_state --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `1e5e6033-7824-4d00-88c5-f9a857b3e4a8`.
+- build:
+  `cargo build --profile dev-fast -p fret-ui-gallery`
+  - result: passed.
+  - note: the run emitted the pre-existing unrelated unused `start` warning from
+    `crates/fret-ui/src/declarative/host_widget/paint.rs`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\slider\ui-gallery-slider-numeric-action-state.json --dir target\fret-diag-slider-numeric-action-state-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779307931755`.
+- dedicated runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-slider-semantics --dir target\fret-diag-slider-semantics-suite-v2 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; `stage_counts={"passed":1}`; script run id `1779307974845`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-slider-numeric-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 16/16; `stage_counts={"passed":16}`; `reason_code_counts={}`;
+    Slider numeric-action row run id `1779308615620`.

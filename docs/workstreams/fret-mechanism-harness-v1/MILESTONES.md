@@ -3651,3 +3651,43 @@ Status: complete for the Checkbox disabled semantics/action companion.
   with summary
   `target/fret-diag-shadcn-runtime-evidence-checkbox-disabled-v1/sessions/1779304064247-171464/suite.summary.json`
   and new row run id `1779304154355`.
+
+
+## M163: Slider Numeric Action-State and Thumb Test-ID Runtime Gate
+
+Status: complete for the Slider numeric semantics companion and duplicate thumb-id repair.
+
+- Added `ui-gallery-slider-numeric-action-state.json`, which starts directly on the Slider page,
+  proves the enabled single thumb exports numeric value/min/max/step/jump and enabled
+  `set_value`/`increment`/`decrement`, updates the value to 80, then proves the disabled thumb
+  exports `disabled=true` and suppresses `set_value`, `increment`, `decrement`, and `focus`.
+- The first dedicated suite run converted a missing-coverage slice into a real diagnostics-surface
+  defect: multi-thumb Slider examples duplicated bare visual `{prefix}-thumb` ids while semantic
+  thumbs were already stable as `{prefix}-thumb-{index}`.
+- Slider visual thumb chrome now derives `{prefix}-thumb-{index}-chrome`, preserving existing
+  semantic selectors and removing duplicate ids from linted runtime bundles.
+- Added `multi_thumb_slider_derives_unique_thumb_test_ids` plus retained
+  `slider_set_value_numeric_updates_model_via_accessibility_driver` coverage as the cheap
+  owning-layer guard.
+- Added the focused `ui-gallery-slider-semantics` suite, promoted the script into
+  `ui-gallery-shadcn-runtime-evidence`, refreshed the registry, and added protocol roundtrip
+  coverage.
+- Gates pass:
+  `cargo test --profile dev-fast -p fret-ui-shadcn multi_thumb_slider_derives_unique_thumb_test_ids --lib -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-ui-shadcn slider_set_value_numeric_updates_model_via_accessibility_driver --lib -- --nocapture`;
+  and
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_slider_numeric_action_state --no-fail-fast --no-capture`
+  with Nextest run id `1e5e6033-7824-4d00-88c5-f9a857b3e4a8`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\slider\ui-gallery-slider-numeric-action-state.json --dir target\fret-diag-slider-numeric-action-state-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779307931755` and AI packet
+  `target/fret-diag-slider-numeric-action-state-v2/sessions/1779307920873-121240/1779307931755/ai.packet`.
+- Dedicated runtime suite passes:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-slider-semantics --dir target\fret-diag-slider-semantics-suite-v2 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with summary
+  `target/fret-diag-slider-semantics-suite-v2/sessions/1779307963346-175080/suite.summary.json`.
+- The broad `ui-gallery-shadcn-runtime-evidence` suite now passes 16/16 with the new Slider row:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-slider-numeric-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with summary
+  `target/fret-diag-shadcn-runtime-evidence-slider-numeric-v1/sessions/1779308003840-152848/suite.summary.json`
+  and new row run id `1779308615620`.

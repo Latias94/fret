@@ -11078,6 +11078,32 @@
       ]
     },
     {
+      "id": "ui-gallery-slider-numeric-action-state",
+      "path": "tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-numeric-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-runtime-evidence",
+        "ui-gallery-slider-semantics"
+      ],
+      "tags": [
+        "action-state",
+        "disabled",
+        "numeric",
+        "semantics",
+        "shadcn",
+        "slider",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Slider page.",
+        "Verifies enabled slider thumb numeric metadata and SetValue/Increment/Decrement actions, then verifies disabled slider thumbs suppress the same action surface."
+      ]
+    },
+    {
       "id": "ui-gallery-slider-set-value",
       "path": "tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-set-value.json",
       "required_capabilities": [],

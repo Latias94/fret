@@ -410,6 +410,19 @@ date: 2026-05-12
   and the dedicated suite evidence is anchored at
   `target/fret-diag-checkbox-semantics-suite-v1/sessions/1779303815632-98108/suite.summary.json`.
 
+
+- Slider numeric action-state and thumb test-id update:
+  `ui-gallery-slider-numeric-action-state.json` now covers the shadcn Slider numeric semantics path.
+  The gate starts on the Slider page, proves enabled thumb numeric value/min/max/step/jump plus
+  enabled `set_value`/`increment`/`decrement`, mutates the value through diagnostics, then proves a
+  disabled thumb keeps numeric metadata while suppressing `set_value`, `increment`, `decrement`, and
+  `focus`. The first linted suite run exposed duplicate visual thumb ids on multi-thumb Slider
+  examples; recipe chrome now derives `{prefix}-thumb-{index}-chrome` while semantic thumbs keep
+  `{prefix}-thumb-{index}`. Focused runtime evidence is anchored at
+  `target/fret-diag-slider-numeric-action-state-v2/sessions/1779307920873-121240/1779307931755/ai.packet`,
+  and the dedicated suite evidence is anchored at
+  `target/fret-diag-slider-semantics-suite-v2/sessions/1779307963346-175080/suite.summary.json`.
+
 A mechanism invariant is covered only when it has at least one of these:
 
 - a synthetic fixture case with stable case id and oracle predicates;

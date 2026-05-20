@@ -1484,3 +1484,20 @@ date: 2026-05-12
     `ui-gallery-checkbox-semantics` suite passed 1/1, and the broad
     `ui-gallery-shadcn-runtime-evidence` suite now passes 15/15 with the Checkbox row run id
     `1779304154355`. No Checkbox runtime defect was reproduced.
+
+
+- [x] Add a Slider numeric action-state semantics runtime gate.
+  - Result:
+    `ui-gallery-slider-numeric-action-state.json` now starts directly on the Slider page, proves the
+    enabled single thumb exports numeric value/min/max/step/jump and enabled
+    `set_value`/`increment`/`decrement`, mutates the value to 80, then proves the disabled thumb
+    exports `disabled=true` and suppresses `set_value`, `increment`, `decrement`, and `focus`.
+    The first dedicated suite run exposed a real lint defect: multi-thumb Slider visual chrome
+    reused bare `{prefix}-thumb` ids. The recipe now derives unique
+    `{prefix}-thumb-{index}-chrome` ids while preserving semantic `{prefix}-thumb-{index}`
+    selectors, and `multi_thumb_slider_derives_unique_thumb_test_ids` guards that contract.
+    Focused runtime passed with run id `1779307931755`, the new `ui-gallery-slider-semantics`
+    suite passed 1/1 with summary
+    `target/fret-diag-slider-semantics-suite-v2/sessions/1779307963346-175080/suite.summary.json`,
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 16/16 with Slider row run
+    id `1779308615620`.
