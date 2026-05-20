@@ -9243,3 +9243,61 @@ Broader gates not run:
   - Reason: `RBX-M2-640` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-21 - RBX-M2-650 pointer-up guard dispatch retained Cx route isolation
+
+Claim verified:
+
+- Pointer-up guard arbitration no longer imports or names retained bridge Cx types in
+  `event_pointer_up/dispatch.rs`.
+- `PointerUpGuardCx` composes the existing retained-agnostic right-click and searcher seams for
+  early pointer-up guard handling.
+- The full retained fallback pointer-up path remains explicit in `event_pointer_up.rs` and is not
+  hidden inside a retained-agnostic guard helper.
+- Right-click pending click release, deferred right-pan menu opening, and searcher pointer-up
+  guard behavior remain green.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_up.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_up/dispatch.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving pointer-up guard
+    dispatch behind retained-agnostic seams.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_guard_dispatch_stays_off_retained_bridge) | test(right_click_route_stays_off_retained_bridge) | test(pending_right_click_click_release_requests_menu_open) | test(right_pan_defers_context_menu_until_pointer_up) | test(searcher_pointer_up_on_row_activates_and_finishes) | test(searcher_pointer_up_without_searcher_clears_pending_drag_only) | test(searcher_pointer_up_outside_dismisses_and_finishes) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 8 tests.
+  - Scope proven: source-policy locks pointer-up guard dispatch off retained bridge Cx names;
+    right-click and searcher pointer-up guard behaviors remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/event_pointer_up/dispatch.rs`
+  - Result: no matches.
+  - Scope proven: pointer-up guard dispatch no longer depends on retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after formatting the pointer-up guard
+    seam changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after moving
+    pointer-up guard dispatch behind retained-agnostic seams.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-650` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.

@@ -20,7 +20,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return;
         }
 
-        let _ = dispatch::dispatch_pointer_up(
+        let _ = pointer_up::handle_pointer_up(
             self,
             cx,
             snapshot,

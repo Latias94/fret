@@ -138,6 +138,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/event_clipboard_feedback_cx.rs");
     const UI_CANVAS_WIDGET_EVENT_TIMER_TOAST_RS: &str =
         include_str!("ui/canvas/widget/event_timer_toast.rs");
+    const UI_CANVAS_WIDGET_EVENT_POINTER_UP_DISPATCH_RS: &str =
+        include_str!("ui/canvas/widget/event_pointer_up/dispatch.rs");
     const UI_CANVAS_WIDGET_CANCEL_CLEANUP_RS: &str =
         include_str!("ui/canvas/widget/cancel_cleanup.rs");
     const UI_CANVAS_WIDGET_STICKY_WIRE_TARGETS_PICKER_RS: &str =
@@ -818,6 +820,22 @@ mod surface_policy_tests {
             assert!(
                 !right_click_sources.contains(forbidden),
                 "right-click route must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pointer_up_guard_dispatch_stays_off_retained_bridge() {
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_EVENT_POINTER_UP_DISPATCH_RS.contains(forbidden),
+                "pointer-up guard dispatch must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

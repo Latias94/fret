@@ -3632,6 +3632,33 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-650 Isolate pointer-up guard dispatch retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_up.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_up/dispatch.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move pointer-up guard arbitration off direct retained bridge Cx names by introducing
+      `PointerUpGuardCx`, composed from the existing right-click and searcher seams.
+    - Keep the retained fallback pointer-up route in the retained caller layer until the full
+      pointer-up commit/release path is migrated.
+    - Lock the guard dispatch file with source-policy coverage and prove right-click/searcher guard
+      behavior still passes.
+  - Result:
+    - `event_pointer_up/dispatch.rs` now only dispatches guard paths through
+      `PointerUpGuardCx`.
+    - `event_pointer_up.rs` calls the retained fallback `pointer_up::handle_pointer_up(...)`
+      directly after guards decline, keeping the retained full pointer-up path explicit.
+    - Added `pointer_up_guard_dispatch_stays_off_retained_bridge` source-policy coverage.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_guard_dispatch_stays_off_retained_bridge) | test(right_click_route_stays_off_retained_bridge) | test(pending_right_click_click_release_requests_menu_open) | test(right_pan_defers_context_menu_until_pointer_up) | test(searcher_pointer_up_on_row_activates_and_finishes) | test(searcher_pointer_up_without_searcher_clears_pending_drag_only) | test(searcher_pointer_up_outside_dismisses_and_finishes) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/event_pointer_up/dispatch.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
