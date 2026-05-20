@@ -269,12 +269,14 @@ pub(crate) fn check_bundle_for_chart_sampling_window_shifts_min_json(
                 if key != 0 {
                     unique_keys.insert(key);
                 }
+                let node = a.get("node").and_then(|v| v.as_u64()).unwrap_or(0);
 
                 if samples.len() < 32 {
                     samples.push(serde_json::json!({
                         "window": window_id,
                         "tick_id": tick_id,
                         "frame_id": frame_id,
+                        "node": node,
                         "chart_sampling_window_key": key,
                     }));
                 }
@@ -284,6 +286,8 @@ pub(crate) fn check_bundle_for_chart_sampling_window_shifts_min_json(
 
     let out_path = out_dir.join("check.chart_sampling_window_shifts_min.json");
     let (bundle_artifact, bundle_json) = super::bundle_artifact_alias_pair(bundle_path);
+    let unique_keys_vec = unique_keys.into_iter().collect::<Vec<u64>>();
+    let distinct_key_count = unique_keys_vec.len() as u64;
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
@@ -295,7 +299,8 @@ pub(crate) fn check_bundle_for_chart_sampling_window_shifts_min_json(
         "min_actions": min_actions,
         "snapshots_examined": snapshots_examined,
         "total_actions": total_actions,
-        "unique_keys": unique_keys.into_iter().collect::<Vec<u64>>(),
+        "distinct_key_count": distinct_key_count,
+        "unique_keys": unique_keys_vec,
         "samples": samples,
     });
     write_json_value(&out_path, &payload)?;
@@ -303,6 +308,14 @@ pub(crate) fn check_bundle_for_chart_sampling_window_shifts_min_json(
     if min_actions > 0 && total_actions < min_actions {
         return Err(format!(
             "expected chart sampling window shift actions to be recorded at least min_actions={min_actions}, but total_actions={total_actions} (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    if min_actions > 1 && distinct_key_count < min_actions {
+        return Err(format!(
+            "expected chart sampling window shift actions to include at least min_actions={min_actions} distinct nonzero sampling keys, but distinct_key_count={distinct_key_count} (total_actions={total_actions}, warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
             bundle_path.display(),
             out_path.display()
         ));

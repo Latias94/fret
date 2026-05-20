@@ -2083,6 +2083,74 @@ fn zoom_lock_prevents_zoom_window_update() {
 }
 
 #[test]
+fn interactive_data_zoom_x_pan_and_zoom_updates_output_axis_window() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+
+    let viewport = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(240.0)),
+    );
+    let mut spec = basic_spec();
+    spec.viewport = Some(viewport);
+    spec.data_zoom_x.push(DataZoomXSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: x_axis,
+        filter_mode: FilterMode::Filter,
+        min_value_span: None,
+        max_value_span: None,
+    });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let x: Vec<f64> = (0..100).map(|i| i as f64).collect();
+    let y: Vec<f64> = (0..100).map(|i| (i as f64 / 10.0).sin()).collect();
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(x));
+    table.push_column(Column::F64(y));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    settle_engine(&mut engine);
+    let before = engine
+        .output()
+        .axis_windows
+        .get(&x_axis)
+        .copied()
+        .expect("initial x axis window should be published");
+
+    engine.apply_action(Action::PanDataWindowXFromBase {
+        axis: x_axis,
+        base: before,
+        delta_px: 40.0,
+        viewport_span_px: viewport.size.width.0,
+    });
+    settle_engine(&mut engine);
+    let after_pan = engine
+        .output()
+        .axis_windows
+        .get(&x_axis)
+        .copied()
+        .expect("panned x axis window should be published");
+    assert_ne!(after_pan, before);
+
+    engine.apply_action(Action::ZoomDataWindowXFromBase {
+        axis: x_axis,
+        base: after_pan,
+        center_px: viewport.size.width.0 * 0.5,
+        log2_scale: 1.0,
+        viewport_span_px: viewport.size.width.0,
+    });
+    settle_engine(&mut engine);
+    let after_zoom = engine
+        .output()
+        .axis_windows
+        .get(&x_axis)
+        .copied()
+        .expect("zoomed x axis window should be published");
+    assert_ne!(after_zoom, after_pan);
+    assert!(after_zoom.span() < after_pan.span());
+}
+
+#[test]
 fn min_value_span_clamps_interactive_zoom_in() {
     let x_axis = crate::ids::AxisId::new(1);
 
@@ -3710,6 +3778,20 @@ impl TextMeasurer for NullTextMeasurer {
     ) -> TextMetrics {
         TextMetrics::default()
     }
+}
+
+fn settle_engine(engine: &mut ChartEngine) {
+    let mut measurer = NullTextMeasurer;
+    for _ in 0..32 {
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+            .expect("chart engine step should succeed");
+        if !step.unfinished {
+            return;
+        }
+    }
+
+    panic!("chart engine should settle within the test work budget");
 }
 
 #[test]

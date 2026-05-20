@@ -1905,3 +1905,1517 @@ are authored but blocked by an existing launch/layout convergence precondition.
   `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_table_retained_sort_select_scroll script_v2_roundtrip_ui_gallery_table_retained_window_boundary_scroll --no-fail-fast`
   with Nextest run id `c6dd9233-dda9-48fd-8fde-c510fc6d9ac1`, and
   `python tools\check_diag_scripts_registry.py`.
+
+## M108: Retained Table Header Bounds Flex Snapshot Fix
+
+Status: complete for the retained Table direct-start header-row bounds convergence defect.
+
+- Fixed a `fret-ui` flex mechanism defect in `layout_flex_impl_engine`: recursive child layout could
+  invalidate later sibling solved rects while the same final layout pass still needed those rects.
+- The flex path now snapshots ordered child rects before recursive child layout and uses that
+  snapshot for auto-margin tail computation, gap preservation, shifts, and final child layout.
+- Added `table_retained_torture_direct_start_header_bounds_converge` in the Gallery driver tests to
+  lock the direct-start retained Table header row at non-zero bounds.
+- Removed temporary debug probes and Gallery-side layout workarounds; the fix lives in the mechanism
+  layer.
+- Focused gates pass:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --features gallery-dev table_retained_torture_direct_start_header_bounds_converge --no-fail-fast --no-capture`
+  with Nextest run id `e84b549f-2b87-4faa-afb2-969c294ae01e`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+  with Nextest run id `faa8f32d-8f3e-4831-aa95-00e1861f831b`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_selected_semantics_follow_windowed_row_selection --no-fail-fast --no-capture`
+  with Nextest run id `9951e6c7-722f-4713-be3f-797dd2d01a6e`; and
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_table_retained_sort_select_scroll script_v2_roundtrip_ui_gallery_table_retained_window_boundary_scroll --no-fail-fast`
+  with Nextest run id `f8df7c84-6a3e-4dde-bbbe-0c0e31546407`.
+- Runtime diagnostics now pass the previous header-row bounds precondition and fail later at the row
+  selected-state assertion because the row click hit-tests the enclosing `scroll_bar`; that is the
+  next isolated follow-up, not part of this flex fix.
+
+## M109: Retained Table Scrollbar Hit Region Absolute-Size Fix
+
+Status: complete for the retained Table sort/select/scroll row-click hit-region defect.
+
+- Fixed a `fret-ui` positioned-layout mechanism defect: manual absolute-child layout paths carried
+  only `InsetStyle`, so an absolute wrapper with explicit size could lose that size and let
+  fill-sized descendants expand to the full probe bounds.
+- The concrete runtime symptom was the retained Table row click from F191 landing on the enclosing
+  ScrollArea `scroll_bar` instead of `ui-gallery-table-retained-row-0`.
+- `PositionedLayoutStyle::Absolute` now carries `InsetStyle + SizeStyle`, and
+  `layout_absolute_child_with_probe_bounds` resolves explicit width/height for absolute children
+  whose axis is pinned on only one side.
+- Added `absolute_interactivity_gate_preserves_scrollbar_track_bounds` in `fret-ui` to lock the
+  ScrollArea-style gate/opacity/scrollbar chain to a `10px` right track and prove content hits do
+  not share the scrollbar target.
+- Updated the retained Table sort/select/scroll script's post-scroll unselected-row oracle to the
+  stable visible row `ui-gallery-table-retained-row-10015`.
+- Focused gates pass:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui absolute_interactivity_gate_preserves_scrollbar_track_bounds --no-fail-fast --no-capture`
+  with Nextest run id `ae114762-9f8e-4ac9-9594-606305eee7ec`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`
+  with Nextest run id `7163fc89-31dd-4f1d-a2ef-ba2e522dac41`; and
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_table_retained_sort_select_scroll --no-fail-fast --no-capture`
+  with Nextest run id `67a19613-9301-4ef6-98a4-e20af5bff6b4`.
+- Runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\table\ui-gallery-table-retained-sort-select-scroll.json --dir target\fret-diag-table-retained-selected-sort-select-scroll-after-absolute-size-fix-current --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness`
+  with run id `1779121343180`.
+
+## M110: Retained DataTable Selected-State Runtime Companion
+
+Status: complete for the retained DataTable sort/select/scroll selected-state diagnostics companion.
+
+- Extended `ui-gallery-data-table-retained-sort-select-scroll.json` with `selected_is` assertions on
+  the real DataTable torture retained path.
+- The runtime proof covers row 0 `selected=false` before the click, row 0 `selected=true` after the
+  click, and post-scroll row `ui-gallery-data-table-row-10015` `selected=false`.
+- Added `script_v2_roundtrip_ui_gallery_data_table_retained_sort_select_scroll` so the redirect
+  script and new selected predicates are covered by protocol roundtrip.
+- The protocol gate passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_data_table_retained_sort_select_scroll --no-fail-fast --no-capture`
+  with Nextest run id `a23c2c5e-e7a7-499b-b2c3-62b73ed5ffd8`.
+- Runtime diagnostics pass:
+  `$env:FRET_UI_GALLERY_DATA_TABLE_RETAINED='1'; target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-retained-sort-select-scroll.json --dir target\fret-diag-data-table-retained-selected-sort-select-scroll-current --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev`
+  with run id `1779122449287`.
+
+## M111: UI Gallery Node Graph Cull Runtime Gate Coverage
+
+Status: complete for Node Graph Cull cull-window runtime evidence and protocol roundtrip coverage.
+
+- Reused the existing Node Graph Cull diagnostics scripts and suite manifests rather than creating a
+  new script surface.
+- Added protocol roundtrip tests for the three redirect entry points:
+  `ui-gallery-node-graph-cull-torture-pan-zoom`,
+  `ui-gallery-node-graph-cull-window-shifts`, and
+  `ui-gallery-node-graph-cull-window-no-shifts-small-pan`.
+- The runtime suites cover complementary cull-window behavior: pan/zoom smoke, large-pan cull
+  window shifts, and a small-pan zero-shift guard.
+- No mechanism defect was reproduced. The earlier `ensure_visible_timeout` was a stale-binary
+  false failure: `target/debug/fret-ui-gallery.exe` did not expose
+  `ui-gallery-nav-node-graph-cull-torture` after nav search, while the rebuilt
+  `target/dev-fast/fret-ui-gallery.exe` did.
+- Protocol roundtrip passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_node_graph_cull --no-fail-fast --no-capture`
+  with Nextest run id `fad3a59e-43d7-47b4-9183-81ae290e61d5`.
+- Runtime diagnostics suites pass:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-node-graph-cull --dir target/fret-diag-node-graph-cull-suite-current --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
+  with run id `1779124205290`;
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-node-graph-cull-window-shifts --dir target/fret-diag-node-graph-cull-window-shifts-suite-current --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
+  with run id `1779124258887`; and
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-node-graph-cull-window-no-shifts-small-pan --dir target/fret-diag-node-graph-cull-window-no-shifts-small-pan-suite-current --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
+  with run id `1779124253283`.
+
+## M112: UI Gallery Canvas Cull Runtime Gate Stabilization
+
+Status: complete for Canvas Cull pan/zoom runtime evidence and protocol roundtrip coverage.
+
+- Added `script_v2_roundtrip_ui_gallery_canvas_cull_torture_pan_zoom` so the Canvas Cull redirect
+  script is covered by `fret-diag-protocol` roundtrip.
+- Hardened `ui-gallery-canvas-cull-torture-pan-zoom.json` to enter the long Gallery nav through
+  `ui-gallery-nav-search`, type `canvas cull`, `ensure_visible` the target row, and then click the
+  Canvas Cull torture page.
+- The first runtime suite exposed a diagnostics authoring defect: the old direct click found
+  `ui-gallery-nav-canvas-cull-torture`, but its live bounds were at `y=993.3` in a `720px` window,
+  so the click was clamped out of the window and hit-tested `no_hit`.
+- No Canvas Cull mechanism defect was reproduced after the script entry fix.
+- JSON validation passes:
+  `python -m json.tool tools\diag-scripts\ui-gallery\perf\ui-gallery-canvas-cull-torture-pan-zoom.json > $null`.
+- Protocol roundtrip passes:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_canvas_cull_torture_pan_zoom --no-fail-fast --no-capture`
+  with Nextest run id `b32d1fd3-74f8-46c3-893f-1bee7b5d65f6`.
+- Runtime diagnostics pass:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-canvas-cull --dir target/fret-diag-canvas-cull-suite-after-search-entry --session-auto --launch -- target/dev-fast/fret-ui-gallery.exe`
+  with run id `1779125873114`; `check.pixels_changed.json` also passed for
+  `ui-gallery-canvas-cull-root`.
+
+## M113: Strict Gallery Nav Click Visibility Authoring Lint
+
+Status: complete for the cull/torture promoted-suite nav-click authoring guard.
+
+- Added `STRICT_NAV_CLICK_VISIBILITY_SUITES` to `tools/check_diag_scripts_registry.py` for:
+  `ui-gallery-canvas-cull`, `ui-gallery-chart-torture`, `ui-gallery-node-graph-cull`,
+  `ui-gallery-node-graph-cull-window-shifts`, and
+  `ui-gallery-node-graph-cull-window-no-shifts-small-pan`.
+- The new lint rejects `click` or `click_stable` on page-row `ui-gallery-nav-*` targets unless the
+  same target has a prior `ensure_visible(within_window=true)` or
+  `scroll_into_view(require_fully_within_window=true)` guard.
+- `ui-gallery-nav-search` and `ui-gallery-nav-scroll` are exempt because they are nav controls, not
+  long-list page rows.
+- Registry self-tests now cover the bad Canvas Cull direct-nav-click case, the guarded case, and
+  the nav-search exemption.
+- Gates pass:
+  `python tools/test_check_diag_scripts_registry.py`
+  with 39/39 tests passed, and
+  `python tools/check_diag_scripts_registry.py`.
+
+## M114: Chart Torture Sampling-Window Runtime Gate
+
+Status: complete for Chart Torture pan/zoom sampling-window telemetry.
+
+- Hardened `chart_sampling_window_shifts_min` so `min_actions > 1` requires distinct nonzero
+  `chart_sampling_window_key` values and writes `distinct_key_count` plus sample `node` evidence.
+- Raised the `ui-gallery-chart-torture` default post-run gate from one sampling-window action to
+  two distinct sampling-window keys.
+- Fixed the Chart Torture page to keep a shared delinea `ChartEngine` in a stable local model and
+  use dataZoom-backed X/Y axes, so retained/cached root recreation no longer resets pan/zoom state
+  before the diagnostics post-run check.
+- Added a delinea headless regression test proving `PanDataWindowXFromBase` and
+  `ZoomDataWindowXFromBase` publish changed `output.axis_windows` when `dataZoomX` is present.
+- Focused gates pass:
+  `cargo nextest run --cargo-profile dev-fast -p delinea interactive_data_zoom_x_pan_and_zoom_updates_output_axis_window --no-fail-fast --no-capture`
+  with Nextest run id `9424544b-9b5b-4ac8-849b-61d2fd6bd6ec`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag chart_sampling_window_shifts_min build_suite_core_default_post_run_checks_sets_chart_torture_sampling_window_gate --no-fail-fast --no-capture`
+  with Nextest run id `01f08348-f52b-4423-872d-cf0c3d0f1b00`; and
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_chart_torture_pan_zoom --no-fail-fast --no-capture`
+  with Nextest run id `3acf2b68-8b37-41da-8c73-e25f5820e177`.
+- Runtime diagnostics pass:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-chart-torture --dir target/fret-diag-chart-torture-suite-shared-engine-v2 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  with run id `1779130059382`; the sampling-window evidence records `distinct_key_count=2`.
+
+## M115: Chart Torture DataZoom Runtime Oracle
+
+Status: complete for Chart Torture shared-engine dataZoom state assertions.
+
+- Added a Gallery app snapshot payload for Chart Torture:
+  `app_snapshot.chart_torture.engine_present`,
+  `app_snapshot.chart_torture.x_data_zoom.active`, the rounded dataZoom window, and supplemental
+  `ChartCanvasOutput` model counters.
+- Updated `ui-gallery-chart-torture-pan-zoom.json` so the runtime gate asserts the shared engine
+  starts with `x_data_zoom.active=false` and becomes `true` after scripted drag/wheel interaction.
+- The first runtime draft exposed an oracle design bug, not a chart defect: `ChartCanvasOutput` is
+  paint-published, so ViewCache replay can leave the output model at revision `0` before
+  interaction. The final gate reads the shared `ChartEngine` state and still records output-model
+  counters when paint later publishes them.
+- Gates pass:
+  `cargo fmt -p fret-ui-gallery --check`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_chart_torture_pan_zoom --no-fail-fast --no-capture`
+  with Nextest run id `b48b7c47-8d4a-4d7d-8923-c3451a4060fe`;
+  `python tools/check_diag_scripts_registry.py`;
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-chart,gallery-dev`; and
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-chart-torture --dir target/fret-diag-chart-torture-suite-output-oracle-v2 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  with run id `1779131647234`.
+
+## M116: Chart Torture Tooltip and Axis Output Oracle
+
+Status: complete for Chart Torture paint-published output payload assertions.
+
+- Promoted the `ChartCanvasOutput` counters from supplemental evidence into hard script waits after
+  pan/zoom interaction.
+- `ui-gallery-chart-torture-pan-zoom.json` now asserts:
+  `x_axis_output_window.present=true`,
+  `output_model.domain_windows_count=2`, and
+  `output_model.tooltip_lines_count=2`.
+- This locks a stronger chart-specific runtime contract: after shared-engine pan/zoom, the
+  paint-published output model must expose both domain windows and tooltip/axis-pointer text.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\perf\ui-gallery-chart-torture-pan-zoom.json`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_chart_torture_pan_zoom --no-fail-fast --no-capture`
+  with Nextest run id `2a111ce6-47bf-4c4d-8a1c-4f18abfb29a2`;
+  `python tools/check_diag_scripts_registry.py`; and
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-chart-torture --dir target/fret-diag-chart-torture-suite-tooltip-output-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  with run id `1779132056758`.
+
+## M117: Workspace Shell Tabstrip Overflow Selection Gate
+
+Status: complete for workspace shell tabstrip overflow selection and visible-order tab command
+runtime coverage.
+
+- Added `ui-gallery-workspace-tabstrip-overflow-select-command.json` and promoted it into the
+  `ui-gallery-workspace-shell` suite.
+- The script starts UI Gallery with `FRET_UI_GALLERY_DIAG_PROFILE=workspace_shell`, keeps the
+  selected page at Overlay, resizes the window to `900 x 720` so the tabstrip overflows without
+  collapsing the top-bar center column, opens the overflow menu, selects the hidden Command tab,
+  and asserts `workspace_tab_strip_active_overflow_is`, active visible state, tab selection, and
+  `/selected_page == "command"`.
+- The full suite exposed a UI Gallery policy drift: keyboard/runtime tab commands handled by
+  `WorkspaceCommandScope` used the workspace crate's default MRU tab cycle while the Gallery
+  driver fallback and existing command smoke expected visible-order cycling. UI Gallery now
+  configures its single-pane workspace layout with `TabCycleMode::InOrder`, while the workspace
+  crate default remains MRU for editor-style consumers.
+- Added a focused UI Gallery regression test for the runtime layout-command path:
+  `workspace_layout_tab_next_uses_gallery_visible_order`.
+- Gates pass:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery workspace_layout_tab_next_uses_gallery_visible_order --no-fail-fast --no-capture`
+  with Nextest run id `c7040c5e-c9cd-4bdc-a4f4-62fc939cffd2`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-workspace tabs::tests::mru_next_toggles_between_two_most_recent --no-fail-fast --no-capture`
+  with Nextest run id `f11787fb-15b0-488b-951c-2fc272c9f5ee`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_workspace_tabstrip_overflow_select_command --no-fail-fast --no-capture`
+  with Nextest run id `9d9ea3d1-66b3-4db3-9a57-cde718d027b0`;
+  `python tools/test_check_diag_scripts_registry.py`;
+  `python tools/check_diag_scripts_registry.py`; and
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-workspace-shell --dir target/fret-diag-workspace-shell-suite-after-overflow-inorder-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  with run ids `1779136173632`, `1779136260333`, `1779136295210`, and `1779136342864`.
+
+## M118: Workspace Shell Demo Tab Movement Ownership Gate
+
+Status: complete for workspace shell demo tab drag ownership, end-drop resolution, and overflow
+reorder runtime coverage.
+
+- Added specific-tab reorder command ids:
+  `workspace.tab.move_before_id.<dragged_len>:<dragged><target>` and
+  `workspace.tab.move_after_id.<dragged_len>:<dragged><target>`.
+- `WorkspaceTabs::move_tab_relative_to` now moves the dragged tab instead of assuming the active tab
+  is still the dragged tab when the command is applied. Focused tests lock active-tab independence
+  and pinned-boundary rejection.
+- Tab strip end-drop now resolves to a concrete canonical after-target before dispatch, so dropping
+  on the explicit `drop_end` surface records the same target semantics as dropping beside a visible
+  tab.
+- Local tab strip drag state and pane-tree tab drag state now use stable window/root model keys so
+  local state survives tabstrip subtree rebuilds during overflow/scroll/reorder frames.
+- The workspace shell demo row that hosts the tab strip now uses auto height and wrapping, keeping
+  overflow controls reachable under the `420 x 720` constrained runtime gate.
+- The final overflow-reorder runtime failure was a diagnostics authoring issue, not a runtime
+  reorder defect: `doc-a-0` was clipped, and dragging from its stale/clipped semantic bounds did
+  not hit the tab. The script now activates `doc-a-0` from the overflow menu, waits for the active
+  tab to become visible, and then drags it to `drop_end`.
+- The rebuilt suite also exposed an app-shell ownership defect: the demo runner applied
+  `workspace.*` commands to its app-owned model, then `WorkspaceCommandScope` replayed the same
+  command to that model. The demo now disables workspace-model command replay on the scope while
+  keeping focus-transfer hooks active.
+- Gates pass:
+  `rustfmt --edition 2024 --check apps/fret-examples/src/workspace_shell_demo.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs ecosystem/fret-workspace/src/command_scope.rs ecosystem/fret-workspace/src/commands.rs ecosystem/fret-workspace/src/panes.rs ecosystem/fret-workspace/src/tab_strip/drag_state.rs ecosystem/fret-workspace/src/tab_strip/intent.rs ecosystem/fret-workspace/src/tab_strip/mod.rs ecosystem/fret-workspace/src/tabs.rs`
+  passed;
+  `git diff --check` passed;
+  `cargo test --profile dev-fast -p fret-workspace --lib end_drop_release_resolves_to_specific_after_target -- --nocapture`
+  passed;
+  `cargo test --profile dev-fast -p fret-workspace --lib move_specific_tab_before_after_does_not_depend_on_active_tab -- --nocapture`
+  passed;
+  `cargo test --profile dev-fast -p fret-workspace --lib move_specific_tab_commands_do_not_cross_pinned_boundary -- --nocapture`
+  passed;
+  `cargo test --profile dev-fast -p fret-workspace --test workspace_command_scope_focus_tab_strip_from_outside_pane -- --nocapture`
+  passed;
+  `python tools/check_diag_scripts_registry.py` passed;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_workspace_shell_demo_tab_cross_pane_move_to_end script_v2_roundtrip_workspace_shell_demo_tab_overflow_activate_hidden_smoke --no-fail-fast --no-capture`
+  passed with Nextest run id `53b23aaa-eca2-43aa-8e4b-201a0ed6f152`;
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/workspace-shell-demo-tab-pin-commits-preview-smoke.json --dir target/fret-diag-workspace-shell-demo-pin-preview-after-scope-owner-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target/dev-fast/workspace_shell_demo.exe`
+  passed with run id `1779147052955`; and
+  `target/dev-fast/fretboard-dev.exe diag suite workspace-shell-demo --dir target/fret-diag-workspace-shell-demo-suite-after-scope-owner-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/workspace_shell_demo.exe`
+  passed with suite summary
+  `target/fret-diag-workspace-shell-demo-suite-after-scope-owner-v1/sessions/1779147074217-22776/suite.summary.json`
+  and overflow reorder run id `1779147195864`.
+
+## M119: Workspace Shell Demo Dirty Close Button Gate
+
+Status: complete for dirty-close policy under widget-dispatched tab close commands.
+
+- Added `workspace-shell-demo-tab-close-button-dirty-shows-prompt-smoke.json` and promoted it into
+  the `workspace-shell-demo` suite.
+- The script marks the active `doc-a-2` tab dirty, clicks the real tab close button
+  `workspace-shell-pane-pane-a-tab-doc-a-2.close`, and asserts the pointer dispatch trace records
+  `workspace.tab.close.doc-a-2` before the dirty-close prompt appears.
+- The script cancels the first prompt and verifies the dirty tab and dirty marker remain, then
+  repeats the real close-button path and discards to verify the tab is removed.
+- The first runtime failure exposed an app-shell redraw defect: `handle_command` installed the
+  blocked dirty-close prompt model but only requested redraw for applied outcomes or UI-driver
+  fallback dispatch. The demo now redraws for `blocked_dirty_close`.
+- The companion `fret-workspace` unit test proves close-by-id commands can be blocked by
+  `BlockDirtyClosePolicy` without removing the dirty tab.
+- Runtime authoring note: while the modal prompt is open, the diagnostics modal barrier filters
+  background tab selectors. The script intentionally clicks Cancel before asserting preserved
+  background tab state.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-tab-close-button-dirty-shows-prompt-smoke.json > $null`;
+  `cargo test --profile dev-fast -p fret-workspace --lib dirty_close_policy_can_block_close_by_id -- --nocapture`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_workspace_shell_demo_tab_close_button_dirty_shows_prompt_smoke --no-fail-fast --no-capture`
+  with Nextest run id `4c8b4510-ec3f-421a-b0dc-826a0faa27ed`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps\fret-examples\src\workspace_shell_demo.rs ecosystem\fret-workspace\src\tabs.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `cargo build --profile dev-fast -p fret-demo --bin workspace_shell_demo`; and
+  `git diff --check`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\workspace-shell-demo-tab-close-button-dirty-shows-prompt-smoke.json --dir target\fret-diag-workspace-shell-demo-dirty-close-widget-v3 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  with run id `1779148945096` and AI packet
+  `target/fret-diag-workspace-shell-demo-dirty-close-widget-v3/sessions/1779148942029-109108/1779148945096/ai.packet`.
+- Full runtime suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite workspace-shell-demo --dir target\fret-diag-workspace-shell-demo-suite-dirty-close-widget-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  with suite summary
+  `target/fret-diag-workspace-shell-demo-suite-dirty-close-widget-v1/sessions/1779148963907-13484/suite.summary.json`
+  and 11/11 scripts passed.
+
+## M120: Workspace Shell Demo Close Others Dirty Aggregation Gate
+
+Status: complete for aggregate dirty-close policy under context-menu Close Other Tabs commands.
+
+- Added `workspace-shell-demo-tab-close-others-dirty-aggregation-smoke.json` and promoted it into
+  the `workspace-shell-demo` suite.
+- The script marks `doc-a-0` and `doc-a-1` dirty, activates `doc-a-2`, invokes `Close Other Tabs`
+  from the real tab context menu, and asserts the pointer command dispatch trace records
+  `workspace.tab.close.others`.
+- The dirty-close prompt now exposes a stable diagnostics label containing the reason, active tab,
+  close-count, and dirty target list. The runtime gate asserts `reason=CloseOthers`,
+  `active=doc-a-2`, `close_count=2`, and `dirty=[doc-a-0, doc-a-1]`.
+- The first runtime drafts exposed diagnostics authoring defects, not runtime defects: direct tab
+  clicking did not make `doc-a-0` selected in this shell state, and `arrowright` was not a valid
+  key token. The final script uses the existing content-focus plus tabstrip keyboard-selection
+  pattern and the valid `arrow_right` key token.
+- The companion `fret-workspace` unit test proves `CloseOthers` dirty-close requests aggregate
+  multiple non-pinned, non-active targets while leaving pinned and active dirty tabs out of the
+  close target set.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-tab-close-others-dirty-aggregation-smoke.json > $null`;
+  `python -m json.tool tools\diag-scripts\workspace-shell-demo-tab-close-others-dirty-aggregation-smoke.json > $null`;
+  `python tools/check_diag_scripts_registry.py`;
+  `cargo test --profile dev-fast -p fret-workspace --lib dirty_close_policy_can_block_close_others_with_multiple_targets -- --nocapture`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_workspace_shell_demo_tab_close_others_dirty_aggregation_smoke --no-fail-fast --no-capture`
+  with Nextest run id `c5d88a4e-1708-43e1-aac0-39bd3f49db41`;
+  `cargo build --profile dev-fast -p fret-demo --bin workspace_shell_demo`; and
+  `rustfmt --edition 2024 --check apps\fret-examples\src\workspace_shell_demo.rs ecosystem\fret-workspace\src\tabs.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\workspace-shell-demo-tab-close-others-dirty-aggregation-smoke.json --dir target\fret-diag-workspace-shell-demo-close-others-dirty-aggregation-v3 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  with run id `1779150581545` and AI packet
+  `target/fret-diag-workspace-shell-demo-close-others-dirty-aggregation-v3/sessions/1779150577000-104072/1779150581545/ai.packet`.
+- Full runtime suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite workspace-shell-demo --dir target\fret-diag-workspace-shell-demo-suite-close-others-dirty-aggregation-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  with suite summary
+  `target/fret-diag-workspace-shell-demo-suite-close-others-dirty-aggregation-v1/sessions/1779150610325-113064/suite.summary.json`;
+  12/12 scripts passed and the new aggregate script run id is `1779150627934`.
+
+## M121: Workspace Shell Demo Cross-Pane Close Button Ownership Gate
+
+Status: complete for real close-button ownership when the clicked tab belongs to a non-active pane.
+
+- Added `workspace-shell-demo-tab-close-cross-pane-button-ownership-smoke.json` and promoted it into
+  the `workspace-shell-demo` suite.
+- The script starts from the default split layout where `pane-a` is the active pane and `pane-b` is
+  visible with selected `doc-b-1`.
+- It clicks the real `workspace-shell-pane-pane-b-tab-doc-b-1.close` button, asserts the pointer
+  path dispatches `workspace.pane.activate.pane-b`, then asserts `workspace.tab.close.doc-b-1`
+  dispatches from the same close button.
+- The final state proves command ownership by checking `doc-b-1` is removed, `doc-b-0` remains and
+  becomes selected with set size `1`, and pane-a's active `doc-a-2` remains present.
+- No runtime mechanism defect was reproduced. The existing tab close interaction already carries a
+  pane-activate command in the close press state and dispatches it before the close command, so the
+  app-owned `WorkspaceWindowLayout` routes the close to the correct pane.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-tab-close-cross-pane-button-ownership-smoke.json > $null`;
+  `python -m json.tool tools\diag-scripts\workspace-shell-demo-tab-close-cross-pane-button-ownership-smoke.json > $null`;
+  `python tools/check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_workspace_shell_demo_tab_close_cross_pane_button_ownership_smoke --no-fail-fast --no-capture`
+  with Nextest run id `dfb8718a-4d49-4fbe-aacd-05b732b5f971`;
+  `cargo build --profile dev-fast -p fret-demo --bin workspace_shell_demo`; and
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-tab-close-cross-pane-button-ownership-smoke.json --dir target\fret-diag-workspace-shell-demo-cross-pane-close-ownership-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  with run id `1779151906508` and AI packet
+  `target/fret-diag-workspace-shell-demo-cross-pane-close-ownership-v1/sessions/1779151900949-103552/1779151906508/ai.packet`.
+- Full runtime suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite workspace-shell-demo --dir target\fret-diag-workspace-shell-demo-suite-cross-pane-close-ownership-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  with suite summary
+  `target/fret-diag-workspace-shell-demo-suite-cross-pane-close-ownership-v1/sessions/1779152081871-77896/suite.summary.json`;
+  13/13 scripts passed and the new cross-pane close ownership script run id is `1779152100416`.
+
+## M122: Workspace Shell Demo Cross-Pane Close Others Context-Menu Ownership Gate
+
+Status: complete for real context-menu `Close Other Tabs` ownership when the context-clicked tab
+belongs to a non-active pane.
+
+- Added `workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json` and
+  promoted it into the `workspace-shell-demo` suite.
+- The script starts from the default split layout where `pane-a` is active and `pane-b` is visible
+  with selected `doc-b-1`.
+- It right-clicks `workspace-shell-pane-pane-b-tab-doc-b-1`, waits for a handled
+  `workspace.pane.activate.pane-b`, clicks the real menu item
+  `workspace-shell-pane-pane-b-tab-doc-b-1.menu.close_others`, and asserts
+  `workspace.tab.close.others` dispatches from that menu item.
+- The final state proves command ownership by checking pane-b's other tab `doc-b-0` is removed,
+  `doc-b-1` remains selected with set size `1`, and pane-a's `doc-a-0`, `doc-a-1`, and selected
+  `doc-a-2` remain present.
+- No runtime ownership defect was reproduced. The first focused runtime draft did expose a
+  diagnostics source-attribution gap: the right-click-triggered pane activation is recorded as
+  programmatic and driver-handled rather than pointer-sourced. The final gate asserts the handled
+  activation command and keeps the pointer-source assertion on the actual aggregate close command.
+  M123 closes this diagnostics follow-up by making pane activation record pointer source metadata.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json > $null`;
+  `python -m json.tool tools\diag-scripts\workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_workspace_shell_demo_tab_close_others_cross_pane_context_menu_ownership_smoke --no-fail-fast --no-capture`
+  with Nextest run id `e7ce6c13-3096-4fb6-a9f1-7a5c81409066`;
+  `cargo build --profile dev-fast -p fret-demo --bin workspace_shell_demo`; and
+  `git diff --check`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json --dir target\fret-diag-workspace-shell-demo-cross-pane-context-close-others-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  with run id `1779152893863` and AI packet
+  `target/fret-diag-workspace-shell-demo-cross-pane-context-close-others-v2/sessions/1779152888206-118016/1779152893863/ai.packet`.
+- Full runtime suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite workspace-shell-demo --dir target\fret-diag-workspace-shell-demo-suite-cross-pane-context-close-others-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  with suite summary
+  `target/fret-diag-workspace-shell-demo-suite-cross-pane-context-close-others-v1/sessions/1779153282522-114068/suite.summary.json`;
+  14/14 scripts passed and the new context-menu Close Others ownership script run id is
+  `1779153324733`.
+
+## M123: Workspace Shell Demo Right-Click Pane Activation Source Attribution
+
+Status: complete for pointer-source attribution on pane activation triggered by a right-clicked tab.
+
+- Fixed the pane-level pointer activation hook in `fret-workspace` so it records pending command
+  dispatch source before dispatching `workspace.pane.activate.<id>`.
+- The source attribution uses the pointer event's hit pressable target when available, so
+  right-clicking a context-menu-wrapped tab attributes pane activation to the tab pressable rather
+  than the pane container.
+- Strengthened
+  `workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json` to assert
+  `workspace.pane.activate.pane-b` is `source_kind=pointer` and
+  `source_test_id=workspace-shell-pane-pane-b-tab-doc-b-1`.
+- Gates pass:
+  `rustfmt --edition 2024 --check ecosystem\fret-workspace\src\panes.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python tools\check_diag_scripts_registry.py`;
+  `git diff --check`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_workspace_shell_demo_tab_close_others_cross_pane_context_menu_ownership_smoke --no-fail-fast --no-capture`
+  with Nextest run id `bb71150c-c340-4217-9dee-e71eaab872f9`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-workspace --lib --no-fail-fast`
+  with Nextest run id `8e889da8-a462-49bf-9685-1bb9750deba6`; and
+  `cargo build --profile dev-fast -p fret-demo --bin workspace_shell_demo`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json --dir target\fret-diag-workspace-shell-demo-cross-pane-context-close-others-source-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  with run id `1779156237310` and AI packet
+  `target/fret-diag-workspace-shell-demo-cross-pane-context-close-others-source-v1/sessions/1779156234065-53332/1779156237310/ai.packet`.
+- Full runtime suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite workspace-shell-demo --dir target\fret-diag-workspace-shell-demo-suite-cross-pane-context-source-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  with suite summary
+  `target/fret-diag-workspace-shell-demo-suite-cross-pane-context-source-v1/sessions/1779156335684-11164/suite.summary.json`;
+  14/14 scripts passed and the strengthened context-menu Close Others ownership script run id is
+  `1779156370933`.
+
+## M124: Retained DataTable Column Actions And Stale Script Gates
+
+Status: complete for retained DataTable column-action state, scoped toolbar selectors, and the
+observable window-boundary runtime gate.
+
+- Strengthened `ui-gallery-data-table-retained-column-actions-menu.json` so the real retained
+  DataTable menu path asserts pointer-sourced command dispatch for
+  `fret_ui_shadcn.data_table.column_action/pin_left/mem_mb`,
+  `fret_ui_shadcn.data_table.column_action/sort_asc/mem_mb`, and
+  `fret_ui_shadcn.data_table.column_action/hide/mem_mb`.
+- The gate now proves the retained UI/model state does not split after hiding `mem_mb`: the column
+  is absent from the visible table, `Sorting: mem_mb asc` and
+  `Pinning: left=[mem_mb] right=[]` remain present, and the Columns menu reports `mem_mb`
+  unchecked.
+- Fixed retained DataTable toolbar script drift by replacing old unscoped toolbar ids with the
+  current `ui-gallery-data-table-torture-toolbar-*` ids in the faceted-filter, reset-filters, and
+  dashed-border screenshot scripts.
+- Reworked `ui-gallery-data-table-window-boundary-scroll-retained.json` from repeated
+  `wheel + wait_frames` steps to deterministic observable row-window assertions: select row 0,
+  touch-wheel to row 25, prove row 0 is detached, then wheel back and prove row 0 returns.
+- Added protocol roundtrip coverage for the DataTable retained window-boundary script so schema
+  mistakes in that promoted gate are caught before runtime.
+- No retained DataTable mechanism or recipe stale-state defect was reproduced. The red runs exposed
+  diagnostics authoring drift instead: scoped toolbar ids had changed, the old window-boundary
+  script could stall on a static frame with `timeout.no_frames`, and the DataTable path did not
+  produce a stable retained-reconcile counter matching the attempted oracle.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-window-boundary-scroll-retained.json > $null`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_data_table_retained_column_actions_menu script_v2_roundtrip_ui_gallery_data_table_retained_faceted_filter script_v2_roundtrip_ui_gallery_data_table_retained_reset_filters script_v2_roundtrip_ui_gallery_data_table_retained_window_boundary_scroll --no-fail-fast --no-capture`
+  with Nextest run id `96dcbf8b-13fa-48da-bae6-c930fad77b04`.
+- Focused runtime diagnostics pass:
+  `$env:FRET_UI_GALLERY_DATA_TABLE_RETAINED='1'; target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-retained-column-actions-menu.json --dir target\fret-diag-data-table-retained-column-actions-menu-state-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with run id `1779157628043` and AI packet
+  `target/fret-diag-data-table-retained-column-actions-menu-state-v2/sessions/1779157546485-30336/1779157628043/ai.packet`.
+- Focused window-boundary diagnostics pass:
+  `$env:FRET_UI_GALLERY_DATA_TABLE_RETAINED='1'; target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-window-boundary-scroll-retained.json --dir target\fret-diag-data-table-window-boundary-scroll-retained-deterministic-v5 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with run id `1779160262364` and AI packet
+  `target/fret-diag-data-table-window-boundary-scroll-retained-deterministic-v5/sessions/1779160251641-54688/1779160262364/ai.packet`.
+- Full retained DataTable suite diagnostics pass:
+  `$env:FRET_UI_GALLERY_DATA_TABLE_RETAINED='1'; target\dev-fast\fretboard-dev.exe diag suite ui-gallery-data-table-retained --dir target\fret-diag-data-table-retained-suite-column-actions-state-v3 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with suite summary
+  `target/fret-diag-data-table-retained-suite-column-actions-state-v3/sessions/1779160314350-36592/suite.summary.json`;
+  12/12 scripts passed and the strengthened column-actions run id is `1779160434776`.
+
+## M125: DataTable View-Cache Filter-Shrink Inputs-Change Gate Hardening
+
+Status: complete for self-contained launch configuration and protocol coverage of the non-retained
+view-cache DataTable filter-shrink gate.
+
+- Strengthened
+  `ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json` with
+  `required_launch_features=["gallery-dev"]` and `env_defaults.FRET_UI_GALLERY_VIEW_CACHE=1`, so
+  promoted suite runs do not rely on caller-provided environment setup.
+- Added an app-snapshot assertion for `/view_cache/enabled=true` before the script applies the
+  global filter. This proves the later `non_retained_rerender` and
+  `scroll_handle_inputs_change_window_update` assertions are being exercised in the intended
+  Gallery view-cache mode.
+- Added direct `fret-diag-protocol` roundtrip coverage for the script.
+- No new mechanism or DataTable recipe defect was reproduced. The existing non-retained view-cache
+  filter-shrink invalidation-detail path still passes; this slice closes the weaker gate hygiene
+  around launch feature/env proof and schema coverage.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_data_table_view_cache_filter_shrink_vlist_inputs_change --no-fail-fast --no-capture`
+  with Nextest run id `19530940-8e8e-477e-9b3e-80f8f0190843`; and
+  `git diff --check`.
+- Focused runtime diagnostics pass without manually setting `FRET_UI_GALLERY_VIEW_CACHE`:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\data-table\ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json --dir target\fret-diag-data-table-view-cache-filter-shrink-env-default-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with run id `1779161694881` and AI packet
+  `target/fret-diag-data-table-view-cache-filter-shrink-env-default-v1/sessions/1779161683796-54152/1779161694881/ai.packet`.
+- Suite diagnostics pass without manually setting `FRET_UI_GALLERY_VIEW_CACHE`:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-data-table-view-cache-torture --dir target\fret-diag-data-table-view-cache-suite-env-default-v1 --session-auto --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with suite summary
+  `target/fret-diag-data-table-view-cache-suite-env-default-v1/sessions/1779161746388-13892/suite.summary.json`;
+  1/1 scripts passed and the script run id is `1779161756820`.
+
+## M126: UI Gallery View Cache Model-Mutation Protocol Gate
+
+Status: complete for protocol coverage and fresh runtime evidence on the View Cache harness gate.
+
+- Added direct `fret-diag-protocol` roundtrip coverage for
+  `ui-gallery-view-cache-model-mutation-through-cache.json`.
+- The script already self-configures `FRET_UI_GALLERY_START_PAGE=view_cache`,
+  `FRET_UI_GALLERY_VIEW_CACHE=1`, and `FRET_UI_GALLERY_VIEW_CACHE_INNER=1`, then asserts
+  `/view_cache/enabled=true` and `/view_cache/inner_enabled=true` before mutating the cached
+  subtree counter and Popover state.
+- No new mechanism defect was reproduced. The fresh runtime pass confirms the existing
+  cached-subtree counter mutation and controlled Popover open/close state still converge through
+  dedicated `/view_cache` app snapshot fields.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\view-cache\ui-gallery-view-cache-model-mutation-through-cache.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_view_cache_model_mutation_through_cache --no-fail-fast --no-capture`
+  with Nextest run id `e96cc371-57d7-46ca-859b-9120a0907d6d`; and
+  `git diff --check`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\view-cache\ui-gallery-view-cache-model-mutation-through-cache.json --dir target\fret-diag-view-cache-model-mutation-roundtrip-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with run id `1779162384646` and AI packet
+  `target/fret-diag-view-cache-model-mutation-roundtrip-v1/sessions/1779162372113-24280/1779162384646/ai.packet`.
+- Suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-view-cache --dir target\fret-diag-view-cache-suite-roundtrip-v1 --session-auto --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with suite summary
+  `target/fret-diag-view-cache-suite-roundtrip-v1/sessions/1779162428017-56424/suite.summary.json`;
+  1/1 scripts passed and the script run id is `1779162437682`.
+
+## M127: Resizable Moving Cached Combobox Protocol Gate
+
+Status: complete for protocol coverage and fresh runtime evidence on cached movement/root-boundary
+placement.
+
+- Added direct `fret-diag-protocol` roundtrip coverage for
+  `ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json`.
+- The script already self-configures the Resizable page, the diagnostics-only moving cached
+  Combobox section, and `FRET_UI_GALLERY_VIEW_CACHE=1`. It moves the cached Combobox source from
+  the left Resizable panel to the right panel before opening the overlay.
+- No new mechanism defect was reproduced. The fresh runtime pass confirms the existing cached-root
+  interaction-cache replay fix still preserves hit-test routing, top-side overlay placement,
+  right-panel/window boundary containment, and Combobox input/listbox relation edges after movement.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\resizable\ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_resizable_view_cache_moving_combobox_root_boundary --no-fail-fast --no-capture`
+  with Nextest run id `c0b75f4d-b758-48c7-9aac-db09a7f02595`; and `git diff --check`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\resizable\ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json --dir target\fret-diag-resizable-view-cache-moving-combobox-roundtrip-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with run id `1779163064132` and AI packet
+  `target/fret-diag-resizable-view-cache-moving-combobox-roundtrip-v1/sessions/1779163052541-37388/1779163064132/ai.packet`.
+- Suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-resizable --dir target\fret-diag-resizable-suite-view-cache-roundtrip-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with suite summary
+  `target/fret-diag-resizable-suite-view-cache-roundtrip-v1/sessions/1779163144561-38700/suite.summary.json`;
+  2/2 scripts passed, `scripts_with_evidence=2`, `overlay_chosen_side_counts.top=2`, and the
+  moving cached Combobox script run id is `1779163184863`.
+
+## M128: Command Retained Active-Descendant Action-State Protocol Gate
+
+Status: complete for protocol coverage and fresh runtime evidence on retained relation/action-state
+mutation.
+
+- Added direct `fret-diag-protocol` roundtrip coverage for
+  `ui-gallery-command-retained-active-descendant-action-state.json`.
+- The script already gates the retained/windowed Command invariant: the active descendant clears
+  when the active row detaches, and after reattach the same row must expose refreshed
+  `disabled=true` and `invoke=false` semantics.
+- No retained relation/action-state mechanism defect was reproduced. The focused runtime pass and
+  full Command suite confirm the existing synthetic retained active-descendant fixture remains
+  locked by a real UI Gallery runtime surface.
+- The first full-suite rerun exposed diagnostics authoring drift in
+  `ui-gallery-command-docs-demo-long-query-text.json`: the docs demo was already visible, so a
+  pre-positioning `scroll_into_view` could emit a no-op wheel and stall with `timeout.no_frames`.
+  The script now uses `ensure_visible(within_window=true)` for that precondition while preserving
+  the input-level long-text oracle.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\command\ui-gallery-command-docs-demo-long-query-text.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery\command\ui-gallery-command-retained-active-descendant-action-state.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_command_docs_demo_long_query_text script_v2_roundtrip_ui_gallery_command_retained_active_descendant_action_state --no-fail-fast --no-capture`
+  with Nextest run id `07836627-15f2-45ec-9209-2915b9d38a3e`; and `git diff --check`.
+- Focused retained action-state runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\command\ui-gallery-command-retained-active-descendant-action-state.json --dir target\fret-diag-command-retained-active-descendant-action-state-roundtrip-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with run id `1779164006100` and AI packet
+  `target/fret-diag-command-retained-active-descendant-action-state-roundtrip-v1/sessions/1779163988388-20728/1779164006100/ai.packet`.
+- Focused long-query runtime diagnostics pass after the authoring fix:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\command\ui-gallery-command-docs-demo-long-query-text.json --dir target\fret-diag-command-long-query-ensure-visible-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with run id `1779164428287`.
+- Full Command suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-command --dir target\fret-diag-command-suite-retained-action-state-roundtrip-v2 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with suite summary
+  `target/fret-diag-command-suite-retained-action-state-roundtrip-v2/sessions/1779164457116-49144/suite.summary.json`;
+  18/18 scripts passed, `scripts_with_evidence=18`, the long-query script run id is
+  `1779164551371`, and the retained action-state script run id is `1779165106416`.
+
+## M129: AI FileTree Protocol Coverage And Auto-Height VirtualList Refresh
+
+Status: complete for protocol coverage, measured-leaf dirtying refresh, screenshot-script
+stabilization, and fresh AI FileTree suite evidence.
+
+- Added direct `fret-diag-protocol` roundtrip coverage for the four promoted AI FileTree scripts:
+  toggle, actions, large-scroll, and zinc-dark screenshot.
+- The first fresh suite rerun reproduced the same high-risk mechanism shape as M80: expanded
+  FileTree rows could be present in semantics while the parent auto-height `VirtualList` measured
+  leaf kept a stale intrinsic height, so the next docs section overlapped the row's hit-test area.
+- `crates/fret-ui/src/layout/engine/flow.rs` now centralizes measured-leaf setup so any measured
+  Taffy leaf whose `UiTree` node is layout-invalidated is also marked dirty in the layout engine.
+  This covers VirtualList and the adjacent auto-sized measured leaf paths without introducing a
+  FileTree-specific workaround.
+- The screenshot script now waits for the expanded `file-lib` row instead of using a fixed
+  two-frame delay, then asserts the hidden selected marker through `raw_semantics_hidden_is` and
+  the actual selected row through `selected_is`.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\ai\ui-gallery-ai-file-tree-demo-screenshot-zinc-dark.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates\fret-ui\src\layout\engine\flow.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui auto_height_virtual_list_len_growth_reflows_following_siblings --no-fail-fast --no-capture`
+  with Nextest run id `de3f626b-824f-4d21-82af-251d51680c64`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui virtual_list --no-fail-fast --no-capture`
+  with Nextest run id `a2e88f71-2c4c-431d-9b0c-8cefdced2a4b`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_ai_file_tree --no-fail-fast --no-capture`
+  with Nextest run id `ea3bdd56-e255-4d34-97f4-b97599cb7369`; and
+  `git diff --check`.
+- Focused screenshot diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery-ai-file-tree-demo-screenshot-zinc-dark.json --dir target\fret-diag-ai-file-tree-screenshot-zinc-dark-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  with run id `1779168079984` and AI packet
+  `target/fret-diag-ai-file-tree-screenshot-zinc-dark-v2/sessions/1779168068402-29976/1779168079984/ai.packet`.
+- Full AI FileTree suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-ai-file-tree --dir target\fret-diag-ai-file-tree-suite-v3 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  with suite summary
+  `target/fret-diag-ai-file-tree-suite-v3/sessions/1779168118270-70184/suite.summary.json`;
+  4/4 scripts passed, `scripts_with_evidence=4`, and the screenshot script run id is
+  `1779168265307`.
+
+## M130: Workspace Shell Demo Window-Close Dirty Aggregation Gate
+
+Status: complete for window-level dirty-close aggregation across workspace panes.
+
+- Added `WorkspaceCloseReason::CloseWindow`,
+  `WorkspaceWindowLayout::dirty_close_request_for_window_close`, and
+  `WorkspaceWindowLayout::can_close_window_with_policy` so the workspace policy layer can build a
+  single dirty-close request over all pane tabs before a window is closed.
+- Routed the workspace shell demo's real `window.close` command and `Event::WindowCloseRequested`
+  through that policy path. When policy blocks, the app-owned dirty-close prompt now reports the
+  `CloseWindow` reason and preserves the window until the user chooses Discard or Save.
+- Added debug controls that mark pane-a and pane-b active tabs dirty, then dispatch the real
+  `window.close` command. The shared command-button helper now records pending pointer source so
+  driver-handled commands keep accurate diagnostics attribution.
+- Added
+  `workspace-shell-demo-window-close-dirty-aggregation-smoke.json` and promoted it into the
+  `workspace-shell-demo` suite. The script marks `doc-a-2` and `doc-b-1` dirty, clicks
+  `workspace-shell-debug-close-window`, asserts pointer-sourced `window.close`, verifies the prompt
+  label contains `reason=CloseWindow active=doc-a-2 close_count=5` and
+  `dirty=[doc-a-2, doc-b-1]`, cancels, and proves both panes plus dirty markers remain.
+- The first focused drafts exposed diagnostics authoring gaps rather than the final ownership
+  invariant: the `window.close` driver branch did not record a command-dispatch trace, the shared
+  debug command button did not record pending pointer source, and the redirect file needed
+  `kind=script_redirect`/`to` to run under the suite launcher.
+- Gates pass:
+  `rustfmt --edition 2024 --check ecosystem\fret-workspace\src\close_policy.rs ecosystem\fret-workspace\src\layout.rs apps\fret-examples\src\workspace_shell_demo.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python -m json.tool tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-window-close-dirty-aggregation-smoke.json > $null`;
+  `python -m json.tool tools\diag-scripts\workspace-shell-demo-window-close-dirty-aggregation-smoke.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-workspace window_close_dirty_policy_aggregates_tabs_across_panes --no-fail-fast --no-capture`
+  with Nextest run id `8cf5ad37-5f56-4572-bab9-b3d96f5a29ae`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_workspace_shell_demo_window_close_dirty_aggregation_smoke --no-fail-fast --no-capture`
+  with Nextest run id `a076a73a-6fe1-44c5-9757-1fd257a67a0c`; and
+  `cargo build --profile dev-fast -p fret-demo --bin workspace_shell_demo`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\workspace\shell-demo\workspace-shell-demo-window-close-dirty-aggregation-smoke.json --dir target\fret-diag-workspace-shell-demo-window-close-dirty-aggregation-v4 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  with run id `1779171091877` and AI packet
+  `target/fret-diag-workspace-shell-demo-window-close-dirty-aggregation-v4/sessions/1779171088566-57484/1779171091877/ai.packet`.
+- Full runtime suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite workspace-shell-demo --dir target\fret-diag-workspace-shell-demo-suite-window-close-dirty-aggregation-v2 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\workspace_shell_demo.exe`
+  with suite summary
+  `target/fret-diag-workspace-shell-demo-suite-window-close-dirty-aggregation-v2/sessions/1779171327648-11792/suite.summary.json`;
+  the new window-close dirty aggregation script run id is `1779171369594`.
+
+## M131: Chart Torture Visible Domain-Window Oracle
+
+Status: complete for Chart Torture visible X domain-window correctness after pan/zoom.
+
+- Extended `app_snapshot.chart_torture` to schema version 2 with:
+  `x_full_domain_window`,
+  `output_model.x_domain_window`, and runtime oracle booleans for whether the engine X axis output
+  window and paint-published output-model X domain window match the active dataZoom window and
+  differ from the fixture's initial full X domain.
+- Hardened `ui-gallery-chart-torture-pan-zoom.json` so it first asserts the known full-domain X
+  baseline (`1735689600000..1747689540000`, span `11999940000`) before interaction, then waits for
+  all visible-window oracle booleans after drag/wheel.
+- No new chart mechanism defect was reproduced. The fresh suite shows the expected convergence:
+  after interaction, the output model and engine axis output both publish
+  `1739283224994..1757471732398`, matching dataZoom and differing from the initial full domain.
+- Gates pass:
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\driver\diag_snapshot.rs`;
+  `python -m json.tool tools\diag-scripts\ui-gallery\perf\ui-gallery-chart-torture-pan-zoom.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_chart_torture_pan_zoom --no-fail-fast --no-capture`
+  with Nextest run id `7bbb707d-390a-4659-b782-1d38ef175e24`;
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-chart,gallery-dev`;
+  and `git diff --check`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\perf\ui-gallery-chart-torture-pan-zoom.json --dir target\fret-diag-chart-torture-visible-window-oracle-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  with run id `1779173616393` and AI packet
+  `target/fret-diag-chart-torture-visible-window-oracle-v1/sessions/1779173543971-68812/1779173616393/ai.packet`.
+- Full runtime suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-chart-torture --dir target\fret-diag-chart-torture-suite-visible-window-oracle-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  with suite summary
+  `target/fret-diag-chart-torture-suite-visible-window-oracle-v1/sessions/1779173643592-70968/suite.summary.json`;
+  run id `1779173655069`.
+
+## M132: Carousel State Suite And Focus Autoplay Stop
+
+Status: complete for compact Carousel state diagnostics and focus-triggered autoplay
+stopOnInteraction correctness.
+
+- Added `ui-gallery-carousel-state` as a compact zero-warning diagnostics suite for Carousel state
+  interactions: Events select, Events reInit, autoplay stopOnLastSnap, autoplay stopOnInteraction
+  via focus, and RTL controls.
+- The first full suite run found a real shadcn Carousel runtime defect. Pressing Tab moved focus
+  into a nested slide button and watchFocus scrolled to that slide, but the autoplay API still
+  reported `playing=true` and `stopped_by_interaction=false`.
+- Fixed the owning recipe layer in `ecosystem/fret-ui-shadcn/src/carousel.rs`: focus entry into a
+  slide now marks autoplay as stopped by interaction whenever stopOnInteraction is enabled. The
+  code still cancels an active timer token when one exists, but no longer treats token presence as
+  the condition for recognizing the focus interaction.
+- Added direct `fret-diag-protocol` roundtrip coverage for the five scripts that make up the new
+  Carousel state suite.
+- Gates pass:
+  `rustfmt --edition 2024 --check ecosystem\fret-ui-shadcn\src\carousel.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-carousel-state\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --test carousel_autoplay_api_handle carousel_autoplay_stop_on_interaction_stops_after_slide_receives_focus --no-fail-fast --no-capture`
+  with Nextest run id `7fc50006-1357-4756-86f2-9452c5605aab`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_carousel_state_gates --no-fail-fast --no-capture`
+  with Nextest run id `96bee069-29be-4c38-8423-f89b44f5d3fa`;
+  and `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\carousel\ui-gallery-carousel-plugin-autoplay-stop-on-interaction-focus-gate.json --dir target\fret-diag-carousel-stop-on-focus-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779176381271` and AI packet
+  `target/fret-diag-carousel-stop-on-focus-v2/sessions/1779176372434-68188/1779176381271/ai.packet`.
+- Full runtime suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-carousel-state --dir target\fret-diag-carousel-state-suite-v2 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with suite summary
+  `target/fret-diag-carousel-state-suite-v2/sessions/1779176492375-78748/suite.summary.json`;
+  5/5 rows passed, `scripts_with_evidence=5`, `focus_mismatch_total=0`, and the focus
+  stopOnInteraction script run id is `1779176831378`.
+
+## M133: Combobox Checkmark Effective Opacity Predicate
+
+Status: complete for structured selected/unselected checkmark opacity evidence in the Combobox
+long-text geometry gates.
+
+- Added the diagnostics predicate `element_effective_opacity_approx_eq`. It reads
+  `ElementRuntime` effective opacity after declarative `Opacity` wrappers are inherited, so a
+  script can prove paint-only selected/hidden affordances even when their semantics/layout nodes
+  remain present.
+- `WindowElementState` now records current and previous effective opacity per element during
+  declarative mount. `mount_element` propagates the parent opacity through children and records the
+  clamped product for every element.
+- The UI diagnostics predicate evaluator maps the target semantics node back to the owning element
+  and compares its effective opacity with an epsilon. The script engine now also recognizes
+  predicate-bearing `assert`, `wait_until`, and `drag_pointer_until` steps that need
+  `ElementRuntime`; the first LTR runtime draft failed because the new predicate did not borrow
+  runtime state and therefore evaluated false before reading the target.
+- Hardened the LTR and RTL Combobox long-text geometry scripts so the selected long checkmark
+  asserts opacity `1.0` and the unselected short checkmark asserts opacity `0.0`.
+- Gates pass:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\elements\runtime.rs crates\fret-ui\src\declarative\mount.rs crates\fret-diag-protocol\src\lib.rs ecosystem\fret-bootstrap\src\ui_diagnostics\predicates.rs ecosystem\fret-bootstrap\src\ui_diagnostics\script_steps_wait.rs ecosystem\fret-bootstrap\src\ui_diagnostics\script_engine.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python -m json.tool tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-long-text-geometry.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-geometry.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_element_effective_opacity_approx_eq_serializes_and_deserializes script_v2_roundtrip_ui_gallery_combobox_long_text_geometry script_v2_roundtrip_ui_gallery_combobox_rtl_long_text_geometry --no-fail-fast --no-capture`
+  with Nextest run id `021decf3-5aae-41ac-95f6-ec738542acca`;
+  `cargo test --profile dev-fast -p fret-bootstrap runtime_gate_keeps_effective_opacity_predicates --features ui-app-driver,diagnostics -- --nocapture`;
+  `cargo check --profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics`;
+  and `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-long-text-geometry.json --dir target\fret-diag-combobox-long-text-opacity-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779180476346` and AI packet
+  `target/fret-diag-combobox-long-text-opacity-v2/sessions/1779180467898-80632/1779180476346/ai.packet`.
+- RTL focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-geometry.json --dir target\fret-diag-combobox-rtl-long-text-opacity-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779180503756` and AI packet
+  `target/fret-diag-combobox-rtl-long-text-opacity-v1/sessions/1779180495343-65848/1779180503756/ai.packet`.
+- Full runtime suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-combobox-geometry-placement --dir target\fret-diag-combobox-geometry-placement-opacity-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with suite summary
+  `target/fret-diag-combobox-geometry-placement-opacity-v1/sessions/1779180495343-74828/suite.summary.json`;
+  7/7 rows passed, `scripts_with_evidence=7`, and `overlay_chosen_side_counts` reports
+  `bottom=6`, `top=5`.
+
+## M134: Text Paint Reprepare Layout Repair And Combobox Intro Gate
+
+Status: complete for paint-time text height convergence and the Combobox Popup docs intro
+non-overlap runtime gate.
+
+- Repaired the mechanism layer in `crates/fret-ui`: after `Text`, `StyledText`, or
+  `SelectableText` performs a paint-time reprepare because width or font stack changed, an
+  auto-height node now invalidates layout and requests redraw when the newly prepared text height
+  exceeds the current paint bounds.
+- Added focused coverage in `text_cache.rs` for a wrapped text node laid out at a wider width and
+  then painted at a narrower width whose prepared metrics are taller. The test proves the node is
+  marked layout-invalid and a redraw effect is emitted.
+- Added a stable docs-intro test id in UI Gallery and promoted
+  `ui-gallery-combobox-popup-doc-intro-non-overlap.json` into the Combobox geometry placement
+  suite. The gate starts directly on the Combobox Popup section at `671x460`, captures layout,
+  screenshot, and bundle evidence, and asserts the intro bottom stays at least `8px` above the
+  Popup title while the description stays below the title.
+- Extended the Combobox Popup trigger and bottom-room gates with selected/unselected checkmark
+  effective-opacity assertions, preserving the previous placement/geometry coverage.
+- Gates pass:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\declarative\host_widget\paint.rs crates\fret-ui\src\declarative\tests\text_cache.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui wrapped_text_paint_width_shrink_reinvalidates_layout_when_height_grows --no-fail-fast --no-capture`
+  with Nextest run id `50e6ec15-0b4f-4340-b689-c10ae58055e2`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_popup_doc_intro_non_overlap script_v2_roundtrip_ui_gallery_combobox_popup_trigger script_v2_roundtrip_ui_gallery_combobox_popup_trigger_bottom_room --no-fail-fast --no-capture`
+  with Nextest run id `05c76ef5-e683-4a03-a809-d71fc53256ca`;
+  `cargo check --profile dev-fast -p fret-ui`;
+  and `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-popup-doc-intro-non-overlap.json --dir target\fret-diag-combobox-popup-doc-intro-overlap-671x460-repair-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779186094473` and AI packet
+  `target/fret-diag-combobox-popup-doc-intro-overlap-671x460-repair-v1/sessions/1779186086330-88228/1779186094473/ai.packet`.
+- Full runtime suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-combobox-geometry-placement --dir target\fret-diag-combobox-geometry-placement-text-layout-repair-v2 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with suite summary
+  `target/fret-diag-combobox-geometry-placement-text-layout-repair-v2/sessions/1779186620899-17592/suite.summary.json`;
+  the new intro non-overlap script run id is `1779186747293`.
+
+## M135: Resizable Multi-Viewport Select Root-Boundary Gate
+
+Status: complete for Select popper placement coverage inside a Resizable panel viewport root.
+
+- Added `multi_viewport_select.rs` to the Resizable UI Gallery page as an opt-in diagnostics
+  fixture. The Select control sits near the bottom of the right Resizable panel so the OS window has
+  room below, but the panel viewport root does not.
+- Promoted `ui-gallery-resizable-multi-viewport-select-placement.json` into the
+  `ui-gallery-resizable` suite with direct `fret-diag-protocol` roundtrip coverage and a top-level
+  redirect script.
+- The runtime gate waits for a `placed_rect` overlay trace with
+  `anchor_test_id=ui-gallery-resizable-multi-viewport-select-root`,
+  `content_test_id=ui-gallery-resizable-multi-viewport-select-listbox`, `preferred_side=bottom`,
+  `chosen_side=top`, `flipped=true`, and `side_offset=6`. The trace records the Resizable panel
+  bounds as the placement `outer`, proving panel-root ownership for Select as a second overlay
+  family after Combobox.
+- No Select placement/root-boundary defect was reproduced. The first runtime drafts exposed script
+  authoring hazards instead: the outer fixture id was not the Select control, exact top-side gap
+  checks overfit the placement solver, and underlay panel selectors are hidden behind the modal
+  overlay barrier once the Select listbox opens.
+- Gates pass:
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\snippets\resizable\multi_viewport_select.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_resizable_multi_viewport_select_placement --no-fail-fast --no-capture`
+  with latest Nextest run id `7944bf63-93b6-476d-aa9a-7b6b53771d9e`;
+  and `git diff --check`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\resizable\ui-gallery-resizable-multi-viewport-select-placement.json --dir target\fret-diag-resizable-multi-viewport-select-placement-v8 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779193025213` and AI packet
+  `target/fret-diag-resizable-multi-viewport-select-placement-v8/sessions/1779193017299-99444/1779193025213/ai.packet`.
+- Full runtime suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-resizable --dir target\fret-diag-ui-gallery-resizable-suite-select-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with suite summary
+  `target/fret-diag-ui-gallery-resizable-suite-select-v1/sessions/1779193114796-63336/suite.summary.json`;
+  3/3 scripts passed, `scripts_with_evidence=3`, and the new Select script run id is
+  `1779193162410`.
+
+## M136: Text Reprepare Repair-Frame Clip And Full Combobox Startup Gate
+
+Status: complete for same-frame clipping during paint-time text layout repair and the full
+Combobox page startup non-overlap gate.
+
+- Extended the mechanism-layer text repair in `crates/fret-ui`: when paint-time text preparation
+  discovers that an auto-height `Text`, `StyledText`, or `SelectableText` blob is taller than the
+  current stale layout bounds, the node still invalidates layout and requests redraw, but the same
+  frame now draws the text under a rectangular clip equal to the stale layout bounds.
+- Extended the focused `wrapped_text_paint_width_shrink_reinvalidates_layout_when_height_grows`
+  regression so it asserts the repair frame contains `PushClipRRect -> Text -> PopClip`, preventing
+  the next regression from fixing only the follow-up layout pass while allowing one-frame visual
+  spill.
+- Added `ui-gallery-combobox-full-page-startup-intro-non-overlap.json`, a full-page companion to
+  the existing Popup-focused intro gate. It starts on the full Combobox page at `671x460`, captures
+  layout/screenshot/bundle evidence before any manual resize recovery, and asserts the long docs
+  intro leaves at least `16px` before the Basic section title.
+- Gates pass:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\declarative\host_widget\paint.rs crates\fret-ui\src\declarative\tests\text_cache.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui wrapped_text_paint_width_shrink_reinvalidates_layout_when_height_grows --no-fail-fast --no-capture`
+  with latest Nextest run id `d8184adc-9875-470f-9828-025bc220465e`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_full_page_startup_intro_non_overlap --no-fail-fast --no-capture`
+  with Nextest run id `4fa52001-9eb6-4102-9bba-033f10b3e2c0`;
+  `cargo check --profile dev-fast -p fret-ui`;
+  and `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-full-page-startup-intro-non-overlap.json --dir target\fret-diag-combobox-full-page-startup-intro-text-clip-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779194385483` and AI packet
+  `target/fret-diag-combobox-full-page-startup-intro-text-clip-v1/sessions/1779194373536-98264/1779194385483/ai.packet`.
+- Focused Popup companion still passes:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-popup-doc-intro-non-overlap.json --dir target\fret-diag-combobox-popup-doc-intro-text-clip-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779194199027`.
+- Full runtime suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-combobox-geometry-placement --dir target\fret-diag-combobox-geometry-placement-text-clip-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with suite summary
+  `target/fret-diag-combobox-geometry-placement-text-clip-v1/sessions/1779194425260-69272/suite.summary.json`;
+  the new full-page startup script run id is `1779194524638`.
+
+## M137: CommandDialog Basic Overlay Focus Gate
+
+Status: complete for Command Basic modal overlay/focus runtime coverage.
+
+- Added `ui-gallery-command-basic-dialog-overlay-focus.json` and a top-level redirect, then promoted
+  it into the `ui-gallery-command` suite with direct `fret-diag-protocol` roundtrip coverage.
+- The runtime gate opens the real Command Basic `CommandDialog`, proves dialog and close-button
+  semantics, input focus, listbox containment, listbox `labelled_by` wiring, input
+  `active_descendant` wiring, ArrowDown movement from Calendar to Search Emoji, Escape dismissal,
+  and focus restoration to the `Open Menu` button.
+- The first focused runtime draft failed only because the script asserted focus on
+  `ui-gallery-command-basic-trigger.chrome`, the visual chrome child. The failure bundle showed the
+  focused semantics node was the outer `role=button` with label `Open Menu`, so the final gate
+  asserts the semantic focus owner instead.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\command\ui-gallery-command-basic-dialog-overlay-focus.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-command-basic-dialog-overlay-focus.json > $null`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python tools\check_diag_scripts_registry.py`;
+  and `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_command_basic_dialog_overlay_focus --no-fail-fast --no-capture`
+  with Nextest run id `08a923e7-9ca3-4b3c-bb2f-fe62628193ec`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\command\ui-gallery-command-basic-dialog-overlay-focus.json --dir target\fret-diag-command-basic-dialog-overlay-focus-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779196803631` and AI packet
+  `target/fret-diag-command-basic-dialog-overlay-focus-v2/sessions/1779196795872-108048/1779196803631/ai.packet`.
+- Full runtime suite diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-command --dir target\fret-diag-ui-gallery-command-suite-dialog-overlay-focus-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with suite summary
+  `target/fret-diag-ui-gallery-command-suite-dialog-overlay-focus-v1/sessions/1779196833923-91304/suite.summary.json`;
+  the new CommandDialog script run id is `1779196993347`.
+
+## M138: Combobox Short Startup Intro Non-Overlap Gate
+
+Status: complete for screenshot-derived short-height startup coverage on the Combobox Popup docs
+intro path.
+
+- Added `ui-gallery-combobox-popup-doc-intro-short-startup-non-overlap.json` plus a top-level
+  redirect, then promoted it into the `ui-gallery-combobox-geometry-placement` suite with direct
+  `fret-diag-protocol` roundtrip coverage.
+- The gate starts directly on the Combobox Popup section at logical `663x311`, matching the
+  observed `994x466` screenshot on a 1.5x scale display. It captures layout, screenshot, and bundle
+  evidence at early startup before any manual resize recovery.
+- No current runtime overlap defect was reproduced after the text repair-frame clipping work. The
+  focused run captured the relevant layout at frame 3: `ui-gallery-doc-page-intro.bottom =
+  379.3333`, `docsec-popup-title.top = 403.3333`, so the measured gap is `24px` and satisfies the
+  `>= 16px` gate.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-popup-doc-intro-short-startup-non-overlap.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-combobox-popup-doc-intro-short-startup-non-overlap.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-combobox-geometry-placement\suite.json > $null`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python tools\check_diag_scripts_registry.py`;
+  and
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_popup_doc_intro_short_startup_non_overlap --no-fail-fast --no-capture`
+  with Nextest run id `e92bb8b8-cf66-47b5-8281-1fa91f73c6b3`.
+- Build pass:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-popup-doc-intro-short-startup-non-overlap.json --dir target\fret-diag-combobox-popup-doc-intro-short-startup-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779198569025`, AI packet
+  `target/fret-diag-combobox-popup-doc-intro-short-startup-v1/sessions/1779198558655-90216/1779198569025/ai.packet`,
+  and pack
+  `target/fret-diag-combobox-popup-doc-intro-short-startup-v1/sessions/1779198558655-90216/share/1779198569025.zip`.
+- Full Combobox geometry placement suite pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-combobox-geometry-placement --dir target\fret-diag-combobox-geometry-placement-short-startup-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with suite summary
+  `target/fret-diag-combobox-geometry-placement-short-startup-v1/sessions/1779198616098-23160/suite.summary.json`;
+  10/10 scripts passed, `scripts_with_evidence=9`, and the new short-startup script run id is
+  `1779198792251`.
+
+## M139: AI Transcript Non-Retained Scroll Count Gate
+
+Status: complete for AI transcript torture scroll mutation coverage and suite tail policy.
+
+- Strengthened `ui-gallery-ai-transcript-torture-scroll.json` so it injects a deterministic
+  `240`-message variable-height transcript, asserts the startup message-count semantics, appends
+  `100` messages, and proves the count advances to `340` with layout, screenshot, and bundle
+  evidence.
+- Added a hidden semantics counter to the AI transcript torture snippet so diagnostics can assert
+  the real model size without depending on rendered text snippets or scroll-window selection.
+- Added direct `fret-diag-protocol` roundtrip coverage for all three
+  `ui-gallery-ai-transcript-retained` suite scripts.
+- Removed `ui-gallery-ai-transcript-torture-scroll.json` from the retained vlist reconcile tail
+  policy. `fret-ui-ai` intentionally uses non-retained virtual lists for transcript surfaces so the
+  component surface does not require `UiHost + 'static`; the old suite tail check treated that
+  intentional non-retained path as a retained-window failure.
+- Gates pass:
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\snippets\ai\transcript_torture.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs crates\fret-diag\src\diag_policy.rs crates\fret-diag\src\tests.rs`;
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag ai_transcript_torture_scroll_is_not_a_retained_vlist_reconcile_gate --no-fail-fast --no-capture`
+  with Nextest run id `caf72dfa-d836-47df-8dd3-0aa22a1618e5`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_ai_conversation_demo_screenshot_zinc_dark script_v2_roundtrip_ui_gallery_ai_conversation_demo_scroll_button script_v2_roundtrip_ui_gallery_ai_transcript_torture_scroll --no-fail-fast --no-capture`
+  with Nextest run id `674f2827-c68d-4532-917f-583e0e81cc1b`;
+  and
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\perf\ui-gallery-ai-transcript-torture-scroll.json --dir target\fret-diag-ai-transcript-torture-count-gate-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with run id `1779201476652` and AI packet
+  `target/fret-diag-ai-transcript-torture-count-gate-v1/sessions/1779201370619-115172/1779201476652/ai.packet`.
+- Full AI transcript suite diagnostics pass after rebuilding `fretboard-dev`:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-ai-transcript-retained --dir target\fret-diag-ai-transcript-retained-cargo-policy-v2 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  with suite summary
+  `target/fret-diag-ai-transcript-retained-cargo-policy-v2/sessions/1779203319147-101240/suite.summary.json`;
+  3/3 scripts passed, the torture script run id is `1779203465969`, and no retained-tail
+  non-retained-shift check file was produced.
+
+## M140: Combobox RTL Long Text Startup Non-Overlap Gate
+
+Status: complete for the screenshot-corrected Combobox RTL Long Text cold-start overlap coverage.
+
+- The latest user screenshot showed the focused Combobox `RTL Long Text` section title visually
+  colliding with the long docs intro, not the earlier Popup title. The previous Popup/full-page
+  startup gates therefore covered the right class but the wrong section target.
+- Added
+  `ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json`, a focused
+  startup gate with `FRET_UI_GALLERY_START_SECTION=RTL Long Text` and
+  `FRET_UI_GALLERY_MAIN_WINDOW_SIZE=1083x752`, matching the observed `1624x1128` physical
+  screenshot at a 1.5x scale factor.
+- The gate captures layout, screenshot, and bundle evidence before manual resize recovery, then
+  asserts that `ui-gallery-doc-page-intro` and
+  `ui-gallery-combobox-rtl-long-text-docsec-title` do not overlap, the title starts at least
+  `16px` after the intro bottom, and the section description starts at least `8px` after the title.
+- Added the `994x466` Popup startup companion as a secondary scale-interpretation probe and
+  promoted both scripts into `ui-gallery-combobox-geometry-placement` with direct
+  `fret-diag-protocol` roundtrip coverage.
+- Current `dev-fast` runtime did not reproduce the overlap after the prior text repair-frame clip
+  work. The focused RTL Long Text run captured a clean frame 3 screenshot and passed with run id
+  `1779207094769`; the full Combobox geometry placement suite passed with the new RTL Long Text run
+  id `1779208395010`.
+- Gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-combobox-geometry-placement\suite.json > $null`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python tools\check_diag_scripts_registry.py`; and
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_popup_doc_intro_logical994_startup_non_overlap script_v2_roundtrip_ui_gallery_combobox_rtl_long_text_doc_intro_logical1083_startup_non_overlap --no-fail-fast --no-capture`
+  with Nextest run id `6619d838-cd48-41d2-b279-ede4466fc291`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json --dir target\fret-diag-combobox-rtl-long-text-doc-intro-logical1083-gate-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779207094769`, AI packet
+  `target/fret-diag-combobox-rtl-long-text-doc-intro-logical1083-gate-v1/sessions/1779207086203-106128/1779207094769/ai.packet`,
+  and pack
+  `target/fret-diag-combobox-rtl-long-text-doc-intro-logical1083-gate-v1/sessions/1779207086203-106128/share/1779207094769.zip`.
+- Full Combobox geometry placement suite pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-combobox-geometry-placement --dir target\fret-diag-combobox-geometry-placement-rtl-long-text-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with suite summary
+  `target/fret-diag-combobox-geometry-placement-rtl-long-text-v1/sessions/1779208245269-120048/suite.summary.json`;
+  12/12 scripts passed, the new RTL Long Text startup run id is `1779208395010`, and the new Popup
+  logical994 run id is `1779208377600`.
+
+## M141: First-Paint Text Auto-Height Repair
+
+Status: complete for the cold-start text repair path behind the Combobox RTL Long Text overlap.
+
+- A follow-up user screenshot showed the RTL Long Text overlap was still visible manually even
+  though M140's focused runtime gate passed. Re-running the promoted gate exposed a gate defect:
+  it pressed `Escape` before capture, which advanced an input frame and could mask the cold-start
+  repair path the script meant to test.
+- Removed the `Escape` step from
+  `ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json`, so the gate
+  captures startup layout/screenshot evidence without keyboard or resize recovery.
+- Fixed `Text`, `StyledText`, and `SelectableText` paint-time repair ownership in
+  `crates/fret-ui`: when any paint-time prepare produces taller metrics than an auto-height text
+  node's current bounds, the node now invalidates layout, requests redraw, and clips the repair
+  frame. The previous condition only covered width/font-stack reprepare and missed first-paint
+  prepare or content/style-driven taller metrics.
+- Gates pass:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\declarative\host_widget\paint.rs crates\fret-ui\src\declarative\tests\text_cache.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui wrapped_text_first_paint_reinvalidates_layout_when_height_grows wrapped_text_paint_width_shrink_reinvalidates_layout_when_height_grows --no-fail-fast --no-capture`
+  with Nextest run id `ee45c3ee-bd9e-4983-bf51-3a676fe8efdc`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_rtl_long_text_doc_intro_logical1083_startup_non_overlap --no-fail-fast --no-capture`
+  with Nextest run id `af2bdc87-44c4-4be2-8e92-d5a6a062da39`;
+  `python tools\check_diag_scripts_registry.py`; and `git diff --check`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json --dir target\fret-diag-combobox-rtl-long-text-no-input-fixed-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  with run id `1779210456769`, AI packet
+  `target/fret-diag-combobox-rtl-long-text-no-input-fixed-v1/sessions/1779210358866-112204/1779210456769/ai.packet`,
+  and screenshot
+  `target/fret-diag-combobox-rtl-long-text-no-input-fixed-v1/sessions/1779210358866-112204/screenshots/1779210460025-ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap/window-4294967297-tick-2-frame-2.png`.
+- Full Combobox geometry placement suite pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-combobox-geometry-placement --dir target\fret-diag-combobox-geometry-placement-startup-text-repair-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  with suite summary
+  `target/fret-diag-combobox-geometry-placement-startup-text-repair-v1/sessions/1779210565472-66488/suite.summary.json`;
+  12/12 scripts passed, and the no-input RTL Long Text startup run id is `1779210808250`.
+
+## M142: Wrapped Text Prepared Measurement Convergence
+
+Status: complete for the startup measurement path behind the remaining Combobox RTL Long Text
+visual overlap.
+
+- A newer manual screenshot still showed `RTL Long Text` content visibly overlapping even after
+  M141. The promoted runtime gate passed because it asserted layout bounds, while the visible
+  failure could be caused by text ink painted taller than the measured layout box.
+- Fixed `Text`, `StyledText`, and `SelectableText` measurement in `crates/fret-ui` so wrapped text
+  paths prepare text and populate the shared text cache during measurement. This makes startup
+  layout reserve the same prepared metrics that paint will use instead of trusting a separate
+  backend `measure` result that can underestimate height before resize/font convergence.
+- Preserved the `TextWrap::None` fast measurement/fingerprint path and kept the M141 paint-time
+  repair as a fallback for stale paint bounds and width changes.
+- Strengthened
+  `ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json` to wait for
+  the live RTL Long Text content/trigger and assert description-to-content plus
+  description-to-trigger spacing, not only intro/title/description bounds.
+- Gates pass:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\declarative\host_widget\measure.rs crates\fret-ui\src\declarative\tests\text_cache.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui wrapped_text_measure_uses_prepare_metrics_for_startup_layout wrapped_text_first_paint_reinvalidates_layout_when_height_grows theme_color_change_does_not_change_text_input_fingerprints --no-fail-fast --no-capture`
+  with Nextest run id `c70a4417-6ee8-46f1-bc4f-a485bc98a122`;
+  `python -m json.tool tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json > $null`;
+  `python tools\check_diag_scripts_registry.py`; and
+  `cargo build --profile dev-fast -p fret-ui-gallery --features gallery-dev`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json --dir target\fret-diag-combobox-rtl-long-text-startup-prepared-measure-v3 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779215099640`, AI packet
+  `target/fret-diag-combobox-rtl-long-text-startup-prepared-measure-v3/sessions/1779215091187-112692/1779215099640/ai.packet`,
+  pack
+  `target/fret-diag-combobox-rtl-long-text-startup-prepared-measure-v3/sessions/1779215091187-112692/share/1779215099640.zip`,
+  and screenshot
+  `target/fret-diag-combobox-rtl-long-text-startup-prepared-measure-v3/sessions/1779215091187-112692/screenshots/1779215103570-ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap/window-4294967297-tick-3-frame-3.png`.
+
+## M143: Chart Torture Multi-Series Tooltip Output Gate
+
+Status: complete for multi-series retained chart tooltip and X domain-window output coverage.
+
+- Changed Chart Torture from one line series to two line series (`A` and `B`) sharing the same X/Y
+  axes. The fixture now exercises multi-series tooltip aggregation against the large retained chart
+  path rather than only a single-row tooltip.
+- Extended the UI Gallery app snapshot for Chart Torture with tooltip summary fields:
+  `axis_header_count`, `series_rows_count`, `source_series_rows_count`, `missing_rows_count`,
+  `series_labels`, `has_series_a`, and `has_series_b`.
+- Strengthened `ui-gallery-chart-torture-pan-zoom.json` so the real drag/wheel pan/zoom path
+  proves the output model tooltip has one axis header, two source-owned series rows, labels `A`
+  and `B`, and zero missing rows.
+- The first runtime run exposed a stale diagnostics assertion: `domain_windows_count == 2` assumed
+  both X and Y axes would auto-export link keys. Under ADR 0301, the shared Y axis is ambiguous
+  once two Y fields participate, so only the unique X `(dataset, field)` key is exported. The gate
+  now expects `domain_windows_count == 1` and keeps the explicit X output-window/dataZoom matching
+  assertions.
+- Gates pass:
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\driver\diag_snapshot.rs apps\fret-ui-gallery\src\ui\previews\pages\torture\chart_torture.rs`;
+  `python -m json.tool tools\diag-scripts\ui-gallery\perf\ui-gallery-chart-torture-pan-zoom.json > $null`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_chart_torture_pan_zoom --no-fail-fast --no-capture`
+  with Nextest run id `993eeccd-72d1-49f4-830f-a710b0b16250`; and
+  `python tools\check_diag_scripts_registry.py`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\perf\ui-gallery-chart-torture-pan-zoom.json --dir target\fret-diag-chart-torture-multiseries-tooltip-v3 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  with run id `1779217026347`, AI packet
+  `target/fret-diag-chart-torture-multiseries-tooltip-v3/sessions/1779217007250-123724/1779217026347/ai.packet`,
+  and pack
+  `target/fret-diag-chart-torture-multiseries-tooltip-v3/sessions/1779217007250-123724/share/1779217026347.zip`.
+- Full Chart Torture suite pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-chart-torture --dir target\fret-diag-chart-torture-suite-multiseries-tooltip-v1 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  with suite summary
+  `target/fret-diag-chart-torture-suite-multiseries-tooltip-v1/sessions/1779217110888-98424/suite.summary.json`
+  and script run id `1779217122878`.
+
+## M144: Cached Prepared Text Stale-Bounds Repair
+
+Status: complete for the persistent Combobox RTL Long Text startup overlap follow-up.
+
+- A fresh manual screenshot still showed `RTL Long Text` visually colliding with the docs intro
+  even though M142's runtime gate passed. The gate's screenshot captures at frame 3, so it can miss
+  a first-visible-frame paint overflow that later repair frames correct.
+- Added a focused mechanism regression for the remaining gap: layout prepares and caches a wrapped
+  text blob with a `40px` height, then paint receives a stale `10px` auto-height bounds. Before
+  the fix, the cached prepared blob path did not invalidate layout or clip; the new test failed on
+  that exact condition.
+- Fixed `Text`, `StyledText`, and `SelectableText` paint in `crates/fret-ui` so the auto-height
+  repair helper also runs after cached/prepared metrics are loaded, not only inside the
+  `needs_prepare` branch. If cached metrics exceed current auto-height bounds, paint now schedules
+  layout repair, requests redraw, and clips the stale frame.
+- Gates pass:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\declarative\host_widget\paint.rs crates\fret-ui\src\declarative\tests\text_cache.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui text_cache --no-fail-fast --no-capture`
+  with Nextest run id `c4dc5647-ab06-4015-be4a-829f175a3359`; and
+  `cargo build --profile dev-fast -p fret-ui-gallery`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json --dir target\fret-diag-ui-gallery-combobox-rtl-intro-overlap-fixed-1624-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779219333574` and AI packet
+  `target/fret-diag-ui-gallery-combobox-rtl-intro-overlap-fixed-1624-v1/sessions/1779219328227-121516/1779219333574/ai.packet`.
+
+## M145: Combobox RTL Long Text Doc Scaffold Min-Width Clamp
+
+Status: complete for the user-visible first-frame doc scaffold overlap follow-up.
+
+- The manual screenshot remained valid after M144: the overlap was visible between the docs intro
+  and the focused `RTL Long Text` section even though the promoted gate passed on stable frames.
+- The immediate scaffold defect was that `muted_full_width` and `section_title` used fill-width
+  text without explicitly opting into `min-width: 0`. Under the card/flex doc layout, that leaves
+  startup text measurement vulnerable to an over-wide first pass before resize recovery.
+- `apps/fret-ui-gallery/src/ui/doc_layout.rs` now applies `min_width=0` to both helpers and
+  `doc_text_helpers_keep_fill_width_min_w_zero` locks the helper shape.
+- Gates pass:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery doc_text_helpers_keep_fill_width_min_w_zero --no-fail-fast --no-capture`
+  with Nextest run id `3c572126-8add-42ad-8fc7-9b02766e5ba3`.
+- Focused runtime diagnostics pass with a clean frame-3 startup screenshot:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json --dir target\fret-diag-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779230956616` and AI packet
+  `target/fret-diag-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap-v2/sessions/1779230951009-124292/1779230956616/ai.packet`.
+
+## M146: Chart Explicit Link-Axis Mapping Output Gate
+
+Status: complete for ADR 0301 explicit Y-axis output publication coverage.
+
+- Added a retained `fret-chart` mechanism regression proving that an explicit host
+  `AxisId -> LinkAxisKey` map publishes an otherwise ambiguous Y domain window to
+  `ChartCanvasOutput`. Without the map, the shared multi-series Y axis remains omitted as
+  ambiguous; with the map, the output model publishes `dataset=1, field=2` and the fixture
+  `[-0.25, 0.75]` window.
+- Added a Chart Torture runtime mode behind
+  `FRET_UI_GALLERY_CHART_TORTURE_EXPLICIT_Y_LINK_MAP=1`. The UI Gallery snapshot now exposes
+  `/chart_torture/output_model/y_explicit_domain_window` and the runtime oracle
+  `/chart_torture/runtime_oracles/y_output_model_domain_matches_explicit_fixture`.
+- Added `ui-gallery-chart-torture-explicit-y-link-map.json` plus direct protocol roundtrip
+  coverage. The gate asserts the explicit Y window is present and matches `min=-250`,
+  `max=750` in milli-units.
+- Split the gate into its own `ui-gallery-chart-linking-explicit-y-map` suite. A diagnostics
+  suite regression covers that this suite stays generic and does not inherit the
+  `ui-gallery-chart-torture` pan/zoom-only `chart_sampling_window_shifts_min` tail check.
+- Gates pass:
+  `rustfmt --edition 2024 --check crates\fret-diag\src\diag_suite.rs apps\fret-ui-gallery\src\driver\diag_snapshot.rs apps\fret-ui-gallery\src\ui\previews\pages\torture\chart_torture.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs ecosystem\fret-chart\src\retained\canvas.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-chart explicit_link_axis_map_publishes_ambiguous_y_domain_window_to_output_model --no-fail-fast --no-capture`
+  with Nextest run id `6d65c626-9933-45ca-b30b-e15ce835bd83`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_chart_torture_explicit_y_link_map --no-fail-fast --no-capture`
+  with Nextest run id `1c0b302d-5894-4a6c-a90a-8e4505d72c2e`; and
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag build_suite_core_default_post_run_checks_keeps_chart_linking_explicit_y_map_generic --no-fail-fast --no-capture`
+  with Nextest run id `9225e20a-b2db-445c-aae1-ef9e369cac20`.
+- Runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-chart-linking-explicit-y-map --dir target\fret-diag-chart-linking-explicit-y-map-suite-v1 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-chart,gallery-dev --bin fret-ui-gallery`
+  with suite summary
+  `target/fret-diag-chart-linking-explicit-y-map-suite-v1/sessions/1779226956912-131628/suite.summary.json`
+  and run id `1779226972500`.
+- Original Chart Torture suite recheck passes after the suite split:
+  `target/fret-diag-chart-torture-suite-recheck-v1/sessions/1779226999698-96944/suite.summary.json`
+  with run id `1779227011824`.
+
+## M147: Combobox RTL Long Text Client-Height Startup Gate
+
+Status: complete for the decorated-window/client-area companion coverage.
+
+- A follow-up manual screenshot still showed `RTL Long Text` visually overlapping the docs intro,
+  but fresh `target\dev-fast\fret-ui-gallery.exe` repro attempts did not reproduce the overlap.
+  The current `dev-fast` focused gate still captures a clean frame-3 screenshot at `1083x752`.
+- The screenshot included the native Windows title bar, so the existing `1083x752` logical gate was
+  also complemented with a shorter `1083x721` client-area gate. This covers the same approximate
+  decorated `1624x1128` physical window on a 1.5x scale display after subtracting title-bar height.
+- Added `ui-gallery-combobox-rtl-long-text-doc-intro-client721-startup-non-overlap.json`, its root
+  redirect, suite membership, registry entry, and protocol roundtrip coverage.
+- Gates pass:
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_combobox_rtl_long_text_doc_intro_client721_startup_non_overlap --no-fail-fast --no-capture`
+  with Nextest run id `6814997f-e496-4dff-82a5-2c30636c7c54`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-client721-startup-non-overlap.json --dir target\fret-diag-combobox-rtl-long-text-client721-gate-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779232803236`, AI packet
+  `target/fret-diag-combobox-rtl-long-text-client721-gate-v1/sessions/1779232796961-55416/1779232803236/ai.packet`,
+  and screenshot size `1625x1082` physical pixels.
+- Full Combobox geometry-placement suite passes with 13/13 rows:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-combobox-geometry-placement --dir target\fret-diag-combobox-geometry-placement-client721-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with suite summary
+  `target/fret-diag-combobox-geometry-placement-client721-v1/sessions/1779232841519-125836/suite.summary.json`
+  and new client-height script run id `1779232938320`.
+- A plain `cargo build -p fret-ui-gallery` attempt to refresh `target\debug\fret-ui-gallery.exe`
+  timed out and was not used as evidence. Current runtime evidence is from `target\dev-fast`.
+
+## M148: Chart Explicit Y Linked-Domain Propagation Mechanism Gate
+
+Status: complete for the retained two-chart explicit Y propagation mechanism path.
+
+- Added
+  `explicit_y_domain_window_propagates_to_second_linked_chart_output_model` in
+  `ecosystem/fret-chart/src/retained/canvas.rs`.
+- The regression constructs a source retained chart and a target retained chart from the same
+  ambiguous multi-axis spec, applies an explicit `AxisId -> LinkAxisKey` map for the otherwise
+  ambiguous Y axis, and gives the target chart a different local initial Y window.
+- The test proves the full mechanism chain: source `ChartCanvasOutput` publishes the explicit Y
+  window, `LinkedChartGroup::tick` writes it into shared linked-domain state, target retained paint
+  consumes that model through `sync_linked_domain_windows`, and target `ChartCanvasOutput` publishes
+  the propagated window rather than its local initial window.
+- Gates pass:
+  `rustfmt --edition 2024 --check ecosystem\fret-chart\src\retained\canvas.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-chart explicit_link_axis_map_publishes_ambiguous_y_domain_window_to_output_model explicit_y_domain_window_propagates_to_second_linked_chart_output_model --no-fail-fast --no-capture`
+  with Nextest run id `620beddb-8a62-4de0-81fd-d5f2fadb28f1`.
+- Runtime note: `chart_multi_axis_demo` currently logs linked-domain state but does not expose an
+  app snapshot provider for direct `fretboard-dev diag` assertions. A follow-up runtime companion
+  should add that bounded diagnostics surface before promoting a demo-level gate.
+
+## M149: Fixed-Line-Box Cold Word-Wrap Text Startup Repair
+
+Status: complete for the Combobox RTL Long Text first-visible-frame text/layout pollution.
+
+- The follow-up manual screenshot remained valid: promoted Combobox RTL Long Text diagnostics
+  gates captured stable startup frames, but they did not explain why the first visible UI could show
+  text overlap until resize. A temporary frame-1 probe against the refreshed debug gallery exposed
+  the missing mechanism signal: the docs intro area rendered the internal fixed-line-height sample
+  text `Hg` before later frames settled to the real long paragraph.
+- Root cause: `ParleyShaper::shape_paragraph_with_wrap` built the real wrapped paragraph into the
+  shared Parley layout, then computed fixed line-box ascent/descent. On a cold metrics cache that
+  computation calls `shape_single_line_metrics("Hg")` on the same shaper, overwriting the current
+  paragraph layout before `shape_paragraph_with_wrap` iterated its lines. The first paint could
+  therefore use the internal metrics sample or an under-sized paragraph layout.
+- Fixed `crates/fret-render-text/src/parley_shaper.rs` so fixed line-box metrics are computed
+  before the real paragraph is built. The internal `Hg` probe can still warm the base metrics cache,
+  but it no longer overwrites the layout currently being returned for paint.
+- Added
+  `fixed_line_box_word_wrap_preserves_paragraph_layout_on_cold_metrics_cache`, which proves a fresh
+  shaper with fixed line height and word wrap produces real multi-line paragraph glyphs on the cold
+  metrics path.
+- Gates pass:
+  `rustfmt --edition 2024 --check crates\fret-render-text\src\parley_shaper.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-render-text --no-fail-fast --no-capture`
+  with Nextest run id `a16c3aa8-c5dc-4b48-a26f-df17e39f442e`;
+  `cargo build --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`;
+  and `cargo build -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`.
+- Focused runtime diagnostics pass on the rebuilt `dev-fast` gallery:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-client721-startup-non-overlap.json --dir target\fret-diag-combobox-rtl-long-text-devfast-client721-fixed-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779237680925` and AI packet
+  `target/fret-diag-combobox-rtl-long-text-devfast-client721-fixed-v1/sessions/1779237666672-136820/1779237680925/ai.packet`.
+- Focused runtime diagnostics also pass on the rebuilt `target\debug\fret-ui-gallery.exe`:
+  `target\fret-diag-combobox-rtl-long-text-debug-client721-fixed-v1\sessions\1779238353963-52416\1779238359542\ai.packet`.
+  `target\release\fret-ui-gallery.exe` remains an older 2026-05-14 binary and was not used as
+  evidence.
+
+## M150: Chart Multi-Axis Linked-Domain Runtime Snapshot Gate
+
+Status: complete for the `chart_multi_axis_demo` linked-domain runtime companion.
+
+- M148 left a runtime gap: the retained chart mechanism test proved source-to-target linked-domain
+  propagation, but `chart_multi_axis_demo` only exposed the same behavior through logs and pixels.
+  The runtime gate could show a visual change, but could not assert shared/top/bottom linked-domain
+  state directly.
+- Added a bounded diagnostics snapshot provider to `apps/fret-examples/src/chart_multi_axis_demo.rs`.
+  It publishes `/chart_multi_axis/linked_domain_windows` and runtime oracles for the shared
+  linked-domain model plus the top and bottom `ChartCanvasOutput` models.
+- Added `chart-multi-axis-linked-domain-window-app-snapshot.json`, which runs against
+  `chart_multi_axis_demo`, waits for the existing diagnostics-only deterministic top-chart X
+  window change to `[-75, 75]`, then asserts shared/top/bottom X windows all match that fixture.
+- Added the `chart-multi-axis-linking` suite so this app-specific gate can be rerun without mixing
+  the launch target with UI Gallery chart suites.
+- Gates pass:
+  `rustfmt --edition 2024 --check apps\fret-examples\src\chart_multi_axis_demo.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo build --profile dev-fast -p fret-demo --bin chart_multi_axis_demo`;
+  and
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_chart_multi_axis_linked_domain_window_app_snapshot --no-fail-fast --no-capture`
+  with Nextest run id `1872c4bc-48ce-4a41-a564-ed9f74f83461`.
+- Runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\charts\chart-multi-axis-linked-domain-window-app-snapshot.json --dir target\fret-diag-chart-multi-axis-linked-domain-app-snapshot-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target\dev-fast\chart_multi_axis_demo.exe`
+  with run id `1779239505892` and AI packet
+  `target/fret-diag-chart-multi-axis-linked-domain-app-snapshot-v1/sessions/1779239502304-133288/1779239505892/ai.packet`.
+- Suite runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite chart-multi-axis-linking --dir target\fret-diag-chart-multi-axis-linking-suite-v1 --session-auto --timeout-ms 420000 --launch -- target\dev-fast\chart_multi_axis_demo.exe`
+  with suite summary
+  `target/fret-diag-chart-multi-axis-linking-suite-v1/sessions/1779239623009-133816/suite.summary.json`.
+
+## M151: Item Cold Startup Long-Docs Text Runtime Gate
+
+Status: complete for the non-Combobox fixed-line-box wrapped docs text companion.
+
+- Rechecked the follow-up manual Combobox RTL Long Text overlap against current binaries. Rebuilt
+  `target\release\fret-ui-gallery.exe` because it was still a 2026-05-14 artifact, then verified the
+  focused client-height Combobox gate and a normal OS-window startup capture against current
+  `release`. Current rebuilt binaries did not reproduce the visible overlap.
+- Added
+  `ui-gallery-item-vs-field-doc-intro-client721-startup-non-overlap.json` as the adjacent runtime
+  lock recommended by F232/F233: it opens a different fixed-line-height wrapped docs paragraph from
+  a cold process, focuses the Item `Item vs Field` section, captures layout/screenshot/bundle
+  evidence, and asserts the long docs intro leaves space before the section title, description, and
+  content.
+- Added the root redirect, `ui-gallery-shadcn-runtime-evidence` suite membership, registry entry,
+  and protocol roundtrip coverage.
+- Gates pass:
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python tools\check_diag_scripts_registry.py`;
+  and
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_item_vs_field_doc_intro_client721_startup_non_overlap --no-fail-fast --no-capture`
+  with Nextest run id `ee8a6ea4-70e4-4a81-af24-980b7b1f603c`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\item\ui-gallery-item-vs-field-doc-intro-client721-startup-non-overlap.json --dir target\fret-diag-item-vs-field-client721-startup-non-overlap-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\release\fret-ui-gallery.exe`
+  with run id `1779242679435` and AI packet
+  `target/fret-diag-item-vs-field-client721-startup-non-overlap-v1/sessions/1779242677744-141216/1779242679435/ai.packet`.
+- Suite runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-ui-gallery-shadcn-runtime-evidence-item-vs-field-v1 --session-auto --timeout-ms 900000 --launch -- target\release\fret-ui-gallery.exe`
+  with suite summary
+  `target/fret-diag-ui-gallery-shadcn-runtime-evidence-item-vs-field-v1/sessions/1779242784682-41468/suite.summary.json`
+  and new script run id `1779242852622`.
+
+## M152: View Cache Dynamic Text Mutation Runtime Gate
+
+Status: complete for cached-subtree dynamic wrapped-text mutation coverage.
+
+- The existing View Cache gate proved counter mutation and controlled Popover open/close state, but
+  it did not prove that visible wrapped text and following layout inside the cached subtree refresh
+  through the same model mutation.
+- Added a dynamic text probe to the View Cache harness page. `counter=0` exposes a short baseline;
+  `counter>0` exposes a longer wrapped sentence inside the cached subtree. The UI Gallery app
+  snapshot now publishes `/view_cache/dynamic_text_len` and `/view_cache/dynamic_text_wrapped`.
+- Added `ui-gallery-view-cache-dynamic-text-mutation-through-cache.json`, its root redirect, suite
+  membership, registry entry, and protocol roundtrip coverage. The gate asserts app-snapshot state,
+  visible label text, renderer text trace coverage, layout sidecars, screenshots, bundle evidence,
+  dynamic-text size, dynamic-text-to-Popover spacing, and Popover/List non-overlap.
+- The first runtime draft exposed an over-constrained script oracle, not a mechanism defect:
+  Popover trigger and retained list are adjacent under current CardContent semantics, so that final
+  assertion now proves non-overlap instead of requiring an `8px` gap.
+- Gates pass:
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\previews\pages\harness\view_cache.rs apps\fret-ui-gallery\src\driver\diag_snapshot.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_view_cache_dynamic_text_mutation_through_cache --no-fail-fast --no-capture`
+  with Nextest run id `bd7f6552-74b2-416f-b0f0-55bb8f82742f`; and
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\view-cache\ui-gallery-view-cache-dynamic-text-mutation-through-cache.json --dir target\fret-diag-ui-gallery-view-cache-dynamic-text-mutation-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779244734657` and AI packet
+  `target/fret-diag-ui-gallery-view-cache-dynamic-text-mutation-v2/sessions/1779244725576-99248/1779244734657/ai.packet`.
+- Full View Cache suite passes 2/2:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-view-cache --dir target\fret-diag-ui-gallery-view-cache-suite-dynamic-text-v1 --session-auto --timeout-ms 600000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with suite summary
+  `target/fret-diag-ui-gallery-view-cache-suite-dynamic-text-v1/sessions/1779244758600-135808/suite.summary.json`.
+
+## M153: HitTestOnly Paint-Cache Replay Runtime Gate
+
+Status: complete for stable cached hit-test-only replay counter coverage.
+
+- Promoted `ui-gallery-hit-test-only-paint-cache-probe-sweep.json` from a local capture script into
+  a self-contained UI Gallery runtime gate. The script now declares `gallery-dev`, injects
+  `FRET_UI_GALLERY_PAINT_CACHE=1`, uses nav search to select the hidden
+  `hit_test_only_paint_cache_probe` page, verifies `/selected_page`, resets diagnostics, sweeps the
+  pointer over a stable cached canvas, asserts the region size, and captures a bundle.
+- Added protocol/runtime predicates for `paint_cache_hit_test_only_replay_allowed_ge` and
+  `paint_cache_hit_test_only_replay_rejected_key_mismatch_le`. Bootstrap diagnostics now export the
+  matching frame counters and can evaluate them from the recent debug snapshot ring.
+- The initial focused run exposed a script-authoring hole: without page navigation the script stayed
+  on the default Overlay page and timed out. A later suite run exposed a real diagnostics hygiene
+  issue: the probe page duplicated `ui-gallery-hit-test-only-probe-region`; the outer panel now uses
+  `ui-gallery-hit-test-only-probe-panel` while the inner hit region keeps the stable id.
+- No paint-cache key-mismatch defect reproduced after promotion. The passing gate proves at least
+  one hit-test-only replay was allowed and zero key-mismatch rejections were observed during the
+  sweep.
+- Gates pass:
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_paint_cache_hit_test_only_replay_counters_serialize script_v2_roundtrip_ui_gallery_hit_test_only_paint_cache_probe_sweep --no-fail-fast --no-capture`
+  with Nextest run id `5c85e308-22d9-4ab5-8d94-3ca48ccf3819`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics paint_cache_hit_test_only_replay_predicates_count_ring_snapshot_maxes --no-fail-fast --no-capture`
+  with Nextest run id `34eb1b6e-b6f7-4d06-80b0-ea1b1c6e764a`; and
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\diag\ui-gallery-hit-test-only-paint-cache-probe-sweep.json --dir target\fret-diag-hit-test-only-paint-cache-probe-sweep-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  with run id `1779247865248` and AI packet
+  `target/fret-diag-hit-test-only-paint-cache-probe-sweep-v2/sessions/1779247851157-129852/1779247865248/ai.packet`.
+- The new `ui-gallery-hit-test-only-paint-cache` suite passes with zero-warning lint policy:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-hit-test-only-paint-cache --dir target\fret-diag-hit-test-only-paint-cache-suite-v3 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  with suite summary
+  `target/fret-diag-hit-test-only-paint-cache-suite-v3/sessions/1779249174760-142600/suite.summary.json`.

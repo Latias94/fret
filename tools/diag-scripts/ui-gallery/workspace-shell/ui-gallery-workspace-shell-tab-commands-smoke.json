@@ -4,11 +4,13 @@
     "name": "UI gallery: workspace shell tab commands smoke",
     "tags": ["keyboard", "smoke", "tabs", "ui-gallery", "workspace", "workspace_shell"],
     "env_defaults": {
-      "FRET_UI_GALLERY_DIAG_PROFILE": "workspace_shell"
+      "FRET_UI_GALLERY_DIAG_PROFILE": "workspace_shell",
+      "FRET_UI_GALLERY_START_PAGE": "field"
     },
     "required_capabilities": ["diag.script_v2", "diag.command_dispatch_trace"],
     "target_hints": [
-      "Boots ui_gallery with the workspace_shell diag profile so the shell starts on the overlay page under zinc/dark with the tab strip enabled.",
+      "Boots ui_gallery with the workspace_shell diag profile so the tab strip is enabled.",
+      "Selects the Field tab explicitly so the command smoke is independent of launch-time start-page routing.",
       "Focuses the workspace content surface, then exercises next/previous/close tab commands from the workspace command scope.",
       "Asserts the single-pane workspace layout mirror updates the selected tab and removes the closed tab."
     ]
@@ -40,6 +42,36 @@
       "predicate": {
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-command" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-field" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-field" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-field" },
+        "selected": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/selected_page",
+        "value": "field"
       },
       "timeout_frames": 240
     },
@@ -88,7 +120,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "selected_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-intro" },
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-field" },
         "selected": true
       },
       "timeout_frames": 240
@@ -107,7 +139,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "not_exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-intro" }
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-field" }
       },
       "timeout_frames": 240
     },

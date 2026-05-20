@@ -580,6 +580,7 @@ where
                         window_frame,
                         child,
                         None,
+                        1.0,
                         &mut scroll_bindings,
                         &mut pending_invalidations,
                     ));
@@ -1115,6 +1116,7 @@ where
                         window_frame,
                         child,
                         None,
+                        1.0,
                         &mut scroll_bindings,
                         &mut pending_invalidations,
                     ));
@@ -1442,6 +1444,7 @@ fn mount_element<H: UiHost + 'static>(
     window_frame: &mut WindowFrame,
     element: AnyElement,
     parent_inherited_text_style: Option<fret_core::TextStyleRefinement>,
+    parent_effective_opacity: f32,
     scroll_bindings: &mut Vec<crate::declarative::frame::ScrollHandleBinding>,
     pending_invalidations: &mut HashMap<NodeId, u8>,
 ) -> NodeId {
@@ -1462,6 +1465,21 @@ fn mount_element<H: UiHost + 'static>(
     let semantics_decoration = element.semantics_decoration.clone();
     let key_context = element.key_context.clone();
     let mut children = std::mem::take(&mut element.children);
+    let parent_effective_opacity = if parent_effective_opacity.is_finite() {
+        parent_effective_opacity
+    } else {
+        1.0
+    };
+    let local_opacity = match &element.kind {
+        ElementKind::Opacity(props) => props.opacity,
+        _ => 1.0,
+    };
+    let local_opacity = if local_opacity.is_finite() {
+        local_opacity
+    } else {
+        1.0
+    };
+    let effective_opacity = (parent_effective_opacity * local_opacity).clamp(0.0, 1.0);
     let existing_node_entry = window_state.node_entry(id);
     let had_existing_node_entry = existing_node_entry.is_some();
     let had_existing_node = existing_node_entry
@@ -1531,6 +1549,7 @@ fn mount_element<H: UiHost + 'static>(
             root: root_id,
         },
     );
+    window_state.record_effective_opacity(id, effective_opacity);
 
     if reuse_view_cache
         && view_cache_root_needs_layout_for_deferred_scroll_requests(ui, window_frame, node)
@@ -1906,6 +1925,7 @@ fn mount_element<H: UiHost + 'static>(
                 window_frame,
                 child,
                 inherited_text_style.clone(),
+                effective_opacity,
                 scroll_bindings,
                 pending_invalidations,
             ));
@@ -1937,6 +1957,7 @@ fn mount_element<H: UiHost + 'static>(
                 window_frame,
                 child,
                 inherited_text_style.clone(),
+                effective_opacity,
                 scroll_bindings,
                 pending_invalidations,
             ));
@@ -2254,6 +2275,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
                 window_frame,
                 child_element,
                 None,
+                1.0,
                 scroll_bindings,
                 pending_invalidations,
             );

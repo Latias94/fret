@@ -5,6 +5,7 @@
     "max_warning_issues": 0
   },
   "scripts": [
-    "tools/diag-scripts/ui-gallery/view-cache/ui-gallery-view-cache-model-mutation-through-cache.json"
+    "tools/diag-scripts/ui-gallery/view-cache/ui-gallery-view-cache-model-mutation-through-cache.json",
+    "tools/diag-scripts/ui-gallery/view-cache/ui-gallery-view-cache-dynamic-text-mutation-through-cache.json"
   ]
 }

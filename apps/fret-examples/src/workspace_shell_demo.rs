@@ -30,7 +30,8 @@ use fret_ui_kit::{
     TreeItem, TreeState,
 };
 use fret_workspace::close_policy::{
-    WorkspaceDirtyCloseDecision, WorkspaceDirtyClosePolicy, WorkspaceDirtyCloseRequest,
+    WorkspaceCloseReason, WorkspaceDirtyCloseDecision, WorkspaceDirtyClosePolicy,
+    WorkspaceDirtyCloseRequest,
 };
 use fret_workspace::layout::{WorkspacePaneTree, WorkspaceWindowLayout};
 use fret_workspace::{
@@ -135,7 +136,8 @@ where
             ..Default::default()
         },
         move |cx, _state| {
-            cx.pressable_add_on_activate(Arc::new(move |host, acx, _reason| {
+            cx.pressable_add_on_activate(Arc::new(move |host, acx, reason| {
+                host.record_pending_command_dispatch_source(acx, &cmd, reason);
                 host.dispatch_command(Some(acx.window), cmd.clone());
             }));
             vec![cx.container(
@@ -559,8 +561,11 @@ pub struct WorkspaceShellDemoDriver;
 
 const CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY: &str = "workspace.shell_demo.set_active_dirty";
 const CMD_WORKSPACE_SHELL_DEMO_CLEAR_ACTIVE_DIRTY: &str = "workspace.shell_demo.clear_active_dirty";
+const CMD_WORKSPACE_SHELL_DEMO_SET_PANE_B_ACTIVE_DIRTY: &str =
+    "workspace.shell_demo.set_pane_b_active_dirty";
 const CMD_WORKSPACE_SHELL_DEMO_DEBUG_CLOSE_ACTIVE_PANE_A: &str =
     "workspace.shell_demo.debug_close_active_in_pane_a";
+const CMD_WORKSPACE_SHELL_DEMO_WINDOW_CLOSE: &str = "window.close";
 const CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_CANCEL: &str = "workspace.shell_demo.dirty_close.cancel";
 const CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_DISCARD: &str =
     "workspace.shell_demo.dirty_close.discard";
@@ -576,6 +581,32 @@ struct WorkspaceShellDirtyClosePrompt {
     pane_id: Arc<str>,
     command: CommandId,
     request: WorkspaceDirtyCloseRequest,
+}
+
+impl WorkspaceShellDirtyClosePrompt {
+    fn window_close(request: WorkspaceDirtyCloseRequest) -> Self {
+        Self {
+            pane_id: Arc::from("<window>"),
+            command: CommandId::new(Arc::<str>::from(CMD_WORKSPACE_SHELL_DEMO_WINDOW_CLOSE)),
+            request,
+        }
+    }
+
+    fn tab_command(
+        pane_id: Arc<str>,
+        command: CommandId,
+        request: WorkspaceDirtyCloseRequest,
+    ) -> Self {
+        Self {
+            pane_id,
+            command,
+            request,
+        }
+    }
+
+    fn is_window_close(&self) -> bool {
+        self.request.reason == WorkspaceCloseReason::CloseWindow
+    }
 }
 
 struct WorkspaceShellDemoDirtyClosePolicy {
@@ -712,6 +743,9 @@ impl WorkspaceShellDemoDriver {
                                     0,
                                 )
                             });
+                        let prompt_label = Arc::<str>::from(format!(
+                            "Dirty close confirmation reason={reason} active={active_tab} close_count={close_count} dirty=[{dirty_list}]"
+                        ));
 
                         let dim_bg = Some(theme.color_token("muted"));
                         let dialog_bg = Some(theme.color_token("card"));
@@ -764,6 +798,7 @@ impl WorkspaceShellDemoDriver {
                                             SemanticsProps {
                                                 layout: fill_layout(),
                                                 role: SemanticsRole::Dialog,
+                                                label: Some(prompt_label.clone()),
                                                 test_id: Some(Arc::from(
                                                     "workspace-shell-dirty-close-prompt",
                                                 )),
@@ -1081,15 +1116,25 @@ impl WorkspaceShellDemoDriver {
 	                                                    let pin_doc_a_1 = CommandId::new(Arc::<str>::from(
 	                                                        "workspace.tab.pin.doc-a-1",
 	                                                    ));
-	                                                    let set_dirty = CommandId::new(Arc::<str>::from(
-	                                                        CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY,
-	                                                    ));
+                                                    let set_dirty = CommandId::new(Arc::<str>::from(
+                                                        CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY,
+                                                    ));
+                                                    let set_pane_b_dirty = CommandId::new(
+                                                        Arc::<str>::from(
+                                                            CMD_WORKSPACE_SHELL_DEMO_SET_PANE_B_ACTIVE_DIRTY,
+                                                        ),
+                                                    );
                                                     let clear_dirty = CommandId::new(Arc::<str>::from(
                                                         CMD_WORKSPACE_SHELL_DEMO_CLEAR_ACTIVE_DIRTY,
                                                     ));
                                                     let toggle_two_row_pinned = CommandId::new(
                                                         Arc::<str>::from(
                                                             CMD_WORKSPACE_SHELL_DEMO_TOGGLE_TABSTRIP_TWO_ROW_PINNED,
+                                                        ),
+                                                    );
+                                                    let close_window = CommandId::new(
+                                                        Arc::<str>::from(
+                                                            CMD_WORKSPACE_SHELL_DEMO_WINDOW_CLOSE,
                                                         ),
                                                     );
 	                                                    let close_others = CommandId::new(Arc::<str>::from(
@@ -1151,6 +1196,14 @@ impl WorkspaceShellDemoDriver {
                                                                     Px(22.0),
                                                                     Px(6.0),
                                                                 ),
+                                                                workspace_shell_command_button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-mark-pane-b-dirty",
+                                                                    "Mark pane-b dirty",
+                                                                    set_pane_b_dirty.clone(),
+                                                                    Px(22.0),
+                                                                    Px(6.0),
+                                                                ),
                                                             ]
                                                         },
                                                     );
@@ -1160,8 +1213,7 @@ impl WorkspaceShellDemoDriver {
                                                                 let mut layout =
                                                                     LayoutStyle::default();
                                                                 layout.size.width = Length::Fill;
-                                                                layout.size.height =
-                                                                    Length::Px(Px(28.0));
+                                                                layout.size.height = Length::Auto;
                                                                 layout.flex.shrink = 0.0;
                                                                 layout
                                                             },
@@ -1171,7 +1223,7 @@ impl WorkspaceShellDemoDriver {
                                                             ),
                                                             justify: MainAlign::Start,
                                                             align: CrossAlign::Center,
-                                                            wrap: false,
+                                                            wrap: true,
                                                             ..Default::default()
                                                         },
                                                         move |cx| {
@@ -1256,6 +1308,14 @@ impl WorkspaceShellDemoDriver {
                                                                     Px(22.0),
                                                                     Px(6.0),
                                                                 ),
+                                                                workspace_shell_command_button(
+                                                                    cx,
+                                                                    "workspace-shell-debug-close-window",
+                                                                    "Close window",
+                                                                    close_window.clone(),
+                                                                    Px(22.0),
+                                                                    Px(6.0),
+                                                                ),
                                                             ]
                                                         },
                                                     );
@@ -1305,7 +1365,11 @@ impl WorkspaceShellDemoDriver {
                         frame
                     };
 
-                    vec![WorkspaceCommandScope::new(window_layout.clone(), out).into_element(cx)]
+                    vec![
+                        WorkspaceCommandScope::new(window_layout.clone(), out)
+                            .apply_workspace_model_commands(false)
+                            .into_element(cx),
+                    ]
                 });
     }
 }
@@ -1347,6 +1411,88 @@ fn handle_global_changes(
     state.ui.propagate_global_changes(app, changed);
 }
 
+fn request_workspace_shell_window_close(
+    app: &mut App,
+    window: AppWindowId,
+    state: &WorkspaceShellWindowState,
+) {
+    let block_dirty_close = env_bool("FRET_WORKSPACE_SHELL_DEBUG_DIRTY_CLOSE_POLICY", false);
+    let mut dirty_close_policy = WorkspaceShellDemoDirtyClosePolicy {
+        block: block_dirty_close,
+    };
+    let outcome = app
+        .models_mut()
+        .read(&state.window_layout, |layout: &WorkspaceWindowLayout| {
+            layout.can_close_window_with_policy(Some(&mut dirty_close_policy))
+        })
+        .unwrap_or(fret_workspace::tabs::WorkspaceApplyCommandOutcome {
+            applied: true,
+            blocked_dirty_close: None,
+        });
+
+    if let Some(req) = outcome.blocked_dirty_close {
+        let _ = app.models_mut().update(&state.dirty_close_prompt, |p| {
+            *p = Some(WorkspaceShellDirtyClosePrompt::window_close(req));
+        });
+        let _ = app
+            .models_mut()
+            .update(&state.dirty_close_prompt_open, |v| *v = true);
+        app.request_redraw(window);
+        return;
+    }
+
+    if outcome.applied {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+    }
+}
+
+fn consume_workspace_shell_pending_command_dispatch_source(
+    app: &mut App,
+    window: AppWindowId,
+    command: &CommandId,
+) -> CommandDispatchSourceV1 {
+    app.with_global_mut(
+        WindowPendingCommandDispatchSourceService::default,
+        |svc, app| {
+            svc.consume(window, app.tick_id(), command)
+                .unwrap_or_else(CommandDispatchSourceV1::programmatic)
+        },
+    )
+}
+
+fn record_workspace_shell_driver_handled_command_dispatch(
+    app: &mut App,
+    window: AppWindowId,
+    command: &CommandId,
+    source: CommandDispatchSourceV1,
+) {
+    let handled_by_scope = app
+        .commands()
+        .get(command.clone())
+        .map(|m| m.scope)
+        .or(Some(CommandScope::Window));
+    app.with_global_mut(
+        WindowCommandDispatchDiagnosticsStore::default,
+        |store, app| {
+            store.record(CommandDispatchDecisionV1 {
+                seq: 0,
+                frame_id: app.frame_id(),
+                tick_id: app.tick_id(),
+                window,
+                command: command.clone(),
+                source,
+                handled: true,
+                handled_by_element: None,
+                handled_by_scope,
+                handled_by_driver: true,
+                stopped: false,
+                started_from_focus: false,
+                used_default_root_fallback: false,
+            });
+        },
+    );
+}
+
 fn handle_command(
     _driver: &mut WorkspaceShellDemoDriver,
     context: WinitCommandContext<'_, WorkspaceShellWindowState>,
@@ -1371,24 +1517,47 @@ fn handle_command(
 
         if (do_discard || do_save) && prompt.is_some() {
             let prompt = prompt.unwrap();
-            let _ = app.models_mut().update(
-                &state.window_layout,
-                |layout: &mut WorkspaceWindowLayout| {
-                    layout.active_pane = Some(prompt.pane_id.clone());
-                    let Some(pane) = layout.pane_tree.find_pane_mut(prompt.pane_id.as_ref()) else {
-                        return;
-                    };
-                    if let Some(active) = prompt.request.active_tab_id.clone() {
-                        let _ = pane.tabs.activate(active);
-                    }
-                    if do_save {
-                        for id in prompt.request.dirty_tabs_in_order.clone() {
-                            pane.tabs.set_dirty(id, false);
+            if prompt.is_window_close() {
+                if do_save {
+                    let _ = app.models_mut().update(
+                        &state.window_layout,
+                        |layout: &mut WorkspaceWindowLayout| {
+                            for dirty_id in prompt.request.dirty_tabs_in_order.clone() {
+                                let mut pane_ids = Vec::new();
+                                layout.pane_tree.collect_leaf_ids(&mut pane_ids);
+                                for pane_id in pane_ids {
+                                    if let Some(pane) =
+                                        layout.pane_tree.find_pane_mut(pane_id.as_ref())
+                                    {
+                                        pane.tabs.set_dirty(dirty_id.clone(), false);
+                                    }
+                                }
+                            }
+                        },
+                    );
+                }
+                app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            } else {
+                let _ = app.models_mut().update(
+                    &state.window_layout,
+                    |layout: &mut WorkspaceWindowLayout| {
+                        layout.active_pane = Some(prompt.pane_id.clone());
+                        let Some(pane) = layout.pane_tree.find_pane_mut(prompt.pane_id.as_ref())
+                        else {
+                            return;
+                        };
+                        if let Some(active) = prompt.request.active_tab_id.clone() {
+                            let _ = pane.tabs.activate(active);
                         }
-                    }
-                    let _ = pane.tabs.apply_command(&prompt.command);
-                },
-            );
+                        if do_save {
+                            for id in prompt.request.dirty_tabs_in_order.clone() {
+                                pane.tabs.set_dirty(id, false);
+                            }
+                        }
+                        let _ = pane.tabs.apply_command(&prompt.command);
+                    },
+                );
+            }
         }
 
         let _ = app
@@ -1401,22 +1570,37 @@ fn handle_command(
         return;
     }
 
-    if command.as_str() == "window.close" {
-        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+    if command.as_str() == CMD_WORKSPACE_SHELL_DEMO_WINDOW_CLOSE {
+        let pending_source =
+            consume_workspace_shell_pending_command_dispatch_source(app, window, &command);
+        request_workspace_shell_window_close(app, window, state);
+        record_workspace_shell_driver_handled_command_dispatch(
+            app,
+            window,
+            &command,
+            pending_source,
+        );
         return;
     }
 
     if matches!(
         command.as_str(),
-        CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY | CMD_WORKSPACE_SHELL_DEMO_CLEAR_ACTIVE_DIRTY
+        CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY
+            | CMD_WORKSPACE_SHELL_DEMO_SET_PANE_B_ACTIVE_DIRTY
+            | CMD_WORKSPACE_SHELL_DEMO_CLEAR_ACTIVE_DIRTY
     ) {
-        let dirty = command.as_str() == CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY;
+        let pane_id = if command.as_str() == CMD_WORKSPACE_SHELL_DEMO_SET_PANE_B_ACTIVE_DIRTY {
+            "pane-b"
+        } else {
+            "pane-a"
+        };
+        let dirty = command.as_str() != CMD_WORKSPACE_SHELL_DEMO_CLEAR_ACTIVE_DIRTY;
         let did_apply = app
             .models_mut()
             .update(
                 &state.window_layout,
                 |layout: &mut WorkspaceWindowLayout| {
-                    let Some(pane) = layout.pane_tree.find_pane_mut("pane-a") else {
+                    let Some(pane) = layout.pane_tree.find_pane_mut(pane_id) else {
                         return false;
                     };
                     let Some(active) = pane
@@ -1469,11 +1653,11 @@ fn handle_command(
 
         if let Some(req) = outcome.blocked_dirty_close.clone() {
             let _ = app.models_mut().update(&state.dirty_close_prompt, |p| {
-                *p = Some(WorkspaceShellDirtyClosePrompt {
-                    pane_id: Arc::from("pane-a"),
-                    command: close_cmd.clone(),
-                    request: req,
-                });
+                *p = Some(WorkspaceShellDirtyClosePrompt::tab_command(
+                    Arc::from("pane-a"),
+                    close_cmd.clone(),
+                    req,
+                ));
             });
             let _ = app
                 .models_mut()
@@ -1494,13 +1678,8 @@ fn handle_command(
     // hooks become non-idempotent (e.g. close-by-id after the tab is already removed). Capture
     // pending source metadata up front so we can still emit a stable command dispatch trace
     // entry for the driver-applied outcome (ADR 0307).
-    let pending_source = app.with_global_mut(
-        WindowPendingCommandDispatchSourceService::default,
-        |svc, app| {
-            svc.consume(window, app.tick_id(), &command)
-                .unwrap_or_else(CommandDispatchSourceV1::programmatic)
-        },
-    );
+    let pending_source =
+        consume_workspace_shell_pending_command_dispatch_source(app, window, &command);
     let pending_source_for_ui = pending_source.clone();
     app.with_global_mut(
         WindowPendingCommandDispatchSourceService::default,
@@ -1538,41 +1717,22 @@ fn handle_command(
 
     let did_dispatch_ui = state.ui.dispatch_command(app, services, &command);
     if (outcome.applied || outcome.blocked_dirty_close.is_some()) && !did_dispatch_ui {
-        let handled_by_scope = app
-            .commands()
-            .get(command.clone())
-            .map(|m| m.scope)
-            .or(Some(CommandScope::Window));
-        app.with_global_mut(
-            WindowCommandDispatchDiagnosticsStore::default,
-            |store, app| {
-                store.record(CommandDispatchDecisionV1 {
-                    seq: 0,
-                    frame_id: app.frame_id(),
-                    tick_id: app.tick_id(),
-                    window,
-                    command: command.clone(),
-                    source: pending_source.clone(),
-                    handled: true,
-                    handled_by_element: None,
-                    handled_by_scope,
-                    handled_by_driver: true,
-                    stopped: false,
-                    started_from_focus: false,
-                    used_default_root_fallback: false,
-                });
-            },
+        record_workspace_shell_driver_handled_command_dispatch(
+            app,
+            window,
+            &command,
+            pending_source.clone(),
         );
     }
 
     if let Some(req) = outcome.blocked_dirty_close.clone() {
         if let Some(pane_id) = active_pane_id {
             let _ = app.models_mut().update(&state.dirty_close_prompt, |p| {
-                *p = Some(WorkspaceShellDirtyClosePrompt {
+                *p = Some(WorkspaceShellDirtyClosePrompt::tab_command(
                     pane_id,
-                    command: command.clone(),
-                    request: req,
-                });
+                    command.clone(),
+                    req,
+                ));
             });
             let _ = app
                 .models_mut()
@@ -1580,7 +1740,7 @@ fn handle_command(
         }
     }
 
-    if outcome.applied || did_dispatch_ui {
+    if outcome.applied || outcome.blocked_dirty_close.is_some() || did_dispatch_ui {
         app.request_redraw(window);
     }
 }
@@ -1597,7 +1757,7 @@ fn handle_event(
         state,
     } = context;
     if matches!(event, Event::WindowCloseRequested) {
-        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        request_workspace_shell_window_close(app, window, state);
         return;
     }
     state.ui.dispatch_event(app, services, event);

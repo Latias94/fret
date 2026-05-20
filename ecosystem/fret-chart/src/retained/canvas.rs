@@ -7886,6 +7886,204 @@ mod tests {
     }
 
     #[test]
+    fn explicit_link_axis_map_publishes_ambiguous_y_domain_window_to_output_model() {
+        let mut app = App::new();
+        let output: Model<ChartCanvasOutput> =
+            app.models_mut().insert(ChartCanvasOutput::default());
+
+        let y_axis = AxisId::new(3);
+        let y_key = LinkAxisKey {
+            kind: AxisKind::Y,
+            dataset: DatasetId::new(1),
+            field: FieldId::new(2),
+        };
+        let window = DataWindow {
+            min: -0.25,
+            max: 0.75,
+        };
+
+        let mut canvas = ChartCanvas::new(multi_axis_spec()).expect("spec should be valid");
+        canvas = canvas.output_model(output.clone());
+        canvas.with_engine_mut(|engine| {
+            engine.apply_action(Action::SetDataWindowY {
+                axis: y_axis,
+                window: Some(window),
+            });
+        });
+
+        let _ = canvas.publish_output(&mut app);
+        let published = output
+            .read(&mut app, |_app, state| state.clone())
+            .expect("expected output model to be readable");
+        assert_eq!(
+            published
+                .snapshot
+                .domain_windows_by_key
+                .get(&y_key)
+                .copied(),
+            None,
+            "ambiguous shared Y axes must not publish by default"
+        );
+
+        let mut explicit = BTreeMap::new();
+        explicit.insert(y_axis, y_key);
+        canvas = canvas.link_axis_map(explicit);
+
+        let output_changed = canvas.publish_output(&mut app);
+        assert!(
+            output_changed,
+            "explicit axis mapping should change the published output snapshot"
+        );
+
+        let published = output
+            .read(&mut app, |_app, state| state.clone())
+            .expect("expected output model to be readable");
+        assert_eq!(
+            published
+                .snapshot
+                .domain_windows_by_key
+                .get(&y_key)
+                .copied(),
+            Some(Some(window)),
+            "explicit Y mapping should publish the domain window in LinkAxisKey space"
+        );
+        assert_eq!(
+            published.snapshot.domain_windows_by_key.len(),
+            1,
+            "only the explicitly disambiguated Y axis should be published"
+        );
+    }
+
+    #[test]
+    fn explicit_y_domain_window_propagates_to_second_linked_chart_output_model() {
+        let window_id = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window_id);
+        let mut services = FakeServices;
+
+        let source_output: Model<ChartCanvasOutput> =
+            app.models_mut().insert(ChartCanvasOutput::default());
+        let target_output: Model<ChartCanvasOutput> =
+            app.models_mut().insert(ChartCanvasOutput::default());
+        let shared_domain_windows = app
+            .models_mut()
+            .insert(BTreeMap::<LinkAxisKey, Option<DataWindow>>::default());
+        let shared_brush = app.models_mut().insert(None::<BrushSelectionLink2D>);
+        let shared_axis_pointer = app.models_mut().insert(None::<AxisPointerLinkAnchor>);
+
+        let y_axis = AxisId::new(3);
+        let y_key = LinkAxisKey {
+            kind: AxisKind::Y,
+            dataset: DatasetId::new(1),
+            field: FieldId::new(2),
+        };
+        let source_window = DataWindow {
+            min: -0.25,
+            max: 0.75,
+        };
+        let target_initial_window = DataWindow {
+            min: -5.0,
+            max: 5.0,
+        };
+        let mut explicit = BTreeMap::new();
+        explicit.insert(y_axis, y_key);
+
+        let mut source = ChartCanvas::new(multi_axis_spec()).expect("source spec should be valid");
+        source = source.output_model(source_output.clone());
+        source = source.link_axis_map(explicit.clone());
+        source.with_engine_mut(|engine| {
+            engine.apply_action(Action::SetDataWindowY {
+                axis: y_axis,
+                window: Some(source_window),
+            });
+        });
+
+        assert!(
+            source.publish_output(&mut app),
+            "source chart should publish the explicit Y domain window"
+        );
+        let source_router = source.link_router().clone();
+
+        let mut target = ChartCanvas::new(multi_axis_spec()).expect("target spec should be valid");
+        target = target.output_model(target_output.clone());
+        target = target.link_axis_map(explicit);
+        target = target.linked_domain_windows(shared_domain_windows.clone());
+        target.with_engine_mut(|engine| {
+            engine.apply_action(Action::SetDataWindowY {
+                axis: y_axis,
+                window: Some(target_initial_window),
+            });
+        });
+        let target_router = target.link_router().clone();
+
+        let root = ChartCanvas::create_node(&mut ui, target.test_id("linked-target-chart"));
+        ui.set_root(root);
+
+        let mut linked = crate::linking::LinkedChartGroup::new(
+            crate::linking::ChartLinkPolicy {
+                brush: false,
+                axis_pointer: false,
+                domain_windows: true,
+            },
+            shared_brush,
+            shared_axis_pointer,
+            shared_domain_windows.clone(),
+        );
+        linked
+            .push(crate::linking::LinkedChartMember {
+                router: source_router,
+                output: source_output.clone(),
+            })
+            .push(crate::linking::LinkedChartMember {
+                router: target_router,
+                output: target_output.clone(),
+            });
+
+        assert!(
+            linked.tick(&mut app),
+            "linked group should copy the source domain window into shared state"
+        );
+        let shared = shared_domain_windows
+            .read(&mut app, |_app, windows| windows.clone())
+            .expect("expected shared domain windows model to be readable");
+        assert_eq!(
+            shared.get(&y_key).copied(),
+            Some(Some(source_window)),
+            "shared linked-domain state should contain the source explicit Y window"
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(400.0)),
+        );
+        pump_chart_frame(&mut ui, &mut app, &mut services, bounds);
+        pump_chart_frame(&mut ui, &mut app, &mut services, bounds);
+
+        let target_published = target_output
+            .read(&mut app, |_app, state| state.clone())
+            .expect("expected target output model to be readable");
+        assert_eq!(
+            target_published
+                .snapshot
+                .domain_windows_by_key
+                .get(&y_key)
+                .copied(),
+            Some(Some(source_window)),
+            "target chart should apply the shared explicit Y window and publish it back to output"
+        );
+        assert_ne!(
+            target_published
+                .snapshot
+                .domain_windows_by_key
+                .get(&y_key)
+                .copied(),
+            Some(Some(target_initial_window)),
+            "target chart output should not remain at its initial local Y window"
+        );
+    }
+
+    #[test]
     fn first_chart_bar_hover_publishes_tooltip_lines_to_output_model() {
         let mut app = App::new();
         let output: Model<ChartCanvasOutput> =

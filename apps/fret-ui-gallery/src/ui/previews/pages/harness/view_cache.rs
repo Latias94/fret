@@ -196,6 +196,16 @@ pub(in crate::ui) fn preview_view_cache(
         let counter = cx
             .get_model_copied(&view_cache_counter, Invalidation::Layout)
             .unwrap_or(0);
+        let dynamic_text: Arc<str> = if counter == 0 {
+            "Cached text mutation probe: short baseline.".into()
+        } else {
+            format!(
+                "Cached text mutation probe: counter={counter} expands this retained subtree \
+                 paragraph into a longer wrapped sentence so text measurement, prepared text cache, \
+                 and following layout all have to update without replacing the cached subtree."
+            )
+            .into()
+        };
 
         let input = shadcn::Input::new(text_input.clone())
             .a11y_label("Cached input")
@@ -275,7 +285,16 @@ pub(in crate::ui) fn preview_view_cache(
                     .into_element(cx),
                 ])
                 .into_element(cx),
-                shadcn::CardContent::new(vec![input, textarea, popover, list]).into_element(cx),
+                shadcn::CardContent::new(vec![
+                    doc_layout::muted_full_width(cx, dynamic_text)
+                        .into_element(cx)
+                        .test_id("ui-gallery-view-cache-dynamic-text"),
+                    input,
+                    textarea,
+                    popover,
+                    list,
+                ])
+                .into_element(cx),
             ])
             .refine_layout(LayoutRefinement::default().w_full())
             .into_element(cx),

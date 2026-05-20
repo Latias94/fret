@@ -28,6 +28,8 @@ fn predicate_uses_debug_snapshot_history(predicate: &UiPredicateV1) -> bool {
             | UiPredicateV1::VirtualListWindowsMatchingGe { .. }
             | UiPredicateV1::RetainedVirtualListReconcilesMatchingGe { .. }
             | UiPredicateV1::ScrollHandleChangesMatchingGe { .. }
+            | UiPredicateV1::PaintCacheHitTestOnlyReplayAllowedGe { .. }
+            | UiPredicateV1::PaintCacheHitTestOnlyReplayRejectedKeyMismatchLe { .. }
     )
 }
 
@@ -122,6 +124,35 @@ fn eval_debug_snapshot_predicate_from_ring(
             });
             Some(changes >= *min)
         }
+        UiPredicateV1::PaintCacheHitTestOnlyReplayAllowedGe { min } => {
+            let allowed_max = ring
+                .snapshots
+                .iter()
+                .map(|snapshot| {
+                    snapshot
+                        .debug
+                        .stats
+                        .paint_cache_hit_test_only_replay_allowed as u64
+                })
+                .max()
+                .unwrap_or(0);
+            Some(allowed_max >= *min)
+        }
+        UiPredicateV1::PaintCacheHitTestOnlyReplayRejectedKeyMismatchLe { max } => {
+            let rejected_max = ring
+                .snapshots
+                .iter()
+                .map(|snapshot| {
+                    snapshot
+                        .debug
+                        .stats
+                        .paint_cache_hit_test_only_replay_rejected_key_mismatch
+                        as u64
+                })
+                .max()
+                .unwrap_or(0);
+            Some(rejected_max <= *max)
+        }
         _ => None,
     }
 }
@@ -135,6 +166,10 @@ pub(super) fn eval_debug_snapshot_predicate(
     }
 
     if let Some(ok) = eval_virtual_list_predicate_from_debug_snapshot(debug, predicate) {
+        return Some(ok);
+    }
+
+    if let Some(ok) = eval_paint_cache_predicate_from_debug_snapshot(debug, predicate) {
         return Some(ok);
     }
 
@@ -162,6 +197,24 @@ fn eval_input_arbitration_predicate_from_debug_snapshot(
         UiPredicateV1::InputPointerCaptureActiveIs { active } => {
             Some(debug.input_arbitration.pointer_capture_active == *active)
         }
+        _ => None,
+    }
+}
+
+fn eval_paint_cache_predicate_from_debug_snapshot(
+    debug: &UiTreeDebugSnapshotV1,
+    predicate: &UiPredicateV1,
+) -> Option<bool> {
+    match predicate {
+        UiPredicateV1::PaintCacheHitTestOnlyReplayAllowedGe { min } => {
+            Some((debug.stats.paint_cache_hit_test_only_replay_allowed as u64) >= *min)
+        }
+        UiPredicateV1::PaintCacheHitTestOnlyReplayRejectedKeyMismatchLe { max } => Some(
+            (debug
+                .stats
+                .paint_cache_hit_test_only_replay_rejected_key_mismatch as u64)
+                <= *max,
+        ),
         _ => None,
     }
 }
@@ -812,6 +865,19 @@ mod tests {
         snapshot_with_debug(debug)
     }
 
+    fn snapshot_with_paint_cache_hit_test_only_replay_counters(
+        allowed: u32,
+        rejected_key_mismatch: u32,
+    ) -> UiDiagnosticsSnapshotV1 {
+        let mut debug = UiTreeDebugSnapshotV1::default();
+        debug.stats.paint_cache_hit_test_only_replay_allowed = allowed;
+        debug
+            .stats
+            .paint_cache_hit_test_only_replay_rejected_key_mismatch = rejected_key_mismatch;
+
+        snapshot_with_debug(debug)
+    }
+
     fn snapshot_with_debug(debug: UiTreeDebugSnapshotV1) -> UiDiagnosticsSnapshotV1 {
         UiDiagnosticsSnapshotV1 {
             schema_version: 1,
@@ -1135,6 +1201,47 @@ mod tests {
                     offset_changed: Some(true),
                     upgraded_to_layout_bindings_min: Some(1),
                 },
+            ),
+            Some(false)
+        );
+    }
+
+    #[test]
+    fn paint_cache_hit_test_only_replay_predicates_count_ring_snapshot_maxes() {
+        let mut ring = WindowRing::default();
+        ring.snapshots
+            .push_back(snapshot_with_paint_cache_hit_test_only_replay_counters(
+                0, 0,
+            ));
+        ring.snapshots
+            .push_back(snapshot_with_paint_cache_hit_test_only_replay_counters(
+                2, 0,
+            ));
+
+        assert_eq!(
+            eval_debug_snapshot_predicate_from_ring(
+                &ring,
+                &UiPredicateV1::PaintCacheHitTestOnlyReplayAllowedGe { min: 1 },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate_from_ring(
+                &ring,
+                &UiPredicateV1::PaintCacheHitTestOnlyReplayRejectedKeyMismatchLe { max: 0 },
+            ),
+            Some(true)
+        );
+
+        ring.snapshots
+            .push_back(snapshot_with_paint_cache_hit_test_only_replay_counters(
+                1, 1,
+            ));
+
+        assert_eq!(
+            eval_debug_snapshot_predicate_from_ring(
+                &ring,
+                &UiPredicateV1::PaintCacheHitTestOnlyReplayRejectedKeyMismatchLe { max: 0 },
             ),
             Some(false)
         );

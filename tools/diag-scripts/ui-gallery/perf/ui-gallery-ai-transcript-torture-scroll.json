@@ -1,6 +1,24 @@
 {
   "schema_version": 2,
+  "meta": {
+    "required_launch_features": ["gallery-ai", "gallery-chart", "gallery-dev", "gallery-web-ime-harness"],
+    "name": "UI gallery: AI transcript retained torture scroll",
+    "tags": ["ui-gallery", "ai-elements", "transcript", "retained", "virtual-list", "scroll"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Navigates to the AI Transcript Torture page.",
+      "Uses a smaller deterministic transcript length for a retained virtual-list scroll and append mutation gate.",
+      "Asserts the retained transcript model count before and after appending while capturing layout and bundle evidence."
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_AI_TRANSCRIPT_LEN": "240",
+      "FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT": "1"
+    }
+  },
   "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 1000.0 },
+    { "type": "wait_frames", "n": 20 },
     {
       "type": "wait_until",
       "predicate": {
@@ -34,6 +52,17 @@
       "timeout_frames": 240
     },
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-messages-len" },
+        "field": "value",
+        "value": 240.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 600
+    },
+    {
       "type": "move_pointer",
       "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-root" }
     },
@@ -54,7 +83,25 @@
     { "type": "wait_frames", "n": 4 },
 
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-append" } },
-    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-messages-len" },
+        "field": "value",
+        "value": 340.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-row-0" }
+      },
+      "timeout_frames": 600
+    },
 
     { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-row-0" }, "delta_y": -240.0 },
     { "type": "wait_frames", "n": 2 },
@@ -64,6 +111,14 @@
     { "type": "wait_frames", "n": 4 },
 
     { "type": "wait_frames", "n": 30 },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-ai-transcript-torture-scroll.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-ai-transcript-torture-scroll"
+    },
     {
       "type": "capture_bundle",
       "label": "ui-gallery-ai-transcript-torture-scroll"

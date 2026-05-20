@@ -51,6 +51,7 @@ impl UiGalleryDriver {
         layout.active_pane = Some(Arc::from(UI_GALLERY_WORKSPACE_PANE_ID));
 
         if let Some(pane) = layout.pane_tree.find_pane_mut(UI_GALLERY_WORKSPACE_PANE_ID) {
+            pane.tabs.set_cycle_mode(TabCycleMode::InOrder);
             for tab_id in tabs.iter().cloned() {
                 pane.tabs.open_and_activate(tab_id);
             }
@@ -70,7 +71,12 @@ impl UiGalleryDriver {
 
         let mut pane_ids = Vec::new();
         layout.pane_tree.collect_leaf_ids(&mut pane_ids);
-        pane_ids.len() == 1 && pane_ids[0].as_ref() == UI_GALLERY_WORKSPACE_PANE_ID
+        pane_ids.len() == 1
+            && pane_ids[0].as_ref() == UI_GALLERY_WORKSPACE_PANE_ID
+            && layout
+                .pane_tree
+                .find_pane(UI_GALLERY_WORKSPACE_PANE_ID)
+                .is_some_and(|pane| pane.tabs.cycle_mode() == TabCycleMode::InOrder)
     }
 
     pub(crate) fn workspace_window_layout_snapshot(

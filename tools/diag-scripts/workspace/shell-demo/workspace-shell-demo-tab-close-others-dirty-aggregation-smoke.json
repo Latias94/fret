@@ -1,0 +1,216 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workspace shell demo: close others dirty aggregation (smoke)",
+    "tags": ["workspace", "tabstrip", "dirty", "close", "prompt", "aggregation", "smoke", "gate"],
+    "required_capabilities": ["diag.script_v2", "diag.command_dispatch_trace"],
+    "env_defaults": {
+      "FRET_WORKSPACE_SHELL_DEBUG_PREVIEW": "1",
+      "FRET_WORKSPACE_SHELL_DEBUG_DIRTY_CLOSE_POLICY": "1"
+    },
+    "target_hints": [
+      "Marks doc-a-0 and doc-a-1 dirty, activates doc-a-2, and invokes Close Other Tabs from the real tab context menu.",
+      "Asserts the dirty-close prompt reports a CloseOthers aggregate with two targets and two dirty tabs.",
+      "Cancels once to prove the aggregate close is blocked, then discards to close only the aggregate targets."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" } },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-content" } },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "focus_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-content" } },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "f6", "modifiers": { "ctrl": true }, "repeat": false },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "press_key", "key": "home", "repeat": false },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "selected_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" }, "selected": true },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-mark-dirty" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0.dirty" } },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-content" } },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "focus_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-content" } },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "f6", "modifiers": { "ctrl": true }, "repeat": false },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "press_key", "key": "arrow_right", "repeat": false },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "selected_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" }, "selected": true },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-mark-dirty" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1.dirty" } },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-content" } },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "focus_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-content" } },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "f6", "modifiers": { "ctrl": true }, "repeat": false },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "press_key", "key": "end", "repeat": false },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "selected_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }, "selected": true },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "button": "right", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "bounds_within_window", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2.menu.close_others" } },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2.menu.close_others" } },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "workspace.tab.close.others",
+        "handled": true,
+        "source_kind": "pointer",
+        "source_test_id": "workspace-shell-pane-pane-a-tab-doc-a-2.menu.close_others"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" },
+        "text": "reason=CloseOthers active=doc-a-2 close_count=2"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" },
+        "text": "dirty=[doc-a-0, doc-a-1]"
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt.cancel" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0.dirty" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1.dirty" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" } },
+      "timeout_frames": 240
+    },
+
+    { "type": "reset_diagnostics" },
+    { "type": "click", "button": "right", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "bounds_within_window", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2.menu.close_others" } },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2.menu.close_others" } },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "workspace.tab.close.others",
+        "handled": true,
+        "source_kind": "pointer",
+        "source_test_id": "workspace-shell-pane-pane-a-tab-doc-a-2.menu.close_others"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" },
+        "text": "reason=CloseOthers active=doc-a-2 close_count=2"
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt.discard" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "set_size_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }, "set_size": 1 },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "workspace-shell-demo-tab-close-others-dirty-aggregation-smoke" }
+  ]
+}

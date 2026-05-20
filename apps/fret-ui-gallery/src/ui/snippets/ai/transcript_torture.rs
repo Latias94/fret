@@ -3,9 +3,10 @@ pub const SOURCE: &str = include_str!("transcript_torture.rs");
 // region: example
 use fret::app::AppRenderActionsExt as _;
 use fret::{AppComponentCx, UiChild};
-use fret_core::Px;
+use fret_core::{Px, SemanticsRole};
 use fret_ui::Invalidation;
 use fret_ui::action::{ActionCx, UiActionHost};
+use fret_ui::element::SemanticsProps;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
@@ -56,6 +57,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let messages = cx
         .get_model_cloned(&messages_model, Invalidation::Layout)
         .unwrap_or_else(|| Arc::from([]));
+    let messages_len = messages.len();
 
     let append_messages = {
         let messages_model = messages_model.clone();
@@ -142,6 +144,16 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         },
     );
 
+    let instrumentation = cx.semantics(
+        SemanticsProps {
+            role: SemanticsRole::Text,
+            test_id: Some(Arc::<str>::from("ui-gallery-ai-transcript-messages-len")),
+            numeric_value: Some(messages_len as f64),
+            ..Default::default()
+        },
+        |_cx| Vec::<_>::new(),
+    );
+
     let mut container_props = cx.with_theme(|theme| {
         decl_style::container_props(
             theme,
@@ -155,6 +167,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         vec![
             header,
             cx.container(container_props, |_cx| vec![transcript]),
+            instrumentation,
         ]
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())

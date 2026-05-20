@@ -192,7 +192,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "data-table-toolbar-faceted-status-trigger"
+          "id": "ui-gallery-data-table-torture-toolbar-faceted-status-trigger"
         }
       },
       "timeout_frames": 240

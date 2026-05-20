@@ -32,6 +32,7 @@ use fret_workspace::commands::{
     CMD_WORKSPACE_TAB_PREV,
 };
 use fret_workspace::layout::WorkspaceWindowLayout;
+use fret_workspace::tabs::TabCycleMode;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;

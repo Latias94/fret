@@ -4,6 +4,30 @@
   "scope": "suites+prelude",
   "scripts": [
     {
+      "id": "chart-multi-axis-linked-domain-window-app-snapshot",
+      "path": "tools/diag-scripts/charts/chart-multi-axis-linked-domain-window-app-snapshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "chart-multi-axis-linking"
+      ],
+      "tags": [
+        "app_snapshot",
+        "chart",
+        "domain_window",
+        "linking",
+        "retained"
+      ],
+      "target_hints": [
+        "Runs against chart_multi_axis_demo.",
+        "The demo applies a deterministic top-chart X window in diagnostics mode after the before screenshot.",
+        "Asserts the shared linked-domain model and both chart output models converge to the same X window."
+      ]
+    },
+    {
       "id": "components-gallery-file-tree-toggle-and-scroll",
       "path": "tools/diag-scripts/components-gallery/file-tree/components-gallery-file-tree-toggle-and-scroll.json",
       "required_capabilities": [],
@@ -3458,13 +3482,32 @@
     {
       "id": "ui-gallery-ai-transcript-torture-scroll",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-ai-transcript-torture-scroll.json",
-      "required_capabilities": [],
-      "required_launch_features": [],
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-ai",
+        "gallery-chart",
+        "gallery-dev",
+        "gallery-web-ime-harness"
+      ],
       "suite_memberships": [
         "ui-gallery-ai-transcript-retained"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "ai-elements",
+        "retained",
+        "scroll",
+        "transcript",
+        "ui-gallery",
+        "virtual-list"
+      ],
+      "target_hints": [
+        "Navigates to the AI Transcript Torture page.",
+        "Uses a smaller deterministic transcript length for a retained virtual-list scroll and append mutation gate.",
+        "Asserts the retained transcript model count before and after appending while capturing layout and bundle evidence."
+      ]
     },
     {
       "id": "ui-gallery-ai-transcription-demo-screenshot-zinc-dark",
@@ -4912,6 +4955,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
+        "ui-gallery-carousel-state",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -4932,6 +4976,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
+        "ui-gallery-carousel-state",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -5055,6 +5100,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
+        "ui-gallery-carousel-state",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -5077,6 +5123,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
+        "ui-gallery-carousel-state",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -5120,6 +5167,7 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-carousel-docs-parity",
+        "ui-gallery-carousel-state",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -5295,6 +5343,29 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-chart-torture-explicit-y-link-map",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-chart-torture-explicit-y-link-map.json",
+      "required_capabilities": [],
+      "required_launch_features": [
+        "gallery-chart"
+      ],
+      "suite_memberships": [
+        "ui-gallery-chart-linking-explicit-y-map"
+      ],
+      "tags": [
+        "adr_0301",
+        "chart",
+        "explicit_axis_map",
+        "linking",
+        "retained",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts from the retained Chart Torture page with an explicit Y-axis link map enabled.",
+        "Proves ADR 0301 explicit host mapping can publish an otherwise ambiguous multi-series Y domain window to ChartCanvasOutput."
+      ]
     },
     {
       "id": "ui-gallery-chart-torture-pan-zoom",
@@ -6155,6 +6226,32 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-combobox-full-page-startup-intro-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-full-page-startup-intro-non-overlap.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-combobox-geometry-placement"
+      ],
+      "tags": [
+        "combobox",
+        "gate",
+        "layout",
+        "shadcn",
+        "startup",
+        "text",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the full Combobox page rather than a focused section.",
+        "Captures the startup viewport before any manual resize recovery.",
+        "Asserts the long docs intro owns enough measured height before the Basic section title."
+      ]
+    },
+    {
       "id": "ui-gallery-combobox-groups-filter-select-paris",
       "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-groups-filter-select-paris.json",
       "required_capabilities": [
@@ -6352,6 +6449,84 @@
       ]
     },
     {
+      "id": "ui-gallery-combobox-popup-doc-intro-logical994-startup-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-doc-intro-logical994-startup-non-overlap.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-combobox-geometry-placement"
+      ],
+      "tags": [
+        "combobox",
+        "gate",
+        "layout",
+        "popup",
+        "shadcn",
+        "startup",
+        "text",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the focused Combobox Popup doc section at the observed 994x466 logical startup window.",
+        "Complements the 671x460 and 663x311 startup probes by treating the user screenshot size as logical pixels instead of display-scaled physical pixels.",
+        "Captures the early startup frames before any manual resize recovery and asserts the long docs intro owns enough measured height before the Popup section title."
+      ]
+    },
+    {
+      "id": "ui-gallery-combobox-popup-doc-intro-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-doc-intro-non-overlap.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-combobox-geometry-placement"
+      ],
+      "tags": [
+        "combobox",
+        "gate",
+        "layout",
+        "popup",
+        "shadcn",
+        "text",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the focused Combobox Popup doc section at a 671x460 logical startup window (about 1006x690 physical at 1.5x scale).",
+        "Asserts the retained page intro wraps into its measured height and does not overlap the Popup section title as soon as the startup page is present, before any resize recovery."
+      ]
+    },
+    {
+      "id": "ui-gallery-combobox-popup-doc-intro-short-startup-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-doc-intro-short-startup-non-overlap.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-combobox-geometry-placement"
+      ],
+      "tags": [
+        "combobox",
+        "gate",
+        "layout",
+        "popup",
+        "shadcn",
+        "startup",
+        "text",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the focused Combobox Popup doc section at a short startup window derived from the observed 994x466 screenshot on a 1.5x scale display.",
+        "Captures the early startup frames before any manual resize recovery and asserts the long docs intro owns enough measured height before the Popup section title."
+      ]
+    },
+    {
       "id": "ui-gallery-combobox-popup-trigger",
       "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-popup-trigger.json",
       "required_capabilities": [
@@ -6475,6 +6650,62 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-combobox-rtl-long-text-doc-intro-client721-startup-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-doc-intro-client721-startup-non-overlap.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-combobox-geometry-placement"
+      ],
+      "tags": [
+        "combobox",
+        "gate",
+        "layout",
+        "long_text",
+        "rtl",
+        "shadcn",
+        "startup",
+        "text",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the focused Combobox RTL Long Text doc section at a client-height companion for the observed decorated 1624x1128 physical window on a 1.5x scale display.",
+        "Covers the case where a manually observed outer-window screenshot includes the Windows title bar, leaving a shorter drawable client area than the logical1083 gate.",
+        "Asserts the long docs intro owns enough measured height before the RTL Long Text section title, description, and live preview content."
+      ]
+    },
+    {
+      "id": "ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-combobox-geometry-placement"
+      ],
+      "tags": [
+        "combobox",
+        "gate",
+        "layout",
+        "long_text",
+        "rtl",
+        "shadcn",
+        "startup",
+        "text",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the focused Combobox RTL Long Text doc section at the observed 1624x1128 physical startup window on a 1.5x scale display.",
+        "Captures the early startup viewport before any manual resize recovery.",
+        "Asserts the long docs intro owns enough measured height before the RTL Long Text section title, description, and live preview content."
+      ]
+    },
+    {
       "id": "ui-gallery-combobox-rtl-long-text-geometry",
       "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-long-text-geometry.json",
       "required_capabilities": [
@@ -6566,6 +6797,33 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-command-basic-dialog-overlay-focus",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-basic-dialog-overlay-focus.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-command"
+      ],
+      "tags": [
+        "active_descendant",
+        "command",
+        "dialog",
+        "focus",
+        "gate",
+        "overlay",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts on the Command Basic section and opens the real CommandDialog trigger.",
+        "Proves dialog overlay presence, input focus, listbox labelling, and cmdk active-descendant wiring.",
+        "Closes with Escape and verifies focus restoration to the trigger."
+      ]
     },
     {
       "id": "ui-gallery-command-docs-demo-icons-screenshots",
@@ -7227,6 +7485,7 @@
       "id": "ui-gallery-data-table-retained-column-actions-menu",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-column-actions-menu.json",
       "required_capabilities": [
+        "diag.command_dispatch_trace",
         "diag.script_v2"
       ],
       "required_launch_features": [
@@ -7586,7 +7845,9 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
-      "required_launch_features": [],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-data-table-view-cache-torture"
       ],
@@ -8291,6 +8552,31 @@
       ]
     },
     {
+      "id": "ui-gallery-hit-test-only-paint-cache-probe-sweep",
+      "path": "tools/diag-scripts/ui-gallery/diag/ui-gallery-hit-test-only-paint-cache-probe-sweep.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
+      "suite_memberships": [
+        "ui-gallery-hit-test-only-paint-cache"
+      ],
+      "tags": [
+        "hit_test",
+        "hit_test_only",
+        "mechanism_harness",
+        "paint_cache",
+        "runtime",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the gallery-dev HitTestOnly Paint-Cache Probe page.",
+        "Sweeps pointer movement over a stable cached canvas and gates hit-test-only paint-cache replay counters."
+      ]
+    },
+    {
       "id": "ui-gallery-hit-test-torture-stripes-move-sweep-via-nav-steady",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-hit-test-torture-stripes-move-sweep-via-nav-steady.json",
       "required_capabilities": [],
@@ -8797,6 +9083,32 @@
         "ui_gallery"
       ],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-item-vs-field-doc-intro-client721-startup-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/item/ui-gallery-item-vs-field-doc-intro-client721-startup-non-overlap.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "gate",
+        "item",
+        "layout",
+        "shadcn",
+        "startup",
+        "text",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Item docs page and focuses the Item vs Field section at the same client-height companion used by the Combobox startup text gate.",
+        "Covers a non-Combobox fixed-line-box long paragraph surface so cold wrapped docs text cannot regress back to one-line startup measurement.",
+        "Asserts the long docs intro owns enough measured height before the Item vs Field section title, description, and content."
+      ]
     },
     {
       "id": "ui-gallery-label-click-label-toggles-checkbox",
@@ -9888,6 +10200,33 @@
         "Starts directly on the Resizable Multi-Viewport Combobox fixture.",
         "Opens a Combobox trigger near the bottom of a Resizable panel viewport root.",
         "The OS window has room below the trigger, but the panel viewport root does not; correct root-boundary ownership flips the anchored popover to the top."
+      ]
+    },
+    {
+      "id": "ui-gallery-resizable-multi-viewport-select-placement",
+      "path": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-multi-viewport-select-placement.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-resizable"
+      ],
+      "tags": [
+        "multi_viewport",
+        "overlay",
+        "resizable",
+        "root_boundary",
+        "select",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Resizable Multi-Viewport Select fixture.",
+        "Opens a popper-positioned Select control near the bottom of a Resizable panel viewport root.",
+        "The OS window has room below the trigger, but the panel viewport root does not; correct root-boundary ownership flips the Select listbox to the top and keeps relation edges intact."
       ]
     },
     {
@@ -11510,6 +11849,32 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-view-cache-dynamic-text-mutation-through-cache",
+      "path": "tools/diag-scripts/ui-gallery/view-cache/ui-gallery-view-cache-dynamic-text-mutation-through-cache.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-view-cache"
+      ],
+      "tags": [
+        "layout",
+        "mechanism_harness",
+        "model",
+        "mutation",
+        "runtime",
+        "text_cache",
+        "ui_gallery",
+        "view_cache"
+      ],
+      "target_hints": [
+        "Drives the View Cache harness through a cached-subtree counter mutation that changes visible wrapped text.",
+        "Asserts app snapshot state, visible text semantics, renderer text trace, and non-overlap with following retained content."
+      ]
+    },
+    {
       "id": "ui-gallery-view-cache-model-mutation-through-cache",
       "path": "tools/diag-scripts/ui-gallery/view-cache/ui-gallery-view-cache-model-mutation-through-cache.json",
       "required_capabilities": [
@@ -11860,9 +12225,35 @@
         "workspace_shell"
       ],
       "target_hints": [
-        "Boots ui_gallery with the workspace_shell diag profile so the shell starts on the overlay page under zinc/dark with the tab strip enabled.",
+        "Boots ui_gallery with the workspace_shell diag profile so the tab strip is enabled.",
+        "Selects the Field tab explicitly so the command smoke is independent of launch-time start-page routing.",
         "Focuses the workspace content surface, then exercises next/previous/close tab commands from the workspace command scope.",
         "Asserts the single-pane workspace layout mirror updates the selected tab and removes the closed tab."
+      ]
+    },
+    {
+      "id": "ui-gallery-workspace-tabstrip-overflow-select-command",
+      "path": "tools/diag-scripts/ui-gallery/workspace-tabstrip/ui-gallery-workspace-tabstrip-overflow-select-command.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-workspace-shell"
+      ],
+      "tags": [
+        "gate",
+        "overflow",
+        "ui_gallery",
+        "workspace",
+        "workspace_shell",
+        "workspace_tabstrip"
+      ],
+      "target_hints": [
+        "Boots UI Gallery with the workspace_shell diag profile so the workspace tabstrip is visible.",
+        "Shrinks the window to force tabstrip overflow.",
+        "Selects the hidden Command tab through the overflow menu.",
+        "Asserts workspace tabstrip diagnostics report overflow/visibility and the selected tab/page state updates."
       ]
     },
     {
@@ -11900,6 +12291,59 @@
         "Targets the already-active tab (doc-a-2) so the close target is in-view and deterministic.",
         "Clicks the close button and asserts a pointer-triggered dispatch trace entry exists.",
         "Asserts the tab is removed from the UI tree."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-close-button-dirty-shows-prompt-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-dirty-shows-prompt-smoke.json",
+      "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "close",
+        "dirty",
+        "gate",
+        "prompt",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Marks the active pane A tab dirty through the demo debug button.",
+        "Clicks the real tab close button for doc-a-2 instead of the demo close-active button.",
+        "Asserts the widget command path dispatches workspace.tab.close.doc-a-2 and dirty-close policy shows the prompt before discard closes the tab."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-close-cross-pane-button-ownership-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-cross-pane-button-ownership-smoke.json",
+      "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "close",
+        "cross_pane",
+        "gate",
+        "ownership",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Starts with pane-a active while pane-b is visible.",
+        "Clicks the real close button for doc-b-1 in pane-b.",
+        "Asserts the pointer path dispatches pane-b activation before closing doc-b-1.",
+        "Proves the close removes only doc-b-1 and does not remove pane-a's active doc-a-2."
       ]
     },
     {
@@ -11949,6 +12393,61 @@
         "Activates doc-a-1 (pane A) via the tab overflow menu so the hidden tab is revealed before closing.",
         "Closes doc-a-1 via the close button.",
         "Asserts doc-a-1 is removed and selection falls back to doc-a-2 (MRU fallback)."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json",
+      "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "close",
+        "context_menu",
+        "cross_pane",
+        "gate",
+        "ownership",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Starts with pane-a active while pane-b has two tabs.",
+        "Opens the real context menu from pane-b's selected doc-b-1 tab.",
+        "Asserts right-click dispatches pane-b activation before the aggregate close command.",
+        "Proves Close Other Tabs removes only pane-b's doc-b-0 and leaves pane-a tabs intact."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-close-others-dirty-aggregation-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-others-dirty-aggregation-smoke.json",
+      "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "aggregation",
+        "close",
+        "dirty",
+        "gate",
+        "prompt",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Marks doc-a-0 and doc-a-1 dirty, activates doc-a-2, and invokes Close Other Tabs from the real tab context menu.",
+        "Asserts the dirty-close prompt reports a CloseOthers aggregate with two targets and two dirty tabs.",
+        "Cancels once to prove the aggregate close is blocked, then discards to close only the aggregate targets."
       ]
     },
     {
@@ -12318,6 +12817,33 @@
         "Enters the tab strip (Ctrl+F6) from pane content.",
         "Presses Escape to restore focus to pane content.",
         "Asserts content focus is restored."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-window-close-dirty-aggregation-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-window-close-dirty-aggregation-smoke.json",
+      "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "aggregation",
+        "close",
+        "dirty",
+        "gate",
+        "prompt",
+        "smoke",
+        "window",
+        "workspace"
+      ],
+      "target_hints": [
+        "Marks the active tab in pane-a and the active tab in pane-b dirty.",
+        "Invokes the real window.close command from the debug UI.",
+        "Asserts the dirty-close prompt aggregates dirty tabs across panes and Cancel preserves the window."
       ]
     }
   ]

@@ -4,14 +4,20 @@ use super::prelude::*;
 pub(super) enum PositionedLayoutStyle {
     Static,
     Relative(crate::element::InsetStyle),
-    Absolute(crate::element::InsetStyle),
+    Absolute {
+        inset: crate::element::InsetStyle,
+        size: crate::element::SizeStyle,
+    },
 }
 
 pub(super) fn positioned_layout_style(layout: LayoutStyle) -> PositionedLayoutStyle {
     match layout.position {
         crate::element::PositionStyle::Static => PositionedLayoutStyle::Static,
         crate::element::PositionStyle::Relative => PositionedLayoutStyle::Relative(layout.inset),
-        crate::element::PositionStyle::Absolute => PositionedLayoutStyle::Absolute(layout.inset),
+        crate::element::PositionStyle::Absolute => PositionedLayoutStyle::Absolute {
+            inset: layout.inset,
+            size: layout.size,
+        },
     }
 }
 
@@ -94,91 +100,58 @@ pub(super) fn layout_positioned_child<H: UiHost>(
             cx.solve_barrier_child_root_if_needed(child, bounds);
             let _ = cx.layout_in(child, bounds);
         }
-        PositionedLayoutStyle::Absolute(inset) => {
+        PositionedLayoutStyle::Absolute { inset, size } => {
             let measured = cx.layout_in_probe(child, base);
-
-            let resolve = |edge: crate::element::InsetEdge, basis: Px| -> Option<Px> {
-                match edge {
-                    crate::element::InsetEdge::Px(px) => Some(px),
-                    crate::element::InsetEdge::Fill => Some(Px(basis.0.max(0.0))),
-                    crate::element::InsetEdge::Fraction(f) => {
-                        let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
-                        Some(Px((basis.0.max(0.0) * f).max(0.0)))
-                    }
-                    crate::element::InsetEdge::Auto => None,
-                }
-            };
-
-            let left = resolve(inset.left, base.size.width);
-            let right = resolve(inset.right, base.size.width);
-            let top = resolve(inset.top, base.size.height);
-            let bottom = resolve(inset.bottom, base.size.height);
-
-            let left_px = left.unwrap_or(Px(0.0));
-            let right_px = right.unwrap_or(Px(0.0));
-            let top_px = top.unwrap_or(Px(0.0));
-            let bottom_px = bottom.unwrap_or(Px(0.0));
-
-            let w = if left.is_some() && right.is_some() {
-                Px((base.size.width.0 - left_px.0 - right_px.0).max(0.0))
-            } else {
-                Px(measured.width.0.min(base.size.width.0.max(0.0)).max(0.0))
-            };
-            let h = if top.is_some() && bottom.is_some() {
-                Px((base.size.height.0 - top_px.0 - bottom_px.0).max(0.0))
-            } else {
-                Px(measured.height.0.min(base.size.height.0.max(0.0)).max(0.0))
-            };
-
-            let x = if left.is_some() {
-                left_px
-            } else if right.is_some() {
-                Px((base.size.width.0 - right_px.0 - w.0).max(0.0))
-            } else {
-                Px(0.0)
-            };
-            let y = if top.is_some() {
-                top_px
-            } else if bottom.is_some() {
-                Px((base.size.height.0 - bottom_px.0 - h.0).max(0.0))
-            } else {
-                Px(0.0)
-            };
-
-            let origin =
-                fret_core::Point::new(Px(base.origin.x.0 + x.0), Px(base.origin.y.0 + y.0));
-            let bounds = Rect::new(origin, Size::new(w, h));
+            let bounds = absolute_positioned_bounds(measured, base, inset, size, true);
             cx.solve_barrier_child_root_if_needed(child, bounds);
             let _ = cx.layout_in(child, bounds);
         }
     }
 }
 
-pub(super) fn layout_absolute_child_with_probe_bounds<H: UiHost>(
-    cx: &mut LayoutCx<'_, H>,
-    child: NodeId,
-    base: Rect,
-    probe: Rect,
-    inset: crate::element::InsetStyle,
-) {
-    let measured = cx.layout_in_probe(child, probe);
-
-    let resolve = |edge: crate::element::InsetEdge, basis: Px| -> Option<Px> {
-        match edge {
-            crate::element::InsetEdge::Px(px) => Some(px),
-            crate::element::InsetEdge::Fill => Some(Px(basis.0.max(0.0))),
-            crate::element::InsetEdge::Fraction(f) => {
-                let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
-                Some(Px((basis.0.max(0.0) * f).max(0.0)))
-            }
-            crate::element::InsetEdge::Auto => None,
+fn resolve_inset_edge(edge: crate::element::InsetEdge, basis: Px) -> Option<Px> {
+    match edge {
+        crate::element::InsetEdge::Px(px) => Some(px),
+        crate::element::InsetEdge::Fill => Some(Px(basis.0.max(0.0))),
+        crate::element::InsetEdge::Fraction(f) => {
+            let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+            Some(Px((basis.0.max(0.0) * f).max(0.0)))
         }
-    };
+        crate::element::InsetEdge::Auto => None,
+    }
+}
 
-    let left = resolve(inset.left, base.size.width);
-    let right = resolve(inset.right, base.size.width);
-    let top = resolve(inset.top, base.size.height);
-    let bottom = resolve(inset.bottom, base.size.height);
+fn resolve_absolute_length(
+    length: crate::element::Length,
+    measured: Px,
+    basis: Px,
+    clamp_auto_to_base: bool,
+) -> Px {
+    match length {
+        crate::element::Length::Auto if clamp_auto_to_base => {
+            Px(measured.0.min(basis.0.max(0.0)).max(0.0))
+        }
+        crate::element::Length::Auto => Px(measured.0.max(0.0)),
+        crate::element::Length::Px(px) => Px(px.0.max(0.0)),
+        crate::element::Length::Fill => Px(basis.0.max(0.0)),
+        crate::element::Length::Fraction(f) => {
+            let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+            Px((basis.0.max(0.0) * f).max(0.0))
+        }
+    }
+}
+
+fn absolute_positioned_bounds(
+    measured: Size,
+    base: Rect,
+    inset: crate::element::InsetStyle,
+    size: crate::element::SizeStyle,
+    clamp_auto_to_base: bool,
+) -> Rect {
+    let left = resolve_inset_edge(inset.left, base.size.width);
+    let right = resolve_inset_edge(inset.right, base.size.width);
+    let top = resolve_inset_edge(inset.top, base.size.height);
+    let bottom = resolve_inset_edge(inset.bottom, base.size.height);
 
     let left_px = left.unwrap_or(Px(0.0));
     let right_px = right.unwrap_or(Px(0.0));
@@ -188,13 +161,22 @@ pub(super) fn layout_absolute_child_with_probe_bounds<H: UiHost>(
     let w = if left.is_some() && right.is_some() {
         Px((base.size.width.0 - left_px.0 - right_px.0).max(0.0))
     } else {
-        Px(measured.width.0.max(0.0))
+        resolve_absolute_length(
+            size.width,
+            measured.width,
+            base.size.width,
+            clamp_auto_to_base,
+        )
     };
-
     let h = if top.is_some() && bottom.is_some() {
         Px((base.size.height.0 - top_px.0 - bottom_px.0).max(0.0))
     } else {
-        Px(measured.height.0.max(0.0))
+        resolve_absolute_length(
+            size.height,
+            measured.height,
+            base.size.height,
+            clamp_auto_to_base,
+        )
     };
 
     let x = if left.is_some() {
@@ -204,7 +186,6 @@ pub(super) fn layout_absolute_child_with_probe_bounds<H: UiHost>(
     } else {
         Px(0.0)
     };
-
     let y = if top.is_some() {
         top_px
     } else if bottom.is_some() {
@@ -214,7 +195,19 @@ pub(super) fn layout_absolute_child_with_probe_bounds<H: UiHost>(
     };
 
     let origin = fret_core::Point::new(Px(base.origin.x.0 + x.0), Px(base.origin.y.0 + y.0));
-    let bounds = Rect::new(origin, Size::new(w, h));
+    Rect::new(origin, Size::new(w, h))
+}
+
+pub(super) fn layout_absolute_child_with_probe_bounds<H: UiHost>(
+    cx: &mut LayoutCx<'_, H>,
+    child: NodeId,
+    base: Rect,
+    probe: Rect,
+    inset: crate::element::InsetStyle,
+    size: crate::element::SizeStyle,
+) {
+    let measured = cx.layout_in_probe(child, probe);
+    let bounds = absolute_positioned_bounds(measured, base, inset, size, false);
     cx.solve_barrier_child_root_if_needed(child, bounds);
     let _ = cx.layout_in(child, bounds);
 }

@@ -1847,6 +1847,7 @@ fn record_wait_until_predicate_selector_trace(
         | UiPredicateV1::SemanticsScrollNotApproxEq { target, .. }
         | UiPredicateV1::TextCompositionIs { target, .. }
         | UiPredicateV1::VisibleInWindow { target }
+        | UiPredicateV1::ElementEffectiveOpacityApproxEq { target, .. }
         | UiPredicateV1::BoundsWithinWindow { target, .. }
         | UiPredicateV1::TextInputImeCursorAreaWithinBounds { target, .. }
         | UiPredicateV1::BoundsMinSize { target, .. }

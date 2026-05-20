@@ -8,6 +8,7 @@ pub enum WorkspaceCloseReason {
     CloseOthers,
     CloseLeftOfActive,
     CloseRightOfActive,
+    CloseWindow,
 }
 
 /// A policy-layer request emitted when a close command would close one or more dirty tabs.

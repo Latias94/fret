@@ -3576,7 +3576,6 @@ impl Carousel {
             // (e.g. keyboard navigation). We mirror the outcome when stopOnInteraction is enabled.
             if autoplay_stop_on_interaction
                 && autoplay_cfg.is_some()
-                && runtime_snapshot.autoplay_token.is_some()
                 && !runtime_snapshot.autoplay_paused_external
                 && !runtime_snapshot.autoplay_stopped_by_interaction
                 && !runtime_snapshot.autoplay_stopped_by_last_snap

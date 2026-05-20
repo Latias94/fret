@@ -3,7 +3,8 @@
     "required_launch_features": ["gallery-dev"],
     "name": "ui-gallery-data-table-retained-column-actions-menu",
     "required_capabilities": [
-      "diag.script_v2"
+      "diag.script_v2",
+      "diag.command_dispatch_trace"
     ],
     "tags": [
       "ui_gallery",
@@ -230,6 +231,15 @@
       "type": "click"
     },
     {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "fret_ui_shadcn.data_table.column_action/pin_left/mem_mb",
+        "handled": true,
+        "source_kind": "pointer"
+      },
+      "timeout_frames": 240
+    },
+    {
       "n": 2,
       "type": "wait_frames"
     },
@@ -276,6 +286,15 @@
         "role": "menu_item"
       },
       "type": "click"
+    },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "fret_ui_shadcn.data_table.column_action/sort_asc/mem_mb",
+        "handled": true,
+        "source_kind": "pointer"
+      },
+      "timeout_frames": 240
     },
     {
       "n": 2,
@@ -326,6 +345,15 @@
       "type": "click"
     },
     {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "fret_ui_shadcn.data_table.column_action/hide/mem_mb",
+        "handled": true,
+        "source_kind": "pointer"
+      },
+      "timeout_frames": 240
+    },
+    {
       "n": 2,
       "type": "wait_frames"
     },
@@ -346,6 +374,52 @@
           "id": "ui-gallery-data-table-row-0-cell-mem_mb",
           "kind": "test_id"
         }
+      },
+      "type": "assert"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "role_and_name",
+          "name": "Sorting: mem_mb asc",
+          "role": "text"
+        }
+      },
+      "type": "assert"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "role_and_name",
+          "name": "Pinning: left=[mem_mb] right=[]",
+          "role": "text"
+        }
+      },
+      "type": "assert"
+    },
+    {
+      "target": {
+        "kind": "role_and_name",
+        "name": "Columns",
+        "role": "button"
+      },
+      "type": "click"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "checked_is",
+        "target": {
+          "kind": "role_and_name",
+          "name": "mem_mb",
+          "role": "menu_item_checkbox"
+        },
+        "checked": false
       },
       "type": "assert"
     },

@@ -1008,6 +1008,37 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "gallery-dev")]
+    #[test]
+    fn table_retained_torture_direct_start_header_bounds_converge() {
+        run_with_large_test_stack(
+            "table-retained-torture-direct-start-header-bounds",
+            || {
+                let _page_size =
+                    EnvVarGuard::set("FRET_UI_GALLERY_TABLE_RETAINED_PAGE_SIZE", "256");
+                let mut rendered =
+                    render_gallery_page_with_bootstrapped_app(PAGE_TABLE_RETAINED_TORTURE);
+                wait_until_test_id_exists(&mut rendered, "ui-gallery-table-retained-header-row", 4);
+
+                let mut header_bounds =
+                    visual_bounds_by_test_id(&rendered, "ui-gallery-table-retained-header-row");
+                for _ in 0..4 {
+                    if header_bounds.size.width.0 > 0.0 && header_bounds.size.height.0 > 0.0 {
+                        return;
+                    }
+                    render_gallery_frame(&mut rendered);
+                    header_bounds =
+                        visual_bounds_by_test_id(&rendered, "ui-gallery-table-retained-header-row");
+                }
+
+                assert!(
+                    header_bounds.size.width.0 > 0.0 && header_bounds.size.height.0 > 0.0,
+                    "expected retained Table direct-start header row to converge to non-zero bounds, got {header_bounds:?}"
+                );
+            }
+        );
+    }
+
     #[test]
     fn content_header_children_stretch_to_header_width() {
         let rendered = render_gallery_page_with_bootstrapped_app(PAGE_INTRO);
@@ -1101,6 +1132,50 @@ mod tests {
         assert_eq!(layout_snapshot.0, workspace_tabs_after);
         assert_eq!(layout_snapshot.1.as_deref(), Some(PAGE_COMMAND));
         assert_eq!(layout_snapshot.2, workspace_dirty_tabs_after);
+    }
+
+    #[test]
+    fn workspace_layout_tab_next_uses_gallery_visible_order() {
+        run_with_large_test_stack("workspace-layout-tab-next-visible-order", || {
+            let mut rendered = render_gallery_page_with_bootstrapped_app(PAGE_FIELD);
+
+            let _ =
+                rendered
+                    .app
+                    .models_mut()
+                    .update(&rendered.state.workspace_window_layout, |layout| {
+                        assert!(
+                            layout.apply_command(&CommandId::from(
+                                fret_workspace::commands::CMD_WORKSPACE_TAB_NEXT
+                            )),
+                            "expected workspace layout tab-next command to apply"
+                        );
+                    });
+
+            render_gallery_frame(&mut rendered);
+
+            let selected_after = rendered
+                .app
+                .models()
+                .get_cloned(&rendered.state.selected_page)
+                .expect("selected page model should exist after workspace layout tab next");
+            let layout_after = rendered
+                .app
+                .models()
+                .get_cloned(&rendered.state.workspace_window_layout)
+                .expect("workspace layout model should exist after workspace layout tab next");
+            let layout_snapshot = UiGalleryDriver::workspace_window_layout_snapshot(&layout_after)
+                .expect(
+                    "workspace layout snapshot should remain supported after workspace layout tab next",
+                );
+            let routed_page =
+                super::super::page_from_gallery_location(&rendered.state.page_router.state().location)
+                    .expect("page router should carry the selected workspace tab page");
+
+            assert_eq!(selected_after.as_ref(), PAGE_COMMAND);
+            assert_eq!(layout_snapshot.1.as_deref(), Some(PAGE_COMMAND));
+            assert_eq!(routed_page.as_ref(), PAGE_COMMAND);
+        });
     }
 
     #[test]

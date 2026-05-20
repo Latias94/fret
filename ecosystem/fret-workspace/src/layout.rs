@@ -3,7 +3,10 @@ use std::sync::Arc;
 use fret_core::Axis;
 use fret_runtime::CommandId;
 
-use crate::close_policy::WorkspaceDirtyClosePolicy;
+use crate::close_policy::{
+    WorkspaceCloseReason, WorkspaceDirtyCloseDecision, WorkspaceDirtyClosePolicy,
+    WorkspaceDirtyCloseRequest,
+};
 use crate::tabs::WorkspaceApplyCommandOutcome;
 
 #[cfg(feature = "serde")]
@@ -136,6 +139,55 @@ impl WorkspaceWindowLayout {
 
     pub fn active_pane_id(&self) -> Option<&Arc<str>> {
         self.active_pane.as_ref()
+    }
+
+    pub fn dirty_close_request_for_window_close(&self) -> Option<WorkspaceDirtyCloseRequest> {
+        let mut pane_ids = Vec::new();
+        self.pane_tree.collect_leaf_ids(&mut pane_ids);
+
+        let mut target_tabs_in_order = Vec::new();
+        let mut dirty_tabs_in_order = Vec::new();
+        for pane_id in pane_ids {
+            let Some(pane) = self.pane_tree.find_pane(pane_id.as_ref()) else {
+                continue;
+            };
+            target_tabs_in_order.extend(pane.tabs.tabs().iter().cloned());
+            dirty_tabs_in_order.extend(pane.tabs.dirty_in_tab_order());
+        }
+
+        if dirty_tabs_in_order.is_empty() {
+            return None;
+        }
+
+        let active_tab_id = self
+            .active_pane
+            .as_ref()
+            .and_then(|pane_id| self.pane_tree.find_pane(pane_id.as_ref()))
+            .and_then(|pane| pane.tabs.active().cloned());
+
+        Some(WorkspaceDirtyCloseRequest {
+            reason: WorkspaceCloseReason::CloseWindow,
+            target_tabs_in_order,
+            dirty_tabs_in_order,
+            active_tab_id,
+        })
+    }
+
+    pub fn can_close_window_with_policy(
+        &self,
+        policy: Option<&mut dyn WorkspaceDirtyClosePolicy>,
+    ) -> WorkspaceApplyCommandOutcome {
+        let Some(request) = self.dirty_close_request_for_window_close() else {
+            return WorkspaceApplyCommandOutcome::applied(true);
+        };
+        let Some(policy) = policy else {
+            return WorkspaceApplyCommandOutcome::applied(true);
+        };
+
+        match policy.decide_dirty_close(&request) {
+            WorkspaceDirtyCloseDecision::Allow => WorkspaceApplyCommandOutcome::applied(true),
+            WorkspaceDirtyCloseDecision::Block => WorkspaceApplyCommandOutcome::blocked(request),
+        }
     }
 
     pub fn activate_pane(&mut self, id: &str) -> bool {
@@ -1080,6 +1132,18 @@ impl WorkspacePaneTreeV1 {
 mod tests {
     use super::*;
 
+    #[derive(Default)]
+    struct BlockDirtyClosePolicy;
+
+    impl WorkspaceDirtyClosePolicy for BlockDirtyClosePolicy {
+        fn decide_dirty_close(
+            &mut self,
+            _request: &WorkspaceDirtyCloseRequest,
+        ) -> WorkspaceDirtyCloseDecision {
+            WorkspaceDirtyCloseDecision::Block
+        }
+    }
+
     #[test]
     fn apply_command_routes_to_active_pane_tabs() {
         let mut window = WorkspaceWindowLayout::new("main", "p1");
@@ -1131,6 +1195,54 @@ mod tests {
         let cmd = crate::commands::pane_activate_command("p2").unwrap();
         assert!(window.apply_command(&cmd));
         assert_eq!(window.active_pane_id().unwrap().as_ref(), "p2");
+    }
+
+    #[test]
+    fn window_close_dirty_policy_aggregates_tabs_across_panes() {
+        let mut window = WorkspaceWindowLayout::new("main", "p1");
+        window.pane_tree = WorkspacePaneTree::split(
+            Axis::Horizontal,
+            0.5,
+            WorkspacePaneTree::leaf("p1"),
+            WorkspacePaneTree::leaf("p2"),
+        );
+        window.active_pane = Some(Arc::<str>::from("p2"));
+
+        let pane1 = window.pane_tree.find_pane_mut("p1").unwrap();
+        pane1.tabs.open_and_activate(Arc::<str>::from("a"));
+        pane1.tabs.open_and_activate(Arc::<str>::from("b"));
+        pane1.tabs.set_dirty(Arc::<str>::from("a"), true);
+
+        let pane2 = window.pane_tree.find_pane_mut("p2").unwrap();
+        pane2.tabs.open_and_activate(Arc::<str>::from("c"));
+        pane2.tabs.open_and_activate(Arc::<str>::from("d"));
+        pane2.tabs.set_dirty(Arc::<str>::from("d"), true);
+
+        let mut policy = BlockDirtyClosePolicy;
+        let outcome = window.can_close_window_with_policy(Some(&mut policy));
+
+        assert!(!outcome.applied);
+        let request = outcome
+            .blocked_dirty_close
+            .expect("expected dirty close request");
+        assert_eq!(request.reason, WorkspaceCloseReason::CloseWindow);
+        assert_eq!(request.active_tab_id.as_deref(), Some("d"));
+        assert_eq!(
+            request
+                .target_tabs_in_order
+                .iter()
+                .map(|id| id.as_ref())
+                .collect::<Vec<_>>(),
+            vec!["a", "b", "c", "d"]
+        );
+        assert_eq!(
+            request
+                .dirty_tabs_in_order
+                .iter()
+                .map(|id| id.as_ref())
+                .collect::<Vec<_>>(),
+            vec!["a", "d"]
+        );
     }
 
     #[test]

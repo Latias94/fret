@@ -7,6 +7,7 @@
     "tools/diag-scripts/ui-gallery-command-docs-demo-long-query-text.json",
     "tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-shortcuts-screenshots-zinc-dark.json",
     "tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-shortcuts-screenshots.json",
+    "tools/diag-scripts/ui-gallery-command-basic-dialog-overlay-focus.json",
     "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-cmdk-keybindings.json",
     "tools/diag-scripts/ui-gallery-command-palette-controlled-selection-arrowdown.json",
     "tools/diag-scripts/ui-gallery-command-palette-controlled-selection-value.json",

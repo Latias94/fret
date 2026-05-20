@@ -10,11 +10,12 @@ use crate::close_policy::{
 use crate::commands::{
     CMD_WORKSPACE_TAB_ACTIVATE_PREFIX, CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_LEFT,
     CMD_WORKSPACE_TAB_CLOSE_OTHERS, CMD_WORKSPACE_TAB_CLOSE_PREFIX, CMD_WORKSPACE_TAB_CLOSE_RIGHT,
-    CMD_WORKSPACE_TAB_COMMIT_PREVIEW, CMD_WORKSPACE_TAB_MOVE_AFTER_PREFIX,
+    CMD_WORKSPACE_TAB_COMMIT_PREVIEW, CMD_WORKSPACE_TAB_MOVE_AFTER_ID_PREFIX,
+    CMD_WORKSPACE_TAB_MOVE_AFTER_PREFIX, CMD_WORKSPACE_TAB_MOVE_BEFORE_ID_PREFIX,
     CMD_WORKSPACE_TAB_MOVE_BEFORE_PREFIX, CMD_WORKSPACE_TAB_MOVE_LEFT,
     CMD_WORKSPACE_TAB_MOVE_RIGHT, CMD_WORKSPACE_TAB_NEXT, CMD_WORKSPACE_TAB_OPEN_PREVIEW_PREFIX,
     CMD_WORKSPACE_TAB_PIN_PREFIX, CMD_WORKSPACE_TAB_PREV, CMD_WORKSPACE_TAB_TOGGLE_PIN,
-    CMD_WORKSPACE_TAB_UNPIN_PREFIX,
+    CMD_WORKSPACE_TAB_UNPIN_PREFIX, parse_tab_move_specific_payload,
 };
 
 #[cfg(feature = "serde")]
@@ -93,6 +94,10 @@ impl WorkspaceTabs {
     pub fn with_cycle_mode(mut self, mode: TabCycleMode) -> Self {
         self.cycle_mode = mode;
         self
+    }
+
+    pub fn set_cycle_mode(&mut self, mode: TabCycleMode) {
+        self.cycle_mode = mode;
     }
 
     pub fn tabs(&self) -> &[Arc<str>] {
@@ -846,6 +851,30 @@ impl WorkspaceTabs {
             return WorkspaceApplyCommandOutcome::applied(self.move_active_relative_to(id, true));
         }
 
+        if let Some(payload) = command
+            .as_str()
+            .strip_prefix(CMD_WORKSPACE_TAB_MOVE_BEFORE_ID_PREFIX)
+        {
+            let Some((dragged, target)) = parse_tab_move_specific_payload(payload) else {
+                return WorkspaceApplyCommandOutcome::applied(false);
+            };
+            return WorkspaceApplyCommandOutcome::applied(
+                self.move_tab_relative_to(dragged, target, false),
+            );
+        }
+
+        if let Some(payload) = command
+            .as_str()
+            .strip_prefix(CMD_WORKSPACE_TAB_MOVE_AFTER_ID_PREFIX)
+        {
+            let Some((dragged, target)) = parse_tab_move_specific_payload(payload) else {
+                return WorkspaceApplyCommandOutcome::applied(false);
+            };
+            return WorkspaceApplyCommandOutcome::applied(
+                self.move_tab_relative_to(dragged, target, true),
+            );
+        }
+
         if let Some(id) = command
             .as_str()
             .strip_prefix(CMD_WORKSPACE_TAB_OPEN_PREVIEW_PREFIX)
@@ -928,12 +957,15 @@ impl WorkspaceTabs {
             return false;
         };
 
-        if active.as_ref() == target_id {
+        self.move_tab_relative_to(active.as_ref(), target_id, after)
+    }
+
+    fn move_tab_relative_to(&mut self, tab_id: &str, target_id: &str, after: bool) -> bool {
+        if self.tabs.len() <= 1 || tab_id == target_id {
             return false;
         }
 
-        let Some(active_index) = self.tabs.iter().position(|t| t.as_ref() == active.as_ref())
-        else {
+        let Some(tab_index) = self.tabs.iter().position(|t| t.as_ref() == tab_id) else {
             return false;
         };
 
@@ -942,19 +974,18 @@ impl WorkspaceTabs {
         }
 
         let pinned_count = self.pinned_count();
-        let active_is_pinned = active_index < pinned_count;
+        let tab_is_pinned = tab_index < pinned_count;
         let target_is_pinned = self
             .tabs
             .iter()
             .take(pinned_count)
             .any(|t| t.as_ref() == target_id);
-        if active_is_pinned != target_is_pinned {
+        if tab_is_pinned != target_is_pinned {
             return false;
         }
 
-        let item = self.tabs.remove(active_index);
+        let item = self.tabs.remove(tab_index);
 
-        // Recompute after removal to avoid index adjustment edge cases.
         let Some(mut target_index) = self.tabs.iter().position(|t| t.as_ref() == target_id) else {
             return false;
         };
@@ -1102,6 +1133,101 @@ mod tests {
         assert!(outcome.blocked_dirty_close.is_some());
         assert_eq!(state.tabs().len(), 2);
         assert!(state.tabs().iter().any(|t| t.as_ref() == "b"));
+    }
+
+    #[test]
+    fn dirty_close_policy_can_block_close_by_id() {
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["a", "b"]) {
+            state.open_and_activate(id);
+        }
+        assert_eq!(state.active().unwrap().as_ref(), "b");
+        state.set_dirty(Arc::<str>::from("b"), true);
+        assert!(state.is_dirty("b"));
+
+        let mut policy = BlockDirtyClosePolicy;
+        let outcome = state.apply_command_with_close_policy(
+            &CommandId::from("workspace.tab.close.b"),
+            Some(&mut policy),
+        );
+
+        assert!(!outcome.applied);
+        let request = outcome
+            .blocked_dirty_close
+            .expect("expected dirty close request");
+        assert_eq!(request.reason, WorkspaceCloseReason::CloseById);
+        assert_eq!(
+            request
+                .target_tabs_in_order
+                .iter()
+                .map(|id| id.as_ref())
+                .collect::<Vec<_>>(),
+            vec!["b"]
+        );
+        assert_eq!(
+            request
+                .dirty_tabs_in_order
+                .iter()
+                .map(|id| id.as_ref())
+                .collect::<Vec<_>>(),
+            vec!["b"]
+        );
+        assert_eq!(state.tabs().len(), 2);
+        assert!(state.tabs().iter().any(|t| t.as_ref() == "b"));
+        assert!(state.is_dirty("b"));
+    }
+
+    #[test]
+    fn dirty_close_policy_can_block_close_others_with_multiple_targets() {
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["p0", "a", "b", "c"]) {
+            state.open_and_activate(id);
+        }
+        state.set_pinned_count(1);
+        assert!(state.activate(Arc::<str>::from("c")));
+        state.set_dirty(Arc::<str>::from("p0"), true);
+        state.set_dirty(Arc::<str>::from("a"), true);
+        state.set_dirty(Arc::<str>::from("b"), true);
+        state.set_dirty(Arc::<str>::from("c"), true);
+
+        let mut policy = BlockDirtyClosePolicy;
+        let outcome = state.apply_command_with_close_policy(
+            &CommandId::from(CMD_WORKSPACE_TAB_CLOSE_OTHERS),
+            Some(&mut policy),
+        );
+
+        assert!(!outcome.applied);
+        let request = outcome
+            .blocked_dirty_close
+            .expect("expected dirty close request");
+        assert_eq!(request.reason, WorkspaceCloseReason::CloseOthers);
+        assert_eq!(request.active_tab_id.as_deref(), Some("c"));
+        assert_eq!(
+            request
+                .target_tabs_in_order
+                .iter()
+                .map(|id| id.as_ref())
+                .collect::<Vec<_>>(),
+            vec!["a", "b"]
+        );
+        assert_eq!(
+            request
+                .dirty_tabs_in_order
+                .iter()
+                .map(|id| id.as_ref())
+                .collect::<Vec<_>>(),
+            vec!["a", "b"]
+        );
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["p0", "a", "b", "c"]
+        );
+        assert_eq!(state.pinned_count(), 1);
+        assert_eq!(state.active().unwrap().as_ref(), "c");
+        assert!(state.is_dirty("p0"));
+        assert!(state.is_dirty("a"));
+        assert!(state.is_dirty("b"));
+        assert!(state.is_dirty("c"));
     }
 
     #[test]
@@ -1396,6 +1522,58 @@ mod tests {
         assert_eq!(
             state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
             vec!["a", "b", "c", "d"]
+        );
+    }
+
+    #[test]
+    fn move_specific_tab_before_after_does_not_depend_on_active_tab() {
+        use crate::commands::{tab_move_after_tab_command, tab_move_before_tab_command};
+
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["a", "b", "c", "d"]) {
+            state.open_and_activate(id);
+        }
+        assert_eq!(state.active().unwrap().as_ref(), "d");
+
+        let cmd = tab_move_after_tab_command("a", "c").unwrap();
+        assert!(state.apply_command(&cmd));
+        assert_eq!(state.active().unwrap().as_ref(), "d");
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["b", "c", "a", "d"]
+        );
+
+        let cmd = tab_move_before_tab_command("a", "b").unwrap();
+        assert!(state.apply_command(&cmd));
+        assert_eq!(state.active().unwrap().as_ref(), "d");
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["a", "b", "c", "d"]
+        );
+    }
+
+    #[test]
+    fn move_specific_tab_commands_do_not_cross_pinned_boundary() {
+        use crate::commands::tab_move_after_tab_command;
+
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["a", "b", "c", "d"]) {
+            state.open_and_activate(id);
+        }
+        state.set_pinned_count(2);
+
+        assert!(
+            !state.apply_command(&tab_move_after_tab_command("a", "c").unwrap()),
+            "expected pinned tab to stay in pinned segment"
+        );
+        assert!(
+            !state.apply_command(&tab_move_after_tab_command("c", "a").unwrap()),
+            "expected unpinned tab to stay in unpinned segment"
+        );
+        assert!(state.apply_command(&tab_move_after_tab_command("c", "d").unwrap()));
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["a", "b", "d", "c"]
         );
     }
 

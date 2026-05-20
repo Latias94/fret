@@ -220,6 +220,17 @@
       "type": "wait_until"
     },
     {
+      "predicate": {
+        "kind": "selected_is",
+        "selected": false,
+        "target": {
+          "id": "ui-gallery-data-table-row-0",
+          "kind": "test_id"
+        }
+      },
+      "type": "assert"
+    },
+    {
       "target": {
         "id": "ui-gallery-data-table-row-0",
         "kind": "test_id"
@@ -237,6 +248,17 @@
     {
       "n": 2,
       "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "selected_is",
+        "selected": true,
+        "target": {
+          "id": "ui-gallery-data-table-row-0",
+          "kind": "test_id"
+        }
+      },
+      "type": "assert"
     },
     {
       "predicate": {
@@ -382,6 +404,28 @@
     {
       "n": 5,
       "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-data-table-row-10015",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "selected_is",
+        "selected": false,
+        "target": {
+          "id": "ui-gallery-data-table-row-10015",
+          "kind": "test_id"
+        }
+      },
+      "type": "assert"
     },
     {
       "label": "ui-gallery-data-table-retained-sort-select-scroll",

@@ -192,7 +192,7 @@
       "predicate": {
         "kind": "exists",
         "target": {
-          "id": "ui-gallery-table-retained-row-25",
+          "id": "ui-gallery-table-retained-row-10015",
           "kind": "test_id"
         }
       },
@@ -204,7 +204,7 @@
         "kind": "selected_is",
         "selected": false,
         "target": {
-          "id": "ui-gallery-table-retained-row-25",
+          "id": "ui-gallery-table-retained-row-10015",
           "kind": "test_id"
         }
       },

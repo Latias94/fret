@@ -164,6 +164,18 @@ fn mark_seen_ui_subtree<H: UiHost>(engine: &mut TaffyLayoutEngine, tree: &UiTree
     }
 }
 
+fn set_measured_and_dirty_if_layout_invalidated<H: UiHost>(
+    engine: &mut TaffyLayoutEngine,
+    tree: &UiTree<H>,
+    node: NodeId,
+    measured: bool,
+) {
+    engine.set_measured(node, measured);
+    if measured && tree.node_layout_invalidated(node) {
+        engine.mark_measured_node_dirty(node);
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 #[stacksafe::stacksafe]
 fn build_flow_subtree_impl<H: UiHost>(
@@ -328,7 +340,7 @@ fn build_flow_subtree_impl<H: UiHost>(
 
         engine.set_style(node, style);
         engine.set_children(node, &[child]);
-        engine.set_measured(node, false);
+        set_measured_and_dirty_if_layout_invalidated(engine, tree, node, false);
         build_flow_subtree(engine, app, tree, window, sf, child_parent_kind, child);
         return;
     }
@@ -347,7 +359,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             );
             engine.set_style(node, style);
             engine.set_children(node, &[]);
-            engine.set_measured(node, true);
+            set_measured_and_dirty_if_layout_invalidated(engine, tree, node, true);
             engine.set_measure_min_content_width_as_max(node, false);
         }
         Some(
@@ -391,7 +403,7 @@ fn build_flow_subtree_impl<H: UiHost>(
 
             engine.set_style(node, style);
             engine.set_children(node, &[]);
-            engine.set_measured(node, false);
+            set_measured_and_dirty_if_layout_invalidated(engine, tree, node, false);
         }
         Some(ElementInstance::Flex(props)) => {
             let mut style = style_for_item_in_parent(
@@ -428,7 +440,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             let children = ordered_flex_children(app, window, tree.children_ref(node));
             engine.set_style(node, style);
             engine.set_children(node, children.as_ref());
-            engine.set_measured(node, false);
+            set_measured_and_dirty_if_layout_invalidated(engine, tree, node, false);
             let parent_kind_for_children = ParentLayoutKind::Flex {
                 direction: props.direction,
                 definite_width: root_override_size.is_some()
@@ -484,7 +496,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             let children = ordered_flex_children(app, window, tree.children_ref(node));
             engine.set_style(node, style);
             engine.set_children(node, children.as_ref());
-            engine.set_measured(node, false);
+            set_measured_and_dirty_if_layout_invalidated(engine, tree, node, false);
             let parent_kind_for_children = ParentLayoutKind::Flex {
                 direction: props.direction,
                 definite_width: root_override_size.is_some()
@@ -540,7 +552,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             let children = ordered_flex_children(app, window, tree.children_ref(node));
             engine.set_style(node, style);
             engine.set_children(node, children.as_ref());
-            engine.set_measured(node, false);
+            set_measured_and_dirty_if_layout_invalidated(engine, tree, node, false);
             let parent_kind_for_children = ParentLayoutKind::Flex {
                 direction: props.direction,
                 definite_width: root_override_size.is_some()
@@ -595,7 +607,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             let children = tree.children_ref(node);
             engine.set_style(node, style);
             engine.set_children(node, children);
-            engine.set_measured(node, false);
+            set_measured_and_dirty_if_layout_invalidated(engine, tree, node, false);
             for &child in children {
                 build_flow_subtree(engine, app, tree, window, sf, ParentLayoutKind::Grid, child);
             }
@@ -717,15 +729,12 @@ fn build_flow_subtree_impl<H: UiHost>(
                 style.display = Display::Block;
                 engine.set_style(node, style);
                 engine.set_children(node, &[]);
-                engine.set_measured(node, true);
-                if tree.node_layout_invalidated(node) {
-                    engine.mark_measured_node_dirty(node);
-                }
+                set_measured_and_dirty_if_layout_invalidated(engine, tree, node, true);
                 engine.set_measure_min_content_width_as_max(node, false);
             } else {
                 engine.set_style(node, style);
                 engine.set_children(node, children);
-                engine.set_measured(node, false);
+                set_measured_and_dirty_if_layout_invalidated(engine, tree, node, false);
             }
             for &child in children {
                 build_flow_subtree(
@@ -801,7 +810,7 @@ fn build_flow_subtree_impl<H: UiHost>(
 
             engine.set_style(node, style);
             engine.set_children(node, &[]);
-            engine.set_measured(node, measured);
+            set_measured_and_dirty_if_layout_invalidated(engine, tree, node, measured);
             engine.set_measure_min_content_width_as_max(node, min_content_width_as_max);
         }
         Some(ElementInstance::StyledText(props)) => {
@@ -866,7 +875,7 @@ fn build_flow_subtree_impl<H: UiHost>(
 
             engine.set_style(node, style);
             engine.set_children(node, &[]);
-            engine.set_measured(node, measured);
+            set_measured_and_dirty_if_layout_invalidated(engine, tree, node, measured);
             engine.set_measure_min_content_width_as_max(node, min_content_width_as_max);
         }
         Some(ElementInstance::SelectableText(props)) => {
@@ -931,7 +940,7 @@ fn build_flow_subtree_impl<H: UiHost>(
 
             engine.set_style(node, style);
             engine.set_children(node, &[]);
-            engine.set_measured(node, measured);
+            set_measured_and_dirty_if_layout_invalidated(engine, tree, node, measured);
             engine.set_measure_min_content_width_as_max(node, min_content_width_as_max);
         }
         Some(ElementInstance::Scroll(_)) => {
@@ -976,7 +985,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             }
             engine.set_style(node, style);
             engine.set_children(node, &[]);
-            engine.set_measured(node, measured);
+            set_measured_and_dirty_if_layout_invalidated(engine, tree, node, measured);
             engine.set_measure_min_content_width_as_max(node, false);
 
             // Barriers are explicit layout systems and must not couple their children into the
@@ -1013,7 +1022,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             );
             engine.set_style(node, style);
             engine.set_children(node, &[]);
-            engine.set_measured(node, true);
+            set_measured_and_dirty_if_layout_invalidated(engine, tree, node, true);
             engine.set_measure_min_content_width_as_max(node, false);
 
             // Barriers are explicit layout systems and must not couple their children into the
@@ -1050,7 +1059,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             );
             engine.set_style(node, style);
             engine.set_children(node, &[]);
-            engine.set_measured(node, true);
+            set_measured_and_dirty_if_layout_invalidated(engine, tree, node, true);
             engine.set_measure_min_content_width_as_max(node, false);
         }
     }
