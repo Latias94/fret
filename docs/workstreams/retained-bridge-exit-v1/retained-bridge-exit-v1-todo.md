@@ -2506,6 +2506,36 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-260 Isolate sticky-wire target picker retained Cx adapters.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_targets.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_targets/picker.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_targets/retained_picker_cx.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move sticky-wire target picker host/window access plus handled-event finish behavior behind a
+      retained-agnostic picker Cx seam.
+    - Keep the retained `EventCx` implementation in a dedicated retained adapter module.
+    - Extend the default source-policy gate so `sticky_wire_targets/picker.rs` cannot re-import
+      retained bridge Cx names.
+  - Result:
+    - Added `StickyWireTargetPickerCx` for host/window access plus handled-event tail behavior.
+    - Added `sticky_wire_targets/retained_picker_cx.rs` as the retained `EventCx` adapter.
+    - Moved `sticky_wire_targets/picker.rs` off direct retained `EventCx` signatures.
+    - Added a retained-agnostic unit test for target picker stop-propagation plus paint
+      invalidation.
+    - Extended `retained_canvas_tail_policy_helpers_stay_off_retained_bridge` to include
+      `sticky_wire_targets/picker.rs`.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas finish_sticky_wire_target_picker_stops_and_invalidates_paint retained_canvas_tail_policy_helpers_stay_off_retained_bridge retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/paint_invalidation.rs ecosystem/fret-node/src/ui/canvas/widget/redraw_request.rs ecosystem/fret-node/src/ui/canvas/widget/widget_tail.rs ecosystem/fret-node/src/ui/canvas/widget/wire_drag/commit_cx.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_finish.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_session/cleanup.rs ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_connect/finish.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/drag/tail.rs ecosystem/fret-node/src/ui/canvas/widget/cancel_cleanup.rs ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_targets/picker.rs`
+    - `cargo fmt -p fret-node`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

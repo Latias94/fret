@@ -1,5 +1,6 @@
 mod inspect;
 mod picker;
+mod retained_picker_cx;
 
 use fret_core::Point;
 use fret_ui::UiHost;

@@ -642,7 +642,11 @@ invalidation behind `WidgetPaintInvalidationCx`; `edge_insert_drag/drag/tail.rs`
 source-policy gated as retained-bridge-free support. `RBX-M2-250` then moved cancel cleanup finish
 release-capture, optional propagation stop, and paint invalidation behind
 `HandledPointerCaptureReleaseCx`; retained `cx.app` timer I/O remains in `cancel.rs`, and
-`cancel_cleanup.rs` is now source-policy gated as retained-bridge-free support.
+`cancel_cleanup.rs` is now source-policy gated as retained-bridge-free support. `RBX-M2-260` then
+moved sticky-wire target picker host/window access plus handled-event finish behavior behind
+`StickyWireTargetPickerCx`; retained `EventCx` implements that seam in
+`sticky_wire_targets/retained_picker_cx.rs`, and `sticky_wire_targets/picker.rs` is now
+source-policy gated as retained-bridge-free support.
 
 ## Next Task
 
@@ -661,14 +665,16 @@ Recommended next implementation shape:
   commit Cx seam is retained-agnostic; pointer-up finish cleanup now uses the same tail seam; and
   sticky-wire finish now uses the handled release-capture tail seam; edge-insert drag move finish
   now uses the paint invalidation tail seam; cancel cleanup finish now uses the handled
-  release-capture tail seam.
+  release-capture tail seam; sticky-wire target picker now uses a retained-agnostic host/window
+  seam.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
   `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`, and
-  `sticky_wire_connect/finish.rs`, `edge_insert_drag/drag/tail.rs`, and `cancel_cleanup.rs` are
-  compat-gated retained-bridge-free support. The remaining canvas interaction families still need
-  default-path tests before their retained widget/event code can be deleted. Each slice should first
-  add default declarative tests or retained-agnostic seams, then remove or gate less retained code.
+  `sticky_wire_connect/finish.rs`, `edge_insert_drag/drag/tail.rs`, `cancel_cleanup.rs`, and
+  `sticky_wire_targets/picker.rs` are compat-gated retained-bridge-free support. The remaining
+  canvas interaction families still need default-path tests before their retained widget/event code
+  can be deleted. Each slice should first add default declarative tests or retained-agnostic seams,
+  then remove or gate less retained code.
 - After the ledger no longer contains behavior-only retained files, remove
   `compat-retained-canvas` / `unstable-retained-bridge` from `fret-node`.
 - Keep the known independent `fret-ui` layout primitive drift
@@ -677,7 +683,22 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-20 for `RBX-M2-250`:
+Last run on 2026-05-20 for `RBX-M2-260`:
+
+- `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
+  `fret-ui` `current_effective_opacity` dead-code warning.
+- `cargo nextest run -p fret-node --features compat-retained-canvas finish_sticky_wire_target_picker_stops_and_invalidates_paint retained_canvas_tail_policy_helpers_stay_off_retained_bridge retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound` -
+  passed, 4 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/paint_invalidation.rs ecosystem/fret-node/src/ui/canvas/widget/redraw_request.rs ecosystem/fret-node/src/ui/canvas/widget/widget_tail.rs ecosystem/fret-node/src/ui/canvas/widget/wire_drag/commit_cx.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_finish.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_session/cleanup.rs ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_connect/finish.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/drag/tail.rs ecosystem/fret-node/src/ui/canvas/widget/cancel_cleanup.rs ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_targets/picker.rs` -
+  no matches.
+- `cargo fmt -p fret-node` - passed.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 428 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+
+Previous run on 2026-05-20 for `RBX-M2-250`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.

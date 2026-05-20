@@ -87,6 +87,10 @@ Compat-gated but retained-bridge-free support:
   - `RBX-M2-250` moved cancel finish release-capture, optional handled-event propagation stop,
     and paint invalidation behind the retained-agnostic `HandledPointerCaptureReleaseCx` tail seam.
     Retained `cx.app` timer I/O remains in the retained caller.
+- `ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_targets/picker.rs`
+  - `RBX-M2-260` moved sticky-wire target picker host/window access plus handled-event finish
+    behavior behind the retained-agnostic `StickyWireTargetPickerCx` seam. Retained `EventCx`
+    implements that seam in `sticky_wire_targets/retained_picker_cx.rs`.
 
 Deleted retained overlay files:
 
@@ -134,6 +138,7 @@ Deleted retained overlay files:
 | Sticky-wire finish tail action | retained canvas still adapts retained `EventCx` release-capture/stop-propagation through `retained_widget_tail.rs` | `RBX-M2-230` moves sticky-wire pointer-down finish onto retained-agnostic `HandledPointerCaptureReleaseCx` and source-policy gates the helper | Continue migrating direct retained `EventCx` tail helpers, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 | Edge-insert drag move tail action | retained canvas still adapts retained `EventCx` paint invalidation through `retained_widget_tail.rs` | `RBX-M2-240` moves edge-insert drag move finish onto retained-agnostic `WidgetPaintInvalidationCx` and source-policy gates the helper | Continue migrating direct retained `EventCx` tail helpers, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 | Cancel cleanup tail action | retained canvas still performs retained caller timer I/O and adapts retained `EventCx` release-capture/stop-propagation through `retained_widget_tail.rs` | `RBX-M2-250` moves cancel finish tail side effects onto retained-agnostic `HandledPointerCaptureReleaseCx` and source-policy gates `cancel_cleanup.rs` | Continue migrating direct retained `EventCx` tail helpers, then replace higher-level pointer event routing with a declarative/event-leaf path. |
+| Sticky-wire target picker Cx seam | retained canvas still adapts retained `EventCx` host/window access through `sticky_wire_targets/retained_picker_cx.rs` | `RBX-M2-260` moves picker host/window access and handled finish tail behavior onto retained-agnostic `StickyWireTargetPickerCx` and source-policy gates `sticky_wire_targets/picker.rs` | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 
 ## New Gate
 
