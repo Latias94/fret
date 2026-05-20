@@ -2632,6 +2632,37 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-300 Isolate pending release retained Cx adapters.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_session/release.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/release.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/release/group.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/release/node.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move pending group drag, pending group resize, and pending node resize pointer-up release
+      tail actions behind the retained-agnostic `PointerCaptureReleaseCx` seam.
+    - Reuse the retained `EventCx` implementation that already lives in `retained_widget_tail.rs`
+      instead of naming retained bridge Cx types in pending release helpers.
+    - Extend the default source-policy gate so pending release helpers cannot re-import retained
+      bridge Cx names.
+  - Result:
+    - Moved `pointer_up_session/release.rs`, `pointer_up_pending/release.rs`,
+      `pointer_up_pending/release/group.rs`, and `pointer_up_pending/release/node.rs` off direct
+      retained `EventCx` signatures.
+    - Reused the existing `PointerCaptureReleaseCx` tail seam for release-capture plus paint
+      invalidation behavior.
+    - Extended `retained_canvas_tail_policy_helpers_stay_off_retained_bridge` to include the
+      pending release helpers.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas retained_canvas_tail_policy_helpers_stay_off_retained_bridge pending_group_drag_release_clears_session_without_committing pending_group_resize_release_clears_session_without_committing pending_group_activation_handlers_stay_off_retained_bridge retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up_session/release.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/release.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/release/group.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/release/node.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

@@ -103,6 +103,14 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_up_finish.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_SESSION_CLEANUP_RS: &str =
         include_str!("ui/canvas/widget/pointer_up_session/cleanup.rs");
+    const UI_CANVAS_WIDGET_POINTER_UP_SESSION_RELEASE_RS: &str =
+        include_str!("ui/canvas/widget/pointer_up_session/release.rs");
+    const UI_CANVAS_WIDGET_POINTER_UP_PENDING_RELEASE_RS: &str =
+        include_str!("ui/canvas/widget/pointer_up_pending/release.rs");
+    const UI_CANVAS_WIDGET_POINTER_UP_PENDING_RELEASE_GROUP_RS: &str =
+        include_str!("ui/canvas/widget/pointer_up_pending/release/group.rs");
+    const UI_CANVAS_WIDGET_POINTER_UP_PENDING_RELEASE_NODE_RS: &str =
+        include_str!("ui/canvas/widget/pointer_up_pending/release/node.rs");
     const UI_CANVAS_WIDGET_STICKY_WIRE_CONNECT_FINISH_RS: &str =
         include_str!("ui/canvas/widget/sticky_wire_connect/finish.rs");
     const UI_CANVAS_WIDGET_EDGE_INSERT_DRAG_DRAG_TAIL_RS: &str =
@@ -226,6 +234,10 @@ mod surface_policy_tests {
             UI_CANVAS_WIDGET_WIRE_DRAG_COMMIT_CX_RS,
             UI_CANVAS_WIDGET_POINTER_UP_FINISH_RS,
             UI_CANVAS_WIDGET_POINTER_UP_SESSION_CLEANUP_RS,
+            UI_CANVAS_WIDGET_POINTER_UP_SESSION_RELEASE_RS,
+            UI_CANVAS_WIDGET_POINTER_UP_PENDING_RELEASE_RS,
+            UI_CANVAS_WIDGET_POINTER_UP_PENDING_RELEASE_GROUP_RS,
+            UI_CANVAS_WIDGET_POINTER_UP_PENDING_RELEASE_NODE_RS,
             UI_CANVAS_WIDGET_STICKY_WIRE_CONNECT_FINISH_RS,
             UI_CANVAS_WIDGET_EDGE_INSERT_DRAG_DRAG_TAIL_RS,
             UI_CANVAS_WIDGET_CANCEL_CLEANUP_RS,

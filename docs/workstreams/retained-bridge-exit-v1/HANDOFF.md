@@ -657,6 +657,10 @@ moved pending group drag activation host access behind `PendingGroupActivationCx
 `EventCx` implements that seam in `pending_group_activation_retained_cx.rs`, pending group resize
 activation no longer takes an unused retained Cx parameter, and `pending_group_drag.rs` /
 `pending_group_resize.rs` are now source-policy gated as retained-bridge-free support.
+`RBX-M2-300` then moved pending group drag, pending group resize, and pending node resize
+pointer-up release tail actions behind `PointerCaptureReleaseCx`; retained `EventCx` already
+implements that seam in `retained_widget_tail.rs`, and the pending release helper files are now
+source-policy gated as retained-bridge-free support.
 
 ## Next Task
 
@@ -678,10 +682,13 @@ Recommended next implementation shape:
   release-capture tail seam; sticky-wire target picker now uses a retained-agnostic host/window
   seam; group drag/resize preview move handlers now use a retained-agnostic host/bounds seam;
   pending group drag activation now uses a retained-agnostic host seam, while pending group resize
-  activation no longer carries a Cx parameter.
+  activation no longer carries a Cx parameter; pending group/node release helpers now use the
+  retained-agnostic release-capture tail seam.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
   `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`,
+  `pointer_up_session/release.rs`, `pointer_up_pending/release.rs`,
+  `pointer_up_pending/release/group.rs`, `pointer_up_pending/release/node.rs`,
   `sticky_wire_connect/finish.rs`, `edge_insert_drag/drag/tail.rs`, `cancel_cleanup.rs`,
   `sticky_wire_targets/picker.rs`, `group_drag/tail.rs`, `group_resize/tail.rs`,
   `group_preview_move_cx.rs`, `group_drag.rs`, `group_resize.rs`,
@@ -698,7 +705,28 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-20 for `RBX-M2-290`:
+Last run on 2026-05-20 for `RBX-M2-300`:
+
+- `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
+  `fret-ui` `current_effective_opacity` dead-code warning.
+- `cargo nextest run -p fret-node --features compat-retained-canvas retained_canvas_tail_policy_helpers_stay_off_retained_bridge pending_group_drag_release_clears_session_without_committing pending_group_resize_release_clears_session_without_committing pending_group_activation_handlers_stay_off_retained_bridge retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound` -
+  passed, 6 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up_session/release.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/release.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/release/group.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/release/node.rs` -
+  no matches.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 428 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-300` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.
+
+Previous run on 2026-05-20 for `RBX-M2-290`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.
@@ -712,13 +740,6 @@ Last run on 2026-05-20 for `RBX-M2-290`:
 - `python3 tools/check_workstream_catalog.py` - passed; validated 428 dedicated directories and 47
   standalone markdown files.
 - `git diff --check` - passed.
-
-Broader gates not run:
-
-- `cargo nextest run --workspace`
-  - Reason: `RBX-M2-290` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
-    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
-    layering, catalog, and whitespace checks cover the changed surface.
 
 Previous run on 2026-05-20 for `RBX-M2-280`:
 

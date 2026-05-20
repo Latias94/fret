@@ -7154,3 +7154,60 @@ Broader gates not run:
   - Reason: `RBX-M2-290` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-20 - RBX-M2-300 pending release retained Cx adapter isolation
+
+Claim verified:
+
+- Pending group drag, pending group resize, and pending node resize release tail actions now flow
+  through retained-agnostic `PointerCaptureReleaseCx`.
+- Retained `EventCx` continues to implement that seam in `retained_widget_tail.rs`.
+- `pointer_up_session/release.rs`, `pointer_up_pending/release.rs`,
+  `pointer_up_pending/release/group.rs`, and `pointer_up_pending/release/node.rs` no longer import
+  or name retained bridge Cx types, and the default source-policy gate locks that boundary.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_session/release.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/release.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/release/group.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/release/node.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_tail.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving pending release
+    tail actions behind `PointerCaptureReleaseCx`.
+- `cargo nextest run -p fret-node --features compat-retained-canvas retained_canvas_tail_policy_helpers_stay_off_retained_bridge pending_group_drag_release_clears_session_without_committing pending_group_resize_release_clears_session_without_committing pending_group_activation_handlers_stay_off_retained_bridge retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+  - Result: passed, 6 tests.
+  - Scope proven: the source-policy gate locks the pending release helpers off retained bridge Cx
+    names; existing pending group drag/resize release oracles remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up_session/release.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/release.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/release/group.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/release/node.rs`
+  - Result: no matches.
+  - Scope proven: pending release helpers no longer depend on retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after the
+    pending release seam extraction.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-300` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.
