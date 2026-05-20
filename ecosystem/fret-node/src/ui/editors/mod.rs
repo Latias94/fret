@@ -1,7 +1,7 @@
 //! Reusable editor widgets and protocols for node-graph UI.
 //!
-//! These helpers are UI-only and intended to be used with `NodeGraphPortalHost` to embed regular
-//! `fret-ui` controls inside node bodies while preserving undo/redo semantics.
+//! These helpers are UI-only and intended to be hosted by the declarative node graph portal layer
+//! while preserving undo/redo semantics.
 
 mod chrome;
 mod portal_command_policy;

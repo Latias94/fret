@@ -34,8 +34,6 @@ mod overlays;
 #[cfg(feature = "compat-retained-canvas")]
 mod panel;
 #[cfg(feature = "compat-retained-canvas")]
-mod portal;
-#[cfg(feature = "compat-retained-canvas")]
 mod retained_event_tail;
 #[cfg(feature = "compat-retained-canvas")]
 mod retained_submit;

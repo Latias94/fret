@@ -2185,6 +2185,46 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-160 Delete retained portal host after default lifecycle/renderer/command parity proof.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/portal.rs`
+    - `ecosystem/fret-node/src/ui/mod.rs`
+    - `ecosystem/fret-node/src/ui/canvas/mod.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/mod.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_lifecycle_conformance.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_measured_geometry_conformance.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_measured_internals_conformance.rs`
+    - `ecosystem/fret-node/src/lib.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Delete retained `NodeGraphPortalHost` after the default declarative path has parity coverage
+      for portal subtree lifecycle keys, measured-geometry cleanup/publishing, arbitrary per-kind
+      renderer hosting, portal command routing, and first-party text/number editor command
+      submission.
+    - Remove the retained portal oracle modules and shrink the retained bridge source migration
+      ledger so portal code cannot re-enter the retained compatibility island.
+  - Result:
+    - Deleted `ui/portal.rs`, including retained `NodeGraphPortalHost`,
+      `NodeGraphPortalCommandHandler`, `PortalNoopCommandHandler`, and
+      `PortalCommandHandlerChain`.
+    - Deleted retained portal lifecycle/measured-geometry/measured-internals oracle test modules.
+    - Removed the compat-gated `mod portal;` entry and the unused retained-canvas `node_order`
+      re-export that only the retained portal host consumed.
+    - Updated the retained bridge source policy test and capability ledger so `src/ui/portal.rs` is
+      no longer an allowed retained source.
+    - Default declarative portal lifecycle, renderer, measurement, command, and text/number editor
+      tests now carry the portal contract after retained host deletion.
+  - Validation:
+    - pre-delete `cargo nextest run -p fret-node --features compat-retained-canvas portal_lifecycle_conformance portal_measured_geometry_conformance portal_measured_internals_conformance declarative_visible_subset_portal_identity_persists_and_resets_on_kind_or_version_change flush_portal_measured_geometry_state_keeps_growth_only_and_removes_missing_nodes declarative_portal_renderer_hosts_custom_subtrees_by_node_kind_with_default_fallback declarative_surface_hosts_node_type_registry_without_retained_portal_host declarative_portal_renderer_publishes_custom_subtree_measurements declarative_portal_command_host_submits_transactions_without_retained_portal_host declarative_portal_text_editor_handler_submits_transactions_without_retained_command_cx declarative_portal_number_editor_handler_submits_transactions_without_retained_command_cx`
+    - post-delete `cargo check -p fret-node --features compat-retained-canvas`
+    - post-delete `cargo nextest run -p fret-node retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - post-delete `cargo nextest run -p fret-node --features compat-retained-canvas retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - post-delete `cargo nextest run -p fret-node declarative_visible_subset_portal_identity_persists_and_resets_on_kind_or_version_change flush_portal_measured_geometry_state_keeps_growth_only_and_removes_missing_nodes declarative_portal_renderer_hosts_custom_subtrees_by_node_kind_with_default_fallback declarative_surface_hosts_node_type_registry_without_retained_portal_host declarative_portal_renderer_publishes_custom_subtree_measurements declarative_portal_command_host_submits_transactions_without_retained_portal_host declarative_portal_text_editor_handler_submits_transactions_without_retained_command_cx declarative_portal_number_editor_handler_submits_transactions_without_retained_command_cx`
+    - `cargo fmt -p fret-node`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

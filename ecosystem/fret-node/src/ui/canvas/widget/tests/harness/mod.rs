@@ -5,7 +5,7 @@ mod services;
 
 pub(super) use contexts::{command_cx, event_cx};
 pub(super) use graphs::{
-    insert_editor_config_with, insert_graph_view, insert_graph_view_editor_config,
+    insert_editor_config_with, insert_graph_view_editor_config,
     insert_graph_view_editor_config_with, insert_view, insert_view_editor_config,
     insert_view_editor_config_with, make_host_graph_view_editor_config,
     make_host_graph_view_editor_config_with, make_host_view_editor_config,

@@ -25,7 +25,7 @@ pub type NodeGraphNodeRenderer<H> =
 /// ReactFlow-style `nodeTypes` mapping (via the canvas portal escape hatch).
 ///
 /// This registry provides a stable place to hang per-kind node view implementations that can be
-/// composed into a `NodeGraphPortalHost`.
+/// composed into the declarative visible-subset portal layer.
 pub struct NodeGraphNodeTypes<H: UiHost> {
     node_types: BTreeMap<NodeKindKey, Box<NodeGraphNodeRenderer<H>>>,
     fallback: Option<Box<NodeGraphNodeRenderer<H>>>,
@@ -83,7 +83,7 @@ impl<H: UiHost> NodeGraphNodeTypes<H> {
         self
     }
 
-    /// Converts this registry into a portal renderer closure for [`crate::ui::portal::NodeGraphPortalHost`].
+    /// Converts this registry into a portal renderer closure.
     pub fn into_portal_renderer(
         mut self,
     ) -> impl for<'a> FnMut(&mut ElementContext<'a, H>, &Graph, NodeGraphPortalNodeLayout) -> Elements

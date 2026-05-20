@@ -6250,3 +6250,86 @@ Broader gates not run:
     source-policy documentation. Default/compat targeted tests, compile gates, source-policy gates,
     formatting, layering, catalog, and whitespace checks cover the changed behavior and boundary
     surface.
+
+## 2026-05-20 - RBX-M2-160 retained portal host deletion
+
+Claim verified:
+
+- The retained `NodeGraphPortalHost` and retained portal command-handler adapter surface were
+  deleted after the default declarative path proved parity for portal subtree lifecycle keys,
+  measured-geometry cleanup/publishing, arbitrary per-kind renderer hosting, portal command
+  routing, and first-party text/number editor command submission.
+- `src/ui/portal.rs` and the retained portal lifecycle/measurement oracle modules are no longer
+  part of the `fret-node` retained bridge source migration ledger.
+- The remaining `compat-retained-canvas` island still compiles and the source-policy tests now
+  reject reintroducing the retained portal module.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/portal.rs` deleted
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_lifecycle_conformance.rs` deleted
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_measured_geometry_conformance.rs` deleted
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_measured_internals_conformance.rs`
+  deleted
+- `ecosystem/fret-node/src/ui/mod.rs`
+- `ecosystem/fret-node/src/ui/canvas/mod.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/mod.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/mod.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- Pre-delete detached-HEAD oracle:
+  `cargo nextest run -p fret-node --features compat-retained-canvas portal_lifecycle_conformance portal_measured_geometry_conformance portal_measured_internals_conformance declarative_visible_subset_portal_identity_persists_and_resets_on_kind_or_version_change flush_portal_measured_geometry_state_keeps_growth_only_and_removes_missing_nodes declarative_portal_renderer_hosts_custom_subtrees_by_node_kind_with_default_fallback declarative_surface_hosts_node_type_registry_without_retained_portal_host declarative_portal_renderer_publishes_custom_subtree_measurements declarative_portal_command_host_submits_transactions_without_retained_portal_host declarative_portal_text_editor_handler_submits_transactions_without_retained_command_cx declarative_portal_number_editor_handler_submits_transactions_without_retained_command_cx`
+  - Result: passed, 12 tests.
+  - Scope proven: the retained portal lifecycle, controller-first command submission,
+    measured-geometry, and measured-internals oracle tests were green at the deletion base commit
+    while the default declarative parity tests were also green.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the remaining retained compatibility island compiles after deleting the portal
+    host module.
+- `cargo nextest run -p fret-node retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+  - Result: passed, 2 tests.
+  - Scope proven: default source-policy tests reject retained bridge usage outside the shrunken
+    ledger and keep the compatibility island crate-private/controller-bound.
+- `cargo nextest run -p fret-node --features compat-retained-canvas retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+  - Result: passed, 2 tests.
+  - Scope proven: the same source-policy and compatibility-island gates remain green under the
+    retained compatibility feature after the retained portal host deletion.
+- `cargo nextest run -p fret-node declarative_visible_subset_portal_identity_persists_and_resets_on_kind_or_version_change flush_portal_measured_geometry_state_keeps_growth_only_and_removes_missing_nodes declarative_portal_renderer_hosts_custom_subtrees_by_node_kind_with_default_fallback declarative_surface_hosts_node_type_registry_without_retained_portal_host declarative_portal_renderer_publishes_custom_subtree_measurements declarative_portal_command_host_submits_transactions_without_retained_portal_host declarative_portal_text_editor_handler_submits_transactions_without_retained_command_cx declarative_portal_number_editor_handler_submits_transactions_without_retained_command_cx`
+  - Result: passed, 8 tests.
+  - Scope proven: default declarative portal lifecycle, measured-geometry cleanup, renderer
+    hosting, registry fallback, custom subtree measurement publishing, command routing, and
+    text/number editor command submission remain green without constructing retained portal code.
+- `cargo fmt -p fret-node`
+  - Result: passed.
+  - Scope proven: touched `fret-node` Rust files were formatted.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after shrinking
+    the `fret-node` retained source ledger.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "NodeGraphPortalHost|NodeGraphPortalCommandHandler|PortalNoopCommandHandler|PortalCommandHandlerChain|portal_lifecycle_conformance|portal_measured_geometry_conformance|portal_measured_internals_conformance|ui/portal\\.rs|mod portal;|pub\\(crate\\) use geometry::node_order" ecosystem/fret-node/src -g '*.rs'`
+  - Result: only policy assertions and comments that describe the default replacement remain.
+  - Scope proven: no live retained portal host module, retained portal command-handler adapter, or
+    retained portal oracle module remains in `fret-node` source.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-160` changes only the `fret-node` retained portal host deletion slice and
+    workstream docs. Pre-delete retained/default oracle tests plus post-delete default/compat
+    targeted tests, compile gates, source-policy gates, formatting, layering, catalog, and
+    whitespace checks cover the changed behavior and boundary surface.

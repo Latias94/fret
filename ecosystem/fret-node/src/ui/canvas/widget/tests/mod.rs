@@ -89,9 +89,6 @@ mod perf_cache;
 mod perf_cache_prune_conformance;
 mod portal_conformance;
 mod portal_keyboard_conformance;
-mod portal_lifecycle_conformance;
-mod portal_measured_geometry_conformance;
-mod portal_measured_internals_conformance;
 mod portal_pointer_passthrough_conformance;
 mod prelude;
 mod render_culling_metrics_conformance;
@@ -115,10 +112,10 @@ mod viewport_animation_conformance;
 mod z_order_conformance;
 
 use harness::{
-    NullServices, TestUiHostImpl, command_cx, event_cx, insert_editor_config_with,
-    insert_graph_view, insert_view, make_test_graph_two_nodes,
-    make_test_graph_two_nodes_with_ports, make_test_graph_two_nodes_with_ports_spaced_x,
-    make_test_graph_two_nodes_with_size, read_node_pos,
+    NullServices, TestUiHostImpl, command_cx, event_cx, insert_editor_config_with, insert_view,
+    make_test_graph_two_nodes, make_test_graph_two_nodes_with_ports,
+    make_test_graph_two_nodes_with_ports_spaced_x, make_test_graph_two_nodes_with_size,
+    read_node_pos,
 };
 #[allow(unused_imports)]
 use harness::{

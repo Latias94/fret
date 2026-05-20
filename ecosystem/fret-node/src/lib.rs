@@ -93,7 +93,6 @@ mod surface_policy_tests {
     const UI_OVERLAY_RENAME_LIFECYCLE_RS: &str = include_str!("ui/overlays/rename_lifecycle.rs");
     const UI_VIEWPORT_OPTIONS_RS: &str = include_str!("ui/viewport_options.rs");
     const UI_VIEW_QUEUE_RS: &str = include_str!("ui/canvas/widget/view_queue.rs");
-    const PORTAL_RS: &str = include_str!("ui/portal.rs");
     const FRET_EXAMPLES_CARGO_TOML: &str = include_str!("../../../apps/fret-examples/Cargo.toml");
     const FRET_EXAMPLES_LIB_RS: &str = include_str!("../../../apps/fret-examples/src/lib.rs");
     const FRET_DEMO_CARGO_TOML: &str = include_str!("../../../apps/fret-demo/Cargo.toml");
@@ -348,12 +347,7 @@ mod surface_policy_tests {
         assert!(UI_CANVAS_BUILDERS_RS.contains("retained compatibility plumbing"));
         assert!(UI_CANVAS_BUILDERS_RS.contains("declarative node graph surface"));
 
-        assert!(PORTAL_RS.contains(
-            "pub fn with_controller(mut self, controller: NodeGraphController) -> Self {"
-        ));
-        assert!(PORTAL_RS.contains("pub(crate) fn with_edit_queue("));
-        assert!(PORTAL_RS.contains("retained compatibility plumbing"));
-        assert!(PORTAL_RS.contains("declarative node graph surface"));
+        assert!(!UI_MOD_RS.contains("#[cfg(feature = \"compat-retained-canvas\")]\nmod portal;"));
     }
 
     #[test]
@@ -366,7 +360,6 @@ mod surface_policy_tests {
         let allowed_exact = [
             "src/ui/editor.rs",
             "src/ui/panel.rs",
-            "src/ui/portal.rs",
             "src/ui/retained_event_tail.rs",
             "src/ui/retained_submit.rs",
             "src/ui/canvas/middleware.rs",

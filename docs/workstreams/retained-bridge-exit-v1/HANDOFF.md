@@ -609,7 +609,12 @@ unclaimed portal commands unhandled. `RBX-M2-150` then moved first-party portal 
 handlers onto that default declarative command seam, converted their session state from host globals
 to cloneable model-backed editor state, deleted the retained `CommandCx` adapters from
 `portal_text.rs` / `portal_number.rs`, and removed those files from the retained bridge source
-ledger after pre-delete and post-delete retained portal oracle runs.
+ledger after pre-delete and post-delete retained portal oracle runs. `RBX-M2-160` then deleted the
+retained `NodeGraphPortalHost`, retained portal command-handler traits/adapters, and retained
+portal lifecycle/measured-geometry/measured-internals oracle modules after the default declarative
+path already covered portal subtree lifecycle keys, measured-geometry cleanup/publishing,
+arbitrary per-kind renderer hosting, portal command routing, and first-party text/number editor
+command submission.
 
 ## Next Task
 
@@ -622,12 +627,9 @@ Recommended next implementation shape:
 - Continue M2 by shrinking the RBX-M2-080 ledger. The retained controls widget is now gone; the
   retained toolbar widgets are gone; retained minimap is gone; retained blackboard is gone; retained
   rename host is gone; retained diagnostics anchors are gone; retained a11y active-descendant
-  anchors are gone; arbitrary per-kind portal renderer hosting, portal command routing, and
-  first-party portal text/number command handlers now have default declarative coverage. The
-  remaining portal retained files are lifecycle/measurement oracle code; the remaining canvas
-  interaction families still need default-path tests before their retained widget/event code can be
-  deleted. Each slice should first add default declarative tests, then remove or gate less retained
-  code.
+  anchors are gone; retained portal host/oracle code is gone. The remaining canvas interaction
+  families still need default-path tests before their retained widget/event code can be deleted.
+  Each slice should first add default declarative tests, then remove or gate less retained code.
 - After the ledger no longer contains behavior-only retained files, remove
   `compat-retained-canvas` / `unstable-retained-bridge` from `fret-node`.
 - Keep the known independent `fret-ui` layout primitive drift
@@ -636,7 +638,26 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-20 for `RBX-M2-140`:
+Last run on 2026-05-20 for `RBX-M2-160`:
+
+- pre-delete `cargo nextest run -p fret-node --features compat-retained-canvas portal_lifecycle_conformance portal_measured_geometry_conformance portal_measured_internals_conformance declarative_visible_subset_portal_identity_persists_and_resets_on_kind_or_version_change flush_portal_measured_geometry_state_keeps_growth_only_and_removes_missing_nodes declarative_portal_renderer_hosts_custom_subtrees_by_node_kind_with_default_fallback declarative_surface_hosts_node_type_registry_without_retained_portal_host declarative_portal_renderer_publishes_custom_subtree_measurements declarative_portal_command_host_submits_transactions_without_retained_portal_host declarative_portal_text_editor_handler_submits_transactions_without_retained_command_cx declarative_portal_number_editor_handler_submits_transactions_without_retained_command_cx` -
+  passed, 12 tests.
+- post-delete `cargo check -p fret-node --features compat-retained-canvas` - passed with the
+  pre-existing `fret-ui` `current_effective_opacity` dead-code warning.
+- post-delete `cargo nextest run -p fret-node retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound` -
+  passed, 2 tests.
+- post-delete `cargo nextest run -p fret-node --features compat-retained-canvas retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound` -
+  passed, 2 tests.
+- post-delete `cargo nextest run -p fret-node declarative_visible_subset_portal_identity_persists_and_resets_on_kind_or_version_change flush_portal_measured_geometry_state_keeps_growth_only_and_removes_missing_nodes declarative_portal_renderer_hosts_custom_subtrees_by_node_kind_with_default_fallback declarative_surface_hosts_node_type_registry_without_retained_portal_host declarative_portal_renderer_publishes_custom_subtree_measurements declarative_portal_command_host_submits_transactions_without_retained_portal_host declarative_portal_text_editor_handler_submits_transactions_without_retained_command_cx declarative_portal_number_editor_handler_submits_transactions_without_retained_command_cx` -
+  passed, 8 tests.
+- `cargo fmt -p fret-node` - passed.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 428 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+
+Previous run on 2026-05-20 for `RBX-M2-140`:
 
 - `cargo nextest run -p fret-node declarative_portal_renderer_hosts_custom_subtrees_by_node_kind_with_default_fallback declarative_surface_hosts_node_type_registry_without_retained_portal_host declarative_portal_renderer_publishes_custom_subtree_measurements` -
   passed, 3 tests.
