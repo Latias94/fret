@@ -2549,6 +2549,13 @@ fn ui_app_render<S>(
                             app.push_effect(effect);
                         }
                     });
+                    // Keep redraw requests from script-injected input alive after the eager
+                    // command-only flush above has drained and re-queued deferred effects. Without
+                    // this bridge, launched diagnostics can end a render tick with the script still
+                    // waiting for geometry progression (for example `scroll_into_view`) but no
+                    // guaranteed post-flush RAF wake-up.
+                    app.request_redraw(window);
+                    app.push_effect(Effect::RequestAnimationFrame(window));
                 }
             },
         );

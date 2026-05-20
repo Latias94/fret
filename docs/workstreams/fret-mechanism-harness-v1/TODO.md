@@ -1235,6 +1235,16 @@ date: 2026-05-12
     exposed diagnostics authoring drift in the Command long-query script: a pre-positioning
     `scroll_into_view` could emit a wheel with no follow-up frame when the docs demo was already
     visible. That guard now uses `ensure_visible(within_window=true)`.
+- [x] Repair desktop repeating-timer redraw starvation that blocked the broad shadcn suite.
+  - Result:
+    the broad `ui-gallery-shadcn-runtime-evidence` suite no longer fails before RadioGroup on the
+    Command retained-active-descendant script. Desktop repeating timers now rearm from handler
+    completion time and record `last_fired_tick`, so a diagnostics keepalive timer cannot catch up
+    repeatedly inside one runner tick and starve the requested `RedrawRequested`. Diagnostics
+    no-frame keepalive paths also preserve redraw/RAF effects for effect-only, keyboard/text/IME,
+    and pointer-move injection. Fresh focused Command diagnostics passed with run id
+    `1779298834262`, and the broad shadcn runtime-evidence suite passed 13/13 with summary
+    `target/fret-diag-shadcn-runtime-evidence-runner-timer-fresh-20260521/sessions/1779299075645-7824/suite.summary.json`.
 - [x] Refresh AI FileTree protocol coverage and auto-height VirtualList runtime proof.
   - Result: the four promoted `ui-gallery-ai-file-tree` scripts now have direct
     `fret-diag-protocol` roundtrip coverage. The fresh suite rerun re-exposed the auto-height

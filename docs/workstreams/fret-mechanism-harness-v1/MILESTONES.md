@@ -3537,3 +3537,35 @@ Status: complete for the focused RadioGroup checked-state mutation companion.
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-radio-group-semantics --dir target\fret-diag-radio-group-semantics-suite-v4 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
   with summary
   `target/fret-diag-radio-group-semantics-suite-v4/sessions/1779263168285-151724/suite.summary.json`.
+
+## M159: Desktop Repeating-Timer Redraw Starvation Repair
+
+Status: complete for the runner scheduling defect that blocked the broad shadcn runtime-evidence
+suite.
+
+- The previous RadioGroup slice left a follow-up: the broad `ui-gallery-shadcn-runtime-evidence`
+  suite could fail before reaching RadioGroup because
+  `ui-gallery-command-retained-active-descendant-action-state.json` stalled with
+  `script_stalled_no_frames`.
+- The root cause was desktop runner timer catch-up. Repeating timers were rearmed from the stale
+  `now` captured at the start of `fire_due_timers`, so a slow diagnostics keepalive handler could
+  make the same repeating timer overdue again inside the same fixed-point effect-drain turn. That
+  starved the winit `RedrawRequested` the handler had just requested.
+- `TimerEntry::last_fired_tick` now prevents a repeating timer from firing more than once per
+  runner tick, and `finish_fired_timer` rearms repeating timers relative to handler completion
+  time. Asset-reload polling timers initialize the same guard.
+- Diagnostics no-frame keepalive handling now also preserves explicit redraw/RAF effects for
+  already-started `wait_frames`, effect-only steps, keyboard/text/IME injection, pointer-move
+  injection, script startup, and post-command-flush injected input.
+- Gates pass:
+  `cargo test --profile dev-fast -p fret-launch repeating_timer --lib -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics --lib no_frame_keepalive -- --nocapture`;
+  and `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`.
+- Focused Command runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\command\ui-gallery-command-retained-active-descendant-action-state.json --dir target\fret-diag-command-retained-active-descendant-action-state-runner-timer-fresh-20260521 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779298834262` and AI packet
+  `target/fret-diag-command-retained-active-descendant-action-state-runner-timer-fresh-20260521/sessions/1779298813208-173816/1779298834262/ai.packet`.
+- The broad `ui-gallery-shadcn-runtime-evidence` suite now passes 13/13:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-runner-timer-fresh-20260521 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with summary
+  `target/fret-diag-shadcn-runtime-evidence-runner-timer-fresh-20260521/sessions/1779299075645-7824/suite.summary.json`.

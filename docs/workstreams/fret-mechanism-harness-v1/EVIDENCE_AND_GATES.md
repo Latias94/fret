@@ -6566,3 +6566,52 @@ Next slice recommendation:
     `ui-gallery-command-retained-active-descendant-action-state.json` stalled with no frames at
     step 1. A focused rerun of that Command script also failed with `script_stalled_no_frames`, so
     this is recorded as a separate diagnostics stability follow-up.
+
+## Desktop Repeating-Timer Redraw Starvation Repair
+
+- invariant:
+  a repeating runner timer must not fire more than once in the same event-loop tick, and repeating
+  timers must rearm from handler completion time rather than from the stale timestamp captured at
+  the beginning of an effect-drain turn. Diagnostics keepalive timers may request redraw and inject
+  events, but they must not starve the platform `RedrawRequested` they are trying to observe.
+- finding:
+  the broad `ui-gallery-shadcn-runtime-evidence` suite failure after the RadioGroup promotion was a
+  real runner scheduling defect, not a Command recipe defect. The Command
+  retained-active-descendant script stalled after `scroll_into_view` because a repeating
+  diagnostics keepalive timer could catch up inside the same fixed-point drain turn. Once the
+  runner tick guard and completion-time rearm landed, the focused Command script and the full broad
+  suite passed.
+- implementation anchors:
+  `crates/fret-launch/src/runner/desktop/runner/timers.rs`,
+  `crates/fret-launch/src/runner/desktop/runner/window.rs`,
+  `crates/fret-launch/src/runner/desktop/runner/asset_reload.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/script_runner.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps.rs`, and
+  `ecosystem/fret-bootstrap/src/ui_app_driver.rs`.
+- evidence anchors:
+  focused Command AI packet:
+  `target/fret-diag-command-retained-active-descendant-action-state-runner-timer-fresh-20260521/sessions/1779298813208-173816/1779298834262/ai.packet`;
+  focused Command pack:
+  `target/fret-diag-command-retained-active-descendant-action-state-runner-timer-fresh-20260521/sessions/1779298813208-173816/share/1779298834262.zip`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-runner-timer-fresh-20260521/sessions/1779299075645-7824/suite.summary.json`.
+- timer regression:
+  `cargo test --profile dev-fast -p fret-launch repeating_timer --lib -- --nocapture`
+  - result: passed; 2 tests.
+- diagnostics no-frame regression:
+  `cargo test --profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics --lib no_frame_keepalive -- --nocapture`
+  - result: passed; 3 tests.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+  - note: the run emitted the pre-existing unrelated unused `start` warning from
+    `crates/fret-ui/src/declarative/host_widget/paint.rs`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\command\ui-gallery-command-retained-active-descendant-action-state.json --dir target\fret-diag-command-retained-active-descendant-action-state-runner-timer-fresh-20260521 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779298834262`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-runner-timer-fresh-20260521 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 13/13; `stage_counts={"passed":13}`; `reason_code_counts={}`.
+  - Command retained-active-descendant row: passed, run id `1779299206755`.
+  - RadioGroup checked-state mutation row: passed, run id `1779299568012`.

@@ -676,6 +676,8 @@ pub(super) fn handle_effect_only_steps(
             active.screenshot_wait = None;
             active.next_step = active.next_step.saturating_add(1);
             output.request_redraw = true;
+            output.effects.push(Effect::Redraw(window));
+            output.effects.push(Effect::RequestAnimationFrame(window));
             true
         }
         UiActionStepV2::WaitMs { n_ms, .. } => {
@@ -696,6 +698,8 @@ pub(super) fn handle_effect_only_steps(
             active.last_clipboard_write_completion = None;
             active.next_step = active.next_step.saturating_add(1);
             output.request_redraw = true;
+            output.effects.push(Effect::Redraw(window));
+            output.effects.push(Effect::RequestAnimationFrame(window));
             true
         }
         _ => false,

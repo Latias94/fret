@@ -73,6 +73,7 @@ pub(super) struct TimerEntry {
     pub(super) window: Option<fret_core::AppWindowId>,
     pub(super) deadline: Instant,
     pub(super) repeat: Option<Duration>,
+    pub(super) last_fired_tick: Option<fret_runtime::TickId>,
 }
 
 #[derive(Debug, Clone, Copy)]
