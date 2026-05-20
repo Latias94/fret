@@ -71,8 +71,9 @@ use crate::runtime::store::NodeGraphStore;
 use crate::ui::measured::MEASURED_GEOMETRY_EPSILON_PX;
 use crate::ui::paint_overrides::{NodeGraphPaintOverrides, NodeGraphPaintOverridesMap};
 use crate::ui::{
-    MeasuredGeometryStore, NodeGraphController, NodeGraphNodeTypes, NodeGraphSurfaceBinding,
-    node_graph_surface, node_graph_surface_with_portal_renderer,
+    MeasuredGeometryStore, NodeGraphController, NodeGraphDeclarativePortalCommandHandler,
+    NodeGraphNodeTypes, NodeGraphSurfaceBinding, PortalCommandOutcome, PortalTextCommand,
+    node_graph_surface, node_graph_surface_with_portal_renderer, portal_submit_text_command,
 };
 use serde_json::Value;
 
@@ -4258,6 +4259,118 @@ impl NodeGraphDeclarativePortalRenderer<TestActionHostImpl> for KindSwitchPortal
         )]
         .into()
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct DeclarativeCommitMoveHandler {
+    node: NodeId,
+}
+
+impl NodeGraphDeclarativePortalCommandHandler for DeclarativeCommitMoveHandler {
+    fn handle_portal_command(
+        &mut self,
+        _host: &mut dyn fret_ui::action::UiFocusActionHost,
+        _cx: fret_ui::action::ActionCx,
+        _graph: &Graph,
+        command: PortalTextCommand,
+    ) -> PortalCommandOutcome {
+        match command {
+            PortalTextCommand::Submit { node } if node == self.node => {
+                PortalCommandOutcome::Commit(crate::ops::GraphTransaction {
+                    label: Some("Move Node".to_string()),
+                    ops: vec![GraphOp::SetNodePos {
+                        id: node,
+                        from: CanvasPoint { x: 10.0, y: 20.0 },
+                        to: CanvasPoint { x: 64.0, y: 32.0 },
+                    }],
+                })
+            }
+            _ => PortalCommandOutcome::NotHandled,
+        }
+    }
+}
+
+#[test]
+fn declarative_portal_command_host_submits_transactions_without_retained_portal_host() {
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let mut services = FakeUiServices;
+    let window = AppWindowId::default();
+    let bounds = test_node_graph_surface_bounds();
+    ui.set_window(window);
+    host.bounds = bounds;
+
+    let node = NodeId::from_u128(0x9341);
+    let mut graph = Graph::new(GraphId::from_u128(0x9340));
+    graph
+        .nodes
+        .insert(node, test_node(CanvasPoint { x: 10.0, y: 20.0 }));
+
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            draw_order: vec![node],
+            ..NodeGraphViewState::default()
+        },
+        default_editor_config(),
+    );
+    let handler = Rc::new(RefCell::new(DeclarativeCommitMoveHandler { node }));
+    let mut surface_element = None;
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        "node-graph-surface-portal-command",
+        |cx| {
+            let mut props = binding.surface_props();
+            props.portal_command_handler = Some(handler.clone());
+            let surface = node_graph_surface(cx, props);
+            surface_element = Some(surface.id);
+            vec![surface]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut host, &mut services, bounds, 1.0);
+
+    assert!(
+        surface_element.is_some(),
+        "surface element should be captured during render"
+    );
+
+    assert!(ui.dispatch_command(&mut host, &mut services, &portal_submit_text_command(node),));
+
+    let graph_pos = host
+        .models
+        .read(&binding.graph_model(), |graph| {
+            graph.nodes.get(&node).map(|node| node.pos)
+        })
+        .ok()
+        .flatten()
+        .expect("graph node pos");
+    assert_eq!(graph_pos, CanvasPoint { x: 64.0, y: 32.0 });
+
+    let store_pos = host
+        .models
+        .read(&binding.store_model(), |store| {
+            store.graph().nodes.get(&node).map(|node| node.pos)
+        })
+        .ok()
+        .flatten()
+        .expect("store node pos");
+    assert_eq!(store_pos, CanvasPoint { x: 64.0, y: 32.0 });
+
+    assert!(
+        !ui.dispatch_command(
+            &mut host,
+            &mut services,
+            &portal_submit_text_command(NodeId::from_u128(0x9342)),
+        ),
+        "unclaimed portal commands must keep bubbling instead of being swallowed"
+    );
 }
 
 #[test]

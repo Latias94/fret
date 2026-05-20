@@ -600,7 +600,13 @@ portal renderer hosting onto the default declarative surface by adding
 lifecycle key, proving custom renderer fallback and registry hosting, and proving custom subtree
 measurements publish into `MeasuredGeometryStore`. Retained portal files are now kept for the
 remaining portal command-adapter/deletion-preflight oracle work, not because arbitrary per-kind
-renderer hosting still requires retained code.
+renderer hosting still requires retained code. `RBX-M2-145` then moved portal command routing onto
+the default declarative surface by adding `NodeGraphDeclarativePortalCommandHandler`,
+`NodeGraphSurfaceProps::portal_command_handler`, default re-exports for the portal command protocol,
+and a surface-root command hook that parses portal commands, routes handled commits through
+`NodeGraphSurfaceBinding`, restores focus to the surface, requests redraw/notify, and leaves
+unclaimed portal commands unhandled. Retained portal files are now kept only for text/number
+command-adapter deletion-preflight oracle work.
 
 ## Next Task
 
@@ -613,11 +619,12 @@ Recommended next implementation shape:
 - Continue M2 by shrinking the RBX-M2-080 ledger. The retained controls widget is now gone; the
   retained toolbar widgets are gone; retained minimap is gone; retained blackboard is gone; retained
   rename host is gone; retained diagnostics anchors are gone; retained a11y active-descendant
-  anchors are gone; arbitrary per-kind portal renderer hosting now has default declarative coverage.
-  The remaining portal family work is retained portal command-adapter deletion after a focused
-  default/deletion-preflight oracle slice. The remaining canvas interaction families still need
-  default-path tests before their retained widget/event code can be deleted. Each slice should first
-  add default declarative tests, then remove or gate less retained code.
+  anchors are gone; arbitrary per-kind portal renderer hosting and portal command routing now have
+  default declarative coverage. The remaining portal family work is retained text/number
+  command-adapter deletion after a focused deletion-preflight oracle slice. The remaining canvas
+  interaction families still need default-path tests before their retained widget/event code can be
+  deleted. Each slice should first add default declarative tests, then remove or gate less retained
+  code.
 - After the ledger no longer contains behavior-only retained files, remove
   `compat-retained-canvas` / `unstable-retained-bridge` from `fret-node`.
 - Keep the known independent `fret-ui` layout primitive drift

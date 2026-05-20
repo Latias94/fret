@@ -1,4 +1,4 @@
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -29,6 +29,11 @@ use crate::ui::declarative::view_reducer::{
 };
 use crate::ui::geometry_overrides::NodeGraphGeometryOverridesRef;
 use crate::ui::paint_overrides::{NodeGraphPaintOverridesMap, NodeGraphPaintOverridesRef};
+pub use crate::ui::portal_commands::{
+    PortalCommandOutcome, PortalTextCommand, PortalTextStepMode, parse_portal_text_command,
+    portal_cancel_text_command, portal_step_text_command, portal_step_text_command_with_mode,
+    portal_submit_text_command,
+};
 use crate::ui::presenter::DefaultNodeGraphPresenter;
 use crate::ui::style::NodeGraphStyle;
 use crate::ui::{
@@ -239,6 +244,24 @@ pub trait NodeGraphDeclarativePortalRenderer<H: UiHost> {
     ) -> Elements;
 }
 
+/// Command adapter for declarative portal subtrees.
+///
+/// This is the default-path replacement for the retained `NodeGraphPortalHost::command` adapter.
+/// It consumes the shared portal command protocol and returns a policy outcome; the surface owns
+/// binding submission, focus return, redraw, and notify side effects.
+pub trait NodeGraphDeclarativePortalCommandHandler {
+    fn handle_portal_command(
+        &mut self,
+        host: &mut dyn fret_ui::action::UiFocusActionHost,
+        cx: fret_ui::action::ActionCx,
+        graph: &Graph,
+        command: PortalTextCommand,
+    ) -> PortalCommandOutcome;
+}
+
+pub type NodeGraphDeclarativePortalCommandHandlerRef =
+    Rc<RefCell<dyn NodeGraphDeclarativePortalCommandHandler>>;
+
 #[derive(Clone)]
 pub struct NodeGraphSurfaceProps {
     binding: NodeGraphSurfaceBinding,
@@ -268,6 +291,9 @@ pub struct NodeGraphSurfaceProps {
 
     /// Visible-subset portal hosting policy for the declarative editor surface.
     pub portal_hosting: NodeGraphVisibleSubsetPortalConfig,
+
+    /// Optional command handler for declarative portal subtrees.
+    pub portal_command_handler: Option<NodeGraphDeclarativePortalCommandHandlerRef>,
 
     /// Declarative diagnostics policy for debug-only shortcuts and overlays.
     pub diagnostics: NodeGraphDiagnosticsConfig,
@@ -300,6 +326,7 @@ impl NodeGraphSurfaceProps {
             measured_geometry: None,
             a11y_internals,
             portal_hosting: NodeGraphVisibleSubsetPortalConfig::default(),
+            portal_command_handler: None,
             diagnostics: NodeGraphDiagnosticsConfig::default(),
             cull_margin_screen_px: 256.0,
             pan_button: MouseButton::Middle,
@@ -360,6 +387,7 @@ fn node_graph_surface_impl<H: UiHost + 'static>(
         measured_geometry,
         a11y_internals,
         portal_hosting,
+        portal_command_handler,
         diagnostics,
         cull_margin_screen_px,
         pan_button,
@@ -463,6 +491,74 @@ fn node_graph_surface_impl<H: UiHost + 'static>(
             ..Default::default()
         },
         move |cx, _element| {
+            if let Some(handler) = portal_command_handler.clone() {
+                let binding_for_availability = binding.clone();
+                let binding_for_command = binding.clone();
+                cx.action_route_fallback_root(_element);
+                cx.command_on_command_availability_for(
+                    _element,
+                    Arc::new(move |host, _cx, command| {
+                        let Some(command) = parse_portal_text_command(&command) else {
+                            return fret_ui::CommandAvailability::NotHandled;
+                        };
+                        let node = match command {
+                            PortalTextCommand::Submit { node }
+                            | PortalTextCommand::Cancel { node }
+                            | PortalTextCommand::Step { node, .. } => node,
+                        };
+                        let has_node = host
+                            .models_mut()
+                            .read(&binding_for_availability.store_model(), |store| {
+                                store.graph().nodes.contains_key(&node)
+                            })
+                            .ok()
+                            .unwrap_or(false);
+                        if has_node {
+                            fret_ui::CommandAvailability::Available
+                        } else {
+                            fret_ui::CommandAvailability::NotHandled
+                        }
+                    }),
+                );
+
+                cx.command_on_command_for(
+                    _element,
+                    Arc::new(move |host, action_cx, command| {
+                        let Some(command) = parse_portal_text_command(&command) else {
+                            return false;
+                        };
+                        let graph = host
+                            .models_mut()
+                            .read(&binding_for_command.store_model(), |store| {
+                                store.graph().clone()
+                            })
+                            .ok()
+                            .unwrap_or_default();
+                        let outcome = handler
+                            .borrow_mut()
+                            .handle_portal_command(host, action_cx, &graph, command);
+
+                        match outcome {
+                            PortalCommandOutcome::NotHandled => false,
+                            PortalCommandOutcome::Handled => {
+                                host.request_focus(action_cx.target);
+                                host.request_redraw(action_cx.window);
+                                host.notify(action_cx);
+                                true
+                            }
+                            PortalCommandOutcome::Commit(tx) => {
+                                let _ =
+                                    binding_for_command.submit_transaction_action_host(host, &tx);
+                                host.request_focus(action_cx.target);
+                                host.request_redraw(action_cx.window);
+                                host.notify(action_cx);
+                                true
+                            }
+                        }
+                    }),
+                );
+            }
+
             let shell = build_surface_shell(
                 cx,
                 _element,

@@ -2102,6 +2102,46 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-145 Host portal commands on the default declarative surface.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/mod.rs`
+    - `ecosystem/fret-node/src/ui/mod.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Replace the retained `NodeGraphPortalHost::command` adapter responsibility with a default
+      declarative command host on `node_graph_surface(...)`.
+    - Keep command policy/component authorship outside `fret-ui` and avoid importing retained
+      `CommandCx` into the default path.
+    - Submit `PortalCommandOutcome::Commit(...)` through `NodeGraphSurfaceBinding` so the
+      authoritative store and graph/view mirrors remain synchronized.
+    - Prove unclaimed portal commands keep bubbling instead of being swallowed.
+  - Result:
+    - Added `NodeGraphDeclarativePortalCommandHandler` and
+      `NodeGraphDeclarativePortalCommandHandlerRef` as the default declarative portal command seam.
+    - Added `NodeGraphSurfaceProps::portal_command_handler` and wired surface-root command
+      availability, action-route fallback, command parsing, binding-backed transaction submission,
+      focus return, redraw, and notify side effects.
+    - Re-exported the portal command protocol from the declarative/default API surface so downstream
+      handlers can name `PortalTextCommand`, `PortalTextStepMode`, `PortalCommandOutcome`, and the
+      command builders/parsers without importing the retained portal module.
+    - Added default declarative coverage proving `portal_submit_text_command(node)` commits a graph
+      transaction through the surface binding without constructing `NodeGraphPortalHost`, and that
+      commands for unhandled nodes are not swallowed.
+    - Verified retained portal lifecycle, measured-geometry, and measured-internals oracle tests
+      still pass under `compat-retained-canvas`.
+  - Validation:
+    - `cargo nextest run -p fret-node declarative_portal_command_host_submits_transactions_without_retained_portal_host declarative_portal_renderer_hosts_custom_subtrees_by_node_kind_with_default_fallback declarative_surface_hosts_node_type_registry_without_retained_portal_host declarative_portal_renderer_publishes_custom_subtree_measurements`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas portal_lifecycle_conformance portal_measured_geometry_conformance portal_measured_internals_conformance declarative_portal_command_host_submits_transactions_without_retained_portal_host declarative_portal_renderer_hosts_custom_subtrees_by_node_kind_with_default_fallback declarative_surface_hosts_node_type_registry_without_retained_portal_host declarative_portal_renderer_publishes_custom_subtree_measurements`
+    - `cargo check -p fret-node`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node declarative_portal_command_host_submits_transactions_without_retained_portal_host retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - `cargo fmt -p fret-node`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
