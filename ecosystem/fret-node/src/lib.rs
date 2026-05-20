@@ -186,6 +186,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_down_double_click_edge/finish.rs");
     const UI_CANVAS_WIDGET_SEARCHER_ACTIVATION_POINTER_DOWN_RS: &str =
         include_str!("ui/canvas/widget/searcher_activation/pointer_down.rs");
+    const UI_CANVAS_WIDGET_SEARCHER_ACTIVATION_POINTER_UP_RS: &str =
+        include_str!("ui/canvas/widget/searcher_activation/pointer_up.rs");
     const UI_CANVAS_WIDGET_SEARCHER_ACTIVATION_STATE_ARM_RS: &str =
         include_str!("ui/canvas/widget/searcher_activation_state/arm.rs");
     const UI_CANVAS_WIDGET_SEARCHER_ACTIVATION_STATE_CLEAR_RS: &str =
@@ -455,6 +457,7 @@ mod surface_policy_tests {
     fn searcher_dismiss_tail_helpers_stay_off_retained_bridge() {
         let searcher_dismiss_sources = [
             UI_CANVAS_WIDGET_SEARCHER_ACTIVATION_POINTER_DOWN_RS,
+            UI_CANVAS_WIDGET_SEARCHER_ACTIVATION_POINTER_UP_RS,
             UI_CANVAS_WIDGET_SEARCHER_ACTIVATION_STATE_ARM_RS,
             UI_CANVAS_WIDGET_SEARCHER_ACTIVATION_STATE_CLEAR_RS,
             UI_CANVAS_WIDGET_SEARCHER_ACTIVATION_STATE_RELEASE_RS,
