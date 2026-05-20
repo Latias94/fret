@@ -128,6 +128,8 @@ mod edge_insert_drag;
 mod edge_path_ctx;
 mod event_clipboard;
 mod event_clipboard_feedback;
+mod event_clipboard_feedback_cx;
+mod event_clipboard_feedback_retained_cx;
 mod event_clipboard_pending;
 mod event_keyboard;
 mod event_keyboard_route;

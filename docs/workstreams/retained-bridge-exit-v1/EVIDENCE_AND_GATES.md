@@ -7665,3 +7665,65 @@ Broader gates not run:
   - Reason: `RBX-M2-380` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-20 - RBX-M2-390 feedback/motion retained Cx adapter isolation
+
+Claim verified:
+
+- Clipboard feedback host/window access now flows through the retained-agnostic
+  `ClipboardFeedbackCx` seam.
+- Clipboard paste feedback and timer-motion paint invalidation now flow through retained-agnostic
+  widget tail paint invalidation seams.
+- Retained `EventCx` is isolated to `event_clipboard_feedback_retained_cx.rs` for clipboard
+  feedback and already implements paint invalidation through `retained_widget_tail.rs`.
+- Clipboard-unavailable feedback behavior remains intact for matching tokens and side-effect free
+  for stale tokens.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/event_clipboard_feedback.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_clipboard_feedback_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_clipboard_feedback_retained_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_shared.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/clipboard_conformance.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving feedback and
+    motion invalidation helpers behind retained-agnostic seams.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(feedback_motion_helpers_stay_off_retained_bridge) | test(clipboard_unavailable_with_matching_token_shows_toast_and_invalidates_paint) | test(clipboard_unavailable_with_stale_token_has_no_feedback_side_effects) | test(pan_inertia_emits_move_end_after_inertia_stops) | test(wheel_zoom_emits_move_start_and_debounced_move_end) | test(pinch_zoom_emits_move_start_and_debounced_move_end) | test(wheel_pan_emits_move_start_and_debounced_move_end) | test(retained_bridge_source_usage_stays_on_the_migration_ledger) | test(retained_widget_compat_island_stays_crate_private_and_controller_bound)'`
+  - Result: passed, 9 tests.
+  - Scope proven: the new source-policy gate locks feedback/motion helpers off retained bridge Cx
+    names; clipboard-unavailable feedback still clears matching pending paste, shows the info
+    toast, schedules the toast timer, requests redraw, and invalidates paint; stale tokens do not
+    produce feedback side effects; existing timer-motion callback tests, retained bridge ledger,
+    and retained compat island gates remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/event_clipboard_feedback.rs ecosystem/fret-node/src/ui/canvas/widget/event_clipboard_feedback_cx.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_shared.rs`
+  - Result: no matches.
+  - Scope proven: feedback/motion helpers no longer depend on retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after the
+    feedback/motion seam extraction.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-390` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.

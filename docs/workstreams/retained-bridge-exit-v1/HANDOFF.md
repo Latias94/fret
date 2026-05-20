@@ -692,6 +692,14 @@ behind `NodeDragGeometryCx`; retained `EventCx` implements that seam in
 effects behind existing `widget_tail` seams; retained `EventCx` already implements those seams in
 `retained_widget_tail.rs`, and `keyboard_pan_activation.rs` is now source-policy gated as
 retained-bridge-free support.
+`RBX-M2-390` then moved clipboard feedback host/window/paint invalidation and timer-motion paint
+invalidation behind retained-agnostic seams. Retained `EventCx` implements clipboard feedback in
+`event_clipboard_feedback_retained_cx.rs` and already implements motion paint invalidation through
+`retained_widget_tail.rs`; `event_clipboard_feedback.rs`, `event_clipboard_feedback_cx.rs`, and
+`timer_motion_shared.rs` are now source-policy gated as retained-bridge-free support. Clipboard
+unavailable feedback now has behavior tests proving matching tokens still clear pending paste,
+show the info toast, schedule the toast timer, request redraw, and invalidate paint while stale
+tokens remain side-effect free.
 
 ## Next Task
 
@@ -721,7 +729,8 @@ Recommended next implementation shape:
   retained-agnostic host/paint invalidation seam; marquee begin/finish now use a retained-agnostic
   host/capture/release seam; node drag preview compute now uses a retained-agnostic host/graph-read
   seam; node drag snaplines and multi-drag extent helpers now use a retained-agnostic
-  host/geometry-read seam; keyboard pan activation now uses retained-agnostic widget tail seams.
+  host/geometry-read seam; keyboard pan activation now uses retained-agnostic widget tail seams;
+  clipboard feedback and timer-motion helpers now use retained-agnostic feedback/paint seams.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
   `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`,
@@ -736,6 +745,7 @@ Recommended next implementation shape:
   `node_drag_preview.rs`, `node_drag_preview/compute.rs`, `node_drag_preview_cx.rs`,
   `marquee_begin.rs`, `marquee_cx.rs`, `marquee_finish.rs`,
   `keyboard_pan_activation.rs`,
+  `event_clipboard_feedback.rs`, `event_clipboard_feedback_cx.rs`, `timer_motion_shared.rs`,
   `sticky_wire_connect/finish.rs`, `edge_insert_drag/drag/tail.rs`, `cancel_cleanup.rs`,
   `sticky_wire_targets/picker.rs`, `group_drag/tail.rs`, `group_resize/tail.rs`,
   `group_preview_move_cx.rs`, `group_drag.rs`, `group_resize.rs`,
@@ -752,13 +762,13 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-20 for `RBX-M2-380`:
+Last run on 2026-05-20 for `RBX-M2-390`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.
-- `cargo nextest run -p fret-node --features compat-retained-canvas keyboard_pan_activation_stays_off_retained_bridge space_to_pan_starts_left_mouse_panning_and_updates_viewport pan_activation_key_code_must_match_to_enable_space_to_pan pan_activation_key_code_none_disables_space_to_pan_activation space_enables_pan_on_scroll_even_when_pan_on_scroll_is_disabled retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound` -
-  passed, 7 tests.
-- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/keyboard_pan_activation.rs` -
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(feedback_motion_helpers_stay_off_retained_bridge) | test(clipboard_unavailable_with_matching_token_shows_toast_and_invalidates_paint) | test(clipboard_unavailable_with_stale_token_has_no_feedback_side_effects) | test(pan_inertia_emits_move_end_after_inertia_stops) | test(wheel_zoom_emits_move_start_and_debounced_move_end) | test(pinch_zoom_emits_move_start_and_debounced_move_end) | test(wheel_pan_emits_move_start_and_debounced_move_end) | test(retained_bridge_source_usage_stays_on_the_migration_ledger) | test(retained_widget_compat_island_stays_crate_private_and_controller_bound)'` -
+  passed, 9 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/event_clipboard_feedback.rs ecosystem/fret-node/src/ui/canvas/widget/event_clipboard_feedback_cx.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_shared.rs` -
   no matches.
 - `cargo fmt --check` - passed.
 - `python3 tools/check_layering.py` - passed.
@@ -769,7 +779,7 @@ Last run on 2026-05-20 for `RBX-M2-380`:
 Broader gates not run:
 
 - `cargo nextest run --workspace`
-  - Reason: `RBX-M2-380` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+  - Reason: `RBX-M2-390` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
 

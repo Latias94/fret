@@ -132,6 +132,10 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/sticky_wire_connect/finish.rs");
     const UI_CANVAS_WIDGET_EDGE_INSERT_DRAG_DRAG_TAIL_RS: &str =
         include_str!("ui/canvas/widget/edge_insert_drag/drag/tail.rs");
+    const UI_CANVAS_WIDGET_EVENT_CLIPBOARD_FEEDBACK_RS: &str =
+        include_str!("ui/canvas/widget/event_clipboard_feedback.rs");
+    const UI_CANVAS_WIDGET_EVENT_CLIPBOARD_FEEDBACK_CX_RS: &str =
+        include_str!("ui/canvas/widget/event_clipboard_feedback_cx.rs");
     const UI_CANVAS_WIDGET_CANCEL_CLEANUP_RS: &str =
         include_str!("ui/canvas/widget/cancel_cleanup.rs");
     const UI_CANVAS_WIDGET_STICKY_WIRE_TARGETS_PICKER_RS: &str =
@@ -174,6 +178,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pending_node_drag_release_cx.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_PENDING_CLICK_SELECT_RS: &str =
         include_str!("ui/canvas/widget/pointer_up_pending/click_select.rs");
+    const UI_CANVAS_WIDGET_TIMER_MOTION_SHARED_RS: &str =
+        include_str!("ui/canvas/widget/timer_motion_shared.rs");
     const UI_VIEW_QUEUE_RS: &str = include_str!("ui/canvas/widget/view_queue.rs");
     const FRET_EXAMPLES_CARGO_TOML: &str = include_str!("../../../apps/fret-examples/Cargo.toml");
     const FRET_EXAMPLES_LIB_RS: &str = include_str!("../../../apps/fret-examples/src/lib.rs");
@@ -454,6 +460,29 @@ mod surface_policy_tests {
             assert!(
                 !UI_CANVAS_WIDGET_KEYBOARD_PAN_ACTIVATION_RS.contains(forbidden),
                 "keyboard pan activation helper must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn feedback_motion_helpers_stay_off_retained_bridge() {
+        let feedback_motion_sources = [
+            UI_CANVAS_WIDGET_EVENT_CLIPBOARD_FEEDBACK_RS,
+            UI_CANVAS_WIDGET_EVENT_CLIPBOARD_FEEDBACK_CX_RS,
+            UI_CANVAS_WIDGET_TIMER_MOTION_SHARED_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !feedback_motion_sources.contains(forbidden),
+                "feedback and motion helpers must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

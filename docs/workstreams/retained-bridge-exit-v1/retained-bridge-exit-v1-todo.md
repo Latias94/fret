@@ -2887,6 +2887,38 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-390 Isolate feedback/motion retained Cx adapters.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/event_clipboard_feedback.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/event_clipboard_feedback_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/event_clipboard_feedback_retained_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_shared.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/clipboard_conformance.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move clipboard feedback host/window/paint invalidation and timer-motion paint invalidation
+      behind retained-agnostic seams.
+    - Extend source-policy coverage so feedback/motion helpers cannot re-import retained bridge Cx
+      names.
+    - Backfill behavior coverage for clipboard-unavailable feedback so adapter isolation does not
+      silently drop toast, timer, redraw, or paint invalidation side effects.
+  - Result:
+    - Added `ClipboardFeedbackCx` as the retained-agnostic feedback seam and kept retained
+      `EventCx` usage isolated in `event_clipboard_feedback_retained_cx.rs`.
+    - Moved `request_paste_feedback(...)`, `show_clipboard_unavailable_toast(...)`, and
+      `invalidate_motion(...)` off direct retained bridge signatures.
+    - Added `feedback_motion_helpers_stay_off_retained_bridge` source-policy coverage.
+    - Added clipboard-unavailable behavior tests for matching and stale paste tokens.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(feedback_motion_helpers_stay_off_retained_bridge) | test(clipboard_unavailable_with_matching_token_shows_toast_and_invalidates_paint) | test(clipboard_unavailable_with_stale_token_has_no_feedback_side_effects) | test(pan_inertia_emits_move_end_after_inertia_stops) | test(wheel_zoom_emits_move_start_and_debounced_move_end) | test(pinch_zoom_emits_move_start_and_debounced_move_end) | test(wheel_pan_emits_move_start_and_debounced_move_end) | test(retained_bridge_source_usage_stays_on_the_migration_ledger) | test(retained_widget_compat_island_stays_crate_private_and_controller_bound)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/event_clipboard_feedback.rs ecosystem/fret-node/src/ui/canvas/widget/event_clipboard_feedback_cx.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_shared.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

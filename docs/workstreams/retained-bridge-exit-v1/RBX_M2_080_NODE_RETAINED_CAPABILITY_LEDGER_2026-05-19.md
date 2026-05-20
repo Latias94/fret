@@ -161,6 +161,13 @@ Compat-gated but retained-bridge-free support:
   - `RBX-M2-380` moved keyboard pan activation paint invalidation and stop-propagation side
     effects behind the retained-agnostic `widget_tail` seams already implemented by retained
     `EventCx`.
+- `ecosystem/fret-node/src/ui/canvas/widget/event_clipboard_feedback.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_clipboard_feedback_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_shared.rs`
+  - `RBX-M2-390` moved clipboard feedback host/window/paint invalidation and timer-motion paint
+    invalidation behind retained-agnostic seams. Retained `EventCx` implements the feedback seam in
+    `event_clipboard_feedback_retained_cx.rs` and already implements paint invalidation through
+    `retained_widget_tail.rs`.
 
 Deleted retained overlay files:
 
@@ -220,6 +227,7 @@ Deleted retained overlay files:
 | Node drag preview compute Cx seam | retained canvas still adapts retained `EventCx` host access through `node_drag_preview_retained_cx.rs`; the higher-level node drag event route still receives retained `EventCx` | `RBX-M2-360` moves node drag preview host/graph-read I/O onto retained-agnostic `NodeDragPreviewCx` and source-policy gates the preview wrapper/compute helpers plus pure seam | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 | Node drag geometry Cx seam | retained canvas still adapts retained `EventCx` host access through `node_drag_geometry_retained_cx.rs`; the higher-level node drag event route still receives retained `EventCx` | `RBX-M2-370` moves snapline geometry reads and multi-drag extent geometry reads onto retained-agnostic `NodeDragGeometryCx` and source-policy gates the snap/constraint helpers plus pure seam | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 | Keyboard pan activation tail seam | retained canvas still adapts retained `EventCx` paint invalidation and stop-propagation through `retained_widget_tail.rs`; the higher-level keyboard event route still receives retained `EventCx` | `RBX-M2-380` moves keyboard pan activation key-down/key-up side effects onto retained-agnostic `WidgetHandledCx` / `WidgetPaintInvalidationCx` and source-policy gates the helper | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level keyboard event routing with a declarative/event-leaf path. |
+| Feedback/motion helper seams | retained canvas still adapts retained `EventCx` clipboard feedback host/window access through `event_clipboard_feedback_retained_cx.rs` and paint invalidation through `retained_widget_tail.rs`; higher-level clipboard/timer event routes still receive retained `EventCx` | `RBX-M2-390` moves clipboard feedback and timer-motion invalidation helpers onto retained-agnostic `ClipboardFeedbackCx` / `WidgetPaintInvalidationCx`, source-policy gates the helpers, and backfills clipboard-unavailable feedback behavior tests | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level clipboard/timer event routing with a declarative/event-leaf path. |
 
 ## New Gate
 
