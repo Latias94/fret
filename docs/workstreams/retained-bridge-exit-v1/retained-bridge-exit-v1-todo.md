@@ -2689,6 +2689,34 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-320 Isolate pending node drag click-select retained Cx adapters.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pending_node_drag_release_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pending_node_drag_release_retained_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/click_select.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move pending node drag click-select release view-state I/O plus pointer-up tail actions behind
+      a retained-agnostic `PendingNodeDragReleaseCx` seam.
+    - Keep retained `EventCx` implementation in a dedicated retained adapter module.
+    - Extend the default source-policy gate so pending node drag click-select release helpers and
+      the pure Cx seam cannot re-import retained bridge Cx names.
+  - Result:
+    - Added `PendingNodeDragReleaseCx` for retained-agnostic host access plus pointer capture
+      release/paint invalidation.
+    - Added `pending_node_drag_release_retained_cx.rs` as the retained `EventCx` adapter.
+    - Moved `pointer_up_pending/click_select.rs` off direct retained `EventCx` signatures.
+    - Added `pending_node_drag_release_handlers_stay_off_retained_bridge` source-policy coverage.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas pending_node_drag_release_handlers_stay_off_retained_bridge apply_pending_node_selection_toggles_selection_and_keeps_node_last_in_draw_order shift_clicking_a_node_does_not_clear_selection node_click_does_not_select_node_when_node_selectable_is_false retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up_pending/click_select.rs ecosystem/fret-node/src/ui/canvas/widget/pending_node_drag_release_cx.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

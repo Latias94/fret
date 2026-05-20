@@ -269,6 +269,8 @@ mod pending_group_activation_cx;
 mod pending_group_activation_retained_cx;
 mod pending_group_drag;
 mod pending_group_resize;
+mod pending_node_drag_release_cx;
+mod pending_node_drag_release_retained_cx;
 mod pending_resize;
 mod pending_resize_session;
 mod pending_wire_drag;

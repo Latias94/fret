@@ -135,6 +135,10 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pending_group_resize.rs");
     const UI_CANVAS_WIDGET_PENDING_GROUP_ACTIVATION_CX_RS: &str =
         include_str!("ui/canvas/widget/pending_group_activation_cx.rs");
+    const UI_CANVAS_WIDGET_PENDING_NODE_DRAG_RELEASE_CX_RS: &str =
+        include_str!("ui/canvas/widget/pending_node_drag_release_cx.rs");
+    const UI_CANVAS_WIDGET_POINTER_UP_PENDING_CLICK_SELECT_RS: &str =
+        include_str!("ui/canvas/widget/pointer_up_pending/click_select.rs");
     const UI_VIEW_QUEUE_RS: &str = include_str!("ui/canvas/widget/view_queue.rs");
     const FRET_EXAMPLES_CARGO_TOML: &str = include_str!("../../../apps/fret-examples/Cargo.toml");
     const FRET_EXAMPLES_LIB_RS: &str = include_str!("../../../apps/fret-examples/src/lib.rs");
@@ -306,6 +310,28 @@ mod surface_policy_tests {
             assert!(
                 !pending_group_activation_sources.contains(forbidden),
                 "pending group activation handlers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pending_node_drag_release_handlers_stay_off_retained_bridge() {
+        let pending_node_drag_release_sources = [
+            UI_CANVAS_WIDGET_POINTER_UP_PENDING_CLICK_SELECT_RS,
+            UI_CANVAS_WIDGET_PENDING_NODE_DRAG_RELEASE_CX_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !pending_node_drag_release_sources.contains(forbidden),
+                "pending node drag release handlers must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

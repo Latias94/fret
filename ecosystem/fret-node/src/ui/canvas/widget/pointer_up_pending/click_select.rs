@@ -2,21 +2,25 @@ use fret_canvas::scale::canvas_units_from_screen_px;
 use fret_core::Point;
 use fret_ui::UiHost;
 
-use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use super::super::{
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith,
+    pending_node_drag_release_cx::PendingNodeDragReleaseCx,
+};
 use crate::core::NodeId;
 use crate::io::NodeGraphViewState;
 use crate::ui::canvas::state::{PendingNodeSelectAction, ViewSnapshot};
 
-pub(in super::super) fn handle_pending_node_drag_release<
-    H: UiHost,
-    M: NodeGraphCanvasMiddleware,
->(
+pub(in super::super) fn handle_pending_node_drag_release<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     position: Point,
     zoom: f32,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: PendingNodeDragReleaseCx<H>,
+{
     let Some(pending) = canvas.interaction.pending_node_drag.take() else {
         return false;
     };
@@ -33,7 +37,7 @@ pub(in super::super) fn handle_pending_node_drag_release<
     {
         let node = pending.primary;
         let select_action = pending.select_action;
-        canvas.update_view_state(cx.app, |view| {
+        canvas.update_view_state(cx.host(), |view| {
             apply_pending_node_selection(view, node, select_action);
         });
     }
