@@ -1,9 +1,7 @@
 use fret_ui::UiHost;
 
 pub(super) fn finish_sticky_wire_pointer_down<H: UiHost>(
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl super::super::widget_tail::HandledPointerCaptureReleaseCx<H>,
 ) {
-    cx.release_pointer_capture();
-    cx.stop_propagation();
-    super::super::paint_invalidation::invalidate_paint(cx);
+    super::super::widget_tail::finish_handled_pointer_capture_release(cx);
 }

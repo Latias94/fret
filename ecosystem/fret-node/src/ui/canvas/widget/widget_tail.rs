@@ -14,6 +14,16 @@ pub(super) trait PointerCaptureReleaseCx<H>: WidgetPaintInvalidationCx<H> {
     fn release_pointer_capture(&mut self);
 }
 
+pub(super) trait HandledPointerCaptureReleaseCx<H>:
+    PointerCaptureReleaseCx<H> + WidgetHandledCx<H>
+{
+}
+
+impl<H, T> HandledPointerCaptureReleaseCx<H> for T where
+    T: PointerCaptureReleaseCx<H> + WidgetHandledCx<H>
+{
+}
+
 pub(super) fn invalidate_widget_paint<H>(cx: &mut impl WidgetPaintInvalidationCx<H>) {
     cx.request_redraw();
     cx.invalidate_paint();
@@ -26,6 +36,14 @@ pub(super) fn finish_widget_handled<H>(cx: &mut impl WidgetHandledCx<H>) {
 
 pub(super) fn finish_pointer_capture_release<H>(cx: &mut impl PointerCaptureReleaseCx<H>) {
     cx.release_pointer_capture();
+    invalidate_widget_paint(cx);
+}
+
+pub(super) fn finish_handled_pointer_capture_release<H>(
+    cx: &mut impl HandledPointerCaptureReleaseCx<H>,
+) {
+    cx.release_pointer_capture();
+    cx.stop_propagation();
     invalidate_widget_paint(cx);
 }
 
@@ -99,5 +117,17 @@ mod tests {
         assert_eq!(cx.redraws, 1);
         assert_eq!(cx.paint_invalidations, 1);
         assert!(!cx.stopped);
+    }
+
+    #[test]
+    fn finish_handled_pointer_capture_release_releases_stops_and_invalidates_paint() {
+        let mut cx = StubCx::default();
+
+        finish_handled_pointer_capture_release(&mut cx);
+
+        assert!(cx.released);
+        assert!(cx.stopped);
+        assert_eq!(cx.redraws, 1);
+        assert_eq!(cx.paint_invalidations, 1);
     }
 }

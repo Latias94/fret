@@ -103,6 +103,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_up_finish.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_SESSION_CLEANUP_RS: &str =
         include_str!("ui/canvas/widget/pointer_up_session/cleanup.rs");
+    const UI_CANVAS_WIDGET_STICKY_WIRE_CONNECT_FINISH_RS: &str =
+        include_str!("ui/canvas/widget/sticky_wire_connect/finish.rs");
     const UI_VIEW_QUEUE_RS: &str = include_str!("ui/canvas/widget/view_queue.rs");
     const FRET_EXAMPLES_CARGO_TOML: &str = include_str!("../../../apps/fret-examples/Cargo.toml");
     const FRET_EXAMPLES_LIB_RS: &str = include_str!("../../../apps/fret-examples/src/lib.rs");
@@ -204,6 +206,7 @@ mod surface_policy_tests {
             UI_CANVAS_WIDGET_WIRE_DRAG_COMMIT_CX_RS,
             UI_CANVAS_WIDGET_POINTER_UP_FINISH_RS,
             UI_CANVAS_WIDGET_POINTER_UP_SESSION_CLEANUP_RS,
+            UI_CANVAS_WIDGET_STICKY_WIRE_CONNECT_FINISH_RS,
         ]
         .join("\n");
 
