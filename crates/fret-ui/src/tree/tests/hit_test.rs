@@ -799,6 +799,111 @@ fn hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_p
 }
 
 #[test]
+fn hit_test_layers_cached_ignores_non_hit_testable_overlapping_higher_z_siblings() {
+    struct NonHitTestableOverlay;
+
+    impl<H: UiHost> Widget<H> for NonHitTestableOverlay {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+    }
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_debug_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let target = ui.create_node(TestStack);
+    let overlay = ui.create_node(NonHitTestableOverlay);
+    ui.set_root(root);
+    ui.set_children(root, vec![target, overlay]);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.nodes[root].bounds = bounds;
+    ui.nodes[target].bounds = bounds;
+    ui.nodes[overlay].bounds = bounds;
+
+    let pointer = Point::new(Px(10.0), Px(10.0));
+    assert_eq!(
+        ui.hit_test_layers_cached(&[root], pointer),
+        Some(target),
+        "prime a cached path to the hit-testable lower-z target"
+    );
+
+    let stats_before_reuse = ui.debug_stats();
+    assert_eq!(
+        ui.hit_test_layers_cached(&[root], Point::new(Px(11.0), Px(11.0))),
+        Some(target),
+        "a higher-z sibling whose widget rejects hit testing must not force the path cache to miss"
+    );
+    let stats_after_reuse = ui.debug_stats();
+    assert!(
+        stats_after_reuse.hit_test_path_cache_hits > stats_before_reuse.hit_test_path_cache_hits,
+        "expected the cached path to be reusable when overlapping higher-z siblings are not hit-testable"
+    );
+}
+
+#[test]
+fn hit_test_layers_cached_checks_transformed_higher_z_siblings_before_reuse() {
+    struct TranslatedSibling {
+        delta: Point,
+    }
+
+    impl<H: UiHost> Widget<H> for TranslatedSibling {
+        fn render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
+            Some(Transform2D::translation(self.delta))
+        }
+    }
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_debug_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let target = ui.create_node(TestStack);
+    let sibling = ui.create_node(TranslatedSibling {
+        delta: Point::new(Px(0.0), Px(0.0)),
+    });
+    ui.set_root(root);
+    ui.set_children(root, vec![target, sibling]);
+
+    ui.nodes[root].bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.nodes[target].bounds =
+        Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(20.0), Px(20.0)));
+    ui.nodes[sibling].bounds =
+        Rect::new(Point::new(Px(60.0), Px(0.0)), Size::new(Px(20.0), Px(20.0)));
+
+    let pointer = Point::new(Px(10.0), Px(10.0));
+    assert_eq!(
+        ui.hit_test_layers_cached(&[root], pointer),
+        Some(target),
+        "prime a cached path to the lower-z target"
+    );
+
+    if let Some(widget) = ui.nodes[sibling].widget.as_mut() {
+        *widget = Box::new(TranslatedSibling {
+            delta: Point::new(Px(-60.0), Px(0.0)),
+        });
+    }
+    let stats_before_rehit = ui.debug_stats();
+    assert_eq!(
+        ui.hit_test_layers_cached(&[root], pointer),
+        Some(sibling),
+        "a transformed higher-z sibling that visually covers the pointer must still win"
+    );
+    let stats_after_rehit = ui.debug_stats();
+    assert!(
+        stats_after_rehit.hit_test_path_cache_misses
+            > stats_before_rehit.hit_test_path_cache_misses,
+        "expected cached-path reuse to miss before fallback accepts the transformed sibling"
+    );
+}
+
+#[test]
 fn pointer_move_dispatch_rejects_stale_path_when_higher_z_sibling_moves_under_pointer() {
     struct CountPointerMove {
         moves: Arc<AtomicUsize>,

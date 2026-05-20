@@ -30,6 +30,8 @@ fn predicate_uses_debug_snapshot_history(predicate: &UiPredicateV1) -> bool {
             | UiPredicateV1::ScrollHandleChangesMatchingGe { .. }
             | UiPredicateV1::PaintCacheHitTestOnlyReplayAllowedGe { .. }
             | UiPredicateV1::PaintCacheHitTestOnlyReplayRejectedKeyMismatchLe { .. }
+            | UiPredicateV1::HitTestPathCacheHitsGe { .. }
+            | UiPredicateV1::HitTestPathCacheMissesGe { .. }
     )
 }
 
@@ -153,6 +155,24 @@ fn eval_debug_snapshot_predicate_from_ring(
                 .unwrap_or(0);
             Some(rejected_max <= *max)
         }
+        UiPredicateV1::HitTestPathCacheHitsGe { min } => {
+            let hits_max = ring
+                .snapshots
+                .iter()
+                .map(|snapshot| snapshot.debug.stats.hit_test_path_cache_hits as u64)
+                .max()
+                .unwrap_or(0);
+            Some(hits_max >= *min)
+        }
+        UiPredicateV1::HitTestPathCacheMissesGe { min } => {
+            let misses_max = ring
+                .snapshots
+                .iter()
+                .map(|snapshot| snapshot.debug.stats.hit_test_path_cache_misses as u64)
+                .max()
+                .unwrap_or(0);
+            Some(misses_max >= *min)
+        }
         _ => None,
     }
 }
@@ -215,6 +235,12 @@ fn eval_paint_cache_predicate_from_debug_snapshot(
                 .paint_cache_hit_test_only_replay_rejected_key_mismatch as u64)
                 <= *max,
         ),
+        UiPredicateV1::HitTestPathCacheHitsGe { min } => {
+            Some((debug.stats.hit_test_path_cache_hits as u64) >= *min)
+        }
+        UiPredicateV1::HitTestPathCacheMissesGe { min } => {
+            Some((debug.stats.hit_test_path_cache_misses as u64) >= *min)
+        }
         _ => None,
     }
 }
@@ -878,6 +904,17 @@ mod tests {
         snapshot_with_debug(debug)
     }
 
+    fn snapshot_with_hit_test_path_cache_counters(
+        hits: u32,
+        misses: u32,
+    ) -> UiDiagnosticsSnapshotV1 {
+        let mut debug = UiTreeDebugSnapshotV1::default();
+        debug.stats.hit_test_path_cache_hits = hits;
+        debug.stats.hit_test_path_cache_misses = misses;
+
+        snapshot_with_debug(debug)
+    }
+
     fn snapshot_with_debug(debug: UiTreeDebugSnapshotV1) -> UiDiagnosticsSnapshotV1 {
         UiDiagnosticsSnapshotV1 {
             schema_version: 1,
@@ -1242,6 +1279,44 @@ mod tests {
             eval_debug_snapshot_predicate_from_ring(
                 &ring,
                 &UiPredicateV1::PaintCacheHitTestOnlyReplayRejectedKeyMismatchLe { max: 0 },
+            ),
+            Some(false)
+        );
+    }
+
+    #[test]
+    fn hit_test_path_cache_predicates_count_ring_snapshot_maxes() {
+        let mut ring = WindowRing::default();
+        ring.snapshots
+            .push_back(snapshot_with_hit_test_path_cache_counters(0, 0));
+        ring.snapshots
+            .push_back(snapshot_with_hit_test_path_cache_counters(3, 1));
+
+        assert_eq!(
+            eval_debug_snapshot_predicate_from_ring(
+                &ring,
+                &UiPredicateV1::HitTestPathCacheHitsGe { min: 2 },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate_from_ring(
+                &ring,
+                &UiPredicateV1::HitTestPathCacheMissesGe { min: 1 },
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate_from_ring(
+                &ring,
+                &UiPredicateV1::HitTestPathCacheHitsGe { min: 4 },
+            ),
+            Some(false)
+        );
+        assert_eq!(
+            eval_debug_snapshot_predicate_from_ring(
+                &ring,
+                &UiPredicateV1::HitTestPathCacheMissesGe { min: 2 },
             ),
             Some(false)
         );

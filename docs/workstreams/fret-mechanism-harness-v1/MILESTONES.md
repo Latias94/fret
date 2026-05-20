@@ -3471,3 +3471,40 @@ Status: complete for focused pointer-move dispatch stale-path coverage.
   `rustfmt --edition 2024 --check crates\fret-ui\src\tree\tests\hit_test.rs`;
   `cargo nextest run --cargo-profile dev-fast -p fret-ui pointer_move_dispatch_rejects_stale_path_when_higher_z_sibling_moves_under_pointer hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer --no-fail-fast --no-capture`
   with Nextest run id `093b8a5d-e67a-4b35-ab82-e02389f63173`.
+
+
+## M157: Hit-Test Path-Cache Runtime Hit Counter Gate
+
+Status: complete for the UI Gallery hit-test path-cache runtime companion.
+
+- Extended `ui-gallery-hit-test-only-paint-cache-probe-sweep.json` beyond paint-cache replay: it now
+  disables bounds-tree queries and waits for `hit_test_path_cache_hits_ge(min=1)`, proving the
+  sweep reaches the cached-path fast path rather than only fallback traversal.
+- The first strict runtime run failed even though paint-cache replay was allowed. Large-ring bundles
+  showed `hit_test_path_cache_hits=0` and `hit_test_path_cache_misses=2` across the sweep. This
+  found an over-conservative mechanism defect in cached-path sibling validation: transformed or
+  non-clipping higher-z siblings forced misses even when real hit testing showed they did not
+  intercept the point.
+- `try_hit_test_along_cached_path` now validates higher-z siblings with `hit_test_node` instead of
+  rejecting on raw bounds/transform heuristics. Focused tests prove both sides: non-hit-testable
+  overlapping siblings no longer poison reuse, while a transformed higher-z sibling that truly
+  covers the pointer still forces a miss and wins through fallback hit testing.
+- The slice also keeps `fret-ui-gallery --features gallery-dev` buildable by updating the AI prompt
+  input cursor snippet to current text-layout and foreground APIs.
+- Gates pass:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\tree\hit_test.rs crates\fret-ui\src\tree\tests\hit_test.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui hit_test_layers_cached_ignores_non_hit_testable_overlapping_higher_z_siblings hit_test_layers_cached_checks_transformed_higher_z_siblings_before_reuse hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer pointer_move_dispatch_rejects_stale_path_when_higher_z_sibling_moves_under_pointer --no-fail-fast --no-capture`
+  with Nextest run id `3d58d069-af7b-4675-a455-9f6ace214151`;
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics hit_test_path_cache_predicates_count_ring_snapshot_maxes paint_cache_hit_test_only_replay_predicates_count_ring_snapshot_maxes --no-fail-fast --no-capture`
+  with Nextest run id `affc9fa2-0c6d-47e8-b252-ae83c14e9059`; and
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_hit_test_path_cache_counters_serialize script_v2_roundtrip_ui_gallery_hit_test_only_paint_cache_probe_sweep --no-fail-fast --no-capture`
+  with Nextest run id `f0505399-96a7-4a92-95d7-398b48b1fd96`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\diag\ui-gallery-hit-test-only-paint-cache-probe-sweep.json --dir target\fret-diag-hit-test-only-paint-cache-path-cache-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  with run id `1779259408910` and AI packet
+  `target/fret-diag-hit-test-only-paint-cache-path-cache-v2/sessions/1779259321228-145468/1779259408910/ai.packet`.
+- The `ui-gallery-hit-test-only-paint-cache` suite passes with the stricter path-cache predicate:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-hit-test-only-paint-cache --dir target\fret-diag-hit-test-only-paint-cache-suite-path-cache-v2 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  with summary
+  `target/fret-diag-hit-test-only-paint-cache-suite-path-cache-v2/sessions/1779259631852-148980/suite.summary.json`.

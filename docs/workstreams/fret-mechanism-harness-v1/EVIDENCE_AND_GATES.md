@@ -6456,3 +6456,56 @@ Next slice recommendation:
   - result: passed; Nextest run id `093b8a5d-e67a-4b35-ab82-e02389f63173`.
   - note: the run emitted the pre-existing `current_effective_opacity` dead-code warning in
     `crates\fret-ui\src\elements\runtime.rs`; this slice did not touch that file.
+
+
+## Hit-Test Path-Cache Runtime Hit Counter Gate
+
+- invariant:
+  UI Gallery pointer sweeps over a stable HitTestOnly/paint-cache surface must exercise the
+  cached hit-test path fast path when bounds-tree queries are disabled. The runtime gate should
+  prove both paint-cache replay and `hit_test_path_cache_hits` from debug snapshot history.
+- finding:
+  the strict gate initially failed: large-ring bundles showed paint-cache replay was allowed, but
+  path-cache hits stayed at zero while misses reached two. The pointer and hit path were correct;
+  the mechanism was over-conservative. Cached-path sibling validation rejected reuse whenever a
+  higher-z sibling used transforms or non-clipping hit-test policy, even when full hit testing for
+  that sibling returned no hit. The fix validates siblings with real hit-test semantics.
+- implementation anchors:
+  `crates/fret-ui/src/tree/hit_test.rs`,
+  `crates/fret-ui/src/tree/tests/hit_test.rs`,
+  `crates/fret-diag-protocol/src/lib.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_predicates.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`,
+  `tools/diag-scripts/ui-gallery/diag/ui-gallery-hit-test-only-paint-cache-probe-sweep.json`, and
+  `apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_cursor_demo.rs`.
+- evidence anchors:
+  strict-predicate failing bundle before the mechanism fix:
+  `target/fret-diag-hit-test-only-paint-cache-path-cache-debug2/sessions/1779257690739-143660/1779257705567/bundle.schema2.json`;
+  passing focused runtime AI packet:
+  `target/fret-diag-hit-test-only-paint-cache-path-cache-v2/sessions/1779259321228-145468/1779259408910/ai.packet`;
+  passing focused runtime pack:
+  `target/fret-diag-hit-test-only-paint-cache-path-cache-v2/sessions/1779259321228-145468/share/1779259408910.zip`;
+  passing suite summary:
+  `target/fret-diag-hit-test-only-paint-cache-suite-path-cache-v2/sessions/1779259631852-148980/suite.summary.json`.
+- format:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\tree\hit_test.rs crates\fret-ui\src\tree\tests\hit_test.rs`
+  - result: passed.
+- focused mechanism regression:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui hit_test_layers_cached_ignores_non_hit_testable_overlapping_higher_z_siblings hit_test_layers_cached_checks_transformed_higher_z_siblings_before_reuse hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer pointer_move_dispatch_rejects_stale_path_when_higher_z_sibling_moves_under_pointer --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `3d58d069-af7b-4675-a455-9f6ace214151`.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- bootstrap predicate evaluation:
+  `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics hit_test_path_cache_predicates_count_ring_snapshot_maxes paint_cache_hit_test_only_replay_predicates_count_ring_snapshot_maxes --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `affc9fa2-0c6d-47e8-b252-ae83c14e9059`.
+- protocol roundtrip and predicate serialization:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_hit_test_path_cache_counters_serialize script_v2_roundtrip_ui_gallery_hit_test_only_paint_cache_probe_sweep --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `f0505399-96a7-4a92-95d7-398b48b1fd96`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\diag\ui-gallery-hit-test-only-paint-cache-probe-sweep.json --dir target\fret-diag-hit-test-only-paint-cache-path-cache-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed; run id `1779259408910`.
+- runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-hit-test-only-paint-cache --dir target\fret-diag-hit-test-only-paint-cache-suite-path-cache-v2 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed; script run id `1779259645062`; summary
+    `target/fret-diag-hit-test-only-paint-cache-suite-path-cache-v2/sessions/1779259631852-148980/suite.summary.json`.

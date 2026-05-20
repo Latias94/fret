@@ -651,26 +651,11 @@ impl<H: UiHost> UiTree<H> {
                     found = true;
                     break;
                 }
-                let Some(sib) = self.nodes.get(child) else {
+                if !self.nodes.contains_key(child) {
                     continue;
-                };
-
-                // Conservative correctness gate: if a sibling uses transforms or does not clip hit
-                // testing to its bounds, we cannot cheaply prove it won't intercept the hit.
-                if let Some(p) = (!self.inspection_active && !sib.invalidation.hit_test)
-                    .then_some(sib.prepaint_hit_test)
-                    .flatten()
-                {
-                    if p.render_transform_inv.is_some() || !p.clips_hit_test {
-                        return None;
-                    }
-                } else if let Some(w) = sib.widget.as_ref()
-                    && (w.render_transform(sib.bounds).is_some() || !w.clips_hit_test(sib.bounds))
-                {
-                    return None;
                 }
 
-                if sib.bounds.contains(child_position) {
+                if self.hit_test_node(child, child_position).is_some() {
                     return None;
                 }
             }

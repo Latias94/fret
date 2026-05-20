@@ -319,6 +319,15 @@ date: 2026-05-12
   `ui-gallery-hit-test-only-paint-cache` suite with zero-warning lint policy. Suite evidence is
   anchored at
   `target/fret-diag-hit-test-only-paint-cache-suite-v3/sessions/1779249174760-142600/suite.summary.json`.
+- Hit-test path-cache runtime update:
+  the same promoted script now also injects `FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1` and waits for
+  `hit_test_path_cache_hits_ge(min=1)`, proving real cached-path reuse during the runtime pointer
+  sweep. The stricter gate exposed an over-conservative sibling validator in
+  `try_hit_test_along_cached_path`: transformed or non-clipping higher-z siblings forced misses even
+  when real hit testing showed they did not intercept the pointer. The mechanism now validates
+  higher-z siblings with `hit_test_node`, with focused guards for non-hit-testable overlaps and
+  transformed interceptors. Fresh suite evidence is anchored at
+  `target/fret-diag-hit-test-only-paint-cache-suite-path-cache-v2/sessions/1779259631852-148980/suite.summary.json`.
 - Moved cache-root stale hit-path update:
   `prepaint_interaction_cache_root_move_invalidates_stale_root_only_hit_path` now covers the
   focused mechanism path where a root-only `hit_test_path_cache` entry survives across a clean

@@ -2086,7 +2086,9 @@ fn eval_predicate(
         UiPredicateV1::EventKindSeen { event_kind: _ } => false,
         UiPredicateV1::InputPointerCaptureActiveIs { .. }
         | UiPredicateV1::PaintCacheHitTestOnlyReplayAllowedGe { .. }
-        | UiPredicateV1::PaintCacheHitTestOnlyReplayRejectedKeyMismatchLe { .. } => false,
+        | UiPredicateV1::PaintCacheHitTestOnlyReplayRejectedKeyMismatchLe { .. }
+        | UiPredicateV1::HitTestPathCacheHitsGe { .. }
+        | UiPredicateV1::HitTestPathCacheMissesGe { .. } => false,
     }
 }
 

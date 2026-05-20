@@ -17,11 +17,13 @@
       "runtime"
     ],
     "env_defaults": {
-      "FRET_UI_GALLERY_PAINT_CACHE": "1"
+      "FRET_UI_GALLERY_PAINT_CACHE": "1",
+      "FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE": "1"
     },
     "target_hints": [
       "Navigates to the gallery-dev HitTestOnly Paint-Cache Probe page.",
-      "Sweeps pointer movement over a stable cached canvas and gates hit-test-only paint-cache replay counters."
+      "Sweeps pointer movement over a stable cached canvas and gates hit-test-only paint-cache replay plus hit-test path-cache counters.",
+      "Disables the hit-test bounds tree so the runtime oracle deterministically exercises the path-cache fast path."
     ]
   },
   "steps": [
@@ -132,6 +134,14 @@
     },
     { "type": "wait_frames", "n": 2 },
 
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "hit_test_path_cache_hits_ge",
+        "min": 1
+      },
+      "timeout_frames": 240
+    },
     {
       "type": "wait_until",
       "predicate": {
