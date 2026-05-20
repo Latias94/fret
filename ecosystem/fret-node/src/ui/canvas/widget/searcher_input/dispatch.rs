@@ -1,12 +1,12 @@
 use fret_core::{KeyCode, Modifiers};
-use fret_ui::UiHost;
 
 use super::super::searcher_ui::finish_searcher_event;
-use super::super::*;
+use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use super::SearcherInputCx;
 
-pub(super) fn handle_searcher_key_down_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_searcher_key_down_event<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl SearcherInputCx<H, M>,
     key: KeyCode,
     modifiers: Modifiers,
 ) -> bool {
@@ -38,3 +38,6 @@ pub(super) fn handle_searcher_key_down_event<H: UiHost, M: NodeGraphCanvasMiddle
 
     false
 }
+
+#[cfg(test)]
+mod tests;

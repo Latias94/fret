@@ -1,9 +1,10 @@
+mod activation_retained_cx;
 mod dispatch;
 
 use fret_core::{KeyCode, Modifiers};
-use fret_ui::UiHost;
 
-use super::*;
+use super::widget_tail::WidgetHandledCx;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum SearcherStepDirection {
@@ -11,9 +12,19 @@ pub(super) enum SearcherStepDirection {
     Backward,
 }
 
-pub(super) fn handle_searcher_key_down_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(in super::super) trait SearcherInputCx<H, M: NodeGraphCanvasMiddleware>:
+    WidgetHandledCx<H>
+{
+    fn try_activate_searcher_row(
+        &mut self,
+        canvas: &mut NodeGraphCanvasWith<M>,
+        row_ix: usize,
+    ) -> bool;
+}
+
+pub(super) fn handle_searcher_key_down_event<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl SearcherInputCx<H, M>,
     key: KeyCode,
     modifiers: Modifiers,
 ) -> bool {
@@ -21,9 +32,9 @@ pub(super) fn handle_searcher_key_down_event<H: UiHost, M: NodeGraphCanvasMiddle
 }
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
-    pub(super) fn try_activate_active_searcher_row<H: UiHost>(
+    pub(super) fn try_activate_active_searcher_row<H>(
         &mut self,
-        cx: &mut EventCx<'_, H>,
+        cx: &mut impl SearcherInputCx<H, M>,
     ) -> bool {
         super::searcher_input_query::try_activate_active_searcher_row(self, cx)
     }

@@ -1,13 +1,13 @@
 mod query;
 
 use fret_core::{KeyCode, Modifiers};
-use fret_ui::UiHost;
 
-use super::*;
+use super::searcher_input::SearcherInputCx;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
-pub(super) fn try_activate_active_searcher_row<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn try_activate_active_searcher_row<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl SearcherInputCx<H, M>,
 ) -> bool {
     let Some(row_ix) = canvas
         .interaction
@@ -17,7 +17,7 @@ pub(super) fn try_activate_active_searcher_row<H: UiHost, M: NodeGraphCanvasMidd
     else {
         return false;
     };
-    canvas.try_activate_searcher_row(cx, row_ix)
+    cx.try_activate_searcher_row(canvas, row_ix)
 }
 
 pub(super) fn update_searcher_query_from_key<M: NodeGraphCanvasMiddleware>(

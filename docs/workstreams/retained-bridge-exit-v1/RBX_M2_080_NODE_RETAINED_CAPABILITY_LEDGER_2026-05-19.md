@@ -207,6 +207,17 @@ Compat-gated but retained-bridge-free support:
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer/wheel_event.rs`
   - `RBX-M2-490` moved searcher pointer move and wheel routing behind the retained-agnostic
     `WidgetPaintInvalidationCx` seam.
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_input.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_input/dispatch.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_input_query.rs`
+  - `RBX-M2-500` moved searcher key-down routing behind the retained-agnostic `SearcherInputCx`
+    seam.
+
+Compat-gated retained adapters:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_input/activation_retained_cx.rs`
+  - `RBX-M2-500` keeps retained searcher key-route row activation I/O as the adapter-only
+    implementation of `SearcherInputCx`.
 
 Deleted retained overlay files:
 
@@ -277,6 +288,7 @@ Deleted retained overlay files:
 | Searcher pointer-up route seam | retained canvas still calls searcher pointer-up from a retained event route, but pointer-up routing now only needs the searcher release seam plus pure pending-drag cleanup | `RBX-M2-470` moves `searcher_activation/pointer_up.rs` onto `SearcherReleaseCx`, source-policy gates the helper, and adds non-left ignore, no-searcher cleanup, row activation/finish, and outside dismiss/finish tests | Replace or narrow the outer `searcher_activation.rs` wrappers and higher-level searcher event routing with a declarative/event-leaf path. |
 | Searcher activation wrapper seam | retained `searcher.rs` still calls pointer-down/up routes with retained `EventCx`, but the intermediate activation wrapper no longer needs retained Cx names | `RBX-M2-480` moves `searcher_activation.rs` onto `SearcherPointerDownCx` / `SearcherReleaseCx`, source-policy gates the wrapper, and keeps pointer-down/up behavior tests plus retained ledger gates green | Continue with `searcher.rs` searcher input/pointer move/wheel route seams or replace the higher-level searcher event route with a declarative/event-leaf path. |
 | Searcher pointer move/wheel route seam | retained `searcher.rs` still calls move/wheel routes with retained `EventCx`, but the move/wheel routing helpers only need paint invalidation after hover/scroll state changes | `RBX-M2-490` moves `searcher_pointer.rs`, `searcher_pointer/move_event.rs`, and `searcher_pointer/wheel_event.rs` onto `WidgetPaintInvalidationCx`, source-policy gates them, and adds move/wheel focused behavior tests | Continue with `searcher.rs` and `searcher_input.rs` key routes, or replace the higher-level searcher event route with a declarative/event-leaf path. |
+| Searcher key-down route seam | retained `searcher.rs` still calls key routes with retained `EventCx`, but key dispatch only needs handled finish behavior plus row activation I/O | `RBX-M2-500` moves `searcher_input.rs`, `searcher_input/dispatch.rs`, and `searcher_input_query.rs` onto `SearcherInputCx`, keeps retained row activation I/O in `searcher_input/activation_retained_cx.rs`, source-policy gates key helpers, and adds Enter, ArrowDown, query, Ctrl text, and no-searcher tests | Continue with `searcher.rs` top-level retained route wrapper or replace the higher-level searcher event route with a declarative/event-leaf path. |
 
 ## New Gate
 
