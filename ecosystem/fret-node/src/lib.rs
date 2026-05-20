@@ -267,6 +267,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/searcher_input/dispatch.rs");
     const UI_CANVAS_WIDGET_SEARCHER_INPUT_QUERY_RS: &str =
         include_str!("ui/canvas/widget/searcher_input_query.rs");
+    const UI_CANVAS_WIDGET_SEARCHER_ROW_ACTIVATION_RS: &str =
+        include_str!("ui/canvas/widget/searcher_row_activation.rs");
     const UI_CANVAS_WIDGET_SEARCHER_POINTER_RS: &str =
         include_str!("ui/canvas/widget/searcher_pointer.rs");
     const UI_CANVAS_WIDGET_SEARCHER_POINTER_MOVE_EVENT_RS: &str =
@@ -825,6 +827,22 @@ mod surface_policy_tests {
             assert!(
                 !searcher_dismiss_sources.contains(forbidden),
                 "searcher dismiss tail helpers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn searcher_row_activation_route_stays_off_retained_bridge() {
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_SEARCHER_ROW_ACTIVATION_RS.contains(forbidden),
+                "searcher row activation route must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

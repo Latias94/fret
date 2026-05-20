@@ -21,9 +21,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         super::searcher_rows::ensure_searcher_active_visible(searcher)
     }
 
-    pub(super) fn try_activate_searcher_row<H: UiHost>(
+    pub(super) fn try_activate_searcher_row(
         &mut self,
-        cx: &mut EventCx<'_, H>,
+        cx: &mut impl super::searcher_row_activation::SearcherRowActivationCx<M>,
         row_ix: usize,
     ) -> bool {
         super::searcher_row_activation::try_activate_searcher_row(self, cx, row_ix)

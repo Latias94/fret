@@ -3573,6 +3573,35 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-630 Isolate searcher row activation retained Cx route.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_logic.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_row_activation.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_row_activation/retained_cx.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move searcher row activation off direct retained bridge Cx names by introducing
+      `SearcherRowActivationCx` for the context-menu item activation side effect.
+    - Keep retained `EventCx` context-menu activation I/O isolated in
+      `searcher_row_activation/retained_cx.rs`.
+    - Lock the searcher row activation route with source-policy coverage and prove no-searcher,
+      unactivatable-row restore, and candidate-row delegation behavior.
+  - Result:
+    - `searcher_row_activation.rs` now takes `SearcherRowActivationCx` instead of retained
+      `EventCx`.
+    - Added `searcher_row_activation/retained_cx.rs` as the retained adapter that delegates to the
+      existing context-menu action seam.
+    - Added focused tests for side-effect-free no-searcher activation, header/disabled-row
+      restoration, and candidate row context-action delegation.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(searcher_row_activation_route_stays_off_retained_bridge) | test(searcher_row_activation_without_searcher_is_side_effect_free) | test(searcher_row_activation_restores_unactivatable_row) | test(searcher_row_activation_delegates_candidate_item_to_context_action) | test(searcher_dismiss_tail_helpers_stay_off_retained_bridge) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/searcher_row_activation.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_logic.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
