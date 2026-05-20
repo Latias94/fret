@@ -80,6 +80,9 @@ Compat-gated but retained-bridge-free support:
 - `ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_connect/finish.rs`
   - `RBX-M2-230` moved sticky-wire pointer-down release-capture, handled-event propagation stop,
     and paint invalidation behind the retained-agnostic `HandledPointerCaptureReleaseCx` tail seam.
+- `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/drag/tail.rs`
+  - `RBX-M2-240` moved edge-insert drag move finish paint invalidation behind the
+    retained-agnostic `WidgetPaintInvalidationCx` tail seam.
 
 Deleted retained overlay files:
 
@@ -125,6 +128,7 @@ Deleted retained overlay files:
 | Wire-drag commit Cx seam | retained canvas still adapts real retained `EventCx` / `CommandCx` through `wire_drag/retained_commit_cx.rs` | `RBX-M2-210` keeps `wire_drag/commit_cx.rs` retained-agnostic and source-policy gated while preserving redraw/paint invalidation sequencing | Continue moving gesture/commit policy behind retained-agnostic seams before replacing or deleting the retained widget adapter. |
 | Pointer-up finish tail action | retained canvas still adapts retained `EventCx` release-capture through `retained_widget_tail.rs` | `RBX-M2-220` moves pointer-up finish and snap-guide cleanup helpers onto retained-agnostic `PointerCaptureReleaseCx` and source-policy gates those helpers | Continue migrating direct retained `EventCx` tail helpers, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 | Sticky-wire finish tail action | retained canvas still adapts retained `EventCx` release-capture/stop-propagation through `retained_widget_tail.rs` | `RBX-M2-230` moves sticky-wire pointer-down finish onto retained-agnostic `HandledPointerCaptureReleaseCx` and source-policy gates the helper | Continue migrating direct retained `EventCx` tail helpers, then replace higher-level pointer event routing with a declarative/event-leaf path. |
+| Edge-insert drag move tail action | retained canvas still adapts retained `EventCx` paint invalidation through `retained_widget_tail.rs` | `RBX-M2-240` moves edge-insert drag move finish onto retained-agnostic `WidgetPaintInvalidationCx` and source-policy gates the helper | Continue migrating direct retained `EventCx` tail helpers, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 
 ## New Gate
 

@@ -2452,6 +2452,32 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-240 Isolate edge-insert drag tail retained Cx adapters.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/drag/tail.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move edge-insert drag move finish paint invalidation behind the retained-agnostic widget tail
+      seam.
+    - Extend the default source-policy gate so the edge-insert drag tail helper cannot re-import
+      retained bridge Cx names.
+  - Result:
+    - Moved `edge_insert_drag/drag/tail.rs` off direct retained `EventCx` signatures.
+    - Reused the existing `WidgetPaintInvalidationCx` seam and `invalidate_widget_paint(...)`
+      helper for redraw plus paint invalidation.
+    - Added a retained-agnostic unit test for edge-insert drag move tail invalidation.
+    - Extended `retained_canvas_tail_policy_helpers_stay_off_retained_bridge` to include the
+      edge-insert drag tail helper.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas retained_canvas_tail_policy_helpers_stay_off_retained_bridge finish_edge_insert_drag_move_invalidates_paint retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/paint_invalidation.rs ecosystem/fret-node/src/ui/canvas/widget/redraw_request.rs ecosystem/fret-node/src/ui/canvas/widget/widget_tail.rs ecosystem/fret-node/src/ui/canvas/widget/wire_drag/commit_cx.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_finish.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_session/cleanup.rs ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_connect/finish.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/drag/tail.rs`
+    - `cargo fmt -p fret-node`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
