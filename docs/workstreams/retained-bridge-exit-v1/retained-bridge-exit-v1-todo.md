@@ -3127,6 +3127,31 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-480 Isolate outer searcher activation wrappers from retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation/pointer_down.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the outer searcher activation wrapper off direct retained bridge Cx names after
+      pointer-down and pointer-up helpers became retained-agnostic.
+    - Extend source-policy coverage so `searcher_activation.rs` cannot re-import retained bridge
+      Cx names.
+  - Result:
+    - `searcher_activation.rs` no longer imports or names retained bridge Cx types.
+    - The pointer-down wrapper now takes the combined `SearcherPointerDownCx` capability, and the
+      pointer-up wrapper now takes `SearcherReleaseCx` directly.
+    - `SearcherPointerDownCx` is visible to the parent widget module while retained `EventCx`
+      support remains only through existing retained adapter implementations.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(searcher_dismiss_tail_helpers_stay_off_retained_bridge) | test(searcher_pointer_down_without_searcher_is_side_effect_free) | test(searcher_pointer_up_ignores_non_left_button) | test(retained_bridge_source_usage_stays_on_the_migration_ledger) | test(retained_widget_compat_island_stays_crate_private_and_controller_bound)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/searcher_activation.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation/pointer_down.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation/pointer_up.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/arm.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/clear.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/release.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_ui.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_ui/event.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

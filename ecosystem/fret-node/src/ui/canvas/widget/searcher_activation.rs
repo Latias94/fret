@@ -1,10 +1,10 @@
 mod pointer_down;
 mod pointer_up;
 
-use fret_core::MouseButton;
-use fret_ui::UiHost;
+use fret_core::{MouseButton, Point};
 
-use super::*;
+use super::searcher_activation_state::SearcherReleaseCx;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub(super) struct SearcherPointerHit {
@@ -12,9 +12,9 @@ pub(super) struct SearcherPointerHit {
     pub(super) row_ix: Option<usize>,
 }
 
-pub(super) fn handle_searcher_pointer_down_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_searcher_pointer_down_event<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl pointer_down::SearcherPointerDownCx<H>,
     position: Point,
     button: MouseButton,
     zoom: f32,
@@ -22,9 +22,9 @@ pub(super) fn handle_searcher_pointer_down_event<H: UiHost, M: NodeGraphCanvasMi
     pointer_down::handle_searcher_pointer_down_event(canvas, cx, position, button, zoom)
 }
 
-pub(super) fn handle_searcher_pointer_up_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_searcher_pointer_up_event<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl SearcherReleaseCx<H, M>,
     position: Point,
     button: MouseButton,
     zoom: f32,

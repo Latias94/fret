@@ -8,7 +8,7 @@ use super::super::{
 };
 use super::SearcherPointerHit;
 
-pub(super) trait SearcherPointerDownCx<H>:
+pub(in super::super) trait SearcherPointerDownCx<H>:
     SearcherArmCx + HandledPointerCaptureReleaseCx<H>
 {
 }
