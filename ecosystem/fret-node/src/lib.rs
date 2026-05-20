@@ -210,6 +210,12 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/context_menu/connection_execution_insert/apply.rs");
     const UI_CANVAS_WIDGET_CONTEXT_MENU_CONNECTION_EXECUTION_INSERT_RECOVERY_RS: &str =
         include_str!("ui/canvas/widget/context_menu/connection_execution_insert/recovery.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_CONNECTION_EXECUTION_CONVERSION_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/connection_execution_conversion.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_CONNECTION_EXECUTION_CONVERSION_ACTIVATE_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/connection_execution_conversion/activate.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_CONNECTION_EXECUTION_CONVERSION_APPLY_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/connection_execution_conversion/apply.rs");
     const UI_CANVAS_WIDGET_CONTEXT_MENU_EDGE_EXECUTION_RS: &str =
         include_str!("ui/canvas/widget/context_menu/edge_execution.rs");
     const UI_CANVAS_WIDGET_CONTEXT_MENU_EDGE_EXECUTION_OPEN_INSERT_RS: &str =
@@ -680,6 +686,29 @@ mod surface_policy_tests {
             assert!(
                 !context_menu_connection_insert_execution_sources.contains(forbidden),
                 "context menu connection insert execution must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn context_menu_connection_conversion_execution_stays_off_retained_bridge() {
+        let context_menu_connection_conversion_execution_sources = [
+            UI_CANVAS_WIDGET_CONTEXT_MENU_CONNECTION_EXECUTION_CONVERSION_RS,
+            UI_CANVAS_WIDGET_CONTEXT_MENU_CONNECTION_EXECUTION_CONVERSION_ACTIVATE_RS,
+            UI_CANVAS_WIDGET_CONTEXT_MENU_CONNECTION_EXECUTION_CONVERSION_APPLY_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !context_menu_connection_conversion_execution_sources.contains(forbidden),
+                "context menu connection conversion execution must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

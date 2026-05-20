@@ -5,7 +5,7 @@ pub(super) fn activate_connection_conversion_picker_action<
     M: NodeGraphCanvasMiddleware,
 >(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl super::ConnectionConversionMenuCx<H>,
     from: PortId,
     to: PortId,
     at: CanvasPoint,
@@ -19,8 +19,13 @@ pub(super) fn activate_connection_conversion_picker_action<
                 return true;
             };
             canvas.record_recent_kind(&candidate.kind);
-            let plan =
-                canvas.plan_connection_conversion_menu_candidate(cx.app, from, to, at, &candidate);
+            let plan = canvas.plan_connection_conversion_menu_candidate(
+                cx.host(),
+                from,
+                to,
+                at,
+                &candidate,
+            );
             canvas.apply_connection_conversion_menu_plan(cx, from, invoked_at, plan);
             true
         }

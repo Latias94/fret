@@ -3541,6 +3541,38 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-620 Isolate context menu connection conversion execution retained Cx route.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/connection_execution_conversion.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/connection_execution_conversion/activate.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/connection_execution_conversion/apply.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/connection_execution_conversion/retained_cx.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move connection conversion context-menu execution off direct retained bridge Cx names by
+      introducing `ConnectionConversionMenuCx` for host/window access and wire-drag restoration.
+    - Keep retained `EventCx` host/window/capture/recovery field access isolated in
+      `context_menu/connection_execution_conversion/retained_cx.rs`.
+    - Lock connection conversion execution files with source-policy coverage and prove candidate
+      gating, rejection restore, successful conversion apply/selection, and ignore restore
+      behavior.
+  - Result:
+    - `connection_execution_conversion.rs` plus its activate/apply helpers now use
+      `ConnectionConversionMenuCx`.
+    - Added `connection_execution_conversion/retained_cx.rs` as the retained adapter for
+      host/window/wire-drag recovery.
+    - Added focused tests for missing candidate handled/no-op behavior, non-candidate ignored
+      behavior, rejected candidate toast plus restore, successful apply clearing suspended drag and
+      selecting the inserted node, and ignore restore.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(context_menu_connection_conversion_execution_stays_off_retained_bridge) | test(connection_conversion_action_with_missing_candidate_is_handled_without_side_effects) | test(connection_conversion_action_ignores_non_candidate_actions) | test(connection_conversion_action_records_candidate_and_restores_on_rejection) | test(connection_conversion_apply_success_clears_suspended_drag_and_selects_node) | test(connection_conversion_apply_ignore_restores_wire_drag) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/context_menu/connection_execution_conversion.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/connection_execution_conversion/activate.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/connection_execution_conversion/apply.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
