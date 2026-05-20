@@ -2395,6 +2395,37 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-220 Isolate pointer-up finish retained Cx adapters.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/widget_tail.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_tail.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_finish.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_session/cleanup.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move pointer-up finish tail behavior (release pointer capture + invalidate paint) behind the
+      retained-agnostic widget tail seam.
+    - Keep retained `EventCx` release-pointer-capture implementation in the retained tail adapter.
+    - Extend the default source-policy gate so pointer-up finish helper files cannot re-import
+      retained bridge Cx names.
+  - Result:
+    - Added `PointerCaptureReleaseCx` and `finish_pointer_capture_release(...)` to `widget_tail.rs`
+      with unit coverage for release/redraw/paint-invalidation sequencing.
+    - Implemented `PointerCaptureReleaseCx` for retained `EventCx` in `retained_widget_tail.rs`.
+    - Moved `pointer_up_finish.rs` and `pointer_up_session/cleanup.rs` off direct retained
+      `EventCx` signatures.
+    - Extended `retained_canvas_tail_policy_helpers_stay_off_retained_bridge` to include the
+      pointer-up finish helper files.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas retained_canvas_tail_policy_helpers_stay_off_retained_bridge widget_tail retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/paint_invalidation.rs ecosystem/fret-node/src/ui/canvas/widget/redraw_request.rs ecosystem/fret-node/src/ui/canvas/widget/widget_tail.rs ecosystem/fret-node/src/ui/canvas/widget/wire_drag/commit_cx.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_finish.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_session/cleanup.rs`
+    - `cargo fmt -p fret-node`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

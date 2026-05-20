@@ -18,6 +18,12 @@ impl<H: UiHost> widget_tail::WidgetHandledCx<H> for EventCx<'_, H> {
     }
 }
 
+impl<H: UiHost> widget_tail::PointerCaptureReleaseCx<H> for EventCx<'_, H> {
+    fn release_pointer_capture(&mut self) {
+        EventCx::release_pointer_capture(self);
+    }
+}
+
 impl<H: UiHost> widget_tail::WidgetRedrawCx<H> for CommandCx<'_, H> {
     fn request_redraw(&mut self) {
         CommandCx::request_redraw(self);

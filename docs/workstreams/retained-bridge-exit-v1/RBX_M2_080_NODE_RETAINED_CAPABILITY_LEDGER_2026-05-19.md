@@ -72,6 +72,11 @@ Compat-gated but retained-bridge-free support:
   - `RBX-M2-210` moved retained `EventCx` / `CommandCx` implementations to
     `wire_drag/retained_commit_cx.rs`, leaving `commit_cx.rs` as a retained-agnostic commit
     side-effect seam locked by the same source-policy gate.
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_finish.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_session/cleanup.rs`
+  - `RBX-M2-220` moved pointer-up release-capture plus paint invalidation behind the
+    retained-agnostic `PointerCaptureReleaseCx` tail seam. Retained `EventCx` implements that seam
+    in `retained_widget_tail.rs`.
 
 Deleted retained overlay files:
 
@@ -115,6 +120,7 @@ Deleted retained overlay files:
 | Middleware extension points | retained event/command middleware hooks deleted; retained canvas still has `before_commit` commit guard | no public retained authoring surface; `NodeGraphCanvasMiddleware` no longer imports or names retained `EventCx` / `CommandCx`; commit rejection remains covered by retained canvas tests | Delete or replace the remaining retained canvas transaction guard when the canvas widget itself is deleted or converted to a declarative canvas leaf. |
 | Canvas widget retained Cx tail actions | retained canvas still adapts real retained `EventCx` / `CommandCx` / `LayoutCx` / `PaintCx` through `retained_widget_tail.rs` | `RBX-M2-200` introduced retained-agnostic `widget_tail.rs` traits and locked `paint_invalidation.rs`, `redraw_request.rs`, and `widget_tail.rs` with a default source-policy test | Continue moving behavior helpers to retained-agnostic seams until only the final retained widget adapter owns retained Cx types. |
 | Wire-drag commit Cx seam | retained canvas still adapts real retained `EventCx` / `CommandCx` through `wire_drag/retained_commit_cx.rs` | `RBX-M2-210` keeps `wire_drag/commit_cx.rs` retained-agnostic and source-policy gated while preserving redraw/paint invalidation sequencing | Continue moving gesture/commit policy behind retained-agnostic seams before replacing or deleting the retained widget adapter. |
+| Pointer-up finish tail action | retained canvas still adapts retained `EventCx` release-capture through `retained_widget_tail.rs` | `RBX-M2-220` moves pointer-up finish and snap-guide cleanup helpers onto retained-agnostic `PointerCaptureReleaseCx` and source-policy gates those helpers | Continue migrating direct retained `EventCx` tail helpers, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 
 ## New Gate
 

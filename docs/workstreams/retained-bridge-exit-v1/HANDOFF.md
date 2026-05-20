@@ -631,7 +631,10 @@ paint-invalidation, and handled-event side-effect traits; retained `EventCx` / `
 `paint_invalidation.rs` / `redraw_request.rs` are locked by a default source-policy test so they
 cannot re-import retained bridge Cx types. `RBX-M2-210` then applied the same pattern to
 wire-drag commit side effects: `wire_drag/commit_cx.rs` is now retained-agnostic, while retained
-`EventCx` / `CommandCx` impls live in `wire_drag/retained_commit_cx.rs`.
+`EventCx` / `CommandCx` impls live in `wire_drag/retained_commit_cx.rs`. `RBX-M2-220` then moved
+pointer-up finish release-capture plus paint invalidation behind `PointerCaptureReleaseCx`; retained
+`EventCx` implements that seam in `retained_widget_tail.rs`, and the pointer-up finish helper files
+are source-policy gated against retained Cx imports.
 
 ## Next Task
 
@@ -646,10 +649,11 @@ Recommended next implementation shape:
   rename host is gone; retained diagnostics anchors are gone; retained a11y active-descendant
   anchors are gone; retained portal host/oracle code is gone; retained editor/panel composition
   wrappers are gone; retained overlay helper tails are gone; retained middleware event/command
-  hooks are gone; retained canvas tail actions now have a retained-agnostic seam; and the
-  wire-drag commit Cx seam is retained-agnostic. The remaining retained bridge source ledger is
-  still the canvas widget root and `canvas/widget/**`, but `canvas/middleware.rs`,
-  `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`, and `wire_drag/commit_cx.rs` are
+  hooks are gone; retained canvas tail actions now have a retained-agnostic seam; the wire-drag
+  commit Cx seam is retained-agnostic; and pointer-up finish cleanup now uses the same tail seam.
+  The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
+  but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
+  `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, and `pointer_up_session/cleanup.rs` are
   compat-gated retained-bridge-free support. The remaining canvas interaction families still need
   default-path tests before their retained widget/event code can be deleted. Each slice should first
   add default declarative tests or retained-agnostic seams, then remove or gate less retained code.
@@ -661,7 +665,22 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-20 for `RBX-M2-210`:
+Last run on 2026-05-20 for `RBX-M2-220`:
+
+- `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
+  `fret-ui` `current_effective_opacity` dead-code warning.
+- `cargo nextest run -p fret-node --features compat-retained-canvas retained_canvas_tail_policy_helpers_stay_off_retained_bridge widget_tail retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound` -
+  passed, 6 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/paint_invalidation.rs ecosystem/fret-node/src/ui/canvas/widget/redraw_request.rs ecosystem/fret-node/src/ui/canvas/widget/widget_tail.rs ecosystem/fret-node/src/ui/canvas/widget/wire_drag/commit_cx.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_finish.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_session/cleanup.rs` -
+  no matches.
+- `cargo fmt -p fret-node` - passed.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 428 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+
+Previous run on 2026-05-20 for `RBX-M2-210`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.
