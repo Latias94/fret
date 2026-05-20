@@ -1051,6 +1051,7 @@ Recent additions:
 - `role_is` (assert semantics role equality for a target)
 - `checked_is` / `checked_is_none` (assert legacy binary `checked` flag state; useful for checkbox/radio menu items)
 - `checked_state_is` (assert explicit tri-state checked semantics: `false`, `true`, `mixed`, or `null`; use this for indeterminate checkbox gates)
+- `pressed_state_is` (assert explicit tri-state pressed semantics: `false`, `true`, `mixed`, or `null`; use this for Toggle and multiple ToggleGroup `aria-pressed` gates)
 - `active_item_is` (assert the active item for composite widgets: matches either container `active_descendant` or roving focus)
 - `window_style_effective_is` (assert effective/clamped OS window style facets such as `transparent`, `appearance`, `hit_test`, and `opacity_alpha_u8`)
 - `dock_drop_preview_kind_is` (assert coarse docking drop preview decision: `wrap_binary` vs `insert_into_split`)
@@ -1280,6 +1281,8 @@ Predicates (v1 MVP):
 - `{"kind":"pos_in_set_is","target":<selector>,"pos_in_set":2}`
 - `{"kind":"set_size_is","target":<selector>,"set_size":10}`
 - `{"kind":"checked_is","target":<selector>,"checked":true}`
+- `{"kind":"checked_state_is","target":<selector>,"state":"mixed"}`
+- `{"kind":"pressed_state_is","target":<selector>,"state":"true"}`
 - `{"kind":"expanded_is","target":<selector>,"expanded":true}` (target exists and its semantics expanded flag matches; useful for Accordion/Disclosure style mutation gates)
 - `{"kind":"selected_is","target":<selector>,"selected":true}`
 - `{"kind":"semantics_live_is","target":<selector>,"live":"polite"}` (target exists and its semantics live-region mode matches; allowed values are `off`, `polite`, and `assertive`)

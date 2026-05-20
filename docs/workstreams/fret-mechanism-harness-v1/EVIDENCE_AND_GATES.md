@@ -6861,3 +6861,78 @@ Next slice recommendation:
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-checkbox-table-mixed-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
   - result: passed 17/17; `stage_counts={"passed":17}`; `reason_code_counts={}`;
     Checkbox table mixed-state row run id `1779311405413`.
+
+## Toggle Pressed-State Runtime Gate
+
+- invariant:
+  a shadcn Toggle must expose explicit tri-state pressed semantics through `pressed_state`, not
+  selected semantics. The Bookmark toggle should move `false -> true -> false` across two
+  activations, keep `selected=false`, and keep `invoke=true`.
+- finding:
+  no Toggle recipe/runtime defect was reproduced. The existing script was wrong: after click, the
+  runtime bundle showed `role=button` and `flags.pressed_state="true"`, while the script asserted
+  `selected_is=true`. This slice closes that diagnostics expressiveness gap with a first-class
+  `pressed_state_is` predicate and updates the Toggle gate to assert the correct semantics axis.
+- implementation anchors:
+  `crates/fret-diag-protocol/src/lib.rs`,
+  `crates/fret-diag-protocol/src/builder.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs`,
+  `crates/fret-mechanism-harness/src/oracle.rs`,
+  `crates/fret-mechanism-harness/src/lib.rs`,
+  `docs/ui-diagnostics-and-scripted-tests.md`,
+  `tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-interaction-screenshots.json`,
+  `tools/diag-scripts/suites/ui-gallery-toggle-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- discovery evidence:
+  old `selected_is=true` script failure:
+  `target/fret-diag-toggle-interaction-selected-probe-v1/sessions/1779313631621-83488/1779313643019/ai.packet`;
+  failure pack:
+  `target/fret-diag-toggle-interaction-selected-probe-v1/sessions/1779313631621-83488/share/1779313643019.zip`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-toggle-pressed-state-interaction-v1/sessions/1779314794606-180768/1779314805300/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-toggle-pressed-state-interaction-v1/sessions/1779314794606-180768/share/1779314805300.zip`;
+  dedicated suite summary:
+  `target/fret-diag-toggle-semantics-suite-v1/sessions/1779314830681-87028/suite.summary.json`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-toggle-pressed-v2/sessions/1779316094427-64032/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\toggle\ui-gallery-toggle-interaction-screenshots.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-toggle-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\src\builder.rs crates\fret-diag-protocol\src\lib.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs crates\fret-mechanism-harness\src\lib.rs crates\fret-mechanism-harness\src\oracle.rs ecosystem\fret-bootstrap\src\ui_diagnostics\predicates.rs ecosystem\fret-bootstrap\src\ui_diagnostics\script_steps_wait.rs`;
+  `git diff --check`
+  - result: passed.
+- protocol/bootstrap/mechanism gates:
+  `cargo test --profile dev-fast -p fret-diag-protocol predicate_pressed_state_is_serializes_and_deserializes --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics pressed_state_is_matches_semantics_pressed_state --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-mechanism-harness semantics_value_state_actions_and_structured_metadata_are_queryable --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui mechanism_harness_semantics_relations_match_oracles --lib -- --nocapture`
+  - result: passed; 1 test.
+- protocol script roundtrip:
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_toggle_interaction_screenshots -- --nocapture`
+  - result: passed; 1 test.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery`
+  - result: passed.
+  - note: the run emitted the pre-existing unrelated unused `start` warning from
+    `crates/fret-ui/src/declarative/host_widget/paint.rs`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\toggle\ui-gallery-toggle-interaction-screenshots.json --dir target\fret-diag-toggle-pressed-state-interaction-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779314805300`.
+- dedicated runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-toggle-semantics --dir target\fret-diag-toggle-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 1/1; `stage_counts={"passed":1}`; script run id `1779314840880`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-toggle-pressed-v2 --session-auto --timeout-ms 1200000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 18/18; `stage_counts={"passed":18}`; `reason_code_counts={}`;
+    Toggle pressed-state row run id `1779317023787`.

@@ -2,14 +2,14 @@ use fret_core::Rect;
 use fret_diag_protocol::{
     UiBoundsMetricV1, UiComparisonV1, UiPredicateV1, UiSelectorV1, UiSemanticsActionV1,
     UiSemanticsCheckedStateV1, UiSemanticsLiveV1, UiSemanticsNumericFieldV1,
-    UiSemanticsScrollFieldV1,
+    UiSemanticsPressedStateV1, UiSemanticsScrollFieldV1,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
     BoundsSpace, ObservedNode, ObservedSemanticsAction, ObservedSemanticsCheckedState,
-    ObservedSemanticsFlag, ObservedSemanticsLive, ObservedSemanticsRelation, ObservedTextRange,
-    ObservedTextSelection, ObservedTree,
+    ObservedSemanticsFlag, ObservedSemanticsLive, ObservedSemanticsPressedState,
+    ObservedSemanticsRelation, ObservedTextRange, ObservedTextSelection, ObservedTree,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -682,6 +682,16 @@ fn eval_ui_predicate(
                 )
             })
         }
+        UiPredicateV1::PressedStateIs { target, state } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            let expected = state.map(observed_pressed_state_from_protocol);
+            pass_bool(node.pressed_state == expected, || {
+                format!(
+                    "pressed_state_is mismatch target={target:?} expected={expected:?} actual={:?}",
+                    node.pressed_state
+                )
+            })
+        }
         UiPredicateV1::ExpandedIs { target, expanded } => {
             let node = tree.select_best(target).map_err(fail)?;
             pass_bool(node.expanded == Some(*expanded), || {
@@ -1058,6 +1068,16 @@ fn observed_checked_state_from_protocol(
         UiSemanticsCheckedStateV1::False => ObservedSemanticsCheckedState::False,
         UiSemanticsCheckedStateV1::True => ObservedSemanticsCheckedState::True,
         UiSemanticsCheckedStateV1::Mixed => ObservedSemanticsCheckedState::Mixed,
+    }
+}
+
+fn observed_pressed_state_from_protocol(
+    state: UiSemanticsPressedStateV1,
+) -> ObservedSemanticsPressedState {
+    match state {
+        UiSemanticsPressedStateV1::False => ObservedSemanticsPressedState::False,
+        UiSemanticsPressedStateV1::True => ObservedSemanticsPressedState::True,
+        UiSemanticsPressedStateV1::Mixed => ObservedSemanticsPressedState::Mixed,
     }
 }
 

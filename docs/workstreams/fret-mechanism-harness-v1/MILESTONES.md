@@ -3740,3 +3740,48 @@ Status: complete for the Checkbox table tri-state semantics companion and diagno
   with summary
   `target/fret-diag-shadcn-runtime-evidence-checkbox-table-mixed-v1/sessions/1779311169346-151568/suite.summary.json`
   and new row run id `1779311405413`.
+
+## M165: Toggle Pressed-State Runtime Gate
+
+Status: complete for the Toggle pressed semantics companion and diagnostics predicate gap.
+
+- Added `pressed_state_is` to `fret-diag-protocol` so scripts can assert explicit tri-state
+  pressed semantics (`false`, `true`, `mixed`, or `null`) instead of overloading `selected_is`.
+- Wired the predicate through `fret-bootstrap` runtime evaluation, selector-resolution trace
+  recording, and `fret-mechanism-harness` oracles.
+- Converted `ui-gallery-toggle-interaction-screenshots.json` from nav-driven screenshot smoke to a
+  direct-start semantics mutation gate. It proves the Bookmark toggle is a `button`, starts with
+  `pressed_state=false`, keeps `selected=false`, exports `invoke=true`, changes to
+  `pressed_state=true` after activation, and returns to `pressed_state=false` after a second
+  activation.
+- Added the focused `ui-gallery-toggle-semantics` suite, promoted the script into
+  `ui-gallery-shadcn-runtime-evidence`, refreshed the registry, and added protocol roundtrip
+  coverage.
+- No Toggle recipe/runtime defect was reproduced. The runtime was correct; the old diagnostic gate
+  used the wrong state axis and failed because Toggle exposes ARIA-like `pressed_state`, not
+  selection.
+- Gates pass:
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo test --profile dev-fast -p fret-diag-protocol predicate_pressed_state_is_serializes_and_deserializes --lib -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics pressed_state_is_matches_semantics_pressed_state --lib -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-mechanism-harness semantics_value_state_actions_and_structured_metadata_are_queryable --lib -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-ui mechanism_harness_semantics_relations_match_oracles --lib -- --nocapture`;
+  and
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_toggle_interaction_screenshots -- --nocapture`.
+- Build passes:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\toggle\ui-gallery-toggle-interaction-screenshots.json --dir target\fret-diag-toggle-pressed-state-interaction-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779314805300`, AI packet
+  `target/fret-diag-toggle-pressed-state-interaction-v1/sessions/1779314794606-180768/1779314805300/ai.packet`,
+  and pack
+  `target/fret-diag-toggle-pressed-state-interaction-v1/sessions/1779314794606-180768/share/1779314805300.zip`.
+- Dedicated runtime suite passes:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-toggle-semantics --dir target\fret-diag-toggle-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with `stage_counts={"passed":1}` and summary
+  `target/fret-diag-toggle-semantics-suite-v1/sessions/1779314830681-87028/suite.summary.json`.
+- The broad `ui-gallery-shadcn-runtime-evidence` suite now passes 18/18 with the new Toggle row:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-toggle-pressed-v2 --session-auto --timeout-ms 1200000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with summary
+  `target/fret-diag-shadcn-runtime-evidence-toggle-pressed-v2/sessions/1779316094427-64032/suite.summary.json`
+  and new row run id `1779317023787`.

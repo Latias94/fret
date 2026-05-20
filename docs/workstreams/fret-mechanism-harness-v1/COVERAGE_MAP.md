@@ -445,3 +445,14 @@ mechanism can visibly fail.
   `target/fret-diag-checkbox-table-mixed-state-action-v1/sessions/1779310480442-177764/1779310495372/ai.packet`,
   and the dedicated suite evidence is anchored at
   `target/fret-diag-checkbox-semantics-suite-table-mixed-v1/sessions/1779310724199-166384/suite.summary.json`.
+- Toggle pressed-state update:
+  `pressed_state_is` now covers explicit tri-state pressed semantics across protocol roundtrip,
+  bootstrap runtime evaluation, wait-until selector tracing, and mechanism-harness oracles. The
+  refreshed `ui-gallery-toggle-interaction-screenshots.json` gate starts on the Toggle page, proves
+  the Bookmark toggle exports `pressed_state=false`, keeps `selected=false`, exposes `invoke=true`,
+  toggles to `pressed_state=true`, and toggles back to `pressed_state=false`. The old selected-state
+  probe failed because Toggle correctly exports pressed state rather than selected state. Focused
+  runtime evidence is anchored at
+  `target/fret-diag-toggle-pressed-state-interaction-v1/sessions/1779314794606-180768/1779314805300/ai.packet`,
+  and the dedicated suite evidence is anchored at
+  `target/fret-diag-toggle-semantics-suite-v1/sessions/1779314830681-87028/suite.summary.json`.

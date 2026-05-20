@@ -11781,6 +11781,32 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-toggle-interaction-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-interaction-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-runtime-evidence",
+        "ui-gallery-toggle-semantics"
+      ],
+      "tags": [
+        "action-state",
+        "mutation",
+        "pressed-state",
+        "semantics",
+        "shadcn",
+        "toggle",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Toggle page.",
+        "Verifies that Toggle uses pressed_state semantics, not selected-state semantics, while keeping invoke enabled."
+      ]
+    },
+    {
       "id": "ui-gallery-tooltip-disabled-code-tab-scroll-range",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-disabled-code-tab-scroll-range.json",
       "required_capabilities": [

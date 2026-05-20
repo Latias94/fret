@@ -32,7 +32,8 @@ mod tests {
     use fret_core::{Point, Px, Rect, Size};
     use fret_diag_protocol::{
         UiBoundsMetricV1, UiComparisonV1, UiPredicateV1, UiSelectorV1, UiSemanticsActionV1,
-        UiSemanticsLiveV1, UiSemanticsNumericFieldV1, UiSemanticsScrollFieldV1,
+        UiSemanticsLiveV1, UiSemanticsNumericFieldV1, UiSemanticsPressedStateV1,
+        UiSemanticsScrollFieldV1,
     };
     use serde::Deserialize;
 
@@ -501,6 +502,7 @@ mod tests {
         option.selected = Some(true);
         option.checked = Some(true);
         option.checked_state = Some(ObservedSemanticsCheckedState::True);
+        option.pressed_state = Some(ObservedSemanticsPressedState::True);
         option.expanded = Some(true);
         option.level = Some(2);
         option.pos_in_set = Some(2);
@@ -624,6 +626,16 @@ mod tests {
                 predicate: UiPredicateV1::CheckedStateIs {
                     target: option_selector.clone(),
                     state: Some(fret_diag_protocol::UiSemanticsCheckedStateV1::True),
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::PressedStateIs {
+                    target: option_selector.clone(),
+                    state: Some(UiSemanticsPressedStateV1::True),
                 },
             },
         )

@@ -1956,6 +1956,14 @@ pub enum UiSemanticsCheckedStateV1 {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+pub enum UiSemanticsPressedStateV1 {
+    False,
+    True,
+    Mixed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum UiSemanticsActionV1 {
     Focus,
     Invoke,
@@ -2113,6 +2121,16 @@ pub enum UiPredicateV1 {
         target: UiSelectorV1,
         /// Use `null` to assert that no tri-state checked semantics are exposed.
         state: Option<UiSemanticsCheckedStateV1>,
+    },
+    /// True when the target exists and its tri-state pressed semantics matches.
+    ///
+    /// Use this for Radix/shadcn Toggle and multiple ToggleGroup items. Those controls expose
+    /// ARIA-like `aria-pressed` through Fret's portable `pressed_state` surface, not through
+    /// `selected_is`.
+    PressedStateIs {
+        target: UiSelectorV1,
+        /// Use `null` to assert that no tri-state pressed semantics are exposed.
+        state: Option<UiSemanticsPressedStateV1>,
     },
     ExpandedIs {
         target: UiSelectorV1,
@@ -4666,6 +4684,30 @@ mod tests {
 
         let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
         assert!(matches!(roundtrip, UiPredicateV1::CheckedStateIs { .. }));
+    }
+
+    #[test]
+    fn predicate_pressed_state_is_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::PressedStateIs {
+            target: UiSelectorV1::TestId {
+                id: "toggle-bookmark".to_string(),
+                root_z_index: None,
+            },
+            state: Some(UiSemanticsPressedStateV1::True),
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "pressed_state_is",
+                "target": { "kind": "test_id", "id": "toggle-bookmark" },
+                "state": "true",
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(roundtrip, UiPredicateV1::PressedStateIs { .. }));
     }
 
     #[test]

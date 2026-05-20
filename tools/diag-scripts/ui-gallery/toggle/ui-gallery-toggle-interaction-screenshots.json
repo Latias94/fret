@@ -1,17 +1,44 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "ui-gallery-toggle-interaction-screenshots",
-    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+    "name": "UI gallery: Toggle pressed-state interaction",
+    "tags": [
+      "ui-gallery",
+      "shadcn",
+      "toggle",
+      "semantics",
+      "pressed-state",
+      "action-state",
+      "mutation"
+    ],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "toggle"
+    },
+    "target_hints": [
+      "Starts directly on the Toggle page.",
+      "Verifies that Toggle uses pressed_state semantics, not selected-state semantics, while keeping invoke enabled."
+    ]
   },
   "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-trigger" }
+      },
+      "timeout_frames": 600
+    },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 820.0, "height_px": 760.0 },
+    { "type": "wait_frames", "n": 10 },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+        "target": { "kind": "test_id", "id": "ui-gallery-page-toggle" }
       },
       "timeout_frames": 600
     },
@@ -19,62 +46,114 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }
+        "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" }
       },
-      "timeout_frames": 600
-    },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "toggle" },
-    { "type": "wait_frames", "n": 2 },
-    {
-      "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-toggle" } },
       "timeout_frames": 600
     },
     {
       "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-toggle" },
-      "delta_y": -240.0,
-      "timeout_frames": 600
-    },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-toggle" } },
-    {
-      "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-toggle" } },
-      "timeout_frames": 600
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-toggle-demo-bookmark" },
+      "delta_y": -160.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 900
     },
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-toggle-demo-bookmark" }
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-toggle-demo-bookmark" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
       },
       "timeout_frames": 600
     },
     {
-      "type": "ensure_visible",
-      "target": { "kind": "test_id", "id": "ui-gallery-toggle-demo-bookmark" },
-      "within_window": true,
-      "padding_px": 8.0,
-      "timeout_frames": 600
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-toggle-demo-bookmark" },
+        "role": "button"
+      }
     },
-    { "type": "capture_screenshot", "label": "toggle-before" },
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-toggle-demo-bookmark" } },
-    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "pressed_state_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-toggle-demo-bookmark" },
+        "state": "false"
+      }
+    },
     {
       "type": "assert",
       "predicate": {
         "kind": "selected_is",
         "target": { "kind": "test_id", "id": "ui-gallery-toggle-demo-bookmark" },
-        "selected": true
+        "selected": false
       }
     },
-    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-toggle-demo-bookmark" },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    { "type": "capture_screenshot", "label": "toggle-before" },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-toggle-demo-bookmark" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "pressed_state_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-toggle-demo-bookmark" },
+        "state": "true"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-toggle-demo-bookmark" },
+        "selected": false
+      }
+    },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-trigger" } },
     { "type": "wait_frames", "n": 2 },
     { "type": "capture_screenshot", "label": "toggle-after-on" },
-    { "type": "capture_bundle", "label": "ui-gallery-toggle-interaction" }
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-toggle-demo-bookmark" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "pressed_state_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-toggle-demo-bookmark" },
+        "state": "false"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-toggle-pressed-state-interaction",
+      "max_snapshots": 1
+    },
+    { "type": "capture_screenshot", "label": "toggle-after-off" }
   ]
 }

@@ -1515,3 +1515,18 @@ date: 2026-05-12
     `target/fret-diag-checkbox-semantics-suite-table-mixed-v1/sessions/1779310724199-166384/suite.summary.json`,
     and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 17/17 with the new row run
     id `1779311405413`.
+
+- [x] Add a Toggle pressed-state semantics runtime gate.
+  - Result:
+    `pressed_state_is` is now a first-class diagnostics predicate over explicit tri-state pressed
+    semantics, with protocol, bootstrap runtime, wait-trace, and mechanism-harness oracle support.
+    The existing Toggle interaction script used `selected_is` and failed against the real runtime:
+    shadcn Toggle correctly exports `role=button` with `pressed_state=true` after activation, not
+    `selected=true`. `ui-gallery-toggle-interaction-screenshots.json` now starts directly on the
+    Toggle page, gates the Bookmark toggle as `pressed_state=false -> true -> false`, keeps
+    `selected=false`, proves `invoke=true`, and captures screenshot/bundle evidence. Focused
+    runtime passed with run id `1779314805300`, the new `ui-gallery-toggle-semantics` suite passed
+    1/1 with summary
+    `target/fret-diag-toggle-semantics-suite-v1/sessions/1779314830681-87028/suite.summary.json`,
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 18/18 with the Toggle row
+    run id `1779317023787`.
