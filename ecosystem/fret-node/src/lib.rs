@@ -128,6 +128,12 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_up_left_route/double_click.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_COMMIT_CX_RS: &str =
         include_str!("ui/canvas/widget/pointer_up_commit_cx.rs");
+    const UI_CANVAS_WIDGET_POINTER_UP_COMMIT_RS: &str =
+        include_str!("ui/canvas/widget/pointer_up_commit.rs");
+    const UI_CANVAS_WIDGET_POINTER_UP_NODE_DRAG_RS: &str =
+        include_str!("ui/canvas/widget/pointer_up_node_drag.rs");
+    const UI_CANVAS_WIDGET_POINTER_UP_LEFT_ROUTE_DISPATCH_COMMIT_RS: &str =
+        include_str!("ui/canvas/widget/pointer_up_left_route/dispatch/commit.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_COMMIT_GROUP_DRAG_RS: &str =
         include_str!("ui/canvas/widget/pointer_up_commit/group_drag.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_COMMIT_RESIZE_RS: &str =
@@ -510,6 +516,9 @@ mod surface_policy_tests {
     fn pointer_up_commit_handlers_stay_off_retained_bridge() {
         let pointer_up_commit_sources = [
             UI_CANVAS_WIDGET_POINTER_UP_COMMIT_CX_RS,
+            UI_CANVAS_WIDGET_POINTER_UP_COMMIT_RS,
+            UI_CANVAS_WIDGET_POINTER_UP_NODE_DRAG_RS,
+            UI_CANVAS_WIDGET_POINTER_UP_LEFT_ROUTE_DISPATCH_COMMIT_RS,
             UI_CANVAS_WIDGET_POINTER_UP_COMMIT_GROUP_DRAG_RS,
             UI_CANVAS_WIDGET_POINTER_UP_COMMIT_RESIZE_RS,
             UI_CANVAS_WIDGET_POINTER_UP_COMMIT_RESIZE_GROUP_RS,

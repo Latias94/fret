@@ -3720,6 +3720,35 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-680 Isolate pointer-up commit dispatch retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_node_drag.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/dispatch/commit.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the pointer-up commit dispatch chain and node-drag commit release helper off direct
+      retained bridge Cx names.
+    - Reuse the existing retained-agnostic `PointerUpCommitCx` seam for host/window access,
+      pointer capture release, and paint invalidation.
+    - Prove node-drag release and group resize commit behavior remain green.
+  - Result:
+    - `pointer_up_commit.rs`, `pointer_up_node_drag.rs`, and
+      `pointer_up_left_route/dispatch/commit.rs` now accept `PointerUpCommitCx` instead of naming
+      retained `EventCx`.
+    - Extended `pointer_up_commit_handlers_stay_off_retained_bridge` source-policy coverage to
+      lock those files off retained bridge Cx names.
+    - Retained `EventCx` adaptation stays isolated in `pointer_up_commit_retained_cx.rs`.
+  - Validation:
+    - Red: `cargo nextest run -p fret-node --features compat-retained-canvas pointer_up_commit_handlers_stay_off_retained_bridge`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_commit_handlers_stay_off_retained_bridge) | test(node_drag_pointer_up_emits_node_drag_end_committed) | test(node_drag_end_batches_group_rect_ops_in_sorted_group_id_order) | test(group_resize_is_previewed_and_committed_on_pointer_up) | test(group_resize_clamps_to_children) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_node_drag.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/dispatch/commit.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

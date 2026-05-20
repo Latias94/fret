@@ -3,14 +3,18 @@ use fret_ui::UiHost;
 use crate::runtime::callbacks::NodeDragEndOutcome;
 use crate::ui::canvas::state::{NodeDrag, ViewSnapshot};
 
-use super::pointer_up_finish::finish_pointer_up;
+use super::pointer_up_commit_cx::PointerUpCommitCx;
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
-pub(super) fn handle_node_drag_release<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_node_drag_release<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: PointerUpCommitCx<H>,
+{
     let Some(drag) = canvas.interaction.node_drag.take() else {
         return false;
     };
@@ -19,16 +23,17 @@ pub(super) fn handle_node_drag_release<H: UiHost, M: NodeGraphCanvasMiddleware>(
     let group_overrides = super::pointer_up_node_drag_ops::group_overrides(&drag);
     let parent_changes = super::pointer_up_node_drag_parent::parent_changes(
         canvas,
-        cx.app,
+        cx.host(),
         snapshot,
         &drag,
         &end_positions,
         &group_overrides,
     );
+    let window = cx.window();
     let drag_outcome = super::pointer_up_node_drag_ops::commit_release_ops(
         canvas,
-        cx.app,
-        cx.window,
+        cx.host(),
+        window,
         &drag,
         &end_positions,
         &group_overrides,
@@ -38,14 +43,17 @@ pub(super) fn handle_node_drag_release<H: UiHost, M: NodeGraphCanvasMiddleware>(
     true
 }
 
-fn finish_node_drag_release<H: UiHost, M: NodeGraphCanvasMiddleware>(
+fn finish_node_drag_release<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut Cx,
     drag: NodeDrag,
     drag_outcome: NodeDragEndOutcome,
-) {
+) where
+    M: NodeGraphCanvasMiddleware,
+    Cx: PointerUpCommitCx<H>,
+{
     canvas.emit_node_drag_end(drag.primary, &drag.node_ids, drag_outcome);
     canvas.interaction.pending_node_drag = None;
     super::pointer_up_session::clear_node_drag_release_state(&mut canvas.interaction);
-    finish_pointer_up(cx);
+    super::pointer_up_finish::finish_pointer_up(cx);
 }

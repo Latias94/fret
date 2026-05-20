@@ -859,6 +859,12 @@ right-pan context-menu behavior remain green.
 `PointerUpReleaseCx`. `pointer_up_left_route/double_click.rs` is now source-policy gated as
 retained-bridge-free support, and a real `pointer_up::handle_pointer_up` test proves the route
 still opens the edge insert picker, clears edge-drag hover state, and invalidates paint.
+`RBX-M2-680` then moved the pointer-up commit dispatch chain and node-drag commit release helper
+behind the retained-agnostic `PointerUpCommitCx` seam. `pointer_up_commit.rs`,
+`pointer_up_node_drag.rs`, and `pointer_up_left_route/dispatch/commit.rs` are now source-policy
+gated as retained-bridge-free support, while retained `EventCx` adaptation stays isolated in
+`pointer_up_commit_retained_cx.rs`. Focused tests keep node-drag release and group resize commit
+behavior green.
 
 ## Next Task
 
@@ -914,7 +920,8 @@ Recommended next implementation shape:
   context-menu routing now uses the retained-agnostic `RightClickCx` seam; pointer-up guard
   dispatch now uses the retained-agnostic `PointerUpGuardCx` seam; pointer-up sticky ignored
   release and pan release helpers now use retained-agnostic `PointerUpReleaseCx` / widget-tail
-  paint seams; pointer-up left double-click edge-insert release now uses `PointerUpReleaseCx`.
+  paint seams; pointer-up left double-click edge-insert release now uses `PointerUpReleaseCx`;
+  pointer-up commit dispatch and node-drag commit release now use `PointerUpCommitCx`.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
   `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`,
@@ -923,6 +930,8 @@ Recommended next implementation shape:
   `pointer_up_pending/wire_drag.rs`, `pointer_up_pending/click_select.rs`,
   `pointer_up_commit_cx.rs`, `pointer_up_commit/group_drag.rs`, `pointer_up_commit/resize.rs`,
   `pointer_up_commit/resize/group.rs`, `pointer_up_commit/resize/node.rs`,
+  `pointer_up_commit.rs`, `pointer_up_node_drag.rs`,
+  `pointer_up_left_route/dispatch/commit.rs`,
   `node_drag_constraints.rs`, `node_drag_constraints_extent.rs`, `node_drag_geometry_cx.rs`,
   `node_drag_snap.rs`,
   `node_drag/tail.rs`, `node_drag_move_tail_cx.rs`,
@@ -981,13 +990,13 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-21 for `RBX-M2-670`:
+Last run on 2026-05-21 for `RBX-M2-680`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.
-- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_left_double_click_route_stays_off_retained_bridge) | test(plain_double_click_edge_insert_left_up_opens_picker_and_invalidates_paint) | test(should_open_edge_insert_picker_requires_plain_double_click) | test(edge_insert_left_up_does_not_open_picker_when_searcher_is_open) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
-  passed, 5 tests.
-- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/double_click.rs` -
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_commit_handlers_stay_off_retained_bridge) | test(node_drag_pointer_up_emits_node_drag_end_committed) | test(node_drag_end_batches_group_rect_ops_in_sorted_group_id_order) | test(group_resize_is_previewed_and_committed_on_pointer_up) | test(group_resize_clamps_to_children) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
+  passed, 6 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_node_drag.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/dispatch/commit.rs` -
   no matches.
 - `cargo fmt --check` - passed.
 - `python3 tools/check_layering.py` - passed.

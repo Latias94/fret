@@ -9437,3 +9437,70 @@ Broader gates not run:
   - Reason: `RBX-M2-670` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-21 - RBX-M2-680 pointer-up commit dispatch retained Cx route isolation
+
+Claim verified:
+
+- Pointer-up commit dispatch helpers no longer import or name retained bridge Cx types in
+  `pointer_up_commit.rs`, `pointer_up_node_drag.rs`, or
+  `pointer_up_left_route/dispatch/commit.rs`.
+- The commit release chain reuses `PointerUpCommitCx` for host/window access plus pointer-up tail
+  side effects.
+- Retained `EventCx` adaptation remains isolated in `pointer_up_commit_retained_cx.rs`.
+- Node-drag release and group resize commit behavior remain green.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_node_drag.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/dispatch/commit.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Red evidence:
+
+- `cargo nextest run -p fret-node --features compat-retained-canvas pointer_up_commit_handlers_stay_off_retained_bridge`
+  - Result: failed before implementation, 1 failed test.
+  - Failure: source-policy found `retained_bridge` in the newly added pointer-up commit source set.
+  - Scope proven: the source-policy gate caught direct retained Cx naming before the seam
+    extraction.
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving the commit
+    dispatch helpers behind `PointerUpCommitCx`.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_commit_handlers_stay_off_retained_bridge) | test(node_drag_pointer_up_emits_node_drag_end_committed) | test(node_drag_end_batches_group_rect_ops_in_sorted_group_id_order) | test(group_resize_is_previewed_and_committed_on_pointer_up) | test(group_resize_clamps_to_children) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 6 tests.
+  - Scope proven: source-policy locks pointer-up commit helpers off retained bridge Cx names; node
+    drag commit release and group resize commit behavior remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_node_drag.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/dispatch/commit.rs`
+  - Result: no matches.
+  - Scope proven: the migrated pointer-up commit helpers no longer depend on retained bridge Cx
+    names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after formatting the pointer-up commit
+    seam changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after moving
+    pointer-up commit helpers behind retained-agnostic seams.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-680` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.
