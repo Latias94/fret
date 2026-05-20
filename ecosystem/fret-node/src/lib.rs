@@ -188,6 +188,10 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/context_menu/ui.rs");
     const UI_CANVAS_WIDGET_CONTEXT_MENU_UI_EVENT_RS: &str =
         include_str!("ui/canvas/widget/context_menu/ui/event.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_KEY_NAVIGATION_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/key_navigation.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_KEY_NAVIGATION_KEY_DOWN_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/key_navigation/key_down.rs");
     const UI_CANVAS_WIDGET_CONTEXT_MENU_KEY_NAVIGATION_POINTER_MOVE_RS: &str =
         include_str!("ui/canvas/widget/context_menu/key_navigation/pointer_move.rs");
     const UI_CANVAS_WIDGET_SEARCHER_RS: &str = include_str!("ui/canvas/widget/searcher.rs");
@@ -524,6 +528,28 @@ mod surface_policy_tests {
             assert!(
                 !UI_CANVAS_WIDGET_CONTEXT_MENU_KEY_NAVIGATION_POINTER_MOVE_RS.contains(forbidden),
                 "context menu pointer-move helper must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn context_menu_key_down_route_stays_off_retained_bridge() {
+        let context_menu_key_down_sources = [
+            UI_CANVAS_WIDGET_CONTEXT_MENU_KEY_NAVIGATION_RS,
+            UI_CANVAS_WIDGET_CONTEXT_MENU_KEY_NAVIGATION_KEY_DOWN_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !context_menu_key_down_sources.contains(forbidden),
+                "context menu key-down route must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

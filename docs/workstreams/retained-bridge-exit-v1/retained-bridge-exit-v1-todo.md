@@ -3289,6 +3289,34 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-540 Isolate context menu key-down retained Cx route.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/key_down.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/key_down_retained_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/tests.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move context menu key-down routing off direct retained bridge Cx names by introducing a
+      retained-agnostic `ContextMenuKeyDownCx` capability.
+    - Keep retained active-selection activation I/O in an adapter-only implementation.
+    - Extend source-policy coverage so key navigation cannot re-import retained bridge Cx names.
+  - Result:
+    - `key_navigation.rs` and `key_navigation/key_down.rs` now route through
+      `ContextMenuKeyDownCx`.
+    - `key_navigation/key_down_retained_cx.rs` is the retained `EventCx` adapter for active
+      selection activation.
+    - Added focused tests for no-menu no-op behavior, ArrowDown navigation/finish, Enter
+      activation/close, Enter keep-open restore, typeahead, and Backspace typeahead pop behavior.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(context_menu_key_down_route_stays_off_retained_bridge) | test(key_down_without_context_menu_is_side_effect_free) | test(key_down_arrow_down_advances_active_item_and_finishes) | test(key_down_enter_activates_active_item_and_closes_menu) | test(key_down_enter_keep_open_restores_menu_and_finishes) | test(key_down_typeahead_updates_active_item_and_finishes) | test(key_down_backspace_pops_typeahead_and_finishes) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/key_down.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

@@ -770,6 +770,13 @@ and paint invalidation.
 `WidgetPaintInvalidationCx` seam. `context_menu/key_navigation/pointer_move.rs` is now
 source-policy gated as retained-bridge-free support, with focused tests proving no-menu no-op
 behavior, hover update paint invalidation, and repeated-hover no-op invalidation behavior.
+`RBX-M2-540` then moved context menu key-down routing behind the retained-agnostic
+`ContextMenuKeyDownCx` seam. `context_menu/key_navigation.rs` and
+`context_menu/key_navigation/key_down.rs` are now source-policy gated as retained-bridge-free
+support; retained active-selection activation I/O lives in
+`context_menu/key_navigation/key_down_retained_cx.rs`. Focused tests prove no-menu no-op behavior,
+ArrowDown navigation/finish, Enter activation/close, Enter keep-open restore, typeahead, and
+Backspace typeahead pop behavior.
 
 ## Next Task
 
@@ -812,7 +819,8 @@ Recommended next implementation shape:
   searcher key-down routing now uses the retained-agnostic input seam; the top-level searcher route
   wrapper now composes those seams through `SearcherCx`; context menu UI open/restore/dismiss/
   finish/invalidate tails now use retained-agnostic widget-tail seams plus `ContextMenuFocusCx`;
-  context menu pointer-move routing now uses the retained-agnostic paint invalidation seam.
+  context menu pointer-move routing now uses the retained-agnostic paint invalidation seam;
+  context menu key-down routing now uses the retained-agnostic key-down activation seam.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
   `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`,
@@ -839,6 +847,7 @@ Recommended next implementation shape:
   `searcher_pointer.rs`, `searcher_pointer/move_event.rs`, `searcher_pointer/wheel_event.rs`,
   `searcher_ui.rs`, `searcher_ui/event.rs`,
   `context_menu/ui.rs`, `context_menu/ui/event.rs`,
+  `context_menu/key_navigation.rs`, `context_menu/key_navigation/key_down.rs`,
   `context_menu/key_navigation/pointer_move.rs`,
   `sticky_wire_connect/finish.rs`, `edge_insert_drag/drag/tail.rs`, `cancel_cleanup.rs`,
   `sticky_wire_targets/picker.rs`, `group_drag/tail.rs`, `group_resize/tail.rs`,
@@ -856,13 +865,13 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-21 for `RBX-M2-530`:
+Last run on 2026-05-21 for `RBX-M2-540`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.
-- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(context_menu_pointer_move_route_stays_off_retained_bridge) | test(pointer_move_without_context_menu_is_side_effect_free) | test(pointer_move_updates_hover_and_invalidates_paint) | test(pointer_move_same_hover_does_not_invalidate_paint_again) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
-  passed, 7 tests.
-- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/pointer_move.rs` -
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(context_menu_key_down_route_stays_off_retained_bridge) | test(key_down_without_context_menu_is_side_effect_free) | test(key_down_arrow_down_advances_active_item_and_finishes) | test(key_down_enter_activates_active_item_and_closes_menu) | test(key_down_enter_keep_open_restores_menu_and_finishes) | test(key_down_typeahead_updates_active_item_and_finishes) | test(key_down_backspace_pops_typeahead_and_finishes) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
+  passed, 8 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/key_down.rs` -
   no matches.
 - `cargo fmt --check` - passed.
 - `python3 tools/check_layering.py` - passed.
@@ -873,7 +882,7 @@ Last run on 2026-05-21 for `RBX-M2-530`:
 Broader gates not run:
 
 - `cargo nextest run --workspace`
-  - Reason: `RBX-M2-530` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+  - Reason: `RBX-M2-540` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
 

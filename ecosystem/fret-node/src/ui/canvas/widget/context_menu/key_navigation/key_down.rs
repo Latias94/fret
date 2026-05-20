@@ -1,13 +1,11 @@
-use fret_ui::UiHost;
-
 use crate::ui::canvas::widget::*;
 
 use super::super::ui;
-use super::{active_item, typeahead};
+use super::{ContextMenuKeyDownCx, active_item, typeahead};
 
-pub(super) fn handle_context_menu_key_down_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_context_menu_key_down_event<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl ContextMenuKeyDownCx<H, M>,
     key: fret_core::KeyCode,
 ) -> bool {
     let Some(mut menu) = super::super::take_context_menu(&mut canvas.interaction) else {
@@ -26,7 +24,7 @@ pub(super) fn handle_context_menu_key_down_event<H: UiHost, M: NodeGraphCanvasMi
             return ui::restore_context_menu_event(canvas, cx, menu);
         }
         fret_core::KeyCode::Enter | fret_core::KeyCode::NumpadEnter => {
-            return match canvas.activate_context_menu_active_selection(cx, &menu) {
+            return match cx.activate_context_menu_active_selection(canvas, &menu) {
                 super::super::selection_activation::ContextMenuSelectionActivationOutcome::Activated => {
                     ui::finish_context_menu_event(cx)
                 }
