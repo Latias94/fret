@@ -57,10 +57,12 @@ component should construct `TextProps` locally.
 - `text_status_message(...)`: muted `text-sm` non-interactive empty/loading/status messages inside
   command/listbox/status surfaces. These messages are not group labels and not compact readouts;
   they stay single-line, shrinkable, and ellipsized when mounted in fixed command/list rows.
-- `text_control_readout_tabular(...)` and `text_control_readout_tabular_emphasis(...)`: numeric
-  control-readout variants for counters, page summaries, and dense dashboard values. They remain in
-  the control-readout family, add inherited `tnum` OpenType features, and keep the same single-line
-  resize contract; the emphasis variant adds medium weight for primary summaries.
+- `text_control_readout_tabular(...)`, `text_control_readout_tabular_emphasis(...)`, and
+  `text_control_readout_compact_tabular_emphasis(...)`: numeric control-readout variants for
+  counters, page summaries, fixed badges, and dense dashboard values. They remain in the
+  control-readout family, add inherited `tnum` OpenType features, and keep the same single-line
+  resize contract; the emphasis variants add medium weight, while the compact emphasis variant
+  keeps `text-xs` sizing for badge-like slots.
 - `text_control_label(...)`: fill-width checkbox/radio/switch/combo/slider label text. It keeps
   fixed control chrome single-line under resize.
 - `text_section_chrome_label(...)`, `text_chrome_title(...)`, and `text_chrome_glyph(...)`: section,

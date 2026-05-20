@@ -981,6 +981,10 @@ Exit criteria:
   `text-xs font-medium`, fill/shrink/min-width-0, no-wrap, and ellipsis semantics, while sidebar
   still owns its muted foreground. Narrow sidebars therefore truncate the label instead of letting
   wrapped text exceed the 32px chrome row.
+  2026-05-20 shadcn SidebarMenuBadge resize result: fixed sidebar menu badges now consume a
+  compact tabular emphasis readout role (`text-xs font-medium tabular-nums`) instead of local
+  sidebar-only text sizing. The badge keeps its `h-5 min-w-5` chrome and sidebar foreground, while
+  the text role owns no-wrap, shrink, min-width-0, and ellipsis behavior under resize.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

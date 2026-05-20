@@ -4699,6 +4699,34 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_workstream_source.py` passed.
 - `cargo check -p fret-ui-shadcn --lib` passed.
 
+2026-05-20 shadcn SidebarMenuBadge compact tabular readout slice:
+
+- Source gap before fix: `SidebarMenuBadge` is an upstream fixed `h-5 min-w-5 text-xs font-medium
+  tabular-nums` counter slot, but the Fret port still rendered it with sidebar-local
+  `ui::text(...).text_size_px(...).line_height_px(...).font_medium().text_color(...).nowrap()`.
+  That duplicated text policy in the sidebar recipe and missed the shared readout role's
+  shrink/min-width-0/ellipsis resize contract.
+- `text_control_readout_compact_tabular_emphasis(...)` now exists as a derived control-readout
+  role, not a new base role. It applies inherited `text-xs`, medium weight, `tnum`, no-wrap,
+  shrink, zero minimum width, and ellipsis overflow for fixed badge/counter slots.
+- `SidebarMenuBadge` now consumes that derived readout role and overrides inherited foreground with
+  `sidebar.foreground`, while keeping the badge chrome (`h-5`, `min-w-5`, padding, rounded, inline
+  end placement) recipe-owned.
+- `compact_tabular_emphasis_readout_uses_xs_medium_single_line_truncation` proves the derived role.
+  `sidebar_menu_badge_uses_shared_compact_tabular_readout_role` proves the sidebar badge no longer
+  writes leaf style/color and keeps upstream `text-xs font-medium tabular-nums` semantics through
+  inherited text metadata.
+- `cargo nextest run -p fret-ui-kit --lib
+  compact_tabular_emphasis_readout_uses_xs_medium_single_line_truncation
+  base_single_line_text_roles_stay_single_line_under_narrow_layout --no-fail-fast` passed.
+- `cargo nextest run -p fret-ui-shadcn --lib
+  sidebar_menu_badge_uses_shared_compact_tabular_readout_role --no-fail-fast` passed.
+- `cargo fmt --check -p fret-ui-kit -p fret-ui-shadcn` passed.
+- `python tools\gate_imui_facade_teaching_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `git diff --check` passed.
+- `cargo check -p fret-ui-shadcn --lib` passed.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground

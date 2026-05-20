@@ -1102,6 +1102,11 @@ Readiness order for the next locally testable review slices:
    single-line ellipsis semantics, and `SidebarGroupLabel` consumes it while overriding foreground
    from sidebar context. This directly targets the resize failure mode where chrome labels wrap
    into a second line and overrun the row bottom.
+   2026-05-20 shadcn SidebarMenuBadge resize follow-up: upstream sidebar badges are fixed
+   `h-5 min-w-5 text-xs font-medium tabular-nums` counter slots. Fret now keeps that in the
+   control-readout role family via `text_control_readout_compact_tabular_emphasis(...)` instead of
+   local `component.sidebar.menu_badge.text_px` / `line_height` text builders. `SidebarMenuBadge`
+   consumes the derived readout role and keeps sidebar foreground ownership.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

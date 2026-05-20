@@ -3128,7 +3128,7 @@ impl SidebarMenuBadge {
         }
 
         let top = sidebar_menu_affordance_top(self.size);
-        let (props, text_px, text_lh, fg) = {
+        let (props, fg) = {
             let theme = Theme::global(&*cx.app);
             let right = theme
                 .metric_by_key("component.sidebar.menu_badge.right")
@@ -3139,12 +3139,6 @@ impl SidebarMenuBadge {
             let min_w = theme
                 .metric_by_key("component.sidebar.menu_badge.min_w")
                 .unwrap_or(Px(20.0));
-            let text_px = theme
-                .metric_by_key("component.sidebar.menu_badge.text_px")
-                .unwrap_or(Px(12.0));
-            let text_lh = theme
-                .metric_by_key("component.sidebar.menu_badge.line_height")
-                .unwrap_or(Px(16.0));
             let fg = sidebar_fg(theme);
             let dir = crate::direction::use_direction(cx, None);
             let base_layout = LayoutRefinement::default()
@@ -3166,16 +3160,11 @@ impl SidebarMenuBadge {
                     .merge(self.chrome),
                 layout.merge(self.layout),
             );
-            (props, text_px, text_lh, fg)
+            (props, fg)
         };
 
-        let text = ui::text(self.label)
-            .text_size_px(text_px)
-            .line_height_px(text_lh)
-            .font_medium()
-            .text_color(ColorRef::Color(fg))
-            .nowrap()
-            .into_element(cx);
+        let text = decl_text::text_control_readout_compact_tabular_emphasis(cx, self.label)
+            .inherit_foreground(fg);
 
         let mut badge = shadcn_layout::container_hstack_centered(cx, props, Space::N0, vec![text]);
         if let Some(test_id) = self.test_id {
@@ -8373,6 +8362,52 @@ mod tests {
             Some(&expected_style)
         );
         assert_eq!(text_element.inherited_foreground, Some(expected_fg));
+    }
+
+    #[test]
+    fn sidebar_menu_badge_uses_shared_compact_tabular_readout_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(96.0), Px(64.0)),
+        );
+
+        let element =
+            elements::with_element_cx(&mut app, window, bounds, "sidebar-menu-badge", |cx| {
+                SidebarMenuBadge::new("128").into_element(cx)
+            });
+
+        let text_element = find_text_element(&element, "128").expect("expected menu badge text");
+        let ElementKind::Text(text) = &text_element.kind else {
+            panic!("expected sidebar menu badge text leaf");
+        };
+
+        assert!(text.style.is_none());
+        assert!(text.color.is_none());
+        assert_eq!(text.layout.flex.shrink, 1.0);
+        assert_eq!(text.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(text.wrap, TextWrap::None);
+        assert_eq!(text.overflow, TextOverflow::Ellipsis);
+
+        let theme = Theme::global(&app);
+        let mut expected_style = typography::composable_refinement_from_style(
+            &typography::control_text_style(theme, typography::UiTextSize::Xs),
+        );
+        expected_style.weight = Some(FontWeight::MEDIUM);
+        expected_style
+            .features
+            .push(fret_core::TextFontFeatureSetting {
+                tag: "tnum".into(),
+                value: 1,
+            });
+        assert_eq!(
+            text_element.inherited_text_style.as_ref(),
+            Some(&expected_style)
+        );
+        assert_eq!(text_element.inherited_foreground, Some(sidebar_fg(theme)));
     }
 
     #[test]
