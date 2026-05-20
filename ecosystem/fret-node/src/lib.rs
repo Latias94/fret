@@ -182,6 +182,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pending_node_drag_release_cx.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_PENDING_CLICK_SELECT_RS: &str =
         include_str!("ui/canvas/widget/pointer_up_pending/click_select.rs");
+    const UI_CANVAS_WIDGET_POINTER_DOWN_DOUBLE_CLICK_EDGE_FINISH_RS: &str =
+        include_str!("ui/canvas/widget/pointer_down_double_click_edge/finish.rs");
     const UI_CANVAS_WIDGET_TIMER_MOTION_SHARED_RS: &str =
         include_str!("ui/canvas/widget/timer_motion_shared.rs");
     const UI_VIEW_QUEUE_RS: &str = include_str!("ui/canvas/widget/view_queue.rs");
@@ -418,6 +420,22 @@ mod surface_policy_tests {
             assert!(
                 !pointer_up_commit_sources.contains(forbidden),
                 "pointer-up commit handlers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn edge_double_click_finish_stays_off_retained_bridge() {
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_POINTER_DOWN_DOUBLE_CLICK_EDGE_FINISH_RS.contains(forbidden),
+                "edge double-click finish helper must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

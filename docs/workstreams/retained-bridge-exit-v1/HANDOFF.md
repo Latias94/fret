@@ -708,6 +708,11 @@ invalidate paint while stale timers leave toast state and feedback side effects 
 handling. `pending_resize.rs` is now source-policy gated as retained-bridge-free support, with
 handler tests proving below-threshold moves stay pending and above-threshold moves activate node
 resize.
+`RBX-M2-420` then moved edge double-click finish stop-propagation plus paint invalidation behind
+the existing retained-agnostic `WidgetHandledCx` seam. `pointer_down_double_click_edge/finish.rs`
+is now source-policy gated as retained-bridge-free support, with a local tail test proving finish
+still stops propagation, requests redraw, and invalidates paint; existing reroute/picker
+double-click gesture tests remain green.
 
 ## Next Task
 
@@ -739,7 +744,8 @@ Recommended next implementation shape:
   seam; node drag snaplines and multi-drag extent helpers now use a retained-agnostic
   host/geometry-read seam; keyboard pan activation now uses retained-agnostic widget tail seams;
   clipboard feedback, toast timer, and timer-motion helpers now use retained-agnostic
-  feedback/paint seams; pending node resize move no longer takes a retained Cx parameter.
+  feedback/paint seams; pending node resize move no longer takes a retained Cx parameter; edge
+  double-click finish now uses the retained-agnostic handled tail seam.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
   `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`,
@@ -757,6 +763,7 @@ Recommended next implementation shape:
   `event_clipboard_feedback.rs`, `event_clipboard_feedback_cx.rs`, `event_timer_toast.rs`,
   `timer_motion_shared.rs`,
   `pending_resize.rs`,
+  `pointer_down_double_click_edge/finish.rs`,
   `sticky_wire_connect/finish.rs`, `edge_insert_drag/drag/tail.rs`, `cancel_cleanup.rs`,
   `sticky_wire_targets/picker.rs`, `group_drag/tail.rs`, `group_resize/tail.rs`,
   `group_preview_move_cx.rs`, `group_drag.rs`, `group_resize.rs`,
@@ -773,13 +780,13 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-20 for `RBX-M2-410`:
+Last run on 2026-05-20 for `RBX-M2-420`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.
-- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pending_node_resize_move_stays_off_retained_bridge) | test(pending_node_resize_move_below_threshold_keeps_pending_resize) | test(pending_node_resize_move_past_threshold_activates_resize) | test(should_activate_pending_node_resize_respects_threshold) | test(activate_pending_node_resize_moves_pending_into_active) | test(retained_bridge_source_usage_stays_on_the_migration_ledger) | test(retained_widget_compat_island_stays_crate_private_and_controller_bound)'` -
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(double_click_edge_inserts_reroute_when_enabled) | test(alt_double_click_edge_opens_insert_node_picker) | test(alt_double_click_edge_prefers_picker_over_reroute_when_both_enabled) | test(edge_double_click_finish_stays_off_retained_bridge) | test(finish_double_click_stops_and_invalidates_paint) | test(retained_bridge_source_usage_stays_on_the_migration_ledger) | test(retained_widget_compat_island_stays_crate_private_and_controller_bound)'` -
   passed, 7 tests.
-- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pending_resize.rs` -
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_edge/finish.rs` -
   no matches.
 - `cargo fmt --check` - passed.
 - `python3 tools/check_layering.py` - passed.
@@ -790,7 +797,7 @@ Last run on 2026-05-20 for `RBX-M2-410`:
 Broader gates not run:
 
 - `cargo nextest run --workspace`
-  - Reason: `RBX-M2-410` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+  - Reason: `RBX-M2-420` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
 

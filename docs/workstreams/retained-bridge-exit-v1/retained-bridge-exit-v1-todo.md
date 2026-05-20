@@ -2971,6 +2971,30 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-420 Isolate edge double-click finish retained Cx adapter.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_edge/finish.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move edge double-click finish stop-propagation plus paint invalidation behind the existing
+      retained-agnostic `WidgetHandledCx` seam.
+    - Extend source-policy coverage so edge double-click finish cannot re-import retained bridge Cx
+      names.
+  - Result:
+    - `pointer_down_double_click_edge/finish.rs` no longer imports or names retained bridge Cx
+      types.
+    - Added a local tail test proving finish stops propagation, requests redraw, and invalidates
+      paint.
+    - Existing edge double-click reroute and insert-picker gesture tests remain green.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(double_click_edge_inserts_reroute_when_enabled) | test(alt_double_click_edge_opens_insert_node_picker) | test(alt_double_click_edge_prefers_picker_over_reroute_when_both_enabled) | test(edge_double_click_finish_stays_off_retained_bridge) | test(finish_double_click_stops_and_invalidates_paint) | test(retained_bridge_source_usage_stays_on_the_migration_ledger) | test(retained_widget_compat_island_stays_crate_private_and_controller_bound)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_edge/finish.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

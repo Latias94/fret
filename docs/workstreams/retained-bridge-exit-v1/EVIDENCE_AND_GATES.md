@@ -7838,3 +7838,56 @@ Broader gates not run:
   - Reason: `RBX-M2-410` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-20 - RBX-M2-420 edge double-click finish retained Cx adapter isolation
+
+Claim verified:
+
+- Edge double-click finish no longer imports or names retained bridge Cx types.
+- Stop-propagation plus paint invalidation now flows through the retained-agnostic
+  `WidgetHandledCx` seam.
+- Existing edge double-click reroute and insert-picker gesture behavior remains intact.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_edge/finish.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving edge
+    double-click finish side effects behind the retained-agnostic widget handled seam.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(double_click_edge_inserts_reroute_when_enabled) | test(alt_double_click_edge_opens_insert_node_picker) | test(alt_double_click_edge_prefers_picker_over_reroute_when_both_enabled) | test(edge_double_click_finish_stays_off_retained_bridge) | test(finish_double_click_stops_and_invalidates_paint) | test(retained_bridge_source_usage_stays_on_the_migration_ledger) | test(retained_widget_compat_island_stays_crate_private_and_controller_bound)'`
+  - Result: passed, 7 tests.
+  - Scope proven: the source-policy gate locks the edge double-click finish helper off retained
+    bridge Cx names; the local tail test proves finish still stops propagation, requests redraw,
+    and invalidates paint; existing double-click edge reroute and insert-picker gesture tests,
+    retained bridge ledger, and retained compat island gates remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_edge/finish.rs`
+  - Result: no matches.
+  - Scope proven: edge double-click finish no longer depends on retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after moving
+    the edge double-click finish helper behind the retained-agnostic seam.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-420` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.
