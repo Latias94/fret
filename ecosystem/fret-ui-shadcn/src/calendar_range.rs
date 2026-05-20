@@ -1474,6 +1474,9 @@ fn calendar_range_day_cell<H: UiHost>(
     let text_sm_line_height = theme
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
+    let mut day_text_style =
+        typography::fixed_line_box_style(fret_core::FontId::ui(), text_sm_px, text_sm_line_height);
+    day_text_style.weight = FontWeight::NORMAL;
     let supporting_text = calendar_day_button_supporting_text(
         day_button,
         CalendarDayButtonInfo {
@@ -1610,8 +1613,7 @@ fn calendar_range_day_cell<H: UiHost>(
                 day_text.clone(),
                 supporting_text.clone(),
                 supporting_test_id.clone(),
-                text_sm_px,
-                text_sm_line_height,
+                day_text_style.clone(),
                 muted_fg,
                 fg,
                 disabled,

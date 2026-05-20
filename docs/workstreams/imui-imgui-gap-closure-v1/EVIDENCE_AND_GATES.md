@@ -4792,6 +4792,32 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   `button_default_label_keeps_font_feature_and_axis_overrides_on_role`, and
   `button_default_label_keeps_weight_override_on_role`.
 
+2026-05-20 shadcn CalendarDayButton shared text-role slice:
+
+- Source gap before fix: `CalendarDayButton` day numbers and optional supporting text rendered with
+  Calendar-local `ui::label(...).text_size_px(...).line_height_px(...).text_color(...).nowrap()`
+  builders inside fixed-size day cells. That duplicated the single-line resize contract in the
+  calendar recipe and left the same day-cell text policy outside the shared role/gate vocabulary.
+- `calendar_day_label_text(...)` now backs day numbers with `decl_text::text_button_label(...)`,
+  layered with Calendar-owned normal weight, foreground, and center alignment through inherited
+  text/foreground metadata. `calendar_day_supporting_text(...)` backs optional supporting text with
+  `decl_text::text_control_readout(...)`, keeping the auxiliary value in the readout family while
+  preserving Calendar-owned center alignment and opacity behavior.
+- `Calendar` and `CalendarRange` both feed the same `day_text_style` into
+  `calendar_day_button_children(...)`, so single-date and range day cells share the role contract.
+  Calendar still owns day-cell chrome, selected/today/range foregrounds, disabled opacity, and
+  test-id/ARIA semantics.
+- `calendar_day_button_text_uses_shared_roles` proves day and supporting text leaves keep
+  `style: None`, `color: None`, fill width, shrink, `min-width: 0`, no-wrap, ellipsis, center
+  alignment, inherited text style, and inherited foreground. Existing supporting-text visibility
+  tests still prove out-of-month supporting text remains absent.
+- Focused gates passed:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  calendar_day_button_text_uses_shared_roles
+  calendar_day_button_supporting_text_renders_only_for_in_month_days --no-fail-fast`,
+  `cargo nextest run -p fret-ui-shadcn --lib calendar_range --no-fail-fast`, and
+  `cargo check -p fret-ui-shadcn --lib`.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground

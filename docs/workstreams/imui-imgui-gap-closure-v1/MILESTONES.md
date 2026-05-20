@@ -997,6 +997,11 @@ Exit criteria:
   consume the shared button-label role instead of local `ui::text(...).fixed_line_box_px(...)`
   builders, while preserving label font, feature, axis, weight, foreground, and `test_id` suffix
   behavior through inherited text/foreground metadata.
+  2026-05-20 shadcn CalendarDayButton text-role result: Calendar day numbers and optional
+  supporting text now consume shared button-label/readout role helpers instead of local
+  `ui::label(...).line_height_px(...).nowrap()` builders. Calendar still owns fixed day-cell
+  chrome, center alignment, range/selected/today foreground, and disabled opacity, while both
+  single and range calendar day cells share the same single-line shrink/ellipsis text contract.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

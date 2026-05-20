@@ -3930,6 +3930,42 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/calendar.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "fn calendar_day_label_text<H: UiHost>(",
+                "fn calendar_day_supporting_text<H: UiHost>(",
+                "decl_text::text_button_label(cx, text)",
+                "decl_text::text_control_readout(cx, text)",
+                "apply_calendar_day_text_layout(",
+                "props.layout.size.width = Length::Fill;",
+                "props.align = align;",
+                "day_text_style.weight = FontWeight::NORMAL;",
+                "calendar_day_button_text_uses_shared_roles",
+                "assert_eq!(day_text.wrap, TextWrap::None);",
+                "assert_eq!(day_text.overflow, TextOverflow::Ellipsis);",
+                "assert_eq!(supporting_text.wrap, TextWrap::None);",
+                "assert_eq!(supporting_text.overflow, TextOverflow::Ellipsis);",
+                "assert!(supporting_text_element.inherited_foreground.is_some());",
+            ],
+            forbidden=[
+                "let day_label = ui::label(day_text.clone())",
+                "let supporting = ui::label(text.clone())",
+                ".text_align(fret_core::TextAlign::Center)\n                    .text_color(ColorRef::Color(supporting_color))",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/calendar_range.rs"),
+            required=[
+                "day_text_style.weight = FontWeight::NORMAL;",
+                "calendar_day_button_children(",
+                "day_text_style.clone(),",
+            ],
+            forbidden=[
+                "calendar_day_button_children(\n                cx,\n                theme,\n                day_text.clone(),\n                supporting_text.clone(),\n                supporting_test_id.clone(),\n                text_sm_px,\n                text_sm_line_height,",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-shadcn/src/tooltip.rs"),
             required=[
                 "fn apply_tooltip_inherited_defaults_scoped(",

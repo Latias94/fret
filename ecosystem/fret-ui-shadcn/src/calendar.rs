@@ -17,6 +17,7 @@ use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
@@ -346,6 +347,51 @@ pub(crate) fn calendar_day_button_supporting_text(
         .and_then(|render| render(info))
 }
 
+fn apply_calendar_day_text_layout(
+    mut element: AnyElement,
+    align: fret_core::TextAlign,
+) -> AnyElement {
+    if let fret_ui::element::ElementKind::Text(props) = &mut element.kind {
+        props.layout.size.width = Length::Fill;
+        props.align = align;
+    }
+    element
+}
+
+fn calendar_day_label_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: Arc<str>,
+    text_style: TextStyle,
+    color: Color,
+) -> AnyElement {
+    let mut refinement = typography::composable_refinement_from_style(&text_style);
+    refinement.weight = Some(text_style.weight);
+
+    apply_calendar_day_text_layout(
+        decl_text::text_button_label(cx, text)
+            .inherit_text_style(refinement)
+            .inherit_foreground(color),
+        fret_core::TextAlign::Center,
+    )
+}
+
+fn calendar_day_supporting_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: Arc<str>,
+    text_style: TextStyle,
+    color: Color,
+) -> AnyElement {
+    let mut refinement = typography::composable_refinement_from_style(&text_style);
+    refinement.weight = Some(text_style.weight);
+
+    apply_calendar_day_text_layout(
+        decl_text::text_control_readout(cx, text)
+            .inherit_text_style(refinement)
+            .inherit_foreground(color),
+        fret_core::TextAlign::Center,
+    )
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn calendar_day_button_children<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -353,8 +399,7 @@ pub(crate) fn calendar_day_button_children<H: UiHost>(
     day_text: Arc<str>,
     supporting_text: Option<Arc<str>>,
     supporting_test_id: Option<Arc<str>>,
-    text_sm_px: Px,
-    text_sm_line_height: Px,
+    day_text_style: TextStyle,
     muted_fg: Color,
     fg: Color,
     disabled: bool,
@@ -398,37 +443,33 @@ pub(crate) fn calendar_day_button_children<H: UiHost>(
             wrap: false,
         },
         move |cx| {
-            let day_label = ui::label(day_text.clone())
-                .text_size_px(text_sm_px)
-                .line_height_px(text_sm_line_height)
-                .font_medium()
-                .w_full()
-                .text_align(fret_core::TextAlign::Center)
-                .text_color(ColorRef::Color(label_color))
-                .nowrap();
+            let day_label =
+                calendar_day_label_text(cx, day_text.clone(), day_text_style.clone(), label_color);
 
             let day_label = if disabled {
-                cx.opacity(0.5, |cx| vec![day_label.into_element(cx)])
+                cx.opacity(0.5, |_cx| vec![day_label])
             } else {
-                day_label.into_element(cx)
+                day_label
             };
 
             let supporting_label = supporting_text.as_ref().map(|text| {
                 let mut supporting_color = label_color;
                 supporting_color.a *= 0.7;
 
-                let supporting = ui::label(text.clone())
-                    .text_size_px(text_xs_px)
-                    .line_height_px(text_xs_line_height)
-                    .text_align(fret_core::TextAlign::Center)
-                    .text_color(ColorRef::Color(supporting_color))
-                    .nowrap();
-
-                let supporting = if let Some(test_id) = supporting_test_id.clone() {
-                    supporting.into_element(cx).test_id(test_id)
-                } else {
-                    supporting.into_element(cx)
-                };
+                let supporting_style = typography::fixed_line_box_style(
+                    fret_core::FontId::ui(),
+                    text_xs_px,
+                    text_xs_line_height,
+                );
+                let mut supporting = calendar_day_supporting_text(
+                    cx,
+                    text.clone(),
+                    supporting_style,
+                    supporting_color,
+                );
+                if let Some(test_id) = supporting_test_id.clone() {
+                    supporting = supporting.test_id(test_id);
+                }
 
                 if disabled {
                     cx.opacity(0.5, |_cx| vec![supporting])
@@ -2603,6 +2644,9 @@ fn calendar_day_cell<H: UiHost>(
     let text_sm_line_height = theme
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
+    let mut day_text_style =
+        typography::fixed_line_box_style(fret_core::FontId::ui(), text_sm_px, text_sm_line_height);
+    day_text_style.weight = FontWeight::NORMAL;
     let supporting_text = calendar_day_button_supporting_text(
         day_button,
         CalendarDayButtonInfo {
@@ -2703,8 +2747,7 @@ fn calendar_day_cell<H: UiHost>(
                 day_text.clone(),
                 supporting_text.clone(),
                 supporting_test_id.clone(),
-                text_sm_px,
-                text_sm_line_height,
+                day_text_style.clone(),
                 muted_fg,
                 fg,
                 disabled,
@@ -2757,6 +2800,18 @@ mod tests {
         node.children
             .iter()
             .find_map(|child| find_element_by_test_id(child, test_id))
+    }
+
+    fn find_text_element<'a>(node: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &node.kind
+            && props.text.as_ref() == needle
+        {
+            return Some(node);
+        }
+
+        node.children
+            .iter()
+            .find_map(|child| find_text_element(child, needle))
     }
 
     #[test]
@@ -2929,6 +2984,83 @@ mod tests {
                     .is_none(),
                 "expected outside-day supporting text to remain absent"
             );
+        });
+    }
+
+    #[test]
+    fn calendar_day_button_text_uses_shared_roles() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(112.0), Px(240.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let month = cx
+                .app
+                .models_mut()
+                .insert(CalendarMonth::new(2026, Month::May));
+            let selected = cx.app.models_mut().insert(None::<Date>);
+
+            let el = Calendar::new(month, selected)
+                .test_id_prefix("calendar.role")
+                .day_button(
+                    CalendarDayButton::new()
+                        .supporting_text_by(|info| info.in_month.then(|| Arc::<str>::from("$100"))),
+                )
+                .into_element(cx);
+
+            let day = find_text_element(&el, "12").expect("expected day number text");
+            let ElementKind::Text(day_text) = &day.kind else {
+                panic!("expected day number text leaf");
+            };
+            assert!(day_text.style.is_none());
+            assert!(day_text.color.is_none());
+            assert_eq!(day_text.layout.size.width, Length::Fill);
+            assert_eq!(day_text.layout.flex.shrink, 1.0);
+            assert_eq!(day_text.layout.size.min_width, Some(Length::Px(Px(0.0))));
+            assert_eq!(day_text.wrap, TextWrap::None);
+            assert_eq!(day_text.overflow, TextOverflow::Ellipsis);
+            assert_eq!(day_text.align, fret_core::TextAlign::Center);
+
+            let theme = Theme::global(&*cx.app);
+            let mut expected_day_style = typography::composable_refinement_from_style(
+                &typography::control_text_style(theme, typography::UiTextSize::Sm),
+            );
+            expected_day_style.weight = Some(FontWeight::NORMAL);
+            assert_eq!(day.inherited_text_style.as_ref(), Some(&expected_day_style));
+            assert!(day.inherited_foreground.is_some());
+
+            let supporting =
+                find_element_by_test_id(&el, "calendar.role:2026-05-12:supporting-text")
+                    .expect("expected supporting text test id");
+            let supporting_text_element =
+                find_text_element(supporting, "$100").expect("expected supporting text leaf");
+            let ElementKind::Text(supporting_text) = &supporting_text_element.kind else {
+                panic!("expected supporting text leaf");
+            };
+            assert!(supporting_text.style.is_none());
+            assert!(supporting_text.color.is_none());
+            assert_eq!(supporting_text.layout.size.width, Length::Fill);
+            assert_eq!(supporting_text.layout.flex.shrink, 1.0);
+            assert_eq!(
+                supporting_text.layout.size.min_width,
+                Some(Length::Px(Px(0.0)))
+            );
+            assert_eq!(supporting_text.wrap, TextWrap::None);
+            assert_eq!(supporting_text.overflow, TextOverflow::Ellipsis);
+            assert_eq!(supporting_text.align, fret_core::TextAlign::Center);
+
+            let mut expected_supporting_style = typography::composable_refinement_from_style(
+                &typography::control_text_style(theme, typography::UiTextSize::Xs),
+            );
+            expected_supporting_style.weight = Some(FontWeight::NORMAL);
+            assert_eq!(
+                supporting_text_element.inherited_text_style.as_ref(),
+                Some(&expected_supporting_style)
+            );
+            assert!(supporting_text_element.inherited_foreground.is_some());
         });
     }
 

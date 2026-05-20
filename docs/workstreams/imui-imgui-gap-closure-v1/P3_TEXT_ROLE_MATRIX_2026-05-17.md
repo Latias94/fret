@@ -71,6 +71,10 @@ component should construct `TextProps` locally.
   overrides onto button-label roles through inherited text refinement. That keeps the role-owned
   no-wrap/ellipsis layout intact instead of forcing components back to leaf-local `TextStyle`
   builders.
+- Calendar-like fixed button cells may consume the button-label/readout role families with
+  component-local inherited refinements for normal weight and center alignment. The role still owns
+  no-wrap, shrink, min-width-zero, and ellipsis; the calendar recipe owns cell chrome, selection
+  foreground, and date/range semantics.
 - `text_control_label(...)`: fill-width checkbox/radio/switch/combo/slider label text. It keeps
   fixed control chrome single-line under resize.
 - `text_section_chrome_label(...)`, `text_chrome_title(...)`, and `text_chrome_glyph(...)`: section,
