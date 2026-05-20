@@ -8997,3 +8997,66 @@ Broader gates not run:
   - Reason: `RBX-M2-600` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-21 - RBX-M2-610 context menu connection insert execution retained Cx route isolation
+
+Claim verified:
+
+- Context menu connection insert execution no longer imports or names retained bridge Cx types in
+  `context_menu/connection_execution_insert.rs` or its activate/apply/recovery helper files.
+- `ConnectionInsertMenuCx` carries the connection insert executor's host/window access plus
+  wire-drag resume/restore hooks while retained `EventCx` field access stays isolated in
+  `context_menu/connection_execution_insert/retained_cx.rs`.
+- Connection insert action behavior remains intact for missing candidates, ignored non-candidate
+  actions, rejected candidates, toast surfacing, recent-kind recording, wire-drag restore/resume,
+  and retained ledger behavior.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/connection_execution_insert.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/connection_execution_insert/activate.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/connection_execution_insert/apply.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/connection_execution_insert/recovery.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/connection_execution_insert/retained_cx.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving context menu
+    connection insert execution behind retained-agnostic seams.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(context_menu_connection_insert_execution_stays_off_retained_bridge) | test(connection_insert_action_with_missing_candidate_is_handled_without_side_effects) | test(connection_insert_action_ignores_non_candidate_actions) | test(connection_insert_action_records_candidate_and_restores_on_rejection) | test(connection_insert_apply_success_resumes_wire_drag) | test(connection_insert_apply_ignore_restores_wire_drag) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 7 tests.
+  - Scope proven: source-policy locks connection insert execution off retained bridge Cx names;
+    missing-candidate, ignored action, rejection toast/restore, success resume, ignore restore, and
+    retained ledger behavior remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/context_menu/connection_execution_insert.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/connection_execution_insert/activate.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/connection_execution_insert/apply.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/connection_execution_insert/recovery.rs`
+  - Result: no matches.
+  - Scope proven: the context menu connection insert execution route files no longer depend on
+    retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after formatting the context menu
+    connection insert seam changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after moving
+    context menu connection insert execution behind retained-agnostic seams.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-610` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.

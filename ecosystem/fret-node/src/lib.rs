@@ -202,6 +202,14 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/context_menu/background_execution/activate.rs");
     const UI_CANVAS_WIDGET_CONTEXT_MENU_BACKGROUND_EXECUTION_APPLY_RS: &str =
         include_str!("ui/canvas/widget/context_menu/background_execution/apply.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_CONNECTION_EXECUTION_INSERT_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/connection_execution_insert.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_CONNECTION_EXECUTION_INSERT_ACTIVATE_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/connection_execution_insert/activate.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_CONNECTION_EXECUTION_INSERT_APPLY_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/connection_execution_insert/apply.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_CONNECTION_EXECUTION_INSERT_RECOVERY_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/connection_execution_insert/recovery.rs");
     const UI_CANVAS_WIDGET_CONTEXT_MENU_EDGE_EXECUTION_RS: &str =
         include_str!("ui/canvas/widget/context_menu/edge_execution.rs");
     const UI_CANVAS_WIDGET_CONTEXT_MENU_EDGE_EXECUTION_OPEN_INSERT_RS: &str =
@@ -648,6 +656,30 @@ mod surface_policy_tests {
             assert!(
                 !context_menu_edge_execution_sources.contains(forbidden),
                 "context menu edge execution must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn context_menu_connection_insert_execution_stays_off_retained_bridge() {
+        let context_menu_connection_insert_execution_sources = [
+            UI_CANVAS_WIDGET_CONTEXT_MENU_CONNECTION_EXECUTION_INSERT_RS,
+            UI_CANVAS_WIDGET_CONTEXT_MENU_CONNECTION_EXECUTION_INSERT_ACTIVATE_RS,
+            UI_CANVAS_WIDGET_CONTEXT_MENU_CONNECTION_EXECUTION_INSERT_APPLY_RS,
+            UI_CANVAS_WIDGET_CONTEXT_MENU_CONNECTION_EXECUTION_INSERT_RECOVERY_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !context_menu_connection_insert_execution_sources.contains(forbidden),
+                "context menu connection insert execution must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }
