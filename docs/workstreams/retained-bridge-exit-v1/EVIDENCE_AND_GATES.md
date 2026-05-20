@@ -9301,3 +9301,74 @@ Broader gates not run:
   - Reason: `RBX-M2-650` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-21 - RBX-M2-660 pointer-up release retained Cx route isolation
+
+Claim verified:
+
+- Pointer-up release routing and release state helpers no longer import or name retained bridge Cx
+  types.
+- Sticky-wire ignored release uses a paint-invalidation capability, and pan release uses the
+  retained-agnostic `PointerUpReleaseCx` seam for host/window access plus pointer capture release.
+- Retained `EventCx` adaptation is isolated in `pointer_up_release_retained_cx.rs`.
+- Sticky-wire ignored release, pan inertia release, and right-pan context-menu behavior remain
+  green.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up/release.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_state/release.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_release_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_release_retained_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Red evidence:
+
+- `cargo nextest run -p fret-node --features compat-retained-canvas pointer_up_release_route_stays_off_retained_bridge`
+  - Result: failed before implementation, 1 failed test.
+  - Failure: `pointer-up release route must stay retained-Cx agnostic; found retained_bridge`.
+  - Scope proven: the new source-policy test caught retained bridge naming in pointer-up release
+    helpers before the seam extraction.
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving pointer-up
+    release helpers behind retained-agnostic seams.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_release_route_stays_off_retained_bridge) | test(sticky_wire_ignored_left_pointer_up_clears_ignore_and_invalidates_paint) | test(pan_inertia_emits_move_end_after_inertia_stops) | test(right_pan_defers_context_menu_until_pointer_up) | test(right_pan_drag_does_not_open_context_menu) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 6 tests.
+  - Scope proven: source-policy locks pointer-up release helpers off retained bridge Cx names;
+    sticky-wire ignored release, pan inertia release, right-pan context-menu deferral, and right-pan
+    drag behavior remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up/release.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_state/release.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_release_cx.rs`
+  - Result: no matches.
+  - Scope proven: pointer-up release route/state helpers and pure seam no longer depend on
+    retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after formatting the pointer-up release
+    seam changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after moving
+    pointer-up release helpers behind retained-agnostic seams.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-660` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.

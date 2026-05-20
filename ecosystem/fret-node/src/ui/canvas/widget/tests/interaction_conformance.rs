@@ -20,7 +20,7 @@ use super::{
 };
 use crate::ui::canvas::state::{EdgeDrag, PendingGroupDrag, PendingGroupResize, WireDragKind};
 use crate::ui::canvas::state::{GroupResize, NodeDrag, NodeResize, NodeResizeHandle};
-use fret_ui::retained_bridge::Widget as _;
+use fret_ui::{Invalidation, retained_bridge::Widget as _};
 
 fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {
     let mut graph = Graph::new(GraphId::new());
@@ -3311,6 +3311,60 @@ fn pointer_left_cancels_wire_drag() {
 
     // Cancel should not change graph history.
     assert_eq!(canvas.history.undo_len(), 0);
+}
+
+#[test]
+fn sticky_wire_ignored_left_pointer_up_clears_ignore_and_invalidates_paint() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, _edge, from, _to) = make_test_graph_edge_reconnect();
+    let graph = host.models.insert(graph_value);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
+
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
+    let snapshot = canvas.sync_view_state(&mut host);
+    canvas.interaction.sticky_wire_ignore_next_up = true;
+    canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
+        kind: WireDragKind::New {
+            from,
+            bundle: vec![from],
+        },
+        pos: Point::new(Px(10.0), Px(10.0)),
+    });
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let window = fret_core::AppWindowId::default();
+    let mut services = NullServices::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
+    cx.window = Some(window);
+
+    assert!(pointer_up::handle_pointer_up(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(10.0), Px(10.0)),
+        fret_core::MouseButton::Left,
+        1,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    assert!(!canvas.interaction.sticky_wire_ignore_next_up);
+    assert!(canvas.interaction.wire_drag.is_some());
+    assert!(
+        cx.invalidations
+            .iter()
+            .any(|(_, kind)| *kind == Invalidation::Paint)
+    );
+    assert!(cx.app.redraw.contains(&window));
 }
 
 #[test]

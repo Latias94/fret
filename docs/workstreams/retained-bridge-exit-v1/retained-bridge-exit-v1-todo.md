@@ -3659,6 +3659,40 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-660 Isolate pointer-up release retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up/release.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_state/release.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_release_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_release_retained_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move pointer-up sticky ignored release and pan release helpers off direct retained bridge Cx
+      names.
+    - Keep retained I/O explicit in a small `PointerUpReleaseCx` retained adapter while release
+      route/state helpers use retained-agnostic capabilities.
+    - Prove sticky-wire ignored release, pan inertia release, and right-pan context-menu behavior
+      remain green.
+  - Result:
+    - Added `PointerUpReleaseCx` for host/window access plus pointer-capture release and paint
+      invalidation.
+    - `pointer_up/release.rs` and `pointer_up_state/release.rs` now use retained-agnostic release
+      capabilities.
+    - Added `pointer_up_release_route_stays_off_retained_bridge` source-policy coverage.
+    - Added `sticky_wire_ignored_left_pointer_up_clears_ignore_and_invalidates_paint` behavior
+      coverage.
+  - Validation:
+    - Red: `cargo nextest run -p fret-node --features compat-retained-canvas pointer_up_release_route_stays_off_retained_bridge`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_release_route_stays_off_retained_bridge) | test(sticky_wire_ignored_left_pointer_up_clears_ignore_and_invalidates_paint) | test(pan_inertia_emits_move_end_after_inertia_stops) | test(right_pan_defers_context_menu_until_pointer_up) | test(right_pan_drag_does_not_open_context_menu) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up/release.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_state/release.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_release_cx.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

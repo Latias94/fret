@@ -296,6 +296,8 @@ mod pointer_up_node_drag;
 mod pointer_up_node_drag_ops;
 mod pointer_up_node_drag_parent;
 mod pointer_up_pending;
+mod pointer_up_release_cx;
+mod pointer_up_release_retained_cx;
 mod pointer_up_state;
 mod preview;
 mod reconnect;

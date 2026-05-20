@@ -118,6 +118,12 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_up_pending/release/node.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_PENDING_WIRE_DRAG_RS: &str =
         include_str!("ui/canvas/widget/pointer_up_pending/wire_drag.rs");
+    const UI_CANVAS_WIDGET_POINTER_UP_RELEASE_RS: &str =
+        include_str!("ui/canvas/widget/pointer_up/release.rs");
+    const UI_CANVAS_WIDGET_POINTER_UP_STATE_RELEASE_RS: &str =
+        include_str!("ui/canvas/widget/pointer_up_state/release.rs");
+    const UI_CANVAS_WIDGET_POINTER_UP_RELEASE_CX_RS: &str =
+        include_str!("ui/canvas/widget/pointer_up_release_cx.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_COMMIT_CX_RS: &str =
         include_str!("ui/canvas/widget/pointer_up_commit_cx.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_COMMIT_GROUP_DRAG_RS: &str =
@@ -836,6 +842,29 @@ mod surface_policy_tests {
             assert!(
                 !UI_CANVAS_WIDGET_EVENT_POINTER_UP_DISPATCH_RS.contains(forbidden),
                 "pointer-up guard dispatch must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pointer_up_release_route_stays_off_retained_bridge() {
+        let pointer_up_release_sources = [
+            UI_CANVAS_WIDGET_POINTER_UP_RELEASE_RS,
+            UI_CANVAS_WIDGET_POINTER_UP_STATE_RELEASE_RS,
+            UI_CANVAS_WIDGET_POINTER_UP_RELEASE_CX_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !pointer_up_release_sources.contains(forbidden),
+                "pointer-up release route must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

@@ -3,7 +3,10 @@ use fret_ui::UiHost;
 
 use crate::runtime::callbacks::{ViewportMoveEndOutcome, ViewportMoveKind};
 
-use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use super::super::{
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, pointer_up_release_cx::PointerUpReleaseCx,
+    widget_tail::WidgetPaintInvalidationCx,
+};
 use crate::ui::canvas::state::ViewSnapshot;
 
 pub(in super::super) fn handle_sticky_wire_ignored_release<
@@ -11,7 +14,7 @@ pub(in super::super) fn handle_sticky_wire_ignored_release<
     M: NodeGraphCanvasMiddleware,
 >(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl WidgetPaintInvalidationCx<H>,
     button: MouseButton,
 ) -> bool {
     if button == MouseButton::Left
@@ -28,7 +31,7 @@ pub(in super::super) fn handle_sticky_wire_ignored_release<
 
 pub(in super::super) fn handle_pan_release<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl PointerUpReleaseCx<H>,
     snapshot: &ViewSnapshot,
     button: MouseButton,
 ) -> bool {
@@ -37,8 +40,9 @@ pub(in super::super) fn handle_pan_release<H: UiHost, M: NodeGraphCanvasMiddlewa
     }
 
     super::super::cancel_session::clear_pan_drag_state(&mut canvas.interaction);
-    canvas.stop_auto_pan_timer(cx.app);
-    let started_inertia = canvas.maybe_start_pan_inertia_timer(cx.app, cx.window, snapshot);
+    canvas.stop_auto_pan_timer(cx.host());
+    let window = cx.window();
+    let started_inertia = canvas.maybe_start_pan_inertia_timer(cx.host(), window, snapshot);
     canvas.emit_move_end(
         snapshot,
         ViewportMoveKind::PanDrag,
