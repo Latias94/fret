@@ -5,16 +5,20 @@ mod pending;
 use fret_core::Point;
 use fret_ui::UiHost;
 
-use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, pointer_up_cx::PointerUpCx};
 use crate::ui::canvas::state::ViewSnapshot;
 
-pub(in super::super) fn handle_left_release_chain<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(in super::super) fn handle_left_release_chain<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     position: Point,
     zoom: f32,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: PointerUpCx<H, M>,
+{
     if super::super::marquee::handle_left_up(canvas, cx) {
         return true;
     }

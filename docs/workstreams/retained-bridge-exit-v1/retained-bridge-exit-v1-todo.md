@@ -3810,6 +3810,54 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-710 Isolate pointer-up route wrappers retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up/left.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/dispatch.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/marquee.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/marquee_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/marquee_pending.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/marquee_selection.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_begin.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_begin_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_begin_retained_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the top-level pointer-up fallback route wrappers off direct retained bridge Cx names by
+      composing the already-migrated release, commit, pending, wire, and marquee capabilities.
+    - Finish the marquee move path that `marquee.rs` forwards into so the wrapper gate covers a
+      real behavior path instead of only hiding the retained type name one frame higher.
+    - Extract a narrow pan-begin Cx seam for marquee-to-pan promotion without widening the slice to
+      the still-retained pan-move route.
+    - Prove pointer-up, marquee selection, and pan-begin behavior remain green.
+  - Result:
+    - Added `PointerUpCx` as a composed capability over `PointerUpReleaseCx`,
+      `PointerUpCommitCx`, `PendingNodeDragReleaseCx`, `WireCommitCx`, and `MarqueeCx`.
+    - `pointer_up.rs`, `pointer_up/left.rs`, `pointer_up_left_route.rs`, and
+      `pointer_up_left_route/dispatch.rs` now accept `PointerUpCx` instead of naming retained
+      `EventCx`.
+    - `marquee.rs`, `marquee_pending.rs`, and `marquee_selection.rs` now use `MarqueeCx` for host,
+      capture, release, and paint invalidation side effects; the old `marquee_retained_cx.rs`
+      adapter was deleted.
+    - Added `PanZoomBeginCx` plus `pan_zoom_begin_retained_cx.rs`, and moved
+      `pan_zoom_begin.rs` behind that seam. `pan_zoom.rs` still has a retained move wrapper and is
+      intentionally not source-policy gated as a whole in this slice.
+    - Added source-policy coverage for pointer-up route wrappers, marquee move handlers, and
+      pan-zoom begin helpers.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_route_wrappers_stay_off_retained_bridge) | test(marquee_begin_finish_stays_off_retained_bridge) | test(marquee_move_handlers_stay_off_retained_bridge) | test(pan_zoom_begin_helpers_stay_off_retained_bridge) | test(background_click_starts_pending_marquee_and_clears_selection_on_up) | test(marquee_replace_mode_replaces_selection_even_with_ctrl_pressed) | test(middle_mouse_panning_tracks_screen_delta_under_render_transform) | test(panning_emits_move_start_and_move_end) | test(pending_node_drag_click_select_release_toggles_selection_and_finishes) | test(edge_reconnect_drop_on_empty_can_disconnect_edge) | test(edge_drag_left_up_clears_edge_drag_and_invalidates_paint) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up/left.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/dispatch.rs ecosystem/fret-node/src/ui/canvas/widget/marquee.rs ecosystem/fret-node/src/ui/canvas/widget/marquee_pending.rs ecosystem/fret-node/src/ui/canvas/widget/marquee_selection.rs ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_begin.rs ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_begin_cx.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

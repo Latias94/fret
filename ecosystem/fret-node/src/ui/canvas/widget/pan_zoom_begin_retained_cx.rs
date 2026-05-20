@@ -1,11 +1,16 @@
+use fret_core::Rect;
 use fret_ui::UiHost;
 use fret_ui::retained_bridge::EventCx;
 
-use super::marquee_cx::MarqueeCx;
+use super::pan_zoom_begin_cx::PanZoomBeginCx;
 
-impl<H: UiHost> MarqueeCx<H> for EventCx<'_, H> {
+impl<H: UiHost> PanZoomBeginCx<H> for EventCx<'_, H> {
     fn host(&mut self) -> &mut H {
         self.app
+    }
+
+    fn bounds(&self) -> Rect {
+        self.bounds
     }
 
     fn capture_self_pointer(&mut self) {

@@ -4,17 +4,23 @@ use fret_core::{MouseButton, Point};
 use fret_runtime::Effect;
 use fret_ui::UiHost;
 
-use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot};
+use super::{
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot, pan_zoom_begin_cx::PanZoomBeginCx,
+};
 use crate::core::CanvasPoint;
 use crate::runtime::callbacks::{ViewportMoveEndOutcome, ViewportMoveKind};
 
-pub(super) fn begin_panning<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn begin_panning<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     start_pos: Point,
     button: MouseButton,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: PanZoomBeginCx<H>,
+{
     cancel_previous_motion(canvas, cx, snapshot);
     clear_competing_interactions(canvas);
 
@@ -22,25 +28,28 @@ pub(super) fn begin_panning<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas.interaction.panning_button = Some(button);
 
     let viewport =
-        NodeGraphCanvasWith::<M>::viewport_from_pan_zoom(cx.bounds, snapshot.pan, snapshot.zoom);
+        NodeGraphCanvasWith::<M>::viewport_from_pan_zoom(cx.bounds(), snapshot.pan, snapshot.zoom);
     let screen_pos = viewport.canvas_to_screen(start_pos);
     canvas.interaction.pan_last_screen_pos = Some(screen_pos);
     canvas.interaction.pan_last_sample_at = Some(Instant::now());
     canvas.interaction.pan_velocity = CanvasPoint::default();
 
     canvas.emit_move_start(snapshot, ViewportMoveKind::PanDrag);
-    cx.capture_pointer(cx.node);
+    cx.capture_self_pointer();
     super::paint_invalidation::invalidate_paint(cx);
     true
 }
 
-fn cancel_previous_motion<H: UiHost, M: NodeGraphCanvasMiddleware>(
+fn cancel_previous_motion<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
-) {
+) where
+    M: NodeGraphCanvasMiddleware,
+    Cx: PanZoomBeginCx<H>,
+{
     if canvas.interaction.pan_inertia.is_some() {
-        canvas.stop_pan_inertia_timer(cx.app);
+        canvas.stop_pan_inertia_timer(cx.host());
         canvas.emit_move_end(
             snapshot,
             ViewportMoveKind::PanInertia,
@@ -48,7 +57,7 @@ fn cancel_previous_motion<H: UiHost, M: NodeGraphCanvasMiddleware>(
         );
     }
     if let Some(state) = canvas.interaction.viewport_move_debounce.take() {
-        cx.app
+        cx.host()
             .push_effect(Effect::CancelTimer { token: state.timer });
         canvas.emit_move_end(snapshot, state.kind, ViewportMoveEndOutcome::Ended);
     }

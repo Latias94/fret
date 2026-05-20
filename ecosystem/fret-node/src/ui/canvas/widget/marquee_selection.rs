@@ -3,14 +3,18 @@ use fret_ui::UiHost;
 
 use crate::ui::canvas::state::{MarqueeDrag, ViewSnapshot};
 
-use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, marquee_cx::MarqueeCx};
 
-pub(super) fn update_active_marquee<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn update_active_marquee<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     position: Point,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: MarqueeCx<H>,
+{
     let Some(mut marquee) = canvas.interaction.marquee.take() else {
         return false;
     };
@@ -19,7 +23,7 @@ pub(super) fn update_active_marquee<H: UiHost, M: NodeGraphCanvasMiddleware>(
     let (selected_nodes, selected_edges) =
         super::marquee_selection_query::collect_marquee_selection(
             canvas,
-            cx.app,
+            cx.host(),
             snapshot,
             marquee.start_pos,
             marquee.pos,
@@ -29,7 +33,7 @@ pub(super) fn update_active_marquee<H: UiHost, M: NodeGraphCanvasMiddleware>(
     super::focus_session::clear_edge_focus(&mut canvas.interaction);
     super::marquee_selection_apply::apply_marquee_selection(
         canvas,
-        cx.app,
+        cx.host(),
         selected_nodes,
         selected_edges,
     );
@@ -37,13 +41,17 @@ pub(super) fn update_active_marquee<H: UiHost, M: NodeGraphCanvasMiddleware>(
     true
 }
 
-pub(super) fn activate_pending_marquee<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn activate_pending_marquee<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     start_pos: Point,
     position: Point,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: MarqueeCx<H>,
+{
     canvas.interaction.pending_marquee = None;
     let marquee = MarqueeDrag {
         start_pos,
@@ -54,14 +62,14 @@ pub(super) fn activate_pending_marquee<H: UiHost, M: NodeGraphCanvasMiddleware>(
     let (selected_nodes, selected_edges) =
         super::marquee_selection_query::collect_marquee_selection(
             canvas,
-            cx.app,
+            cx.host(),
             snapshot,
             marquee.start_pos,
             marquee.pos,
         );
     super::marquee_selection_apply::apply_marquee_selection(
         canvas,
-        cx.app,
+        cx.host(),
         selected_nodes,
         selected_edges,
     );

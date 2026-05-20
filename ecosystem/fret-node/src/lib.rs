@@ -97,6 +97,15 @@ mod surface_policy_tests {
     const UI_CANVAS_WIDGET_MARQUEE_CX_RS: &str = include_str!("ui/canvas/widget/marquee_cx.rs");
     const UI_CANVAS_WIDGET_MARQUEE_FINISH_RS: &str =
         include_str!("ui/canvas/widget/marquee_finish.rs");
+    const UI_CANVAS_WIDGET_MARQUEE_PENDING_RS: &str =
+        include_str!("ui/canvas/widget/marquee_pending.rs");
+    const UI_CANVAS_WIDGET_MARQUEE_RS: &str = include_str!("ui/canvas/widget/marquee.rs");
+    const UI_CANVAS_WIDGET_MARQUEE_SELECTION_RS: &str =
+        include_str!("ui/canvas/widget/marquee_selection.rs");
+    const UI_CANVAS_WIDGET_PAN_ZOOM_BEGIN_RS: &str =
+        include_str!("ui/canvas/widget/pan_zoom_begin.rs");
+    const UI_CANVAS_WIDGET_PAN_ZOOM_BEGIN_CX_RS: &str =
+        include_str!("ui/canvas/widget/pan_zoom_begin_cx.rs");
     const UI_CANVAS_WIDGET_PAINT_INVALIDATION_RS: &str =
         include_str!("ui/canvas/widget/paint_invalidation.rs");
     const UI_CANVAS_WIDGET_REDRAW_REQUEST_RS: &str =
@@ -124,6 +133,13 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_up_state/release.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_RELEASE_CX_RS: &str =
         include_str!("ui/canvas/widget/pointer_up_release_cx.rs");
+    const UI_CANVAS_WIDGET_POINTER_UP_RS: &str = include_str!("ui/canvas/widget/pointer_up.rs");
+    const UI_CANVAS_WIDGET_POINTER_UP_LEFT_RS: &str =
+        include_str!("ui/canvas/widget/pointer_up/left.rs");
+    const UI_CANVAS_WIDGET_POINTER_UP_LEFT_ROUTE_RS: &str =
+        include_str!("ui/canvas/widget/pointer_up_left_route.rs");
+    const UI_CANVAS_WIDGET_POINTER_UP_LEFT_ROUTE_DISPATCH_RS: &str =
+        include_str!("ui/canvas/widget/pointer_up_left_route/dispatch.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_LEFT_ROUTE_DOUBLE_CLICK_RS: &str =
         include_str!("ui/canvas/widget/pointer_up_left_route/double_click.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_COMMIT_CX_RS: &str =
@@ -589,6 +605,31 @@ mod surface_policy_tests {
             assert!(
                 !pointer_up_active_sources.contains(forbidden),
                 "pointer-up active dispatch must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pointer_up_route_wrappers_stay_off_retained_bridge() {
+        let pointer_up_route_sources = [
+            UI_CANVAS_WIDGET_POINTER_UP_RS,
+            UI_CANVAS_WIDGET_POINTER_UP_LEFT_RS,
+            UI_CANVAS_WIDGET_POINTER_UP_LEFT_ROUTE_RS,
+            UI_CANVAS_WIDGET_POINTER_UP_LEFT_ROUTE_DISPATCH_RS,
+            UI_CANVAS_WIDGET_MARQUEE_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !pointer_up_route_sources.contains(forbidden),
+                "pointer-up route wrappers must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }
@@ -1127,6 +1168,50 @@ mod surface_policy_tests {
             assert!(
                 !marquee_sources.contains(forbidden),
                 "marquee begin/finish helpers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn marquee_move_handlers_stay_off_retained_bridge() {
+        let marquee_sources = [
+            UI_CANVAS_WIDGET_MARQUEE_PENDING_RS,
+            UI_CANVAS_WIDGET_MARQUEE_SELECTION_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !marquee_sources.contains(forbidden),
+                "marquee move handlers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pan_zoom_begin_helpers_stay_off_retained_bridge() {
+        let pan_zoom_begin_sources = [
+            UI_CANVAS_WIDGET_PAN_ZOOM_BEGIN_RS,
+            UI_CANVAS_WIDGET_PAN_ZOOM_BEGIN_CX_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !pan_zoom_begin_sources.contains(forbidden),
+                "pan-zoom begin helpers must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

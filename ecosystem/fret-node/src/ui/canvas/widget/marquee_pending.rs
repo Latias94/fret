@@ -2,17 +2,21 @@ use fret_canvas::scale::canvas_units_from_screen_px;
 use fret_core::{Modifiers, MouseButton, Point};
 use fret_ui::UiHost;
 
-use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, marquee_cx::MarqueeCx};
 use crate::ui::canvas::state::ViewSnapshot;
 
-pub(super) fn handle_pending_marquee<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_pending_marquee<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     position: Point,
     modifiers: Modifiers,
     zoom: f32,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: MarqueeCx<H>,
+{
     if canvas.interaction.node_drag.is_some() {
         return false;
     }

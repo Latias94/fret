@@ -143,7 +143,7 @@ Compat-gated but retained-bridge-free support:
 - `ecosystem/fret-node/src/ui/canvas/widget/marquee_finish.rs`
   - `RBX-M2-350` moved marquee begin capture/paint invalidation and marquee finish view-state
     I/O/release tail actions behind the retained-agnostic `MarqueeCx` seam. Retained `EventCx`
-    implements that seam in `marquee_retained_cx.rs`.
+    adaptation moved again in `RBX-M2-710` to the shared pan-begin retained adapter.
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_preview.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_preview/compute.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_preview_cx.rs`
@@ -255,6 +255,21 @@ Compat-gated but retained-bridge-free support:
     edge-insert/edge-drag pointer-up leaf helpers behind retained-agnostic commit/release
     capabilities. Wire commit already used `WireCommitCx`; active dispatch now composes that with
     `PointerUpReleaseCx`.
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up/left.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/dispatch.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/marquee.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/marquee_pending.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/marquee_selection.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_begin.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_begin_cx.rs`
+  - `RBX-M2-710` moved the top-level pointer-up fallback wrappers behind the composed
+    retained-agnostic `PointerUpCx` capability and completed the forwarded marquee move path behind
+    `MarqueeCx`. It also extracted `PanZoomBeginCx` for marquee pending-to-pan promotion. Retained
+    `EventCx` adaptation for pan begin and marquee capture now lives in
+    `pan_zoom_begin_retained_cx.rs`; the old `marquee_retained_cx.rs` adapter was deleted.
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher.rs`
   - `RBX-M2-510` moved the top-level searcher escape/key/pointer/wheel route wrapper behind the
     retained-agnostic `SearcherCx` capability composed from the existing searcher pointer-down,
@@ -428,6 +443,7 @@ Deleted retained overlay files:
 | Pointer-up commit dispatch seam | retained left pointer-up routing still owns pending/active release chains and top-level dispatch, but the commit release chain only needs host/window plus pointer-capture release and paint invalidation | `RBX-M2-680` moves `pointer_up_commit.rs`, `pointer_up_node_drag.rs`, and `pointer_up_left_route/dispatch/commit.rs` onto `PointerUpCommitCx`, source-policy gates those helpers, and keeps node drag plus group resize commit behavior green | Continue isolating `pointer_up_left_route/dispatch/{pending,active}.rs`, then replace `pointer_up_left_route/dispatch.rs`, `pointer_up/left.rs`, and `pointer_up.rs`. |
 | Pointer-up pending dispatch seam | retained left pointer-up routing still owns active release chains and top-level dispatch, but the pending release chain only needs pending node-selection host access plus pointer-capture release and paint invalidation | `RBX-M2-690` moves `pointer_up_left_route/dispatch/pending.rs` onto `PendingNodeDragReleaseCx`, source-policy gates the helper, and adds real pointer-up behavior tests for pending node click-select and pending wire-drag promotion while keeping pending group release behavior green | Continue isolating `pointer_up_left_route/dispatch/active.rs`, then replace `pointer_up_left_route/dispatch.rs`, `pointer_up/left.rs`, and `pointer_up.rs`. |
 | Pointer-up active dispatch seam | retained left pointer-up routing still owns top-level dispatch, but the active release chain can be expressed as wire commit plus edge-insert/edge-drag release capabilities | `RBX-M2-700` moves `pointer_up_left_route/dispatch/active.rs` onto `WireCommitCx + PointerUpReleaseCx`, moves direct edge-insert and edge-drag pointer-up leaf helpers onto release seams, source-policy gates those files, and keeps wire left-up, edge-insert left-up, and edge-drag left-up behavior green | Continue isolating `pointer_up_left_route/dispatch.rs`, `pointer_up/left.rs`, and `pointer_up.rs`. |
+| Pointer-up route wrapper seam | retained canvas event routing still calls the fallback pointer-up route from retained `EventCx`, but the wrapper chain now only needs the composed release, commit, pending, wire, and marquee capabilities | `RBX-M2-710` moves `pointer_up.rs`, `pointer_up/left.rs`, `pointer_up_left_route.rs`, and `pointer_up_left_route/dispatch.rs` onto `PointerUpCx`; moves marquee move and pan-begin helpers behind `MarqueeCx` / `PanZoomBeginCx`; source-policy gates the wrappers, marquee move helpers, and pan-begin helpers; keeps real pointer-up, marquee selection, and panning behavior green | Replace the retained `event_pointer_up.rs` caller with a declarative/event-leaf path, or continue isolating sibling pointer-move/pan routes before deleting the retained event widget. |
 | Context menu UI tail seam | retained context menu callers still use retained `EventCx`, but UI open/restore/dismiss/finish/invalidate helpers only need handled/paint widget-tail behavior plus a focus-self side effect on open | `RBX-M2-520` moves `context_menu/ui.rs` and `context_menu/ui/event.rs` onto `WidgetHandledCx`, `WidgetPaintInvalidationCx`, and `ContextMenuFocusCx`; retained focus-self I/O lives in `context_menu/ui/event_retained_cx.rs`; source-policy gates UI tail helpers and adds open/restore/dismiss/invalidate tests | Continue with context menu key/pointer selection routes, then replace the higher-level context menu event route with a declarative/event-leaf path. |
 | Context menu pointer-move route seam | retained context menu pointer-move callers still pass retained `EventCx`, but the pointer-move helper only needs paint invalidation after hover state changes | `RBX-M2-530` moves `context_menu/key_navigation/pointer_move.rs` onto `WidgetPaintInvalidationCx`, source-policy gates the helper, and adds no-menu, hover-update, and repeated-hover tests | Continue with context menu key-down and pointer-down selection routes, then replace the higher-level context menu event route with a declarative/event-leaf path. |
 | Context menu key-down route seam | retained context menu key-down callers still pass retained `EventCx`, but the key-down helper only needs handled finish behavior plus active-selection activation I/O | `RBX-M2-540` moves `context_menu/key_navigation.rs` and `context_menu/key_navigation/key_down.rs` onto `ContextMenuKeyDownCx`, source-policy gates the route, and adds no-menu, ArrowDown, Enter activate, Enter keep-open, typeahead, and Backspace tests. `RBX-M2-550` then replaces the key-down-specific retained adapter with the shared `ContextMenuSelectionActivationCx` retained adapter. | Continue with higher-level context menu route wrappers, then replace them with a declarative/event-leaf path. |
