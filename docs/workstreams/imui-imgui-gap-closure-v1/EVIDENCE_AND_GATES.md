@@ -4964,6 +4964,33 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   `python tools\gate_imui_workstream_source.py`, `python tools\gate_imui_facade_teaching_source.py`,
   and `git diff --check`.
 
+2026-05-20 shadcn Combobox shared text-role slice:
+
+- Source gap before fix: default Combobox trigger selected/placeholder text and non-search popover
+  option labels still used component-local `ui::label(...)` fixed-line builders. This duplicated
+  the same resize-sensitive text contract fixed in NativeSelect and left Combobox trigger/listbox
+  defaults easy to drift from the shared role vocabulary.
+- `combobox_trigger_text(...)` now backs default trigger labels with
+  `decl_text::text_control_label(...)`; `combobox_item_text(...)` backs non-search option labels
+  with `decl_text::text_list_row_label(...)`. Both layer Combobox/Command typography and state
+  foreground through inherited metadata, leaving leaf `style` and `color` empty.
+- Combobox still owns trigger chrome, placeholder vs selected foreground, inline addons,
+  clear/chevron buttons, popover/drawer policy, search-enabled `CommandPalette` behavior, custom
+  item content, and RTL ordering. No new `fret-imui` API or runtime text role was added.
+- `combobox_trigger_and_item_text_use_shared_resize_roles` proves both helper paths keep
+  fill/grow/shrink/basis-zero, `min-width: 0`, no-wrap, ellipsis, inherited text style, inherited
+  foreground, and the trigger-label test id hook.
+- `tools/gate_imui_workstream_source.py` now requires the helper/test shape and forbids the old
+  local trigger/item default text builders from returning.
+- Focused gates passed:
+  `cargo fmt --check -p fret-ui-shadcn`,
+  `cargo check -p fret-ui-shadcn --lib`,
+  `cargo nextest run -p fret-ui-shadcn --lib
+  combobox_trigger_and_item_text_use_shared_resize_roles --no-fail-fast`,
+  `python -m py_compile tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_facade_teaching_source.py`, and `git diff --check`.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground

@@ -1154,6 +1154,13 @@ Readiness order for the next locally testable review slices:
    selected foreground, command-list selection, check icon visibility, popover placement, and
    RTL order; shared text roles own no-wrap, fill/grow/shrink, min-width-zero, ellipsis, and
    inherited typography/foreground semantics.
+   2026-05-20 shadcn Combobox text-role follow-up: default Combobox trigger labels now route
+   through `text_control_label(...)`, and non-search listbox option labels route through
+   `text_list_row_label(...)`, instead of component-local `ui::label(...)` fixed-line builders.
+   Combobox still owns trigger chrome, placeholder vs selected foreground, inline addons,
+   clear/chevron buttons, popover/drawer behavior, search-enabled CommandPalette behavior, custom
+   item content, and RTL order; shared text roles own default-label no-wrap, fill/grow/shrink,
+   min-width-zero, ellipsis, and inherited typography/foreground semantics.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

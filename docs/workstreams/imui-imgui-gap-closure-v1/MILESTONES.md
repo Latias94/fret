@@ -1028,6 +1028,13 @@ Exit criteria:
   metadata. NativeSelect keeps trigger chrome, popover/listbox behavior, check icons, placeholder
   state, and RTL ordering recipe-owned; the shared roles own the resize-critical single-line,
   fill/grow/shrink, min-width-zero, and ellipsis contracts.
+  2026-05-20 shadcn Combobox text-role result: default Combobox selected/placeholder trigger text
+  now consumes `text_control_label(...)`, and non-search option rows consume
+  `text_list_row_label(...)`, with Combobox/Command typography and state foreground layered
+  through inherited metadata. Combobox keeps trigger chrome, inline addons, clear/chevron buttons,
+  popover/drawer policy, search-enabled CommandPalette behavior, custom item content, and RTL
+  ordering recipe-owned; the shared roles own the default-label single-line, fill/grow/shrink,
+  min-width-zero, and ellipsis contracts.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

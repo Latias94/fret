@@ -4058,6 +4058,28 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/combobox.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "fn combobox_text_refinement(style: &TextStyle) -> fret_core::TextStyleRefinement",
+                "fn combobox_trigger_text<H: UiHost>(",
+                "decl_text::text_control_label(cx, label)",
+                "fn combobox_item_text<H: UiHost>(",
+                "decl_text::text_list_row_label(cx, label)",
+                "combobox_trigger_and_item_text_use_shared_resize_roles",
+                "assert_combobox_role_text(&trigger_text, trigger_fg);",
+                "assert_combobox_role_text(&item_text, item_fg);",
+                "assert_eq!(props.layout.flex.grow, 1.0);",
+                "assert_eq!(props.wrap, fret_core::TextWrap::None);",
+                "assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);",
+            ],
+            forbidden=[
+                "let mut label = ui::label( resolved_label.clone())",
+                "let mut label = ui::label( label_text.clone())",
+                ".text_size_px(label_style.size)",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-shadcn/src/calendar.rs"),
             required=[
                 "use fret_ui_kit::declarative::text as decl_text;",
