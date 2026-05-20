@@ -1072,6 +1072,10 @@ Readiness order for the next locally testable review slices:
    foreground patching now treats `inherited_text_style` as a protected role scope. Bare custom text
    keeps the component foreground fallback, while caller-supplied `text_button_label(...)` children
    keep their role-owned no-wrap, ellipsis, zero-min-width, and shrink contract.
+   2026-05-20 shadcn Badge children-role follow-up: badge foreground patching now treats
+   `inherited_text_style` as a protected role scope. Bare leading/trailing text keeps the badge
+   foreground fallback, while caller-supplied `text_button_label(...)` children keep their role-owned
+   no-wrap, ellipsis, zero-min-width, and shrink contract.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

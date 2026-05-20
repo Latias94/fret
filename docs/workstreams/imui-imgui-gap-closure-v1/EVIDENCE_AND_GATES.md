@@ -4544,6 +4544,27 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   toggle_group_item_children_apply_foreground_to_bare_text
   toggle_group_item_children_preserve_shared_button_label_role_contracts --no-fail-fast`.
 
+2026-05-20 shadcn Badge role-preservation slice:
+
+- Source gap before fix: `Badge` recursively wrote its resolved variant foreground into leading
+  and trailing child text leaves. That preserved color inheritance for bare text, but it overwrote
+  shared text role children such as `text_button_label(...)`, replacing the role-owned leaf color
+  path that controls single-line shrink/ellipsis in dense badge chrome.
+- `apply_badge_inherited_fg(...)` now treats `inherited_text_style` as a protected role scope and
+  carries that scope through descendants. Bare child text still receives the badge foreground; shared
+  role children keep `style: None`, `color: None`, no-wrap, ellipsis overflow, zero minimum width,
+  shrink, and inherited role metadata. Badge foreground still flows through the content root's
+  inherited foreground.
+- `badge_children_apply_foreground_to_bare_text` proves the bare-text fallback remains, and
+  `badge_children_preserve_shared_button_label_role_contracts` proves a shared button-label role
+  survives `Badge::leading_children(...)`.
+- Early focused runs timed out while Cargo/Rustc was still compiling. No process was killed; after
+  Cargo/Rustc exited naturally, the split focused runs passed:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  badge_children_apply_foreground_to_bare_text --no-fail-fast` and
+  `cargo nextest run -p fret-ui-shadcn --lib
+  badge_children_preserve_shared_button_label_role_contracts --no-fail-fast`.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground

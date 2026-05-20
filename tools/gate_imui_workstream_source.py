@@ -3807,6 +3807,25 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/badge.rs"),
+            required=[
+                "fn apply_badge_inherited_fg(",
+                "role_scope_active: bool",
+                "let role_scope_active = role_scope_active || element.inherited_text_style.is_some();",
+                "if props.color.is_none() && !role_scope_active",
+                "apply_badge_inherited_fg(child, fg, theme_fg, theme_muted_fg, role_scope_active)",
+                "badge_children_apply_foreground_to_bare_text",
+                "badge_children_preserve_shared_button_label_role_contracts",
+                "Badge::new(\"Core\")\n                .leading_children([decl_text::text_button_label(cx, \"Start\")])",
+                "assert_eq!(props.wrap, fret_core::TextWrap::None);",
+                "assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);",
+            ],
+            forbidden=[
+                "if props.color.is_none() {\n                props.color = Some(fg);",
+                "apply_badge_inherited_fg(child, fg, theme_fg, theme_muted_fg)\n",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-shadcn/src/item.rs"),
             required=[
                 "fn patch_item_title_text_style_recursive_scoped(",

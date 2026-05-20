@@ -390,10 +390,12 @@ fn apply_badge_inherited_fg(
     fg: Color,
     theme_fg: Color,
     theme_muted_fg: Color,
+    role_scope_active: bool,
 ) -> AnyElement {
+    let role_scope_active = role_scope_active || element.inherited_text_style.is_some();
     match &mut element.kind {
         ElementKind::Text(props) => {
-            if props.color.is_none() {
+            if props.color.is_none() && !role_scope_active {
                 props.color = Some(fg);
             }
         }
@@ -423,7 +425,9 @@ fn apply_badge_inherited_fg(
     element.children = element
         .children
         .into_iter()
-        .map(|child| apply_badge_inherited_fg(child, fg, theme_fg, theme_muted_fg))
+        .map(|child| {
+            apply_badge_inherited_fg(child, fg, theme_fg, theme_muted_fg, role_scope_active)
+        })
         .collect();
     element
 }
@@ -625,7 +629,9 @@ fn badge_with_patch<H: UiHost>(
             let children = children
                 .into_iter()
                 .map(|child| apply_badge_child_icon_size(child, icon_px))
-                .map(|child| apply_badge_inherited_fg(child, resolved_fg, theme_fg, theme_muted_fg))
+                .map(|child| {
+                    apply_badge_inherited_fg(child, resolved_fg, theme_fg, theme_muted_fg, false)
+                })
                 .map(|child| {
                     if hover_underline {
                         apply_badge_hover_underline(child)
@@ -640,7 +646,9 @@ fn badge_with_patch<H: UiHost>(
             let trailing_children = trailing_children
                 .into_iter()
                 .map(|child| apply_badge_child_icon_size(child, icon_px))
-                .map(|child| apply_badge_inherited_fg(child, resolved_fg, theme_fg, theme_muted_fg))
+                .map(|child| {
+                    apply_badge_inherited_fg(child, resolved_fg, theme_fg, theme_muted_fg, false)
+                })
                 .map(|child| {
                     if hover_underline {
                         apply_badge_hover_underline(child)
@@ -831,6 +839,7 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, FontWeight, Point, Rect, Size};
+    use fret_ui_kit::declarative::text as decl_text;
     fn blend_over(fg: Color, bg: Color) -> Color {
         let a = fg.a.clamp(0.0, 1.0);
         Color {
@@ -947,6 +956,18 @@ mod tests {
         None
     }
 
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &el.kind
+            && props.text.as_ref() == needle
+        {
+            return Some(el);
+        }
+
+        el.children
+            .iter()
+            .find_map(|child| find_text_element(child, needle))
+    }
+
     #[test]
     fn badge_defaults_to_font_medium_and_shrink_0() {
         let window = AppWindowId::default();
@@ -1001,6 +1022,52 @@ mod tests {
             assert!(
                 icons.is_empty(),
                 "expected inline-order test to stay text-only"
+            );
+        });
+    }
+
+    #[test]
+    fn badge_children_apply_foreground_to_bare_text() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let el = Badge::new("Core")
+                .leading_children([cx.text("Start")])
+                .into_element(cx);
+
+            let child = find_text(&el, "Start").expect("expected badge child text");
+            assert!(
+                child.color.is_some(),
+                "expected bare badge child text to receive Badge foreground"
+            );
+        });
+    }
+
+    #[test]
+    fn badge_children_preserve_shared_button_label_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let el = Badge::new("Core")
+                .leading_children([decl_text::text_button_label(cx, "Start")])
+                .into_element(cx);
+
+            let text = find_text_element(&el, "Start").expect("expected badge role child text");
+            let ElementKind::Text(props) = &text.kind else {
+                panic!("expected text leaf");
+            };
+            assert!(props.style.is_none());
+            assert!(props.color.is_none());
+            assert_eq!(props.wrap, fret_core::TextWrap::None);
+            assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
+            assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+            assert_eq!(props.layout.flex.shrink, 1.0);
+            assert!(text.inherited_text_style.is_some());
+            assert!(
+                find_inherited_foreground(&el).is_some(),
+                "expected Badge foreground to remain inherited through the content root"
             );
         });
     }
