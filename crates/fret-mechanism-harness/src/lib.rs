@@ -500,6 +500,7 @@ mod tests {
         option.node_id = Some(2);
         option.selected = Some(true);
         option.checked = Some(true);
+        option.checked_state = Some(ObservedSemanticsCheckedState::True);
         option.expanded = Some(true);
         option.level = Some(2);
         option.pos_in_set = Some(2);
@@ -613,6 +614,16 @@ mod tests {
                 predicate: UiPredicateV1::CheckedIs {
                     target: option_selector.clone(),
                     checked: true,
+                },
+            },
+        )
+        .unwrap();
+        evaluate_predicate(
+            &tree,
+            &MechanismPredicate::UiPredicate {
+                predicate: UiPredicateV1::CheckedStateIs {
+                    target: option_selector.clone(),
+                    state: Some(fret_diag_protocol::UiSemanticsCheckedStateV1::True),
                 },
             },
         )

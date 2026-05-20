@@ -433,3 +433,15 @@ A mechanism invariant is covered only when it has at least one of these:
 Passing diagnostics alone is not enough. Passing synthetic fixtures alone is not enough for a
 high-risk app path. The goal is controlled mechanism proof plus one real runtime lock where the
 mechanism can visibly fail.
+
+
+- Checkbox table mixed checked-state update:
+  `checked_state_is` now covers explicit tri-state checked semantics across protocol roundtrip,
+  bootstrap runtime evaluation, wait-until selector tracing, and mechanism-harness oracles. The
+  `ui-gallery-checkbox-table-mixed-state-action.json` gate starts on the Checkbox page, proves the
+  table select-all checkbox exports `mixed` when rows are partially selected, proves it becomes
+  `true` when all rows are selected, toggles one row back off to return to `mixed`, and then selects
+  all rows again. Focused runtime evidence is anchored at
+  `target/fret-diag-checkbox-table-mixed-state-action-v1/sessions/1779310480442-177764/1779310495372/ai.packet`,
+  and the dedicated suite evidence is anchored at
+  `target/fret-diag-checkbox-semantics-suite-table-mixed-v1/sessions/1779310724199-166384/suite.summary.json`.

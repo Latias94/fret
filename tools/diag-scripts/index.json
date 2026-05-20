@@ -5490,6 +5490,32 @@
       ]
     },
     {
+      "id": "ui-gallery-checkbox-table-mixed-state-action",
+      "path": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-table-mixed-state-action.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-checkbox-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "action-state",
+        "checkbox",
+        "mixed-state",
+        "semantics",
+        "shadcn",
+        "table",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Checkbox page.",
+        "Verifies that the table select-all checkbox exports explicit mixed/true checked-state semantics while keeping invoke enabled through row and select-all mutations."
+      ]
+    },
+    {
       "id": "ui-gallery-chrome-torture-layout",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-layout.json",
       "required_capabilities": [],

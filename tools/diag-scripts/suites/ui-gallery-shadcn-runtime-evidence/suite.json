@@ -5,6 +5,7 @@
     "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-usage-toggle.json",
     "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-focusable-disabled-keyboard-suppression.json",
     "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-disabled-action-state.json",
+    "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-table-mixed-state-action.json",
     "tools/diag-scripts/ui-gallery/command/ui-gallery-command-scrollable-filter-clamps-scroll.json",
     "tools/diag-scripts/ui-gallery/command/ui-gallery-command-retained-active-descendant-action-state.json",
     "tools/diag-scripts/ui-gallery-command-scrollable-collection-metadata-mutation.json",

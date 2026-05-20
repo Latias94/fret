@@ -9,8 +9,8 @@ use crate::{
     UiActionScriptV2, UiActionStepV2, UiBoundsMetricV1, UiCommandDispatchTraceQueryV1,
     UiComparisonV1, UiImeEventV1, UiIncomingOpenInjectItemV1, UiKeyModifiersV1, UiMouseButtonV1,
     UiOverlayPlacementTraceQueryV1, UiPointerKindV1, UiPredicateV1, UiSelectorV1,
-    UiSemanticsActionV1, UiSemanticsLiveV1, UiSemanticsRelationV1, UiShortcutRoutingTraceQueryV1,
-    UiWindowTargetV1,
+    UiSemanticsActionV1, UiSemanticsCheckedStateV1, UiSemanticsLiveV1, UiSemanticsRelationV1,
+    UiShortcutRoutingTraceQueryV1, UiWindowTargetV1,
 };
 
 pub fn test_id(id: impl Into<String>) -> UiSelectorV1 {
@@ -85,6 +85,20 @@ pub fn semantics_relation_is_empty(
 
 pub fn selected_is(target: UiSelectorV1, selected: bool) -> UiPredicateV1 {
     UiPredicateV1::SelectedIs { target, selected }
+}
+
+pub fn checked_state_is(target: UiSelectorV1, state: UiSemanticsCheckedStateV1) -> UiPredicateV1 {
+    UiPredicateV1::CheckedStateIs {
+        target,
+        state: Some(state),
+    }
+}
+
+pub fn checked_state_is_none(target: UiSelectorV1) -> UiPredicateV1 {
+    UiPredicateV1::CheckedStateIs {
+        target,
+        state: None,
+    }
 }
 
 pub fn disabled_is(target: UiSelectorV1, disabled: bool) -> UiPredicateV1 {

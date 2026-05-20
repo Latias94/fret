@@ -1501,3 +1501,17 @@ date: 2026-05-12
     `target/fret-diag-slider-semantics-suite-v2/sessions/1779307963346-175080/suite.summary.json`,
     and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 16/16 with Slider row run
     id `1779308615620`.
+
+
+- [x] Add a Checkbox table mixed checked-state semantics runtime gate.
+  - Result:
+    `checked_state_is` is now a first-class diagnostics predicate over explicit tri-state checked
+    semantics, with protocol, bootstrap runtime, wait-trace, and mechanism-harness oracle support.
+    `ui-gallery-checkbox-table-mixed-state-action.json` starts directly on the Checkbox page,
+    gates the table select-all checkbox as `mixed`, proves `invoke=true`, selects all rows,
+    toggles a single row back to false, and proves the select-all checkbox returns to `mixed` before
+    selecting all again. Focused runtime passed with run id `1779310495372`, the updated
+    `ui-gallery-checkbox-semantics` suite passed 2/2 with summary
+    `target/fret-diag-checkbox-semantics-suite-table-mixed-v1/sessions/1779310724199-166384/suite.summary.json`,
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 17/17 with the new row run
+    id `1779311405413`.

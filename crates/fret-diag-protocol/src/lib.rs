@@ -1948,6 +1948,14 @@ pub enum UiSemanticsLiveV1 {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+pub enum UiSemanticsCheckedStateV1 {
+    False,
+    True,
+    Mixed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum UiSemanticsActionV1 {
     Focus,
     Invoke,
@@ -2095,6 +2103,16 @@ pub enum UiPredicateV1 {
     CheckedIs {
         target: UiSelectorV1,
         checked: bool,
+    },
+    /// True when the target exists and its tri-state checked semantics matches.
+    ///
+    /// Prefer this for indeterminate checkboxes: `checked_is_none` only proves that the legacy
+    /// binary flag is absent, while this predicate proves the explicit mixed/true/false
+    /// checked-state contract.
+    CheckedStateIs {
+        target: UiSelectorV1,
+        /// Use `null` to assert that no tri-state checked semantics are exposed.
+        state: Option<UiSemanticsCheckedStateV1>,
     },
     ExpandedIs {
         target: UiSelectorV1,
@@ -4624,6 +4642,30 @@ mod tests {
 
         let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
         assert!(matches!(roundtrip, UiPredicateV1::SelectedIs { .. }));
+    }
+
+    #[test]
+    fn predicate_checked_state_is_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::CheckedStateIs {
+            target: UiSelectorV1::TestId {
+                id: "select-all".to_string(),
+                root_z_index: None,
+            },
+            state: Some(UiSemanticsCheckedStateV1::Mixed),
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "checked_state_is",
+                "target": { "kind": "test_id", "id": "select-all" },
+                "state": "mixed",
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(roundtrip, UiPredicateV1::CheckedStateIs { .. }));
     }
 
     #[test]

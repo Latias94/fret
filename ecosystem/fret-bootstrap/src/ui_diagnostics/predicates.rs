@@ -168,6 +168,22 @@ fn semantics_live_from_protocol(
     }
 }
 
+fn semantics_checked_state_from_protocol(
+    state: fret_diag_protocol::UiSemanticsCheckedStateV1,
+) -> fret_core::SemanticsCheckedState {
+    match state {
+        fret_diag_protocol::UiSemanticsCheckedStateV1::False => {
+            fret_core::SemanticsCheckedState::False
+        }
+        fret_diag_protocol::UiSemanticsCheckedStateV1::True => {
+            fret_core::SemanticsCheckedState::True
+        }
+        fret_diag_protocol::UiSemanticsCheckedStateV1::Mixed => {
+            fret_core::SemanticsCheckedState::Mixed
+        }
+    }
+}
+
 fn semantics_action_value(
     actions: fret_core::SemanticsActions,
     action: fret_diag_protocol::UiSemanticsActionV1,
@@ -986,6 +1002,12 @@ fn eval_predicate(
                 return false;
             };
             node.flags.checked == Some(*checked)
+        }
+        UiPredicateV1::CheckedStateIs { target, state } => {
+            let Some(node) = select_node(target) else {
+                return false;
+            };
+            node.flags.checked_state == state.map(semantics_checked_state_from_protocol)
         }
         UiPredicateV1::ExpandedIs { target, expanded } => {
             let Some(node) = select_node(target) else {
@@ -2096,8 +2118,9 @@ fn eval_predicate(
 mod predicate_tests {
     use super::*;
     use fret_core::{
-        NodeId, Point, PointerId, Px, Rect, RenderTargetId, SemanticsActions, SemanticsFlags,
-        SemanticsLive, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size,
+        NodeId, Point, PointerId, Px, Rect, RenderTargetId, SemanticsActions,
+        SemanticsCheckedState, SemanticsFlags, SemanticsLive, SemanticsNode, SemanticsRole,
+        SemanticsRoot, SemanticsSnapshot, Size,
     };
     use fret_diag_protocol::UiSemanticsRelationV1;
     use slotmap::KeyData;
@@ -3014,6 +3037,94 @@ mod predicate_tests {
                     root_z_index: None,
                 },
                 read_only: true,
+            },
+        ));
+    }
+
+    #[test]
+    fn checked_state_is_matches_semantics_checked_state() {
+        let window = window_id(1);
+        let mut root = semantics_node(1, "root", false);
+        root.role = SemanticsRole::Window;
+        let mut checkbox = semantics_node(2, "select-all", false);
+        checkbox.parent = Some(root.id);
+        checkbox.role = SemanticsRole::Checkbox;
+        checkbox.flags.checked_state = Some(SemanticsCheckedState::Mixed);
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![root, checkbox],
+        };
+
+        assert!(eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::CheckedStateIs {
+                target: UiSelectorV1::TestId {
+                    id: "select-all".to_string(),
+                    root_z_index: None,
+                },
+                state: Some(fret_diag_protocol::UiSemanticsCheckedStateV1::Mixed),
+            },
+        ));
+        assert!(!eval_predicate(
+            &snapshot,
+            rect(0.0, 0.0, 100.0, 100.0),
+            window,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            &[],
+            1,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &UiPredicateV1::CheckedStateIs {
+                target: UiSelectorV1::TestId {
+                    id: "select-all".to_string(),
+                    root_z_index: None,
+                },
+                state: Some(fret_diag_protocol::UiSemanticsCheckedStateV1::True),
             },
         ));
     }

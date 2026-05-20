@@ -1049,7 +1049,8 @@ When authoring scripts, prefer stable `test_id` selectors and stick to predicate
 Recent additions:
 
 - `role_is` (assert semantics role equality for a target)
-- `checked_is` / `checked_is_none` (assert `checked` flag state; useful for checkbox/radio menu items)
+- `checked_is` / `checked_is_none` (assert legacy binary `checked` flag state; useful for checkbox/radio menu items)
+- `checked_state_is` (assert explicit tri-state checked semantics: `false`, `true`, `mixed`, or `null`; use this for indeterminate checkbox gates)
 - `active_item_is` (assert the active item for composite widgets: matches either container `active_descendant` or roving focus)
 - `window_style_effective_is` (assert effective/clamped OS window style facets such as `transparent`, `appearance`, `hit_test`, and `opacity_alpha_u8`)
 - `dock_drop_preview_kind_is` (assert coarse docking drop preview decision: `wrap_binary` vs `insert_into_split`)

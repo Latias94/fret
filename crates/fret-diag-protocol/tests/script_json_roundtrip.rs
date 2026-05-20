@@ -730,6 +730,13 @@ fn script_v2_roundtrip_ui_gallery_slider_numeric_action_state() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_checkbox_table_mixed_state_action() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-table-mixed-state-action.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_card_description_no_early_wrap() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-card-description-no-early-wrap.json"
