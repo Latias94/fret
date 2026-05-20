@@ -21,8 +21,6 @@ mod minimap_interaction_policy;
 mod minimap_navigation_policy;
 mod minimap_policy;
 mod minimap_projection;
-#[cfg(feature = "compat-retained-canvas")]
-mod panel_button_paint;
 mod panel_item_state;
 mod panel_navigation_policy;
 mod panel_pointer_policy;

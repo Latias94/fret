@@ -6402,3 +6402,77 @@ Broader gates not run:
     docs. No-user proof plus pre-delete placement/source-policy tests, post-delete default/compat
     targeted tests, compile gates, formatting, layering, catalog, and whitespace checks cover the
     changed behavior and boundary surface.
+
+## 2026-05-20 - RBX-M2-180 no-user retained submit/tail/panel paint helper deletion
+
+Claim verified:
+
+- `retained_submit.rs`, `retained_event_tail.rs`, and `panel_button_paint.rs` no longer had live
+  consumers after the previous overlay, portal, editor, and panel wrapper deletions.
+- `panel_pointer_policy.rs` now contains only default hover/release policy and no retained
+  `EventCx` adapter.
+- `fret-node` overlay sources stay retained-bridge-free; the retained bridge source ledger now
+  allows only the retained canvas widget root, middleware, and `canvas/widget/**`.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/retained_submit.rs` deleted
+- `ecosystem/fret-node/src/ui/retained_event_tail.rs` deleted
+- `ecosystem/fret-node/src/ui/overlays/panel_button_paint.rs` deleted
+- `ecosystem/fret-node/src/ui/overlays/panel_pointer_policy.rs`
+- `ecosystem/fret-node/src/ui/mod.rs`
+- `ecosystem/fret-node/src/ui/overlays/mod.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- Pre-delete `cargo nextest run -p fret-node --features compat-retained-canvas sync_panel_hover_only_reports_real_changes release_panel_press_only_activates_on_matching_release_target centered_text_origin_centers_within_button_rect leading_text_origin_keeps_padding_and_vertical_centering retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+  - Result: passed, 6 tests.
+  - Scope proven: the retained panel button paint helper tests, default panel pointer policy tests,
+    and retained source-policy gates were green before deleting no-user retained helper modules.
+- Pre-delete `rg -n "\b(retained_submit|submit_graph_transaction|submit_graph_and_view_transaction|retained_event_tail|request_paint_repaint|finish_paint_event|focus_canvas_and_finish_paint_event|focus_canvas_and_finish_layout_event|finish_portal_command|begin_panel_press|paint_panel_button|paint_panel_label|centered_text_origin|leading_text_origin)\b" ecosystem/fret-node/src apps crates ecosystem tools --glob '!target/**' --glob '!ecosystem/fret-node/src/lib.rs' --glob '!ecosystem/fret-node/src/ui/retained_submit.rs' --glob '!ecosystem/fret-node/src/ui/retained_event_tail.rs' --glob '!ecosystem/fret-node/src/ui/overlays/panel_button_paint.rs' --glob '!ecosystem/fret-node/src/ui/overlays/panel_pointer_policy.rs'`
+  - Result: no live consumers outside module entries and deleted/self files.
+  - Scope proven: deleting the retained helper modules does not remove a still-referenced runtime
+    path.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the remaining retained compatibility island compiles after deleting the helper
+    modules and retained panel press adapter.
+- `cargo nextest run -p fret-node sync_panel_hover_only_reports_real_changes release_panel_press_only_activates_on_matching_release_target retained_bridge_source_usage_stays_on_the_migration_ledger default_overlay_policy_surfaces_stay_off_retained_bridge retained_widget_compat_island_stays_crate_private_and_controller_bound`
+  - Result: passed, 5 tests.
+  - Scope proven: default panel pointer policy and overlay/source policy gates remain green after
+    overlay helper deletion.
+- `cargo nextest run -p fret-node --features compat-retained-canvas sync_panel_hover_only_reports_real_changes release_panel_press_only_activates_on_matching_release_target retained_bridge_source_usage_stays_on_the_migration_ledger default_overlay_policy_surfaces_stay_off_retained_bridge retained_widget_compat_island_stays_crate_private_and_controller_bound`
+  - Result: passed, 5 tests.
+  - Scope proven: the same policy gates remain green under `compat-retained-canvas`.
+- `cargo fmt -p fret-node`
+  - Result: passed.
+  - Scope proven: touched `fret-node` Rust files were formatted.
+- `rg -n "retained_bridge|UiTreeRetainedExt|RetainedSubtreeProps|use fret_ui::retained_bridge|fret_ui::retained_bridge::" ecosystem/fret-node/src/ui/overlays -g '*.rs'`
+  - Result: no matches.
+  - Scope proven: overlay source files no longer contain retained bridge usage.
+
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after shrinking
+    the `fret-node` retained source ledger.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-180` deletes no-user retained helper modules in `fret-node` and updates
+    workstream docs. No-user proof plus pre-delete helper/policy tests, post-delete default/compat
+    targeted tests, compile gates, formatting, layering, catalog, and whitespace checks cover the
+    changed behavior and boundary surface.

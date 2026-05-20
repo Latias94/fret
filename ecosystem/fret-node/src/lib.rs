@@ -359,14 +359,7 @@ mod surface_policy_tests {
         let mut files = Vec::new();
         collect_rs_files(&ui_root, &mut files);
 
-        let allowed_exact = [
-            "src/ui/retained_event_tail.rs",
-            "src/ui/retained_submit.rs",
-            "src/ui/canvas/middleware.rs",
-            "src/ui/canvas/widget.rs",
-            "src/ui/overlays/panel_button_paint.rs",
-            "src/ui/overlays/panel_pointer_policy.rs",
-        ];
+        let allowed_exact = ["src/ui/canvas/middleware.rs", "src/ui/canvas/widget.rs"];
         let allowed_prefixes = ["src/ui/canvas/widget/"];
         let retained_terms = [
             "use fret_ui::retained_bridge",
@@ -448,14 +441,7 @@ mod surface_policy_tests {
             );
         }
 
-        for retained_widget_module in ["mod panel_button_paint;"] {
-            let marker =
-                format!("#[cfg(feature = \"compat-retained-canvas\")]\n{retained_widget_module}");
-            assert!(
-                UI_OVERLAYS_MOD_RS.contains(&marker),
-                "retained overlay widget module must stay behind compat-retained-canvas: {retained_widget_module}"
-            );
-        }
+        assert!(!UI_OVERLAYS_MOD_RS.contains("mod panel_button_paint;"));
     }
 
     #[test]

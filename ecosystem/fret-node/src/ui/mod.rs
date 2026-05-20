@@ -29,10 +29,6 @@ mod viewport_options;
 
 mod editors;
 mod overlays;
-#[cfg(feature = "compat-retained-canvas")]
-mod retained_event_tail;
-#[cfg(feature = "compat-retained-canvas")]
-mod retained_submit;
 mod screen_space_placement;
 
 pub use binding::NodeGraphSurfaceBinding;

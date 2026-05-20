@@ -2257,6 +2257,40 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-180 Delete no-user retained submit/tail/panel paint helpers.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/retained_submit.rs`
+    - `ecosystem/fret-node/src/ui/retained_event_tail.rs`
+    - `ecosystem/fret-node/src/ui/overlays/panel_button_paint.rs`
+    - `ecosystem/fret-node/src/ui/overlays/panel_pointer_policy.rs`
+    - `ecosystem/fret-node/src/ui/mod.rs`
+    - `ecosystem/fret-node/src/ui/overlays/mod.rs`
+    - `ecosystem/fret-node/src/lib.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Delete retained helper modules that no longer have live consumers after the overlay, portal,
+      editor, and panel wrapper deletions.
+    - Move `panel_pointer_policy.rs` fully onto the default policy path by deleting its retained
+      `begin_panel_press` adapter.
+    - Remove overlay retained bridge source entries from the `fret-node` retained source ledger.
+  - Result:
+    - Deleted `retained_submit.rs`, `retained_event_tail.rs`, and `panel_button_paint.rs`.
+    - Removed their module entries from `ui/mod.rs` / `ui/overlays/mod.rs`.
+    - Deleted retained-only `begin_panel_press(...)`; `panel_pointer_policy.rs` now contains only
+      default hover/release policy shared by controls and blackboard.
+    - Shrank the retained bridge source policy allowlist so only the retained canvas widget root,
+      middleware, and `canvas/widget/**` remain.
+  - Validation:
+    - pre-delete `cargo nextest run -p fret-node --features compat-retained-canvas sync_panel_hover_only_reports_real_changes release_panel_press_only_activates_on_matching_release_target centered_text_origin_centers_within_button_rect leading_text_origin_keeps_padding_and_vertical_centering retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - pre-delete `rg -n "\b(retained_submit|submit_graph_transaction|submit_graph_and_view_transaction|retained_event_tail|request_paint_repaint|finish_paint_event|focus_canvas_and_finish_paint_event|focus_canvas_and_finish_layout_event|finish_portal_command|begin_panel_press|paint_panel_button|paint_panel_label|centered_text_origin|leading_text_origin)\b" ecosystem/fret-node/src apps crates ecosystem tools --glob '!target/**' --glob '!ecosystem/fret-node/src/lib.rs' --glob '!ecosystem/fret-node/src/ui/retained_submit.rs' --glob '!ecosystem/fret-node/src/ui/retained_event_tail.rs' --glob '!ecosystem/fret-node/src/ui/overlays/panel_button_paint.rs' --glob '!ecosystem/fret-node/src/ui/overlays/panel_pointer_policy.rs'`
+    - post-delete `cargo check -p fret-node --features compat-retained-canvas`
+    - post-delete `cargo nextest run -p fret-node sync_panel_hover_only_reports_real_changes release_panel_press_only_activates_on_matching_release_target retained_bridge_source_usage_stays_on_the_migration_ledger default_overlay_policy_surfaces_stay_off_retained_bridge retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - post-delete `cargo nextest run -p fret-node --features compat-retained-canvas sync_panel_hover_only_reports_real_changes release_panel_press_only_activates_on_matching_release_target retained_bridge_source_usage_stays_on_the_migration_ledger default_overlay_policy_surfaces_stay_off_retained_bridge retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - `cargo fmt -p fret-node`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

@@ -617,7 +617,10 @@ arbitrary per-kind renderer hosting, portal command routing, and first-party tex
 command submission. `RBX-M2-170` then deleted the no-user retained `NodeGraphEditor` and
 `NodeGraphPanel` composition wrappers, removed their compat module entries and retained-source
 ledger allowlist entries, and kept the actual panel placement contract on default
-`screen_space_placement::rect_in_bounds`.
+`screen_space_placement::rect_in_bounds`. `RBX-M2-180` then deleted no-user retained helper
+modules (`retained_submit.rs`, `retained_event_tail.rs`, `panel_button_paint.rs`), removed their
+module entries, deleted the retained-only `begin_panel_press(...)` adapter, and left
+`panel_pointer_policy.rs` as default-only hover/release policy shared by controls and blackboard.
 
 ## Next Task
 
@@ -631,9 +634,11 @@ Recommended next implementation shape:
   retained toolbar widgets are gone; retained minimap is gone; retained blackboard is gone; retained
   rename host is gone; retained diagnostics anchors are gone; retained a11y active-descendant
   anchors are gone; retained portal host/oracle code is gone; retained editor/panel composition
-  wrappers are gone. The remaining canvas interaction families still need default-path tests before
-  their retained widget/event code can be deleted. Each slice should first add default declarative
-  tests, then remove or gate less retained code.
+  wrappers are gone; retained overlay helper tails are gone. The remaining retained bridge source
+  ledger is now the canvas widget root, canvas middleware, and `canvas/widget/**`. The remaining
+  canvas interaction families still need default-path tests before their retained widget/event code
+  can be deleted. Each slice should first add default declarative tests, then remove or gate less
+  retained code.
 - After the ledger no longer contains behavior-only retained files, remove
   `compat-retained-canvas` / `unstable-retained-bridge` from `fret-node`.
 - Keep the known independent `fret-ui` layout primitive drift
@@ -642,7 +647,22 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-20 for `RBX-M2-170`:
+Last run on 2026-05-20 for `RBX-M2-180`:
+
+- pre-delete `cargo nextest run -p fret-node --features compat-retained-canvas sync_panel_hover_only_reports_real_changes release_panel_press_only_activates_on_matching_release_target centered_text_origin_centers_within_button_rect leading_text_origin_keeps_padding_and_vertical_centering retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound` -
+  passed, 6 tests.
+- pre-delete `rg -n "\b(retained_submit|submit_graph_transaction|submit_graph_and_view_transaction|retained_event_tail|request_paint_repaint|finish_paint_event|focus_canvas_and_finish_paint_event|focus_canvas_and_finish_layout_event|finish_portal_command|begin_panel_press|paint_panel_button|paint_panel_label|centered_text_origin|leading_text_origin)\b" ecosystem/fret-node/src apps crates ecosystem tools --glob '!target/**' --glob '!ecosystem/fret-node/src/lib.rs' --glob '!ecosystem/fret-node/src/ui/retained_submit.rs' --glob '!ecosystem/fret-node/src/ui/retained_event_tail.rs' --glob '!ecosystem/fret-node/src/ui/overlays/panel_button_paint.rs' --glob '!ecosystem/fret-node/src/ui/overlays/panel_pointer_policy.rs'` -
+  no live consumers outside module entries and deleted/self files.
+- post-delete `cargo check -p fret-node --features compat-retained-canvas` - passed with the
+  pre-existing `fret-ui` `current_effective_opacity` dead-code warning.
+- post-delete `cargo nextest run -p fret-node sync_panel_hover_only_reports_real_changes release_panel_press_only_activates_on_matching_release_target retained_bridge_source_usage_stays_on_the_migration_ledger default_overlay_policy_surfaces_stay_off_retained_bridge retained_widget_compat_island_stays_crate_private_and_controller_bound` -
+  passed, 5 tests.
+- post-delete `cargo nextest run -p fret-node --features compat-retained-canvas sync_panel_hover_only_reports_real_changes release_panel_press_only_activates_on_matching_release_target retained_bridge_source_usage_stays_on_the_migration_ledger default_overlay_policy_surfaces_stay_off_retained_bridge retained_widget_compat_island_stays_crate_private_and_controller_bound` -
+  passed, 5 tests.
+- post-delete `rg -n "retained_bridge|UiTreeRetainedExt|RetainedSubtreeProps|use fret_ui::retained_bridge|fret_ui::retained_bridge::" ecosystem/fret-node/src/ui/overlays -g '*.rs'` -
+  no matches.
+
+Previous run on 2026-05-20 for `RBX-M2-170`:
 
 - no-user `rg -n "\b(NodeGraphEditor|NodeGraphPanel|NodeGraphPanelPosition|NodeGraphPanelSize)\b" ecosystem/fret-node/src apps crates ecosystem tools --glob '!target/**' --glob '!ecosystem/fret-node/src/lib.rs'` -
   no matches.
