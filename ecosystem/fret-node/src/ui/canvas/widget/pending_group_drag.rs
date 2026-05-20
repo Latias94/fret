@@ -4,16 +4,23 @@ mod checks;
 use fret_core::Point;
 use fret_ui::UiHost;
 
-use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use super::{
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith,
+    pending_group_activation_cx::PendingGroupActivationCx,
+};
 use crate::ui::canvas::state::ViewSnapshot;
 
-pub(super) fn handle_pending_group_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_pending_group_drag_move<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     position: Point,
     zoom: f32,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: PendingGroupActivationCx<H>,
+{
     if canvas.interaction.group_drag.is_some() {
         return false;
     }
@@ -25,7 +32,7 @@ pub(super) fn handle_pending_group_drag_move<H: UiHost, M: NodeGraphCanvasMiddle
         return true;
     }
 
-    let nodes = activate::group_drag_start_nodes(canvas, cx.app, pending.group);
+    let nodes = activate::group_drag_start_nodes(canvas, cx.host(), pending.group);
 
     super::pending_drag_session::activate_pending_group_drag(
         &mut canvas.interaction,

@@ -265,6 +265,8 @@ mod pan_zoom_zoom;
 mod pending_connection_session;
 mod pending_drag;
 mod pending_drag_session;
+mod pending_group_activation_cx;
+mod pending_group_activation_retained_cx;
 mod pending_group_drag;
 mod pending_group_resize;
 mod pending_resize;

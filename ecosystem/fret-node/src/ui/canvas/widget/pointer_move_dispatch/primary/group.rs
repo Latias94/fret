@@ -10,8 +10,6 @@ pub(super) fn dispatch_group_move_handlers<H: UiHost, M: NodeGraphCanvasMiddlewa
 ) -> bool {
     pending_group_drag::handle_pending_group_drag_move(canvas, cx, snapshot, position, zoom)
         || group_drag::handle_group_drag_move(canvas, cx, snapshot, position, modifiers, zoom)
-        || pending_group_resize::handle_pending_group_resize_move(
-            canvas, cx, snapshot, position, zoom,
-        )
+        || pending_group_resize::handle_pending_group_resize_move(canvas, snapshot, position, zoom)
         || group_resize::handle_group_resize_move(canvas, cx, snapshot, position, modifiers, zoom)
 }

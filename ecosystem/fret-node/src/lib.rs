@@ -119,6 +119,12 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/group_resize/tail.rs");
     const UI_CANVAS_WIDGET_GROUP_PREVIEW_MOVE_CX_RS: &str =
         include_str!("ui/canvas/widget/group_preview_move_cx.rs");
+    const UI_CANVAS_WIDGET_PENDING_GROUP_DRAG_RS: &str =
+        include_str!("ui/canvas/widget/pending_group_drag.rs");
+    const UI_CANVAS_WIDGET_PENDING_GROUP_RESIZE_RS: &str =
+        include_str!("ui/canvas/widget/pending_group_resize.rs");
+    const UI_CANVAS_WIDGET_PENDING_GROUP_ACTIVATION_CX_RS: &str =
+        include_str!("ui/canvas/widget/pending_group_activation_cx.rs");
     const UI_VIEW_QUEUE_RS: &str = include_str!("ui/canvas/widget/view_queue.rs");
     const FRET_EXAMPLES_CARGO_TOML: &str = include_str!("../../../apps/fret-examples/Cargo.toml");
     const FRET_EXAMPLES_LIB_RS: &str = include_str!("../../../apps/fret-examples/src/lib.rs");
@@ -262,6 +268,29 @@ mod surface_policy_tests {
             assert!(
                 !group_preview_move_sources.contains(forbidden),
                 "group preview move handlers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pending_group_activation_handlers_stay_off_retained_bridge() {
+        let pending_group_activation_sources = [
+            UI_CANVAS_WIDGET_PENDING_GROUP_DRAG_RS,
+            UI_CANVAS_WIDGET_PENDING_GROUP_RESIZE_RS,
+            UI_CANVAS_WIDGET_PENDING_GROUP_ACTIVATION_CX_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !pending_group_activation_sources.contains(forbidden),
+                "pending group activation handlers must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

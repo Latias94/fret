@@ -2601,6 +2601,37 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-290 Isolate pending group activation retained Cx adapters.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pending_group_drag.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pending_group_resize.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pending_group_activation_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pending_group_activation_retained_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/group.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move pending group drag activation host access behind a retained-agnostic
+      `PendingGroupActivationCx` seam.
+    - Remove the unused retained Cx parameter from pending group resize activation.
+    - Extend the default source-policy gate so pending group activation handlers and the pure Cx
+      seam cannot re-import retained bridge Cx names.
+  - Result:
+    - Added `PendingGroupActivationCx` for retained-agnostic host access.
+    - Added `pending_group_activation_retained_cx.rs` as the retained `EventCx` adapter.
+    - Moved `pending_group_drag.rs` off direct retained `EventCx` signatures.
+    - Removed the unused Cx parameter from `pending_group_resize.rs`.
+    - Added `pending_group_activation_handlers_stay_off_retained_bridge` source-policy coverage.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas pending_group_activation_handlers_stay_off_retained_bridge group_preview_move_handlers_stay_off_retained_bridge pending_group_drag_release_clears_session_without_committing pending_group_resize_release_clears_session_without_committing group_header_click_selects_group_and_arms_pending_group_drag group_resize_is_previewed_and_committed_on_pointer_up group_resize_clamps_to_children retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pending_group_drag.rs ecosystem/fret-node/src/ui/canvas/widget/pending_group_resize.rs ecosystem/fret-node/src/ui/canvas/widget/pending_group_activation_cx.rs`
+    - `cargo fmt -p fret-node`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

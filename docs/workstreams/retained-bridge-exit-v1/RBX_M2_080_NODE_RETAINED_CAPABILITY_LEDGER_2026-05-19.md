@@ -102,6 +102,13 @@ Compat-gated but retained-bridge-free support:
   - `RBX-M2-280` moved group drag/resize move handler host/bounds access behind the
     retained-agnostic `GroupPreviewMoveCx` seam. Retained `EventCx` implements that seam in
     `group_preview_move_retained_cx.rs`.
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_group_activation_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_group_drag.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_group_resize.rs`
+  - `RBX-M2-290` moved pending group drag activation host access behind the retained-agnostic
+    `PendingGroupActivationCx` seam. Retained `EventCx` implements that seam in
+    `pending_group_activation_retained_cx.rs`; pending group resize activation no longer takes a
+    retained Cx parameter.
 
 Deleted retained overlay files:
 
@@ -151,6 +158,7 @@ Deleted retained overlay files:
 | Cancel cleanup tail action | retained canvas still performs retained caller timer I/O and adapts retained `EventCx` release-capture/stop-propagation through `retained_widget_tail.rs` | `RBX-M2-250` moves cancel finish tail side effects onto retained-agnostic `HandledPointerCaptureReleaseCx` and source-policy gates `cancel_cleanup.rs` | Continue migrating direct retained `EventCx` tail helpers, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 | Sticky-wire target picker Cx seam | retained canvas still adapts retained `EventCx` host/window access through `sticky_wire_targets/retained_picker_cx.rs` | `RBX-M2-260` moves picker host/window access and handled finish tail behavior onto retained-agnostic `StickyWireTargetPickerCx` and source-policy gates `sticky_wire_targets/picker.rs` | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 | Group preview move handler/tail action | retained canvas still adapts host/bounds access through `group_preview_move_retained_cx.rs` and paint invalidation through `retained_widget_tail.rs` | `RBX-M2-270` moves group drag/resize preview state update tails onto retained-agnostic `WidgetPaintInvalidationCx`; `RBX-M2-280` moves group drag/resize move handlers onto retained-agnostic `GroupPreviewMoveCx` and source-policy gates both handlers plus the pure seam | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
+| Pending group activation Cx seam | retained canvas still adapts pending group drag host access through `pending_group_activation_retained_cx.rs`; pending group resize no longer needs retained Cx | `RBX-M2-290` moves pending group drag activation onto retained-agnostic `PendingGroupActivationCx`, removes the unused pending group resize Cx parameter, and source-policy gates both handlers plus the pure seam | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 
 ## New Gate
 
