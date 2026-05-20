@@ -339,6 +339,12 @@ date: 2026-05-12
   `target/fret-diag-command-retained-active-descendant-action-state-runner-timer-fresh-20260521/sessions/1779298813208-173816/1779298834262/ai.packet`,
   and the fresh broad-suite summary is anchored at
   `target/fret-diag-shadcn-runtime-evidence-runner-timer-fresh-20260521/sessions/1779299075645-7824/suite.summary.json`.
+- Runner repeating-timer overlap stress update:
+  `overlapping_repeating_timers_do_not_catch_up_inside_one_runner_tick` now locks the same
+  scheduler invariant without launching UI Gallery. It covers a window-targeted
+  script-keepalive-style timer and a windowless asset-reload-poll-style timer that are both made
+  stale again in the same runner tick; neither may refire until `tick_id` advances. The full
+  `repeating_timer` filter now has 3 passing timer tests.
 - Hit-test path-cache runtime update:
   the same promoted script now also injects `FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1` and waits for
   `hit_test_path_cache_hits_ge(min=1)`, proving real cached-path reuse during the runtime pointer

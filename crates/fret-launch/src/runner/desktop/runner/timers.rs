@@ -226,4 +226,76 @@ mod tests {
         assert!(runner.fire_due_timers(Instant::now()));
         assert_eq!(fired.get(), 0);
     }
+
+    #[test]
+    fn overlapping_repeating_timers_do_not_catch_up_inside_one_runner_tick() {
+        let fired = std::rc::Rc::new(Cell::new(0));
+        let mut runner = WinitRunner::new(
+            WinitRunnerConfig::default(),
+            App::new(),
+            TimerTestDriver {
+                fired: fired.clone(),
+            },
+        );
+
+        let script_keepalive = TimerToken(100);
+        let asset_reload_poll = TimerToken(101);
+        let interval = Duration::from_secs(60);
+        let due_at = Instant::now() - Duration::from_secs(1);
+
+        runner.timers.insert(
+            script_keepalive,
+            TimerEntry {
+                window: Some(AppWindowId::default()),
+                deadline: due_at,
+                repeat: Some(interval),
+                last_fired_tick: None,
+            },
+        );
+        runner.timers.insert(
+            asset_reload_poll,
+            TimerEntry {
+                window: None,
+                deadline: due_at,
+                repeat: Some(interval),
+                last_fired_tick: None,
+            },
+        );
+
+        let first_tick = runner.tick_id;
+        assert!(runner.fire_due_timers(Instant::now()));
+
+        for token in [script_keepalive, asset_reload_poll] {
+            let entry = runner.timers.get(&token).expect("repeating timer remains");
+            assert_eq!(entry.last_fired_tick, Some(first_tick));
+        }
+
+        // Model a slow handler / stale drain timestamp by making both timers overdue again before
+        // the runner advances to another event-loop tick. Neither the script keepalive timer nor an
+        // asset-reload-style windowless poll timer may catch up inside the same tick.
+        for token in [script_keepalive, asset_reload_poll] {
+            runner
+                .timers
+                .get_mut(&token)
+                .expect("timer remains")
+                .deadline = due_at;
+        }
+
+        assert!(
+            !runner.fire_due_timers(Instant::now()),
+            "overlapping repeating timers should not self-spin inside one runner tick"
+        );
+        assert_eq!(
+            fired.get(),
+            0,
+            "this scheduling stress gate does not require a real winit window"
+        );
+
+        runner.tick_id = fret_runtime::TickId(runner.tick_id.0.saturating_add(1));
+        assert!(runner.fire_due_timers(Instant::now()));
+        for token in [script_keepalive, asset_reload_poll] {
+            let entry = runner.timers.get(&token).expect("repeating timer remains");
+            assert_eq!(entry.last_fired_tick, Some(runner.tick_id));
+        }
+    }
 }

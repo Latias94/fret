@@ -1245,6 +1245,13 @@ date: 2026-05-12
     and pointer-move injection. Fresh focused Command diagnostics passed with run id
     `1779298834262`, and the broad shadcn runtime-evidence suite passed 13/13 with summary
     `target/fret-diag-shadcn-runtime-evidence-runner-timer-fresh-20260521/sessions/1779299075645-7824/suite.summary.json`.
+- [x] Add an owning-layer overlap stress gate for runner repeating timers.
+  - Result:
+    `overlapping_repeating_timers_do_not_catch_up_inside_one_runner_tick` covers a
+    script-keepalive-style window timer and an asset-reload-poll-style windowless timer that are
+    both made stale again inside the same runner tick. Neither timer refires until `tick_id`
+    advances. Focused gate `overlapping_repeating_timers` passed, and the full `repeating_timer`
+    filter now passes 3 timer tests.
 - [x] Refresh AI FileTree protocol coverage and auto-height VirtualList runtime proof.
   - Result: the four promoted `ui-gallery-ai-file-tree` scripts now have direct
     `fret-diag-protocol` roundtrip coverage. The fresh suite rerun re-exposed the auto-height

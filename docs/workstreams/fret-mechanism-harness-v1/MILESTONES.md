@@ -3569,3 +3569,20 @@ suite.
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-runner-timer-fresh-20260521 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
   with summary
   `target/fret-diag-shadcn-runtime-evidence-runner-timer-fresh-20260521/sessions/1779299075645-7824/suite.summary.json`.
+
+## M160: Runner Repeating-Timer Overlap Stress Gate
+
+Status: complete for the cheap owning-layer regression that generalizes M159.
+
+- Added `overlapping_repeating_timers_do_not_catch_up_inside_one_runner_tick` to cover two overdue
+  repeating timers in the same runner tick: a window-targeted script-keepalive-style timer and a
+  windowless asset-reload-poll-style timer.
+- The test forces both timers stale again after their first fire without advancing `tick_id`. The
+  second `fire_due_timers` call must return `false`, proving the same-tick guard applies across
+  overlapping timers and not only one isolated token.
+- After `tick_id` advances, both timers are allowed to fire again and update `last_fired_tick` to
+  the new tick.
+- Gates pass:
+  `cargo test --profile dev-fast -p fret-launch overlapping_repeating_timers --lib -- --nocapture`;
+  and `cargo test --profile dev-fast -p fret-launch repeating_timer --lib -- --nocapture` with 3
+  passing timer tests.

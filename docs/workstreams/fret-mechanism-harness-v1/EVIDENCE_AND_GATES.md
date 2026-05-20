@@ -6615,3 +6615,21 @@ Next slice recommendation:
   - result: passed 13/13; `stage_counts={"passed":13}`; `reason_code_counts={}`.
   - Command retained-active-descendant row: passed, run id `1779299206755`.
   - RadioGroup checked-state mutation row: passed, run id `1779299568012`.
+
+## Runner Repeating-Timer Overlap Stress Gate
+
+- invariant:
+  the same-tick repeating-timer guard must apply across overlapping timers. A window-targeted
+  diagnostics keepalive timer and a windowless asset-reload-style polling timer can both be due in
+  a stale drain turn, but neither may catch up more than once before the runner tick advances.
+- finding:
+  no new runtime defect was reproduced. This is a regression-hardening companion to the F242
+  runtime failure so future scheduler changes can be checked cheaply without launching UI Gallery.
+- implementation anchors:
+  `crates/fret-launch/src/runner/desktop/runner/timers.rs`.
+- focused stress gate:
+  `cargo test --profile dev-fast -p fret-launch overlapping_repeating_timers --lib -- --nocapture`
+  - result: passed; 1 test.
+- full timer regression filter:
+  `cargo test --profile dev-fast -p fret-launch repeating_timer --lib -- --nocapture`
+  - result: passed; 3 tests.
