@@ -153,12 +153,16 @@ reopen.
       Maintenance: `apps/fret-devtools/src/native.rs` now also surfaces a persistent
       `demo-metrics-debug` route in the GUI shell, naming the editor proof/editor notes/device shell
       demos plus `diag stats`, `diag layout-perf-summary`, `diag memory-summary`, `diag triage`,
-      and `diag hotspots` entrypoints. This improves Dear ImGui-style demo/metrics/debug
+      `diag hotspots`, and `diag trace` entrypoints. This improves Dear ImGui-style demo/metrics/debug
       discoverability without widening `fret-imui`.
       Maintenance: `fretboard-dev list tool-apps` now also prints the same `demo-metrics-debug`
       route, and `fretboard-dev list tool-apps --json` exposes it under `first_open_routes` with
       grouped demo, metrics, and debug commands. This keeps CLI, GUI, MCP-style consumers, and
       docs on one first-open route vocabulary instead of making the GUI the only productized entry.
+      Maintenance: the CLI/JSON route, DevTools GUI guide panel, and MCP `first-open.md` projection
+      now include `diag trace <bundle-or-dir> --json` as the trace artifact drill-down next to
+      stats/layout/memory/triage/hotspots, keeping perf-attribution handoff visible from the same
+      Demo/Metrics/Debug entry.
       Maintenance: the same GUI shell now surfaces a `Gate Commands` block for stale paint/scene,
       pixels-changed, perf-threshold, and resource-footprint diagnostics command templates. This is
       tracked in `docs/workstreams/diag-devtools-gui-v1/`, keeping gate UX in the diagnostics owner

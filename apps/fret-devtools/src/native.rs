@@ -147,6 +147,8 @@ const DEVTOOLS_DEBUG_TRIAGE_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json";
 const DEVTOOLS_DEBUG_HOTSPOTS_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json";
+const DEVTOOLS_DEBUG_TRACE_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json";
 #[derive(Clone)]
 struct DevtoolsConfig {
     transport: DiagTransportKind,
@@ -7220,6 +7222,7 @@ fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String> {
         format!("metrics memory: {DEVTOOLS_METRICS_MEMORY_COMMAND}"),
         format!("debug triage: {DEVTOOLS_DEBUG_TRIAGE_COMMAND}"),
         format!("debug hotspots: {DEVTOOLS_DEBUG_HOTSPOTS_COMMAND}"),
+        format!("debug trace: {DEVTOOLS_DEBUG_TRACE_COMMAND}"),
     ]
 }
 
@@ -8121,6 +8124,9 @@ mod tests {
         );
         assert!(
             text.contains("debug hotspots: cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json")
+        );
+        assert!(
+            text.contains("debug trace: cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json")
         );
     }
 

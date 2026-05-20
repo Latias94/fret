@@ -914,13 +914,34 @@ DevTools demo/metrics/debug discovery follow-up (2026-05-21): `fretboard-dev lis
 prints a `route: demo-metrics-debug` row, and `fretboard-dev list tool-apps --json` exposes the
 same route under `first_open_routes`. The route groups the editor proof/editor notes/device shell
 demos separately from the `diag stats`, `diag layout-perf-summary`, `diag memory-summary`,
-`diag triage`, and `diag hotspots` commands. This keeps the Dear ImGui-style Demo/Metrics/Debug
-entrypoint discoverable from CLI/JSON consumers rather than only from the DevTools GUI guide panel.
+`diag triage`, `diag hotspots`, and `diag trace` commands. This keeps the Dear ImGui-style
+Demo/Metrics/Debug entrypoint discoverable from CLI/JSON consumers rather than only from the
+DevTools GUI guide panel.
 Focused gates passed locally for this slice:
 
 ```text
 cargo fmt -p fretboard-dev --check
 cargo nextest run -p fretboard-dev tool_apps_list_names_first_open_routes tool_apps_json_value_exposes_stable_machine_readable_shape --no-fail-fast
+python -m py_compile tools/diag_gate_imui_p2_devtools_first_open.py tools/diag_gate_imui_product_chain.py tools/gate_imui_workstream_source.py
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built
+python tools/diag_gate_imui_product_chain.py --only discovery --reuse-built
+python tools/gate_imui_workstream_source.py
+git diff --check
+```
+
+DevTools demo/metrics/debug trace drill-down follow-up (2026-05-21): the same
+`demo-metrics-debug` route is now projected through CLI, JSON, DevTools GUI, and MCP first-open
+surfaces with `diag trace <bundle-or-dir> --json` alongside stats/layout/memory/triage/hotspots.
+This keeps trace artifact handoff visible from the first-open Demo/Metrics/Debug route while
+leaving perf implementation work in the diagnostics/perf lanes. Focused gates passed locally for
+this follow-up:
+
+```text
+cargo fmt -p fretboard-dev -p fret-devtools -p fret-devtools-mcp --check
+cargo nextest run -p fretboard-dev tool_apps_list_names_first_open_routes tool_apps_json_value_exposes_stable_machine_readable_shape --no-fail-fast
+cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes --no-fail-fast
+cargo nextest run -p fret-devtools-mcp mcp_first_open_resource_text_surfaces_imui_product_chain --no-fail-fast
+cargo build -p fretboard-dev -p fret-devtools -p fret-devtools-mcp
 python -m py_compile tools/diag_gate_imui_p2_devtools_first_open.py tools/diag_gate_imui_product_chain.py tools/gate_imui_workstream_source.py
 python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built
 python tools/diag_gate_imui_product_chain.py --only discovery --reuse-built

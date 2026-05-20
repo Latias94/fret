@@ -105,6 +105,7 @@ const DEBUG_TRIAGE_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json";
 const DEBUG_HOTSPOTS_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json";
+const DEBUG_TRACE_COMMAND: &str = "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json";
 const DEMO_METRICS_DEBUG_DEMO_COMMANDS: &[RouteCommand] = &[
     RouteCommand {
         label: "demo editor proof",
@@ -141,6 +142,10 @@ const DEMO_METRICS_DEBUG_DEBUG_COMMANDS: &[RouteCommand] = &[
     RouteCommand {
         label: "debug hotspots",
         command: DEBUG_HOTSPOTS_COMMAND,
+    },
+    RouteCommand {
+        label: "debug trace",
+        command: DEBUG_TRACE_COMMAND,
     },
 ];
 
@@ -700,6 +705,11 @@ mod tests {
                         && command.command
                             == "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json"
                 })
+                && route.debug_commands.iter().any(|command| {
+                    command.label == "debug trace"
+                        && command.command
+                            == "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json"
+                })
         }));
     }
 
@@ -783,6 +793,11 @@ mod tests {
                     command["label"] == "debug triage"
                         && command["command"]
                             == "cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json"
+                })
+                && debug.iter().any(|command| {
+                    command["label"] == "debug trace"
+                        && command["command"]
+                            == "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json"
                 })
         }));
 

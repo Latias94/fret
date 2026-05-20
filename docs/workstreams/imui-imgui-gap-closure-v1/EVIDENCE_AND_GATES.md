@@ -1594,9 +1594,14 @@ Run evidence:
 - 2026-05-21: DevTools demo/metrics/debug discovery now has a shared CLI/JSON route, not only a
   GUI guide panel. `fretboard-dev list tool-apps` prints `route: demo-metrics-debug`, and
   `fretboard-dev list tool-apps --json` exposes the same route under `first_open_routes` with
-  grouped editor demo, metrics, and debug commands. Focused gates passed locally for this slice:
+  grouped editor demo, metrics, and debug commands, including `diag trace <bundle-or-dir> --json`.
+  Focused gates passed locally for this slice:
   `cargo fmt -p fretboard-dev --check`,
+  `cargo fmt -p fretboard-dev -p fret-devtools -p fret-devtools-mcp --check`,
   `cargo nextest run -p fretboard-dev tool_apps_list_names_first_open_routes tool_apps_json_value_exposes_stable_machine_readable_shape --no-fail-fast`,
+  `cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes --no-fail-fast`,
+  `cargo nextest run -p fret-devtools-mcp mcp_first_open_resource_text_surfaces_imui_product_chain --no-fail-fast`,
+  `cargo build -p fretboard-dev -p fret-devtools -p fret-devtools-mcp`,
   `python -m py_compile tools/diag_gate_imui_p2_devtools_first_open.py tools/diag_gate_imui_product_chain.py tools/gate_imui_workstream_source.py`,
   `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`,
   `python tools/diag_gate_imui_product_chain.py --only discovery --reuse-built`,

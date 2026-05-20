@@ -210,7 +210,7 @@ expected `perf-docking/regression.summary.json`, `perf-docking/check.perf_thresh
 `perf-docking/*/trace.chrome.json` artifacts that DevTools-style consumers should surface first.
 The same JSON also includes `first_open_routes`; today that names `demo-metrics-debug`, its editor
 proof/editor notes/device shell demos, and the current `diag stats`, `diag layout-perf-summary`,
-`diag memory-summary`, `diag triage`, and `diag hotspots` commands.
+`diag memory-summary`, `diag triage`, `diag hotspots`, and `diag trace` commands.
 
 Open:
 

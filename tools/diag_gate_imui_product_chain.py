@@ -64,6 +64,7 @@ DEMO_METRICS_DEBUG_ROUTE_COMMANDS = {
     "debug_commands": {
         "debug triage": "cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json",
         "debug hotspots": "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json",
+        "debug trace": "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json",
     },
 }
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
@@ -458,6 +459,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         'const DEVTOOLS_METRICS_STATS_COMMAND: &str =',
         'const DEVTOOLS_METRICS_LAYOUT_PERF_COMMAND: &str =',
         'const DEVTOOLS_DEBUG_TRIAGE_COMMAND: &str =',
+        'const DEVTOOLS_DEBUG_TRACE_COMMAND: &str =',
         "DevtoolsGateScriptTargetCommandInputV1",
         "DevtoolsGatePerfThresholdCommandInputV1",
         "DevtoolsGateResourceFootprintThresholdCommandInputV1",
@@ -623,6 +625,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "route: {DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID}",
         "metrics stats: {DEVTOOLS_METRICS_STATS_COMMAND}",
         "debug triage: {DEVTOOLS_DEBUG_TRIAGE_COMMAND}",
+        "debug trace: {DEVTOOLS_DEBUG_TRACE_COMMAND}",
         "devtools_demo_metrics_debug_lines_surface_canonical_routes",
         "devtools_dogfood_workflow_lines_surface_ui_gallery_loop",
         "devtools_gate_command_lines_surface_first_class_gates",
@@ -808,6 +811,8 @@ def _validate_devtools_mcp_product_workflow_source(repo_root: Path) -> None:
         'const IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND: &str =',
         'const IMUI_PRODUCT_WORKFLOW_SUITE: &str =',
         'const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[',
+        'const DEMO_METRICS_DEBUG_ROUTE_ID: &str = "demo-metrics-debug"',
+        'const DEBUG_TRACE_COMMAND: &str =',
         "mcp_first_open_resource_text",
         "mcp first-open: {DEVTOOLS_FIRST_OPEN_DOC}",
         "mcp workflow: {DEVTOOLS_MCP_DOC}",
@@ -821,6 +826,8 @@ def _validate_devtools_mcp_product_workflow_source(repo_root: Path) -> None:
         "product workflow docs: {IMUI_PRODUCT_WORKFLOW_DOC}",
         "product workflow artifacts: {}",
         "IMUI_PRODUCT_WORKFLOW_ARTIFACTS.join(\", \")",
+        "route: {DEMO_METRICS_DEBUG_ROUTE_ID}",
+        "debug trace: {DEBUG_TRACE_COMMAND}",
         "regression_summary_drilldown(&summary)",
         "regression_bundle_followup_commands",
         "regression_bundle_followup_command_lines(drilldown.bundle_dirs.iter().map(String::as_str))",

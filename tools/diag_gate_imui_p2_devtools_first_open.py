@@ -257,6 +257,7 @@ def _validate_tool_app_discovery(
         "metrics memory: cargo run -p fretboard-dev -- diag memory-summary <bundle-or-dir> --json",
         "debug triage: cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json",
         "debug hotspots: cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json",
+        "debug trace: cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json",
         "fret-devtools",
         "cargo run -p fret-devtools",
         DEVTOOLS_GUI_DOC,
@@ -317,6 +318,7 @@ def _validate_tool_app_discovery(
         "debug_commands": {
             "debug triage": "cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json",
             "debug hotspots": "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json",
+            "debug trace": "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json",
         },
     }
     for group, expected_commands in route_groups.items():
@@ -457,6 +459,7 @@ def _validate_devtools_gui_first_open_source(
         'const DEVTOOLS_METRICS_LAYOUT_PERF_COMMAND: &str =',
         'const DEVTOOLS_DEBUG_TRIAGE_COMMAND: &str =',
         'const DEVTOOLS_DEBUG_HOTSPOTS_COMMAND: &str =',
+        'const DEVTOOLS_DEBUG_TRACE_COMMAND: &str =',
         "DevtoolsGateScriptTargetCommandInputV1",
         "DevtoolsGatePerfThresholdCommandInputV1",
         "DevtoolsGateResourceFootprintThresholdCommandInputV1",
@@ -613,6 +616,7 @@ def _validate_devtools_gui_first_open_source(
         "route: {DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID}",
         "metrics stats: {DEVTOOLS_METRICS_STATS_COMMAND}",
         "debug triage: {DEVTOOLS_DEBUG_TRIAGE_COMMAND}",
+        "debug trace: {DEVTOOLS_DEBUG_TRACE_COMMAND}",
         "regression_selected_perf_evidence",
         "regression_summary_drilldown(&summary)",
         "regression_bundle_followup_command_lines(selected_bundle_dirs.iter().map(|v| v.as_ref()))",

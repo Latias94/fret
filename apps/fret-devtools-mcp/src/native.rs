@@ -74,6 +74,22 @@ const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[
     "perf-docking/check.perf_thresholds.json",
     "perf-docking/*/trace.chrome.json",
 ];
+const DEMO_METRICS_DEBUG_ROUTE_ID: &str = "demo-metrics-debug";
+const DEMO_EDITOR_PROOF_COMMAND: &str = "cargo run -p fret-demo --bin imui_editor_proof_demo";
+const DEMO_EDITOR_NOTES_COMMAND: &str = "cargo run -p fret-demo --bin editor_notes_demo";
+const DEMO_DEVICE_SHELL_COMMAND: &str =
+    "cargo run -p fret-demo --bin editor_notes_device_shell_demo";
+const METRICS_STATS_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json";
+const METRICS_LAYOUT_PERF_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag layout-perf-summary <bundle-or-dir> --json";
+const METRICS_MEMORY_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag memory-summary <bundle-or-dir> --json";
+const DEBUG_TRIAGE_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json";
+const DEBUG_HOTSPOTS_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json";
+const DEBUG_TRACE_COMMAND: &str = "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json";
 
 #[derive(Clone)]
 struct WsState {
@@ -2528,6 +2544,16 @@ fn mcp_first_open_lines() -> Vec<String> {
             "product workflow artifacts: {}",
             IMUI_PRODUCT_WORKFLOW_ARTIFACTS.join(", ")
         ),
+        format!("route: {DEMO_METRICS_DEBUG_ROUTE_ID}"),
+        format!("demo editor proof: {DEMO_EDITOR_PROOF_COMMAND}"),
+        format!("demo editor notes: {DEMO_EDITOR_NOTES_COMMAND}"),
+        format!("demo device shell: {DEMO_DEVICE_SHELL_COMMAND}"),
+        format!("metrics stats: {METRICS_STATS_COMMAND}"),
+        format!("metrics layout perf: {METRICS_LAYOUT_PERF_COMMAND}"),
+        format!("metrics memory: {METRICS_MEMORY_COMMAND}"),
+        format!("debug triage: {DEBUG_TRIAGE_COMMAND}"),
+        format!("debug hotspots: {DEBUG_HOTSPOTS_COMMAND}"),
+        format!("debug trace: {DEBUG_TRACE_COMMAND}"),
     ]
 }
 
@@ -3062,6 +3088,16 @@ mod tests {
         ));
         assert!(text.contains(
             "product workflow artifacts: perf-docking/regression.summary.json, perf-docking/check.perf_thresholds.json, perf-docking/*/trace.chrome.json"
+        ));
+        assert!(text.contains("route: demo-metrics-debug"));
+        assert!(
+            text.contains("demo editor proof: cargo run -p fret-demo --bin imui_editor_proof_demo")
+        );
+        assert!(text.contains(
+            "metrics stats: cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json"
+        ));
+        assert!(text.contains(
+            "debug trace: cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json"
         ));
     }
 

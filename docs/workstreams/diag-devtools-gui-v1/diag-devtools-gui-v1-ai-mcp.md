@@ -102,14 +102,16 @@ fresh dump with `fret_diag_bundle_dump` first.
 
 The server also exposes `fret-diag://first-open.md`, a sessionless text resource that mirrors the
 shared first-open diagnostics path and points at the same IMUI product-chain route used by the GUI
-and CLI discoverability maps.
+and CLI discoverability maps, plus the `demo-metrics-debug` route with stats/layout/memory/triage,
+hotspots, and trace drill-down commands.
 
 ### Resource URIs
 
 Global:
 
 - `fret-diag://first-open.md`
-  - Markdown text for the shared first-open diagnostics path and IMUI product-chain route
+  - Markdown text for the shared first-open diagnostics path, IMUI product-chain route, and
+    `demo-metrics-debug` route
 
 For a session `<session_id>`:
 
