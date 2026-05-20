@@ -6124,3 +6124,51 @@ Next slice recommendation:
   `apps/fret-examples/src/chart_multi_axis_demo.rs` already has two linked charts and deterministic
   diagnostics auto-zoom, but currently exposes linked-domain state through logs rather than an app
   snapshot provider. Add a bounded snapshot surface before promoting a runtime assertion gate.
+
+## Fixed-Line-Box Cold Word-Wrap Startup Repair
+
+- invariant:
+  a fixed-line-height wrapped paragraph must not let the internal `Hg` line-metrics probe overwrite
+  the paragraph layout being returned for paint. Cold-process startup must reserve and draw the real
+  wrapped paragraph on the first visible frame.
+- finding:
+  the manual Combobox RTL Long Text overlap remained valid after the previous client-height gate.
+  A temporary frame-1 probe showed the deeper mechanism defect: the docs intro rendered as `Hg`,
+  which is the internal fixed line-box metrics sample, before later frames converged to the real
+  paragraph. `ParleyShaper::shape_paragraph_with_wrap` computed fixed-line-box metrics after
+  building the paragraph into the shared Parley layout, so a cold `shape_single_line_metrics("Hg")`
+  call clobbered that layout before the paragraph lines were consumed.
+- implementation anchors:
+  `crates/fret-render-text/src/parley_shaper.rs`.
+- evidence anchors:
+  fixed `dev-fast` first-frame screenshot:
+  `target/fret-diag-combobox-rtl-long-text-devfast-frame1-fixed-v1/sessions/1779237666634-128156/screenshots/1779237681089-ui-gallery-combobox-rtl-long-text-client721-frame1-screenshot/window-4294967297-tick-4-frame-4.png`;
+  fixed `dev-fast` focused client-height AI packet:
+  `target/fret-diag-combobox-rtl-long-text-devfast-client721-fixed-v1/sessions/1779237666672-136820/1779237680925/ai.packet`;
+  fixed debug focused client-height AI packet:
+  `target/fret-diag-combobox-rtl-long-text-debug-client721-fixed-v1/sessions/1779238353963-52416/1779238359542/ai.packet`.
+- format:
+  `rustfmt --edition 2024 --check crates\fret-render-text\src\parley_shaper.rs`
+  - result: passed.
+- mechanism regression:
+  `cargo nextest run --cargo-profile dev-fast -p fret-render-text --no-fail-fast --no-capture`
+  - result: passed; 85/85 tests; Nextest run id `a16c3aa8-c5dc-4b48-a26f-df17e39f442e`.
+- gallery rebuilds:
+  `cargo build --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed.
+  `cargo build -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-client721-startup-non-overlap.json --dir target\fret-diag-combobox-rtl-long-text-devfast-client721-fixed-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779237680925`.
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-client721-startup-non-overlap.json --dir target\fret-diag-combobox-rtl-long-text-debug-client721-fixed-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\debug\fret-ui-gallery.exe`
+  - result: passed; run id `1779238359542`.
+- registry/checks:
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed.
+  `git diff --check`
+  - result: passed.
+- binary freshness note:
+  `target\debug\fret-ui-gallery.exe` and `target\dev-fast\fret-ui-gallery.exe` were rebuilt after
+  the fix. `target\release\fret-ui-gallery.exe` is still from 2026-05-14 and was not used as
+  evidence.

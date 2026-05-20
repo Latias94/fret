@@ -1365,3 +1365,14 @@ date: 2026-05-12
     paint-time `sync_linked_domain_windows` path, and the target `ChartCanvasOutput` publishes the
     same explicit Y window instead of its initial local window. Focused chart checks passed with
     Nextest run id `620beddb-8a62-4de0-81fd-d5f2fadb28f1`.
+- [x] Fix fixed-line-height word-wrap cold-start text pollution behind the Combobox RTL Long Text
+  screenshot.
+  - Result:
+    the user's follow-up screenshot exposed a real earlier-frame issue that the stable diagnostics
+    gate missed. A temporary frame-1 probe showed the docs intro rendering as the internal `Hg`
+    fixed-line-height metrics sample. `ParleyShaper::shape_paragraph_with_wrap` now computes fixed
+    line-box ascent/descent before building the real paragraph into the shared Parley layout, so the
+    internal metrics probe cannot overwrite the paragraph layout being returned for paint. The full
+    `fret-render-text` nextest suite passed with run id
+    `a16c3aa8-c5dc-4b48-a26f-df17e39f442e`; rebuilt `dev-fast` and debug Gallery focused
+    `client721` gates passed with run ids `1779237680925` and `1779238359542`.

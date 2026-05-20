@@ -3252,3 +3252,39 @@ Status: complete for the retained two-chart explicit Y propagation mechanism pat
 - Runtime note: `chart_multi_axis_demo` currently logs linked-domain state but does not expose an
   app snapshot provider for direct `fretboard-dev diag` assertions. A follow-up runtime companion
   should add that bounded diagnostics surface before promoting a demo-level gate.
+
+## M149: Fixed-Line-Box Cold Word-Wrap Text Startup Repair
+
+Status: complete for the Combobox RTL Long Text first-visible-frame text/layout pollution.
+
+- The follow-up manual screenshot remained valid: promoted Combobox RTL Long Text diagnostics
+  gates captured stable startup frames, but they did not explain why the first visible UI could show
+  text overlap until resize. A temporary frame-1 probe against the refreshed debug gallery exposed
+  the missing mechanism signal: the docs intro area rendered the internal fixed-line-height sample
+  text `Hg` before later frames settled to the real long paragraph.
+- Root cause: `ParleyShaper::shape_paragraph_with_wrap` built the real wrapped paragraph into the
+  shared Parley layout, then computed fixed line-box ascent/descent. On a cold metrics cache that
+  computation calls `shape_single_line_metrics("Hg")` on the same shaper, overwriting the current
+  paragraph layout before `shape_paragraph_with_wrap` iterated its lines. The first paint could
+  therefore use the internal metrics sample or an under-sized paragraph layout.
+- Fixed `crates/fret-render-text/src/parley_shaper.rs` so fixed line-box metrics are computed
+  before the real paragraph is built. The internal `Hg` probe can still warm the base metrics cache,
+  but it no longer overwrites the layout currently being returned for paint.
+- Added
+  `fixed_line_box_word_wrap_preserves_paragraph_layout_on_cold_metrics_cache`, which proves a fresh
+  shaper with fixed line height and word wrap produces real multi-line paragraph glyphs on the cold
+  metrics path.
+- Gates pass:
+  `rustfmt --edition 2024 --check crates\fret-render-text\src\parley_shaper.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-render-text --no-fail-fast --no-capture`
+  with Nextest run id `a16c3aa8-c5dc-4b48-a26f-df17e39f442e`;
+  `cargo build --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`;
+  and `cargo build -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`.
+- Focused runtime diagnostics pass on the rebuilt `dev-fast` gallery:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\combobox\ui-gallery-combobox-rtl-long-text-doc-intro-client721-startup-non-overlap.json --dir target\fret-diag-combobox-rtl-long-text-devfast-client721-fixed-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779237680925` and AI packet
+  `target/fret-diag-combobox-rtl-long-text-devfast-client721-fixed-v1/sessions/1779237666672-136820/1779237680925/ai.packet`.
+- Focused runtime diagnostics also pass on the rebuilt `target\debug\fret-ui-gallery.exe`:
+  `target\fret-diag-combobox-rtl-long-text-debug-client721-fixed-v1\sessions\1779238353963-52416\1779238359542\ai.packet`.
+  `target\release\fret-ui-gallery.exe` remains an older 2026-05-14 binary and was not used as
+  evidence.

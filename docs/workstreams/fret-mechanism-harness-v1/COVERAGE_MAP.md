@@ -242,6 +242,15 @@ date: 2026-05-12
   model through `sync_linked_domain_windows`, and target output republishes the propagated window.
   Focused chart evidence uses Nextest run id `620beddb-8a62-4de0-81fd-d5f2fadb28f1`. The remaining
   runtime companion gap is a bounded app snapshot provider for `chart_multi_axis_demo`.
+- Fixed-line-box cold word-wrap update:
+  `ParleyShaper::shape_paragraph_with_wrap` now computes fixed line-box base metrics before
+  building the real paragraph into the shared Parley layout. This prevents the internal `Hg`
+  metrics sample from overwriting cold-start wrapped paragraph layout, which was the deeper
+  mechanism behind the Combobox RTL Long Text first-visible-frame screenshot. The primary mechanism
+  guard is
+  `fixed_line_box_word_wrap_preserves_paragraph_layout_on_cold_metrics_cache`; focused runtime
+  evidence is anchored at
+  `target/fret-diag-combobox-rtl-long-text-devfast-client721-fixed-v1/sessions/1779237666672-136820/1779237680925/ai.packet`.
 - AI transcript non-retained scroll update:
   `ui-gallery-ai-transcript-torture-scroll.json` now gates deterministic large-transcript mutation
   on the non-retained AI transcript path by asserting a hidden message-count semantics value moves
