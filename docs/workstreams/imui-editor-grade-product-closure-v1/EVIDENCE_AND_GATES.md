@@ -882,6 +882,10 @@ DevTools GUI perf-threshold preset closure (2026-05-16):
 - 2026-05-16 maintenance: the GUI follow-up result schema now records trace output artifacts
   explicitly, so `trace.chrome.json` becomes part of the selected-result summary/detail evidence
   rather than a path the user has to infer from the bundle directory.
+- 2026-05-21 maintenance: the selected-summary inspector can copy or open the selected trace
+  artifact directly. The action resolves `trace_report.trace_chrome_json_path` first, falls back to
+  the `trace.chrome.json` output artifact row, and resolves relative paths against the repo root
+  before clipboard or platform URL handling.
 - The shared follow-up projection now emits commands for every selected bundle root, with stable
   first-bundle command ids for GUI run buttons and indexed labels/ids for additional
   threshold-failure bundles shown to GUI/MCP consumers.
@@ -894,7 +898,7 @@ DevTools GUI perf-threshold preset closure (2026-05-16):
 cargo nextest run -p fret-diag devtools_gate_perf_threshold_command_preserves_placeholders_until_filled devtools_gate_perf_threshold_command_includes_runnable_diag_args devtools_gate_perf_threshold_command_quotes_target_and_rejects_invalid_numbers devtools_gate_perf_threshold_product_chain_defaults_are_runnable --no-fail-fast
 cargo nextest run -p fret-diag regression_summary_drilldown_projects_perf_evidence regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required regression_bundle_followup_commands_cover_each_selected_bundle perf_row_to_regression_item_uses_single_run_bundle_artifact perf_row_to_regression_item_marks_threshold_failures --no-fail-fast
 cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
-cargo nextest run -p fret-devtools runnable_followup_command_action_lines_surface_indexed_bundle_commands load_regression_summary_drilldown_collects_perf_evidence --no-fail-fast
+cargo nextest run -p fret-devtools runnable_followup_command_action_lines_surface_indexed_bundle_commands regression_followup_trace_result_record_projects_output_artifact regression_followup_result_summary_lines_project_output_artifacts regression_followup_trace_artifact_path_prefers_trace_report regression_followup_trace_artifact_path_falls_back_to_output_artifacts file_url_from_path_projects_trace_artifact_paths regression_followup_result_history_entry_detail_lines_surface_repro_fields load_regression_summary_drilldown_collects_perf_evidence --no-fail-fast
 cargo nextest run -p fret-devtools-mcp build_regression_dashboard_result_limits_top_rows_and_builds_human_summary --no-fail-fast
 python tools/diag_gate_imui_product_chain.py --only discovery --reuse-built
 ```

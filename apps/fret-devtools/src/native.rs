@@ -85,6 +85,10 @@ const CMD_COPY_FOLLOWUP_RESULT_JSON: &str = "fret.devtools.regression.followup.c
 const CMD_COPY_FOLLOWUP_RESULT_COMMAND: &str =
     "fret.devtools.regression.followup.copy_result_command";
 const CMD_OPEN_FOLLOWUP_RESULT_JSON: &str = "fret.devtools.regression.followup.open_result_json";
+const CMD_COPY_FOLLOWUP_TRACE_ARTIFACT_PATH: &str =
+    "fret.devtools.regression.followup.copy_trace_artifact_path";
+const CMD_OPEN_FOLLOWUP_TRACE_ARTIFACT: &str =
+    "fret.devtools.regression.followup.open_trace_artifact";
 const CMD_GATE_RUN_GENERATED: &str = "fret.devtools.gate.run_generated";
 const CMD_COPY_GATE_RESULT_PATH: &str = "fret.devtools.gate.copy_result_path";
 const CMD_COPY_GATE_RESULT_JSON: &str = "fret.devtools.gate.copy_result_json";
@@ -3231,6 +3235,9 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .as_ref()
         .map(|entry| entry.result_json.clone())
         .unwrap_or_default();
+    let selected_followup_trace_artifact_path =
+        followup::followup_trace_artifact_path_from_result_json(&selected_followup_result_json)
+            .map(|path| resolve_repo_or_abs_path(&repo_root, &path).to_string_lossy().to_string());
     let failing_rows = regression_failing_summary_rows(&index_json, 10);
     let failing_count = failing_rows.len();
     let selected_bundle_count = selected_bundle_dirs.len();
@@ -3855,6 +3862,22 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::Sm)
                     .on_click(CMD_COPY_FOLLOWUP_RESULT_JSON)
+                    .into_element(cx),
+            );
+        }
+        if selected_followup_trace_artifact_path.is_some() {
+            out.push(
+                shadcn::Button::new("Copy selected trace artifact")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CMD_COPY_FOLLOWUP_TRACE_ARTIFACT_PATH)
+                    .into_element(cx),
+            );
+            out.push(
+                shadcn::Button::new("Open selected trace artifact")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CMD_OPEN_FOLLOWUP_TRACE_ARTIFACT)
                     .into_element(cx),
             );
         }
@@ -5099,6 +5122,17 @@ fn selected_followup_result_json_from_state(app: &App, st: &State) -> Option<Str
     selected_followup_result_entry_from_state(app, st).map(|entry| entry.result_json)
 }
 
+fn selected_followup_trace_artifact_path_from_state(app: &App, st: &State) -> Option<String> {
+    let result_json = selected_followup_result_json_from_state(app, st)?;
+    let artifact_path = followup::followup_trace_artifact_path_from_result_json(&result_json)?;
+    let repo_root = repo_root_from_script_paths(&st.script_paths);
+    Some(
+        resolve_repo_or_abs_path(&repo_root, &artifact_path)
+            .to_string_lossy()
+            .to_string(),
+    )
+}
+
 fn gate_run_result_history_from_state(
     app: &App,
     st: &State,
@@ -5564,6 +5598,37 @@ fn on_command(
                 window,
                 token,
                 text: result_json,
+            });
+        }
+        CMD_COPY_FOLLOWUP_TRACE_ARTIFACT_PATH => {
+            let Some(path) = selected_followup_trace_artifact_path_from_state(app, st) else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "copy selected trace artifact refused (no selected-bundle trace artifact yet)",
+                );
+                return;
+            };
+            let token = app.next_clipboard_token();
+            app.push_effect(Effect::ClipboardWriteText {
+                window,
+                token,
+                text: path,
+            });
+        }
+        CMD_OPEN_FOLLOWUP_TRACE_ARTIFACT => {
+            let Some(path) = selected_followup_trace_artifact_path_from_state(app, st) else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "open selected trace artifact refused (no selected-bundle trace artifact yet)",
+                );
+                return;
+            };
+            app.push_effect(Effect::OpenUrl {
+                url: file_url_from_path(&path),
+                target: None,
+                rel: None,
             });
         }
         CMD_GATE_RUN_GENERATED => {
@@ -7897,6 +7962,18 @@ mod tests {
         assert_eq!(
             file_url_from_path("/tmp/fret/diag/followups/结果.json"),
             "file:///tmp/fret/diag/followups/%E7%BB%93%E6%9E%9C.json"
+        );
+    }
+
+    #[test]
+    fn file_url_from_path_projects_trace_artifact_paths() {
+        assert_eq!(
+            file_url_from_path("F:\\repo\\target\\fret-diag\\run-a\\trace.chrome.json"),
+            "file:///F:/repo/target/fret-diag/run-a/trace.chrome.json"
+        );
+        assert_eq!(
+            file_url_from_path("/tmp/fret/target/fret-diag/run a/trace.chrome.json"),
+            "file:///tmp/fret/target/fret-diag/run%20a/trace.chrome.json"
         );
     }
 

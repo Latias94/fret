@@ -234,6 +234,10 @@ reopen.
       the current selection.
       Maintenance: the selected-bundle follow-up JSON can now be copied directly from the same
       inspector, keeping the exact payload one click away for issue reports and AI triage.
+      Maintenance: the selected trace follow-up artifact can now be copied or opened directly from
+      the same selected-summary inspector. Relative `trace.chrome.json` paths are resolved against
+      the repo root before clipboard or platform URL handling, while the follow-up result JSON
+      remains the durable evidence record.
       Maintenance: the DevTools GUI selected-summary drill-down now includes a dedicated
       `Perf Evidence` section above raw JSON, projecting `perf_summary_json`, `compare_json`,
       curated metrics, and threshold failure evidence from regression summaries.

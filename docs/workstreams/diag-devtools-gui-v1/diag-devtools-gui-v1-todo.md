@@ -157,6 +157,8 @@ Conventions:
   - [x] Copying a follow-up result path uses the selected bundle's latest history entry instead of
         the global last result artifact.
   - [x] Copying the selected bundle's follow-up JSON is available from the same inspector.
+  - [x] Selected trace follow-up artifacts can be copied or opened directly from the inspector,
+        with relative `trace.chrome.json` paths resolved against the repo root before copy/open.
   - [x] stale paint/scene launch/run + result artifact history,
   - [x] pixels changed launch/run + result artifact history,
   - [x] perf thresholds,

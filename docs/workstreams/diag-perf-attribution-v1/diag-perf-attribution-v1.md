@@ -115,6 +115,9 @@ Remaining gaps / follow-ups:
     `trace_report` metadata read from that generated trace artifact, so the GUI summary/details can
     show `trace_source`, real-span counts/keys, and `trace_event_count` without forcing maintainers
     to open the full Chrome trace payload.
+  - 2026-05-21: DevTools selected-result actions can copy/open the generated trace artifact
+    directly, resolving relative `trace.chrome.json` paths against the repo root while keeping the
+    follow-up result JSON as the stable evidence record.
   - 2026-05-16: MCP regression dashboards now expose structured follow-up command rows with
     `diag_args`, keeping AI-driven trace/stats/triage actions aligned with the GUI projection.
   - Still remaining: broader nested runtime spans beyond these first overlay cases and external

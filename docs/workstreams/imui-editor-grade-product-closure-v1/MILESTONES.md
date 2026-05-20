@@ -366,6 +366,10 @@ Current status:
   path instead of the global last result artifact, keeping copied evidence aligned with selection.
 - 2026-05-15 the selected-bundle follow-up JSON is now copyable from the same inspector, keeping
   the exact payload one click away for issue reports and AI triage.
+- 2026-05-21 the selected trace follow-up artifact can now be copied or opened directly from the
+  same inspector. The action prefers `trace_report.trace_chrome_json_path`, falls back to the
+  `trace.chrome.json` output artifact row, and resolves relative paths against the repo root before
+  clipboard or platform URL handling.
 - 2026-05-15 DevTools GUI perf-evidence drill-down extracts selected regression summary perf
   evidence into a dedicated `Perf Evidence` section above raw JSON. The focused unit gate covers
   `perf_summary_json`, `compare_json`, curated metric lines, and threshold failure counts/JSON.

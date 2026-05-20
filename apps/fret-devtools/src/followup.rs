@@ -138,6 +138,11 @@ pub(crate) fn followup_result_summary_lines(result_json: &str) -> Vec<String> {
     lines
 }
 
+pub(crate) fn followup_trace_artifact_path_from_result_json(result_json: &str) -> Option<String> {
+    let value = serde_json::from_str::<serde_json::Value>(result_json).ok()?;
+    followup_trace_artifact_path_from_result_value(&value)
+}
+
 pub(crate) fn followup_result_history_summary_lines<'a>(
     entries: &[FollowupResultHistoryEntry],
     selected_bundle_dirs: impl IntoIterator<Item = &'a str>,
@@ -417,6 +422,37 @@ fn followup_output_artifact_lines_from_result_json(value: &serde_json::Value) ->
         .collect::<Vec<_>>();
     lines.extend(followup_trace_report_lines_from_result_json(value));
     lines
+}
+
+fn followup_trace_artifact_path_from_result_value(value: &serde_json::Value) -> Option<String> {
+    let trace_report_path = value
+        .get("trace_report")
+        .and_then(|report| report.get("trace_chrome_json_path"))
+        .and_then(|value| value.as_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    let output_artifact_path = || {
+        value
+            .get("output_artifacts")
+            .and_then(|value| value.as_array())
+            .into_iter()
+            .flatten()
+            .find(|artifact| {
+                artifact
+                    .get("kind")
+                    .and_then(|value| value.as_str())
+                    .is_some_and(|kind| kind == "trace.chrome.json")
+            })
+            .and_then(|artifact| artifact.get("path"))
+            .and_then(|value| value.as_str())
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+    };
+    trace_report_path
+        .or_else(|| {
+            output_artifact_path()
+        })
+        .map(|value| value.replace('\\', "/"))
 }
 
 fn followup_trace_report_for_artifacts(
@@ -967,6 +1003,51 @@ mod tests {
         assert!(text.contains("real_span_event_count: 2"));
         assert!(text.contains("trace_event_count: 42"));
         assert!(text.contains("real_span_extension_keys: fret.perf.spans.v1"));
+    }
+
+    #[test]
+    fn regression_followup_trace_artifact_path_prefers_trace_report() {
+        let json = serde_json::json!({
+            "output_artifacts": [
+                {
+                    "kind": "trace.chrome.json",
+                    "path": "target\\fret-diag\\run-a\\trace.chrome.json"
+                }
+            ],
+            "trace_report": {
+                "trace_chrome_json_path": "target/fret-diag/run-a/report-trace.chrome.json"
+            }
+        })
+        .to_string();
+
+        assert_eq!(
+            followup_trace_artifact_path_from_result_json(&json),
+            Some("target/fret-diag/run-a/report-trace.chrome.json".to_string())
+        );
+    }
+
+    #[test]
+    fn regression_followup_trace_artifact_path_falls_back_to_output_artifacts() {
+        let json = serde_json::json!({
+            "output_artifacts": [
+                {
+                    "kind": "stats.json",
+                    "path": "target/fret-diag/run-a/stats.json"
+                },
+                {
+                    "kind": "trace.chrome.json",
+                    "path": "target\\fret-diag\\run-a\\trace.chrome.json"
+                }
+            ]
+        })
+        .to_string();
+
+        assert_eq!(
+            followup_trace_artifact_path_from_result_json(&json),
+            Some("target/fret-diag/run-a/trace.chrome.json".to_string())
+        );
+        assert_eq!(followup_trace_artifact_path_from_result_json("{}"), None);
+        assert_eq!(followup_trace_artifact_path_from_result_json("not json"), None);
     }
 
     #[test]

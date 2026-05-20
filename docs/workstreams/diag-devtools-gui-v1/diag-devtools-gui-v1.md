@@ -131,6 +131,9 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   global last result, so copied evidence paths stay aligned with the current selected summary.
 - The same selected-bundle result JSON can be copied directly from the inspector, giving issue
   reports and AI-assisted triage the exact payload shown in the panel.
+- Trace follow-up artifacts can now be copied or opened directly from the same selected-result
+  actions. The GUI resolves relative `trace.chrome.json` paths against the repo root and still
+  keeps the result JSON as the durable evidence record.
 - The live inspect path now has a real minimal WS payload loop instead of only a GUI raw-JSON
   receiver. `fret-diag-protocol` owns `UiInspectHoverV1`, `UiInspectFocusV1`, overlay hook, and
   `UiOverlaySummaryV1` types; `fret-bootstrap` publishes changed `inspect.hover`,

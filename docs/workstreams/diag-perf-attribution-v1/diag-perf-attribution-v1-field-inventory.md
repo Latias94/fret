@@ -89,6 +89,9 @@ schema:
     `real_spans_included`, `real_span_event_count`, `real_span_extension_keys`, and
     `trace_event_count`. The GUI summary/details render these fields so maintainers can tell
     whether a selected trace includes real spans without opening the full `traceEvents` payload.
+  - DevTools selected-result actions resolve the trace artifact path from
+    `trace_report.trace_chrome_json_path` first, then fall back to the `trace.chrome.json`
+    `output_artifacts[]` row, before copying or opening the resolved artifact path.
   - MCP regression dashboards expose the same commands as structured rows under
     `followup_commands`, `runnable_followup_commands`, and `manual_followup_commands`, preserving
     `diag_args` for clients that should not parse shell text.
