@@ -84,6 +84,11 @@ schema:
   - DevTools follow-up result records expose the generated trace as
     `output_artifacts[].kind="trace.chrome.json"` plus `output_artifacts[].path`, and normalize the
     stored path to `/` separators for stable GUI/MCP evidence.
+  - Successful DevTools trace follow-up records also include additive `trace_report` metadata read
+    from the generated trace artifact: `trace_chrome_json_path`, `trace_source`,
+    `real_spans_included`, `real_span_event_count`, `real_span_extension_keys`, and
+    `trace_event_count`. The GUI summary/details render these fields so maintainers can tell
+    whether a selected trace includes real spans without opening the full `traceEvents` payload.
   - MCP regression dashboards expose the same commands as structured rows under
     `followup_commands`, `runnable_followup_commands`, and `manual_followup_commands`, preserving
     `diag_args` for clients that should not parse shell text.
@@ -150,7 +155,7 @@ Evidence anchors:
 - Regression follow-up trace action gate:
   `cargo nextest run -p fret-diag regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required regression_bundle_followup_commands_cover_each_selected_bundle --no-fail-fast`
 - DevTools GUI/MCP trace projection gate:
-  `cargo nextest run -p fret-devtools runnable_followup_command_action_lines_surface_indexed_bundle_commands regression_followup_command_returns_direct_diag_args regression_followup_trace_result_record_projects_output_artifact regression_followup_result_summary_lines_project_output_artifacts --no-fail-fast`
+  `cargo nextest run -p fret-devtools runnable_followup_command_action_lines_surface_indexed_bundle_commands regression_followup_command_returns_direct_diag_args regression_followup_trace_result_record_projects_output_artifact regression_followup_result_summary_lines_project_output_artifacts regression_followup_result_history_entry_detail_lines_surface_repro_fields --no-fail-fast`
   and `cargo nextest run -p fret-devtools-mcp build_regression_dashboard_result_limits_top_rows_and_builds_human_summary --no-fail-fast`
 - Runtime extension writer focused gate:
   `cargo nextest run -p fret-bootstrap --features diagnostics,ui-app-driver,ui-app-command-palette real_perf_spans_extension_value_is_v1_payload record_snapshot_includes_diagnostics_snapshot_span_at_frame_relative_start perf_span_capture_records_frame_relative_driver_phase perf_span_capture_allows_nested_phase_recording perf_span_capture_records_view_command_palette_overlay_phase perf_span_capture_records_view_preferences_overlay_phase perf_span_capture_records_diagnostics_drive_script_phase --no-fail-fast`

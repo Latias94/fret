@@ -1,10 +1,10 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::mpsc;
 
 use fret_app::App;
 use fret_diag::regression_summary::RegressionBundleFollowupCommandV1;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{State, now_unix_ms, push_log, repo_root_from_script_paths};
 
@@ -46,6 +46,8 @@ struct FollowupResultRecordV1 {
     error: Option<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     output_artifacts: Vec<FollowupOutputArtifactV1>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    trace_report: Option<FollowupTraceReportV1>,
     started_unix_ms: u64,
     finished_unix_ms: u64,
 }
@@ -54,6 +56,18 @@ struct FollowupResultRecordV1 {
 struct FollowupOutputArtifactV1 {
     kind: &'static str,
     path: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct FollowupTraceReportV1 {
+    trace_chrome_json_path: String,
+    trace_kind: Option<String>,
+    trace_schema_version: Option<u64>,
+    trace_source: Option<String>,
+    real_spans_included: Option<bool>,
+    real_span_event_count: Option<u64>,
+    real_span_extension_keys: Vec<String>,
+    trace_event_count: u64,
 }
 
 pub(crate) fn runnable_diag_args_for_followup_command(
@@ -295,9 +309,15 @@ fn build_followup_result_record(
     started_unix_ms: u64,
     finished_unix_ms: u64,
     result: &Result<(), String>,
+    repo_root: &Path,
 ) -> FollowupResultRecordV1 {
     let bundle_dir = followup_bundle_dir_from_diag_args(&diag_args);
     let output_artifacts = followup_output_artifacts_for_command(command, &diag_args);
+    let trace_report = if result.is_ok() {
+        followup_trace_report_for_artifacts(&output_artifacts, repo_root)
+    } else {
+        None
+    };
     FollowupResultRecordV1 {
         schema_version: 1,
         kind: "fret_devtools_regression_followup_result",
@@ -309,6 +329,7 @@ fn build_followup_result_record(
         status: if result.is_ok() { "passed" } else { "failed" },
         error: result.as_ref().err().cloned(),
         output_artifacts,
+        trace_report,
         started_unix_ms,
         finished_unix_ms,
     }
@@ -376,7 +397,7 @@ fn trace_followup_output_path(bundle_arg: &str) -> Option<String> {
 }
 
 fn followup_output_artifact_lines_from_result_json(value: &serde_json::Value) -> Vec<String> {
-    value
+    let mut lines = value
         .get("output_artifacts")
         .and_then(|value| value.as_array())
         .into_iter()
@@ -393,7 +414,126 @@ fn followup_output_artifact_lines_from_result_json(value: &serde_json::Value) ->
             Some(format!("artifact {kind}: {path}"))
         })
         .take(8)
-        .collect()
+        .collect::<Vec<_>>();
+    lines.extend(followup_trace_report_lines_from_result_json(value));
+    lines
+}
+
+fn followup_trace_report_for_artifacts(
+    artifacts: &[FollowupOutputArtifactV1],
+    repo_root: &Path,
+) -> Option<FollowupTraceReportV1> {
+    let trace_artifact = artifacts
+        .iter()
+        .find(|artifact| artifact.kind == "trace.chrome.json")?;
+    followup_trace_report_from_trace_path(&trace_artifact.path, repo_root)
+}
+
+fn followup_trace_report_from_trace_path(
+    path: &str,
+    repo_root: &Path,
+) -> Option<FollowupTraceReportV1> {
+    let trace_path = PathBuf::from(path);
+    let read_path = if trace_path.is_absolute() {
+        trace_path
+    } else {
+        repo_root.join(&trace_path)
+    };
+    let trace = std::fs::read_to_string(read_path).ok()?;
+    let value = serde_json::from_str::<serde_json::Value>(&trace).ok()?;
+    let trace_chrome_json_path = path.replace('\\', "/");
+    let trace_kind = value
+        .get("kind")
+        .and_then(|value| value.as_str())
+        .map(ToOwned::to_owned);
+    let trace_schema_version = value.get("schema_version").and_then(|value| value.as_u64());
+    let trace_source = value
+        .get("trace_source")
+        .and_then(|value| value.as_str())
+        .map(ToOwned::to_owned);
+    let real_spans_included = value
+        .get("real_spans_included")
+        .and_then(|value| value.as_bool());
+    let real_span_event_count = value
+        .get("real_span_event_count")
+        .and_then(|value| value.as_u64());
+    let real_span_extension_keys = value
+        .get("real_span_extension_keys")
+        .and_then(|value| value.as_array())
+        .into_iter()
+        .flatten()
+        .filter_map(|value| value.as_str())
+        .map(ToOwned::to_owned)
+        .collect();
+    let trace_event_count = value
+        .get("traceEvents")
+        .and_then(|value| value.as_array())
+        .map(|events| events.len() as u64)
+        .unwrap_or(0);
+    Some(FollowupTraceReportV1 {
+        trace_chrome_json_path,
+        trace_kind,
+        trace_schema_version,
+        trace_source,
+        real_spans_included,
+        real_span_event_count,
+        real_span_extension_keys,
+        trace_event_count,
+    })
+}
+
+fn followup_trace_report_lines_from_result_json(value: &serde_json::Value) -> Vec<String> {
+    let Some(report) = value.get("trace_report") else {
+        return Vec::new();
+    };
+    let mut lines = Vec::new();
+    if let Some(path) = report
+        .get("trace_chrome_json_path")
+        .and_then(|value| value.as_str())
+        .filter(|value| !value.trim().is_empty())
+    {
+        lines.push(format!("trace_path: {path}"));
+    }
+    if let Some(source) = report
+        .get("trace_source")
+        .and_then(|value| value.as_str())
+        .filter(|value| !value.trim().is_empty())
+    {
+        lines.push(format!("trace_source: {source}"));
+    }
+    if let Some(included) = report
+        .get("real_spans_included")
+        .and_then(|value| value.as_bool())
+    {
+        lines.push(format!("real_spans_included: {included}"));
+    }
+    if let Some(count) = report
+        .get("real_span_event_count")
+        .and_then(|value| value.as_u64())
+    {
+        lines.push(format!("real_span_event_count: {count}"));
+    }
+    if let Some(count) = report
+        .get("trace_event_count")
+        .and_then(|value| value.as_u64())
+    {
+        lines.push(format!("trace_event_count: {count}"));
+    }
+    if let Some(keys) = report
+        .get("real_span_extension_keys")
+        .and_then(|value| value.as_array())
+        .filter(|keys| !keys.is_empty())
+    {
+        let keys = keys
+            .iter()
+            .filter_map(|value| value.as_str())
+            .collect::<Vec<_>>()
+            .join(",");
+        if !keys.is_empty() {
+            lines.push(format!("real_span_extension_keys: {keys}"));
+        }
+    }
+    lines
 }
 
 fn write_followup_result_record(out_path: &PathBuf, result_json: &str) -> Result<(), String> {
@@ -522,6 +662,7 @@ pub(crate) fn start_regression_followup_command(
                 started_unix_ms,
                 finished_unix_ms,
                 &result,
+                &repo_root,
             );
             let result_json = followup_result_record_json(&record)
                 .unwrap_or_else(|err| fallback_followup_result_json(&err));
@@ -587,6 +728,7 @@ pub(crate) fn new_followup_channel(
 mod tests {
     use super::*;
     use fret_diag::regression_summary::regression_bundle_followup_commands;
+    use std::fs;
 
     fn history_entry(
         id: &str,
@@ -665,6 +807,7 @@ mod tests {
             10,
             20,
             &Err("boom".to_string()),
+            Path::new("."),
         );
         let value = serde_json::to_value(record).expect("record json");
 
@@ -682,27 +825,78 @@ mod tests {
             .into_iter()
             .find(|command| command.id == "stats")
             .expect("stats command");
-        let record =
-            build_followup_result_record(&command, command.diag_args.clone(), 10, 20, &Ok(()));
+        let record = build_followup_result_record(
+            &command,
+            command.diag_args.clone(),
+            10,
+            20,
+            &Ok(()),
+            Path::new("."),
+        );
         let json = followup_result_record_json(&record).expect("record json text");
         assert!(json.contains("\"status\": \"passed\""));
     }
 
     #[test]
     fn regression_followup_trace_result_record_projects_output_artifact() {
-        let command = regression_bundle_followup_commands(["target/fret-diag/run-a"])
+        let root = std::env::temp_dir().join(format!(
+            "fret-devtools-followup-trace-{}",
+            std::process::id()
+        ));
+        let run_dir = root.join("run-a");
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&run_dir).expect("create run dir");
+        fs::write(
+            run_dir.join("trace.chrome.json"),
+            serde_json::json!({
+                "kind": "perf_trace_chrome",
+                "schema_version": 1,
+                "trace_source": "bundle_synthetic_phases_with_extension_spans",
+                "real_spans_included": true,
+                "real_span_event_count": 2,
+                "real_span_extension_keys": ["fret.perf.spans.v1"],
+                "traceEvents": [{ "name": "fret.ui.view" }, { "name": "fret.ui.paint" }]
+            })
+            .to_string(),
+        )
+        .expect("write trace");
+        let bundle_dir = run_dir.to_string_lossy().replace('\\', "/");
+        let command = regression_bundle_followup_commands([bundle_dir.as_str()])
             .into_iter()
             .find(|command| command.id == "trace")
             .expect("trace command");
-        let record = build_followup_result_record(&command, command.diag_args.clone(), 10, 20, &Ok(()));
+        let record = build_followup_result_record(
+            &command,
+            command.diag_args.clone(),
+            10,
+            20,
+            &Ok(()),
+            Path::new("."),
+        );
         let value = serde_json::to_value(record).expect("record json");
 
         assert_eq!(value["id"], "trace");
         assert_eq!(value["output_artifacts"][0]["kind"], "trace.chrome.json");
         assert_eq!(
             value["output_artifacts"][0]["path"],
-            "target/fret-diag/run-a/trace.chrome.json"
+            format!("{bundle_dir}/trace.chrome.json")
         );
+        assert_eq!(
+            value["trace_report"]["trace_chrome_json_path"],
+            format!("{bundle_dir}/trace.chrome.json")
+        );
+        assert_eq!(
+            value["trace_report"]["trace_source"],
+            "bundle_synthetic_phases_with_extension_spans"
+        );
+        assert_eq!(value["trace_report"]["real_spans_included"], true);
+        assert_eq!(value["trace_report"]["real_span_event_count"], 2);
+        assert_eq!(value["trace_report"]["trace_event_count"], 2);
+        assert_eq!(
+            value["trace_report"]["real_span_extension_keys"][0],
+            "fret.perf.spans.v1"
+        );
+        let _ = fs::remove_dir_all(&root);
     }
 
     #[test]
@@ -748,6 +942,16 @@ mod tests {
                     "path": "target/fret-diag/run-a/trace.chrome.json"
                 }
             ],
+            "trace_report": {
+                "trace_chrome_json_path": "target/fret-diag/run-a/trace.chrome.json",
+                "trace_kind": "perf_trace_chrome",
+                "trace_schema_version": 1,
+                "trace_source": "bundle_synthetic_phases_with_extension_spans",
+                "real_spans_included": true,
+                "real_span_event_count": 2,
+                "real_span_extension_keys": ["fret.perf.spans.v1"],
+                "trace_event_count": 42
+            },
             "started_unix_ms": 10,
             "finished_unix_ms": 25
         })
@@ -758,6 +962,11 @@ mod tests {
         assert!(
             text.contains("artifact trace.chrome.json: target/fret-diag/run-a/trace.chrome.json")
         );
+        assert!(text.contains("trace_source: bundle_synthetic_phases_with_extension_spans"));
+        assert!(text.contains("real_spans_included: true"));
+        assert!(text.contains("real_span_event_count: 2"));
+        assert!(text.contains("trace_event_count: 42"));
+        assert!(text.contains("real_span_extension_keys: fret.perf.spans.v1"));
     }
 
     #[test]
@@ -910,7 +1119,15 @@ mod tests {
                     "kind": "trace.chrome.json",
                     "path": "target/fret-diag/run-a/trace.chrome.json"
                 }
-            ]
+            ],
+            "trace_report": {
+                "trace_chrome_json_path": "target/fret-diag/run-a/trace.chrome.json",
+                "trace_source": "bundle_synthetic_phases_with_extension_spans",
+                "real_spans_included": true,
+                "real_span_event_count": 2,
+                "real_span_extension_keys": ["fret.perf.spans.v1"],
+                "trace_event_count": 42
+            }
         })
         .to_string();
 
@@ -925,6 +1142,8 @@ mod tests {
         assert!(
             text.contains("artifact trace.chrome.json: target/fret-diag/run-a/trace.chrome.json")
         );
+        assert!(text.contains("trace_source: bundle_synthetic_phases_with_extension_spans"));
+        assert!(text.contains("real_span_event_count: 2"));
         assert_eq!(
             followup_result_history_entry_detail_lines(None),
             vec!["selected follow-up result: <none>".to_string()]
