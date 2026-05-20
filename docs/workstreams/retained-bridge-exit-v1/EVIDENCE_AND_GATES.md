@@ -7321,3 +7321,62 @@ Broader gates not run:
   - Reason: `RBX-M2-320` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-20 - RBX-M2-330 pointer-up commit retained Cx adapter isolation
+
+Claim verified:
+
+- Group drag, group resize, and node resize pointer-up commit host/window I/O now flows through
+  retained-agnostic `PointerUpCommitCx`.
+- Retained `EventCx` implements that seam in `pointer_up_commit_retained_cx.rs`.
+- Pointer-up commit helpers no longer import or name retained bridge Cx types, and the default
+  source-policy gate locks that boundary.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit_retained_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit/group_drag.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit/resize.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit/resize/group.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit/resize/node.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving pointer-up commit
+    host/window access behind `PointerUpCommitCx`.
+- `cargo nextest run -p fret-node --features compat-retained-canvas pointer_up_commit_handlers_stay_off_retained_bridge build_group_drag_ops_includes_group_and_moved_nodes_only build_node_resize_ops_collects_node_and_group_changes node_resize_expands_group_when_expand_parent_is_true group_resize_is_previewed_and_committed_on_pointer_up group_resize_clamps_to_children retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+  - Result: passed, 8 tests.
+  - Scope proven: the new source-policy gate locks pointer-up commit helpers and the pure Cx seam
+    off retained bridge Cx names; existing group drag op building, node resize commit, and group
+    resize commit behavior remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit_cx.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit/group_drag.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit/resize.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit/resize/group.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit/resize/node.rs`
+  - Result: no matches.
+  - Scope proven: pointer-up commit helpers no longer depend on retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after the
+    pointer-up commit seam extraction.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-330` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.

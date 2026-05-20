@@ -125,6 +125,14 @@ Compat-gated but retained-bridge-free support:
   - `RBX-M2-320` moved pending node drag click-select release view-state I/O plus pointer-up tail
     actions behind the retained-agnostic `PendingNodeDragReleaseCx` seam. Retained `EventCx`
     implements that seam in `pending_node_drag_release_retained_cx.rs`.
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit/group_drag.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit/resize.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit/resize/group.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_commit/resize/node.rs`
+  - `RBX-M2-330` moved group drag, group resize, and node resize pointer-up commit host/window I/O
+    plus pointer-up tail actions behind the retained-agnostic `PointerUpCommitCx` seam. Retained
+    `EventCx` implements that seam in `pointer_up_commit_retained_cx.rs`.
 
 Deleted retained overlay files:
 
@@ -178,6 +186,7 @@ Deleted retained overlay files:
 | Pending release tail action | retained canvas still adapts retained `EventCx` release-capture/paint invalidation through `retained_widget_tail.rs` | `RBX-M2-300` moves pending group drag, pending group resize, and pending node resize pointer-up release helpers onto retained-agnostic `PointerCaptureReleaseCx` and source-policy gates the pending release helper files | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 | Pending wire release tail action | retained canvas still adapts retained `EventCx` release-capture/paint invalidation through `retained_widget_tail.rs` | `RBX-M2-310` moves pending wire drag pointer-up release/promotion helper onto retained-agnostic `PointerCaptureReleaseCx` and source-policy gates the helper file | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 | Pending node drag click-select release Cx seam | retained canvas still adapts retained `EventCx` host access through `pending_node_drag_release_retained_cx.rs` and release-capture/paint invalidation through `retained_widget_tail.rs` | `RBX-M2-320` moves pending node drag click-select release view-state I/O onto retained-agnostic `PendingNodeDragReleaseCx` and source-policy gates the handler plus pure seam | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
+| Pointer-up commit Cx seam | retained canvas still adapts retained `EventCx` host/window access through `pointer_up_commit_retained_cx.rs` and release-capture/paint invalidation through `retained_widget_tail.rs` | `RBX-M2-330` moves group drag, group resize, and node resize pointer-up commit helpers onto retained-agnostic `PointerUpCommitCx` and source-policy gates those helpers plus the pure seam | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 
 ## New Gate
 

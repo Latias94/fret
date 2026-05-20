@@ -113,6 +113,16 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_up_pending/release/node.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_PENDING_WIRE_DRAG_RS: &str =
         include_str!("ui/canvas/widget/pointer_up_pending/wire_drag.rs");
+    const UI_CANVAS_WIDGET_POINTER_UP_COMMIT_CX_RS: &str =
+        include_str!("ui/canvas/widget/pointer_up_commit_cx.rs");
+    const UI_CANVAS_WIDGET_POINTER_UP_COMMIT_GROUP_DRAG_RS: &str =
+        include_str!("ui/canvas/widget/pointer_up_commit/group_drag.rs");
+    const UI_CANVAS_WIDGET_POINTER_UP_COMMIT_RESIZE_RS: &str =
+        include_str!("ui/canvas/widget/pointer_up_commit/resize.rs");
+    const UI_CANVAS_WIDGET_POINTER_UP_COMMIT_RESIZE_GROUP_RS: &str =
+        include_str!("ui/canvas/widget/pointer_up_commit/resize/group.rs");
+    const UI_CANVAS_WIDGET_POINTER_UP_COMMIT_RESIZE_NODE_RS: &str =
+        include_str!("ui/canvas/widget/pointer_up_commit/resize/node.rs");
     const UI_CANVAS_WIDGET_STICKY_WIRE_CONNECT_FINISH_RS: &str =
         include_str!("ui/canvas/widget/sticky_wire_connect/finish.rs");
     const UI_CANVAS_WIDGET_EDGE_INSERT_DRAG_DRAG_TAIL_RS: &str =
@@ -332,6 +342,31 @@ mod surface_policy_tests {
             assert!(
                 !pending_node_drag_release_sources.contains(forbidden),
                 "pending node drag release handlers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pointer_up_commit_handlers_stay_off_retained_bridge() {
+        let pointer_up_commit_sources = [
+            UI_CANVAS_WIDGET_POINTER_UP_COMMIT_CX_RS,
+            UI_CANVAS_WIDGET_POINTER_UP_COMMIT_GROUP_DRAG_RS,
+            UI_CANVAS_WIDGET_POINTER_UP_COMMIT_RESIZE_RS,
+            UI_CANVAS_WIDGET_POINTER_UP_COMMIT_RESIZE_GROUP_RS,
+            UI_CANVAS_WIDGET_POINTER_UP_COMMIT_RESIZE_NODE_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !pointer_up_commit_sources.contains(forbidden),
+                "pointer-up commit handlers must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }
