@@ -71,6 +71,9 @@ component should construct `TextProps` locally.
 - `text_keycap_label(...)`: compact keycap/shortcut-hint labels for fixed `h-5` key chrome. It
   owns the same single-line shrink/min-width-zero/ellipsis contract as other fixed chrome roles,
   while keycap recipes may refine typography from `component.kbd.*` tokens and set foreground.
+- `text_chip_label(...)`: compact chip, tag, and inline-badge labels whose pill/container owns the
+  slot width. It uses compact medium text and keeps the single-line shrink/min-width-zero/ellipsis
+  contract, but deliberately does not fill or grow like list-row/control labels.
 - Component-local refinements may layer font features, variable font axes, or explicit weight
   overrides onto button-label roles through inherited text refinement. That keeps the role-owned
   no-wrap/ellipsis layout intact instead of forcing components back to leaf-local `TextStyle`
@@ -103,9 +106,9 @@ component should construct `TextProps` locally.
 
 ## Triage Rules
 
-1. If the text is a control label, readout, trigger label, list row, table cell, title, or glyph, it
-   must not wrap by default. Use the matching single-line role and make the parent allow shrinkage
-   with `min-width: 0` when the row is flexed.
+1. If the text is a control label, readout, trigger label, list row, chip/tag label, table cell,
+   title, or glyph, it must not wrap by default. Use the matching single-line role and make the
+   parent allow shrinkage with `min-width: 0` when the row is flexed.
 2. If the text is paragraph, validation prose, or explanatory body copy, wrapping is allowed, but the
    parent must measure/grow for multiple lines. Painting a second line past a fixed row bottom is a
    layout bug, not an acceptable text role outcome.
@@ -137,6 +140,7 @@ component should construct `TextProps` locally.
 - Shared role behavior:
   - `cargo nextest run -p fret-ui-kit --features imui --lib control_readout_text_uses_muted_compact_single_line_truncation control_readout_tabular_text_uses_muted_single_line_truncation control_readout_tabular_emphasis_text_uses_medium_single_line_truncation button_label_text_uses_medium_single_line_truncation prose_variants_and_code_wrap_install_semantic_inherited_overrides table_cell_text_uses_compact_single_line_truncation attributed_list_row_label_text_uses_fill_width_single_line_truncation --no-fail-fast`
   - `cargo nextest run -p fret-ui-kit --features imui --lib keycap_label_text_uses_xs_medium_single_line_truncation base_single_line_text_roles_stay_single_line_under_narrow_layout --no-fail-fast`
+  - `cargo nextest run -p fret-ui-kit --lib chip_label_text_uses_xs_medium_non_growing_single_line_truncation --no-fail-fast`
   - `cargo nextest run -p fret-ui-kit --features imui --lib list_row_label_text_uses_fill_width_single_line_truncation attributed_list_row_label_text_uses_fill_width_single_line_truncation --no-fail-fast`
   - `cargo nextest run -p fret-ui-kit --features imui --lib menu_group_label_text_uses_muted_xs_single_line_truncation --no-fail-fast`
   - `cargo nextest run -p fret-ui-kit --features imui --lib status_message_text_uses_muted_sm_single_line_truncation --no-fail-fast`
