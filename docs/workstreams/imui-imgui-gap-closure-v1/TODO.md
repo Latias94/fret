@@ -1161,6 +1161,13 @@ Readiness order for the next locally testable review slices:
    clear/chevron buttons, popover/drawer behavior, search-enabled CommandPalette behavior, custom
    item content, and RTL order; shared text roles own default-label no-wrap, fill/grow/shrink,
    min-width-zero, ellipsis, and inherited typography/foreground semantics.
+   2026-05-21 shadcn ComboboxChips text-role follow-up: empty-trigger placeholder text now routes
+   through `text_control_label(...)`, and selected chip pill labels route through the new
+   `text_chip_label(...)` shared role instead of component-local `ui::label(...).text_size_px(...)
+   .truncate()` builders. ComboboxChips still owns trigger/chip chrome, remove button behavior,
+   popover/search policy, selected-value lookup, wrapping chip row layout, and RTL order; shared
+   roles own the resize-sensitive no-wrap/min-width-zero/ellipsis contracts, with chip labels kept
+   non-growing so pill chrome does not expand like a row label.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

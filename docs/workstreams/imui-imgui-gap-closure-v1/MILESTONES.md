@@ -1035,6 +1035,12 @@ Exit criteria:
   popover/drawer policy, search-enabled CommandPalette behavior, custom item content, and RTL
   ordering recipe-owned; the shared roles own the default-label single-line, fill/grow/shrink,
   min-width-zero, and ellipsis contracts.
+  2026-05-21 shadcn ComboboxChips text-role result: empty-trigger placeholder text now consumes
+  `text_control_label(...)`, while selected chip pill labels consume `text_chip_label(...)`. The new
+  shared chip role owns compact medium no-wrap/min-width-zero/ellipsis without fill/grow, so chip
+  chrome can shrink safely without behaving like a row/control label. ComboboxChips keeps
+  trigger/chip chrome, remove actions, popover/search policy, selected-value mapping, wrapping chip
+  layout, and RTL ordering recipe-owned.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

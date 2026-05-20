@@ -4991,6 +4991,42 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   `python tools\gate_imui_workstream_source.py`,
   `python tools\gate_imui_facade_teaching_source.py`, and `git diff --check`.
 
+2026-05-21 shadcn ComboboxChips shared text-role slice:
+
+- Source gap before fix: ComboboxChips still hand-built empty-trigger placeholder text and selected
+  chip pill labels with local `ui::label(...).text_size_px(...).font_weight(...).truncate()`
+  builders. Placeholder text needs the same fill/grow control-label contract as other combo
+  triggers, but chip labels need a compact non-growing role so the pill chrome can shrink without
+  becoming a row/control label.
+- `text_chip_label(...)` is now the shared compact chip/tag/inline-badge text role in
+  `fret-ui-kit::declarative::text`. It owns `text-xs font-medium`, no-wrap, shrink,
+  `min-width: 0`, and ellipsis, but deliberately leaves width/flex-grow/basis at the non-growing
+  defaults.
+- `combobox_chips_placeholder_text(...)` backs empty trigger placeholder text with
+  `decl_text::text_control_label(...)`; `combobox_chip_label_text(...)` backs selected chip labels
+  with `decl_text::text_chip_label(...)`. ComboboxChips still owns trigger and chip chrome, remove
+  button behavior, selected-value lookup, popover/search policy, chip row wrapping, and RTL order.
+  No new `fret-imui` API or runtime text role was added.
+- `chip_label_text_uses_xs_medium_non_growing_single_line_truncation` proves the shared role keeps
+  `width: auto`, `flex-grow: 0`, `flex-basis: auto`, shrink, `min-width: 0`, no-wrap, ellipsis,
+  and inherited typography. `combobox_chips_placeholder_and_chip_text_use_shared_resize_roles`
+  proves the recipe uses fill/grow control-label semantics for placeholders and non-growing chip
+  semantics for selected pill labels while layering shadcn typography and foreground through
+  inherited metadata.
+- `tools/gate_imui_workstream_source.py` now requires the helper/test shape and forbids the old
+  local ComboboxChips placeholder/chip text builders from returning.
+- Focused gates passed:
+  `cargo fmt --check -p fret-ui-kit -p fret-ui-shadcn`,
+  `cargo check -p fret-ui-kit --lib`,
+  `cargo check -p fret-ui-shadcn --lib`,
+  `cargo nextest run -p fret-ui-kit --lib
+  chip_label_text_uses_xs_medium_non_growing_single_line_truncation --no-fail-fast`,
+  `cargo nextest run -p fret-ui-shadcn --lib
+  combobox_chips_placeholder_and_chip_text_use_shared_resize_roles --no-fail-fast`,
+  `python -m py_compile tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_facade_teaching_source.py`, and `git diff --check`.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground
