@@ -1107,6 +1107,13 @@ Readiness order for the next locally testable review slices:
    control-readout role family via `text_control_readout_compact_tabular_emphasis(...)` instead of
    local `component.sidebar.menu_badge.text_px` / `line_height` text builders. `SidebarMenuBadge`
    consumes the derived readout role and keeps sidebar foreground ownership.
+   2026-05-20 shadcn SidebarMenuButton/SubButton resize follow-up: upstream sidebar menu labels
+   are fixed-row button-like triggers with `truncate` behavior (`text-sm` by default, `text-xs` for
+   small rows). Fret now keeps the main and nested default labels in the button-label role family
+   through `text_button_label_fill(...)` / `text_button_label_compact_fill(...)`, deleting the
+   sidebar-local `menu_button_style(...)` / `menu_sub_button_style(...)` text builders and their
+   local `text_size_px` / `line_height_px` policy. Sidebar still owns row chrome, collapse opacity,
+   RTL ordering, foreground inheritance, and tooltip placement.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

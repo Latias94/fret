@@ -50,6 +50,12 @@ pub(crate) fn text_button_label_refinement(theme: &Theme) -> TextStyleRefinement
     refinement
 }
 
+pub(crate) fn text_button_label_compact_refinement(theme: &Theme) -> TextStyleRefinement {
+    let mut refinement = text_xs_refinement(theme);
+    refinement.weight = Some(FontWeight::MEDIUM);
+    refinement
+}
+
 pub(crate) fn text_chrome_title_refinement(theme: &Theme) -> TextStyleRefinement {
     let mut refinement = text_sm_refinement(theme);
     refinement.weight = Some(FontWeight::MEDIUM);
@@ -505,6 +511,61 @@ pub fn text_button_label<H: UiHost>(
     ui_typography::scope_text_style(
         cx.text_props(TextProps {
             layout: shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
+/// Fill-width variant of [`text_button_label`].
+///
+/// Use this when a button-like row label owns the remaining inline space between icons/actions.
+/// It stays in the button-label family while adding fill/grow/basis-zero flex behavior.
+pub fn text_button_label_fill<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_button_label_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: fill_growing_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
+/// Compact fill-width variant of [`text_button_label`].
+///
+/// Use this for `text-xs font-medium` button-like triggers such as small sidebar menu rows.
+pub fn text_button_label_compact_fill<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_button_label_compact_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: fill_growing_single_line_layout(),
             text: text.into(),
             style: None,
             color: None,
@@ -1771,6 +1832,72 @@ mod tests {
     }
 
     #[test]
+    fn fill_button_label_text_uses_growing_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_button_label_fill(cx, "Project settings and workspace tools")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_button_label_fill(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(
+            el.inherited_text_style,
+            Some(text_button_label_refinement(&theme))
+        );
+    }
+
+    #[test]
+    fn compact_fill_button_label_text_uses_xs_growing_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_button_label_compact_fill(cx, "Small nested project row")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_button_label_compact_fill(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(
+            el.inherited_text_style,
+            Some(text_button_label_compact_refinement(&theme))
+        );
+        assert_eq!(
+            el.inherited_text_style
+                .as_ref()
+                .and_then(|style| style.size),
+            text_xs_refinement(&theme).size
+        );
+    }
+
+    #[test]
     fn section_chrome_label_text_uses_single_line_truncation() {
         let window = AppWindowId::default();
         let mut app = test_app();
@@ -1895,6 +2022,12 @@ mod tests {
         );
         assert_single_line_text_role("button-label", Px(18.0), move |cx| {
             text_button_label(cx, long)
+        });
+        assert_single_line_text_role("button-label-fill", Px(18.0), move |cx| {
+            text_button_label_fill(cx, long)
+        });
+        assert_single_line_text_role("button-label-compact-fill", Px(18.0), move |cx| {
+            text_button_label_compact_fill(cx, long)
         });
         assert_single_line_text_role("table-cell", Px(18.0), move |cx| text_table_cell(cx, long));
         assert_single_line_text_role("code-label", Px(18.0), move |cx| {

@@ -63,6 +63,10 @@ component should construct `TextProps` locally.
   control-readout family, add inherited `tnum` OpenType features, and keep the same single-line
   resize contract; the emphasis variants add medium weight, while the compact emphasis variant
   keeps `text-xs` sizing for badge-like slots.
+- `text_button_label_fill(...)` and `text_button_label_compact_fill(...)`: button-label variants
+  for button-like rows whose label owns the remaining inline space between icons/actions. They
+  remain in the button-label family, add fill/grow/basis-zero layout, and keep single-line
+  ellipsis; the compact variant owns `text-xs font-medium` for small trigger rows.
 - `text_control_label(...)`: fill-width checkbox/radio/switch/combo/slider label text. It keeps
   fixed control chrome single-line under resize.
 - `text_section_chrome_label(...)`, `text_chrome_title(...)`, and `text_chrome_glyph(...)`: section,

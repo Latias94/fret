@@ -4727,6 +4727,45 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `git diff --check` passed.
 - `cargo check -p fret-ui-shadcn --lib` passed.
 
+2026-05-20 shadcn SidebarMenuButton/SubButton fill button-label slice:
+
+- Source gap before fix: default `SidebarMenuButton` and `SidebarMenuSubButton` labels lived in
+  fixed-height sidebar rows but still hand-rolled local `ui::text(...).w_full().min_w_0().flex_1()
+  .basis_0().text_size_px(...).font_weight(...).line_height_px(...).truncate()` policy. The
+  collapsed sidebar tooltip label also used local `wrap(TextWrap::Word)` / `TextOverflow::Clip`.
+  That duplicated role policy in the sidebar recipe and left the small-row `text-xs` shadcn axis
+  outside the shared button-label family.
+- `text_button_label_fill(...)` and `text_button_label_compact_fill(...)` now exist as derived
+  button-label roles. They add fill/grow/basis-zero layout to the button-label resize contract,
+  while the compact variant owns `text-xs font-medium` for small trigger rows.
+- `SidebarMenuButton` and `SidebarMenuSubButton` default labels now consume those derived roles
+  through a small sidebar helper and inherit sidebar foreground. `size=sm` maps to the compact
+  role, default/lg and md rows map to the regular fill role, and collapsed tooltip labels use
+  `text_button_label(...)` instead of local wrapping text. Sidebar still owns row chrome,
+  foreground state, collapse opacity, RTL ordering, and tooltip placement.
+- `fill_button_label_text_uses_growing_single_line_truncation` and
+  `compact_fill_button_label_text_uses_xs_growing_single_line_truncation` prove the derived role
+  contracts. `sidebar_menu_button_label_uses_shared_fill_button_role` and
+  `sidebar_menu_sub_button_label_uses_shared_fill_button_role` prove sidebar default labels keep
+  fill/grow/min-width-0/no-wrap/ellipsis semantics and the correct `text-sm` vs `text-xs` inherited
+  typography.
+- `cargo nextest run -p fret-ui-kit --lib
+  fill_button_label_text_uses_growing_single_line_truncation
+  compact_fill_button_label_text_uses_xs_growing_single_line_truncation
+  base_single_line_text_roles_stay_single_line_under_narrow_layout --no-fail-fast` passed.
+- First `cargo nextest run -p fret-ui-shadcn --lib
+  sidebar_menu_button_label_uses_shared_fill_button_role
+  sidebar_menu_sub_button_label_uses_shared_fill_button_role
+  sidebar_menu_button_default_content_reorders_in_rtl
+  sidebar_menu_sub_button_default_content_reorders_in_rtl --no-fail-fast` timed out while Cargo was
+  still compiling. No process was killed; after Cargo exited naturally the same focused command was
+  rerun. The first rerun exposed the expected test update for sub-button row signatures after the
+  label became a shared role, and the post-fix run passed.
+- `cargo fmt --check -p fret-ui-kit -p fret-ui-shadcn` passed.
+- `python tools\gate_imui_facade_teaching_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo check -p fret-ui-shadcn --lib` passed.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground

@@ -985,6 +985,12 @@ Exit criteria:
   compact tabular emphasis readout role (`text-xs font-medium tabular-nums`) instead of local
   sidebar-only text sizing. The badge keeps its `h-5 min-w-5` chrome and sidebar foreground, while
   the text role owns no-wrap, shrink, min-width-0, and ellipsis behavior under resize.
+  2026-05-20 shadcn SidebarMenuButton/SubButton label result: default sidebar menu and sub-menu
+  labels now consume fill-width button-label role variants instead of sidebar-local text builders.
+  The main default/lg labels use `text_button_label_fill(...)`, small main/sub labels use
+  `text_button_label_compact_fill(...)`, and collapsed tooltip labels use `text_button_label(...)`.
+  This keeps upstream truncate behavior in the shared button-label family while leaving sidebar
+  chrome, foreground, collapse motion, RTL ordering, and tooltip placement recipe-owned.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.
