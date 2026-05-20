@@ -111,10 +111,14 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/cancel_cleanup.rs");
     const UI_CANVAS_WIDGET_STICKY_WIRE_TARGETS_PICKER_RS: &str =
         include_str!("ui/canvas/widget/sticky_wire_targets/picker.rs");
+    const UI_CANVAS_WIDGET_GROUP_DRAG_RS: &str = include_str!("ui/canvas/widget/group_drag.rs");
     const UI_CANVAS_WIDGET_GROUP_DRAG_TAIL_RS: &str =
         include_str!("ui/canvas/widget/group_drag/tail.rs");
+    const UI_CANVAS_WIDGET_GROUP_RESIZE_RS: &str = include_str!("ui/canvas/widget/group_resize.rs");
     const UI_CANVAS_WIDGET_GROUP_RESIZE_TAIL_RS: &str =
         include_str!("ui/canvas/widget/group_resize/tail.rs");
+    const UI_CANVAS_WIDGET_GROUP_PREVIEW_MOVE_CX_RS: &str =
+        include_str!("ui/canvas/widget/group_preview_move_cx.rs");
     const UI_VIEW_QUEUE_RS: &str = include_str!("ui/canvas/widget/view_queue.rs");
     const FRET_EXAMPLES_CARGO_TOML: &str = include_str!("../../../apps/fret-examples/Cargo.toml");
     const FRET_EXAMPLES_LIB_RS: &str = include_str!("../../../apps/fret-examples/src/lib.rs");
@@ -235,6 +239,29 @@ mod surface_policy_tests {
             assert!(
                 !tail_policy_sources.contains(forbidden),
                 "canvas widget tail policy helpers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn group_preview_move_handlers_stay_off_retained_bridge() {
+        let group_preview_move_sources = [
+            UI_CANVAS_WIDGET_GROUP_DRAG_RS,
+            UI_CANVAS_WIDGET_GROUP_RESIZE_RS,
+            UI_CANVAS_WIDGET_GROUP_PREVIEW_MOVE_CX_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !group_preview_move_sources.contains(forbidden),
+                "group preview move handlers must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

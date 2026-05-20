@@ -173,6 +173,8 @@ mod focus_session;
 mod graph_construction;
 mod group_drag;
 mod group_draw_order;
+mod group_preview_move_cx;
+mod group_preview_move_retained_cx;
 mod group_resize;
 mod group_resize_apply;
 mod group_resize_hit;

@@ -7028,3 +7028,64 @@ Broader gates not run:
   - Reason: `RBX-M2-270` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-20 - RBX-M2-280 group preview move retained Cx adapter isolation
+
+Claim verified:
+
+- Group drag/resize move handler host/bounds access now flows through retained-agnostic
+  `GroupPreviewMoveCx`.
+- Retained `EventCx` implements that seam in `group_preview_move_retained_cx.rs`.
+- `group_drag.rs`, `group_resize.rs`, and `group_preview_move_cx.rs` no longer import or name
+  retained bridge Cx types, and the default source-policy gate locks that boundary.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/group_drag.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/group_resize.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/group_preview_move_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/group_preview_move_retained_cx.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving group preview
+    move handler host/bounds access behind `GroupPreviewMoveCx`.
+- `cargo nextest run -p fret-node --features compat-retained-canvas group_preview_move_handlers_stay_off_retained_bridge update_drag_preview_state update_resize_preview_state group_resize_is_previewed_and_committed_on_pointer_up group_resize_clamps_to_children retained_canvas_tail_policy_helpers_stay_off_retained_bridge retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+  - Result: passed, 10 tests.
+  - Scope proven: the new source-policy gate locks group drag/resize move handlers and the pure
+    Cx seam off retained bridge Cx names; existing group preview tail tests and retained group
+    resize oracle coverage remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/group_drag.rs ecosystem/fret-node/src/ui/canvas/widget/group_resize.rs ecosystem/fret-node/src/ui/canvas/widget/group_preview_move_cx.rs`
+  - Result: no matches.
+  - Scope proven: group preview move handlers and the pure Cx seam no longer depend on retained
+    bridge Cx names.
+- `cargo fmt -p fret-node`
+  - Result: passed.
+  - Scope proven: touched `fret-node` Rust files were formatted.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after the group
+    preview move Cx seam extraction.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-280` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.

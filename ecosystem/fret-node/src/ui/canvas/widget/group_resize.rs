@@ -6,29 +6,41 @@ use fret_ui::UiHost;
 
 use crate::core::CanvasRect;
 
-use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot};
+use super::{
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot,
+    group_preview_move_cx::GroupPreviewMoveCx,
+};
 
-pub(super) fn handle_group_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_group_resize_move<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     position: Point,
     modifiers: Modifiers,
     _zoom: f32,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: GroupPreviewMoveCx<H>,
+{
     let Some(mut resize) = canvas.interaction.group_resize.clone() else {
         return false;
     };
 
-    let auto_pan_delta = pointer::auto_pan_delta::<M>(snapshot, position, cx.bounds);
+    let auto_pan_delta = pointer::auto_pan_delta::<M>(snapshot, position, cx.bounds());
     let position = pointer::adjusted_position(position, auto_pan_delta);
 
     let new_rect = super::group_resize_apply::next_group_resize_rect(
-        canvas, cx.app, snapshot, &resize, position, modifiers,
+        canvas,
+        cx.host(),
+        snapshot,
+        &resize,
+        position,
+        modifiers,
     );
 
     if auto_pan_delta.x != 0.0 || auto_pan_delta.y != 0.0 {
-        canvas.update_view_state(cx.app, |s| {
+        canvas.update_view_state(cx.host(), |s| {
             s.pan.x += auto_pan_delta.x;
             s.pan.y += auto_pan_delta.y;
         });
