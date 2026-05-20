@@ -884,6 +884,13 @@ Cx types. Because those wrappers forward into marquee and pending-to-pan code, t
 retained adapter in favor of `pan_zoom_begin_retained_cx.rs`. Source-policy gates now lock the
 pointer-up wrappers, marquee move helpers, and pan-begin helpers off retained Cx names; real
 pointer-up, marquee selection, and panning behavior remain green.
+`RBX-M2-720` then moved the pointer-up event entry behind the composed
+retained-agnostic `PointerUpRouteCx` capability. `event_pointer_up.rs` no longer names retained
+bridge Cx types, and `PointerUpGuardCx` is widget-internal so the composed route seam does not
+trigger private-bound warnings. The upper `event_router_pointer_button/up.rs` parser is still a
+retained event route and remains a later isolation slice. Focused tests prove guard dispatch,
+marquee release, pending node click-select release, edge reconnect release, and edge-drag left-up
+cleanup remain green.
 
 ## Next Task
 
@@ -943,7 +950,8 @@ Recommended next implementation shape:
   pointer-up commit dispatch and node-drag commit release now use `PointerUpCommitCx`; pointer-up
   pending dispatch now uses `PendingNodeDragReleaseCx`; pointer-up active dispatch now uses
   `WireCommitCx + PointerUpReleaseCx`; pointer-up route wrappers now use `PointerUpCx`; marquee
-  move/selection/pending helpers now use `MarqueeCx`; and pan begin now uses `PanZoomBeginCx`.
+  move/selection/pending helpers now use `MarqueeCx`; pan begin now uses `PanZoomBeginCx`; and the
+  pointer-up event entry now uses `PointerUpRouteCx`.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
   `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`,
@@ -1000,7 +1008,7 @@ Recommended next implementation shape:
   `context_menu/key_navigation.rs`, `context_menu/key_navigation/key_down.rs`,
   `context_menu/key_navigation/pointer_move.rs`,
   `context_menu/selection_activation.rs`, `context_menu/selection_activation/pointer_down.rs`,
-  `event_pointer_up/dispatch.rs`,
+  `event_pointer_up.rs`, `event_pointer_up/dispatch.rs`,
   `pointer_up/release.rs`, `pointer_up_state/release.rs`, `pointer_up_release_cx.rs`,
   `pointer_up_left_route/double_click.rs`,
   `right_click.rs`, `right_click/pending.rs`,
@@ -1020,13 +1028,13 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-21 for `RBX-M2-710`:
+Last run on 2026-05-21 for `RBX-M2-720`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.
-- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_route_wrappers_stay_off_retained_bridge) | test(marquee_begin_finish_stays_off_retained_bridge) | test(marquee_move_handlers_stay_off_retained_bridge) | test(pan_zoom_begin_helpers_stay_off_retained_bridge) | test(background_click_starts_pending_marquee_and_clears_selection_on_up) | test(marquee_replace_mode_replaces_selection_even_with_ctrl_pressed) | test(middle_mouse_panning_tracks_screen_delta_under_render_transform) | test(panning_emits_move_start_and_move_end) | test(pending_node_drag_click_select_release_toggles_selection_and_finishes) | test(edge_reconnect_drop_on_empty_can_disconnect_edge) | test(edge_drag_left_up_clears_edge_drag_and_invalidates_paint) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
-  passed, 12 tests.
-- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up/left.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/dispatch.rs ecosystem/fret-node/src/ui/canvas/widget/marquee.rs ecosystem/fret-node/src/ui/canvas/widget/marquee_pending.rs ecosystem/fret-node/src/ui/canvas/widget/marquee_selection.rs ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_begin.rs ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_begin_cx.rs` -
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_event_entry_stays_off_retained_bridge) | test(pointer_up_guard_dispatch_stays_off_retained_bridge) | test(pointer_up_route_wrappers_stay_off_retained_bridge) | test(background_click_starts_pending_marquee_and_clears_selection_on_up) | test(pending_node_drag_click_select_release_toggles_selection_and_finishes) | test(edge_reconnect_drop_on_empty_can_disconnect_edge) | test(edge_drag_left_up_clears_edge_drag_and_invalidates_paint) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
+  passed, 8 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/event_pointer_up.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_up/dispatch.rs` -
   no matches.
 - `cargo fmt --check` - passed.
 - `python3 tools/check_layering.py` - passed.
@@ -1037,7 +1045,7 @@ Last run on 2026-05-21 for `RBX-M2-710`:
 Broader gates not run:
 
 - `cargo nextest run --workspace`
-  - Reason: `RBX-M2-710` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+  - Reason: `RBX-M2-720` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
 

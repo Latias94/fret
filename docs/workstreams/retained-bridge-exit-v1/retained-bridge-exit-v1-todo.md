@@ -3858,6 +3858,36 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-720 Isolate pointer-up event entry retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_up.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_up/dispatch.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the retained fallback pointer-up event entry off direct retained bridge Cx names by
+      composing the existing guard and route capabilities.
+    - Keep the upper pointer-event parser (`event_router_pointer_button/up.rs`) as a later route
+      isolation slice so this task stays focused on the pointer-up handler entry.
+    - Prove the real pointer-up path still handles guard dispatch, marquee release, pending node
+      click-select release, edge reconnect release, and edge-drag left-up cleanup.
+  - Result:
+    - Added `PointerUpRouteCx` as the event-entry capability over `PointerUpGuardCx` and
+      `PointerUpCx`.
+    - `NodeGraphCanvasWith::handle_pointer_up(...)` now accepts the retained-agnostic composed
+      capability instead of naming retained `EventCx`.
+    - Widened `PointerUpGuardCx` to widget-internal visibility so the composed route seam does not
+      trigger private-bound warnings.
+    - Added `pointer_up_event_entry_stays_off_retained_bridge` source-policy coverage.
+  - Validation:
+    - Red: `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_event_entry_stays_off_retained_bridge) | test(pointer_up_guard_dispatch_stays_off_retained_bridge) | test(pointer_up_route_wrappers_stay_off_retained_bridge) | test(background_click_starts_pending_marquee_and_clears_selection_on_up) | test(pending_node_drag_click_select_release_toggles_selection_and_finishes) | test(edge_reconnect_drop_on_empty_can_disconnect_edge) | test(edge_drag_left_up_clears_edge_drag_and_invalidates_paint) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_event_entry_stays_off_retained_bridge) | test(pointer_up_guard_dispatch_stays_off_retained_bridge) | test(pointer_up_route_wrappers_stay_off_retained_bridge) | test(background_click_starts_pending_marquee_and_clears_selection_on_up) | test(pending_node_drag_click_select_release_toggles_selection_and_finishes) | test(edge_reconnect_drop_on_empty_can_disconnect_edge) | test(edge_drag_left_up_clears_edge_drag_and_invalidates_paint) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/event_pointer_up.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_up/dispatch.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

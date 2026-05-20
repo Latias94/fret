@@ -180,6 +180,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/event_clipboard_feedback_cx.rs");
     const UI_CANVAS_WIDGET_EVENT_TIMER_TOAST_RS: &str =
         include_str!("ui/canvas/widget/event_timer_toast.rs");
+    const UI_CANVAS_WIDGET_EVENT_POINTER_UP_RS: &str =
+        include_str!("ui/canvas/widget/event_pointer_up.rs");
     const UI_CANVAS_WIDGET_EVENT_POINTER_UP_DISPATCH_RS: &str =
         include_str!("ui/canvas/widget/event_pointer_up/dispatch.rs");
     const UI_CANVAS_WIDGET_CANCEL_CLEANUP_RS: &str =
@@ -947,6 +949,22 @@ mod surface_policy_tests {
             assert!(
                 !UI_CANVAS_WIDGET_EVENT_POINTER_UP_DISPATCH_RS.contains(forbidden),
                 "pointer-up guard dispatch must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pointer_up_event_entry_stays_off_retained_bridge() {
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_EVENT_POINTER_UP_RS.contains(forbidden),
+                "pointer-up event entry must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

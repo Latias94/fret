@@ -3,7 +3,7 @@ use super::super::{
     right_click, searcher,
 };
 
-pub(super) trait PointerUpGuardCx<H: UiHost, M: NodeGraphCanvasMiddleware>:
+pub(in super::super) trait PointerUpGuardCx<H: UiHost, M: NodeGraphCanvasMiddleware>:
     right_click::RightClickCx<H, M> + searcher::SearcherCx<H, M>
 {
 }
