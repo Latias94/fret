@@ -6427,3 +6427,32 @@ Next slice recommendation:
   - result: passed; Nextest run id `92315d8d-56fd-4c3e-bfc1-bbfc849e954b`.
   - note: the run emitted the pre-existing `current_effective_opacity` dead-code warning in
     `crates\fret-ui\src\elements\runtime.rs`; this slice did not touch that file.
+
+## Pointer-Move Dispatch Stale Hit-Path Gate
+
+- invariant:
+  pointer-move dispatch must not deliver events through a stale cached `root -> lower_child` path
+  after a higher-z sibling moves under the same pointer. The real dispatch path must reject stale
+  path-cache reuse before building the mapped event chain.
+- finding:
+  no stale pointer-move dispatch defect was reproduced. The focused dispatch guard shows
+  `UiTree::dispatch_event` routes the first move to the lower child, rejects that stale path after a
+  higher-z sibling moves under the same pointer, delivers the second move to the moved sibling, and
+  then records a cache hit for the refreshed higher-z path on a third move.
+- implementation anchors:
+  `crates/fret-ui/src/tree/tests/hit_test.rs`,
+  `crates/fret-ui/src/tree/hit_test.rs`, and
+  `crates/fret-ui/src/tree/dispatch/window.rs`.
+- workstream/static checks:
+  `python -m json.tool docs\workstreams\fret-mechanism-harness-v1\WORKSTREAM.json > $null`;
+  `python tools\check_workstream_catalog.py`;
+  `git diff --check`
+  - result: passed.
+- format:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\tree\tests\hit_test.rs`
+  - result: passed.
+- focused mechanism regression:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui pointer_move_dispatch_rejects_stale_path_when_higher_z_sibling_moves_under_pointer hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `093b8a5d-e67a-4b35-ab82-e02389f63173`.
+  - note: the run emitted the pre-existing `current_effective_opacity` dead-code warning in
+    `crates\fret-ui\src\elements\runtime.rs`; this slice did not touch that file.

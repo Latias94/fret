@@ -799,6 +799,100 @@ fn hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_p
 }
 
 #[test]
+fn pointer_move_dispatch_rejects_stale_path_when_higher_z_sibling_moves_under_pointer() {
+    struct CountPointerMove {
+        moves: Arc<AtomicUsize>,
+    }
+
+    impl<H: UiHost> Widget<H> for CountPointerMove {
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
+                self.moves.fetch_add(1, Ordering::SeqCst);
+                cx.stop_propagation();
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let window = AppWindowId::default();
+    let mut app = crate::test_host::TestHost::new();
+    let lower_moves = Arc::new(AtomicUsize::new(0));
+    let higher_moves = Arc::new(AtomicUsize::new(0));
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let root = ui.create_node(TestStack);
+    let lower = ui.create_node(CountPointerMove {
+        moves: lower_moves.clone(),
+    });
+    let higher = ui.create_node(CountPointerMove {
+        moves: higher_moves.clone(),
+    });
+    ui.set_root(root);
+    ui.set_children(root, vec![lower, higher]);
+
+    ui.nodes[root].bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.nodes[lower].bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(20.0), Px(20.0)));
+    ui.nodes[higher].bounds =
+        Rect::new(Point::new(Px(60.0), Px(0.0)), Size::new(Px(20.0), Px(20.0)));
+
+    let pointer = Point::new(Px(10.0), Px(10.0));
+    let mut services = FakeUiServices;
+    let first_move = Event::Pointer(PointerEvent::Move {
+        position: pointer,
+        buttons: fret_core::MouseButtons::default(),
+        modifiers: fret_core::Modifiers::default(),
+        pointer_id: fret_core::PointerId(0),
+        pointer_type: fret_core::PointerType::Mouse,
+    });
+    ui.dispatch_event(&mut app, &mut services, &first_move);
+    assert_eq!(
+        lower_moves.load(Ordering::SeqCst),
+        1,
+        "prime real pointer-move dispatch through the lower-z child"
+    );
+    assert_eq!(higher_moves.load(Ordering::SeqCst), 0);
+
+    ui.nodes[higher].bounds = ui.nodes[lower].bounds;
+    let stats_before_rehit = ui.debug_stats();
+    ui.dispatch_event(&mut app, &mut services, &first_move);
+
+    assert_eq!(
+        lower_moves.load(Ordering::SeqCst),
+        1,
+        "the stale lower-child cached path must not receive the second pointer move"
+    );
+    assert_eq!(
+        higher_moves.load(Ordering::SeqCst),
+        1,
+        "fallback hit testing should route the second pointer move to the moved higher-z sibling"
+    );
+    let stats_after_rehit = ui.debug_stats();
+    assert!(
+        stats_after_rehit.hit_test_path_cache_misses
+            > stats_before_rehit.hit_test_path_cache_misses,
+        "expected dispatch to reject the stale lower-child path before routing to the moved sibling"
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &first_move);
+    assert_eq!(higher_moves.load(Ordering::SeqCst), 2);
+    let stats_after_cached_reuse = ui.debug_stats();
+    assert!(
+        stats_after_cached_reuse.hit_test_path_cache_hits
+            > stats_after_rehit.hit_test_path_cache_hits,
+        "expected the refreshed higher-z dispatch path to be cache-reusable"
+    );
+}
+
+#[test]
 fn hit_test_works_with_view_cache_root_and_prepaint_reuse_under_render_transform() {
     struct TransformedOverlayRoot;
 

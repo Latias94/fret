@@ -196,7 +196,8 @@
       "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-table-retained --dir target/fret-diag-table-retained-suite-candidate-v4 --session-auto --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery",
       "cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_paint_cache_hit_test_only_replay_counters_serialize script_v2_roundtrip_ui_gallery_hit_test_only_paint_cache_probe_sweep --no-fail-fast --no-capture",
       "cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics paint_cache_hit_test_only_replay_predicates_count_ring_snapshot_maxes --no-fail-fast --no-capture",
-      "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-hit-test-only-paint-cache --dir target/fret-diag-hit-test-only-paint-cache-suite-v3 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery"
+      "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-hit-test-only-paint-cache --dir target/fret-diag-hit-test-only-paint-cache-suite-v3 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery",
+      "cargo nextest run --cargo-profile dev-fast -p fret-ui pointer_move_dispatch_rejects_stale_path_when_higher_z_sibling_moves_under_pointer hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer --no-fail-fast --no-capture"
     ]
   },
   "gates": [
@@ -903,6 +904,10 @@
     {
       "name": "fret-ui-hit-test-path-cache-higher-z-sibling",
       "command": "cargo nextest run --cargo-profile dev-fast -p fret-ui hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer hit_test_layers_cached_reuses_path_and_respects_layer_order --no-fail-fast --no-capture"
+    },
+    {
+      "name": "fret-ui-pointer-move-dispatch-stale-hit-path",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-ui pointer_move_dispatch_rejects_stale_path_when_higher_z_sibling_moves_under_pointer hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer --no-fail-fast --no-capture"
     }
   ],
   "evidence": [
@@ -1196,6 +1201,7 @@
     "target/fret-diag-hit-test-only-paint-cache-probe-sweep-v2/sessions/1779247851157-129852/1779247865248/ai.packet",
     "target/fret-diag-hit-test-only-paint-cache-suite-v3/sessions/1779249174760-142600/suite.summary.json",
     "crates/fret-ui/src/tree/hit_test.rs",
+    "crates/fret-ui/src/tree/dispatch/window.rs",
     "crates/fret-ui/src/tree/tests/hit_test.rs"
   ],
   "adr_refs": [

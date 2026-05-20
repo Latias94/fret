@@ -3453,3 +3453,21 @@ Status: complete for focused stale child-path z-order reuse coverage.
   `rustfmt --edition 2024 --check crates\fret-ui\src\tree\tests\hit_test.rs`;
   `cargo nextest run --cargo-profile dev-fast -p fret-ui hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer hit_test_layers_cached_reuses_path_and_respects_layer_order --no-fail-fast --no-capture`
   with Nextest run id `92315d8d-56fd-4c3e-bfc1-bbfc849e954b`.
+
+## M156: Pointer-Move Dispatch Stale Hit-Path Guard
+
+Status: complete for focused pointer-move dispatch stale-path coverage.
+
+- Added `pointer_move_dispatch_rejects_stale_path_when_higher_z_sibling_moves_under_pointer` to
+  lift M155 from a direct hit-test query into real window dispatch. The test sends a
+  `PointerEvent::Move` through `UiTree::dispatch_event`, verifies the lower-z widget receives the
+  first move, moves a higher-z sibling under the same pointer, and sends a second move with the
+  path cache still live.
+- The second move must not be delivered to the stale lower-z target. Instead dispatch rejects the
+  cached lower-child path, increments `hit_test_path_cache_misses`, delivers the move to the moved
+  higher-z sibling, and refreshes the cache so a third move records a cache hit for the higher-z
+  path.
+- Gates pass:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\tree\tests\hit_test.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui pointer_move_dispatch_rejects_stale_path_when_higher_z_sibling_moves_under_pointer hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer --no-fail-fast --no-capture`
+  with Nextest run id `093b8a5d-e67a-4b35-ab82-e02389f63173`.

@@ -1436,3 +1436,11 @@ date: 2026-05-12
     cached-path reuse misses before fallback hit testing accepts the moved sibling. The refreshed
     higher-z path is then cache-reusable. Focused checks passed with Nextest run id
     `92315d8d-56fd-4c3e-bfc1-bbfc849e954b`.
+- [x] Add a dispatch-level pointer-move stale-path guard for moved higher-z siblings.
+  - Result:
+    `pointer_move_dispatch_rejects_stale_path_when_higher_z_sibling_moves_under_pointer` now sends
+    real pointer moves through `UiTree::dispatch_event`, primes dispatch on a lower-z widget, moves
+    a higher-z sibling under the same pointer, and proves the next move routes to the higher-z
+    widget while the stale lower-child path records a cache miss. A third move proves the refreshed
+    higher-z dispatch path is cache-reusable. Focused checks passed with Nextest run id
+    `093b8a5d-e67a-4b35-ab82-e02389f63173`.

@@ -330,6 +330,12 @@ date: 2026-05-12
   the child-path variant: a cached lower-child path must miss when a higher-z sibling moves under
   the same pointer, then refresh to the moved sibling for subsequent cache hits. Focused evidence
   uses Nextest run id `92315d8d-56fd-4c3e-bfc1-bbfc849e954b`.
+- Pointer-move dispatch stale hit-path update:
+  `pointer_move_dispatch_rejects_stale_path_when_higher_z_sibling_moves_under_pointer` now proves
+  the same child-path invariant through `UiTree::dispatch_event`. Real pointer-move delivery first
+  targets the lower-z widget, then after the higher-z sibling moves under the same pointer the
+  stale path records a miss and mapped event-chain delivery reaches the moved sibling. Focused
+  evidence uses Nextest run id `093b8a5d-e67a-4b35-ab82-e02389f63173`.
 - Node Graph cull-window update:
   `ui-gallery-node-graph-cull`, `ui-gallery-node-graph-cull-window-shifts`, and
   `ui-gallery-node-graph-cull-window-no-shifts-small-pan` now have protocol roundtrip coverage for
