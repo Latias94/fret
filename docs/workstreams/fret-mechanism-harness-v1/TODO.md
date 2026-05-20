@@ -1474,3 +1474,13 @@ date: 2026-05-12
     `ui-gallery-switch-semantics` suite passed 1/1, and the broad
     `ui-gallery-shadcn-runtime-evidence` suite now passes 14/14 with the Switch row run id
     `1779302260684`. No Switch runtime defect was reproduced.
+
+- [x] Add a Checkbox disabled action-state semantics runtime gate.
+  - Result:
+    `ui-gallery-checkbox-disabled-action-state.json` now starts directly on the Checkbox page,
+    scrolls to the Disabled section, proves the disabled checkbox is checked, exports
+    `disabled=true`, and suppresses `invoke=false`. It activates both the disabled control and its
+    associated label, then reasserts checked state and disabled action metadata. The new
+    `ui-gallery-checkbox-semantics` suite passed 1/1, and the broad
+    `ui-gallery-shadcn-runtime-evidence` suite now passes 15/15 with the Checkbox row run id
+    `1779304154355`. No Checkbox runtime defect was reproduced.

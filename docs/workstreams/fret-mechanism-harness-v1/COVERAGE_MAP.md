@@ -401,6 +401,15 @@ date: 2026-05-12
   `scroll_into_view` window guard, while exempting `ui-gallery-nav-search` and
   `ui-gallery-nav-scroll`.
 
+- Checkbox disabled action-state update:
+  `ui-gallery-checkbox-disabled-action-state.json` now covers the non-text shadcn Checkbox disabled
+  semantics path. The gate starts on the Checkbox page, scrolls to the Disabled section, proves the
+  control is checked, exports `disabled=true`, suppresses `invoke=false`, and remains unchanged
+  after both control and associated-label activation. Focused runtime evidence is anchored at
+  `target/fret-diag-checkbox-disabled-action-state-v1/sessions/1779303551841-64456/1779303569865/ai.packet`,
+  and the dedicated suite evidence is anchored at
+  `target/fret-diag-checkbox-semantics-suite-v1/sessions/1779303815632-98108/suite.summary.json`.
+
 A mechanism invariant is covered only when it has at least one of these:
 
 - a synthetic fixture case with stable case id and oracle predicates;

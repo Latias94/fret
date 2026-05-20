@@ -3618,3 +3618,36 @@ Status: complete for the Switch Choice Card recipe-consumer semantics companion.
   with summary
   `target/fret-diag-shadcn-runtime-evidence-switch-choice-card-v1/sessions/1779301689107-175712/suite.summary.json`
   and new row run id `1779302260684`.
+
+## M162: Checkbox Disabled Action-State Runtime Gate
+
+Status: complete for the Checkbox disabled semantics/action companion.
+
+- Added `ui-gallery-checkbox-disabled-action-state.json`, which starts directly on the Checkbox
+  page, scrolls to the Disabled section, proves the disabled checkbox is checked, exports
+  `disabled=true`, and suppresses `invoke=false`.
+- The script activates both the disabled control and its associated label, then reasserts checked
+  state and disabled action metadata so visual disabled chrome cannot hide stale exported action
+  state.
+- Added the focused `ui-gallery-checkbox-semantics` suite, promoted the script into
+  `ui-gallery-shadcn-runtime-evidence`, refreshed the registry, and added protocol roundtrip
+  coverage.
+- No runtime defect was reproduced; this slice closes the missing disabled action-state companion
+  for a non-text shadcn form control.
+- Gates pass:
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_checkbox_disabled_action_state --no-fail-fast --no-capture`
+  with Nextest run id `8ace631b-a63d-4a0d-bc9b-55ccc1a64267`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\checkbox\ui-gallery-checkbox-disabled-action-state.json --dir target\fret-diag-checkbox-disabled-action-state-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779303569865` and AI packet
+  `target/fret-diag-checkbox-disabled-action-state-v1/sessions/1779303551841-64456/1779303569865/ai.packet`.
+- Dedicated runtime suite passes:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-checkbox-semantics --dir target\fret-diag-checkbox-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with summary
+  `target/fret-diag-checkbox-semantics-suite-v1/sessions/1779303815632-98108/suite.summary.json`.
+- The broad `ui-gallery-shadcn-runtime-evidence` suite now passes 15/15 with the new Checkbox row:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-checkbox-disabled-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with summary
+  `target/fret-diag-shadcn-runtime-evidence-checkbox-disabled-v1/sessions/1779304064247-171464/suite.summary.json`
+  and new row run id `1779304154355`.

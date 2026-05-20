@@ -5403,6 +5403,31 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-checkbox-disabled-action-state",
+      "path": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-disabled-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-checkbox-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "action-state",
+        "checkbox",
+        "disabled",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Checkbox page.",
+        "Verifies that a disabled Checkbox exposes disabled=true, suppresses invoke, and does not mutate checked state through control or label activation."
+      ]
+    },
+    {
       "id": "ui-gallery-checkbox-invalid-code-tab-scroll-range",
       "path": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-invalid-code-tab-scroll-range.json",
       "required_capabilities": [
