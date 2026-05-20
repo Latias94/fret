@@ -7,7 +7,7 @@ use fret_ui::{Invalidation, UiTree};
 
 use crate::core::{Graph, PortId};
 
-use crate::ui::NodeGraphCanvas;
+use crate::ui::canvas::NodeGraphCanvas;
 use crate::ui::presenter::NodeGraphPresenter;
 
 use super::{

@@ -292,6 +292,9 @@ pub enum ElementKind {
     Image(ImageProps),
     /// A declarative, leaf canvas element for custom scene emission (ADR 0141).
     Canvas(CanvasProps),
+    /// A mechanism-only managed surface that can place and paint child roots from runtime-computed
+    /// geometry without exposing the retained `Widget` API.
+    ManagedSurface(ManagedSurfaceProps),
     /// Unstable bridge element for hosting a retained subtree under declarative mount.
     #[cfg(feature = "unstable-retained-bridge")]
     RetainedSubtree(crate::retained_bridge::RetainedSubtreeProps),
@@ -2373,6 +2376,29 @@ impl Default for CanvasProps {
     }
 }
 
+/// A mechanism-only managed surface element.
+///
+/// Handlers are registered via element-local state so props remain `Copy + Debug`. This primitive
+/// intentionally owns no component policy; ecosystem layers provide layout/event/paint decisions.
+#[derive(Debug, Clone, Copy)]
+pub struct ManagedSurfaceProps {
+    pub layout: LayoutStyle,
+    /// Whether a prepaint hook is registered in element-local state.
+    pub prepaint: bool,
+}
+
+impl Default for ManagedSurfaceProps {
+    fn default() -> Self {
+        let mut layout = LayoutStyle::default();
+        layout.size.width = Length::Fill;
+        layout.size.height = Length::Fill;
+        Self {
+            layout,
+            prepaint: false,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct SvgIconProps {
     pub layout: LayoutStyle,
@@ -3114,6 +3140,12 @@ impl IntoElement for SelectableTextProps {
 impl IntoElement for ImageProps {
     fn into_element(self, id: GlobalElementId) -> AnyElement {
         AnyElement::new(id, ElementKind::Image(self), Vec::new())
+    }
+}
+
+impl IntoElement for ManagedSurfaceProps {
+    fn into_element(self, id: GlobalElementId) -> AnyElement {
+        AnyElement::new(id, ElementKind::ManagedSurface(self), Vec::new())
     }
 }
 

@@ -9,7 +9,7 @@ use crate::core::{
 use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphOpBuilderExt as _, GraphTransaction};
 
-use super::SymbolRenameOverlay;
+use super::group_rename::SymbolRenameOverlay;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum BlackboardAction {

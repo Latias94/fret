@@ -1,7 +1,7 @@
-use fret_ui::{UiHost, retained_bridge::*};
-
+#[cfg(feature = "compat-retained-canvas")]
 use crate::ui::retained_event_tail;
 
+#[cfg(feature = "compat-retained-canvas")]
 use super::panel_item_state::promote_pointer_target_to_keyboard_item;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -10,8 +10,9 @@ pub(super) struct PanelPressRelease<T> {
     pub(super) activate: Option<T>,
 }
 
+#[cfg(feature = "compat-retained-canvas")]
 pub(super) fn begin_panel_press<H: UiHost, T: Copy>(
-    cx: &mut EventCx<'_, H>,
+    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     keyboard_active: &mut Option<T>,
     pressed: &mut Option<T>,
     pressed_target: Option<T>,
@@ -28,6 +29,9 @@ pub(super) fn begin_panel_press<H: UiHost, T: Copy>(
     cx.capture_pointer(cx.node);
     retained_event_tail::request_paint_repaint(cx);
 }
+
+#[cfg(feature = "compat-retained-canvas")]
+use fret_ui::UiHost;
 
 pub(super) fn sync_panel_hover<T: Copy + Eq>(
     hovered: &mut Option<T>,

@@ -2,14 +2,13 @@ use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{
-    AppWindowId, Color, Corners, DrawOrder, Edges, Event, PanelKind, Rect, Scene, SceneOp,
-    UiServices, geometry::Px,
+    AppWindowId, Color, Corners, DrawOrder, Edges, Event, Rect, Scene, SceneOp, UiServices,
+    geometry::Px,
 };
 use fret_docking::{
-    DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
-    DockPanelRegistryService, DockViewportLayout, DockViewportOverlayHooks,
+    DockManager, DockPanel, DockPanelElementRegistry, DockPanelElementRegistryService,
+    DockSpaceElementOptions, DockViewportLayout, DockViewportOverlayHooks,
     DockViewportOverlayHooksService, DockingRuntime, ViewportPanel,
-    create_dock_space_node_with_test_id, render_and_bind_dock_panels,
 };
 use fret_launch::{
     DevStateExport, DevStateHook, DevStateHooks, FnDriver, WindowCreateSpec, WinitCommandContext,
@@ -17,9 +16,9 @@ use fret_launch::{
     WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
-use fret_ui::element::{ContainerProps, LayoutStyle, Length};
+use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length};
 use fret_ui::retained_bridge::{LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt as _, Widget};
-use fret_ui::{Theme, UiTree};
+use fret_ui::{ElementContext, Theme, UiTree};
 use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
@@ -118,119 +117,117 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingDemoHarnessRoot {
         }
     }
 }
-struct DemoDockPanelFactory {
-    kind: PanelKind,
-}
+struct DemoDockPanelRegistry;
 
-impl DemoDockPanelFactory {
-    fn new(kind: &'static str) -> Self {
-        Self {
-            kind: PanelKind::new(kind),
-        }
-    }
-}
-
-impl DockPanelFactory<App> for DemoDockPanelFactory {
-    fn panel_kind(&self) -> PanelKind {
-        self.kind.clone()
-    }
-
-    fn build_panel(
+impl DemoDockPanelRegistry {
+    fn render_known_panel(
         &self,
+        cx: &mut ElementContext<'_, App>,
         panel: &fret_core::PanelKey,
-        cx: &mut DockPanelFactoryCx<'_, App>,
-    ) -> Option<fret_core::NodeId> {
+    ) -> Option<AnyElement> {
+        if !matches!(panel.kind.0.as_str(), "core.hierarchy" | "core.inspector") {
+            return None;
+        }
+
         let kind = panel.kind.0.clone();
-        let root_name = format!("dock_demo.panel.{kind}");
-        Some(cx.render_cached_panel_root(&root_name, |cx| {
-            let theme = Theme::global(&*cx.app).clone();
-            let padding = theme.metric_token("metric.padding.md");
-            let background = theme.color_token("background");
+        let theme = Theme::global(&*cx.app).clone();
+        let padding = theme.metric_token("metric.padding.md");
+        let background = theme.color_token("background");
 
-            let label: &str = match kind.as_str() {
-                "core.hierarchy" => "Hierarchy panel (declarative root)",
-                "core.inspector" => "Inspector panel (declarative root)",
-                _ => "Panel (unregistered kind)",
-            };
+        let label: &str = match kind.as_str() {
+            "core.hierarchy" => "Hierarchy panel (declarative root)",
+            "core.inspector" => "Inspector panel (declarative root)",
+            _ => "Panel (unregistered kind)",
+        };
 
-            vec![cx.container(
-                ContainerProps {
-                    layout: {
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Fill;
-                        layout.size.height = Length::Fill;
-                        layout
-                    },
-                    padding: fret_core::Edges::all(padding).into(),
-                    background: Some(background),
-                    ..Default::default()
+        Some(cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout.size.height = Length::Fill;
+                    layout
                 },
-                |cx| {
-                    let body = match kind.as_str() {
-                        "core.hierarchy" => shadcn::Card::new(vec![
-                            shadcn::CardHeader::new(vec![
-                                shadcn::CardTitle::new("Hierarchy").into_element(cx),
-                                shadcn::CardDescription::new(
-                                    "Placeholder content for docking + tab drag smoke tests.",
-                                )
-                                .into_element(cx),
-                            ])
-                            .into_element(cx),
-                            shadcn::CardContent::new([ui::v_flex(|cx| {
-                                [
-                                    shadcn::Button::new("Toggle collapse (layout.expand motion)")
-                                        .variant(shadcn::ButtonVariant::Outline)
-                                        .size(shadcn::ButtonSize::Sm)
-                                        .on_click(CMD_DOCK_DEMO_SPLIT_TOGGLE)
-                                        .test_id("dock-demo-split-toggle")
-                                        .into_element(cx),
-                                    docking_demo_list_row_text(cx, "Scene"),
-                                    docking_demo_list_row_text(cx, "Camera"),
-                                    docking_demo_list_row_text(cx, "Directional Light"),
-                                    docking_demo_list_row_text(cx, "Player"),
-                                ]
-                            })
-                            .gap(Space::N1)
-                            .layout(LayoutRefinement::default().w_full())
-                            .into_element(cx)])
+                padding: fret_core::Edges::all(padding).into(),
+                background: Some(background),
+                ..Default::default()
+            },
+            |cx| {
+                let body = match kind.as_str() {
+                    "core.hierarchy" => shadcn::Card::new(vec![
+                        shadcn::CardHeader::new(vec![
+                            shadcn::CardTitle::new("Hierarchy").into_element(cx),
+                            shadcn::CardDescription::new(
+                                "Placeholder content for docking + tab drag smoke tests.",
+                            )
                             .into_element(cx),
                         ])
-                        .size(shadcn::CardSize::Sm)
                         .into_element(cx),
-                        "core.inspector" => shadcn::Card::new(vec![
-                            shadcn::CardHeader::new(vec![
-                                shadcn::CardTitle::new("Inspector").into_element(cx),
-                                shadcn::CardDescription::new(label).into_element(cx),
-                            ])
-                            .into_element(cx),
-                            shadcn::CardContent::new([ui::v_flex(|cx| {
-                                [
-                                    docking_demo_readout_text(cx, "Name: Player"),
-                                    docking_demo_readout_text(cx, "Position: (12.0, 3.0, -8.0)"),
-                                    docking_demo_readout_text(cx, "Rotation: (0.0, 90.0, 0.0)"),
-                                ]
-                            })
-                            .gap(Space::N1)
-                            .layout(LayoutRefinement::default().w_full())
-                            .into_element(cx)])
-                            .into_element(cx),
+                        shadcn::CardContent::new([ui::v_flex(|cx| {
+                            [
+                                shadcn::Button::new("Toggle collapse (layout.expand motion)")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .on_click(CMD_DOCK_DEMO_SPLIT_TOGGLE)
+                                    .test_id("dock-demo-split-toggle")
+                                    .into_element(cx),
+                                docking_demo_list_row_text(cx, "Scene"),
+                                docking_demo_list_row_text(cx, "Camera"),
+                                docking_demo_list_row_text(cx, "Directional Light"),
+                                docking_demo_list_row_text(cx, "Player"),
+                            ]
+                        })
+                        .gap(Space::N1)
+                        .layout(LayoutRefinement::default().w_full())
+                        .into_element(cx)])
+                        .into_element(cx),
+                    ])
+                    .size(shadcn::CardSize::Sm)
+                    .into_element(cx),
+                    "core.inspector" => shadcn::Card::new(vec![
+                        shadcn::CardHeader::new(vec![
+                            shadcn::CardTitle::new("Inspector").into_element(cx),
+                            shadcn::CardDescription::new(label).into_element(cx),
                         ])
-                        .size(shadcn::CardSize::Sm)
                         .into_element(cx),
-                        _ => shadcn::Card::new(vec![
-                            shadcn::CardHeader::new(vec![
-                                shadcn::CardTitle::new(label).into_element(cx),
-                            ])
-                            .into_element(cx),
+                        shadcn::CardContent::new([ui::v_flex(|cx| {
+                            [
+                                docking_demo_readout_text(cx, "Name: Player"),
+                                docking_demo_readout_text(cx, "Position: (12.0, 3.0, -8.0)"),
+                                docking_demo_readout_text(cx, "Rotation: (0.0, 90.0, 0.0)"),
+                            ]
+                        })
+                        .gap(Space::N1)
+                        .layout(LayoutRefinement::default().w_full())
+                        .into_element(cx)])
+                        .into_element(cx),
+                    ])
+                    .size(shadcn::CardSize::Sm)
+                    .into_element(cx),
+                    _ => shadcn::Card::new(vec![
+                        shadcn::CardHeader::new(vec![
+                            shadcn::CardTitle::new(label).into_element(cx),
                         ])
-                        .size(shadcn::CardSize::Sm)
                         .into_element(cx),
-                    };
+                    ])
+                    .size(shadcn::CardSize::Sm)
+                    .into_element(cx),
+                };
 
-                    vec![body]
-                },
-            )]
-        }))
+                vec![body]
+            },
+        ))
+    }
+}
+
+impl DockPanelElementRegistry<App> for DemoDockPanelRegistry {
+    fn render_panel(
+        &self,
+        cx: &mut ElementContext<'_, App>,
+        _window: AppWindowId,
+        panel: &fret_core::PanelKey,
+    ) -> Option<AnyElement> {
+        self.render_known_panel(cx, panel)
     }
 }
 
@@ -267,6 +264,8 @@ pub struct DockingDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
     dock_space: Option<fret_core::NodeId>,
+    left_anchor: Option<fret_core::NodeId>,
+    right_anchor: Option<fret_core::NodeId>,
 }
 
 #[derive(Default)]
@@ -285,6 +284,8 @@ impl DockingDemoDriver {
             ui,
             root: None,
             dock_space: None,
+            left_anchor: None,
+            right_anchor: None,
         }
     }
 
@@ -345,9 +346,25 @@ impl DockingDemoDriver {
     ) {
         Self::ensure_dock_graph(app, window);
 
-        let dock_space = state.dock_space.get_or_insert_with(|| {
-            create_dock_space_node_with_test_id(&mut state.ui, window, "dock-demo-dock-space")
-        });
+        let dock_space = fret_ui::declarative::render_root(
+            &mut state.ui,
+            app,
+            services,
+            window,
+            bounds,
+            "dock-demo-dock-space",
+            |cx| {
+                vec![fret_docking::dock_space_element_from_registry(
+                    cx,
+                    window,
+                    DockSpaceElementOptions {
+                        test_id: Some("dock-demo-dock-space"),
+                        ..Default::default()
+                    },
+                )]
+            },
+        );
+        state.dock_space = Some(dock_space);
 
         if state.root.is_none() {
             let left_anchor = state
@@ -357,15 +374,23 @@ impl DockingDemoDriver {
                 "dock-demo-tab-drag-anchor-right",
             ));
             let root = state.ui.create_node_retained(DockingDemoHarnessRoot {
-                dock_space: *dock_space,
+                dock_space,
                 left_anchor,
                 right_anchor,
             });
             state
                 .ui
-                .set_children(root, vec![*dock_space, left_anchor, right_anchor]);
+                .set_children(root, vec![dock_space, left_anchor, right_anchor]);
             state.ui.set_root(root);
             state.root = Some(root);
+            state.left_anchor = Some(left_anchor);
+            state.right_anchor = Some(right_anchor);
+        } else if let (Some(root), Some(left_anchor), Some(right_anchor)) =
+            (state.root, state.left_anchor, state.right_anchor)
+        {
+            state
+                .ui
+                .set_children(root, vec![dock_space, left_anchor, right_anchor]);
         }
 
         // When view caching is active, explicitly mark the dock space as a cache root so paint
@@ -373,10 +398,8 @@ impl DockingDemoDriver {
         if state.ui.view_cache_enabled() {
             state
                 .ui
-                .set_node_view_cache_flags(*dock_space, true, false, false);
+                .set_node_view_cache_flags(dock_space, true, false, false);
         }
-
-        render_and_bind_dock_panels(&mut state.ui, app, services, window, bounds, *dock_space);
     }
 }
 
@@ -409,6 +432,8 @@ fn hot_reload_window(
     crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
     state.root = None;
     state.dock_space = None;
+    state.left_anchor = None;
+    state.right_anchor = None;
 }
 
 fn handle_model_changes(
@@ -820,13 +845,12 @@ pub fn run() -> anyhow::Result<()> {
 
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
-    let mut registry = DockPanelRegistryBuilder::new();
-    registry
-        .register(DemoDockPanelFactory::new("core.hierarchy"))
-        .register(DemoDockPanelFactory::new("core.inspector"));
-    app.with_global_mut(DockPanelRegistryService::<App>::default, |svc, _app| {
-        svc.set(registry.build_arc());
-    });
+    app.with_global_mut(
+        DockPanelElementRegistryService::<App>::default,
+        |svc, _app| {
+            svc.set(Arc::new(DemoDockPanelRegistry));
+        },
+    );
     app.with_global_mut(DockViewportOverlayHooksService::default, |svc, _app| {
         svc.set(Arc::new(DemoViewportOverlayHooks));
     });

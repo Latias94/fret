@@ -101,6 +101,10 @@ impl DockFocusRequestService {
         self.per_window.insert(window, panel);
     }
 
+    pub(super) fn has(&self, window: AppWindowId) -> bool {
+        self.per_window.contains_key(&window)
+    }
+
     pub(super) fn take(&mut self, window: AppWindowId) -> Option<PanelKey> {
         self.per_window.remove(&window)
     }

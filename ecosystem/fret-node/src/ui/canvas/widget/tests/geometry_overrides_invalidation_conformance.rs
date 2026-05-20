@@ -5,7 +5,9 @@ use fret_runtime::ui_host::GlobalsHost;
 use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, Theme, UiTree};
 
-use crate::ui::{NodeGraphCanvas, NodeGraphGeometryOverridesMap, NodeGraphGeometryOverridesRef};
+use crate::ui::{
+    NodeGraphGeometryOverridesMap, NodeGraphGeometryOverridesRef, canvas::NodeGraphCanvas,
+};
 
 use super::{
     NullServices, TestUiHostImpl, insert_graph_view_editor_config_with,

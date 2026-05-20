@@ -1,3 +1,5 @@
+use std::cell::Cell;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_canvas::view::{DEFAULT_WHEEL_ZOOM_BASE, DEFAULT_WHEEL_ZOOM_STEP, PanZoom2D};
@@ -7,13 +9,15 @@ use fret_core::scene::{
     PaintEvalSpaceV1, TileMode,
 };
 use fret_core::{
-    Color, DrawOrder, MouseButton, PathCommand, PathStyle, Point, Px, Rect, StrokeCapV1,
-    StrokeJoinV1, StrokeStyleV2,
+    Color, DrawOrder, MouseButton, PathCommand, PathStyle, Point, Px, Rect, SemanticsRole,
+    StrokeCapV1, StrokeJoinV1, StrokeStyleV2,
 };
 use fret_runtime::Model;
 use fret_ui::canvas::{CanvasKey, CanvasPainter};
-use fret_ui::element::{AnyElement, CanvasProps, Length, PointerRegionProps, SemanticsProps};
-use fret_ui::{ElementContext, ElementContextAccess, Invalidation, UiHost};
+use fret_ui::element::{
+    AnyElement, CanvasProps, Length, PointerRegionProps, SemanticsDecoration, SemanticsProps,
+};
+use fret_ui::{ElementContext, ElementContextAccess, GlobalElementId, Invalidation, UiHost};
 
 use crate::core::Graph;
 use crate::io::NodeGraphViewState;
@@ -27,7 +31,8 @@ use crate::ui::paint_overrides::{NodeGraphPaintOverridesMap, NodeGraphPaintOverr
 use crate::ui::presenter::DefaultNodeGraphPresenter;
 use crate::ui::style::NodeGraphStyle;
 use crate::ui::{
-    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphPresenter, NodeGraphSurfaceBinding,
+    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphInternalsStore, NodeGraphPresenter,
+    NodeGraphSurfaceBinding,
 };
 
 #[path = "paint_only/cache.rs"]
@@ -241,6 +246,10 @@ pub struct NodeGraphSurfaceProps {
     /// portal subtrees may publish measured node sizes back into the same store.
     pub measured_geometry: Option<Arc<MeasuredGeometryStore>>,
 
+    /// Optional UI-only internals store used to expose active-descendant semantics and editor
+    /// overlay geometry without serializing that derived state into graph assets.
+    pub a11y_internals: Option<Arc<NodeGraphInternalsStore>>,
+
     /// Visible-subset portal hosting policy for the declarative editor surface.
     pub portal_hosting: NodeGraphVisibleSubsetPortalConfig,
 
@@ -264,6 +273,7 @@ impl NodeGraphSurfaceProps {
         let mut pointer_region = PointerRegionProps::default();
         pointer_region.layout.size.width = Length::Fill;
         pointer_region.layout.size.height = Length::Fill;
+        let a11y_internals = Some(binding.internals_store());
 
         Self {
             binding,
@@ -272,6 +282,7 @@ impl NodeGraphSurfaceProps {
             geometry_overrides: None,
             paint_overrides: None,
             measured_geometry: None,
+            a11y_internals,
             portal_hosting: NodeGraphVisibleSubsetPortalConfig::default(),
             diagnostics: NodeGraphDiagnosticsConfig::default(),
             cull_margin_screen_px: 256.0,
@@ -308,6 +319,7 @@ pub fn node_graph_surface<H: UiHost + 'static>(
         geometry_overrides,
         paint_overrides,
         measured_geometry,
+        a11y_internals,
         portal_hosting,
         diagnostics,
         cull_margin_screen_px,
@@ -392,18 +404,29 @@ pub fn node_graph_surface<H: UiHost + 'static>(
     let semantics_value = prepared_frame.semantics_value;
     let test_id = prepared_frame.test_id;
 
-    cx.semantics_with_id(
+    let a11y_snapshot = a11y_internals
+        .as_ref()
+        .map(|internals| internals.a11y_snapshot());
+    let active_descendant_key = a11y_snapshot
+        .as_ref()
+        .and_then(|snapshot| active_descendant_key_from_a11y(snapshot));
+    let active_descendant_element = Rc::new(Cell::new(None::<GlobalElementId>));
+    let active_descendant_element_for_children = active_descendant_element.clone();
+
+    let surface = cx.semantics_with_id(
         SemanticsProps {
+            role: SemanticsRole::Viewport,
+            label: Some(Arc::from("Node Graph Canvas")),
             test_id: Some(test_id.clone()),
             value: Some(semantics_value.clone()),
             // Make the surface focusable so keyboard actions can route here after pointer-down.
             focusable: true,
             ..Default::default()
         },
-        move |cx, element| {
-            build_surface_shell(
+        move |cx, _element| {
+            let shell = build_surface_shell(
                 cx,
-                element,
+                _element,
                 SurfaceShellParams {
                     binding: binding.clone(),
                     pointer_region,
@@ -458,9 +481,113 @@ pub fn node_graph_surface<H: UiHost + 'static>(
                         test_id: test_id.clone(),
                     },
                 },
+            );
+            build_surface_semantics_children(
+                cx,
+                shell,
+                a11y_snapshot.as_ref(),
+                active_descendant_key,
+                &active_descendant_element_for_children,
             )
         },
-    )
+    );
+    match active_descendant_element.get() {
+        Some(element) => surface
+            .attach_semantics(SemanticsDecoration::default().active_descendant_element(element.0)),
+        None => surface,
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum NodeGraphA11yDescendantKey {
+    FocusedPort,
+    FocusedEdge,
+    FocusedNode,
+}
+
+fn active_descendant_key_from_a11y(
+    snapshot: &crate::ui::internals::NodeGraphA11ySnapshot,
+) -> Option<NodeGraphA11yDescendantKey> {
+    if snapshot.focused_port.is_some() {
+        Some(NodeGraphA11yDescendantKey::FocusedPort)
+    } else if snapshot.focused_edge.is_some() {
+        Some(NodeGraphA11yDescendantKey::FocusedEdge)
+    } else if snapshot.focused_node.is_some() {
+        Some(NodeGraphA11yDescendantKey::FocusedNode)
+    } else {
+        None
+    }
+}
+
+fn build_surface_semantics_children<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    mut shell: Vec<AnyElement>,
+    a11y: Option<&crate::ui::internals::NodeGraphA11ySnapshot>,
+    active_descendant_key: Option<NodeGraphA11yDescendantKey>,
+    active_descendant_element: &Rc<Cell<Option<GlobalElementId>>>,
+) -> Vec<AnyElement> {
+    if let Some(a11y) = a11y {
+        shell.extend(build_a11y_descendant_semantics(
+            cx,
+            a11y,
+            active_descendant_key,
+            active_descendant_element,
+        ));
+    }
+    shell
+}
+
+fn build_a11y_descendant_semantics<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    a11y: &crate::ui::internals::NodeGraphA11ySnapshot,
+    active_descendant_key: Option<NodeGraphA11yDescendantKey>,
+    active_descendant_element: &Rc<Cell<Option<GlobalElementId>>>,
+) -> Vec<AnyElement> {
+    [
+        (
+            NodeGraphA11yDescendantKey::FocusedPort,
+            a11y.focused_port_label.clone().or_else(|| {
+                a11y.focused_port
+                    .map(|port| format!("Focused port {port:?}"))
+            }),
+        ),
+        (
+            NodeGraphA11yDescendantKey::FocusedEdge,
+            a11y.focused_edge_label.clone().or_else(|| {
+                a11y.focused_edge
+                    .map(|edge| format!("Focused edge {edge:?}"))
+            }),
+        ),
+        (
+            NodeGraphA11yDescendantKey::FocusedNode,
+            a11y.focused_node_label.clone().or_else(|| {
+                a11y.focused_node
+                    .map(|node| format!("Focused node {node:?}"))
+            }),
+        ),
+    ]
+    .into_iter()
+    .filter_map(|(key, label)| {
+        label.map(|label| {
+            let active_descendant_element = active_descendant_element.clone();
+            let mut props = SemanticsProps {
+                role: SemanticsRole::Generic,
+                label: Some(Arc::<str>::from(label)),
+                ..Default::default()
+            };
+            props.layout.size.width = Length::Px(Px(0.0));
+            props.layout.size.height = Length::Px(Px(0.0));
+            cx.keyed(key, move |cx| {
+                cx.semantics_with_id(props, |_cx, id| {
+                    if active_descendant_key == Some(key) {
+                        active_descendant_element.set(Some(id));
+                    }
+                    Vec::new()
+                })
+            })
+        })
+    })
+    .collect()
 }
 
 #[cfg(test)]

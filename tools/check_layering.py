@@ -306,7 +306,6 @@ def main(argv: list[str]) -> int:
     # Feature usage policy: retained bridge must remain explicitly opt-in and tightly scoped.
     unstable_retained_bridge_allowlist = {
         "fret-chart",
-        "fret-docking",
         "fret-node",
         "fret-plot",
         "fret-plot3d",
@@ -326,4 +325,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))
-

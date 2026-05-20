@@ -660,6 +660,11 @@ impl ElementHostWidget {
                 props.layout,
                 cx.constraints,
             ),
+            ElementInstance::ManagedSurface(props) => clamp_to_constraints_in_measure(
+                available_px_or_zero(cx.constraints),
+                props.layout,
+                cx.constraints,
+            ),
             #[cfg(feature = "unstable-retained-bridge")]
             ElementInstance::RetainedSubtree(props) => clamp_to_constraints_in_measure(
                 available_px_or_zero(cx.constraints),

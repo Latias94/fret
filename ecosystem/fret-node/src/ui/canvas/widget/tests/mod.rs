@@ -20,11 +20,10 @@ use serde_json::Value;
 
 macro_rules! new_canvas {
     ($host:ident, $graph:expr, $view:expr, $editor_config:expr) => {
-        crate::ui::NodeGraphCanvas::new($graph, $view, $editor_config)
+        crate::ui::canvas::NodeGraphCanvas::new($graph, $view, $editor_config)
     };
 }
 
-mod a11y_active_descendant_conformance;
 mod background_style_conformance;
 mod cached_edge_labels_tile_equivalence_conformance;
 mod cached_edges_tile_equivalence_conformance;
@@ -79,13 +78,8 @@ mod node_sizing_conformance;
 mod nudge_step_conformance;
 mod only_render_visible_elements_conformance;
 mod op_batching_determinism_conformance;
-mod overlay_blackboard_conformance;
-mod overlay_group_rename_conformance;
 mod overlay_invalidation_conformance;
 mod overlay_menu_searcher_conformance;
-mod overlay_minimap_controls_conformance;
-mod overlay_symbol_rename_conformance;
-mod overlay_toolbars_conformance;
 mod paint_overrides_apply_to_edge_markers_paint_conformance;
 mod paint_overrides_apply_to_edge_wire_paint_conformance;
 mod paint_overrides_apply_to_node_paint_conformance;

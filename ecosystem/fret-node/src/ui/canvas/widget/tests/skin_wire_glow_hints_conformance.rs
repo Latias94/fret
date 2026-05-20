@@ -6,7 +6,7 @@ use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
 use crate::core::{CanvasPoint, Edge, EdgeId, EdgeKind};
-use crate::ui::{NodeGraphCanvas, NodeGraphPresetFamily, NodeGraphPresetSkinV1};
+use crate::ui::{NodeGraphPresetFamily, NodeGraphPresetSkinV1, canvas::NodeGraphCanvas};
 
 use super::{
     NullServices, TestUiHostImpl, insert_graph_view_editor_config_with,

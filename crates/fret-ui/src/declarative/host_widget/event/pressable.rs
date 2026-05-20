@@ -228,6 +228,8 @@ pub(super) fn handle_pressable<H: UiHost>(
         window: AppWindowId,
         element: crate::GlobalElementId,
         source_test_id: Option<Arc<str>>,
+        requested_focus: Option<&'a mut Option<NodeId>>,
+        requested_focus_target: Option<&'a mut Option<crate::GlobalElementId>>,
         notify_requested: &'a mut bool,
         notify_requested_location: &'a mut Option<crate::widget::UiSourceLocation>,
     }
@@ -327,6 +329,19 @@ pub(super) fn handle_pressable<H: UiHost>(
                     column: caller.column(),
                 });
             }
+        }
+    }
+
+    impl<H: UiHost> action::UiFocusActionHost for PressableActionHookHost<'_, H> {
+        fn request_focus(&mut self, target: crate::GlobalElementId) {
+            let (Some(requested_focus), Some(requested_focus_target)) = (
+                self.requested_focus.as_deref_mut(),
+                self.requested_focus_target.as_deref_mut(),
+            ) else {
+                return;
+            };
+            *requested_focus = None;
+            *requested_focus_target = Some(target);
         }
     }
 
@@ -665,12 +680,12 @@ pub(super) fn handle_pressable<H: UiHost>(
                     cx.request_focus(cx.node);
                 }
                 if pressed && hovered && (!is_touch || *is_click) && !skip_activate {
-                    let hook = crate::elements::with_element_state(
+                    let (hook, focus_hook) = crate::elements::with_element_state(
                         &mut *cx.app,
                         window,
                         this.element,
                         crate::action::PressableActionHooks::default,
-                        |hooks| hooks.on_activate.clone(),
+                        |hooks| (hooks.on_activate.clone(), hooks.on_activate_focus.clone()),
                     );
 
                     if let Some(h) = hook {
@@ -679,6 +694,28 @@ pub(super) fn handle_pressable<H: UiHost>(
                             window,
                             element: this.element,
                             source_test_id: props.a11y.test_id.clone(),
+                            requested_focus: None,
+                            requested_focus_target: None,
+                            notify_requested: &mut cx.notify_requested,
+                            notify_requested_location: &mut cx.notify_requested_location,
+                        };
+                        h(
+                            &mut host,
+                            action::ActionCx {
+                                window,
+                                target: this.element,
+                            },
+                            ActivateReason::Pointer,
+                        );
+                    }
+                    if let Some(h) = focus_hook {
+                        let mut host = PressableActionHookHost {
+                            app: &mut *cx.app,
+                            window,
+                            element: this.element,
+                            source_test_id: props.a11y.test_id.clone(),
+                            requested_focus: Some(&mut cx.requested_focus),
+                            requested_focus_target: Some(&mut cx.requested_focus_target),
                             notify_requested: &mut cx.notify_requested,
                             notify_requested_location: &mut cx.notify_requested_location,
                         };
@@ -763,12 +800,12 @@ pub(super) fn handle_pressable<H: UiHost>(
             }
             cx.invalidate_self(Invalidation::Paint);
             cx.request_redraw();
-            let hook = crate::elements::with_element_state(
+            let (hook, focus_hook) = crate::elements::with_element_state(
                 &mut *cx.app,
                 window,
                 this.element,
                 crate::action::PressableActionHooks::default,
-                |hooks| hooks.on_activate.clone(),
+                |hooks| (hooks.on_activate.clone(), hooks.on_activate_focus.clone()),
             );
 
             if let Some(h) = hook {
@@ -777,6 +814,28 @@ pub(super) fn handle_pressable<H: UiHost>(
                     window,
                     element: this.element,
                     source_test_id: props.a11y.test_id.clone(),
+                    requested_focus: None,
+                    requested_focus_target: None,
+                    notify_requested: &mut cx.notify_requested,
+                    notify_requested_location: &mut cx.notify_requested_location,
+                };
+                h(
+                    &mut host,
+                    action::ActionCx {
+                        window,
+                        target: this.element,
+                    },
+                    ActivateReason::Keyboard,
+                );
+            }
+            if let Some(h) = focus_hook {
+                let mut host = PressableActionHookHost {
+                    app: &mut *cx.app,
+                    window,
+                    element: this.element,
+                    source_test_id: props.a11y.test_id.clone(),
+                    requested_focus: Some(&mut cx.requested_focus),
+                    requested_focus_target: Some(&mut cx.requested_focus_target),
                     notify_requested: &mut cx.notify_requested,
                     notify_requested_location: &mut cx.notify_requested_location,
                 };
@@ -811,6 +870,8 @@ pub(super) fn handle_pressable<H: UiHost>(
                 window,
                 element: this.element,
                 source_test_id: props.a11y.test_id.clone(),
+                requested_focus: None,
+                requested_focus_target: None,
                 notify_requested: &mut cx.notify_requested,
                 notify_requested_location: &mut cx.notify_requested_location,
             };

@@ -23,7 +23,7 @@ pub(super) fn spacing_px_for_basis(length: crate::element::SpacingLength, basis:
 }
 
 impl ElementHostWidget {
-    pub(super) fn layout_impl<H: UiHost>(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+    pub(super) fn layout_impl<H: UiHost + 'static>(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let _element_id = self.element;
         let Some(window) = cx.window else {
             return Size::new(Px(0.0), Px(0.0));
@@ -58,6 +58,7 @@ impl ElementHostWidget {
 
         self.render_transform = None;
         self.scroll_child_transform = None;
+        self.managed_surface_hit_test_mask = None;
 
         self.hit_testable = match &instance {
             ElementInstance::Pressable(_) => true,
@@ -197,6 +198,7 @@ impl ElementHostWidget {
             | ElementInstance::Scrollbar(_)
             | ElementInstance::Image(_)
             | ElementInstance::Canvas(_)
+            | ElementInstance::ManagedSurface(_)
             | ElementInstance::ViewportSurface(_)
             | ElementInstance::SvgIcon(_)
             | ElementInstance::SvgImage(_)
@@ -1578,6 +1580,23 @@ impl ElementHostWidget {
             ElementInstance::Canvas(props) => {
                 clamp_to_constraints(cx.available, props.layout, cx.available)
             }
+            ElementInstance::ManagedSurface(props) => {
+                let on_layout = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::managed_surface::ManagedSurfaceHooks::<H>::default,
+                    |hooks| hooks.on_layout.clone(),
+                );
+                if let Some(on_layout) = on_layout {
+                    let mut managed_cx = crate::managed_surface::ManagedSurfaceLayoutCx::new(cx);
+                    (on_layout)(&mut managed_cx);
+                    self.managed_surface_hit_test_mask = managed_cx
+                        .take_hit_test_rects()
+                        .map(crate::managed_surface::ManagedSurfaceHitTestMask::new);
+                }
+                clamp_to_constraints(cx.available, props.layout, cx.available)
+            }
             #[cfg(feature = "unstable-retained-bridge")]
             ElementInstance::RetainedSubtree(props) => {
                 if let Some(&child) = cx.children.first() {
@@ -1771,17 +1790,25 @@ fn try_layout_children_from_engine_with_manual_absolute<H: UiHost>(
 
     let base = Rect::new(base_for_absolute.origin, desired);
 
-    for (child, bounds) in non_absolute {
-        let _ = cx.layout_in(child, bounds);
-    }
-
-    for (child, inset, size) in absolute {
-        layout_positioned_child(
-            cx,
-            child,
-            base,
-            PositionedLayoutStyle::Absolute { inset, size },
-        );
+    let mut non_absolute_index = 0;
+    let mut absolute_index = 0;
+    for &child in cx.children {
+        if let Some(&(absolute_child, inset, size)) = absolute.get(absolute_index)
+            && absolute_child == child
+        {
+            layout_positioned_child(
+                cx,
+                child,
+                base,
+                PositionedLayoutStyle::Absolute { inset, size },
+            );
+            absolute_index += 1;
+        } else if let Some(&(non_absolute_child, bounds)) = non_absolute.get(non_absolute_index)
+            && non_absolute_child == child
+        {
+            let _ = cx.layout_in(child, bounds);
+            non_absolute_index += 1;
+        }
     }
 
     Some(desired)

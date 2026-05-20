@@ -121,10 +121,12 @@ enum SvgCacheKey {
 pub(super) struct ElementHostWidget {
     element: GlobalElementId,
     text_cache: TextCache,
+    deferred_paint_text_blobs: Vec<fret_core::TextBlobId>,
     svg_cache: SvgCache,
     canvas_cache: crate::canvas::CanvasCache,
     render_transform: Option<fret_core::Transform2D>,
     scroll_child_transform: Option<ScrollChildTransform>,
+    managed_surface_hit_test_mask: Option<crate::managed_surface::ManagedSurfaceHitTestMask>,
     hit_testable: bool,
     hit_test_children: bool,
     focus_traversal_children: bool,
@@ -151,10 +153,12 @@ impl ElementHostWidget {
         Self {
             element,
             text_cache: TextCache::default(),
+            deferred_paint_text_blobs: Vec::new(),
             svg_cache: SvgCache::default(),
             canvas_cache: crate::canvas::CanvasCache::default(),
             render_transform: None,
             scroll_child_transform: None,
+            managed_surface_hit_test_mask: None,
             hit_testable: true,
             hit_test_children: true,
             focus_traversal_children: true,
@@ -227,7 +231,7 @@ impl ElementHostWidget {
     }
 }
 
-impl<H: UiHost> Widget<H> for ElementHostWidget {
+impl<H: UiHost + 'static> Widget<H> for ElementHostWidget {
     fn event_capture(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.event_capture_impl(cx, event);
     }
@@ -236,6 +240,21 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         let Some(window) = cx.window else {
             return false;
         };
+        let managed_surface_command = crate::elements::with_element_state(
+            &mut *cx.app,
+            window,
+            self.element,
+            crate::managed_surface::ManagedSurfaceHooks::<H>::default,
+            |hooks| hooks.on_command.clone(),
+        );
+        if let Some(managed_surface_command) = managed_surface_command {
+            let mut managed_cx = crate::managed_surface::ManagedSurfaceCommandCx::new(cx);
+            if (managed_surface_command)(&mut managed_cx, command) {
+                managed_cx.stop_propagation();
+                return true;
+            }
+        }
+
         let action_hooks = crate::elements::with_element_state(
             &mut *cx.app,
             window,
@@ -530,6 +549,22 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         let Some(window) = cx.window else {
             return CommandAvailability::NotHandled;
         };
+        let managed_surface_availability = crate::elements::with_element_state(
+            &mut *cx.app,
+            window,
+            self.element,
+            crate::managed_surface::ManagedSurfaceHooks::<H>::default,
+            |hooks| hooks.on_command_availability.clone(),
+        );
+        if let Some(managed_surface_availability) = managed_surface_availability {
+            let mut managed_cx =
+                crate::managed_surface::ManagedSurfaceCommandAvailabilityCx::new(cx);
+            let availability = (managed_surface_availability)(&mut managed_cx, command);
+            if availability != CommandAvailability::NotHandled {
+                return availability;
+            }
+        }
+
         let action_hooks = crate::elements::with_element_state(
             &mut *cx.app,
             window,
@@ -679,6 +714,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
     fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
         self.hit_testable
+            && self
+                .managed_surface_hit_test_mask
+                .as_ref()
+                .is_none_or(|mask| mask.hit_test(_position))
     }
 
     fn hit_test_children(&self, _bounds: Rect, _position: Point) -> bool {
@@ -1006,6 +1045,25 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
         sync_internal_drag_region_route(cx.app, window, cx.node, &instance);
 
+        if let ElementInstance::ManagedSurface(props) = instance {
+            if !props.prepaint {
+                return;
+            }
+
+            let on_prepaint = crate::elements::with_element_state(
+                &mut *cx.app,
+                window,
+                self.element,
+                crate::managed_surface::ManagedSurfaceHooks::<H>::default,
+                |hooks| hooks.on_prepaint.clone(),
+            );
+            if let Some(on_prepaint) = on_prepaint {
+                let mut managed_cx = crate::managed_surface::ManagedSurfacePrepaintCx::new(cx);
+                (on_prepaint)(&mut managed_cx);
+            }
+            return;
+        }
+
         let canvas_props = match instance {
             ElementInstance::Canvas(props) if props.prepaint => props,
             _ => return,
@@ -1030,6 +1088,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
+        for blob in self.deferred_paint_text_blobs.drain(..) {
+            services.text().release(blob);
+        }
         if let Some(blob) = self.text_cache.blob.take() {
             services.text().release(blob);
         }

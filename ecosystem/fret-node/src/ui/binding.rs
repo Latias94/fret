@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use fret_core::{Point, Rect};
 use fret_runtime::{Model, ModelStore};
 use fret_ui::action::UiActionHost;
@@ -14,6 +16,7 @@ use super::controller::{
     NodeGraphNodeConnectionsQuery, NodeGraphNodeUpdate, NodeGraphPortConnectionsQuery,
 };
 use super::declarative::NodeGraphSurfaceProps;
+use super::internals::NodeGraphInternalsStore;
 use super::viewport_options::{NodeGraphFitViewOptions, NodeGraphSetViewportOptions};
 
 #[path = "binding_queries.rs"]
@@ -33,6 +36,7 @@ pub struct NodeGraphSurfaceBinding {
     view_state: Model<NodeGraphViewState>,
     editor_config: Model<NodeGraphEditorConfig>,
     store: Model<NodeGraphStore>,
+    internals: Arc<NodeGraphInternalsStore>,
 }
 
 impl NodeGraphSurfaceBinding {
@@ -84,6 +88,7 @@ impl NodeGraphSurfaceBinding {
             view_state,
             editor_config,
             store: controller.store(),
+            internals: Arc::new(NodeGraphInternalsStore::new()),
         }
     }
 
@@ -105,6 +110,15 @@ impl NodeGraphSurfaceBinding {
     /// a fresh `NodeGraphController` explicitly from this store handle.
     pub fn store_model(&self) -> Model<NodeGraphStore> {
         self.store.clone()
+    }
+
+    /// UI-only derived internals for declarative overlays, diagnostics, and accessibility.
+    ///
+    /// The store is intentionally kept out of graph/view serialization and travels with the
+    /// binding so the app-facing declarative path exposes editor internals without retained
+    /// widgets.
+    pub fn internals_store(&self) -> Arc<NodeGraphInternalsStore> {
+        self.internals.clone()
     }
 
     pub fn surface_props(&self) -> NodeGraphSurfaceProps {

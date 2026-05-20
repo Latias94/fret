@@ -1,5 +1,6 @@
 use fret_runtime::Model;
 use fret_ui::UiHost;
+use fret_ui::action::UiActionHost;
 
 use crate::core::CanvasPoint;
 use crate::io::NodeGraphViewState;
@@ -10,7 +11,7 @@ use crate::ui::controller::NodeGraphController;
 /// Navigation wiring knobs for the minimap overlay.
 ///
 /// This is intentionally policy-light: it only affects how viewport updates are emitted.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum NodeGraphMiniMapNavigationBinding {
     /// Uses the overlay's default behavior (updates `NodeGraphViewState`, and `NodeGraphStore` when attached).
     Default,
@@ -20,7 +21,7 @@ pub enum NodeGraphMiniMapNavigationBinding {
     Controller(NodeGraphController),
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct NodeGraphMiniMapBindings {
     pub navigation: NodeGraphMiniMapNavigationBinding,
 }
@@ -63,6 +64,43 @@ pub(super) fn apply_minimap_viewport_update<H: UiHost>(
 
             if let Some(store) = store {
                 let _ = store.update(host, |store, _cx| {
+                    store.set_viewport(pan, zoom);
+                });
+            }
+        }
+    }
+}
+
+pub(super) fn apply_minimap_viewport_update_action_host(
+    host: &mut dyn UiActionHost,
+    navigation: &NodeGraphMiniMapNavigationBinding,
+    view_state: &Model<NodeGraphViewState>,
+    store: Option<&Model<NodeGraphStore>>,
+    pan: CanvasPoint,
+    zoom: f32,
+) {
+    let zoom = normalize_minimap_navigation_zoom(zoom);
+
+    match navigation {
+        NodeGraphMiniMapNavigationBinding::Disabled => {}
+        NodeGraphMiniMapNavigationBinding::Controller(controller) => {
+            if controller.set_viewport_with_options_action_host(
+                host,
+                pan,
+                zoom,
+                NodeGraphSetViewportOptions::default(),
+            ) {
+                let _ = controller.sync_view_state_model_from_store_action_host(host, view_state);
+            }
+        }
+        NodeGraphMiniMapNavigationBinding::Default => {
+            let _ = host.models_mut().update(view_state, |state| {
+                state.pan = pan;
+                state.zoom = zoom;
+            });
+
+            if let Some(store) = store {
+                let _ = host.models_mut().update(store, |store| {
                     store.set_viewport(pan, zoom);
                 });
             }

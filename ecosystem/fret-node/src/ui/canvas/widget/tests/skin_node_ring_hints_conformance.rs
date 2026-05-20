@@ -4,7 +4,9 @@ use fret_core::{Color, Corners, DrawOrder, Point, Px, Rect, Scene, SceneOp, Size
 use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
-use crate::ui::{NodeChromeHint, NodeGraphCanvas, NodeGraphSkin, NodeGraphStyle, NodeRingHint};
+use crate::ui::{
+    NodeChromeHint, NodeGraphSkin, NodeGraphStyle, NodeRingHint, canvas::NodeGraphCanvas,
+};
 
 use super::{
     NullServices, TestUiHostImpl, insert_graph_view_editor_config_with, make_test_graph_two_nodes,

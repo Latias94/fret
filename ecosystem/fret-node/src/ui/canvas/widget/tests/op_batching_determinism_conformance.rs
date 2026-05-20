@@ -8,7 +8,8 @@ use crate::core::{
 
 use crate::ops::{GraphOp, GraphTransaction};
 use crate::ui::{
-    NodeGraphCanvasCommitOutcome, NodeGraphCanvasMiddleware, NodeGraphCanvasMiddlewareCx,
+    NodeGraphCanvasCommitOutcome, canvas::NodeGraphCanvasMiddleware,
+    canvas::NodeGraphCanvasMiddlewareCx,
 };
 
 use super::prelude::{node_drag, pointer_up};

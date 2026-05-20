@@ -14,14 +14,14 @@ use fret_core::window::{ColorScheme, ContrastPreference, ForcedColorsMode};
 use fret_core::{
     AppWindowId, Color, Edges, EffectChain, EffectMode, EffectQuality, NodeId, Px, Rect,
 };
-use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError, TimerToken};
+use fret_runtime::{CommandId, Effect, FrameId, Model, ModelId, ModelUpdateError, TimerToken};
 
 use crate::action::OnHoverChange;
 use crate::action::{
     ActionRouteHooks, CommandActionHooks, CommandAvailabilityActionHooks, DismissibleActionHooks,
-    KeyActionHooks, OnActivate, OnCommand, OnCommandAvailability, OnDismissRequest,
-    OnDismissiblePointerMove, OnKeyDown, OnPinchGesture, OnPointerCancel, OnPointerDown,
-    OnPointerMove, OnPointerUp, OnPressablePointerDown, OnPressablePointerMove,
+    KeyActionHooks, OnActivate, OnActivateFocus, OnCommand, OnCommandAvailability,
+    OnDismissRequest, OnDismissiblePointerMove, OnKeyDown, OnPinchGesture, OnPointerCancel,
+    OnPointerDown, OnPointerMove, OnPointerUp, OnPressablePointerDown, OnPressablePointerMove,
     OnPressablePointerUp, OnRovingActiveChange, OnRovingNavigate, OnRovingTypeahead,
     OnSelectableTextActivateSpan, OnTimer, OnWheel, PointerActionHooks, PressableActionHooks,
     PressableHoverActionHooks, PressablePointerUpResult, RovingActionHooks,
@@ -34,12 +34,18 @@ use crate::element::{
     AnyElement, BackdropSourceGroupProps, CanvasProps, ColumnProps, CompositeGroupProps,
     ContainerProps, EffectLayerProps, ElementKind, FlexProps, FocusTraversalGateProps,
     ForegroundScopeProps, GridProps, HitTestGateProps, HoverRegionProps, ImageProps,
-    InteractivityGateProps, LayoutQueryRegionProps, LayoutStyle, MaskLayerProps, OpacityProps,
-    PointerRegionProps, PressableProps, PressableState, ResizablePanelGroupProps, RowProps,
-    ScrollProps, ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps, StackProps,
-    StyledTextProps, SvgIconProps, SvgImageProps, TextAreaProps, TextInputProps, TextProps,
-    ViewportSurfaceProps, VirtualListOptions, VirtualListProps, VirtualListState,
-    VisualTransformProps,
+    InteractivityGateProps, LayoutQueryRegionProps, LayoutStyle, ManagedSurfaceProps,
+    MaskLayerProps, OpacityProps, PointerRegionProps, PressableProps, PressableState,
+    ResizablePanelGroupProps, RowProps, ScrollProps, ScrollbarProps, SelectableTextProps,
+    SpacerProps, SpinnerProps, StackProps, StyledTextProps, SvgIconProps, SvgImageProps,
+    TextAreaProps, TextInputProps, TextProps, ViewportSurfaceProps, VirtualListOptions,
+    VirtualListProps, VirtualListState, VisualTransformProps,
+};
+use crate::managed_surface::{
+    ManagedSurfaceCommandAvailabilityCx, ManagedSurfaceCommandCx, ManagedSurfaceEventCx,
+    ManagedSurfaceHooks, ManagedSurfaceLayoutCx, ManagedSurfacePaintCx, ManagedSurfacePrepaintCx,
+    OnManagedSurfaceCommand, OnManagedSurfaceCommandAvailability, OnManagedSurfaceEvent,
+    OnManagedSurfaceLayout, OnManagedSurfacePaint, OnManagedSurfacePrepaint,
 };
 use crate::overlay_placement::{AnchoredPanelLayoutTrace, Side};
 use crate::widget::Invalidation;
@@ -2242,6 +2248,26 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    /// Register a focus-capable activation handler for the current pressable element.
+    ///
+    /// This is for policy surfaces that must restore focus to another declarative element after
+    /// activation while keeping the default `pressable_on_activate` contract stable.
+    pub fn pressable_on_activate_focus(&mut self, handler: OnActivateFocus) {
+        self.root_state(PressableActionHooks::default, |hooks| {
+            hooks.on_activate_focus = Some(handler);
+        });
+    }
+
+    pub fn pressable_on_activate_focus_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnActivateFocus,
+    ) {
+        self.state_for(element, PressableActionHooks::default, |hooks| {
+            hooks.on_activate_focus = Some(handler);
+        });
+    }
+
     pub fn pressable_add_on_activate(&mut self, handler: OnActivate) {
         self.root_state(PressableActionHooks::default, |hooks| {
             hooks.on_activate = match hooks.on_activate.clone() {
@@ -2272,9 +2298,49 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn pressable_add_on_activate_focus(&mut self, handler: OnActivateFocus) {
+        self.root_state(PressableActionHooks::default, |hooks| {
+            hooks.on_activate_focus = match hooks.on_activate_focus.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, reason| {
+                        prev(host, cx, reason);
+                        next(host, cx, reason);
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn pressable_add_on_activate_focus_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnActivateFocus,
+    ) {
+        self.state_for(element, PressableActionHooks::default, |hooks| {
+            hooks.on_activate_focus = match hooks.on_activate_focus.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, reason| {
+                        prev(host, cx, reason);
+                        next(host, cx, reason);
+                    }))
+                }
+            };
+        });
+    }
+
     pub fn pressable_clear_on_activate(&mut self) {
         self.root_state(PressableActionHooks::default, |hooks| {
             hooks.on_activate = None;
+        });
+    }
+
+    pub fn pressable_clear_on_activate_focus(&mut self) {
+        self.root_state(PressableActionHooks::default, |hooks| {
+            hooks.on_activate_focus = None;
         });
     }
 
@@ -3711,6 +3777,113 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             });
             cx.new_any_element(id, ElementKind::Canvas(props), Vec::new())
         })
+    }
+
+    #[track_caller]
+    pub fn managed_surface<I>(
+        &mut self,
+        props: ManagedSurfaceProps,
+        layout: impl for<'p, 'q> Fn(&mut ManagedSurfaceLayoutCx<'p, 'q, H>) + 'static,
+        paint: impl for<'p, 'q> Fn(&mut ManagedSurfacePaintCx<'p, 'q, H>) + 'static,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        H: 'static,
+        I: IntoIterator<Item = AnyElement>,
+    {
+        let on_layout: OnManagedSurfaceLayout<H> = Arc::new(layout);
+        let on_paint: OnManagedSurfacePaint<H> = Arc::new(paint);
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let built = f(cx);
+            let children = cx.collect_children(built);
+            cx.state_for(id, ManagedSurfaceHooks::<H>::default, |hooks| {
+                hooks.on_layout = Some(on_layout.clone());
+                hooks.on_prepaint = None;
+                hooks.on_paint = Some(on_paint.clone());
+                hooks.on_event = None;
+                hooks.on_command = None;
+                hooks.on_command_availability = None;
+            });
+            cx.new_any_element(id, ElementKind::ManagedSurface(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn managed_surface_with_prepaint<I>(
+        &mut self,
+        mut props: ManagedSurfaceProps,
+        layout: impl for<'p, 'q> Fn(&mut ManagedSurfaceLayoutCx<'p, 'q, H>) + 'static,
+        prepaint: impl for<'p, 'q> Fn(&mut ManagedSurfacePrepaintCx<'p, 'q, H>) + 'static,
+        paint: impl for<'p, 'q> Fn(&mut ManagedSurfacePaintCx<'p, 'q, H>) + 'static,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        H: 'static,
+        I: IntoIterator<Item = AnyElement>,
+    {
+        props.prepaint = true;
+        let on_layout: OnManagedSurfaceLayout<H> = Arc::new(layout);
+        let on_prepaint: OnManagedSurfacePrepaint<H> = Arc::new(prepaint);
+        let on_paint: OnManagedSurfacePaint<H> = Arc::new(paint);
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let built = f(cx);
+            let children = cx.collect_children(built);
+            cx.state_for(id, ManagedSurfaceHooks::<H>::default, |hooks| {
+                hooks.on_layout = Some(on_layout.clone());
+                hooks.on_prepaint = Some(on_prepaint.clone());
+                hooks.on_paint = Some(on_paint.clone());
+                hooks.on_event = None;
+                hooks.on_command = None;
+                hooks.on_command_availability = None;
+            });
+            cx.new_any_element(id, ElementKind::ManagedSurface(props), children)
+        })
+    }
+
+    pub fn managed_surface_on_event_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: impl for<'p, 'q> Fn(&mut ManagedSurfaceEventCx<'p, 'q, H>, &fret_core::Event) + 'static,
+    ) where
+        H: 'static,
+    {
+        let on_event: OnManagedSurfaceEvent<H> = Arc::new(handler);
+        self.state_for(element, ManagedSurfaceHooks::<H>::default, |hooks| {
+            hooks.on_event = Some(on_event);
+        });
+    }
+
+    pub fn managed_surface_on_command_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: impl for<'p, 'q> Fn(&mut ManagedSurfaceCommandCx<'p, 'q, H>, &CommandId) -> bool
+        + 'static,
+    ) where
+        H: 'static,
+    {
+        let on_command: OnManagedSurfaceCommand<H> = Arc::new(handler);
+        self.state_for(element, ManagedSurfaceHooks::<H>::default, |hooks| {
+            hooks.on_command = Some(on_command);
+        });
+    }
+
+    pub fn managed_surface_on_command_availability_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: impl for<'p, 'q> Fn(
+            &mut ManagedSurfaceCommandAvailabilityCx<'p, 'q, H>,
+            &CommandId,
+        ) -> crate::widget::CommandAvailability
+        + 'static,
+    ) where
+        H: 'static,
+    {
+        let on_command_availability: OnManagedSurfaceCommandAvailability<H> = Arc::new(handler);
+        self.state_for(element, ManagedSurfaceHooks::<H>::default, |hooks| {
+            hooks.on_command_availability = Some(on_command_availability);
+        });
     }
 
     #[cfg(feature = "unstable-retained-bridge")]

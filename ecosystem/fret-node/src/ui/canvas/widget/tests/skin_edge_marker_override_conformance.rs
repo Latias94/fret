@@ -5,7 +5,7 @@ use fret_ui::{Invalidation, UiTree};
 use std::sync::Arc;
 
 use crate::core::{Edge, EdgeId, EdgeKind, Graph};
-use crate::ui::NodeGraphCanvas;
+use crate::ui::canvas::NodeGraphCanvas;
 use crate::ui::edge_types::NodeGraphEdgeTypes;
 use crate::ui::presenter::EdgeMarker;
 use crate::ui::skin::{EdgeChromeHint, NodeGraphSkin};

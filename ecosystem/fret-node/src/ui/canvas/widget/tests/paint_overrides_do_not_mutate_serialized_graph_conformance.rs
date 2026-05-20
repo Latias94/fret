@@ -7,7 +7,7 @@ use fret_ui::{Invalidation, Theme, UiTree};
 
 use crate::core::{Edge, EdgeId, EdgeKind};
 use crate::ui::{
-    EdgePaintOverrideV1, NodeGraphCanvas, NodeGraphPaintOverridesMap, NodePaintOverrideV1,
+    EdgePaintOverrideV1, NodeGraphPaintOverridesMap, NodePaintOverrideV1, canvas::NodeGraphCanvas,
 };
 
 use super::{

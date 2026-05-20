@@ -5,7 +5,7 @@ use fret_core::{Color, Point, Px, Rect, Scene, SceneOp, Size, Transform2D};
 use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
-use crate::ui::{NodeGraphCanvas, NodeGraphPaintOverridesMap, NodePaintOverrideV1};
+use crate::ui::{NodeGraphPaintOverridesMap, NodePaintOverrideV1, canvas::NodeGraphCanvas};
 
 use super::{
     NullServices, TestUiHostImpl, insert_graph_view_editor_config,

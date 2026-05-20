@@ -12,10 +12,13 @@ use fret_ui::elements::ElementContext;
 use fret_ui::{ThemeSnapshot, UiHost};
 
 use crate::core::{Graph, NodeId};
-use crate::ops::GraphTransaction;
 use crate::ui::editors::chrome::{
     PORTAL_BUTTON_STACK_GAP, PortalSmallButtonUi, PortalTextInputUi, portal_button_stack_height,
     portal_text_input_props, render_pressable_small_button,
+};
+use crate::ui::editors::portal_command_policy::PortalTextEditSpec;
+use crate::ui::editors::portal_command_session::{
+    PortalTextCommandSession, handle_portal_text_command_with_session,
 };
 use crate::ui::portal::{
     NodeGraphPortalCommandHandler, NodeGraphPortalNodeLayout, PortalCommandOutcome,
@@ -310,12 +313,22 @@ impl PortalTextEditor {
         node: NodeId,
         spec: &S,
     ) -> Model<String> {
+        let text = spec.initial_text(graph, node);
+        self.ensure_input_model_with_initial(app, window, node, text)
+    }
+
+    fn ensure_input_model_with_initial<H: UiHost>(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        node: NodeId,
+        initial_text: String,
+    ) -> Model<String> {
         self.with_session_mut(app, window, |session, app| {
             session.inputs.entry(node).or_insert_with(|| {
-                let text = spec.initial_text(graph, node);
-                session.last_synced.insert(node, text.clone());
-                session.last_seen.insert(node, text.clone());
-                app.models_mut().insert(text)
+                session.last_synced.insert(node, initial_text.clone());
+                session.last_seen.insert(node, initial_text.clone());
+                app.models_mut().insert(initial_text)
             });
             session.inputs.get(&node).expect("model exists").clone()
         })
@@ -349,54 +362,17 @@ impl PortalTextEditor {
         });
     }
 
-    fn reset_input<H: UiHost, S: PortalTextEditSpec>(
+    fn write_input_text<H: UiHost>(
         &self,
         app: &mut H,
         window: AppWindowId,
-        graph: &Graph,
         node: NodeId,
-        spec: &S,
+        text: String,
     ) {
-        let model = self.ensure_input_model(app, window, graph, node, spec);
-        let text = spec.initial_text(graph, node);
         let synced = text.clone();
+        let model = self.ensure_input_model_with_initial(app, window, node, text.clone());
         let _ = model.update(app, |v, _cx| {
             *v = text;
-        });
-        self.with_session_mut(app, window, |session, _app| {
-            session.last_synced.insert(node, synced.clone());
-            session.last_seen.insert(node, synced);
-        });
-    }
-
-    fn read_input<H: UiHost, S: PortalTextEditSpec>(
-        &self,
-        app: &mut H,
-        window: AppWindowId,
-        graph: &Graph,
-        node: NodeId,
-        spec: &S,
-    ) -> String {
-        let model = self.ensure_input_model(app, window, graph, node, spec);
-        model.read_ref(app, |v| v.clone()).ok().unwrap_or_default()
-    }
-
-    fn write_normalized_input<H: UiHost, S: PortalTextEditSpec>(
-        &self,
-        app: &mut H,
-        window: AppWindowId,
-        graph: &Graph,
-        node: NodeId,
-        spec: &S,
-        normalized: Option<String>,
-    ) {
-        let Some(normalized) = normalized else {
-            return;
-        };
-        let synced = normalized.clone();
-        let model = self.ensure_input_model(app, window, graph, node, spec);
-        let _ = model.update(app, |v, _cx| {
-            *v = normalized;
         });
         self.with_session_mut(app, window, |session, _app| {
             session.last_synced.insert(node, synced.clone());
@@ -478,41 +454,6 @@ impl PortalTextEditor {
 }
 
 #[derive(Debug, Clone)]
-pub enum PortalTextEditSubmit {
-    NotHandled,
-    Handled {
-        normalized_text: Option<String>,
-    },
-    Error {
-        message: Arc<str>,
-    },
-    Commit {
-        tx: GraphTransaction,
-        normalized_text: Option<String>,
-    },
-}
-
-pub trait PortalTextEditSpec {
-    fn initial_text(&self, graph: &Graph, node: NodeId) -> String;
-    fn submit(&self, graph: &Graph, node: NodeId, text: &str) -> PortalTextEditSubmit;
-
-    fn step_text(&self, _graph: &Graph, _node: NodeId, _text: &str, _delta: i32) -> Option<String> {
-        None
-    }
-
-    fn step_text_with_mode(
-        &self,
-        graph: &Graph,
-        node: NodeId,
-        text: &str,
-        delta: i32,
-        _mode: PortalTextStepMode,
-    ) -> Option<String> {
-        self.step_text(graph, node, text, delta)
-    }
-}
-
-#[derive(Debug, Clone)]
 pub struct PortalTextEditHandler<S> {
     editor: PortalTextEditor,
     spec: S,
@@ -540,93 +481,39 @@ impl<H: UiHost, S: PortalTextEditSpec> NodeGraphPortalCommandHandler<H>
             return PortalCommandOutcome::NotHandled;
         };
 
-        match command {
-            PortalTextCommand::Cancel { node } => {
-                self.editor
-                    .reset_input(cx.app, window, graph, node, &self.spec);
-                self.editor.set_error(cx.app, window, node, None);
-                PortalCommandOutcome::Handled
-            }
-            PortalTextCommand::Submit { node } => {
-                let text = self
-                    .editor
-                    .read_input(cx.app, window, graph, node, &self.spec);
-                self.handle_submit(cx, window, graph, node, text)
-            }
-            PortalTextCommand::Step { node, delta, mode } => {
-                let text = self
-                    .editor
-                    .read_input(cx.app, window, graph, node, &self.spec);
-                let Some(next_text) = self
-                    .spec
-                    .step_text_with_mode(graph, node, &text, delta, mode)
-                else {
-                    return PortalCommandOutcome::NotHandled;
-                };
-
-                let model = self
-                    .editor
-                    .ensure_input_model(cx.app, window, graph, node, &self.spec);
-                let submit_text = next_text.clone();
-                let _ = model.update(cx.app, |v, _cx| {
-                    *v = next_text;
-                });
-                self.editor
-                    .with_session_mut(cx.app, window, |session, _app| {
-                        session.last_synced.insert(node, submit_text.clone());
-                        session.last_seen.insert(node, submit_text.clone());
-                    });
-
-                self.editor.set_error(cx.app, window, node, None);
-                self.handle_submit(cx, window, graph, node, submit_text)
-            }
-        }
+        let mut session = RetainedPortalTextCommandSession {
+            editor: self.editor.clone(),
+            app: cx.app,
+            window,
+        };
+        handle_portal_text_command_with_session(graph, &self.spec, &mut session, command)
     }
 }
 
-impl<S: PortalTextEditSpec> PortalTextEditHandler<S> {
-    fn handle_submit<H: UiHost>(
-        &mut self,
-        cx: &mut fret_ui::retained_bridge::CommandCx<'_, H>,
-        window: AppWindowId,
-        graph: &Graph,
-        node: NodeId,
-        text: String,
-    ) -> PortalCommandOutcome {
-        match self.spec.submit(graph, node, &text) {
-            PortalTextEditSubmit::NotHandled => PortalCommandOutcome::NotHandled,
-            PortalTextEditSubmit::Handled { normalized_text } => {
-                self.editor.set_error(cx.app, window, node, None);
-                self.editor.write_normalized_input(
-                    cx.app,
-                    window,
-                    graph,
-                    node,
-                    &self.spec,
-                    normalized_text,
-                );
-                PortalCommandOutcome::Handled
-            }
-            PortalTextEditSubmit::Error { message } => {
-                self.editor.set_error(cx.app, window, node, Some(message));
-                PortalCommandOutcome::Handled
-            }
-            PortalTextEditSubmit::Commit {
-                tx,
-                normalized_text,
-            } => {
-                self.editor.set_error(cx.app, window, node, None);
-                self.editor.write_normalized_input(
-                    cx.app,
-                    window,
-                    graph,
-                    node,
-                    &self.spec,
-                    normalized_text,
-                );
-                PortalCommandOutcome::Commit(tx)
-            }
-        }
+struct RetainedPortalTextCommandSession<'a, H: UiHost> {
+    editor: PortalTextEditor,
+    app: &'a mut H,
+    window: AppWindowId,
+}
+
+impl<H: UiHost> PortalTextCommandSession for RetainedPortalTextCommandSession<'_, H> {
+    fn current_text(&mut self, node: NodeId, initial_text: String) -> String {
+        let model =
+            self.editor
+                .ensure_input_model_with_initial(self.app, self.window, node, initial_text);
+        model
+            .read_ref(self.app, |v| v.clone())
+            .ok()
+            .unwrap_or_default()
+    }
+
+    fn write_text(&mut self, node: NodeId, text: String) {
+        self.editor
+            .write_input_text(self.app, self.window, node, text);
+    }
+
+    fn set_error(&mut self, node: NodeId, message: Option<Arc<str>>) {
+        self.editor.set_error(self.app, self.window, node, message);
     }
 }
 

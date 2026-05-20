@@ -14,17 +14,14 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     use fret_core::Px;
     use fret_icons::IconId;
     use fret_node::io::{NodeGraphEditorConfig, NodeGraphViewState};
-    use fret_node::ui::{
-        NodeGraphCanvas, NodeGraphController, NodeGraphEditor, NodeGraphSurfaceBinding,
-    };
+    use fret_node::ui::{NodeGraphSurfaceBinding, node_graph_surface};
     use fret_node::{
         CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
         PortCapacity, PortDirection, PortId, PortKey, PortKind,
     };
     use fret_runtime::Model;
     use fret_ui::action::{ActionCx, UiActionHost};
-    use fret_ui::element::{LayoutStyle, SemanticsProps};
-    use fret_ui::retained_bridge::RetainedSubtreeProps;
+    use fret_ui::element::{LayoutQueryRegionProps, SemanticsProps};
     use fret_ui_kit::declarative::style as decl_style;
     use fret_ui_kit::ui;
     use fret_ui_kit::{
@@ -231,55 +228,18 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     }
 
     #[derive(Clone)]
-    struct BoundsRecorder {
-        bounds: Model<Option<fret_core::Rect>>,
-    }
-
-    impl BoundsRecorder {
-        fn new(bounds: Model<Option<fret_core::Rect>>) -> Self {
-            Self { bounds }
-        }
-    }
-
-    impl<H: fret_ui::UiHost> fret_ui::retained_bridge::Widget<H> for BoundsRecorder {
-        fn layout(
-            &mut self,
-            cx: &mut fret_ui::retained_bridge::LayoutCx<'_, H>,
-        ) -> fret_core::Size {
-            let prev = cx
-                .app
-                .models_mut()
-                .read(&self.bounds, |b| *b)
-                .ok()
-                .flatten();
-            if prev != Some(cx.bounds) {
-                let _ = cx
-                    .app
-                    .models_mut()
-                    .update(&self.bounds, |b| *b = Some(cx.bounds));
-            }
-            cx.bounds.size
-        }
-
-        fn hit_test(&self, _bounds: fret_core::Rect, _position: fret_core::Point) -> bool {
-            false
-        }
-    }
-
-    #[derive(Clone)]
     struct DemoSurfaceState {
         binding: NodeGraphSurfaceBinding,
-        controller: NodeGraphController,
+        did_fit_on_mount: Model<bool>,
     }
 
     let binding_slot = cx.keyed_slot_id("binding");
     let bounds = cx.local_model_keyed("bounds", || None::<fret_core::Rect>);
-    let surface = cx.state_for(
+    let surface = match cx.state_for(
         binding_slot,
         || None::<DemoSurfaceState>,
         |slot| slot.clone(),
-    );
-    let surface = match surface {
+    ) {
         Some(surface) => surface,
         None => {
             let binding = NodeGraphSurfaceBinding::new(
@@ -288,25 +248,23 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 NodeGraphViewState::default(),
                 NodeGraphEditorConfig::default(),
             );
-            let controller = NodeGraphController::new(binding.store_model());
+            let did_fit_on_mount = cx.app.models_mut().insert(false);
             let surface = DemoSurfaceState {
-                controller,
                 binding,
+                did_fit_on_mount,
             };
             cx.state_for(
                 binding_slot,
                 || None::<DemoSurfaceState>,
                 |slot| {
-                    if slot.is_none() {
-                        *slot = Some(surface.clone());
-                    }
-                    slot.clone()
-                        .expect("workflow node graph binding slot must be initialized")
+                    *slot = Some(surface.clone());
                 },
-            )
+            );
+            surface
         }
     };
     let binding = surface.binding.clone();
+    binding.observe(cx);
     let graph = binding.graph_model();
     let view_state = binding.view_state_model();
 
@@ -472,32 +430,46 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let stage = cx.container(stage_props, move |cx| {
         let binding = binding.clone();
         let bounds = bounds.clone();
-        let controller = surface.controller.clone();
+        let did_fit_on_mount = surface.did_fit_on_mount.clone();
 
-        let mut layout = LayoutStyle::default();
-        layout.size.width = fret_ui::element::Length::Fill;
-        layout.size.height = fret_ui::element::Length::Fill;
+        let mut region = LayoutQueryRegionProps::default();
+        region.layout.size.width = fret_ui::element::Length::Fill;
+        region.layout.size.height = fret_ui::element::Length::Fill;
+        region.name = Some(Arc::<str>::from("ui-ai-workflow-node-graph-demo-stage"));
 
-        let props = RetainedSubtreeProps::new::<fret::app::App>(move |ui| {
-            use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+        let surface = cx.layout_query_region_with_id(region, move |cx, region_id| {
+            if let Some(rect) = cx.layout_query_bounds(region_id, fret_ui::Invalidation::Layout) {
+                let previous = cx.app.models_mut().read(&bounds, |b| *b).ok().flatten();
+                if previous != Some(rect) {
+                    let _ = cx.app.models_mut().update(&bounds, |b| *b = Some(rect));
+                }
 
-            let editor = ui.create_node_retained(NodeGraphEditor::new());
-            let canvas = NodeGraphCanvas::new(
-                binding.graph_model(),
-                binding.view_state_model(),
-                binding.editor_config_model(),
-            )
-            .with_controller(controller.clone())
-            .with_fit_view_on_mount();
-            let canvas_node = ui.create_node_retained(canvas);
-            let bounds_node = ui.create_node_retained(BoundsRecorder::new(bounds.clone()));
-            ui.set_children(editor, vec![canvas_node, bounds_node]);
-            editor
-        })
-        .with_layout(layout);
+                let already_fit = cx
+                    .app
+                    .models_mut()
+                    .read(&did_fit_on_mount, |did_fit| *did_fit)
+                    .unwrap_or(false);
+                if !already_fit {
+                    let nodes = cx
+                        .app
+                        .models_mut()
+                        .read(&binding.graph_model(), |graph| {
+                            graph.nodes.keys().copied().collect::<Vec<_>>()
+                        })
+                        .unwrap_or_default();
+                    if binding.fit_view_nodes_in_bounds(cx.app, rect, nodes) {
+                        let _ = cx.app.models_mut().update(&did_fit_on_mount, |did_fit| {
+                            *did_fit = true;
+                        });
+                    }
+                }
+            }
 
-        let subtree = cx.retained_subtree(props);
-        vec![subtree, overlay_panel]
+            let mut props = binding.surface_props();
+            props.test_id = Some(Arc::<str>::from("ui-ai-workflow-node-graph-demo-canvas"));
+            vec![node_graph_surface(cx, props)]
+        });
+        vec![surface, overlay_panel]
     });
 
     let body = ui::v_flex(move |cx| {

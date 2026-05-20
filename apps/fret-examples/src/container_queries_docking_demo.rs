@@ -1,11 +1,10 @@
 use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
-use fret_core::{AppWindowId, Event, PanelKind, Rect, UiServices, geometry::Px};
+use fret_core::{AppWindowId, Event, Rect, UiServices, geometry::Px};
 use fret_docking::{
-    DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
-    DockPanelRegistryService, DockingRuntime, create_dock_space_node_with_test_id,
-    render_and_bind_dock_panels,
+    DockManager, DockPanel, DockPanelElementRegistry, DockPanelElementRegistryService,
+    DockSpaceElementOptions, DockingRuntime,
 };
 use fret_launch::{
     FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
@@ -91,17 +90,9 @@ impl<H: fret_ui::UiHost> Widget<H> for ContainerQueriesDockingHarnessRoot {
     }
 }
 
-struct DemoDockPanelFactory {
-    kind: PanelKind,
-}
+struct DemoDockPanelRegistry;
 
-impl DemoDockPanelFactory {
-    fn new(kind: &'static str) -> Self {
-        Self {
-            kind: PanelKind::new(kind),
-        }
-    }
-
+impl DemoDockPanelRegistry {
     fn render_left_panel<H: fret_ui::UiHost>(
         cx: &mut ElementContext<'_, H>,
         theme: &Theme,
@@ -206,49 +197,36 @@ impl DemoDockPanelFactory {
     }
 }
 
-impl DockPanelFactory<App> for DemoDockPanelFactory {
-    fn panel_kind(&self) -> PanelKind {
-        self.kind.clone()
-    }
-
-    fn build_panel(
+impl DockPanelElementRegistry<App> for DemoDockPanelRegistry {
+    fn render_panel(
         &self,
+        cx: &mut ElementContext<'_, App>,
+        _window: AppWindowId,
         panel: &fret_core::PanelKey,
-        cx: &mut DockPanelFactoryCx<'_, App>,
-    ) -> Option<fret_core::NodeId> {
+    ) -> Option<AnyElement> {
         let kind = panel.kind.0.clone();
-        let root_name = format!("container_queries_docking_demo.panel.{kind}");
-        Some(cx.render_cached_panel_root(&root_name, |cx| {
-            let theme = Theme::global(&*cx.app).clone();
-            match kind.as_str() {
-                "examples.cq.left" => Self::render_left_panel(cx, &theme),
-                "examples.cq.right" => {
-                    vec![
-                        cx.container(
-                            ContainerProps {
-                                layout: {
-                                    let mut layout = LayoutStyle::default();
-                                    layout.size.width = Length::Fill;
-                                    layout.size.height = Length::Fill;
-                                    layout
-                                },
-                                padding: fret_core::Edges::all(
-                                    theme.metric_token("metric.padding.md"),
-                                )
-                                .into(),
-                                background: Some(theme.color_token("background")),
-                                ..Default::default()
-                            },
-                            |_cx| vec![],
-                        ),
-                    ]
-                }
-                _ => vec![container_query_docking_readout_text(
-                    cx,
-                    "Unregistered panel kind",
-                )],
-            }
-        }))
+        let theme = Theme::global(&*cx.app).clone();
+        match kind.as_str() {
+            "examples.cq.left" => Self::render_left_panel(cx, &theme).into_iter().next(),
+            "examples.cq.right" => Some(cx.container(
+                ContainerProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.height = Length::Fill;
+                        layout
+                    },
+                    padding: fret_core::Edges::all(theme.metric_token("metric.padding.md")).into(),
+                    background: Some(theme.color_token("background")),
+                    ..Default::default()
+                },
+                |_cx| Vec::<AnyElement>::new(),
+            )),
+            _ => Some(container_query_docking_readout_text(
+                cx,
+                "Unregistered panel kind",
+            )),
+        }
     }
 }
 
@@ -256,6 +234,7 @@ pub struct ContainerQueriesDockingDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
     dock_space: Option<fret_core::NodeId>,
+    split_anchor: Option<fret_core::NodeId>,
 }
 
 #[derive(Default)]
@@ -273,6 +252,7 @@ impl ContainerQueriesDockingDemoDriver {
             ui,
             root: None,
             dock_space: None,
+            split_anchor: None,
         }
     }
 
@@ -324,9 +304,25 @@ impl ContainerQueriesDockingDemoDriver {
     ) {
         Self::ensure_dock_graph(app, window);
 
-        let dock_space = state.dock_space.get_or_insert_with(|| {
-            create_dock_space_node_with_test_id(&mut state.ui, window, "cq-dock-demo-dock-space")
-        });
+        let dock_space = fret_ui::declarative::render_root(
+            &mut state.ui,
+            app,
+            services,
+            window,
+            bounds,
+            "cq-dock-demo-dock-space",
+            |cx| {
+                vec![fret_docking::dock_space_element_from_registry(
+                    cx,
+                    window,
+                    DockSpaceElementOptions {
+                        test_id: Some("cq-dock-demo-dock-space"),
+                        ..Default::default()
+                    },
+                )]
+            },
+        );
+        state.dock_space = Some(dock_space);
 
         if state.root.is_none() {
             let split_anchor = state
@@ -335,21 +331,22 @@ impl ContainerQueriesDockingDemoDriver {
             let root = state
                 .ui
                 .create_node_retained(ContainerQueriesDockingHarnessRoot {
-                    dock_space: *dock_space,
+                    dock_space,
                     split_anchor,
                 });
-            state.ui.set_children(root, vec![*dock_space, split_anchor]);
+            state.ui.set_children(root, vec![dock_space, split_anchor]);
             state.ui.set_root(root);
             state.root = Some(root);
+            state.split_anchor = Some(split_anchor);
+        } else if let (Some(root), Some(split_anchor)) = (state.root, state.split_anchor) {
+            state.ui.set_children(root, vec![dock_space, split_anchor]);
         }
 
         if state.ui.view_cache_enabled() {
             state
                 .ui
-                .set_node_view_cache_flags(*dock_space, true, false, false);
+                .set_node_view_cache_flags(dock_space, true, false, false);
         }
-
-        render_and_bind_dock_panels(&mut state.ui, app, services, window, bounds, *dock_space);
     }
 }
 
@@ -378,6 +375,7 @@ fn hot_reload_window(
     crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
     state.root = None;
     state.dock_space = None;
+    state.split_anchor = None;
 }
 
 fn handle_model_changes(
@@ -771,13 +769,12 @@ pub fn run() -> anyhow::Result<()> {
 
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
-    let mut registry = DockPanelRegistryBuilder::new();
-    registry
-        .register(DemoDockPanelFactory::new("examples.cq.left"))
-        .register(DemoDockPanelFactory::new("examples.cq.right"));
-    app.with_global_mut(DockPanelRegistryService::<App>::default, |svc, _app| {
-        svc.set(registry.build_arc());
-    });
+    app.with_global_mut(
+        DockPanelElementRegistryService::<App>::default,
+        |svc, _app| {
+            svc.set(Arc::new(DemoDockPanelRegistry));
+        },
+    );
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo container_queries_docking_demo".to_string(),

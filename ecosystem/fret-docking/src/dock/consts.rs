@@ -7,3 +7,6 @@ pub(super) const DOCK_TAB_MAX_W: Px = Px(240.0);
 pub(super) const DOCK_TAB_CLOSE_SIZE: Px = Px(20.0);
 pub(super) const DOCK_TAB_CLOSE_GAP: Px = Px(6.0);
 pub(super) const DOCK_TAB_CLOSE_CLICK_SLOP: Px = Px(8.0);
+pub(super) const DOCK_FLOATING_BORDER: Px = Px(1.0);
+pub(super) const DOCK_FLOATING_TITLE_H: Px = Px(22.0);
+pub(super) const DOCK_FLOATING_CLOSE_SIZE: Px = Px(14.0);

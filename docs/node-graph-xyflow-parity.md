@@ -133,7 +133,7 @@ High-level layering (ADR 0126):
   - overlays (rename, controls, minimap): `ecosystem/fret-node/src/ui/overlays/mod.rs`
   - portal escape hatch: `ecosystem/fret-node/src/ui/portal.rs`
   - commands: `ecosystem/fret-node/src/ui/commands.rs`
-- **Demos**: `apps/fret-examples/src/node_graph_demo.rs`, `apps/fret-examples/src/node_graph_domain_demo.rs`
+- **Demos**: `apps/fret-examples/src/node_graph_demo.rs`
 
 ---
 
@@ -184,8 +184,10 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - fret-node:
     - callback contract + store adapter: `ecosystem/fret-node/src/runtime/callbacks.rs` (`NodeGraphCommitCallbacks`, `NodeGraphViewCallbacks`, `NodeGraphGestureCallbacks`, `NodeGraphCallbacks`, `install_callbacks`)
     - connection change extraction: `ecosystem/fret-node/src/runtime/callbacks.rs` (`connection_changes_from_transaction`)
-    - UI glue (canvas surface): `ecosystem/fret-node/src/ui/canvas/widget.rs` (`NodeGraphCanvas::with_callbacks`)
-    - demo usage: `apps/fret-examples/src/node_graph_domain_demo.rs` (`DomainDemoCallbacks`)
+    - UI glue (legacy canvas compatibility island): `ecosystem/fret-node/src/ui/canvas/widget.rs`
+      (`NodeGraphCanvas::with_callbacks`)
+    - declarative app path: `NodeGraphSurfaceBinding` plus
+      `apps/fret-examples/src/node_graph_demo.rs`
   - Notes:
     - Callback layers are now explicit: committed graph diffs (`NodeGraphCommitCallbacks`), view-state sync (`NodeGraphViewCallbacks`), and transient UI gesture lifecycle (`NodeGraphGestureCallbacks`).
     - UI callbacks are emitted for graph commits and view-state changes (selection/viewport).
@@ -221,9 +223,10 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 ### Callback wiring quick sketch (fret-node)
 
 - Store-driven UI (recommended default):
-  - create a `NodeGraphStore` in your app model and pass it to `NodeGraphCanvas::with_store`
-  - optionally attach `NodeGraphCanvas::with_callbacks` for analytics, editor shells, and middleware
-  - reference: `apps/fret-examples/src/node_graph_domain_demo.rs`
+  - create a `NodeGraphSurfaceBinding` from either a graph/view/config triplet or an existing
+    `NodeGraphStore`
+  - render it with `node_graph_surface(...)` / `node_graph_surface_in(...)`
+  - reference: `apps/fret-examples/src/node_graph_demo.rs`
 - Headless / tooling:
   - attach `runtime::callbacks::install_callbacks(store, callbacks)` and compose the layered callback traits through `NodeGraphCallbacks`
 
@@ -374,7 +377,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - fret-node:
     - contract: `docs/adr/0126-node-graph-editor-and-typed-connections.md` ("Editor state persistence")
     - IO helpers: `ecosystem/fret-node/src/io/mod.rs` (`NodeGraphViewStateFileV1`, `default_project_view_state_path`)
-    - demo persistence: `apps/fret-examples/src/node_graph_demo.rs`, `apps/fret-examples/src/node_graph_domain_demo.rs`
+    - demo persistence: `apps/fret-examples/src/node_graph_demo.rs`
 
 ---
 

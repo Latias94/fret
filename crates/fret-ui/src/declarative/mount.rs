@@ -1538,7 +1538,8 @@ fn mount_element<H: UiHost + 'static>(
     ui.set_node_element(node, Some(id));
     ui.set_node_widget_prepaint_enabled(
         node,
-        matches!(&element.kind, ElementKind::Canvas(props) if props.prepaint),
+        matches!(&element.kind, ElementKind::Canvas(props) if props.prepaint)
+            || matches!(&element.kind, ElementKind::ManagedSurface(props) if props.prepaint),
     );
 
     window_state.set_node_entry(
@@ -1678,6 +1679,7 @@ fn mount_element<H: UiHost + 'static>(
         ElementKind::Grid(p) => ElementInstance::Grid(p),
         ElementKind::Image(p) => ElementInstance::Image(p),
         ElementKind::Canvas(p) => ElementInstance::Canvas(p),
+        ElementKind::ManagedSurface(p) => ElementInstance::ManagedSurface(p),
         #[cfg(feature = "unstable-retained-bridge")]
         ElementKind::RetainedSubtree(p) => ElementInstance::RetainedSubtree(p),
         ElementKind::ViewportSurface(p) => ElementInstance::ViewportSurface(p),
@@ -2550,6 +2552,13 @@ fn declarative_instance_change_mask(
             if virtual_list_layout_inputs_changed(a, b) {
                 layout_changed = true;
             }
+        }
+        (ElementInstance::ManagedSurface(_), ElementInstance::ManagedSurface(_)) => {
+            // Managed surface hooks are opaque element-state closures. They can capture host policy
+            // inputs that are not represented in `ManagedSurfaceProps`, so each declarative render
+            // must refresh host-selected layout, paint, and hit-test outputs.
+            layout_changed = true;
+            paint_changed = true;
         }
         _ => {}
     }

@@ -29,21 +29,17 @@ mod widget;
 #[cfg(feature = "compat-retained-canvas")]
 mod workflow;
 
+#[cfg(all(test, feature = "compat-retained-canvas"))]
+pub use middleware::{
+    NodeGraphCanvasCommandOutcome, NodeGraphCanvasCommitOutcome, NodeGraphCanvasMiddleware,
+    NodeGraphCanvasMiddlewareCx,
+};
 pub use resize_handle::NodeResizeHandle;
-#[cfg(feature = "compat-retained-canvas")]
+#[cfg(all(test, feature = "compat-retained-canvas"))]
 pub use widget::NodeGraphCanvas;
-#[cfg(feature = "compat-retained-canvas")]
-pub use widget::NodeGraphCanvasWith;
 
 pub(crate) use geometry::CanvasGeometry;
 #[cfg(feature = "compat-retained-canvas")]
 pub(crate) use geometry::node_order;
 pub(crate) use geometry::{node_ports, node_size_default_px};
 pub(crate) use spatial::CanvasSpatialDerived;
-
-#[cfg(feature = "compat-retained-canvas")]
-pub use middleware::{
-    NodeGraphCanvasCommandOutcome, NodeGraphCanvasCommitOutcome, NodeGraphCanvasEventOutcome,
-    NodeGraphCanvasMiddleware, NodeGraphCanvasMiddlewareChain, NodeGraphCanvasMiddlewareCx,
-    NoopNodeGraphCanvasMiddleware, RejectInvalidSizeTx, RejectNonFiniteTx,
-};

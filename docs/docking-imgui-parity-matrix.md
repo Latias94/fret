@@ -699,18 +699,19 @@ The rule of thumb:
     - `apps/fret-examples/src/docking_demo.rs` (uses `DockingRuntime`)
     - `apps/fret-examples/src/docking_arbitration_demo.rs` (uses `DockingRuntime`)
 
-- [x] **A “mount contract” helper for `DockSpace`**
+- [x] **A declarative mount contract for dock spaces**
   - Requirement (ADR 0072):
-    - Create one `DockSpace` per window and keep it alive.
-    - Ensure it is attached into the UI tree so hit-testing can descend.
-  - Implemented (v1) helper:
-    - `fret_docking::mount_dock_space(ui, window) -> DockSpaceMount`
-      - creates a dock space node and mounts it as the UI root
-    - `fret_docking::mount_dock_space_with_test_id(...)`
+    - Create one dock-space host per window and keep it alive.
+    - Ensure it is attached into the declarative tree so hit-testing can descend.
+  - Implemented (current) helper:
+    - `fret_docking::dock_space_element_from_registry(cx, window, options)`
+      - creates a managed-surface-backed dock-space element and binds registered declarative panel roots
+    - `fret_docking::imui::dock_space_declarative_with(...)`
   - Why crate-owned:
     - Prevents the class of bugs where a demo lays out a node but forgets to wire parent/children.
   - Evidence anchors:
-    - `ecosystem/fret-docking/src/dock/mod.rs` (`mount_dock_space(...)`, `DockSpaceMount`)
+    - `ecosystem/fret-docking/src/dock/declarative.rs`
+    - `ecosystem/fret-docking/src/imui.rs`
 
 - [~] **Optional: a structured diagnostic stream**
   - Proposed `DockingDiagnostics`:
@@ -727,7 +728,7 @@ The rule of thumb:
 - **Panel content**
   - Demos/apps own the UI trees for panels.
   - Docking should only need a registry hook:
-    - `DockPanelRegistry` + `DockPanelRegistryService`
+    - `DockPanelElementRegistry` + `DockPanelElementRegistryService`
 
 - **Which panels exist / domain naming**
   - Apps own panel kinds, titles, and domain-specific grouping.

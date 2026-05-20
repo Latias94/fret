@@ -7,7 +7,7 @@ use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
 use crate::ui::style::{NodeGraphBackgroundPattern, NodeGraphBackgroundStyle};
-use crate::ui::{NodeGraphCanvas, NodeGraphColorMode, NodeGraphStyle};
+use crate::ui::{NodeGraphColorMode, NodeGraphStyle, canvas::NodeGraphCanvas};
 
 use super::{
     NullServices, TestUiHostImpl, make_host_graph_view_editor_config,

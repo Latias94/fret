@@ -4,7 +4,7 @@ use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
 use crate::core::{Edge, EdgeId, EdgeKind};
-use crate::ui::NodeGraphCanvas;
+use crate::ui::canvas::NodeGraphCanvas;
 use crate::ui::edge_types::{EdgeCustomPath, EdgePathInput, NodeGraphEdgeTypes};
 use crate::ui::presenter::EdgeMarker;
 

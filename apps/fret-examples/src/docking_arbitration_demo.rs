@@ -3,14 +3,14 @@ use fret_app::CreateWindowKind;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_bootstrap::ui_diagnostics::{UiDiagnosticsService, UiRealPerfSpanCaptureV1};
 use fret_core::{
-    AppWindowId, Color, Corners, DrawOrder, Edges, Event, Modifiers, MouseButton, MouseButtons,
-    Point, Rect, RenderTargetId, Scene, SceneOp, Size, UiServices, ViewportInputEvent,
-    dock::DropZone, geometry::Px,
+    AppWindowId, Axis, Color, Corners, DrawOrder, Edges, Event, Modifiers, MouseButton,
+    MouseButtons, Point, Rect, RenderTargetId, Scene, SceneOp, Size, UiServices,
+    ViewportInputEvent, dock::DropZone, geometry::Px,
 };
 use fret_docking::{
-    DockManager, DockPanel, DockPanelFactory, DockPanelFactoryCx, DockPanelRegistryBuilder,
-    DockPanelRegistryService, DockSpace, DockViewportOverlayHooks, DockViewportOverlayHooksService,
-    DockingPolicy, DockingPolicyService, DockingRuntime, render_and_bind_dock_panels,
+    DockManager, DockPanel, DockPanelElementRegistry, DockPanelElementRegistryService,
+    DockSpaceElementOptions, DockViewportOverlayHooks, DockViewportOverlayHooksService,
+    DockingPolicy, DockingPolicyService, DockingRuntime,
 };
 use fret_launch::{
     DevStateExport, DevStateHook, DevStateHooks, DevStateWindowKeyRegistry, FnDriver,
@@ -19,10 +19,9 @@ use fret_launch::{
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
-use fret_ui::element::{ContainerProps, LayoutStyle, Length};
-use fret_ui::retained_bridge::resizable_panel_group as resizable;
+use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length};
 use fret_ui::retained_bridge::{LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt as _, Widget};
-use fret_ui::{Invalidation, Theme, UiTree};
+use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
@@ -50,6 +49,205 @@ const PANEL_KIND_VIEWPORT_RIGHT: &str = "demo.viewport.right";
 const PANEL_KIND_VIEWPORT_EXTRA: &str = "demo.viewport.extra";
 const PANEL_KIND_CONTROLS: &str = "demo.controls";
 const PANEL_KIND_DUMMY_OVERFLOW: &str = "demo.dummy.overflow";
+
+fn docking_arbitration_split_panel_rects(
+    axis: Axis,
+    bounds: Rect,
+    children_len: usize,
+    fractions: &[f32],
+    gap: Px,
+    min_px: &[Px],
+) -> Vec<Rect> {
+    let gap = gap.0.max(0.0);
+    let axis_len = docking_arbitration_axis_len(bounds, axis).max(0.0);
+    let total_gap = gap * (children_len.saturating_sub(1) as f32);
+    let avail = (axis_len - total_gap).max(0.0);
+
+    let mins = docking_arbitration_effective_min_px(children_len, avail, min_px);
+    let fractions = docking_arbitration_sanitize_fractions(fractions.to_vec(), children_len);
+    let sizes = docking_arbitration_apply_min_constraints(
+        docking_arbitration_sizes_from_fractions(&fractions, avail),
+        &mins,
+        avail,
+    );
+
+    let mut panel_rects = Vec::with_capacity(children_len);
+    let mut cursor = docking_arbitration_axis_origin(bounds, axis);
+    for i in 0..children_len {
+        let len = sizes.get(i).copied().unwrap_or(0.0).max(0.0);
+        match axis {
+            Axis::Horizontal => {
+                panel_rects.push(Rect::new(
+                    Point::new(Px(cursor), bounds.origin.y),
+                    Size::new(Px(len), bounds.size.height),
+                ));
+            }
+            Axis::Vertical => {
+                panel_rects.push(Rect::new(
+                    Point::new(bounds.origin.x, Px(cursor)),
+                    Size::new(bounds.size.width, Px(len)),
+                ));
+            }
+        }
+        cursor += len;
+        if i + 1 < children_len {
+            cursor += gap;
+        }
+    }
+
+    panel_rects
+}
+
+fn docking_arbitration_axis_len(bounds: Rect, axis: Axis) -> f32 {
+    match axis {
+        Axis::Horizontal => bounds.size.width.0,
+        Axis::Vertical => bounds.size.height.0,
+    }
+}
+
+fn docking_arbitration_axis_origin(bounds: Rect, axis: Axis) -> f32 {
+    match axis {
+        Axis::Horizontal => bounds.origin.x.0,
+        Axis::Vertical => bounds.origin.y.0,
+    }
+}
+
+fn docking_arbitration_effective_min_px(count: usize, avail: f32, min_px: &[Px]) -> Vec<f32> {
+    let default = Px(120.0);
+    if count == 0 {
+        return Vec::new();
+    }
+
+    let mut mins: Vec<f32> = if min_px.is_empty() {
+        vec![default.0; count]
+    } else if min_px.len() == 1 {
+        vec![min_px[0].0.max(0.0); count]
+    } else if min_px.len() == count {
+        min_px.iter().map(|p| p.0.max(0.0)).collect()
+    } else {
+        vec![min_px[0].0.max(0.0); count]
+    };
+
+    let sum: f32 = mins.iter().copied().sum();
+    if !sum.is_finite() || sum <= 0.0 {
+        return mins;
+    }
+    if avail > 0.0 && avail < sum {
+        let scale = (avail / sum).clamp(0.0, 1.0);
+        for m in &mut mins {
+            *m = (*m * scale).max(0.0);
+        }
+    }
+    mins
+}
+
+fn docking_arbitration_sanitize_fractions(mut fractions: Vec<f32>, count: usize) -> Vec<f32> {
+    if count == 0 {
+        return Vec::new();
+    }
+    if fractions.len() != count {
+        return vec![1.0 / count as f32; count];
+    }
+    for value in &mut fractions {
+        if !value.is_finite() {
+            *value = 0.0;
+        }
+        *value = (*value).max(0.0);
+    }
+    let sum: f32 = fractions.iter().sum();
+    if !sum.is_finite() || sum <= f32::EPSILON {
+        return vec![1.0 / count as f32; count];
+    }
+    for value in &mut fractions {
+        *value /= sum;
+    }
+    fractions
+}
+
+fn docking_arbitration_sizes_from_fractions(fractions: &[f32], avail: f32) -> Vec<f32> {
+    let mut sizes: Vec<f32> = fractions
+        .iter()
+        .copied()
+        .map(|f| (f.clamp(0.0, 1.0) * avail).max(0.0))
+        .collect();
+    let sum: f32 = sizes.iter().sum();
+    let diff = avail - sum;
+    if sizes.is_empty() {
+        return sizes;
+    }
+    let last = sizes.len() - 1;
+    sizes[last] = (sizes[last] + diff).max(0.0);
+    sizes
+}
+
+fn docking_arbitration_apply_min_constraints(
+    mut sizes: Vec<f32>,
+    mins: &[f32],
+    avail: f32,
+) -> Vec<f32> {
+    if sizes.is_empty() {
+        return sizes;
+    }
+    if mins.len() != sizes.len() {
+        return sizes;
+    }
+
+    let sum_min: f32 = mins.iter().copied().sum();
+    if avail <= 0.0 {
+        return vec![0.0; sizes.len()];
+    }
+    if sum_min.is_finite() && sum_min > 0.0 && avail < sum_min {
+        let scale = (avail / sum_min).clamp(0.0, 1.0);
+        for (size, min) in sizes.iter_mut().zip(mins.iter().copied()) {
+            *size = (min * scale).max(0.0);
+        }
+        return sizes;
+    }
+
+    for (size, min) in sizes.iter_mut().zip(mins.iter().copied()) {
+        if *size < min {
+            *size = min;
+        }
+    }
+
+    let mut sum: f32 = sizes.iter().sum();
+    if sum <= avail + 1.0e-3 {
+        let last = sizes.len() - 1;
+        sizes[last] = (sizes[last] + (avail - sum)).max(mins[last]);
+        return sizes;
+    }
+
+    let mut excess = sum - avail;
+    for _ in 0..4 {
+        if excess <= 1.0e-3 {
+            break;
+        }
+        let mut adjustable_total = 0.0;
+        for (size, min) in sizes.iter().zip(mins.iter().copied()) {
+            adjustable_total += (*size - min).max(0.0);
+        }
+        if adjustable_total <= 1.0e-6 {
+            break;
+        }
+        for (size, min) in sizes.iter_mut().zip(mins.iter().copied()) {
+            let room = (*size - min).max(0.0);
+            if room <= 0.0 {
+                continue;
+            }
+            let take = (excess * (room / adjustable_total)).min(room);
+            *size -= take;
+            excess -= take;
+            if excess <= 1.0e-3 {
+                break;
+            }
+        }
+    }
+
+    sum = sizes.iter().sum();
+    let last = sizes.len() - 1;
+    sizes[last] = (sizes[last] + (avail - sum)).max(mins[last]);
+    sizes
+}
 
 fn docking_arbitration_readout_text<H: fret_ui::UiHost>(
     cx: &mut fret_ui::ElementContext<'_, H>,
@@ -92,25 +290,19 @@ fn dock_panel_debug_name(panel: &fret_core::PanelKey) -> String {
     }
 }
 
-fn render_viewport_panel_root(
-    cx: &mut DockPanelFactoryCx<'_, App>,
-    root_name: &str,
-    test_id: Arc<str>,
-) -> fret_core::NodeId {
-    cx.render_cached_panel_root(root_name, move |cx| {
-        let mut layout = fret_ui::element::LayoutStyle::default();
-        layout.size.width = fret_ui::element::Length::Fill;
-        layout.size.height = fret_ui::element::Length::Fill;
-        vec![cx.semantics(
-            fret_ui::element::SemanticsProps {
-                layout,
-                role: fret_core::SemanticsRole::Viewport,
-                test_id: Some(test_id.clone()),
-                ..Default::default()
-            },
-            |_cx| vec![],
-        )]
-    })
+fn render_viewport_panel_root(cx: &mut ElementContext<'_, App>, test_id: Arc<str>) -> AnyElement {
+    let mut layout = fret_ui::element::LayoutStyle::default();
+    layout.size.width = fret_ui::element::Length::Fill;
+    layout.size.height = fret_ui::element::Length::Fill;
+    cx.semantics(
+        fret_ui::element::SemanticsProps {
+            layout,
+            role: fret_core::SemanticsRole::Viewport,
+            test_id: Some(test_id),
+            ..Default::default()
+        },
+        |_cx| vec![],
+    )
 }
 
 #[derive(Debug, Default)]
@@ -225,7 +417,6 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
             .copied()
             .unwrap_or_default();
         let split_handle_gap = docking_interaction_settings.split_handle_gap;
-        let split_handle_hit_thickness = docking_interaction_settings.split_handle_hit_thickness;
 
         let half = DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE.0 * 0.5;
         let rect = |x: f32, y: f32| {
@@ -266,43 +457,34 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 node: DockNodeId,
                 rect: Rect,
                 split_handle_gap: Px,
-                split_handle_hit_thickness: Px,
                 panel: &PanelKey,
             ) -> Option<Rect> {
                 #[allow(unreachable_patterns)]
                 match graph.node(node)? {
                     DockNode::Tabs { tabs, .. } => tabs.iter().any(|p| p == panel).then_some(rect),
-                    DockNode::Floating { child } => tabs_rect_for_panel(
-                        graph,
-                        *child,
-                        rect,
-                        split_handle_gap,
-                        split_handle_hit_thickness,
-                        panel,
-                    ),
+                    DockNode::Floating { child } => {
+                        tabs_rect_for_panel(graph, *child, rect, split_handle_gap, panel)
+                    }
                     DockNode::Split {
                         axis,
                         children,
                         fractions,
                     } => {
                         let min_px = vec![Px(0.0); children.len()];
-                        let computed = resizable::compute_layout(
+                        let panel_rects = docking_arbitration_split_panel_rects(
                             *axis,
                             rect,
                             children.len(),
                             fractions,
                             split_handle_gap,
-                            split_handle_hit_thickness,
                             &min_px,
                         );
-                        for (child, &child_rect) in children.iter().zip(computed.panel_rects.iter())
-                        {
+                        for (child, &child_rect) in children.iter().zip(panel_rects.iter()) {
                             if let Some(found) = tabs_rect_for_panel(
                                 graph,
                                 *child,
                                 child_rect,
                                 split_handle_gap,
-                                split_handle_hit_thickness,
                                 panel,
                             ) {
                                 return Some(found);
@@ -318,7 +500,6 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 window: AppWindowId,
                 bounds: Rect,
                 split_handle_gap: Px,
-                split_handle_hit_thickness: Px,
                 panel: &PanelKey,
             ) -> Option<(f32, f32)> {
                 let anchor_for_rect = |tabs_rect: Rect, floating: bool| {
@@ -343,14 +524,9 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 };
 
                 if let Some(root) = dock.graph.window_root(window) {
-                    if let Some(tabs_rect) = tabs_rect_for_panel(
-                        &dock.graph,
-                        root,
-                        bounds,
-                        split_handle_gap,
-                        split_handle_hit_thickness,
-                        panel,
-                    ) {
+                    if let Some(tabs_rect) =
+                        tabs_rect_for_panel(&dock.graph, root, bounds, split_handle_gap, panel)
+                    {
                         return Some(anchor_for_rect(tabs_rect, false));
                     }
                 }
@@ -361,7 +537,6 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                         floating.floating,
                         floating.rect,
                         split_handle_gap,
-                        split_handle_hit_thickness,
                         panel,
                     ) {
                         return Some(anchor_for_rect(tabs_rect, true));
@@ -376,7 +551,6 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 window: AppWindowId,
                 bounds: Rect,
                 split_handle_gap: Px,
-                split_handle_hit_thickness: Px,
                 panel: &PanelKey,
             ) -> Option<(f32, f32)> {
                 let anchor_for_rect = |tabs_rect: Rect, floating: bool| {
@@ -401,14 +575,9 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 };
 
                 if let Some(root) = dock.graph.window_root(window) {
-                    if let Some(tabs_rect) = tabs_rect_for_panel(
-                        &dock.graph,
-                        root,
-                        bounds,
-                        split_handle_gap,
-                        split_handle_hit_thickness,
-                        panel,
-                    ) {
+                    if let Some(tabs_rect) =
+                        tabs_rect_for_panel(&dock.graph, root, bounds, split_handle_gap, panel)
+                    {
                         return Some(anchor_for_rect(tabs_rect, false));
                     }
                 }
@@ -419,7 +588,6 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                         floating.floating,
                         floating.rect,
                         split_handle_gap,
-                        split_handle_hit_thickness,
                         panel,
                     ) {
                         return Some(anchor_for_rect(tabs_rect, true));
@@ -436,7 +604,6 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 self.window,
                 bounds,
                 split_handle_gap,
-                split_handle_hit_thickness,
                 &viewport_left,
             ) {
                 left_anchor_pos = p;
@@ -446,7 +613,6 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 self.window,
                 bounds,
                 split_handle_gap,
-                split_handle_hit_thickness,
                 &viewport_right,
             ) {
                 right_anchor_pos = p;
@@ -456,7 +622,6 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 self.window,
                 bounds,
                 split_handle_gap,
-                split_handle_hit_thickness,
                 &viewport_right,
             ) {
                 right_tabs_group_anchor_pos = p;
@@ -464,14 +629,9 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
 
             for (ix, pos) in extra_anchor_pos.iter_mut().enumerate() {
                 let panel = extra_viewport_panel_key(ix);
-                if let Some(p) = tab_bar_anchor_for_panel(
-                    dock,
-                    self.window,
-                    bounds,
-                    split_handle_gap,
-                    split_handle_hit_thickness,
-                    &panel,
-                ) {
+                if let Some(p) =
+                    tab_bar_anchor_for_panel(dock, self.window, bounds, split_handle_gap, &panel)
+                {
                     *pos = p;
                 }
             }
@@ -563,42 +723,33 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 node: DockNodeId,
                 rect: Rect,
                 split_handle_gap: Px,
-                split_handle_hit_thickness: Px,
                 panel: &PanelKey,
             ) -> Option<Rect> {
                 match graph.node(node)? {
                     DockNode::Tabs { tabs, .. } => tabs.iter().any(|p| p == panel).then_some(rect),
-                    DockNode::Floating { child } => tabs_rect_for_panel(
-                        graph,
-                        *child,
-                        rect,
-                        split_handle_gap,
-                        split_handle_hit_thickness,
-                        panel,
-                    ),
+                    DockNode::Floating { child } => {
+                        tabs_rect_for_panel(graph, *child, rect, split_handle_gap, panel)
+                    }
                     DockNode::Split {
                         axis,
                         children,
                         fractions,
                     } => {
                         let min_px = vec![Px(0.0); children.len()];
-                        let computed = resizable::compute_layout(
+                        let panel_rects = docking_arbitration_split_panel_rects(
                             *axis,
                             rect,
                             children.len(),
                             fractions,
                             split_handle_gap,
-                            split_handle_hit_thickness,
                             &min_px,
                         );
-                        for (child, &child_rect) in children.iter().zip(computed.panel_rects.iter())
-                        {
+                        for (child, &child_rect) in children.iter().zip(panel_rects.iter()) {
                             if let Some(found) = tabs_rect_for_panel(
                                 graph,
                                 *child,
                                 child_rect,
                                 split_handle_gap,
-                                split_handle_hit_thickness,
                                 panel,
                             ) {
                                 return Some(found);
@@ -617,14 +768,8 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
             // Anchor overflow geometry to the left viewport's tabs container. Most arbitration
             // scripts build tab overflow by merging additional tabs into that leaf.
             let left_panel = viewport_left_panel_key();
-            let tabs_rect = tabs_rect_for_panel(
-                &dock.graph,
-                root,
-                bounds,
-                split_handle_gap,
-                split_handle_hit_thickness,
-                &left_panel,
-            )?;
+            let tabs_rect =
+                tabs_rect_for_panel(&dock.graph, root, bounds, split_handle_gap, &left_panel)?;
             let (tabs_node, _active) = dock.graph.find_panel_in_window(self.window, &left_panel)?;
             let (tabs, active) = match dock.graph.node(tabs_node)? {
                 DockNode::Tabs { tabs, active } => (tabs.as_slice(), *active),
@@ -884,19 +1029,13 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 bounds: Rect,
                 desired_axis: fret_core::Axis,
                 split_handle_gap: Px,
-                split_handle_hit_thickness: Px,
             ) -> Option<Rect> {
                 let n = graph.node(node)?;
                 match n {
                     fret_core::DockNode::Tabs { .. } => None,
-                    fret_core::DockNode::Floating { child } => first_handle_for_axis(
-                        graph,
-                        *child,
-                        bounds,
-                        desired_axis,
-                        split_handle_gap,
-                        split_handle_hit_thickness,
-                    ),
+                    fret_core::DockNode::Floating { child } => {
+                        first_handle_for_axis(graph, *child, bounds, desired_axis, split_handle_gap)
+                    }
                     fret_core::DockNode::Split {
                         axis,
                         children,
@@ -906,13 +1045,12 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                         if count == 0 {
                             return None;
                         }
-                        let computed = resizable::compute_layout(
+                        let panel_rects = docking_arbitration_split_panel_rects(
                             *axis,
                             bounds,
                             count,
                             fractions,
                             split_handle_gap,
-                            split_handle_hit_thickness,
                             &[],
                         );
                         if *axis == desired_axis {
@@ -921,9 +1059,9 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                             // anchor aligned with the visible split boundary (and therefore
                             // reliably draggable in scripts), even if handle hit thickness / gap
                             // policies evolve.
-                            if computed.panel_rects.len() >= 2 {
-                                let a = computed.panel_rects[0];
-                                let b = computed.panel_rects[1];
+                            if panel_rects.len() >= 2 {
+                                let a = panel_rects[0];
+                                let b = panel_rects[1];
                                 let ax1 = a.origin.x.0 + a.size.width.0;
                                 let bx0 = b.origin.x.0;
                                 let cx = (ax1 + bx0) * 0.5;
@@ -948,14 +1086,13 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                                 }
                             }
                         }
-                        for (&child, &rect) in children.iter().zip(computed.panel_rects.iter()) {
+                        for (&child, &rect) in children.iter().zip(panel_rects.iter()) {
                             if let Some(found) = first_handle_for_axis(
                                 graph,
                                 child,
                                 rect,
                                 desired_axis,
                                 split_handle_gap,
-                                split_handle_hit_thickness,
                             ) {
                                 return Some(found);
                             }
@@ -973,7 +1110,6 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 bounds,
                 fret_core::Axis::Horizontal,
                 split_handle_gap,
-                split_handle_hit_thickness,
             )
         })();
 
@@ -1055,188 +1191,176 @@ impl DockingArbitrationPanelModelsService {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+struct DockingArbitrationUiDebugSnapshot {
+    captured: String,
+    layer_lines: Vec<String>,
+}
+
+#[derive(Default)]
+struct DockingArbitrationUiDebugSnapshotService {
+    by_window: HashMap<AppWindowId, DockingArbitrationUiDebugSnapshot>,
+}
+
+impl DockingArbitrationUiDebugSnapshotService {
+    fn set(&mut self, window: AppWindowId, snapshot: DockingArbitrationUiDebugSnapshot) {
+        self.by_window.insert(window, snapshot);
+    }
+
+    fn get(&self, window: AppWindowId) -> DockingArbitrationUiDebugSnapshot {
+        self.by_window.get(&window).cloned().unwrap_or_default()
+    }
+}
+
 fn render_controls_panel(
-    factory_cx: &mut DockPanelFactoryCx<'_, App>,
-) -> Option<fret_core::NodeId> {
-    let models = factory_cx
+    cx: &mut ElementContext<'_, App>,
+    window: AppWindowId,
+) -> Option<AnyElement> {
+    let models = cx
         .app
         .global::<DockingArbitrationPanelModelsService>()
-        .and_then(|svc| svc.get(factory_cx.window))
+        .and_then(|svc| svc.get(window))
         .cloned()?;
 
-    let captured = format!("captured={:?}", factory_cx.ui.captured());
-    let layer_lines: Vec<String> = factory_cx
-        .ui
-        .debug_layers_in_paint_order()
-        .iter()
-        .enumerate()
-        .map(|(ix, layer)| {
-            format!(
-                "#{ix} root={:?} visible={} barrier={} hit_testable={} outside={} move={} timer={}",
-                layer.root,
-                layer.visible,
-                layer.blocks_underlay_input,
-                layer.hit_testable,
-                layer.wants_pointer_down_outside_events,
-                layer.wants_pointer_move_events,
-                layer.wants_timer_events
-            )
-        })
-        .collect();
+    let debug_snapshot = cx
+        .app
+        .global::<DockingArbitrationUiDebugSnapshotService>()
+        .map(|svc| svc.get(window))
+        .unwrap_or_default();
+    let captured = debug_snapshot.captured;
+    let layer_lines = debug_snapshot.layer_lines;
 
-    let root_name = "dock.panel.controls";
-    Some(
-        declarative::RenderRootContext::new(
-            factory_cx.ui,
-            factory_cx.app,
-            factory_cx.services,
-            factory_cx.window,
-            factory_cx.bounds,
-        )
-        .render_root(
-            root_name,
+    Some({
+        cx.observe_model(&models.popover_open, Invalidation::Layout);
+        cx.observe_model(&models.dialog_open, Invalidation::Layout);
+        cx.observe_model(&models.drop_mask_disallow_left_edge, Invalidation::Layout);
+        cx.observe_model(&models.last_viewport_input, Invalidation::Layout);
+        cx.observe_model(&models.synth_pointer_debug, Invalidation::Layout);
+
+        let theme = Theme::global(&*cx.app);
+        let padding = theme.metric_token("metric.padding.md");
+        let background = theme.color_token("background");
+
+        let drag_state = cx
+            .app
+            .drag(fret_core::PointerId(0))
+            .map(|d| format!("drag(kind={:?}, dragging={})", d.kind, d.dragging))
+            .unwrap_or_else(|| "drag(<none>)".to_string());
+
+        let last = cx
+            .app
+            .models()
+            .get_cloned(&models.last_viewport_input)
+            .unwrap_or_else(|| Arc::<str>::from("<missing>"));
+        let synth_debug = cx
+            .app
+            .models()
+            .get_cloned(&models.synth_pointer_debug)
+            .unwrap_or_else(|| Arc::<str>::from("<missing>"));
+
+        let popover_open = models.popover_open.clone();
+        let dialog_open = models.dialog_open.clone();
+        let drop_mask_disallow_left_edge = models.drop_mask_disallow_left_edge.clone();
+        let sonner = shadcn::Sonner::global(&mut *cx.app);
+        let popover_is_open = cx.app.models().get_cloned(&popover_open).unwrap_or(false);
+        let dialog_is_open = cx.app.models().get_cloned(&dialog_open).unwrap_or(false);
+        let drop_mask_left_disallowed = cx
+            .app
+            .models()
+            .get_cloned(&drop_mask_disallow_left_edge)
+            .unwrap_or(false);
+        let disallow_left_flag = cx
+            .app
+            .global::<DockingArbitrationPolicyFlags>()
+            .map(|f| f.disallow_left_edge.clone())
+            .unwrap_or_else(|| Arc::new(AtomicBool::new(false)));
+
+        let popover = shadcn::Popover::from_open(popover_open.clone())
+            .auto_focus(true)
+            .into_element_with(
+                cx,
+                |cx| {
+                    shadcn::Button::new("Open popover")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .test_id("dock-arb-popover-trigger")
+                        .toggle_model(popover_open.clone())
+                        .into_element(cx)
+                },
+                |cx| {
+                    shadcn::PopoverContent::new(vec![
+                        docking_arbitration_paragraph_text(cx, "Non-modal overlay (Popover)."),
+                        shadcn::Button::new("Close")
+                            .variant(shadcn::ButtonVariant::Secondary)
+                            .test_id("dock-arb-popover-close")
+                            .toggle_model(popover_open.clone())
+                            .into_element(cx),
+                    ])
+                    .into_element(cx)
+                },
+            );
+
+        let dialog = shadcn::Dialog::new(dialog_open.clone()).into_element(
+            cx,
             |cx| {
-                cx.observe_model(&models.popover_open, Invalidation::Layout);
-                cx.observe_model(&models.dialog_open, Invalidation::Layout);
-                cx.observe_model(&models.drop_mask_disallow_left_edge, Invalidation::Layout);
-                cx.observe_model(&models.last_viewport_input, Invalidation::Layout);
-                cx.observe_model(&models.synth_pointer_debug, Invalidation::Layout);
-
-                let theme = Theme::global(&*cx.app);
-                let padding = theme.metric_token("metric.padding.md");
-                let background = theme.color_token("background");
-
-                let drag_state = cx
-                    .app
-                    .drag(fret_core::PointerId(0))
-                    .map(|d| format!("drag(kind={:?}, dragging={})", d.kind, d.dragging))
-                    .unwrap_or_else(|| "drag(<none>)".to_string());
-
-                let last = cx
-                    .app
-                    .models()
-                    .get_cloned(&models.last_viewport_input)
-                    .unwrap_or_else(|| Arc::<str>::from("<missing>"));
-                let synth_debug = cx
-                    .app
-                    .models()
-                    .get_cloned(&models.synth_pointer_debug)
-                    .unwrap_or_else(|| Arc::<str>::from("<missing>"));
-
-                let popover_open = models.popover_open.clone();
-                let dialog_open = models.dialog_open.clone();
-                let drop_mask_disallow_left_edge = models.drop_mask_disallow_left_edge.clone();
-                let sonner = shadcn::Sonner::global(&mut *cx.app);
-                let popover_is_open = cx
-                    .app
-                    .models()
-                    .get_cloned(&popover_open)
-                    .unwrap_or(false);
-                let dialog_is_open = cx
-                    .app
-                    .models()
-                    .get_cloned(&dialog_open)
-                    .unwrap_or(false);
-                let drop_mask_left_disallowed = cx
-                    .app
-                    .models()
-                    .get_cloned(&drop_mask_disallow_left_edge)
-                    .unwrap_or(false);
-                let disallow_left_flag = cx
-                    .app
-                    .global::<DockingArbitrationPolicyFlags>()
-                    .map(|f| f.disallow_left_edge.clone())
-                    .unwrap_or_else(|| Arc::new(AtomicBool::new(false)));
-
-                let popover = shadcn::Popover::from_open(popover_open.clone())
-                    .auto_focus(true)
-                    .into_element_with(
-                        cx,
-                        |cx| {
-                            shadcn::Button::new("Open popover")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .test_id("dock-arb-popover-trigger")
-                                .toggle_model(popover_open.clone())
-                                .into_element(cx)
-                        },
-                        |cx| {
-                            shadcn::PopoverContent::new(vec![
-                                docking_arbitration_paragraph_text(
-                                    cx,
-                                    "Non-modal overlay (Popover).",
-                                ),
-                                shadcn::Button::new("Close")
-                                    .variant(shadcn::ButtonVariant::Secondary)
-                                    .test_id("dock-arb-popover-close")
-                                    .toggle_model(popover_open.clone())
-                                    .into_element(cx),
-                            ])
-                            .into_element(cx)
-                        },
-                    );
-
-                let dialog = shadcn::Dialog::new(dialog_open.clone()).into_element(
-                    cx,
-                    |cx| {
-                        shadcn::Button::new("Open modal dialog")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .test_id("dock-arb-dialog-trigger")
-                            .toggle_model(dialog_open.clone())
-                            .into_element(cx)
+                shadcn::Button::new("Open modal dialog")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("dock-arb-dialog-trigger")
+                    .toggle_model(dialog_open.clone())
+                    .into_element(cx)
+            },
+            |cx| {
+                let sonner_for_dialog = sonner.clone();
+                let mut layout = fret_ui::element::LayoutStyle::default();
+                layout.size.width = fret_ui::element::Length::Fill;
+                layout.size.height = fret_ui::element::Length::Fill;
+                cx.semantics(
+                    fret_ui::element::SemanticsProps {
+                        layout,
+                        role: fret_core::SemanticsRole::Dialog,
+                        test_id: Some(Arc::<str>::from("dock-arb-dialog-content")),
+                        ..Default::default()
                     },
                     |cx| {
-                        let sonner_for_dialog = sonner.clone();
-                        let mut layout = fret_ui::element::LayoutStyle::default();
-                        layout.size.width = fret_ui::element::Length::Fill;
-                        layout.size.height = fret_ui::element::Length::Fill;
-                        cx.semantics(
-                            fret_ui::element::SemanticsProps {
-                                layout,
-                                role: fret_core::SemanticsRole::Dialog,
-                                test_id: Some(Arc::<str>::from("dock-arb-dialog-content")),
-                                ..Default::default()
-                            },
-                            |cx| {
-                                vec![shadcn::DialogContent::new(vec![
-                                    shadcn::DialogHeader::new(vec![
-                                        shadcn::DialogTitle::new("Dialog").into_element(cx),
-                                        shadcn::DialogDescription::new(
-                                            "Modal barrier should block docking + viewport input.",
-                                        )
-                                        .into_element(cx),
-                                    ])
-                                    .into_element(cx),
-                                    shadcn::Button::new("Trigger toast (Sonner)")
-                                        .variant(shadcn::ButtonVariant::Secondary)
-                                        .test_id("dock-arb-sonner-trigger")
-                                        .on_activate(Arc::new(move |host, action_cx, _reason| {
-                                            sonner_for_dialog.toast(
-                                                host,
-                                                action_cx.window,
-                                                shadcn::ToastRequest::new(
-                                                    "Toast while modal is open",
-                                                )
-                                                .duration(None)
-                                                .test_id("dock-arb-sonner-toast"),
-                                            );
-                                        }))
-                                        .into_element(cx),
-                                    shadcn::DialogFooter::new(vec![
-                                        shadcn::Button::new("Close")
-                                            .variant(shadcn::ButtonVariant::Secondary)
-                                            .test_id("dock-arb-dialog-close")
-                                            .toggle_model(dialog_open.clone())
-                                            .into_element(cx),
-                                    ])
+                        vec![
+                            shadcn::DialogContent::new(vec![
+                                shadcn::DialogHeader::new(vec![
+                                    shadcn::DialogTitle::new("Dialog").into_element(cx),
+                                    shadcn::DialogDescription::new(
+                                        "Modal barrier should block docking + viewport input.",
+                                    )
                                     .into_element(cx),
                                 ])
-                                .into_element(cx)]
-                            },
-                        )
+                                .into_element(cx),
+                                shadcn::Button::new("Trigger toast (Sonner)")
+                                    .variant(shadcn::ButtonVariant::Secondary)
+                                    .test_id("dock-arb-sonner-trigger")
+                                    .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                        sonner_for_dialog.toast(
+                                            host,
+                                            action_cx.window,
+                                            shadcn::ToastRequest::new("Toast while modal is open")
+                                                .duration(None)
+                                                .test_id("dock-arb-sonner-toast"),
+                                        );
+                                    }))
+                                    .into_element(cx),
+                                shadcn::DialogFooter::new(vec![
+                                    shadcn::Button::new("Close")
+                                        .variant(shadcn::ButtonVariant::Secondary)
+                                        .test_id("dock-arb-dialog-close")
+                                        .toggle_model(dialog_open.clone())
+                                        .into_element(cx),
+                                ])
+                                .into_element(cx),
+                            ])
+                            .into_element(cx),
+                        ]
                     },
-                );
+                )
+            },
+        );
 
-                vec![cx.container(
+        cx.container(
                 ContainerProps {
                     layout: {
                         let mut layout = LayoutStyle::default();
@@ -1570,78 +1694,36 @@ fn render_controls_panel(
                         shadcn::Toaster::new().into_element(cx),
                     ]
                 },
-            )]
-            },
-        ),
-    )
+            )
+    })
 }
 
-struct StaticViewportPanelFactory {
-    kind: fret_core::PanelKind,
-    root_name: &'static str,
-    test_id: &'static str,
-}
+struct DockingArbitrationPanelRegistry;
 
-impl StaticViewportPanelFactory {
-    fn new(kind: &'static str, root_name: &'static str, test_id: &'static str) -> Self {
-        Self {
-            kind: fret_core::PanelKind::new(kind),
-            root_name,
-            test_id,
-        }
-    }
-}
-
-impl DockPanelFactory<App> for StaticViewportPanelFactory {
-    fn panel_kind(&self) -> fret_core::PanelKind {
-        self.kind.clone()
-    }
-
-    fn build_panel(
+impl DockPanelElementRegistry<App> for DockingArbitrationPanelRegistry {
+    fn render_panel(
         &self,
-        _panel: &fret_core::PanelKey,
-        cx: &mut DockPanelFactoryCx<'_, App>,
-    ) -> Option<fret_core::NodeId> {
-        Some(render_viewport_panel_root(
-            cx,
-            self.root_name,
-            Arc::<str>::from(self.test_id),
-        ))
-    }
-}
-
-struct ExtraViewportPanelFactory;
-
-impl DockPanelFactory<App> for ExtraViewportPanelFactory {
-    fn panel_kind(&self) -> fret_core::PanelKind {
-        fret_core::PanelKind::new(PANEL_KIND_VIEWPORT_EXTRA)
-    }
-
-    fn build_panel(
-        &self,
+        cx: &mut ElementContext<'_, App>,
+        window: AppWindowId,
         panel: &fret_core::PanelKey,
-        cx: &mut DockPanelFactoryCx<'_, App>,
-    ) -> Option<fret_core::NodeId> {
-        let suffix = panel.instance.as_deref()?;
-        let root_name = format!("dock.panel.viewport_extra_{suffix}");
-        let test_id = Arc::<str>::from(format!("dock-arb-viewport-extra-{suffix}"));
-        Some(render_viewport_panel_root(cx, &root_name, test_id))
-    }
-}
-
-struct DockingArbitrationControlsPanelFactory;
-
-impl DockPanelFactory<App> for DockingArbitrationControlsPanelFactory {
-    fn panel_kind(&self) -> fret_core::PanelKind {
-        fret_core::PanelKind::new(PANEL_KIND_CONTROLS)
-    }
-
-    fn build_panel(
-        &self,
-        _panel: &fret_core::PanelKey,
-        cx: &mut DockPanelFactoryCx<'_, App>,
-    ) -> Option<fret_core::NodeId> {
-        render_controls_panel(cx)
+    ) -> Option<AnyElement> {
+        match panel.kind.0.as_str() {
+            PANEL_KIND_VIEWPORT_LEFT => Some(render_viewport_panel_root(
+                cx,
+                Arc::<str>::from("dock-arb-viewport-left"),
+            )),
+            PANEL_KIND_VIEWPORT_RIGHT => Some(render_viewport_panel_root(
+                cx,
+                Arc::<str>::from("dock-arb-viewport-right"),
+            )),
+            PANEL_KIND_VIEWPORT_EXTRA => {
+                let suffix = panel.instance.as_deref()?;
+                let test_id = Arc::<str>::from(format!("dock-arb-viewport-extra-{suffix}"));
+                Some(render_viewport_panel_root(cx, test_id))
+            }
+            PANEL_KIND_CONTROLS => render_controls_panel(cx, window),
+            _ => None,
+        }
     }
 }
 
@@ -2450,16 +2532,57 @@ impl DockingArbitrationDriver {
 
         OverlayController::begin_frame(app, window);
 
-        let dock_space = state.dock_space.get_or_insert_with(|| {
-            use fret_ui::retained_bridge::UiTreeRetainedExt as _;
-            let allow_chained_tear_off =
-                std::env::var_os("FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF").is_some();
-            state.ui.create_node_retained(
-                DockSpace::new(window)
-                    .with_allow_multi_window_tear_off(allow_chained_tear_off)
-                    .with_semantics_test_id("dock-arb-dock-space"),
-            )
-        });
+        let debug_snapshot = DockingArbitrationUiDebugSnapshot {
+            captured: format!("captured={:?}", state.ui.captured()),
+            layer_lines: state
+                .ui
+                .debug_layers_in_paint_order()
+                .iter()
+                .enumerate()
+                .map(|(ix, layer)| {
+                    format!(
+                        "#{ix} root={:?} visible={} barrier={} hit_testable={} outside={} move={} timer={}",
+                        layer.root,
+                        layer.visible,
+                        layer.blocks_underlay_input,
+                        layer.hit_testable,
+                        layer.wants_pointer_down_outside_events,
+                        layer.wants_pointer_move_events,
+                        layer.wants_timer_events
+                    )
+                })
+                .collect(),
+        };
+        app.with_global_mut(
+            DockingArbitrationUiDebugSnapshotService::default,
+            |svc, _app| {
+                svc.set(window, debug_snapshot);
+            },
+        );
+
+        let allow_chained_tear_off =
+            std::env::var_os("FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF").is_some();
+        let dock_space = declarative::render_root(
+            &mut state.ui,
+            app,
+            services,
+            window,
+            bounds,
+            "dock-arb-dock-space",
+            |cx| {
+                vec![fret_docking::dock_space_element_from_registry(
+                    cx,
+                    window,
+                    DockSpaceElementOptions {
+                        test_id: Some("dock-arb-dock-space"),
+                        allow_multi_window_tear_off: allow_chained_tear_off,
+                        ..Default::default()
+                    },
+                )]
+            },
+        );
+        state.dock_space = Some(dock_space);
+
         let _ = state.root.get_or_insert_with(|| {
             let left_anchor = state
                 .ui
@@ -2579,7 +2702,7 @@ impl DockingArbitrationDriver {
                 .ui
                 .create_node_retained(DockingArbitrationHarnessRoot {
                     window,
-                    dock_space: *dock_space,
+                    dock_space,
                     left_anchor,
                     right_anchor,
                     right_tabs_group_anchor,
@@ -2601,7 +2724,7 @@ impl DockingArbitrationDriver {
             // Ensure the retained harness nodes participate in hit-testing and event routing.
             // Without explicit parent/child wiring, `layout_in` can position nodes for paint, but
             // pointer hit-testing will not descend into them (it only follows the UI tree).
-            let children: Vec<fret_core::NodeId> = std::iter::once(*dock_space)
+            let children: Vec<fret_core::NodeId> = std::iter::once(dock_space)
                 .chain(std::iter::once(left_anchor))
                 .chain(std::iter::once(right_anchor))
                 .chain(std::iter::once(right_tabs_group_anchor))
@@ -2622,8 +2745,6 @@ impl DockingArbitrationDriver {
             state.ui.set_children(root, children);
             root
         });
-
-        render_and_bind_dock_panels(&mut state.ui, app, services, window, bounds, *dock_space);
 
         OverlayController::render(&mut state.ui, app, services, window, bounds);
     }
@@ -3527,23 +3648,12 @@ pub fn run() -> anyhow::Result<()> {
         caps.ui.window_tear_off = false;
     }
     app.set_global(caps);
-    let mut registry = DockPanelRegistryBuilder::new();
-    registry
-        .register(StaticViewportPanelFactory::new(
-            PANEL_KIND_VIEWPORT_LEFT,
-            "dock.panel.viewport_left",
-            "dock-arb-viewport-left",
-        ))
-        .register(StaticViewportPanelFactory::new(
-            PANEL_KIND_VIEWPORT_RIGHT,
-            "dock.panel.viewport_right",
-            "dock-arb-viewport-right",
-        ))
-        .register(ExtraViewportPanelFactory)
-        .register(DockingArbitrationControlsPanelFactory);
-    app.with_global_mut(DockPanelRegistryService::<App>::default, |svc, _app| {
-        svc.set(registry.build_arc());
-    });
+    app.with_global_mut(
+        DockPanelElementRegistryService::<App>::default,
+        |svc, _app| {
+            svc.set(Arc::new(DockingArbitrationPanelRegistry));
+        },
+    );
     app.with_global_mut(DockViewportOverlayHooksService::default, |svc, _app| {
         svc.set(Arc::new(DemoViewportOverlayHooks {
             tools: viewport_tools.clone(),

@@ -24,8 +24,8 @@ surface, lock these decisions before adding public API:
   docs/examples on plain installer functions
 - if you really need an inline closure with captured runtime values, keep it on
   `UiAppBuilder::setup_with(...)` instead of teaching `.setup(|app| ...)`
-- keep typed routes on `RouteCodec`, dockable panel contributions on `DockPanelFactory`, and host
-  command catalog ownership in `fret-ui-kit::command`
+- keep typed routes on `RouteCodec`, dockable panel contributions on
+  `DockPanelElementRegistry`, and host command catalog ownership in `fret-ui-kit::command`
 - use plain `CommandMeta` when a command only needs normal registration, keybindings, menus, and
   command identity; reach for `CommandCatalog` only when a discovery surface needs grouped or
   enriched catalog entries beyond flat registered metadata

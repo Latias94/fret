@@ -52,6 +52,7 @@ use crate::ui::commands::{
     CMD_NODE_GRAPH_PASTE, CMD_NODE_GRAPH_REDO, CMD_NODE_GRAPH_SELECT_ALL, CMD_NODE_GRAPH_UNDO,
 };
 use crate::ui::compat_transport::NodeGraphEditQueue;
+use crate::ui::overlays::{GroupRenameOverlay, NodeGraphOverlayState};
 use crate::ui::presenter::{
     DefaultNodeGraphPresenter, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate,
     NodeGraphContextMenuAction, NodeGraphContextMenuItem, NodeGraphPresenter, NodeResizeHandleSet,
@@ -59,10 +60,10 @@ use crate::ui::presenter::{
 };
 use crate::ui::style::{NodeGraphBackgroundStyle, NodeGraphColorMode, NodeGraphStyle};
 use crate::ui::{
-    FallbackMeasuredNodeGraphPresenter, GroupRenameOverlay, MeasuredGeometryStore,
-    NodeGraphCanvasTransform, NodeGraphController, NodeGraphEdgeTypes,
-    NodeGraphGeometryOverridesRef, NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
-    NodeGraphOverlayState, NodeGraphPaintOverridesRef, NodeGraphSkinRef,
+    FallbackMeasuredNodeGraphPresenter, MeasuredGeometryStore, NodeGraphCanvasTransform,
+    NodeGraphController, NodeGraphEdgeTypes, NodeGraphGeometryOverridesRef,
+    NodeGraphInternalsSnapshot, NodeGraphInternalsStore, NodeGraphPaintOverridesRef,
+    NodeGraphSkinRef,
 };
 
 use super::middleware::{
@@ -295,7 +296,6 @@ mod retained_widget_layout;
 mod retained_widget_layout_children;
 mod retained_widget_layout_drain;
 mod retained_widget_layout_observe;
-mod retained_widget_layout_publish;
 mod retained_widget_runtime;
 mod retained_widget_runtime_command;
 mod retained_widget_runtime_event;
@@ -455,8 +455,6 @@ pub struct NodeGraphCanvasWith<M> {
     internals: Option<Arc<NodeGraphInternalsStore>>,
     internals_key: Option<InternalsCacheKey>,
 
-    diagnostics_anchor_ports: Option<DiagnosticsAnchorPorts>,
-
     cached_pan: CanvasPoint,
     cached_zoom: f32,
     last_cull_window_key: Option<u64>,
@@ -477,12 +475,6 @@ pub struct NodeGraphCanvasWith<M> {
     edge_labels_build_states: HashMap<u64, EdgeLabelsBuildState>,
     edge_labels_build_state: Option<EdgeLabelsBuildState>,
     interaction: InteractionState,
-}
-
-#[derive(Debug, Clone)]
-struct DiagnosticsAnchorPorts {
-    child_offset: usize,
-    ports: Vec<PortId>,
 }
 
 #[derive(Debug, Clone)]

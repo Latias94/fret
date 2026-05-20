@@ -488,6 +488,182 @@ fn pressable_on_activate_hook_runs_on_pointer_activation() {
 }
 
 #[test]
+fn pressable_focus_activation_hook_can_restore_focus_after_pointer_activation() {
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(48.0)));
+    let mut services = FakeTextService::default();
+    let target_id = Rc::new(Cell::new(None::<crate::elements::GlobalElementId>));
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pressable-focus-activate-hook-pointer",
+        |cx| {
+            let target = cx.pressable_with_id(crate::element::PressableProps::default(), {
+                let target_id = target_id.clone();
+                move |cx, _state, id| {
+                    target_id.set(Some(id));
+                    vec![cx.text("surface")]
+                }
+            });
+            let target_element = target.id;
+
+            let button = cx.pressable(
+                crate::element::PressableProps::default(),
+                move |cx, _state| {
+                    cx.pressable_on_activate_focus(Arc::new(move |host, _cx, reason| {
+                        assert_eq!(reason, ActivateReason::Pointer);
+                        host.request_focus(target_element);
+                    }));
+                    vec![cx.text("button")]
+                },
+            );
+
+            vec![target, button]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let target_node = crate::elements::node_for_element(
+        &mut app,
+        window,
+        target_id.get().expect("target element id"),
+    )
+    .expect("target node");
+    let button_node = ui.children(root)[1];
+    let button_bounds = ui.debug_node_bounds(button_node).expect("button bounds");
+    let position = Point::new(
+        Px(button_bounds.origin.x.0 + 1.0),
+        Px(button_bounds.origin.y.0 + 1.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        ui.focus(),
+        Some(target_node),
+        "activation focus hook should override Pressable's default pointer focus"
+    );
+}
+
+#[test]
+fn pressable_focus_activation_hook_can_restore_focus_after_keyboard_activation() {
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(48.0)));
+    let mut services = FakeTextService::default();
+    let target_id = Rc::new(Cell::new(None::<crate::elements::GlobalElementId>));
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pressable-focus-activate-hook-keyboard",
+        |cx| {
+            let target = cx.pressable_with_id(crate::element::PressableProps::default(), {
+                let target_id = target_id.clone();
+                move |cx, _state, id| {
+                    target_id.set(Some(id));
+                    vec![cx.text("surface")]
+                }
+            });
+            let target_element = target.id;
+
+            let button = cx.pressable(
+                crate::element::PressableProps::default(),
+                move |cx, _state| {
+                    cx.pressable_on_activate_focus(Arc::new(move |host, _cx, reason| {
+                        assert_eq!(reason, ActivateReason::Keyboard);
+                        host.request_focus(target_element);
+                    }));
+                    vec![cx.text("button")]
+                },
+            );
+
+            vec![target, button]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let target_node = crate::elements::node_for_element(
+        &mut app,
+        window,
+        target_id.get().expect("target element id"),
+    )
+    .expect("target node");
+    let button_node = ui.children(root)[1];
+    ui.set_focus(Some(button_node));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::KeyDown {
+            key: fret_core::KeyCode::Enter,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::KeyUp {
+            key: fret_core::KeyCode::Enter,
+            modifiers: Modifiers::default(),
+        },
+    );
+
+    assert_eq!(
+        ui.focus(),
+        Some(target_node),
+        "activation focus hook should restore focus after keyboard activation"
+    );
+}
+
+#[test]
 fn pressable_clipboard_write_completed_hook_handles_matching_success_token() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

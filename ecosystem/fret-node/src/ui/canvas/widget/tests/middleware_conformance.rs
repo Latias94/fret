@@ -7,8 +7,8 @@ use crate::ops::GraphTransaction;
 use crate::rules::{Diagnostic, DiagnosticSeverity, DiagnosticTarget};
 use crate::ui::commands::{CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_SELECT_ALL};
 use crate::ui::{
-    NodeGraphCanvasCommandOutcome, NodeGraphCanvasCommitOutcome, NodeGraphCanvasMiddleware,
-    NodeGraphCanvasMiddlewareCx,
+    NodeGraphCanvasCommandOutcome, NodeGraphCanvasMiddlewareCx,
+    canvas::NodeGraphCanvasCommitOutcome, canvas::NodeGraphCanvasMiddleware,
 };
 
 use super::{

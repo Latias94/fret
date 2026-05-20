@@ -170,10 +170,10 @@ impl DockManager {
 
     /// Reconciles the viewport layouts observed during a render pass for one window.
     ///
-    /// This is intentionally idempotent for identical layout sets. `DockSpace` calls it from
-    /// paint/layout code, so repeated frames with unchanged viewport geometry should not churn the
-    /// retained cache. Graph/runtime mutations can still use `clear_viewport_layout_for_window(...)`
-    /// as an explicit invalidation path.
+    /// This is intentionally idempotent for identical layout sets. Dock hosts call it from
+    /// layout/prepaint code, so repeated frames with unchanged viewport geometry should not churn
+    /// cached viewport mappings. Graph/runtime mutations can still use
+    /// `clear_viewport_layout_for_window(...)` as an explicit invalidation path.
     pub fn sync_viewport_layouts_for_window(
         &mut self,
         window: fret_core::AppWindowId,

@@ -84,8 +84,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
     /// Binds this retained canvas to a store-backed controller.
     ///
-    /// This is an advanced retained composition seam. Raw view-queue transport remains
-    /// crate-internal compatibility plumbing and is not part of the public widget posture.
+    /// This is retained compatibility plumbing for focused retained tests and temporary migration
+    /// harnesses. Public composition should use the declarative node graph surface.
     pub fn with_controller(mut self, controller: NodeGraphController) -> Self {
         self.store = Some(controller.store());
         self.store_rev = None;
@@ -105,22 +105,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
     pub fn with_internals_store(mut self, store: Arc<NodeGraphInternalsStore>) -> Self {
         self.internals = Some(store);
-        self
-    }
-
-    pub fn with_diagnostics_anchor_ports(
-        mut self,
-        child_offset: usize,
-        ports: Vec<PortId>,
-    ) -> Self {
-        self.diagnostics_anchor_ports = if ports.is_empty() {
-            None
-        } else {
-            Some(DiagnosticsAnchorPorts {
-                child_offset,
-                ports,
-            })
-        };
         self
     }
 

@@ -3,7 +3,7 @@
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
 use super::prelude_core::*;
-use fret_ui::retained_bridge::resizable_panel_group as resizable;
+use super::split_geometry;
 
 pub(super) fn compute_layout_map(
     graph: &DockGraph,
@@ -69,7 +69,7 @@ fn compute_layout_map_impl(
             if count == 0 {
                 return;
             }
-            let computed = resizable::compute_layout(
+            let computed = split_geometry::compute_layout(
                 *axis,
                 bounds,
                 count,
@@ -133,7 +133,7 @@ fn compute_layout_map_impl_with_overrides(
                 .filter(|f| f.len() == fractions.len())
                 .map(|f| f.as_ref())
                 .unwrap_or(fractions);
-            let computed = resizable::compute_layout(
+            let computed = split_geometry::compute_layout(
                 *axis,
                 bounds,
                 count,
@@ -175,6 +175,7 @@ pub(super) fn hidden_bounds(size: Size) -> Rect {
     }
 }
 
+#[cfg(test)]
 pub(super) fn active_panel_content_bounds(
     graph: &DockGraph,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
