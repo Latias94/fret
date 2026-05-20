@@ -139,6 +139,10 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/group_resize/tail.rs");
     const UI_CANVAS_WIDGET_GROUP_PREVIEW_MOVE_CX_RS: &str =
         include_str!("ui/canvas/widget/group_preview_move_cx.rs");
+    const UI_CANVAS_WIDGET_NODE_DRAG_TAIL_RS: &str =
+        include_str!("ui/canvas/widget/node_drag/tail.rs");
+    const UI_CANVAS_WIDGET_NODE_DRAG_MOVE_TAIL_CX_RS: &str =
+        include_str!("ui/canvas/widget/node_drag_move_tail_cx.rs");
     const UI_CANVAS_WIDGET_PENDING_GROUP_DRAG_RS: &str =
         include_str!("ui/canvas/widget/pending_group_drag.rs");
     const UI_CANVAS_WIDGET_PENDING_GROUP_RESIZE_RS: &str =
@@ -367,6 +371,28 @@ mod surface_policy_tests {
             assert!(
                 !pointer_up_commit_sources.contains(forbidden),
                 "pointer-up commit handlers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn node_drag_move_tail_stays_off_retained_bridge() {
+        let node_drag_move_tail_sources = [
+            UI_CANVAS_WIDGET_NODE_DRAG_TAIL_RS,
+            UI_CANVAS_WIDGET_NODE_DRAG_MOVE_TAIL_CX_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !node_drag_move_tail_sources.contains(forbidden),
+                "node drag move tail helpers must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

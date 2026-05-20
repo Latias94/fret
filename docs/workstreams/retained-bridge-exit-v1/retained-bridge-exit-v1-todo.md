@@ -2749,6 +2749,33 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-340 Isolate node drag move tail retained Cx adapters.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/node_drag/tail.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_move_tail_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_move_tail_retained_cx.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move node drag move tail host I/O and paint invalidation behind a retained-agnostic
+      `NodeDragMoveTailCx` seam.
+    - Keep retained `EventCx` implementation in a dedicated retained adapter module.
+    - Extend the default source-policy gate so node drag move tail helpers and the pure Cx seam
+      cannot re-import retained bridge Cx names.
+  - Result:
+    - Added `NodeDragMoveTailCx` for retained-agnostic host access plus paint invalidation.
+    - Added `node_drag_move_tail_retained_cx.rs` as the retained `EventCx` adapter.
+    - Moved `node_drag/tail.rs` off direct retained `EventCx` signatures.
+    - Added `node_drag_move_tail_stays_off_retained_bridge` source-policy coverage.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas node_drag_move_tail_stays_off_retained_bridge node_drag_move_emits_on_node_drag child_node_drag_is_clamped_to_group_when_expand_parent_is_false child_node_drag_expands_group_when_expand_parent_is_true node_drag_records_single_history_entry_for_multi_node_move retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/node_drag/tail.rs ecosystem/fret-node/src/ui/canvas/widget/node_drag_move_tail_cx.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
