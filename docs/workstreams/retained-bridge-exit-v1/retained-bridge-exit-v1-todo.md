@@ -3023,6 +3023,34 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-440 Isolate searcher row-drag release retained Cx adapter.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/release.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/release/tests.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/release_retained_cx.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move searcher row-drag release activation, dismiss, release-capture, and finish coordination
+      behind a retained-agnostic `SearcherReleaseCx` seam.
+    - Keep retained `EventCx` row activation as an adapter-only implementation.
+    - Extend source-policy coverage so `release.rs` cannot re-import retained bridge Cx names.
+  - Result:
+    - `searcher_activation_state/release.rs` no longer imports or names retained bridge Cx types.
+    - Added `release_retained_cx.rs` as the only retained adapter for row activation during
+      searcher release.
+    - Added focused tests for no-pending-drag side-effect-free release, row activation release, and
+      outside dismiss release.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(searcher_dismiss_tail_helpers_stay_off_retained_bridge) | test(searcher_release_without_pending_drag_is_side_effect_free) | test(searcher_release_on_row_activates_and_finishes) | test(searcher_release_outside_dismisses_and_finishes) | test(retained_bridge_source_usage_stays_on_the_migration_ledger) | test(retained_widget_compat_island_stays_crate_private_and_controller_bound)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/clear.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/release.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_ui.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_ui/event.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

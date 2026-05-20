@@ -42,9 +42,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         super::searcher_activation_state::arm_searcher_row_drag(self, cx, row_ix, position)
     }
 
-    pub(super) fn activate_searcher_hit_or_dismiss<H: UiHost>(
+    pub(super) fn activate_searcher_hit_or_dismiss<H>(
         &mut self,
-        cx: &mut EventCx<'_, H>,
+        cx: &mut impl super::searcher_activation_state::SearcherReleaseCx<H, M>,
         hit: SearcherPointerHit,
     ) {
         super::searcher_activation_state::activate_searcher_hit_or_dismiss(self, cx, hit)

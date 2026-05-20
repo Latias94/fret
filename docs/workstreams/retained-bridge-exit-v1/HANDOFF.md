@@ -719,6 +719,11 @@ tails behind retained-agnostic `widget_tail` seams. `searcher_activation_state/c
 support, with focused tests proving dismiss clears overlay/pending-drag state and releases capture
 without adding paint side effects at that layer, while finish/invalidate still request redraw/paint
 invalidation and stop propagation where appropriate.
+`RBX-M2-440` then moved searcher row-drag release activation/dismiss coordination behind a
+retained-agnostic `SearcherReleaseCx` seam. `searcher_activation_state/release.rs` is now
+source-policy gated as retained-bridge-free support, retained row activation lives in
+`searcher_activation_state/release_retained_cx.rs`, and focused tests prove no-pending release is
+side-effect free, row release activates and finishes, and outside release dismisses and finishes.
 
 ## Next Task
 
@@ -752,7 +757,8 @@ Recommended next implementation shape:
   clipboard feedback, toast timer, and timer-motion helpers now use retained-agnostic
   feedback/paint seams; pending node resize move no longer takes a retained Cx parameter; edge
   double-click finish now uses the retained-agnostic handled tail seam; searcher dismiss release,
-  finish, and paint invalidation now use retained-agnostic widget tail seams.
+  finish, and paint invalidation now use retained-agnostic widget tail seams; searcher row-drag
+  release coordination now uses a retained-agnostic release seam.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
   `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`,
@@ -771,7 +777,8 @@ Recommended next implementation shape:
   `timer_motion_shared.rs`,
   `pending_resize.rs`,
   `pointer_down_double_click_edge/finish.rs`,
-  `searcher_activation_state/clear.rs`, `searcher_ui.rs`, `searcher_ui/event.rs`,
+  `searcher_activation_state/clear.rs`, `searcher_activation_state/release.rs`,
+  `searcher_ui.rs`, `searcher_ui/event.rs`,
   `sticky_wire_connect/finish.rs`, `edge_insert_drag/drag/tail.rs`, `cancel_cleanup.rs`,
   `sticky_wire_targets/picker.rs`, `group_drag/tail.rs`, `group_resize/tail.rs`,
   `group_preview_move_cx.rs`, `group_drag.rs`, `group_resize.rs`,
@@ -788,13 +795,13 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-20 for `RBX-M2-430`:
+Last run on 2026-05-20 for `RBX-M2-440`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.
-- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(searcher_dismiss_tail_helpers_stay_off_retained_bridge) | test(clear_pending_searcher_row_drag_reports_and_clears_state) | test(clear_searcher_overlay_clears_searcher_and_pending_drag) | test(dismiss_searcher_overlay_clears_state_and_releases_capture_without_painting) | test(invalidate_searcher_paint_requests_redraw_and_paint_invalidation) | test(finish_searcher_event_stops_and_invalidates_paint) | test(retained_bridge_source_usage_stays_on_the_migration_ledger) | test(retained_widget_compat_island_stays_crate_private_and_controller_bound)'` -
-  passed, 8 tests.
-- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/clear.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_ui.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_ui/event.rs` -
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(searcher_dismiss_tail_helpers_stay_off_retained_bridge) | test(searcher_release_without_pending_drag_is_side_effect_free) | test(searcher_release_on_row_activates_and_finishes) | test(searcher_release_outside_dismisses_and_finishes) | test(retained_bridge_source_usage_stays_on_the_migration_ledger) | test(retained_widget_compat_island_stays_crate_private_and_controller_bound)'` -
+  passed, 6 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/clear.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/release.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_ui.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_ui/event.rs` -
   no matches.
 - `cargo fmt --check` - passed.
 - `python3 tools/check_layering.py` - passed.
@@ -805,7 +812,7 @@ Last run on 2026-05-20 for `RBX-M2-430`:
 Broader gates not run:
 
 - `cargo nextest run --workspace`
-  - Reason: `RBX-M2-430` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+  - Reason: `RBX-M2-440` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
 
