@@ -1,11 +1,20 @@
 mod background;
 mod edge;
 mod group;
+mod retained_cx;
 
 use super::item_builders;
 use crate::core::GroupId;
-use crate::ui::canvas::widget::context_menu::ui::ContextMenuHoverEdgePolicy;
+use crate::ui::canvas::widget::context_menu::ui::{ContextMenuFocusCx, ContextMenuHoverEdgePolicy};
 use crate::ui::canvas::widget::*;
+
+pub(in crate::ui::canvas::widget) trait ContextMenuOpeningCx<H: UiHost>:
+    ContextMenuFocusCx<H>
+{
+    fn host(&mut self) -> &mut H;
+    fn bounds(&self) -> Rect;
+    fn has_window(&self) -> bool;
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ContextMenuOpeningRoute {
@@ -41,15 +50,15 @@ pub(in crate::ui::canvas::widget) fn handle_right_click_context_menu_event<
     M: NodeGraphCanvasMiddleware,
 >(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl ContextMenuOpeningCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     zoom: f32,
 ) -> bool {
     record_context_menu_invocation_position(canvas, position);
 
-    let group_hit = canvas.hit_group_context_target(cx.app, snapshot, position, zoom);
-    let edge_hit = canvas.hit_edge_context_target(cx.app, snapshot, position, zoom);
+    let group_hit = canvas.hit_group_context_target(cx.host(), snapshot, position, zoom);
+    let edge_hit = canvas.hit_edge_context_target(cx.host(), snapshot, position, zoom);
 
     match context_menu_opening_route(group_hit, edge_hit) {
         ContextMenuOpeningRoute::Group(group_id) => {
@@ -67,7 +76,7 @@ pub(in crate::ui::canvas::widget) fn handle_right_click_context_menu_event<
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in crate::ui::canvas::widget) fn show_context_menu<H: UiHost>(
         &mut self,
-        cx: &mut EventCx<'_, H>,
+        cx: &mut impl ContextMenuOpeningCx<H>,
         snapshot: &ViewSnapshot,
         position: Point,
         target: ContextMenuTarget,
@@ -76,7 +85,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         hover_edge_policy: ContextMenuHoverEdgePolicy,
     ) -> bool {
         let menu = build_context_menu_state(
-            self, position, cx.bounds, snapshot, target, items, candidates,
+            self,
+            position,
+            cx.bounds(),
+            snapshot,
+            target,
+            items,
+            candidates,
         );
         super::ui::open_context_menu_event(self, cx, menu, hover_edge_policy)
     }

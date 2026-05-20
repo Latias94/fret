@@ -1,18 +1,22 @@
 use std::sync::Arc;
 
-use fret_core::{KeyCode, Point, Px, Rect, Size};
+use fret_core::{
+    KeyCode, Modifiers, MouseButton, Point, PointerEvent, PointerId, PointerType, Px, Rect, Size,
+};
 use fret_runtime::CommandId;
 use fret_ui::retained_bridge::Widget;
 
-use crate::core::{CanvasPoint, Graph, GraphId, NodeKindKey, PortId};
+use crate::core::{
+    CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Group, GroupId,
+    Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
+};
 use crate::ui::commands::CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER;
 use crate::ui::presenter::{
     InsertNodeCandidate, NodeGraphContextMenuAction, NodeGraphContextMenuItem,
 };
 use crate::ui::style::NodeGraphStyle;
 
-use super::prelude::NodeGraphCanvas;
-use super::prelude::overlay_hit;
+use super::prelude::{HitTestCtx, HitTestScratch, NodeGraphCanvas, overlay_hit};
 use super::{NullServices, TestUiHostImpl, command_cx, event_cx, insert_graph_view_editor_config};
 use crate::ui::canvas::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRow, SearcherRowKind};
 use crate::ui::canvas::state::{
@@ -24,6 +28,198 @@ fn bounds() -> Rect {
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
     )
+}
+
+fn context_menu_test_node(
+    kind: NodeKindKey,
+    pos: CanvasPoint,
+    size: CanvasSize,
+    ports: Vec<PortId>,
+) -> Node {
+    Node {
+        kind,
+        kind_version: 1,
+        pos,
+        selectable: None,
+        draggable: None,
+        connectable: None,
+        deletable: None,
+        parent: None,
+        extent: None,
+        expand_parent: None,
+        size: Some(size),
+        hidden: false,
+        collapsed: false,
+        ports,
+        data: serde_json::Value::Null,
+    }
+}
+
+fn context_menu_test_port(node: NodeId, key: &str, dir: PortDirection) -> Port {
+    Port {
+        node,
+        key: PortKey::new(key),
+        dir,
+        kind: PortKind::Data,
+        capacity: PortCapacity::Single,
+        connectable: None,
+        connectable_start: None,
+        connectable_end: None,
+        ty: None,
+        data: serde_json::Value::Null,
+    }
+}
+
+fn graph_with_context_targets() -> (Graph, GroupId, EdgeId, PortId, PortId) {
+    let mut graph = Graph::new(GraphId::new());
+    let kind = NodeKindKey::new("test.node");
+
+    let group_id = GroupId::new();
+    graph.groups.insert(
+        group_id,
+        Group {
+            title: "Group".to_string(),
+            rect: CanvasRect {
+                origin: CanvasPoint { x: 10.0, y: 20.0 },
+                size: CanvasSize {
+                    width: 160.0,
+                    height: 120.0,
+                },
+            },
+            color: None,
+        },
+    );
+
+    let a = NodeId::new();
+    let a_out = PortId::new();
+    graph.nodes.insert(
+        a,
+        context_menu_test_node(
+            kind.clone(),
+            CanvasPoint { x: 240.0, y: 80.0 },
+            CanvasSize {
+                width: 120.0,
+                height: 60.0,
+            },
+            vec![a_out],
+        ),
+    );
+    graph
+        .ports
+        .insert(a_out, context_menu_test_port(a, "out", PortDirection::Out));
+
+    let b = NodeId::new();
+    let b_in = PortId::new();
+    graph.nodes.insert(
+        b,
+        context_menu_test_node(
+            kind,
+            CanvasPoint { x: 460.0, y: 80.0 },
+            CanvasSize {
+                width: 120.0,
+                height: 60.0,
+            },
+            vec![b_in],
+        ),
+    );
+    graph
+        .ports
+        .insert(b_in, context_menu_test_port(b, "in", PortDirection::In));
+
+    let edge_id = EdgeId::new();
+    graph.edges.insert(
+        edge_id,
+        Edge {
+            kind: EdgeKind::Data,
+            from: a_out,
+            to: b_in,
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
+        },
+    );
+
+    (graph, group_id, edge_id, a_out, b_in)
+}
+
+fn hit_edge_at(
+    canvas: &mut NodeGraphCanvas,
+    host: &mut TestUiHostImpl,
+    snapshot: &crate::ui::canvas::state::ViewSnapshot,
+    pos: Point,
+) -> Option<EdgeId> {
+    let (geom, index) = canvas.canvas_derived(&*host, snapshot);
+    let this = canvas;
+    this.graph
+        .read_ref(host, |graph| {
+            let mut scratch = HitTestScratch::default();
+            let mut ctx =
+                HitTestCtx::new(geom.as_ref(), index.as_ref(), snapshot.zoom, &mut scratch);
+            this.hit_edge(graph, snapshot, &mut ctx, pos)
+        })
+        .ok()
+        .flatten()
+}
+
+fn find_edge_hit_position(
+    canvas: &mut NodeGraphCanvas,
+    host: &mut TestUiHostImpl,
+    snapshot: &crate::ui::canvas::state::ViewSnapshot,
+    edge_id: EdgeId,
+    from_port: PortId,
+    to_port: PortId,
+) -> Point {
+    let (from, to) = {
+        let (geom, _index) = canvas.canvas_derived(&*host, snapshot);
+        let from = geom
+            .ports
+            .get(&from_port)
+            .expect("source port geometry should exist")
+            .center;
+        let to = geom
+            .ports
+            .get(&to_port)
+            .expect("target port geometry should exist")
+            .center;
+        (from, to)
+    };
+
+    (1..20)
+        .map(|step| {
+            let t = step as f32 / 20.0;
+            Point::new(
+                Px(from.x.0 + (to.x.0 - from.x.0) * t),
+                Px(from.y.0 + (to.y.0 - from.y.0) * t),
+            )
+        })
+        .find(|position| hit_edge_at(canvas, host, snapshot, *position) == Some(edge_id))
+        .expect("edge should be hittable along the route between its ports")
+}
+
+fn open_context_menu_with_right_click(
+    canvas: &mut NodeGraphCanvas,
+    host: &mut TestUiHostImpl,
+    position: Point,
+) {
+    let mut services = NullServices::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        host,
+        &mut services,
+        bounds(),
+        &mut prevented_default_actions,
+    );
+    canvas.event(
+        &mut cx,
+        &fret_core::Event::Pointer(PointerEvent::Down {
+            pointer_id: PointerId::default(),
+            position,
+            button: MouseButton::Right,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
 }
 
 fn rect_contains_rect(outer: Rect, inner: Rect) -> bool {
@@ -294,7 +490,7 @@ fn clamp_context_menu_origin_keeps_menu_rect_inside_visible_canvas_rect() {
         s.zoom = 2.0;
     });
 
-    let mut canvas = new_canvas!(host, graph, view, editor_config);
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
     let snapshot = canvas.sync_view_state(&mut host);
 
     let viewport = NodeGraphCanvas::viewport_from_snapshot(bounds(), &snapshot);
@@ -311,6 +507,117 @@ fn clamp_context_menu_origin_keeps_menu_rect_inside_visible_canvas_rect() {
         rect_contains_rect(vis, rect),
         "expected clamped context menu rect to remain inside the visible canvas rect"
     );
+}
+
+#[test]
+fn right_click_background_opens_background_context_menu_with_paste_disabled_without_window() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, _group_id, _edge_id, _from_port, _to_port) = graph_with_context_targets();
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
+    let _ = view.update(&mut host, |s, _cx| {
+        s.selected_nodes.push(NodeId::new());
+    });
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
+
+    open_context_menu_with_right_click(&mut canvas, &mut host, Point::new(Px(700.0), Px(500.0)));
+
+    let menu = canvas
+        .interaction
+        .context_menu
+        .as_ref()
+        .expect("right-click background should open a context menu");
+    assert!(matches!(menu.target, ContextMenuTarget::Background));
+    assert_eq!(menu.invoked_at, Point::new(Px(700.0), Px(500.0)));
+    assert_eq!(
+        menu.items
+            .iter()
+            .filter(|item| item.label.as_ref() == "Paste")
+            .count(),
+        1
+    );
+    let paste = menu
+        .items
+        .iter()
+        .find(|item| item.label.as_ref() == "Paste")
+        .expect("background menu should include Paste");
+    assert!(!paste.enabled);
+    let delete = menu
+        .items
+        .iter()
+        .find(|item| item.label.as_ref() == "Delete Selection")
+        .expect("background menu should include Delete Selection");
+    assert!(delete.enabled);
+}
+
+#[test]
+fn right_click_group_opens_group_context_menu_and_selects_group() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, group_id, _edge_id, _from_port, _to_port) = graph_with_context_targets();
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
+
+    open_context_menu_with_right_click(&mut canvas, &mut host, Point::new(Px(20.0), Px(25.0)));
+
+    let menu = canvas
+        .interaction
+        .context_menu
+        .as_ref()
+        .expect("right-click group should open a context menu");
+    assert!(matches!(menu.target, ContextMenuTarget::Group(id) if id == group_id));
+    assert_eq!(
+        menu.items.first().map(|item| item.label.as_ref()),
+        Some("Bring to Front")
+    );
+    let selected_groups = view
+        .read_ref(&host, |state| state.selected_groups.clone())
+        .expect("view state should be readable");
+    assert_eq!(selected_groups, vec![group_id]);
+}
+
+#[test]
+fn right_click_edge_opens_edge_context_menu_and_selects_edge() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, _group_id, edge_id, from_port, to_port) = graph_with_context_targets();
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
+
+    let snapshot = canvas.sync_view_state(&mut host);
+    let position = find_edge_hit_position(
+        &mut canvas,
+        &mut host,
+        &snapshot,
+        edge_id,
+        from_port,
+        to_port,
+    );
+
+    open_context_menu_with_right_click(&mut canvas, &mut host, position);
+
+    let menu = canvas
+        .interaction
+        .context_menu
+        .as_ref()
+        .expect("right-click edge should open a context menu");
+    assert!(matches!(menu.target, ContextMenuTarget::Edge(id) if id == edge_id));
+    assert!(
+        menu.items
+            .iter()
+            .any(|item| item.label.as_ref() == "Insert Node...")
+    );
+    assert!(
+        menu.items
+            .iter()
+            .any(|item| item.label.as_ref() == "Insert Reroute")
+    );
+    assert!(
+        menu.items
+            .iter()
+            .any(|item| item.label.as_ref() == "Delete")
+    );
+    let selected_edges = view
+        .read_ref(&host, |state| state.selected_edges.clone())
+        .expect("view state should be readable");
+    assert_eq!(selected_edges, vec![edge_id]);
 }
 
 #[test]

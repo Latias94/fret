@@ -2,7 +2,7 @@ use super::super::*;
 use super::{ContextMenuHoverEdgePolicy, overlay};
 use crate::ui::canvas::widget::widget_tail::{WidgetHandledCx, WidgetPaintInvalidationCx};
 
-pub(in crate::ui::canvas::widget::context_menu) trait ContextMenuFocusCx<H>:
+pub(in crate::ui::canvas::widget) trait ContextMenuFocusCx<H>:
     WidgetHandledCx<H>
 {
     fn request_context_menu_focus(&mut self);

@@ -190,6 +190,14 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/context_menu/input.rs");
     const UI_CANVAS_WIDGET_CONTEXT_MENU_POINTER_RS: &str =
         include_str!("ui/canvas/widget/context_menu/pointer.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_OPENING_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/opening.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_OPENING_BACKGROUND_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/opening/background.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_OPENING_EDGE_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/opening/edge.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_OPENING_GROUP_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/opening/group.rs");
     const UI_CANVAS_WIDGET_CONTEXT_MENU_UI_RS: &str =
         include_str!("ui/canvas/widget/context_menu/ui.rs");
     const UI_CANVAS_WIDGET_CONTEXT_MENU_UI_EVENT_RS: &str =
@@ -523,6 +531,30 @@ mod surface_policy_tests {
             assert!(
                 !context_menu_top_level_sources.contains(forbidden),
                 "context menu top-level route must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn context_menu_opening_route_stays_off_retained_bridge() {
+        let context_menu_opening_sources = [
+            UI_CANVAS_WIDGET_CONTEXT_MENU_OPENING_RS,
+            UI_CANVAS_WIDGET_CONTEXT_MENU_OPENING_BACKGROUND_RS,
+            UI_CANVAS_WIDGET_CONTEXT_MENU_OPENING_EDGE_RS,
+            UI_CANVAS_WIDGET_CONTEXT_MENU_OPENING_GROUP_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !context_menu_opening_sources.contains(forbidden),
+                "context menu opening route must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

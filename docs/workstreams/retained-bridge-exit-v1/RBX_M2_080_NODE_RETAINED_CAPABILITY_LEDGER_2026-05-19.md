@@ -236,9 +236,18 @@ Compat-gated but retained-bridge-free support:
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/pointer.rs`
   - `RBX-M2-560` moved the context menu top-level route wrapper behind retained-agnostic
     `ContextMenuCx`, `ContextMenuKeyDownCx`, `ContextMenuPointerDownCx`, and widget-tail seams.
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/opening.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/opening/background.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/opening/edge.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/opening/group.rs`
+  - `RBX-M2-570` moved context menu opening routes behind retained-agnostic `ContextMenuOpeningCx`
+    host/bounds/window/focus/finish seams.
 
 Compat-gated retained adapters:
 
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/opening/retained_cx.rs`
+  - `RBX-M2-570` keeps retained context menu opening host/bounds/window/focus I/O as the
+    adapter-only implementation of `ContextMenuOpeningCx`.
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation/retained_cx.rs`
   - `RBX-M2-550` keeps retained context menu item execution I/O as the adapter-only implementation
     of `ContextMenuSelectionActivationCx`, replacing the earlier key-down-specific
@@ -326,6 +335,7 @@ Deleted retained overlay files:
 | Context menu key-down route seam | retained context menu key-down callers still pass retained `EventCx`, but the key-down helper only needs handled finish behavior plus active-selection activation I/O | `RBX-M2-540` moves `context_menu/key_navigation.rs` and `context_menu/key_navigation/key_down.rs` onto `ContextMenuKeyDownCx`, source-policy gates the route, and adds no-menu, ArrowDown, Enter activate, Enter keep-open, typeahead, and Backspace tests. `RBX-M2-550` then replaces the key-down-specific retained adapter with the shared `ContextMenuSelectionActivationCx` retained adapter. | Continue with higher-level context menu route wrappers, then replace them with a declarative/event-leaf path. |
 | Context menu selection activation and pointer-down route seam | retained context menu pointer-down callers still pass retained `EventCx`, but pointer-down routing only needs handled finish behavior plus selection activation I/O | `RBX-M2-550` moves `context_menu/selection_activation.rs` and `context_menu/selection_activation/pointer_down.rs` onto `ContextMenuSelectionActivationCx` / `ContextMenuPointerDownCx`, keeps retained item execution I/O in `context_menu/selection_activation/retained_cx.rs`, source-policy gates the route, and adds no-menu, left enabled activation, left disabled restore, left outside close, and right replacement-menu pass-through tests | Continue with higher-level context menu input/pointer wrappers, opening/target execution helpers, then replace them with a declarative/event-leaf path. |
 | Context menu top-level route seam | retained canvas event routing still calls top-level context menu routes from retained `EventCx` callers, but the top-level wrappers only need the existing retained-agnostic key-down, pointer-down, and widget-tail capabilities | `RBX-M2-560` moves `context_menu/mod.rs`, `context_menu/input.rs`, and `context_menu/pointer.rs` onto `ContextMenuCx` and narrower route-specific seams, source-policy gates the top-level route, and adds top-level Escape, Enter activation, pointer-down activation, and pointer-move hover tests | Continue with context menu opening/target/action execution helpers, then replace higher-level canvas event routing with a declarative/event-leaf path. |
+| Context menu opening route seam | retained canvas right-click routing still needs host reads, canvas bounds, window availability, and focus/finish side effects, but opening policy does not need direct retained Cx names | `RBX-M2-570` moves `context_menu/opening.rs` and its background/group/edge helpers onto `ContextMenuOpeningCx`, keeps retained I/O in `opening/retained_cx.rs`, source-policy gates the route, and adds right-click background/group/edge menu tests | Continue with context menu target/action execution helpers, then replace higher-level canvas event routing with a declarative/event-leaf path. |
 
 ## New Gate
 

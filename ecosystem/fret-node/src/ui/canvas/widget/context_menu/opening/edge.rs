@@ -3,13 +3,13 @@ use crate::ui::canvas::widget::*;
 
 pub(super) fn show_edge_context_menu<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl super::ContextMenuOpeningCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     edge: EdgeId,
 ) -> bool {
-    let items = canvas.build_edge_context_menu_items(cx.app, edge);
-    canvas.select_edge_context_target(cx.app, edge);
+    let items = canvas.build_edge_context_menu_items(cx.host(), edge);
+    canvas.select_edge_context_target(cx.host(), edge);
     canvas.show_context_menu(
         cx,
         snapshot,

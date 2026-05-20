@@ -8743,3 +8743,68 @@ Broader gates not run:
   - Reason: `RBX-M2-560` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-21 - RBX-M2-570 context menu opening retained Cx route isolation
+
+Claim verified:
+
+- Context menu opening route helpers no longer import or name retained bridge Cx types in
+  `context_menu/opening.rs` or its background/group/edge target helpers.
+- `ContextMenuOpeningCx` carries the opening route's host, bounds, window availability, focus, and
+  handled-finish capabilities while retained `EventCx` field access stays isolated in
+  `context_menu/opening/retained_cx.rs`.
+- Retained-path right-click opening behavior remains intact for background, group, and edge targets,
+  including background item enablement, group selection, and edge selection/menu items.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/opening.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/opening/background.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/opening/edge.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/opening/group.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/opening/retained_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui/event.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_menu_searcher_conformance.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving context menu
+    opening routes behind retained-agnostic seams.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(context_menu_opening_route_stays_off_retained_bridge) | test(right_click_background_opens_background_context_menu_with_paste_disabled_without_window) | test(right_click_group_opens_group_context_menu_and_selects_group) | test(right_click_edge_opens_edge_context_menu_and_selects_edge) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 5 tests.
+  - Scope proven: source-policy locks the context menu opening route off retained bridge Cx names;
+    retained-path background, group, and edge right-click opening behavior and retained ledger
+    behavior remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/context_menu/opening.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/opening/background.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/opening/edge.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/opening/group.rs`
+  - Result: no matches.
+  - Scope proven: the context menu opening route files no longer depend on retained bridge Cx
+    names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after formatting the context menu
+    opening seam changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after moving
+    context menu opening routes behind retained-agnostic seams.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-570` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.

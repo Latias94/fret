@@ -2,6 +2,7 @@ mod event;
 mod event_retained_cx;
 mod overlay;
 
+pub(in crate::ui::canvas::widget) use event::ContextMenuFocusCx;
 pub(in crate::ui::canvas::widget) use overlay::ContextMenuHoverEdgePolicy;
 
 use crate::ui::canvas::widget::widget_tail::{WidgetHandledCx, WidgetPaintInvalidationCx};
