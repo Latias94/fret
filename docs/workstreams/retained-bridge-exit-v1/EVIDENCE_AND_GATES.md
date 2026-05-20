@@ -6333,3 +6333,72 @@ Broader gates not run:
     workstream docs. Pre-delete retained/default oracle tests plus post-delete default/compat
     targeted tests, compile gates, source-policy gates, formatting, layering, catalog, and
     whitespace checks cover the changed behavior and boundary surface.
+
+## 2026-05-20 - RBX-M2-170 unused retained editor/panel wrapper deletion
+
+Claim verified:
+
+- Retained `NodeGraphEditor` and `NodeGraphPanel` had no live source consumers outside their own
+  deleted files and policy assertions.
+- The only retained panel placement math was already covered by the default
+  `screen_space_placement::rect_in_bounds` contract.
+- `src/ui/editor.rs` and `src/ui/panel.rs` are no longer retained bridge source ledger entries, and
+  the remaining compatibility island still compiles.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/editor.rs` deleted
+- `ecosystem/fret-node/src/ui/panel.rs` deleted
+- `ecosystem/fret-node/src/ui/mod.rs`
+- `ecosystem/fret-node/src/ui/overlays/mod.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- Pre-delete `cargo nextest run -p fret-node --features compat-retained-canvas positioned_rect_top_right_respects_margin rect_in_bounds_top_right_respects_margin retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+  - Result: passed, 4 tests.
+  - Scope proven: the retained panel wrapper's own placement test, the default placement equivalent,
+    and retained source-policy gates were green before deleting the no-user wrappers.
+- `rg -n "\b(NodeGraphEditor|NodeGraphPanel|NodeGraphPanelPosition|NodeGraphPanelSize)\b" ecosystem/fret-node/src apps crates ecosystem tools --glob '!target/**' --glob '!ecosystem/fret-node/src/lib.rs'`
+  - Result: no matches.
+  - Scope proven: no live source consumer still references the deleted retained editor/panel
+    wrapper types.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the remaining retained compatibility island compiles after deleting the
+    editor/panel wrapper modules.
+- `cargo nextest run -p fret-node rect_in_bounds_top_right_respects_margin retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+  - Result: passed, 3 tests.
+  - Scope proven: the default placement contract and shrunken retained source-policy gates remain
+    green after deleting the retained wrappers.
+- `cargo nextest run -p fret-node --features compat-retained-canvas retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+  - Result: passed, 2 tests.
+  - Scope proven: source-policy and compatibility-island gates remain green under the retained
+    compatibility feature after deleting editor/panel wrappers.
+- `cargo fmt -p fret-node`
+  - Result: passed.
+  - Scope proven: touched `fret-node` Rust files were formatted.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after shrinking
+    the `fret-node` retained source ledger.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-170` deletes no-user retained wrappers in `fret-node` and updates workstream
+    docs. No-user proof plus pre-delete placement/source-policy tests, post-delete default/compat
+    targeted tests, compile gates, formatting, layering, catalog, and whitespace checks cover the
+    changed behavior and boundary surface.

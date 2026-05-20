@@ -335,6 +335,8 @@ mod surface_policy_tests {
         assert!(!UI_MOD_RS.contains("pub use portal::{"));
         assert!(!UI_MOD_RS.contains("pub use overlays::{"));
         assert!(UI_MOD_RS.contains("#[cfg(all(test, feature = \"compat-retained-canvas\"))]"));
+        assert!(!UI_MOD_RS.contains("#[cfg(feature = \"compat-retained-canvas\")]\nmod editor;"));
+        assert!(!UI_MOD_RS.contains("#[cfg(feature = \"compat-retained-canvas\")]\nmod panel;"));
 
         assert!(UI_CANVAS_RS.contains(
             "pub fn new(\n        graph: Model<Graph>,\n        view_state: Model<NodeGraphViewState>,\n        editor_config: Model<NodeGraphEditorConfig>,\n    ) -> Self {"
@@ -358,8 +360,6 @@ mod surface_policy_tests {
         collect_rs_files(&ui_root, &mut files);
 
         let allowed_exact = [
-            "src/ui/editor.rs",
-            "src/ui/panel.rs",
             "src/ui/retained_event_tail.rs",
             "src/ui/retained_submit.rs",
             "src/ui/canvas/middleware.rs",

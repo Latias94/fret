@@ -44,6 +44,6 @@ pub(in crate::ui) use rename_policy::open_group_rename_session;
 enum OverlayPlacement {
     /// Positions itself within the canvas bounds (legacy / backwards-compatible).
     FloatingInCanvas,
-    /// Treats `cx.bounds` as the overlay's own panel bounds (for `NodeGraphPanel` composition).
+    /// Treats `cx.bounds` as the overlay's own window-space panel bounds.
     PanelBounds,
 }

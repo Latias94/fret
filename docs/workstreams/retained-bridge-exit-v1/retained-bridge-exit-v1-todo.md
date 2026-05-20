@@ -2225,6 +2225,38 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-170 Delete unused retained editor/panel composition wrappers.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/editor.rs`
+    - `ecosystem/fret-node/src/ui/panel.rs`
+    - `ecosystem/fret-node/src/ui/mod.rs`
+    - `ecosystem/fret-node/src/ui/overlays/mod.rs`
+    - `ecosystem/fret-node/src/lib.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Delete retained `NodeGraphEditor` and `NodeGraphPanel` wrappers after proving there are no
+      live source consumers outside their own files.
+    - Keep the actual window-space placement math on the default `screen_space_placement` module
+      rather than retaining a dead `Widget` wrapper.
+    - Shrink the retained bridge source migration ledger so editor/panel wrappers cannot re-enter
+      the compatibility island.
+  - Result:
+    - Deleted `ui/editor.rs` and `ui/panel.rs`.
+    - Removed their compat-gated module entries and retained-source ledger allowlist entries.
+    - Updated the overlay placement comment to describe window-space panel bounds without naming
+      the deleted retained wrapper.
+    - Kept `screen_space_placement::rect_in_bounds` as the default placement contract.
+  - Validation:
+    - pre-delete `rg -n "\bNodeGraphEditor\b|\bNodeGraphPanel\b|\bNodeGraphPanelPosition\b|\bNodeGraphPanelSize\b" ecosystem/fret-node/src apps crates ecosystem tools --glob '!target/**' --glob '!ecosystem/fret-node/src/ui/editor.rs' --glob '!ecosystem/fret-node/src/ui/panel.rs' --glob '!ecosystem/fret-node/src/lib.rs'`
+    - pre-delete `cargo nextest run -p fret-node --features compat-retained-canvas positioned_rect_top_right_respects_margin rect_in_bounds_top_right_respects_margin retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - post-delete `cargo nextest run -p fret-node rect_in_bounds_top_right_respects_margin retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - post-delete `cargo nextest run -p fret-node --features compat-retained-canvas retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo fmt -p fret-node`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

@@ -27,12 +27,8 @@ pub mod style;
 mod viewport_helper;
 mod viewport_options;
 
-#[cfg(feature = "compat-retained-canvas")]
-mod editor;
 mod editors;
 mod overlays;
-#[cfg(feature = "compat-retained-canvas")]
-mod panel;
 #[cfg(feature = "compat-retained-canvas")]
 mod retained_event_tail;
 #[cfg(feature = "compat-retained-canvas")]
