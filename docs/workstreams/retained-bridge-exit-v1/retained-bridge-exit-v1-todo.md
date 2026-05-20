@@ -3209,6 +3209,34 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-510 Isolate the top-level searcher retained Cx route.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the top-level searcher escape/key/pointer/wheel route wrapper off direct retained bridge
+      Cx names by introducing a narrow `SearcherCx` capability composed from the existing
+      retained-agnostic searcher seams.
+    - Keep retained pointer/timer/capture, row activation, and widget-tail I/O in the existing
+      adapter-only implementations.
+    - Extend source-policy coverage so `searcher.rs` cannot re-import retained bridge Cx names.
+  - Result:
+    - `searcher.rs` now routes Escape, key down, pointer down/up/move, and wheel through
+      `impl SearcherCx` instead of `fret_ui::retained_bridge::EventCx`.
+    - `SearcherCx` composes `SearcherPointerDownCx`, `SearcherReleaseCx`, and `SearcherInputCx`;
+      retained `EventCx` satisfies it only through the existing adapter implementations.
+    - Added focused top-level route tests for Escape dismiss/finish, Enter row activation through
+      the input seam, and pointer-down row drag arming without retained Cx types.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(searcher_top_level_route_stays_off_retained_bridge) | test(searcher_top_level_escape_dismisses_and_finishes) | test(searcher_top_level_key_down_delegates_to_activation_seam) | test(searcher_top_level_pointer_down_arms_row_drag_without_retained_cx) | test(searcher_dismiss_tail_helpers_stay_off_retained_bridge) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/searcher.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation/pointer_down.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation/pointer_up.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/arm.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/clear.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/release.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_input.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_input/dispatch.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_input_query.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer/move_event.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer/wheel_event.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_ui.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_ui/event.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

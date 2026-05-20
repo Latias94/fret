@@ -212,6 +212,10 @@ Compat-gated but retained-bridge-free support:
 - `ecosystem/fret-node/src/ui/canvas/widget/searcher_input_query.rs`
   - `RBX-M2-500` moved searcher key-down routing behind the retained-agnostic `SearcherInputCx`
     seam.
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher.rs`
+  - `RBX-M2-510` moved the top-level searcher escape/key/pointer/wheel route wrapper behind the
+    retained-agnostic `SearcherCx` capability composed from the existing searcher pointer-down,
+    release, and input seams.
 
 Compat-gated retained adapters:
 
@@ -289,6 +293,7 @@ Deleted retained overlay files:
 | Searcher activation wrapper seam | retained `searcher.rs` still calls pointer-down/up routes with retained `EventCx`, but the intermediate activation wrapper no longer needs retained Cx names | `RBX-M2-480` moves `searcher_activation.rs` onto `SearcherPointerDownCx` / `SearcherReleaseCx`, source-policy gates the wrapper, and keeps pointer-down/up behavior tests plus retained ledger gates green | Continue with `searcher.rs` searcher input/pointer move/wheel route seams or replace the higher-level searcher event route with a declarative/event-leaf path. |
 | Searcher pointer move/wheel route seam | retained `searcher.rs` still calls move/wheel routes with retained `EventCx`, but the move/wheel routing helpers only need paint invalidation after hover/scroll state changes | `RBX-M2-490` moves `searcher_pointer.rs`, `searcher_pointer/move_event.rs`, and `searcher_pointer/wheel_event.rs` onto `WidgetPaintInvalidationCx`, source-policy gates them, and adds move/wheel focused behavior tests | Continue with `searcher.rs` and `searcher_input.rs` key routes, or replace the higher-level searcher event route with a declarative/event-leaf path. |
 | Searcher key-down route seam | retained `searcher.rs` still calls key routes with retained `EventCx`, but key dispatch only needs handled finish behavior plus row activation I/O | `RBX-M2-500` moves `searcher_input.rs`, `searcher_input/dispatch.rs`, and `searcher_input_query.rs` onto `SearcherInputCx`, keeps retained row activation I/O in `searcher_input/activation_retained_cx.rs`, source-policy gates key helpers, and adds Enter, ArrowDown, query, Ctrl text, and no-searcher tests | Continue with `searcher.rs` top-level retained route wrapper or replace the higher-level searcher event route with a declarative/event-leaf path. |
+| Searcher top-level route seam | retained canvas event routing still calls top-level searcher routes from retained `EventCx` callers, but `searcher.rs` itself only needs the existing retained-agnostic searcher pointer-down, release, and input capabilities | `RBX-M2-510` moves `searcher.rs` onto `SearcherCx`, source-policy gates the top-level route, and adds top-level Escape dismiss/finish, Enter activation, and pointer-down row-drag arming tests | Replace the remaining higher-level canvas event routes with a declarative/event-leaf path, or continue isolating other retained canvas interaction families such as context menu and edge insert. |
 
 ## New Gate
 

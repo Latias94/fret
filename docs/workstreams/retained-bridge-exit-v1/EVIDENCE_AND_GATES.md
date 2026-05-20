@@ -8371,3 +8371,70 @@ Broader gates not run:
   - Reason: `RBX-M2-500` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-20 - RBX-M2-510 top-level searcher retained Cx route isolation
+
+Claim verified:
+
+- The top-level searcher escape/key/pointer/wheel route wrapper no longer imports or names retained
+  bridge Cx types in `searcher.rs`.
+- `searcher.rs` now uses the retained-agnostic `SearcherCx` capability composed from
+  `SearcherPointerDownCx`, `SearcherReleaseCx`, and `SearcherInputCx`.
+- Retained pointer/timer/capture, row activation, and widget-tail I/O remain available only through
+  the existing adapter implementations.
+- Searcher top-level route behavior remains intact for Escape dismiss/finish, Enter row activation,
+  and pointer-down row drag arming.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving the top-level
+    searcher route wrapper behind `SearcherCx`.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(searcher_top_level_route_stays_off_retained_bridge) | test(searcher_top_level_escape_dismisses_and_finishes) | test(searcher_top_level_key_down_delegates_to_activation_seam) | test(searcher_top_level_pointer_down_arms_row_drag_without_retained_cx) | test(searcher_dismiss_tail_helpers_stay_off_retained_bridge) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 6 tests.
+  - Scope proven: source-policy locks the top-level searcher route and existing searcher helper
+    files off retained bridge Cx names; top-level Escape, key activation, pointer-down arming, and
+    retained ledger gates remain green.
+- `rm -rf target/debug/incremental`
+  - Result: completed after an initial targeted nextest run failed with
+    `rustc-LLVM ERROR: IO failure on output stream: No space left on device`.
+  - Scope proven: removed only rebuildable Cargo incremental artifacts to restore enough disk space
+    for verification. Source and git-tracked files were not removed.
+- `cargo fmt`
+  - Result: passed.
+  - Scope proven: Rust sources were formatted after the searcher route changes.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/searcher.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation/pointer_down.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation/pointer_up.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/arm.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/clear.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/release.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_input.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_input/dispatch.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_input_query.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer/move_event.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer/wheel_event.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_ui.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_ui/event.rs`
+  - Result: no matches.
+  - Scope proven: searcher top-level route, activation, input, pointer, dismiss, and release helper
+    files no longer depend on retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after formatting the searcher top-level
+    route seam changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after moving
+    the top-level searcher route behind retained-agnostic seams.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-510` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.

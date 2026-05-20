@@ -184,6 +184,7 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_up_pending/click_select.rs");
     const UI_CANVAS_WIDGET_POINTER_DOWN_DOUBLE_CLICK_EDGE_FINISH_RS: &str =
         include_str!("ui/canvas/widget/pointer_down_double_click_edge/finish.rs");
+    const UI_CANVAS_WIDGET_SEARCHER_RS: &str = include_str!("ui/canvas/widget/searcher.rs");
     const UI_CANVAS_WIDGET_SEARCHER_ACTIVATION_RS: &str =
         include_str!("ui/canvas/widget/searcher_activation.rs");
     const UI_CANVAS_WIDGET_SEARCHER_ACTIVATION_POINTER_DOWN_RS: &str =
@@ -463,6 +464,22 @@ mod surface_policy_tests {
             assert!(
                 !UI_CANVAS_WIDGET_POINTER_DOWN_DOUBLE_CLICK_EDGE_FINISH_RS.contains(forbidden),
                 "edge double-click finish helper must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn searcher_top_level_route_stays_off_retained_bridge() {
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_SEARCHER_RS.contains(forbidden),
+                "searcher top-level route must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

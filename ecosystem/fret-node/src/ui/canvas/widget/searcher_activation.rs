@@ -6,6 +6,8 @@ use fret_core::{MouseButton, Point};
 use super::searcher_activation_state::SearcherReleaseCx;
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
+pub(super) use pointer_down::SearcherPointerDownCx;
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub(super) struct SearcherPointerHit {
     pub(super) inside: bool,
@@ -14,7 +16,7 @@ pub(super) struct SearcherPointerHit {
 
 pub(super) fn handle_searcher_pointer_down_event<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut impl pointer_down::SearcherPointerDownCx<H>,
+    cx: &mut impl SearcherPointerDownCx<H>,
     position: Point,
     button: MouseButton,
     zoom: f32,
