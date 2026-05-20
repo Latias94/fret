@@ -1,0 +1,214 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-view-cache-dynamic-text-mutation-through-cache",
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.screenshot_png"
+    ],
+    "tags": [
+      "ui_gallery",
+      "view_cache",
+      "text_cache",
+      "mechanism_harness",
+      "model",
+      "mutation",
+      "layout",
+      "runtime"
+    ],
+    "env_defaults": {
+      "FRET_TEXT_FONT_TRACE_ALL": "1",
+      "FRET_UI_GALLERY_START_PAGE": "view_cache",
+      "FRET_UI_GALLERY_VIEW_CACHE": "1",
+      "FRET_UI_GALLERY_VIEW_CACHE_INNER": "1"
+    },
+    "target_hints": [
+      "Drives the View Cache harness through a cached-subtree counter mutation that changes visible wrapped text.",
+      "Asserts app snapshot state, visible text semantics, renderer text trace, and non-overlap with following retained content."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-view-cache" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/view_cache/enabled",
+        "value": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/view_cache/inner_enabled",
+        "value": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-view-cache-reset-counter" },
+      "delta_y": -220.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-view-cache-reset-counter" },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/view_cache/counter",
+        "value": 0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/view_cache/dynamic_text_wrapped",
+        "value": false
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "ui-gallery-view-cache-dynamic-text" },
+        "text": "short baseline"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-view-cache-dynamic-text-before.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-view-cache-dynamic-text-before"
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-view-cache-bump-counter" },
+      "delta_y": -220.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-view-cache-bump-counter" },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/view_cache/counter",
+        "value": 1
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/view_cache/dynamic_text_wrapped",
+        "value": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "ui-gallery-view-cache-dynamic-text" },
+        "text": "counter=1 expands this retained subtree"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "render_text_font_trace_entries_matching_ge",
+        "min": 1,
+        "text_contains": "counter=1 expands this retained subtree",
+        "font": "ui",
+        "wrap": "word",
+        "overflow": "clip",
+        "missing_glyphs": 0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-view-cache-dynamic-text-after.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-view-cache-dynamic-text-after"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-view-cache-dynamic-text-mutation-through-cache"
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-view-cache-dynamic-text" },
+        "min_w_px": 320.0,
+        "min_h_px": 32.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_metric_pair_delta",
+        "a": { "kind": "test_id", "id": "ui-gallery-view-cache-popover-trigger" },
+        "b": { "kind": "test_id", "id": "ui-gallery-view-cache-dynamic-text" },
+        "a_metric": "top",
+        "b_metric": "bottom",
+        "comparison": "ge",
+        "value_px": 8.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": { "kind": "test_id", "id": "ui-gallery-view-cache-list" },
+        "b": { "kind": "test_id", "id": "ui-gallery-view-cache-popover-trigger" },
+        "eps_px": 1.0
+      }
+    }
+  ]
+}

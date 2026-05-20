@@ -6259,3 +6259,54 @@ Next slice recommendation:
 - suite runtime diagnostics:
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-ui-gallery-shadcn-runtime-evidence-item-vs-field-v1 --session-auto --timeout-ms 900000 --launch -- target\release\fret-ui-gallery.exe`
   - result: passed; new script run id `1779242852622`.
+
+## View Cache Dynamic Text Mutation Runtime Gate
+
+- invariant:
+  a cached View Cache subtree must refresh visible wrapped text, prepared-text cache state, and
+  following layout when its observed counter model changes. The runtime gate must assert visible
+  text and geometry, not only the app-snapshot counter.
+- finding:
+  no new view-cache, text-cache, or layout defect was reproduced. The coverage gap was that the
+  previous View Cache gate covered counter and Popover state without changing a wrapped text leaf
+  inside the cached subtree. The first focused runtime draft exposed an over-constrained script
+  oracle: Popover trigger and retained list are adjacent under current CardContent semantics, so the
+  durable assertion for that pair is non-overlap rather than an `8px` gap.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/previews/pages/harness/view_cache.rs`,
+  `apps/fret-ui-gallery/src/driver/diag_snapshot.rs`,
+  `tools/diag-scripts/ui-gallery/view-cache/ui-gallery-view-cache-dynamic-text-mutation-through-cache.json`,
+  `tools/diag-scripts/ui-gallery-view-cache-dynamic-text-mutation-through-cache.json`,
+  `tools/diag-scripts/suites/ui-gallery-view-cache/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  first over-constrained failure:
+  `target/fret-diag-ui-gallery-view-cache-dynamic-text-mutation-v1/sessions/1779244450932-17084/script.result.json`;
+  focused runtime AI packet:
+  `target/fret-diag-ui-gallery-view-cache-dynamic-text-mutation-v2/sessions/1779244725576-99248/1779244734657/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-ui-gallery-view-cache-dynamic-text-mutation-v2/sessions/1779244725576-99248/share/1779244734657.zip`;
+  suite summary:
+  `target/fret-diag-ui-gallery-view-cache-suite-dynamic-text-v1/sessions/1779244758600-135808/suite.summary.json`.
+- JSON/registry/format:
+  `python -m json.tool tools\diag-scripts\ui-gallery\view-cache\ui-gallery-view-cache-dynamic-text-mutation-through-cache.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-view-cache-dynamic-text-mutation-through-cache.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-view-cache\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\previews\pages\harness\view_cache.rs apps\fret-ui-gallery\src\driver\diag_snapshot.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_view_cache_dynamic_text_mutation_through_cache --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `bd7f6552-74b2-416f-b0f0-55bb8f82742f`.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\view-cache\ui-gallery-view-cache-dynamic-text-mutation-through-cache.json --dir target\fret-diag-ui-gallery-view-cache-dynamic-text-mutation-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779244734657`.
+- suite runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-view-cache --dir target\fret-diag-ui-gallery-view-cache-suite-dynamic-text-v1 --session-auto --timeout-ms 600000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; 2/2 rows; new script run id `1779244796106`.

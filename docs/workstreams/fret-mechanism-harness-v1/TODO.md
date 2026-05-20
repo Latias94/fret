@@ -1397,3 +1397,14 @@ date: 2026-05-12
     evidence, and asserts the long docs intro, section title, description, and content keep their
     expected vertical separation. Focused runtime passed with run id `1779242679435`, and the
     `ui-gallery-shadcn-runtime-evidence` suite passed with the new script run id `1779242852622`.
+- [x] Add a View Cache dynamic wrapped-text mutation gate.
+  - Result:
+    `ui-gallery-view-cache-dynamic-text-mutation-through-cache.json` now drives the View Cache
+    harness through a cached-subtree counter mutation that changes visible wrapped text from a
+    short baseline to a longer paragraph. The UI Gallery snapshot exposes
+    `/view_cache/dynamic_text_len` and `/view_cache/dynamic_text_wrapped`; the gate asserts the
+    snapshot state, visible label text, renderer text trace, layout sidecars, screenshots, bundle
+    evidence, dynamic-text size, dynamic-text-to-Popover spacing, and Popover/List non-overlap.
+    Focused runtime passed with run id `1779244734657`, and the full `ui-gallery-view-cache` suite
+    passed 2/2 with summary
+    `target/fret-diag-ui-gallery-view-cache-suite-dynamic-text-v1/sessions/1779244758600-135808/suite.summary.json`.

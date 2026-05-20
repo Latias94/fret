@@ -11824,6 +11824,32 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-view-cache-dynamic-text-mutation-through-cache",
+      "path": "tools/diag-scripts/ui-gallery/view-cache/ui-gallery-view-cache-dynamic-text-mutation-through-cache.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-view-cache"
+      ],
+      "tags": [
+        "layout",
+        "mechanism_harness",
+        "model",
+        "mutation",
+        "runtime",
+        "text_cache",
+        "ui_gallery",
+        "view_cache"
+      ],
+      "target_hints": [
+        "Drives the View Cache harness through a cached-subtree counter mutation that changes visible wrapped text.",
+        "Asserts app snapshot state, visible text semantics, renderer text trace, and non-overlap with following retained content."
+      ]
+    },
+    {
       "id": "ui-gallery-view-cache-model-mutation-through-cache",
       "path": "tools/diag-scripts/ui-gallery/view-cache/ui-gallery-view-cache-model-mutation-through-cache.json",
       "required_capabilities": [

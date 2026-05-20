@@ -772,6 +772,15 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                     app.models().get_cloned(&ids.view_cache_popover_open)?;
                 let view_cache_continuous = app.models().get_cloned(&ids.view_cache_continuous)?;
                 let view_cache_counter = app.models().get_cloned(&ids.view_cache_counter)?;
+                let view_cache_dynamic_text = if view_cache_counter == 0 {
+                    "Cached text mutation probe: short baseline.".to_string()
+                } else {
+                    format!(
+                        "Cached text mutation probe: counter={view_cache_counter} expands this retained subtree \
+                         paragraph into a longer wrapped sentence so text measurement, prepared text cache, \
+                         and following layout all have to update without replacing the cached subtree."
+                    )
+                };
                 let settings_open = app.models().get_cloned(&ids.settings_open)?;
                 let settings_menu_bar_os = app.models().get_cloned(&ids.settings_menu_bar_os)?;
                 let settings_menu_bar_in_window = app.models().get_cloned(&ids.settings_menu_bar_in_window)?;
@@ -1155,6 +1164,8 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                         "popover_open": view_cache_popover_open,
                         "continuous": view_cache_continuous,
                         "counter": view_cache_counter,
+                        "dynamic_text_len": view_cache_dynamic_text.len(),
+                        "dynamic_text_wrapped": view_cache_counter > 0,
                     }),
                 );
                 out.insert("shell".to_string(), serde_json::Value::Object(shell));

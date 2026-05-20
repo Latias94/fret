@@ -849,6 +849,13 @@ fn script_v2_roundtrip_ui_gallery_view_cache_model_mutation_through_cache() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_view_cache_dynamic_text_mutation_through_cache() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/view-cache/ui-gallery-view-cache-dynamic-text-mutation-through-cache.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_data_table_listlike_pointer_selection() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-data-table-listlike-pointer-selection.json"

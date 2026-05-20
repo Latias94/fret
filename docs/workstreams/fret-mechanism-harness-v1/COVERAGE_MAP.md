@@ -303,6 +303,13 @@ date: 2026-05-12
   open/close state through `/view_cache` app snapshots while the script self-configures start page,
   outer view-cache, and inner view-cache env defaults. Suite evidence is anchored at
   `target/fret-diag-view-cache-suite-roundtrip-v1/sessions/1779162428017-56424/suite.summary.json`.
+- UI Gallery View Cache dynamic-text update:
+  `ui-gallery-view-cache-dynamic-text-mutation-through-cache.json` now complements the model-state
+  gate with a cached-subtree wrapped-text mutation. The script changes the counter from a short
+  baseline to a longer paragraph, asserts `/view_cache/dynamic_text_wrapped=true`, verifies the
+  visible text label and renderer text trace, captures layout/screenshot/bundle evidence, and locks
+  dynamic-text spacing plus following Popover/List non-overlap. Suite evidence is anchored at
+  `target/fret-diag-ui-gallery-view-cache-suite-dynamic-text-v1/sessions/1779244758600-135808/suite.summary.json`.
 - Node Graph cull-window update:
   `ui-gallery-node-graph-cull`, `ui-gallery-node-graph-cull-window-shifts`, and
   `ui-gallery-node-graph-cull-window-no-shifts-small-pan` now have protocol roundtrip coverage for

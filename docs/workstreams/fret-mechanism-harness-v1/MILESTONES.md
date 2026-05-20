@@ -3352,3 +3352,35 @@ Status: complete for the non-Combobox fixed-line-box wrapped docs text companion
   with suite summary
   `target/fret-diag-ui-gallery-shadcn-runtime-evidence-item-vs-field-v1/sessions/1779242784682-41468/suite.summary.json`
   and new script run id `1779242852622`.
+
+## M152: View Cache Dynamic Text Mutation Runtime Gate
+
+Status: complete for cached-subtree dynamic wrapped-text mutation coverage.
+
+- The existing View Cache gate proved counter mutation and controlled Popover open/close state, but
+  it did not prove that visible wrapped text and following layout inside the cached subtree refresh
+  through the same model mutation.
+- Added a dynamic text probe to the View Cache harness page. `counter=0` exposes a short baseline;
+  `counter>0` exposes a longer wrapped sentence inside the cached subtree. The UI Gallery app
+  snapshot now publishes `/view_cache/dynamic_text_len` and `/view_cache/dynamic_text_wrapped`.
+- Added `ui-gallery-view-cache-dynamic-text-mutation-through-cache.json`, its root redirect, suite
+  membership, registry entry, and protocol roundtrip coverage. The gate asserts app-snapshot state,
+  visible label text, renderer text trace coverage, layout sidecars, screenshots, bundle evidence,
+  dynamic-text size, dynamic-text-to-Popover spacing, and Popover/List non-overlap.
+- The first runtime draft exposed an over-constrained script oracle, not a mechanism defect:
+  Popover trigger and retained list are adjacent under current CardContent semantics, so that final
+  assertion now proves non-overlap instead of requiring an `8px` gap.
+- Gates pass:
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\previews\pages\harness\view_cache.rs apps\fret-ui-gallery\src\driver\diag_snapshot.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `python tools\check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_view_cache_dynamic_text_mutation_through_cache --no-fail-fast --no-capture`
+  with Nextest run id `bd7f6552-74b2-416f-b0f0-55bb8f82742f`; and
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\view-cache\ui-gallery-view-cache-dynamic-text-mutation-through-cache.json --dir target\fret-diag-ui-gallery-view-cache-dynamic-text-mutation-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779244734657` and AI packet
+  `target/fret-diag-ui-gallery-view-cache-dynamic-text-mutation-v2/sessions/1779244725576-99248/1779244734657/ai.packet`.
+- Full View Cache suite passes 2/2:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-view-cache --dir target\fret-diag-ui-gallery-view-cache-suite-dynamic-text-v1 --session-auto --timeout-ms 600000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with suite summary
+  `target/fret-diag-ui-gallery-view-cache-suite-dynamic-text-v1/sessions/1779244758600-135808/suite.summary.json`.
